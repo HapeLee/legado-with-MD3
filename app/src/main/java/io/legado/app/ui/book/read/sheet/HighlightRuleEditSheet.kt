@@ -43,13 +43,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -515,9 +515,16 @@ fun HighlightRuleEditSheet(
     val readSettingsRepository: ReadSettingsRepository = org.koin.compose.koinInject()
     val fontSelectScope = rememberCoroutineScope()
     val fontSelectPreferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
-        initialValue = ReadPreferences()
+        initialValue = null
     )
-    val fontFolderUri = fontSelectPreferences.fontFolder.takeIf { it.isNotEmpty() }?.toUri()
+    val fontFolderState = remember(fontSelectPreferences) {
+        val pref = fontSelectPreferences
+        if (pref == null) {
+            FontFolderState.Loading
+        } else {
+            FontFolderState.Loaded(pref.fontFolder.takeIf { it.isNotEmpty() }?.toUri())
+        }
+    }
     val systemTypefaces = stringArrayResource(R.array.system_typefaces)
     val fontFolderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -534,7 +541,7 @@ fun HighlightRuleEditSheet(
     FontSelectSheet(
         show = showFontSelect,
         title = stringResource(R.string.select_font),
-        fontFolderUri = fontFolderUri,
+        folderState = fontFolderState,
         selectedFontPath = fontPath,
         onDismissRequest = { showFontSelect = false },
         onSelectFont = { fontPath = it.uri.toString(); showFontSelect = false },

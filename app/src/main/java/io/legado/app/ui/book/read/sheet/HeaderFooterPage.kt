@@ -49,12 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -568,15 +568,22 @@ internal fun HeaderFooterPage(
     // Font selector for header/footer
     val readSettingsRepository: ReadSettingsRepository = koinInject()
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
-        initialValue = ReadPreferences()
+        initialValue = null
     )
-    val fontFolderUri = preferences.fontFolder.takeIf { it.isNotEmpty() }?.toUri()
+    val fontFolderState = remember(preferences) {
+        val pref = preferences
+        if (pref == null) {
+            FontFolderState.Loading
+        } else {
+            FontFolderState.Loaded(pref.fontFolder.takeIf { it.isNotEmpty() }?.toUri())
+        }
+    }
     val systemTypefaces = stringArrayResource(R.array.system_typefaces)
 
     FontSelectSheet(
         show = showFontSelect,
         title = stringResource(R.string.select_font),
-        fontFolderUri = fontFolderUri,
+        folderState = fontFolderState,
         selectedFontPath = ReadBookConfig.headerFont,
         onDismissRequest = { showFontSelect = false },
         onSelectFont = {

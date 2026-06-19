@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
@@ -13,6 +14,7 @@ import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,8 +23,21 @@ import java.io.File
 import java.io.FileOutputStream
 
 class ThemeConfigViewModel(
-    private val localPreferencesRepository: LocalPreferencesRepository
+    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val readSettingsRepository: ReadSettingsRepository
 ) : ViewModel() {
+
+    val fontFolder = readSettingsRepository.preferences
+        .map { it.fontFolder as String? }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun setFontFolder(path: String) {
+        viewModelScope.launch {
+            runCatching {
+                readSettingsRepository.setFontFolder(path)
+            }
+        }
+    }
 
     val showThemeRefactorTip = localPreferencesRepository
         .getPreference(LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP, true)

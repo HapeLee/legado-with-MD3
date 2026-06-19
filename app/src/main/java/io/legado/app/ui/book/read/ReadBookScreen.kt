@@ -12,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
@@ -37,6 +36,7 @@ import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
+import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
@@ -172,15 +172,21 @@ fun ReadBookScreen(
     )
     val fontSelectReadSettings: ReadSettingsRepository = org.koin.compose.koinInject()
     val fontSelectPreferences by fontSelectReadSettings.preferences.collectAsStateWithLifecycle(
-        initialValue = ReadPreferences()
+        initialValue = null
     )
-    val fontSelectFolderUri = fontSelectPreferences.fontFolder
-        .takeIf { it.isNotEmpty() }?.toUri()
+    val fontSelectFolderState = remember(fontSelectPreferences) {
+        val pref = fontSelectPreferences
+        if (pref == null) {
+            FontFolderState.Loading
+        } else {
+            FontFolderState.Loaded(pref.fontFolder.takeIf { it.isNotEmpty() }?.toUri())
+        }
+    }
     val fontSelectSystemTypefaces = stringArrayResource(R.array.system_typefaces)
     FontSelectSheet(
         show = state.activeSheet is ReadBookSheet.FontSelect,
         title = stringResource(R.string.select_font),
-        fontFolderUri = fontSelectFolderUri,
+        folderState = fontSelectFolderState,
         selectedFontPath = ReadBookConfig.textFont,
         onDismissRequest = dismissSheet,
         onSelectFont = { onIntent(ReadBookIntent.SelectFont(it.uri.toString())) },
@@ -191,7 +197,7 @@ fun ReadBookScreen(
     FontSelectSheet(
         show = state.activeSheet is ReadBookSheet.TitleFontSelect,
         title = stringResource(R.string.read_config_title_settings),
-        fontFolderUri = fontSelectFolderUri,
+        folderState = fontSelectFolderState,
         selectedFontPath = ReadBookConfig.titleFont,
         onDismissRequest = dismissSheet,
         onSelectFont = { onIntent(ReadBookIntent.SelectTitleFont(it.uri.toString())) },

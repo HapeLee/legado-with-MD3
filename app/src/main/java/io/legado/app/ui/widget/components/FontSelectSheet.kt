@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components
 
-import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.TextFields
@@ -24,7 +23,7 @@ import io.legado.app.utils.FileDoc
 fun FontSelectSheet(
     show: Boolean = true,
     title: String,
-    fontFolderUri: Uri?,
+    folderState: FontFolderState,
     selectedFontPath: String?,
     onDismissRequest: () -> Unit,
     onSelectFont: (FileDoc) -> Unit,
@@ -83,7 +82,7 @@ fun FontSelectSheet(
         },
     ) {
         FontSelectGrid(
-            fontFolderUri = fontFolderUri,
+            folderState = folderState,
             selectedFontName = selectedFontName,
             onSelectFont = { doc ->
                 onSelectFont(doc)

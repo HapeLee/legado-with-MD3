@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components
 
 import android.graphics.Typeface
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,8 +26,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,41 +44,57 @@ import io.legado.app.R
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.FileDoc
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private val fontGridHeight = 360.dp
+
+
+sealed interface FontFolderState {
+    data object Loading : FontFolderState
+    data class Loaded(val uri: Uri?) : FontFolderState
+}
 
 /**
  * Shared font selection grid with search support.
  *
- * @param fontFolderUri URI of the font folder to load from
+ * @param folderState 字体文件夹加载状态，见 [FontFolderState]
  * @param selectedFontName currently selected font name (for check mark), null to hide
  * @param onSelectFont called when a font file is selected
  * @param emptyText text to show when no fonts found
  */
 @Composable
 fun FontSelectGrid(
-    fontFolderUri: android.net.Uri?,
+    folderState: FontFolderState,
     selectedFontName: String?,
     onSelectFont: (FileDoc) -> Unit,
     emptyText: String? = null,
 ) {
     val context = LocalContext.current
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var filesLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    LaunchedEffect(fontFolderUri) {
-        isLoading = true
-        fontItems = withContext(Dispatchers.IO) {
-            loadFontFiles(context, fontFolderUri)
+    LaunchedEffect(folderState) {
+        if (folderState is FontFolderState.Loaded) {
+            filesLoading = true
+            try {
+                fontItems = withContext(Dispatchers.IO) {
+                    loadFontFiles(context, folderState.uri)
+                }
+            } finally {
+                filesLoading = false
+            }
         }
-        isLoading = false
     }
 
     val filteredItems = remember(fontItems, searchQuery) {
         if (searchQuery.isBlank()) fontItems
         else fontItems.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
+
+    val showLoading = folderState is FontFolderState.Loading || filesLoading
 
     Column(
         modifier = Modifier
@@ -92,11 +111,11 @@ fun FontSelectGrid(
         Spacer(Modifier.height(4.dp))
 
         // Font grid
-        if (isLoading) {
+        if (showLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(fontGridHeight),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
@@ -105,7 +124,7 @@ fun FontSelectGrid(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
+                    .height(fontGridHeight),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -120,7 +139,7 @@ fun FontSelectGrid(
                 contentPadding = PaddingValues(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.height(360.dp),
+                modifier = Modifier.height(fontGridHeight),
             ) {
                 items(filteredItems, key = { it.name }) { item ->
                     FontItem(
@@ -140,21 +159,7 @@ private fun FontItem(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val fontFamily = remember(item.uri) {
-        runCatching {
-            val uri = item.uri
-            val typeface: Typeface? = if (uri.scheme == "content") {
-                context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                    Typeface.Builder(it.fileDescriptor).build()
-                }
-            } else {
-                uri.path?.let { Typeface.createFromFile(it) }
-            }
-            typeface?.let { FontFamily(it) }
-        }.getOrNull()
-    }
-
+    val fontFamily by rememberItemFontFamily(item.uri)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -184,5 +189,25 @@ private fun FontItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun rememberItemFontFamily(uri: Uri): State<FontFamily?> {
+    val context = LocalContext.current
+    return produceState<FontFamily?>(initialValue = null, uri) {
+        val parsed = withContext(Dispatchers.IO) {
+            runCatching {
+                val typeface: Typeface? = if (uri.scheme == "content") {
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                        Typeface.Builder(it.fileDescriptor).build()
+                    }
+                } else {
+                    uri.path?.let { Typeface.createFromFile(it) }
+                }
+                typeface?.let { FontFamily(it) }
+            }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+        }
+        if (parsed != null) value = parsed
     }
 }

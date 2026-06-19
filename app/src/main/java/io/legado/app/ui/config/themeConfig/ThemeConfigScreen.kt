@@ -74,7 +74,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.config.labConfig.LabConfig
@@ -83,6 +82,7 @@ import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -98,9 +98,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -128,19 +126,22 @@ fun ThemeConfigScreen(
     var showFontSheet by remember { mutableStateOf(false) }
     val showThemeRefactorTip by viewModel.showThemeRefactorTip.collectAsStateWithLifecycle()
 
-    var fontFolderUri by remember {
-        mutableStateOf(
-            context.getPrefString(PreferKey.fontFolder)?.toUri()
-        )
+    val fontFolder by viewModel.fontFolder.collectAsStateWithLifecycle()
+    val fontFolderState = remember(fontFolder) {
+        val folder = fontFolder
+        if (folder == null) {
+            FontFolderState.Loading
+        } else {
+            FontFolderState.Loaded(folder.takeIf { it.isNotEmpty() }?.toUri())
+        }
     }
 
     val fontFolderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         if (uri != null) {
-            fontFolderUri = uri
             uri.takePersistablePermissionSafely(context, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            context.putPrefString(PreferKey.fontFolder, uri.toString())
+            viewModel.setFontFolder(uri.toString())
         }
     }
 
@@ -869,7 +870,7 @@ fun ThemeConfigScreen(
     FontSelectSheet(
         show = showFontSheet,
         title = stringResource(R.string.font_setting),
-        fontFolderUri = fontFolderUri,
+        folderState = fontFolderState,
         selectedFontPath = ThemeConfig.appFontPath,
         onDismissRequest = { showFontSheet = false },
         onSelectFont = { doc ->
