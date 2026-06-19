@@ -4,6 +4,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

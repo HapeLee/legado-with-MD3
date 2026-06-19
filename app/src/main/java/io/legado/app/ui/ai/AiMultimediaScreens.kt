@@ -225,16 +225,29 @@ private fun ImageResultCard(
         colors = CardDefaults.cardColors()
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            if (img.bitmap != null) {
-                Image(
-                    bitmap = img.bitmap.asImageBitmap(),
-                    contentDescription = img.prompt,
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
+            if (img.base64 != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "（Base64 图像已生成）",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (img.url != null) {
+                Text(
+                    text = "图像URL: ${img.url.take(80)}...",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(8.dp)
                 )
             } else {
                 Text(
-                    text = img.url?.let { "图像URL: $it" } ?: "（无图像数据）",
+                    text = "（无图像数据）",
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(8.dp)

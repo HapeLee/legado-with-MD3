@@ -2,7 +2,7 @@ package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookType
+import io.legado.app.constant.BookType
 import io.legado.app.model.analyzeRule.QueryTTF
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull

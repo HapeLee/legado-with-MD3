@@ -41,7 +41,8 @@ data class AiPreset(
 data class GeneratedImage(
     val url: String? = null,
     val base64: String? = null,
-    val revisedPrompt: String? = null
+    val revisedPrompt: String? = null,
+    val prompt: String = ""
 )
 
 data class TextTool(
