@@ -17,7 +17,7 @@ enum class AiProvider(val displayName: String) {
     OLLAMA("Ollama 本地")
 }
 
-data class AiProviderConfig(
+data class AiSimpleClientConfig(
     val provider: AiProvider,
     val endpoint: String,
     val apiKey: String,
@@ -30,7 +30,7 @@ data class AiProviderConfig(
     val timeoutSeconds: Int = 120
 )
 
-data class AiMessage(val role: String, val content: String)
+data class AiSimpleMessage(val role: String, val content: String)
 
 data class AiPreset(
     val id: String,

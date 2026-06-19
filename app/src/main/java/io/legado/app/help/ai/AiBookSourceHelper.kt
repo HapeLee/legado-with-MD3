@@ -56,7 +56,7 @@ object AiBookSourceHelper {
 只输出一个合法的 JSON 对象，不要任何 Markdown 标记、说明文字或代码块。确保 JSON 语法正确、字段完整。"""
 
             val result = AiClient.chat(
-                messages = listOf(AiMessage("user", prompt)),
+                messages = listOf(AiSimpleMessage("user", prompt)),
                 config = config,
                 model = model
             )
@@ -96,7 +96,7 @@ ${sourceJson.take(6000)}
 6. 给出修正后的推荐 JSON（如果有明显问题）
 
 输出使用 Markdown 格式，中文回答。"""
-            AiClient.chat(listOf(AiMessage("user", prompt)), config, model).getOrThrow()
+            AiClient.chat(listOf(AiSimpleMessage("user", prompt)), config, model).getOrThrow()
         }
     }
 

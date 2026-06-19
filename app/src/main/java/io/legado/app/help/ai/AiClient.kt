@@ -69,8 +69,8 @@ private val json = Json {
 object AiClient {
 
     suspend fun chat(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String = "",
         systemPrompt: String = "",
         temperature: Float? = null
@@ -78,7 +78,7 @@ object AiClient {
         runCatching {
             val effectiveModel = model.ifBlank { config.chatModel }
             val finalMessages = buildList {
-                if (systemPrompt.isNotBlank()) add(AiMessage("system", systemPrompt))
+                if (systemPrompt.isNotBlank()) add(AiSimpleMessage("system", systemPrompt))
                 addAll(messages)
             }
             when (config.provider) {
@@ -90,8 +90,8 @@ object AiClient {
     }
 
     fun chatStream(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String = "",
         systemPrompt: String = "",
         temperature: Float? = null
@@ -99,7 +99,7 @@ object AiClient {
         runCatching {
             val effectiveModel = model.ifBlank { config.chatModel }
             val finalMessages = buildList {
-                if (systemPrompt.isNotBlank()) add(AiMessage("system", systemPrompt))
+                if (systemPrompt.isNotBlank()) add(AiSimpleMessage("system", systemPrompt))
                 addAll(messages)
             }
             when (config.provider) {
@@ -114,7 +114,7 @@ object AiClient {
 
     suspend fun generateImages(
         prompt: String,
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         model: String = "",
         size: String = "1024x1024",
         quality: String = "standard",
@@ -146,7 +146,7 @@ object AiClient {
 
     suspend fun generateVideo(
         prompt: String,
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         model: String = "",
         aspectRatio: String = "16:9",
         durationSeconds: Int = 10
@@ -167,7 +167,7 @@ object AiClient {
     suspend fun visionAnalyze(
         prompt: String,
         imageBase64: String,
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         model: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
@@ -187,7 +187,7 @@ object AiClient {
     suspend fun textTool(
         inputText: String,
         toolType: String,
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         model: String = "",
         extra: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -208,7 +208,7 @@ object AiClient {
                 }
             }
             chat(
-                messages = listOf(AiMessage("user", finalPrompt)),
+                messages = listOf(AiSimpleMessage("user", finalPrompt)),
                 config = config,
                 model = effectiveModel,
                 systemPrompt = systemPrompt
@@ -218,8 +218,8 @@ object AiClient {
 
     // ---------- internal: OpenAI 兼容 ----------
     private suspend fun openAIChat(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?,
         stream: Boolean
@@ -238,8 +238,8 @@ object AiClient {
     }
 
     private suspend fun openAIChatFlow(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?
     ): Flow<ChatStreamChunk> = flow {
@@ -272,8 +272,8 @@ object AiClient {
 
     // ---------- internal: Anthropic 简化 ----------
     private suspend fun anthropicChat(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?
     ): String {
@@ -284,16 +284,16 @@ object AiClient {
     }
 
     private suspend fun anthropicChatFlow(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?
     ): Flow<ChatStreamChunk> = openAIChatFlow(messages, config, model, temperature)
 
     // ---------- internal: Gemini 简化 ----------
     private suspend fun geminiChat(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?
     ): String {
@@ -315,8 +315,8 @@ object AiClient {
     }
 
     private suspend fun geminiChatFlow(
-        messages: List<AiMessage>,
-        config: AiProviderConfig,
+        messages: List<AiSimpleMessage>,
+        config: AiSimpleClientConfig,
         model: String,
         temperature: Float?
     ): Flow<ChatStreamChunk> = flow {
@@ -330,7 +330,7 @@ object AiClient {
     private suspend fun postJson(
         urlStr: String,
         body: String,
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         includeAuthHeader: Boolean = true
     ): String = withContext(Dispatchers.IO) {
         val url = URL(urlStr)
@@ -357,7 +357,7 @@ object AiClient {
     private fun postJsonStream(
         urlStr: String,
         body: String,
-        config: AiProviderConfig
+        config: AiSimpleClientConfig
     ): Flow<String> = flow {
         val url = URL(urlStr)
         val conn = url.openConnection() as HttpURLConnection

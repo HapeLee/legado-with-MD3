@@ -63,7 +63,7 @@ object AiBookshelfHelper {
     }
 
     suspend fun analyzeShelf(
-        config: AiProviderConfig,
+        config: AiSimpleClientConfig,
         model: String = config.chatModel,
         customPrompt: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -99,7 +99,7 @@ object AiBookshelfHelper {
                 appendLine(stats.sampleBooks)
             }
             AiClient.chat(
-                messages = listOf(AiMessage("user", userPrompt)),
+                messages = listOf(AiSimpleMessage("user", userPrompt)),
                 config = config,
                 model = model,
                 systemPrompt = systemPrompt
