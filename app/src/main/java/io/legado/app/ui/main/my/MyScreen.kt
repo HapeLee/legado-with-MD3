@@ -48,6 +48,8 @@ import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
+import io.legado.app.ui.main.ai.AiChatActivity
+import io.legado.app.ui.main.ai.AiImageGalleryActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -163,14 +165,26 @@ fun MyScreen(
             }
 
             SplicedColumnGroup(
-                title = "AI 智能"
+                title = stringResource(R.string.ai_assistant)
             ) {
                 ClickableSettingItem(
-                    title = "AI 控制台",
-                    description = "聊天 · 图像生成 · 书源生成 · 书架分析 · 更多",
+                    title = stringResource(R.string.ai_assistant),
+                    description = stringResource(R.string.ai_assistant_summary),
                     imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
                     onClick = {
-                        onNavigate(PrefClickEvent.OpenAiConsole)
+                        onNavigate(
+                            PrefClickEvent.StartActivity(AiChatActivity::class.java)
+                        )
+                    }
+                )
+                ClickableSettingItem(
+                    title = stringResource(R.string.ai_image_gallery),
+                    description = stringResource(R.string.ai_image_gallery_summary),
+                    imageVector = Icons.Default.Source,
+                    onClick = {
+                        onNavigate(
+                            PrefClickEvent.StartActivity(AiImageGalleryActivity::class.java)
+                        )
                     }
                 )
             }
