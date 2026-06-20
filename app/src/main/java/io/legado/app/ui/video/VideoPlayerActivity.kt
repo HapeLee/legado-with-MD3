@@ -168,11 +168,9 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         }
     private val tocActivityResult = registerForActivityResult(TocActivityResult()) {
         it?.let {
-            if (it[2] as Boolean) {
-                VideoPlay.chapterInVolumeIndex = it[0] as Int
-                val durChapterPos = it[1] as Int
-                VideoPlay.durVolumeIndex = it[3] as Int
-                VideoPlay.chapterInVolumeIndex = it[4] as Int
+            if (it.third) {
+                VideoPlay.chapterInVolumeIndex = it.first
+                val durChapterPos = it.second
                 VideoPlay.upEpisodes()
                 VideoPlay.saveRead(durChapterPos)
                 if (VideoPlay.episodes.isNullOrEmpty()) {
