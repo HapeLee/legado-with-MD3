@@ -1,7 +1,8 @@
 pluginManagement {
     repositories {
-        maven { url = uri("https://mirrors.cloud.tencent.com/maven/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-central/") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://mirrors.cloud.tencent.com/gradle/") }
         google()
         gradlePluginPortal()
@@ -18,8 +19,9 @@ dependencyResolutionManagement {
                 includeGroupByRegex("com\\.github.*")
             }
         }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://mirrors.cloud.tencent.com/maven/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-central/") }
         google()
         mavenCentral()
     }
