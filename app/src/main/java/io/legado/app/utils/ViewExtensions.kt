@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.Picture
 import android.os.Build
 import android.text.Html
+import android.text.Spanned
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.GONE
@@ -45,6 +46,8 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.TintHelper
 import io.legado.app.utils.canvasrecorder.CanvasRecorder
 import io.legado.app.utils.canvasrecorder.record
+import io.noties.markwon.Markwon
+import io.noties.markwon.image.AsyncDrawableSpan
 import splitties.systemservices.inputMethodManager
 import splitties.views.bottomPadding
 import splitties.views.topPadding
@@ -246,6 +249,85 @@ fun TextView.setHtml(html: String, imageGetter: GlideImageGetter?) {
         @Suppress("DEPRECATION")
         text = Html.fromHtml(html, imageGetter, null)
     }
+}
+
+fun TextView.setMarkdown(markwon: Markwon, spanned: Spanned, imgOnLongClickListener: (source: String) -> Unit) {
+    val imageSpans = spanned.getSpans(0, spanned.length, AsyncDrawableSpan::class.java)
+    val clickSpans = mutableListOf<Pair<Pair<Int, Int>, String>>()
+    for (imageSpan in imageSpans) {
+        val start = spanned.getSpanStart(imageSpan)
+        val end = spanned.getSpanEnd(imageSpan)
+        if (start >= 0 && end >= 0) {
+            val source = imageSpan.drawable.destination
+            clickSpans.add((start to end) to source)
+        }
+    }
+    if (clickSpans.isNotEmpty()) {
+        movementMethod = object : android.text.method.LinkMovementMethod() {
+            private var longClickRunnable: Runnable? = null
+            private var isLongClick = false
+            override fun onTouchEvent(
+                widget: TextView,
+                buffer: android.text.Spannable,
+                event: MotionEvent
+            ): Boolean {
+                isLongClickable = false
+                var x = event.x.toInt()
+                var y = event.y.toInt()
+                x -= widget.totalPaddingLeft
+                y -= widget.totalPaddingTop
+                val line = widget.layout.getLineForVertical(y)
+                val off = widget.layout.getOffsetForHorizontal(line, x.toFloat())
+                var durSource: String? = null
+                for ((position, source) in clickSpans) {
+                    if (off in position.first..position.second) {
+                        durSource = source
+                        break
+                    }
+                }
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        cancelLongClick()
+                        if (durSource != null) {
+                            isLongClickable = false
+                            longClickRunnable = postDelayed(600) {
+                                isLongClick = true
+                                imgOnLongClickListener(durSource)
+                            }
+                            return true
+                        }
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        isLongClickable = true
+                        if (!isLongClick) {
+                            cancelLongClick()
+                        }
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (durSource != null) {
+                            isLongClickable = false
+                            return true
+                        }
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        isLongClickable = true
+                        cancelLongClick()
+                        return true
+                    }
+                }
+                return super.onTouchEvent(widget, buffer, event)
+            }
+
+            private fun cancelLongClick() {
+                longClickRunnable?.let {
+                    removeCallbacks(it)
+                    longClickRunnable = null
+                }
+                isLongClick = false
+            }
+        }
+    }
+    markwon.setParsedMarkdown(this, spanned)
 }
 
 fun TextView.setTextIfNotEqual(charSequence: CharSequence?) {
