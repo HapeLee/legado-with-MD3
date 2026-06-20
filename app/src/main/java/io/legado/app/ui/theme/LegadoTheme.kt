@@ -5,6 +5,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import com.materialkolor.PaletteStyle
@@ -109,15 +110,15 @@ data class LegadoTypography(
 
     )
 
-val LocalLegadoColorScheme = compositionLocalOf<LegadoColorScheme> {
+val LocalLegadoColorScheme = staticCompositionLocalOf<LegadoColorScheme> {
     error("No ColorScheme provided")
 }
 
-val LocalLegadoTypography = compositionLocalOf<LegadoTypography> {
+val LocalLegadoTypography = staticCompositionLocalOf<LegadoTypography> {
     error("No Typography provided")
 }
 
-val LocalLegadoThemeColors = compositionLocalOf {
+val LocalLegadoThemeColors = staticCompositionLocalOf {
     LegadoThemeMode(
         colorScheme = lightColorScheme(),
         isDark = false,

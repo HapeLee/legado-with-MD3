@@ -8,8 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.snap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +33,15 @@ fun CardTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var lastSelectedTabIndex by remember { mutableIntStateOf(selectedTabIndex) }
+    val isSelectionChanged = selectedTabIndex != lastSelectedTabIndex
+
+    SideEffect {
+        lastSelectedTabIndex = selectedTabIndex
+    }
+
+    val animSpec = if (isSelectionChanged) tween<Color>(durationMillis = 200) else snap()
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -38,7 +54,7 @@ fun CardTabRow(
                 } else {
                     LegadoTheme.colorScheme.surfaceContainerLow
                 },
-                animationSpec = tween(durationMillis = 200),
+                animationSpec = animSpec,
                 label = "tabColor",
             )
             val contentColor by animateColorAsState(
@@ -47,7 +63,7 @@ fun CardTabRow(
                 } else {
                     LegadoTheme.colorScheme.onSurfaceVariant
                 },
-                animationSpec = tween(durationMillis = 200),
+                animationSpec = animSpec,
                 label = "tabContentColor",
             )
 
