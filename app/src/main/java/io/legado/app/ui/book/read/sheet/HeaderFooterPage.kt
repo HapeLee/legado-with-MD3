@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +41,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -59,7 +59,7 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
-import io.legado.app.ui.widget.components.pager.rememberConsumeHorizontalPagerNestedScrollConnection
+import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -91,7 +91,10 @@ internal fun HeaderFooterPage(
     val pagerState = rememberPagerState(pageCount = { 3 })
     var selectedTab by remember { mutableIntStateOf(0) }
     var clickScrollCount by remember { mutableIntStateOf(0) }
-    val childPagerNestedScrollConnection = rememberConsumeHorizontalPagerNestedScrollConnection()
+    val childPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
+        state = pagerState,
+        orientation = Orientation.Horizontal,
+    )
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
@@ -221,10 +224,10 @@ internal fun HeaderFooterPage(
         HorizontalPager(
             state = pagerState,
             verticalAlignment = Alignment.Top,
+            pageNestedScrollConnection = childPagerNestedScrollConnection,
             modifier = Modifier
                 .fillMaxWidth()
                 .clipToBounds()
-                .nestedScroll(childPagerNestedScrollConnection)
                 .pagerHeight(animatedHeight),
         ) { page ->
             Box(

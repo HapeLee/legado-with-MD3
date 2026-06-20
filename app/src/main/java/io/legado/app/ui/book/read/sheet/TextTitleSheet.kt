@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -35,7 +36,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -49,7 +49,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
-import io.legado.app.ui.widget.components.pager.rememberConsumeHorizontalPagerNestedScrollConnection
+import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -135,7 +135,10 @@ internal fun ReadStyleTextTitleContent(
 ) {
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
-    val childPagerNestedScrollConnection = rememberConsumeHorizontalPagerNestedScrollConnection()
+    val childPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
+        state = pagerState,
+        orientation = Orientation.Horizontal,
+    )
 
     Column(
         modifier = modifier
@@ -152,10 +155,10 @@ internal fun ReadStyleTextTitleContent(
         HorizontalPager(
             state = pagerState,
             verticalAlignment = Alignment.Top,
+            pageNestedScrollConnection = childPagerNestedScrollConnection,
             modifier = Modifier
                 .fillMaxWidth()
                 .clipToBounds()
-                .nestedScroll(childPagerNestedScrollConnection)
                 .pagerHeight(animatedHeight),
         ) { page ->
             Box(
