@@ -237,7 +237,7 @@ object LibArchiveUtils {
                     getEntryString(ArchiveEntry.pathnameUtf8(entry), ArchiveEntry.pathname(entry))
                         ?: continue
                 val entryFile = File(destDir, entryName)
-                if (!entryFile.canonicalPath.startsWith(destDir.canonicalPath)) {
+                if (!entryFile.canonicalPath.startsWith(destDir.canonicalPath + File.separator)) {
                     throw SecurityException("压缩文件只能解压到指定路径")
                 }
                 val entryStat = ArchiveEntry.stat(entry)
