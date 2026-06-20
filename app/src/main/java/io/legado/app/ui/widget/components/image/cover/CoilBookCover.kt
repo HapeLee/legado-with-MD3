@@ -83,9 +83,7 @@ fun BookCoverImage(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(finalPath) {
-        mutableStateOf(sharedCoverKey != null && finalPath != null)
-    }
+    var isOnlineCoverLoaded by remember(finalPath) { mutableStateOf(false) }
 
     LaunchedEffect(finalPath) {
         if (finalPath == null) {
@@ -175,9 +173,7 @@ fun CoilBookCover(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(finalPath) {
-        mutableStateOf(sharedCoverKey != null && finalPath != null)
-    }
+    var isOnlineCoverLoaded by remember(finalPath) { mutableStateOf(false) }
 
     LaunchedEffect(finalPath) {
         if (finalPath == null) {

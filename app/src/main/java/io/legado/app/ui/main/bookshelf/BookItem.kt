@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -627,6 +628,7 @@ fun BookItem(
     val book = bookUi.book
     val unreadCount = book.getUnreadChapterNum()
     val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
+    val showUpdateBadge = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew
     val bookTypeLabel = if (BookshelfConfig.showTip) {
         when {
             book.isAudio -> stringResource(R.string.audio)
@@ -658,6 +660,8 @@ fun BookItem(
             {
                 TextCard(
                     text = unreadText,
+                    icon = if (showUpdateBadge) Icons.Default.Update else null,
+                    iconSize = 12.dp,
                     cornerRadius = 4.dp,
                     horizontalPadding = 4.dp,
                     verticalPadding = 0.dp
@@ -676,7 +680,7 @@ fun BookItem(
                     .aspectRatio(5f / 7f),
                 sourceOrigin = book.origin,
                 badgeText = if (layoutMode != 0) unreadText else null,
-                showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
+                showBadgeDot = showUpdateBadge,
                 leftBottomText = matchedSourceLabel ?: bookTypeLabel,
                 showLoadingPlaceholder = true,
                 sharedTransitionScope = sharedTransitionScope,

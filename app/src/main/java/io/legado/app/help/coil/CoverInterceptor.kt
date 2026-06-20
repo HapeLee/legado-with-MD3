@@ -37,7 +37,11 @@ class CoverInterceptor : Interceptor {
 
         if (data is String && data.isNotBlank()) {
             val sourceOrigin = request.parameters.value("sourceOrigin") as? String
-            val source = sourceOrigin?.let { SourceHelp.getSource(it) }
+            val source = sourceOrigin?.let { origin ->
+                withContext(Dispatchers.IO) {
+                    SourceHelp.getSource(origin)
+                }
+            }
 
             val cacheKey = "$data|$sourceOrigin"
             val cached = synchronized(resolvedUrlCache) {
