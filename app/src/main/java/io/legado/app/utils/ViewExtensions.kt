@@ -141,6 +141,8 @@ fun View.invisible() {
     }
 }
 
+fun View.inVisible() = invisible()
+
 fun View.visible() {
     if (visibility != VISIBLE) {
         visibility = VISIBLE
