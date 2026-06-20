@@ -13,19 +13,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
@@ -34,6 +42,8 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
+
+private val SwipeThreshold = 300.dp
 
 @Composable
 fun ReadStyleContent(
@@ -54,6 +64,79 @@ fun ReadStyleContent(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 2 })
     var currentPage by remember { mutableIntStateOf(0) }
+    var systemMenuPage by remember { mutableIntStateOf(0) }
+    var parentUserScrollEnabled by remember { mutableStateOf(true) }
+    var lastActionTime by remember { mutableLongStateOf(0L) }
+    val currentOnOpenMoreConfig by rememberUpdatedState(onOpenMoreConfig)
+
+    val density = LocalDensity.current
+    var isAnimatingParent by remember { mutableStateOf(false) }
+    val nestedScrollConnection = remember(pagerState, density) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (isAnimatingParent) {
+                    return available
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (isAnimatingParent) {
+                    return available
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (isAnimatingParent) {
+                    return available
+                }
+                return Velocity.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (isAnimatingParent) {
+                    return available
+                }
+                val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                //Log.d("fansangg", "onPreFling: available.x = ${available.x}, systemMenuPage = $systemMenuPage, parentPage = ${pagerState.currentPage}, parentOffset = ${pagerState.currentPageOffsetFraction}, position = $position")
+                if (systemMenuPage == 0 && pagerState.currentPage == 1 && position < 0.99f) {
+                    val thresholdPx = with(density) { SwipeThreshold.toPx() }
+                    val targetPage = if (available.x > thresholdPx || position < 0.8f) 0 else 1
+                    isAnimatingParent = true
+                    parentUserScrollEnabled = false
+                    scope.launch {
+                        try {
+                            pagerState.animateScrollToPage(
+                                page = targetPage,
+                                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                            )
+                        }  finally {
+                            isAnimatingParent = false
+                            parentUserScrollEnabled = true
+                        }
+                    }
+                    return available
+                }
+                if (systemMenuPage == 2 && pagerState.currentPage == 1) {
+                    val thresholdPx = with(density) { SwipeThreshold.toPx() }
+                    if (available.x < -thresholdPx) {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastActionTime > 800L) {
+                            lastActionTime = currentTime
+                            currentOnOpenMoreConfig()
+                        }
+                        return available
+                    }
+                }
+                return Velocity.Zero
+            }
+        }
+    }
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
@@ -72,6 +155,7 @@ fun ReadStyleContent(
         HorizontalPager(
             state = pagerState,
             verticalAlignment = Alignment.Top,
+            userScrollEnabled = parentUserScrollEnabled,
             modifier = Modifier
                 .weight(1f, fill = false)
                 .clipToBounds()
@@ -101,11 +185,20 @@ fun ReadStyleContent(
                         styleConfig = styleConfig,
                     )
 
-                    1 -> SystemMenuPage(
-                        customIcons = readMenuCustomIcons,
-                        bottomBarButtons = bottomBarButtons,
-                        onIntent = onIntent,
-                    )
+                    1 -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .nestedScroll(nestedScrollConnection)
+                        ) {
+                            SystemMenuPage(
+                                customIcons = readMenuCustomIcons,
+                                bottomBarButtons = bottomBarButtons,
+                                onIntent = onIntent,
+                                onPageChanged = { systemMenuPage = it }
+                            )
+                        }
+                    }
                 }
             }
         }
