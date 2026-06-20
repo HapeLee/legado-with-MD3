@@ -182,9 +182,7 @@ private fun BookInfoScreenContent(
     ) { paddingValues ->
         val book = state.book
         if (book == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                AppCircularProgressIndicator()
-            }
+            Box(modifier = Modifier.fillMaxSize())
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 BookInfoBackdrop(

@@ -705,13 +705,14 @@ class BookInfoViewModel(
         canReName: Boolean = true,
         runPreUpdateJs: Boolean = true,
         scope: CoroutineScope = viewModelScope,
+        showLoading: Boolean = true,
     ) {
-        syncUiState(isTocLoading = true)
+        syncUiState(isTocLoading = showLoading)
         if (book.isLocal) {
             LocalBook.upBookInfo(book)
             currentBook = book
-            syncUiState(isTocLoading = true)
-            loadChapter(book)
+            syncUiState(isTocLoading = showLoading)
+            loadChapter(book, showLoading = showLoading)
         } else {
             val source = bookSource ?: run {
                 currentChapterList = emptyList()
@@ -730,14 +731,14 @@ class BookInfoViewModel(
                     if (inBookshelf) {
                         loadedBook.save()
                     }
-                    syncUiState(isTocLoading = true)
+                    syncUiState(isTocLoading = showLoading)
                     refreshMeta(loadedBook)
                     if (loadedBook.isWebFile) {
                         loadWebFile(loadedBook)
                         currentChapterList = emptyList()
                         syncUiState(isTocLoading = false)
                     } else {
-                        loadChapter(loadedBook, runPreUpdateJs)
+                        loadChapter(loadedBook, runPreUpdateJs, showLoading = showLoading)
                     }
                     scheduleRelatedBooksLoad(loadedBook, source)
                 }.onError {
@@ -786,11 +787,11 @@ class BookInfoViewModel(
         currentGroupNames = null
         currentHasCustomGroup = false
         bookSource = source
-        syncUiState(isTocLoading = true)
+        syncUiState(isTocLoading = false)
         refreshMeta(book)
         upCoverByRule(book)
         if (book.tocUrl.isEmpty() && !book.isLocal) {
-            loadBookInfo(book, runPreUpdateJs = inBookshelf)
+            loadBookInfo(book, runPreUpdateJs = inBookshelf, showLoading = false)
         } else {
             execute {
                 appDb.bookChapterDao.getChapterList(book.bookUrl)
@@ -800,10 +801,10 @@ class BookInfoViewModel(
                     syncUiState(isTocLoading = false)
                     source?.let { scheduleRelatedBooksLoad(book, it) }
                 } else {
-                    loadChapter(book)
+                    loadChapter(book, showLoading = false)
                 }
             }.onError {
-                loadChapter(book)
+                loadChapter(book, showLoading = false)
             }
         }
     }
@@ -851,8 +852,9 @@ class BookInfoViewModel(
         book: Book,
         runPreUpdateJs: Boolean = true,
         scope: CoroutineScope = viewModelScope,
+        showLoading: Boolean = true,
     ) {
-        syncUiState(isTocLoading = true)
+        syncUiState(isTocLoading = showLoading)
         if (book.isLocal) {
             execute(scope) {
                 LocalBook.getChapterList(book).also {

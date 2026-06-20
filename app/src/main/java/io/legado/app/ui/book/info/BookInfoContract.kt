@@ -25,7 +25,7 @@ data class BookInfoUiState(
     val inBookshelf: Boolean = false,
     val bookSource: BookInfoSourceUi? = null,
     val relatedBooks: ImmutableList<RelatedBooksUi> = persistentListOf(),
-    val isTocLoading: Boolean = true,
+    val isTocLoading: Boolean = false,
     val isBusy: Boolean = false,
     val deleteAlertEnabled: Boolean = true,
     val deleteOriginal: Boolean = false,
