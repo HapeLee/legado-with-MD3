@@ -76,6 +76,7 @@ class BookSourceEditActivity :
     private val infoEntities: ArrayList<EditEntity> = ArrayList()
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
+    private var jsonMode = false
 
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
@@ -189,6 +190,12 @@ class BookSourceEditActivity :
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_content)
         })
+        binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
+            text = "JSON"
+        })
+        binding.jsonEditView.addLegadoPattern()
+        binding.jsonEditView.addJsonPattern()
+        binding.jsonEditView.addJsPattern()
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         if (adapter.editEntityMaxLine < 999) {
             binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
@@ -244,16 +251,45 @@ class BookSourceEditActivity :
     }
 
     private fun setEditEntities(tabPosition: Int?) {
-        adapter.editEntities = when (tabPosition) {
-            1 -> searchEntities
-            2 -> exploreEntities
-            3 -> homepageEntities
-            4 -> infoEntities
-            5 -> tocEntities
-            6 -> contentEntities
-            else -> sourceEntities
+        if (tabPosition == 7) {
+            jsonMode = true
+            binding.recyclerView.visibility = android.view.View.GONE
+            binding.jsonEditView.visibility = android.view.View.VISIBLE
+            val json = GSON.toJson(getSource())
+            binding.jsonEditView.setText(json)
+        } else {
+            if (jsonMode) {
+                val text = binding.jsonEditView.text?.toString()
+                if (!text.isNullOrBlank()) {
+                    runCatching {
+                        GSON.fromJson(text, BookSource::class.java)
+                    }.onSuccess { source ->
+                        sourceEntities.forEach { it.value = null }
+                        searchEntities.forEach { it.value = null }
+                        exploreEntities.forEach { it.value = null }
+                        homepageEntities.forEach { it.value = null }
+                        infoEntities.forEach { it.value = null }
+                        tocEntities.forEach { it.value = null }
+                        contentEntities.forEach { it.value = null }
+                        viewModel.bookSource = source
+                        upSourceView(source)
+                    }
+                }
+            }
+            jsonMode = false
+            binding.recyclerView.visibility = android.view.View.VISIBLE
+            binding.jsonEditView.visibility = android.view.View.GONE
+            adapter.editEntities = when (tabPosition) {
+                1 -> searchEntities
+                2 -> exploreEntities
+                3 -> homepageEntities
+                4 -> infoEntities
+                5 -> tocEntities
+                6 -> contentEntities
+                else -> sourceEntities
+            }
+            binding.recyclerView.scrollToPosition(0)
         }
-        binding.recyclerView.scrollToPosition(0)
     }
 
     private fun upSourceView(bookSource: BookSource?) {
@@ -397,6 +433,14 @@ class BookSourceEditActivity :
     }
 
     private fun getSource(): BookSource {
+        if (jsonMode) {
+            val text = binding.jsonEditView.text?.toString()
+            if (!text.isNullOrBlank()) {
+                runCatching {
+                    GSON.fromJson(text, BookSource::class.java)
+                }.onSuccess { return it }
+            }
+        }
         val source = viewModel.bookSource?.copy() ?: BookSource()
         source.enabled = binding.cbIsEnable.isChecked
         source.enabledExplore = binding.cbIsEnableExplore.isChecked

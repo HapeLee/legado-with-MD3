@@ -112,12 +112,32 @@
         android:elevation="3dp"
         tools:ignore="SpeakableTextPresentCheck" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_view"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingHorizontal="16dp"
-        android:clipToPadding="false"
-        tools:listitem="@layout/item_source_edit" />
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="16dp"
+            android:clipToPadding="false"
+            tools:listitem="@layout/item_source_edit" />
+
+        <io.legado.app.ui.widget.code.CodeView
+            android:id="@+id/json_edit_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp"
+            android:gravity="top|start"
+            android:visibility="gone"
+            android:background="@android:color/transparent"
+            android:textSize="13sp"
+            android:inputType="textMultiLine|textCapSentences"
+            android:isScrollContainer="true"
+            android:hint="Book Source JSON" />
+
+    </FrameLayout>
 
 </LinearLayout>

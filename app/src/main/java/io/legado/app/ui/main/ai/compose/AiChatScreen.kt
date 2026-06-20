@@ -196,7 +196,7 @@ fun AiChatScreen(
     LaunchedEffect(listState.isScrollInProgress, isAtBottom) {
         if (isAtBottom) {
             stickToBottom = true
-        } else if (listState.isScrollInProgress) {
+        } else {
             stickToBottom = false
         }
     }
