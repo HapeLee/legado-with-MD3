@@ -18,6 +18,7 @@
     <string name="menu_import_github">Import github data</string>
     <string name="menu_replace_rule">Replacement</string>
     <string name="menu_send">Send</string>
+    <string name="resize">Resize</string>
 
     <string name="dialog_title">Prompt</string>
     <string name="dialog_cancel">Cancel</string>

@@ -161,4 +161,33 @@ class CoverFetcher(
             return CoverFetcher(data.toString(), options, client, loadOnlyWifi)
         }
     }
+
+    /**
+     * Fetcher for file:// URIs to load local images.
+     * Coil's default file fetcher is not included in the app's custom ImageLoader components.
+     */
+    class FileFetcher(
+        private val uri: Uri,
+        private val options: Options,
+    ) : Fetcher {
+        override suspend fun fetch(): FetchResult {
+            val path = uri.path ?: throw IOException("File path is null")
+            val file = java.io.File(path)
+            if (!file.exists() || !file.isFile) {
+                throw IOException("File not found: ${file.absolutePath}")
+            }
+            return SourceResult(
+                source = ImageSource(source = okio.source(file.inputStream()), context = options.context),
+                mimeType = null,
+                dataSource = DataSource.DISK
+            )
+        }
+
+        class Factory : Fetcher.Factory<Uri> {
+            override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
+                if (data.scheme == "file") return FileFetcher(data, options)
+                return null
+            }
+        }
+    }
 }

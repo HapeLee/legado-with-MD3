@@ -78,6 +78,7 @@ class VideoPlayService : BaseService() {
         LayoutInflater.from(this).inflate(R.layout.floating_video_player, FrameLayout(this), false)
     }
     private val playerView by lazy { floatingView.findViewById<FloatingPlayer>(R.id.floatingPlayerView) }
+    private val resizeHandle by lazy { floatingView.findViewById<View>(R.id.resizeHandle) }
     private var isNew = true
     private var upNotificationJob: Coroutine<*>? = null
     private var animator: SpringAnimation? = null
@@ -459,23 +460,53 @@ class VideoPlayService : BaseService() {
         private var initialX = 0
         private var initialY = 0
         private var isClick = true
+        private var isResizing = false
+        private var initialWidth = 0
+        private var initialHeight = 0
 
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouch(v: View, event: MotionEvent): Boolean {
+            val handleBounds = resizeHandle?.let { handle ->
+                val location = IntArray(2)
+                handle.getLocationOnScreen(location)
+                val handleWidth = handle.width
+                val handleHeight = handle.height
+                location[0] <= event.rawX && event.rawX <= location[0] + handleWidth &&
+                        location[1] <= event.rawY && event.rawY <= location[1] + handleHeight
+            } ?: false
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     isClick = true
+                    isResizing = handleBounds
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     initialX = params.x
                     initialY = params.y
+                    initialWidth = params.width
+                    initialHeight = params.height
                     cancelAnimator()
                 }
 
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = event.rawX - initialTouchX
                     val deltaY = event.rawY - initialTouchY
-                    if (abs(deltaX) > 20 || abs(deltaY) > 20) {
+                    if (isResizing) {
+                        // Resize mode: adjust width and height
+                        val newWidth = (initialWidth + deltaX).toInt().coerceIn(
+                            resources.displayMetrics.widthPixels / 4,
+                            resources.displayMetrics.widthPixels
+                        )
+                        val newHeight = (initialHeight + deltaY).toInt().coerceIn(
+                            resources.displayMetrics.heightPixels / 4,
+                            resources.displayMetrics.heightPixels
+                        )
+                        params.width = newWidth
+                        params.height = newHeight
+                        updateViewPosition()
+                        cancelAnimator()
+                        isClick = false
+                    } else if (abs(deltaX) > 20 || abs(deltaY) > 20) {
                         isClick = false
                         params.x = (initialX + (event.rawX - initialTouchX)).toInt()
                         params.y = (initialY + (event.rawY - initialTouchY)).toInt()
@@ -492,7 +523,7 @@ class VideoPlayService : BaseService() {
                     } else {
                         startEdgeAnimation()
                     }
-
+                    isResizing = false
                 }
             }
             return false

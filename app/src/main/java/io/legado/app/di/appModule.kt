@@ -225,6 +225,7 @@ val appModule = module {
                 add(SvgDecoder.Factory())
                 add(CoverInterceptor())
                 add(CoverFetcher.Factory(okHttpClient, okHttpClientManga))
+                add(CoverFetcher.FileFetcher.Factory())
             }
             .crossfade(true)
             .build()
