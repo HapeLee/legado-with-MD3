@@ -3479,6 +3479,18 @@ class ReadBookViewModel(
                     readSettingsRepository.setExpandTextMenu(update.value)
                 }
             }
+            is ConfigUpdate.ShowSelectMenuIcon -> {
+                ReadConfig.showSelectMenuIcon = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setShowSelectMenuIcon(update.value)
+                }
+            }
+            is ConfigUpdate.TextSelectMenuFilter -> {
+                ReadConfig.textSelectMenuFilter = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setTextSelectMenuFilter(update.value)
+                }
+            }
             is ConfigUpdate.ShowReadTitleAddition -> {
                 ReadConfig.showReadTitleAddition = update.value
                 viewModelScope.launch {

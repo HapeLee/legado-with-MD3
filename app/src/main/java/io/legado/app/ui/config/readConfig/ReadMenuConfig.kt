@@ -40,6 +40,16 @@ object ReadMenuConfig {
         false
     )
 
+    var showSelectMenuIcon by prefDelegate(
+        PreferKey.showSelectMenuIcon,
+        true
+    )
+
+    var textSelectMenuFilter by prefDelegate(
+        PreferKey.textSelectMenuFilter,
+        ""
+    )
+
     var showReadTitleAddition by prefDelegate(
         PreferKey.showReadTitleAddition,
         true
