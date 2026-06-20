@@ -23,6 +23,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ItemTextBinding
 import io.legado.app.databinding.PopupActionMenuBinding
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.printOnDebug
@@ -44,9 +45,10 @@ class TextActionMenu(
         setHasStableIds(true)
     }
 
-    private val menuItems: List<MenuItemImpl>
+    private var menuItems: List<MenuItemImpl> = emptyList()
     private val visibleMenuItems = arrayListOf<MenuItemImpl>()
     private val moreMenuItems = arrayListOf<MenuItemImpl>()
+    private val myMenu = MenuBuilder(context)
 
     init {
         @SuppressLint("InflateParams")
@@ -57,13 +59,7 @@ class TextActionMenu(
         isFocusable = false
         animationStyle = R.style.TextActionMenuAnimation
 
-        val myMenu = MenuBuilder(context)
-        val otherMenu = MenuBuilder(context)
         SupportMenuInflater(context).inflate(R.menu.content_select_action, myMenu)
-        onInitializeMenu(otherMenu)
-        menuItems = myMenu.visibleItems + otherMenu.visibleItems
-        visibleMenuItems.addAll(menuItems.subList(0, 6))
-        moreMenuItems.addAll(menuItems.subList(6, menuItems.size))
         binding.recyclerView.adapter = adapter
         binding.recyclerViewMore.adapter = adapter
         setOnDismissListener {
@@ -91,6 +87,18 @@ class TextActionMenu(
     }
 
     fun upMenu() {
+        val otherMenu = MenuBuilder(context)
+        onInitializeMenu(otherMenu)
+        menuItems = myMenu.visibleItems + otherMenu.visibleItems
+        visibleMenuItems.clear()
+        moreMenuItems.clear()
+        if (menuItems.size > 6) {
+            visibleMenuItems.addAll(menuItems.subList(0, 6))
+            moreMenuItems.addAll(menuItems.subList(6, menuItems.size))
+        } else {
+            visibleMenuItems.addAll(menuItems)
+        }
+
         if (expandTextMenu()) {
             adapter.setItems(menuItems)
             binding.ivMenuMore.gone()
@@ -172,6 +180,15 @@ class TextActionMenu(
         ) {
             with(binding) {
                 textView.text = item.title
+                val icon = item.icon
+                if (icon != null && ReadConfig.showSelectMenuIcon) {
+                    val size = 18.dpToPx()
+                    icon.setBounds(0, 0, size, size)
+                    textView.setCompoundDrawables(icon, null, null, null)
+                    textView.compoundDrawablePadding = 6.dpToPx()
+                } else {
+                    textView.setCompoundDrawables(null, null, null, null)
+                }
             }
         }
 
@@ -255,11 +272,23 @@ class TextActionMenu(
     private fun onInitializeMenu(menu: Menu) {
         kotlin.runCatching {
             var menuItemOrder = 100
+            val pm = context.packageManager
+            val filterSet = ReadConfig.textSelectMenuFilter.split(",").filter { it.isNotEmpty() }.toSet()
             for (resolveInfo in getSupportedActivities()) {
-                menu.add(
+                val componentName = "${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}"
+                if (filterSet.contains(componentName)) {
+                    continue
+                }
+                val menuItem = menu.add(
                     Menu.NONE, Menu.NONE,
-                    menuItemOrder++, resolveInfo.loadLabel(context.packageManager)
-                ).intent = createProcessTextIntentForResolveInfo(resolveInfo)
+                    menuItemOrder++, resolveInfo.loadLabel(pm)
+                )
+                menuItem.intent = createProcessTextIntentForResolveInfo(resolveInfo)
+                if (ReadConfig.showSelectMenuIcon) {
+                    menuItem.icon = kotlin.runCatching {
+                        resolveInfo.loadIcon(pm)
+                    }.getOrNull()
+                }
             }
         }.onFailure {
             context.toastOnUi("获取文字操作菜单出错:${it.localizedMessage}")

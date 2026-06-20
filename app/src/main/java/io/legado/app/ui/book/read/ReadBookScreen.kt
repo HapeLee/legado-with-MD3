@@ -41,6 +41,7 @@ import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
+import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -243,6 +244,10 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.DismissSheet)
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
         },
+        onOpenTextSelectMenuFilterConfig = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextSelectMenuFilterConfig))
+        },
     )
     ReadAloudConfigSheet(
         show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
@@ -334,6 +339,16 @@ fun ReadBookScreen(
         is ReadBookSheet.PageKeyConfig -> {
             PageKeyConfigSheet(
                 onDismissRequest = dismissSheet,
+            )
+        }
+
+        is ReadBookSheet.TextSelectMenuFilterConfig -> {
+            TextSelectMenuFilterSheet(
+                show = true,
+                onDismissRequest = dismissSheet,
+                onFilterChanged = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSelectMenuFilter(it)))
+                }
             )
         }
 

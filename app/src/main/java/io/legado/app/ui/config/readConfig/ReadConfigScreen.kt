@@ -370,6 +370,30 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.show_select_menu_icon),
+                    checked = state.showSelectMenuIcon,
+                    onCheckedChange = {
+                        viewModel.onIntent(ReadConfigIntent.ShowSelectMenuIconChanged(it))
+                    }
+                )
+
+                var showSelectMenuFilterSheet by remember { mutableStateOf(false) }
+
+                ClickableSettingItem(
+                    title = stringResource(R.string.text_select_menu_filter),
+                    description = stringResource(R.string.text_select_menu_filter_desc),
+                    onClick = { showSelectMenuFilterSheet = true }
+                )
+
+                TextSelectMenuFilterSheet(
+                    show = showSelectMenuFilterSheet,
+                    onDismissRequest = { showSelectMenuFilterSheet = false },
+                    onFilterChanged = {
+                        viewModel.onIntent(ReadConfigIntent.TextSelectMenuFilterChanged(it))
+                    }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.show_read_title_addition),
                     checked = state.showReadTitleAddition,
                     onCheckedChange = {

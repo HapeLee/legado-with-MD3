@@ -51,6 +51,8 @@ data class ReadPreferences(
     val optimizeRender: Boolean = false,
     val disableReturnKey: Boolean = false,
     val expandTextMenu: Boolean = false,
+    val showSelectMenuIcon: Boolean = true,
+    val textSelectMenuFilter: String = "",
     val showReadTitleAddition: Boolean = true,
     val autoReadSpeed: Int = 10,
     val prevKeys: String = "",
@@ -229,6 +231,12 @@ class ReadSettingsRepository(
 
     suspend fun setExpandTextMenu(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.expandTextMenu, value)
+
+    suspend fun setShowSelectMenuIcon(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.showSelectMenuIcon, value)
+
+    suspend fun setTextSelectMenuFilter(value: String) =
+        settingsRepository.putString(PreferKey.textSelectMenuFilter, value)
 
     suspend fun setShowReadTitleAddition(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.showReadTitleAddition, value)
@@ -420,6 +428,8 @@ class ReadSettingsRepository(
             optimizeRender = this[Keys.OptimizeRender] ?: false,
             disableReturnKey = this[Keys.DisableReturnKey] ?: false,
             expandTextMenu = this[Keys.ExpandTextMenu] ?: false,
+            showSelectMenuIcon = this[Keys.ShowSelectMenuIcon] ?: true,
+            textSelectMenuFilter = this[Keys.TextSelectMenuFilter] ?: "",
             showReadTitleAddition = this[Keys.ShowReadTitleAddition] ?: true,
             autoReadSpeed = this[Keys.AutoReadSpeed] ?: 10,
             prevKeys = this[Keys.PrevKeys] ?: "",
@@ -518,6 +528,8 @@ class ReadSettingsRepository(
         val OptimizeRender = booleanPreferencesKey(PreferKey.optimizeRender)
         val DisableReturnKey = booleanPreferencesKey(PreferKey.disableReturnKey)
         val ExpandTextMenu = booleanPreferencesKey(PreferKey.expandTextMenu)
+        val ShowSelectMenuIcon = booleanPreferencesKey(PreferKey.showSelectMenuIcon)
+        val TextSelectMenuFilter = stringPreferencesKey(PreferKey.textSelectMenuFilter)
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)

@@ -35,6 +35,8 @@ data class ReadConfigUiState(
     val optimizeRender: Boolean = false,
     val disableReturnKey: Boolean = false,
     val expandTextMenu: Boolean = false,
+    val showSelectMenuIcon: Boolean = true,
+    val textSelectMenuFilter: String = "",
     val showReadTitleAddition: Boolean = true,
     val autoReadSpeed: Int = 10,
     val prevKeys: String = "",
@@ -76,6 +78,8 @@ sealed interface ReadConfigIntent {
     data class OptimizeRenderChanged(val value: Boolean) : ReadConfigIntent
     data class DisableReturnKeyChanged(val value: Boolean) : ReadConfigIntent
     data class ExpandTextMenuChanged(val value: Boolean) : ReadConfigIntent
+    data class ShowSelectMenuIconChanged(val value: Boolean) : ReadConfigIntent
+    data class TextSelectMenuFilterChanged(val value: String) : ReadConfigIntent
     data class ShowReadTitleAdditionChanged(val value: Boolean) : ReadConfigIntent
     data class ShowMenuIconChanged(val value: Boolean) : ReadConfigIntent
     data class PageKeysChanged(val prevKeys: String, val nextKeys: String) : ReadConfigIntent
