@@ -33,6 +33,7 @@ import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
@@ -137,6 +138,7 @@ class ReadBookViewModel(
     private val readAloudSettingsRepository: ReadAloudSettingsRepository,
     private val localPreferencesRepository: LocalPreferencesRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
+    private val uploadRepository: UploadRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -847,11 +849,12 @@ class ReadBookViewModel(
             is ReadBookIntent.ExportAllHttpTtsAsUrl -> {
                 execute {
                     val json = exportHttpTtsJson()
-                    val dataUrl = "data:application/json;base64," + Base64.encodeToString(
-                        json.toByteArray(Charsets.UTF_8),
-                        Base64.NO_WRAP
+                    val url = uploadRepository.upload(
+                        fileName = "httpTTS.json",
+                        file = json,
+                        contentType = "application/json"
                     )
-                    "legado://import/httpTTS?src=" + URLEncoder.encode(dataUrl, "UTF-8")
+                    "legado://import/httpTTS?src=" + URLEncoder.encode(url, "UTF-8")
                 }.onSuccess { url ->
                     context.sendToClip(url)
                     _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.copy_url)))
@@ -2024,15 +2027,6 @@ class ReadBookViewModel(
             ReadBook.resetData(book)
         }
         _uiState.update { it.copy(isInitFinish = true) }
-        // 旋转后 ChapterProvider 的 doublePage/visibleWidth 已在 onSizeChanged 中更新，
-        // 但 ReloadContent 因 isInitFinish=false 被跳过。此处确保内容用新布局重新加载。
-        if (isSameBook) {
-            _effects.tryEmit(
-                ReadBookEffect.UpdateReadViewConfig(
-                    setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
-                )
-            )
-        }
         if (!book.isLocal && book.tocUrl.isEmpty() && !loadBookInfo(book)) {
             return
         }

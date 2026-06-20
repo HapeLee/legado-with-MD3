@@ -273,7 +273,8 @@ val appModule = module {
             readBookStyleConfigRepository = get(),
             readAloudSettingsRepository = get(),
             localPreferencesRepository = get(),
-            highlightRuleRepository = get()
+            highlightRuleRepository = get(),
+            uploadRepository = get()
         )
     }
     viewModelOf(::ChangeCoverViewModel)

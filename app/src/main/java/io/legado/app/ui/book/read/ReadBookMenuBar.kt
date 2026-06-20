@@ -2300,7 +2300,7 @@ private fun ReadMenuLiquidSlider(
         val animationScope = rememberCoroutineScope()
         var didDrag by remember { mutableStateOf(false) }
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
-        val dampedDragAnimation = remember(animationScope) {
+        val dampedDragAnimation = remember(animationScope, trackWidth, rangeStart, rangeEnd, isLtr) {
             DampedDragAnimation(
                 animationScope = animationScope,
                 initialValue = value(),
@@ -3057,8 +3057,12 @@ private fun BrightnessBar(
     glassThumbEnabled: Boolean = false,
 ) {
     val activity = LocalActivity.current
-    var sliderValue by remember { mutableFloatStateOf(brightness.toFloat()) }
-    var sliderDragging by remember { mutableStateOf(false) }
+    var sliderValue by remember(vertical, buttonGlassEnabled) {
+        mutableFloatStateOf(brightness.toFloat())
+    }
+    var sliderDragging by remember(vertical, buttonGlassEnabled) {
+        mutableStateOf(false)
+    }
 
     LaunchedEffect(brightness, brightnessAuto) {
         if (brightnessAuto) {

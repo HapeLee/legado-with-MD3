@@ -5,10 +5,18 @@ import android.content.Intent
 import androidx.navigation3.runtime.NavKey
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.read.MainRouteRssRead
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object MainNavigator {
 
     private var backNavigationInProgress = false
+    private val navigationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var backNavigationResetJob: Job? = null
 
     fun navigateToRoute(backStack: MutableList<NavKey>, route: NavKey) {
         val currentRoute = backStack.lastOrNull()
@@ -186,8 +194,8 @@ object MainNavigator {
         if (backNavigationInProgress) {
             return
         }
-        backNavigationInProgress = true
         if (backStack.size > 1) {
+            backNavigationInProgress = true
             backStack.removeLastOrNull()
         } else {
             activity.finish()
@@ -195,7 +203,11 @@ object MainNavigator {
     }
 
     fun onBackStackChanged() {
-        backNavigationInProgress = false
+        backNavigationResetJob?.cancel()
+        backNavigationResetJob = navigationScope.launch {
+            delay(500)
+            backNavigationInProgress = false
+        }
     }
 
     fun resolveStartRoute(intent: Intent?): NavKey {

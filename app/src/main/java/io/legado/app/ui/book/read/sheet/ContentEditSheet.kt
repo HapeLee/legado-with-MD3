@@ -79,7 +79,7 @@ fun ContentEditSheet(
             pendingLocateOffset = null
             return@LaunchedEffect
         }
-        val offset = locateOffset.coerceIn(0, layoutTextLength)
+        val offset = locateOffset.coerceIn(0, layoutTextLength - 1)
         val cursorTop = layoutResult.getCursorRect(offset).top.toInt()
         editorScrollState.scrollTo((cursorTop - 120).coerceIn(0, editorScrollState.maxValue))
         pendingLocateOffset = null

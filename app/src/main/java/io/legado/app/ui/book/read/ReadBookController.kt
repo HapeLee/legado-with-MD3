@@ -1048,7 +1048,7 @@ class ReadBookController(
     }
 
     private fun upScreenTimeOut() {
-        val keepLightPrefer = viewModel.readPreferences.value.keepLight.toIntOrNull() ?: 0
+        val keepLightPrefer = ReadConfig.keepLight.toLongOrNull() ?: 0L
         screenTimeOut = keepLightPrefer * 1000L
         screenOffTimerStartInternal()
     }
