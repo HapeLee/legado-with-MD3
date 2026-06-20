@@ -288,4 +288,6 @@ dependencies {
     implementation(libs.backdrop)
     implementation(libs.lyricViewx)
     implementation(libs.timber)
+    implementation(libs.gsyVideoPlayer)
+    implementation(libs.danmakuView)
 }

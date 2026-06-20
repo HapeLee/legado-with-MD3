@@ -10,9 +10,10 @@ import io.legado.app.base.BaseFragment
 import io.legado.app.databinding.FragmentAiChatBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.selector
-import io.legado.app.ui.config.ConfigActivity
 import io.legado.app.ui.config.ConfigTag
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainFragmentInterface
+import io.legado.app.ui.main.MainRouteConst
 import io.legado.app.ui.main.ai.compose.AiChatRoute
 import io.legado.app.ui.main.ai.compose.AiChatScreenActions
 import io.legado.app.utils.startActivity
@@ -82,8 +83,8 @@ class AiChatFragment() : BaseFragment(R.layout.fragment_ai_chat), MainFragmentIn
     }
 
     private fun openAiSettings() {
-        startActivity<ConfigActivity> {
-            putExtra("configTag", ConfigTag.AI_CONFIG)
+        startActivity<MainActivity> {
+            putExtra("startRoute", MainRouteConst.ROUTE_SETTINGS)
         }
     }
 

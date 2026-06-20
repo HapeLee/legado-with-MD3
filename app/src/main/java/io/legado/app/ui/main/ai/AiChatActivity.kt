@@ -12,8 +12,9 @@ import io.legado.app.help.ai.AiImageGalleryManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
-import io.legado.app.ui.config.ConfigActivity
 import io.legado.app.ui.config.ConfigTag
+import io.legado.app.ui.main.MainActivity
+import io.legado.app.ui.main.MainRouteConst
 import io.legado.app.ui.main.ai.compose.AiChatRoute
 import io.legado.app.ui.main.ai.compose.AiChatScreenActions
 import io.legado.app.utils.toastOnUi
@@ -104,8 +105,8 @@ class AiChatActivity : BaseActivity<ActivityAiChatBinding>(
     }
 
     private fun openAiSettings() {
-        android.content.Intent(this, ConfigActivity::class.java).apply {
-            putExtra("configTag", ConfigTag.AI_CONFIG)
+        android.content.Intent(this, MainActivity::class.java).apply {
+            putExtra("startRoute", MainRouteConst.ROUTE_SETTINGS)
         }.also(::startActivity)
     }
 
