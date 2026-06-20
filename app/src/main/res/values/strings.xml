@@ -2160,4 +2160,12 @@
     <string name="ask_ai">询问 AI</string>
     <string name="more">更多</string>
     <string name="history">历史</string>
+    <string name="book_info_tab_intro">简介</string>
+    <string name="book_info_tab_info">信息</string>
+    <string name="change_book_source_action">换源</string>
+    <string name="config_settings">设置</string>
+    <string name="auto_play">自动播放</string>
+    <string name="start_full">启动全屏</string>
+    <string name="full_bottom_progress">全屏底部进度条</string>
+    <string name="press_speed">长按倍速</string>
 </resources>

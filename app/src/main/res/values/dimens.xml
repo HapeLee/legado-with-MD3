@@ -36,4 +36,5 @@
 
     <dimen name="ui_panel_radius">16dp</dimen>
     <dimen name="ui_action_radius">8dp</dimen>
+    <dimen name="seek_bar_image">120dp</dimen>
 </resources>
