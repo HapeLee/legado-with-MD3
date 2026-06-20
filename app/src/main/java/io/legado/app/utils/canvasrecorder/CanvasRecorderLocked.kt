@@ -25,8 +25,11 @@ class CanvasRecorderLocked(private val delegate: CanvasRecorder) :
     }
 
     override fun endRecording() {
-        delegate.endRecording()
-        lock!!.unlock()
+        try {
+            delegate.endRecording()
+        } finally {
+            lock!!.unlock()
+        }
     }
 
     override fun draw(canvas: Canvas) {

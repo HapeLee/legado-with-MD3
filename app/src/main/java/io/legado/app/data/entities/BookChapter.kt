@@ -85,11 +85,11 @@ data class BookChapter(
         return RuleBigDataHelp.getChapterVariable(bookUrl, url, key)
     }
 
-    override fun hashCode() = url.hashCode()
+    override fun hashCode() = (bookUrl + url).hashCode()
 
     override fun equals(other: Any?): Boolean {
         if (other is BookChapter) {
-            return other.url == url
+            return other.bookUrl == bookUrl && other.url == url
         }
         return false
     }

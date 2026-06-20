@@ -110,10 +110,16 @@ class TextFile(private var book: Book) {
         if (txtBuffer == null || start > bufferEnd || end < bufferStart) {
             LocalBook.getBookInputStream(book).use { bis ->
                 bufferStart = txtBufferSize * (start / txtBufferSize)
-                txtBuffer = ByteArray(min(txtBufferSize, bis.available() - bufferStart.toInt()))
+                val remaining = bis.available().toLong() - bufferStart
+                txtBuffer = ByteArray(min(txtBufferSize, remaining.toInt()))
                 bufferEnd = bufferStart + txtBuffer!!.size
                 bis.skip(bufferStart)
-                bis.read(txtBuffer)
+                var offset = 0
+                while (offset < txtBuffer!!.size) {
+                    val read = bis.read(txtBuffer!!, offset, txtBuffer!!.size - offset)
+                    if (read < 0) break
+                    offset += read
+                }
             }
         }
 
@@ -125,7 +131,12 @@ class TextFile(private var book: Book) {
             /** 章节内容在缓冲区交界处 */
             LocalBook.getBookInputStream(book).use { bis ->
                 bis.skip(start)
-                bis.read(buffer)
+                var offset = 0
+                while (offset < buffer.size) {
+                    val read = bis.read(buffer, offset, buffer.size - offset)
+                    if (read < 0) break
+                    offset += read
+                }
             }
         } else {
             /** 章节内容在缓冲区内 */

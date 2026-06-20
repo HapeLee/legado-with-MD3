@@ -28,7 +28,7 @@ interface BookmarkDao {
     @Query(
         """SELECT * FROM bookmarks 
         where bookName = :bookName and bookAuthor = :bookAuthor 
-        and chapterName like '%'||:key||'%' or content like '%'||:key||'%'
+        and (chapterName like '%'||:key||'%' or content like '%'||:key||'%')
         order by chapterIndex"""
     )
     fun flowSearch(bookName: String, bookAuthor: String, key: String): Flow<List<Bookmark>>
@@ -43,7 +43,7 @@ interface BookmarkDao {
     @Query(
         """SELECT * FROM bookmarks 
         where bookName = :bookName and bookAuthor = :bookAuthor 
-        and chapterName like '%'||:key||'%' or content like '%'||:key||'%'
+        and (chapterName like '%'||:key||'%' or content like '%'||:key||'%')
         order by chapterIndex"""
     )
     fun search(bookName: String, bookAuthor: String, key: String): List<Bookmark>

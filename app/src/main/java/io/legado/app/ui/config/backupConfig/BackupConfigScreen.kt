@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import io.legado.app.utils.AppLog
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -434,6 +435,7 @@ fun BackupConfigScreen(
             try {
                 selectBackupPathLauncher.launch(null)
             } catch (e: Exception) {
+                AppLog.put("启动备份文件选择器失败\n${e.localizedMessage}", e)
             }
         }
     )
@@ -447,6 +449,7 @@ fun BackupConfigScreen(
             try {
                 backupAndSelectLauncher.launch(null)
             } catch (e: Exception) {
+                AppLog.put("启动恢复文件选择器失败\n${e.localizedMessage}", e)
             }
         }
     )

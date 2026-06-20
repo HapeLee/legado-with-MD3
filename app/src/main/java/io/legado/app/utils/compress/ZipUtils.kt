@@ -238,7 +238,7 @@ object ZipUtils {
         while (zipInputStream.nextEntry.also { entry = it } != null) {
             val entryName = entry!!.name
             val entryFile = File(dir, entryName)
-            if (!entryFile.canonicalPath.startsWith(dir.canonicalPath)) {
+            if (!entryFile.canonicalPath.startsWith(dir.canonicalPath + File.separator)) {
                 throw SecurityException("压缩文件只能解压到指定路径")
             }
             if (entry.isDirectory) {

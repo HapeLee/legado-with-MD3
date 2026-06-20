@@ -654,7 +654,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             return
         }
         val mediaItem = exoPlayer.currentMediaItem ?: return
-        val filePath = mediaItem.localConfiguration!!.uri.path!!
+        val filePath = mediaItem.localConfiguration?.uri?.path ?: return
         File(filePath).delete()
     }
 

@@ -34,6 +34,7 @@ suspend fun OkHttpClient.newCallResponse(
     requestBuilder.apply(builder)
     var response: Response? = null
     for (i in 0..retry) {
+        response?.close()
         response = newCall(requestBuilder.build()).await()
         if (response.isSuccessful) {
             return response
