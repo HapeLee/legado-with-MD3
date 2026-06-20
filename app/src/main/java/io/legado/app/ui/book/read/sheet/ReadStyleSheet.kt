@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -32,6 +33,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
+import io.legado.app.ui.widget.components.pager.rememberConsumeHorizontalPagerNestedScrollConnection
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
 
@@ -54,6 +56,7 @@ fun ReadStyleContent(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 2 })
     var currentPage by remember { mutableIntStateOf(0) }
+    val childPagerNestedScrollConnection = rememberConsumeHorizontalPagerNestedScrollConnection()
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
@@ -75,6 +78,7 @@ fun ReadStyleContent(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .clipToBounds()
+                .nestedScroll(childPagerNestedScrollConnection)
                 .pagerHeight(animatedHeight),
         ) { page ->
             Box(

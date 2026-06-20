@@ -129,6 +129,7 @@ import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.pager.rememberConsumeHorizontalPagerNestedScrollConnection
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
@@ -231,6 +232,7 @@ fun BookshelfScreen(
         initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
         pageCount = { uiState.groups.size }
     )
+    val childPagerNestedScrollConnection = rememberConsumeHorizontalPagerNestedScrollConnection()
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
 
@@ -835,6 +837,7 @@ fun BookshelfScreen(
                             state = pagerState,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .nestedScroll(childPagerNestedScrollConnection)
                                 .then(
                                     with(sharedTransitionScope) {
                                         if (this != null) Modifier.skipToLookaheadSize() else Modifier
