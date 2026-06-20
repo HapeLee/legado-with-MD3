@@ -492,11 +492,9 @@ object DatabaseMigrations {
 
 
     @Suppress("ClassName")
-    @DeleteColumn.Entries(
-        @DeleteColumn(
-            tableName = "books",
-            columnName = "remark"
-        )
+    @DeleteColumn(
+        tableName = "books",
+        columnName = "remark"
     )
     class Migration_91_92 : AutoMigrationSpec
 

@@ -176,9 +176,8 @@ fun Uri.writeBytes(
     byteArray: ByteArray
 ): Boolean {
     if (this.isContentScheme()) {
-        context.contentResolver.openOutputStream(this)?.let {
+        context.contentResolver.openOutputStream(this)?.use {
             it.write(byteArray)
-            it.close()
             return true
         }
         return false

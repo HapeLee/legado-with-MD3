@@ -74,6 +74,7 @@ object Debug {
         log(debugSource, msg ?: "", true)
     }
 
+    @Synchronized
     fun cancelDebug(destroy: Boolean = false) {
         tasks.clear()
 
@@ -83,20 +84,24 @@ object Debug {
         }
     }
 
+    @Synchronized
     fun startChecking(source: BookSource) {
         isChecking = true
         debugTimeMap[source.bookSourceUrl] = System.currentTimeMillis()
         debugMessageMap[source.bookSourceUrl] = "${debugTimeFormat.format(Date(0))} 开始校验"
     }
 
+    @Synchronized
     fun finishChecking() {
         isChecking = false
     }
 
+    @Synchronized
     fun getRespondTime(sourceUrl: String): Long {
         return debugTimeMap[sourceUrl] ?: CheckSource.timeout
     }
 
+    @Synchronized
     fun updateFinalMessage(sourceUrl: String, state: String) {
         if (debugTimeMap[sourceUrl] != null && debugMessageMap[sourceUrl] != null) {
             val spendingTime = System.currentTimeMillis() - debugTimeMap[sourceUrl]!!

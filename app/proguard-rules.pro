@@ -95,9 +95,9 @@ cn.hutool.core.util.**{*;}
 # markwon
 -dontwarn org.commonmark.ext.gfm.**
 
--keep class okhttp3.*{*;}
--keep class okio.*{*;}
--keep class com.jayway.jsonpath.*{*;}
+-keep class okhttp3.**{*;}
+-keep class okio.**{*;}
+-keep class com.jayway.jsonpath.**{*;}
 
 # LiveEventBus
 -keepclassmembers class androidx.lifecycle.LiveData {

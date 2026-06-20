@@ -29,8 +29,9 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         initInflate(mContext)
         mTextureViewContainer = findViewById(R.id.surface_container)
         if (isInEditMode) return
-        mScreenWidth = activityContext!!.resources.displayMetrics.widthPixels
-        mScreenHeight = activityContext!!.resources.displayMetrics.heightPixels
+        val ctx = activityContext ?: context
+        mScreenWidth = ctx.resources.displayMetrics.widthPixels
+        mScreenHeight = ctx.resources.displayMetrics.heightPixels
         mStartButton = findViewById(R.id.start)
         mStartButton.setOnClickListener { clickStartIcon() }
         mTopContainer = findViewById(R.id.layout_top)
