@@ -64,6 +64,12 @@ jobs:
           JAVA_HOME_VAL=$(java -XshowSettings:properties -version 2>&1 | grep "java.home" | head -1 | awk '{print $3}')
           echo "Detected java.home: $JAVA_HOME_VAL"
 
+      - name: Switch Gradle wrapper to official distribution (aliyun mirror unreachable in CI)
+        run: |
+          sed -i 's|https\\://mirrors.aliyun.com/macports/distfiles/gradle/|https\\://services.gradle.org/distributions/|' gradle/wrapper/gradle-wrapper.properties
+          echo "gradle-wrapper.properties:"
+          cat gradle/wrapper/gradle-wrapper.properties
+
       - name: Build Debug APK
         run: |
           chmod +x gradlew
