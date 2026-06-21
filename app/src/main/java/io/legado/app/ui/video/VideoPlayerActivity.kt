@@ -125,7 +125,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     private var pooledWebView: PooledWebView? = null
     private val imgAvailableWidth by lazy {
         val textView = introTextView
-        textView.width - textView.paddingLeft - textView.paddingRight - 8.dpToPx()
+        (textView.width - textView.paddingLeft - textView.paddingRight - 8.dpToPx()).coerceAtLeast(1)
     }
     private var initGetter = false
     private val glideImageGetter by lazy {

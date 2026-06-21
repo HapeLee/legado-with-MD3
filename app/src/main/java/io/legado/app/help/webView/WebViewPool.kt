@@ -9,7 +9,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * 池化的 WebView 包装，用于复用 WebView 实例。
  */
 class PooledWebView(val realWebView: WebView) {
-    fun release() {
+    /**
+     * 重置 WebView 状态以便放回池中复用。
+     * 不销毁 WebView，仅清理上一次使用的状态。
+     */
+    fun reset() {
         realWebView.stopLoading()
         realWebView.webChromeClient = null
         realWebView.webViewClient = WebViewClient()
@@ -18,6 +22,13 @@ class PooledWebView(val realWebView: WebView) {
         realWebView.removeJavascriptInterface("source")
         realWebView.removeJavascriptInterface("cache")
         (realWebView.parent as? android.view.ViewGroup)?.removeView(realWebView)
+    }
+
+    /**
+     * 真正销毁 WebView，释放资源。仅在不再需要时调用。
+     */
+    fun destroy() {
+        reset()
         realWebView.destroy()
     }
 }
@@ -29,11 +40,24 @@ object WebViewPool {
     private val pool = ConcurrentLinkedQueue<PooledWebView>()
 
     fun acquire(context: Context): PooledWebView {
-        val pooled = pool.poll()
-        return pooled ?: PooledWebView(WebView(context))
+        return pool.poll() ?: PooledWebView(WebView(context))
     }
 
+    /**
+     * 将 WebView 重置后归还到池中以便复用。
+     */
     fun release(pooledWebView: PooledWebView) {
-        pooledWebView.release()
+        pooledWebView.reset()
+        pool.offer(pooledWebView)
+    }
+
+    /**
+     * 销毁池中所有 WebView。可在 Application onTrimMemory 时调用。
+     */
+    fun clear() {
+        while (true) {
+            val pooled = pool.poll() ?: break
+            pooled.destroy()
+        }
     }
 }

@@ -301,7 +301,11 @@ class VideoPlayService : BaseService() {
             }
         }
         val intentFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-        registerReceiver(broadcastReceiver, intentFilter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(broadcastReceiver, intentFilter)
+        }
     }
 
     /**
@@ -368,7 +372,7 @@ class VideoPlayService : BaseService() {
     }
 
     private fun createNotification(): NotificationCompat.Builder {
-        val nTitle = getString(R.string.audio_play_t) + ": $VideoPlay.videoTitle"
+        val nTitle = getString(R.string.audio_play_t) + ": ${VideoPlay.videoTitle}"
         val nSubtitle = getString(R.string.audio_play_s)
         val builder = NotificationCompat.Builder(this@VideoPlayService, AppConst.channelIdReadAloud)
             .setSmallIcon(R.drawable.ic_volume_up)
@@ -527,7 +531,7 @@ class VideoPlayService : BaseService() {
                     isResizing = false
                 }
             }
-            return false
+            return true
         }
     }
 
@@ -616,7 +620,7 @@ class VideoPlayService : BaseService() {
                 windowManager.removeView(floatingView)
             }
             mediaSessionCompat.release()
-            unregisterReceiver(broadcastReceiver)
+            broadcastReceiver?.let { unregisterReceiver(it) }
             upMediaSessionPlaybackState(PlaybackStateCompat.STATE_STOPPED)
             upNotificationJob?.invokeOnCompletion {
                 notificationManager.cancel(NotificationId.VideoPlayService)

@@ -8,21 +8,25 @@ import android.util.Base64
 @Suppress("unused")
 object EncoderUtils {
 
+    /**
+     * 模拟 JavaScript 的 escape() 函数行为。
+     * 与 JS 一致：不编码 @*_+-./，hex 大写，%uXXXX 固定 4 位，%XX 固定 2 位。
+     */
     fun escape(src: String): String {
+        val safeChars = "@*_+-./"
         val tmp = StringBuilder()
         for (char in src) {
             val charCode = char.code
-            if (charCode in 48..57 || charCode in 65..90 || charCode in 97..122) {
+            if (charCode in 48..57 || charCode in 65..90 || charCode in 97..122 || char in safeChars) {
                 tmp.append(char)
                 continue
             }
-
-            val prefix = when {
-                charCode < 16 -> "%0"
-                charCode < 256 -> "%"
-                else -> "%u"
+            val hex = charCode.toString(16).uppercase()
+            if (charCode < 256) {
+                tmp.append("%").append(hex.padStart(2, '0'))
+            } else {
+                tmp.append("%u").append(hex.padStart(4, '0'))
             }
-            tmp.append(prefix).append(charCode.toString(16))
         }
         return tmp.toString()
     }
@@ -30,12 +34,12 @@ object EncoderUtils {
     @JvmOverloads
     fun base64Decode(str: String, flags: Int = Base64.DEFAULT): String {
         val bytes = Base64.decode(str, flags)
-        return String(bytes)
+        return String(bytes, Charsets.UTF_8)
     }
 
     @JvmOverloads
-    fun base64Encode(str: String, flags: Int = Base64.NO_WRAP): String? {
-        return Base64.encodeToString(str.toByteArray(), flags)
+    fun base64Encode(str: String, flags: Int = Base64.NO_WRAP): String {
+        return Base64.encodeToString(str.toByteArray(Charsets.UTF_8), flags)
     }
 
     @JvmOverloads

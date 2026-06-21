@@ -303,10 +303,11 @@ object VideoPlay : CoroutineScope by MainScope(){
                     }
                 }
                 preloadNextEpisode(chapterSource, book)
+                isLoading = false
             }.onError {
                 AppLog.put("获取资源链接出错\n$it", it, true)
+                isLoading = false
             }
-        isLoading = false
     }
 
     private fun buildChapterCacheKey(source: BookSource, book: Book, chapter: BookChapter): String {
@@ -364,8 +365,8 @@ object VideoPlay : CoroutineScope by MainScope(){
      */
     fun backFromWindowFull(context: Context?): Boolean {
         var backFrom = false
-        val vp =
-            (CommonUtil.scanForActivity(context)).findViewById<View?>(Window.ID_ANDROID_CONTENT) as ViewGroup
+        val activity = CommonUtil.scanForActivity(context) ?: return false
+        val vp = activity.findViewById<View?>(Window.ID_ANDROID_CONTENT) as ViewGroup
         val oldF = vp.findViewById<View?>(FULLSCREEN_ID)
         if (oldF != null) {
             backFrom = true

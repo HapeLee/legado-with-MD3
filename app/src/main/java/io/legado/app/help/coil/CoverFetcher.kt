@@ -176,8 +176,10 @@ class CoverFetcher(
             if (!file.exists() || !file.isFile) {
                 throw IOException("File not found: ${file.absolutePath}")
             }
+            val buffer = Buffer()
+            file.inputStream().use { buffer.readFrom(it) }
             return SourceResult(
-                source = ImageSource(source = Buffer().readFrom(file.inputStream()), context = options.context),
+                source = ImageSource(source = buffer, context = options.context),
                 mimeType = null,
                 dataSource = DataSource.DISK
             )
