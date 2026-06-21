@@ -74,10 +74,11 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew assembleAppDebug --stacktrace --no-daemon --no-configuration-cache --refresh-dependencies 2>&1 | tee build_output.txt
+          ./gradlew assembleAppDebug --stacktrace --no-daemon --no-configuration-cache 2>&1 | tee build_output.txt
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
+          GRADLE_OPTS: "-Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000"
 
       - name: Upload Build Logs
         if: always()
