@@ -121,7 +121,7 @@ fun BookInfoRouteScreen(
                 is BookInfoEffect.OpenReader -> {
                     val cls = when {
                         effect.book.isAudio -> AudioPlayActivity::class.java
-                        effect.book.isVideo -> io.legado.app.ui.book.read.video.VideoPlayActivity::class.java
+                        effect.book.isVideo -> io.legado.app.ui.video.VideoPlayerActivity::class.java
                         !effect.book.isLocal && effect.book.isImage && ReadMangaConfig.showMangaUi -> {
                             ReadMangaActivity::class.java
                         }
@@ -141,6 +141,12 @@ fun BookInfoRouteScreen(
                             putExtra("bookUrl", effect.book.bookUrl)
                             putExtra("inBookshelf", effect.inBookshelf)
                             putExtra("chapterChanged", effect.chapterChanged)
+                            if (cls == io.legado.app.ui.video.VideoPlayerActivity::class.java) {
+                                putExtra(
+                                    io.legado.app.ui.video.VideoPlayerActivity.EXTRA_PREPARE_BOOK_INFO,
+                                    true
+                                )
+                            }
                         }
                     )
                 }
