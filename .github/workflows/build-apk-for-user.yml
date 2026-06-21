@@ -51,24 +51,12 @@ jobs:
           echo "清空18PlusList.txt"
           echo "" > $GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
 
-      - name: Remove China mirrors (unreliable in CI)
-        run: |
-          sed -i '/maven\.aliyun\.com/d; /mirrors\.huaweicloud\.com/d; /mirrors\.cloud\.tencent\.com/d' settings.gradle
-          echo "settings.gradle after removing China mirrors:"
-          cat settings.gradle
-
       - name: Configure Gradle to use CI JDK (disable auto-download toolchains)
         run: |
           echo "org.gradle.java.installations.auto-download=false" >> gradle.properties
           echo "org.gradle.java.installations.auto-detect=true" >> gradle.properties
           JAVA_HOME_VAL=$(java -XshowSettings:properties -version 2>&1 | grep "java.home" | head -1 | awk '{print $3}')
           echo "Detected java.home: $JAVA_HOME_VAL"
-
-      - name: Switch Gradle wrapper to official distribution (aliyun mirror unreachable in CI)
-        run: |
-          sed -i 's|https\\://mirrors.aliyun.com/macports/distfiles/gradle/|https\\://services.gradle.org/distributions/|' gradle/wrapper/gradle-wrapper.properties
-          echo "gradle-wrapper.properties:"
-          cat gradle/wrapper/gradle-wrapper.properties
 
       - name: Build Debug APK
         run: |
