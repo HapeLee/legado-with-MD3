@@ -11,12 +11,6 @@
         android:layout_height="match_parent"
         android:gravity="center" />
 
-    <master.flame.danmaku.ui.widget.DanmakuView
-        android:id="@+id/danmaku_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
-
     <RelativeLayout
         android:id="@+id/thumb"
         android:layout_width="match_parent"
@@ -68,17 +62,6 @@
             android:layout_marginEnd="16dp"
             android:text="00:00"
             android:textColor="#ffffff" />
-
-        <TextView
-            android:id="@+id/toggle_danmaku"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:minEms="2"
-            android:text="关弹幕"
-            android:textColor="#ffffff"
-            android:visibility="gone"
-            tools:visibility="visible" />
 
         <ImageView
             android:id="@+id/fullscreen"

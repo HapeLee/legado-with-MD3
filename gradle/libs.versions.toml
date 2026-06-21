@@ -93,7 +93,6 @@ benchmarkMacroJunit4 = "1.4.1"
 baselineprofile = "1.4.1"
 profileinstaller = "1.4.1"
 gsyVideoPlayer = "v13.0.0"
-danmakuView = "1.0.0"
 [libraries]
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
@@ -244,7 +243,6 @@ capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 lyricViewx = { module = "com.github.Moriafly:LyricViewX", version.ref = "lyricViewx" }
 gsyVideoPlayer = { module = "com.github.CarGuo.GSYVideoPlayer:gsyvideoplayer", version.ref = "gsyVideoPlayer" }
-danmakuView = { module = "com.github.ctiao:DanmakuView", version.ref = "danmakuView" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }

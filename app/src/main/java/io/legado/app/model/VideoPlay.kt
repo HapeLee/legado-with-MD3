@@ -27,7 +27,6 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
 import io.legado.app.exception.ContentEmptyException
 import io.legado.app.help.CacheManager
-import io.legado.app.help.book.getDanmaku
 import io.legado.app.help.book.update
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.gsyVideo.ExoVideoManager
@@ -101,8 +100,6 @@ object VideoPlay : CoroutineScope by MainScope(){
         set(value) {
             videoPrefs.edit { putBoolean("fullBottomProgressBar", value) }
         }
-    /**  弹幕滚动速度  **/
-    var danmakuSpeed = 1.2f
     /**  锁屏  **/
     var lockCurScreen = false
     /**  竖屏视频  **/
@@ -133,18 +130,12 @@ object VideoPlay : CoroutineScope by MainScope(){
     var rssStar: RssStar? = null
     /**  订阅历史记录,收藏优先  **/
     var rssRecord: RssReadRecord? = null
-    /**  弹幕相关  **/
-    var danmakuFile: File? = null
-    var danmakuStr: String? = null
-    var danmakuShow = true
 
     /**
      * 开始播放
      */
     fun startPlay(player: StandardGSYVideoPlayer) {
         if (source == null) return
-        danmakuStr = null
-        danmakuFile = null
         val player = player.getCurrentPlayer()
         if (singleUrl) {
             val mUrl = videoUrl ?: return
@@ -270,10 +261,6 @@ object VideoPlay : CoroutineScope by MainScope(){
         }
         if (cached != null) {
             videoUrl = cached.mediaUrl
-            when (val danmaku = chapter.getDanmaku()) {
-                is String -> danmakuStr = danmaku
-                is File -> danmakuFile = danmaku
-            }
             player.mapHeadData = cached.headers.toMutableMap()
             player.setUp(cached.playUrl, false, File(appCtx.externalCache, "exoplayer"), chapter.title)
             if (autoPlay) {
@@ -303,10 +290,6 @@ object VideoPlay : CoroutineScope by MainScope(){
                     ruleData = book,
                     chapter = chapter
                 )
-                when (val danmaku = chapter.getDanmaku()) {
-                    is String -> danmakuStr = danmaku
-                    is File -> danmakuFile = danmaku
-                }
                 val playUrl = analyzeUrl.url
                 chapterLinkCache[chapterCacheKey] = CachedPlayLink(
                     playUrl = playUrl,
@@ -421,8 +404,6 @@ object VideoPlay : CoroutineScope by MainScope(){
             inBookshelf = true
             rssStar = null
             rssRecord = null
-            danmakuStr = null
-            danmakuFile = null
             lockCurScreen = false
             isPortraitVideo = false
             release()
