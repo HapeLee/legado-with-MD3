@@ -161,9 +161,6 @@ fun MainActivity.mainEntryProvider(
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
             },
-            onNavigateToAiConsole = {
-                onNavigateToRoute(MainRouteAiConsole)
-            },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
@@ -641,22 +638,4 @@ fun MainActivity.mainEntryProvider(
             onBack = { onNavigateBack() },
         )
     }
-
-    // ========== AI 模块入口 ==========
-    // AI screens are accessed via Activities (AiChatActivity, AiImageGalleryActivity)
-    // rather than Compose navigation routes. Route keys remain registered for compatibility.
-    entry<MainRouteAiConsole> { }
-    entry<MainRouteAiChat> { }
-    entry<MainRouteAiImage> { }
-    entry<MainRouteAiVideo> { }
-    entry<MainRouteAiVision> { }
-    entry<MainRouteAiTextTools> { }
-    entry<MainRouteAiSource> { }
-    entry<MainRouteAiSourceAdvanced> { }
-    entry<MainRouteAiBookshelf> { }
-    entry<MainRouteAiRecommend> { }
-    entry<MainRouteAiArchive> { }
-    entry<MainRouteAiContentTools> { }
-    entry<MainRouteAiArt> { }
-    entry<MainRouteAiSettings> { }
 }

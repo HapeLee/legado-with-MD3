@@ -29,7 +29,6 @@ sealed class PrefClickEvent {
     object OpenAbout : PrefClickEvent()
     object ToggleWebService : PrefClickEvent()
     object ExitApp : PrefClickEvent()
-    object OpenAiConsole : PrefClickEvent()
 }
 
 class MyViewModel(
