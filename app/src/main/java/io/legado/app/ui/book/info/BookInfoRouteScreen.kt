@@ -140,13 +140,6 @@ fun BookInfoRouteScreen(
                         Intent(activity, cls).apply {
                             putExtra("bookUrl", effect.book.bookUrl)
                             putExtra("inBookshelf", effect.inBookshelf)
-                            putExtra("chapterChanged", effect.chapterChanged)
-                            if (cls == io.legado.app.ui.video.VideoPlayerActivity::class.java) {
-                                putExtra(
-                                    io.legado.app.ui.video.VideoPlayerActivity.EXTRA_PREPARE_BOOK_INFO,
-                                    true
-                                )
-                            }
                         }
                     )
                 }
