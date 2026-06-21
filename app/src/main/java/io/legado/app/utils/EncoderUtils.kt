@@ -49,3 +49,30 @@ object EncoderUtils {
     }
 
 }
+
+/**
+ * 解析 data URL 中的 base64 数据并返回字节数组。
+ * 支持 `data:image/png;base64,...` 形式或纯 base64 字符串。
+ * 失败时返回 null。
+ */
+fun String.decodeBase64DataUrlBytes(): ByteArray? {
+    val payload = this.substringAfter(",", this).trim().filterNot { it.isWhitespace() }
+    if (payload.isEmpty()) return null
+    val normalized = if (payload.length % 4 != 0) {
+        payload + "=".repeat(4 - (payload.length % 4))
+    } else {
+        payload
+    }
+    return runCatching { Base64.decode(normalized, Base64.DEFAULT) }
+        .getOrElse {
+            runCatching { Base64.decode(normalized, Base64.URL_SAFE) }.getOrNull()
+        }
+}
+
+/**
+ * 估算 data URL 或纯 base64 字符串解码后的字节数（不实际解码）。
+ */
+fun String.estimateBase64DataUrlBytes(): Long {
+    val payload = this.substringAfter(",", this).trim().filterNot { it.isWhitespace() }
+    return payload.length.toLong() * 3L / 4L
+}

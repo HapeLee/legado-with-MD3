@@ -10,6 +10,7 @@ import androidx.lifecycle.Lifecycle
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import io.legado.app.utils.lifecycle
 import java.lang.ref.WeakReference
 
 class GlideImageGetter private constructor(

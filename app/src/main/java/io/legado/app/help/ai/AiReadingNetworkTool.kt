@@ -140,9 +140,7 @@ object AiReadingNetworkTool {
                 sourceRegex = args.optString("sourceRegex").takeIf { it.isNotBlank() },
                 overrideUrlRegex = args.optString("overrideUrlRegex").takeIf { it.isNotBlank() },
                 javaScript = args.optString("js").takeIf { it.isNotBlank() },
-                delayTime = args.optLong("delayMs", 900L).coerceIn(0L, 30_000L),
-                cacheFirst = args.optBoolean("cacheFirst", false),
-                timeout = timeoutMs
+                delayTime = args.optLong("delayMs", 900L).coerceIn(0L, 30_000L)
             ).getStrResponse()
             val body = response.body.orEmpty()
             ok().apply {

@@ -48,4 +48,11 @@ object UiCorner {
             addState(intArrayOf(), normal)
         }
     }
+
+    /**
+     * Convert a dp value to pixels, applying the device's display density.
+     */
+    fun scaledDp(dp: Float): Float {
+        return dp * android.content.res.Resources.getSystem().displayMetrics.density
+    }
 }

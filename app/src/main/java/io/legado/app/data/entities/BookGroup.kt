@@ -37,6 +37,7 @@ data class BookGroup(
         const val IdLocalNone = -5L
         const val IdManga = -7L
         const val IdText = -8L
+        const val IdVideo = -9L
         const val IdError = -11L
         const val IdReading = -20L
         const val IdUnread = -21L

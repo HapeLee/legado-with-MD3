@@ -177,7 +177,7 @@ class CoverFetcher(
                 throw IOException("File not found: ${file.absolutePath}")
             }
             return SourceResult(
-                source = ImageSource(source = okio.source(file.inputStream()), context = options.context),
+                source = ImageSource(source = Buffer().readFrom(file.inputStream()), context = options.context),
                 mimeType = null,
                 dataSource = DataSource.DISK
             )

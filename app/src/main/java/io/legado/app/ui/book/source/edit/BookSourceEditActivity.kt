@@ -31,10 +31,14 @@ import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.search.SearchActivity
+import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.qrcode.QrCodeResult
+import io.legado.app.ui.widget.code.addLegadoPattern
+import io.legado.app.ui.widget.code.addJsonPattern
+import io.legado.app.ui.widget.code.addJsPattern
 import io.legado.app.ui.widget.dialog.UrlOptionDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
@@ -774,7 +778,7 @@ class BookSourceEditActivity :
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
-    override fun onUndoClicked() {
+    fun onUndoClicked() {
         val editText = window.decorView.findFocus()
         if (editText is EditText) {
             editText.onTextContextMenuItem(android.R.id.undo)
@@ -782,7 +786,7 @@ class BookSourceEditActivity :
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
-    override fun onRedoClicked() {
+    fun onRedoClicked() {
         val editText = window.decorView.findFocus()
         if (editText is EditText) {
             editText.onTextContextMenuItem(android.R.id.redo)

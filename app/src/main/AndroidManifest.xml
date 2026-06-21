@@ -224,6 +224,11 @@
             android:enableOnBackInvokedCallback="true"
             android:launchMode="standard"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.code.CodeEditActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- AI 聊天界面 -->
         <activity
             android:name=".ui.main.ai.AiChatActivity"

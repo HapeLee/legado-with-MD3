@@ -55,6 +55,7 @@
     <string name="dynamic_loading">Loading</string>
     <string name="draw">Warning</string>
     <string name="edit">Edit</string>
+    <string name="save">Save</string>
     <string name="delete">Delete</string>
     <string name="delete_select_group">Delete Select Group</string>
     <string name="delete_all">Delete all</string>
@@ -64,6 +65,7 @@
     <string name="replace_purify_desc">Configure replacement rules</string>
     <string name="not_available">Not available now</string>
     <string name="enable">Enable</string>
+    <string name="disable">Disable</string>
     <string name="replace_purify_search">Search Replacement</string>
     <string name="bookshelf">Bookshelf</string>
     <string name="home">Home</string>
@@ -227,6 +229,7 @@
     <string name="previous">Previous</string>
     <string name="next">Next</string>
     <string name="video">Video</string>
+    <string name="unknown">Unknown</string>
     <string name="set_timer">Timer</string>
     <string name="read_aloud_pause">Speak Paused</string>
     <string name="read_aloud_timer">Speaking(%d min left)</string>

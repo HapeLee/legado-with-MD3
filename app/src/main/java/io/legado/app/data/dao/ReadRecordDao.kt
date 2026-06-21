@@ -17,6 +17,15 @@ interface ReadRecordDao {
     @get:Query("select * from readRecord")
     val all: List<ReadRecord>
 
+    @get:Query("select * from readRecord order by lastRead desc")
+    val allShow: List<ReadRecord>
+
+    @get:Query("select * from readRecordDetail order by date desc, lastReadTime desc")
+    val allDesc: List<ReadRecordDetail>
+
+    @get:Query("select coalesce(sum(readTime), 0) from readRecord")
+    val allTime: Long
+
     @get:Query("select * from readRecordDetail")
     val allDetail: List<ReadRecordDetail>
 

@@ -55,7 +55,7 @@ class AiConfigFragment : PreferenceFragment(),
         super.onViewCreated(view, savedInstanceState)
         activity?.setTitle(R.string.ai_setting)
         preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(this)
-        listView.setEdgeEffectColor(primaryColor)
+        listView.setEdgeEffectColor(requireContext().primaryColor)
     }
 
     override fun onDestroy() {

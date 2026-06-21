@@ -2,6 +2,7 @@ package io.legado.app.help.webView
 
 import android.content.Context
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -12,9 +13,10 @@ class PooledWebView(val realWebView: WebView) {
         realWebView.stopLoading()
         realWebView.webChromeClient = null
         realWebView.webViewClient = WebViewClient()
-        realWebView.removeJavascriptInterface(nameCache)
-        realWebView.removeJavascriptInterface(nameSource)
-        realWebView.removeJavascriptInterface(nameJava)
+        realWebView.removeJavascriptInterface("searchRule")
+        realWebView.removeJavascriptInterface("java")
+        realWebView.removeJavascriptInterface("source")
+        realWebView.removeJavascriptInterface("cache")
         (realWebView.parent as? android.view.ViewGroup)?.removeView(realWebView)
         realWebView.destroy()
     }

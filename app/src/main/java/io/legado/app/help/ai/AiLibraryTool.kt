@@ -225,7 +225,7 @@ object AiLibraryTool {
                         put("date", record.date)
                         put("readTimeMillis", record.readTime)
                         put("readTimeText", formatDuration(record.readTime))
-                        put("updatedAt", formatTime(record.updatedAt))
+                        put("updatedAt", formatTime(record.lastReadTime))
                     })
                 }
             })

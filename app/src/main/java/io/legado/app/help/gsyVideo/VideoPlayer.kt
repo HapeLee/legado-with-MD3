@@ -256,7 +256,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
         actionBar: Boolean,
         statusBar: Boolean
     ): VideoPlayer? {
-        return super.startWindowFullscreen(context, actionBar, statusBar)
+        return super.startWindowFullscreen(context, actionBar, statusBar) as? VideoPlayer
     }
 
     override fun resolveNormalVideoShow(

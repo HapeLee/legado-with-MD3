@@ -917,11 +917,11 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         SourceCallBack.callBackBook(SourceCallBack.END_READ, VideoPlay.source as BookSource?, VideoPlay.book, VideoPlay.chapter)
     }
 
-    override fun updateFavorite(title: String?, group: String?) {
+    fun updateFavorite(title: String?, group: String?) {
         viewModel.updateFavorite(title, group)
     }
 
-    override fun deleteFavorite() {
+    fun deleteFavorite() {
         viewModel.delFavorite()
     }
 

@@ -16,6 +16,7 @@ import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.ai.AI_API_MODE_CHAT_COMPLETIONS
 import io.legado.app.ui.main.ai.AI_API_MODE_RESPONSES
 import io.legado.app.ui.main.ai.AiChatSession

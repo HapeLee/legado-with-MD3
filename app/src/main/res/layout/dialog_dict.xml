@@ -19,7 +19,7 @@
         android:layout_marginTop="8dp"
         android:visibility="gone" />
 
-    <io.noties.markwon.editor.MarkwonEditorTextView
+    <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvDict"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

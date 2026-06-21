@@ -19,5 +19,7 @@
     <item name="cursor_right" type="id" />
     <item name="navigation_bar" type="id" />
     <item name="ai_markdown_link_tap_handler" type="id" />
+    <item name="small_id" type="id" />
+    <item name="full_id" type="id" />
 
 </resources>
