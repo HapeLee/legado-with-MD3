@@ -4,7 +4,6 @@ buildscript {
         set("build_tool_version", "34.0.0")
     }
 }
-
 plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.android.application) apply false
@@ -18,7 +17,6 @@ plugins {
     alias(libs.plugins.android.test) apply false
     alias(libs.plugins.baselineprofile) apply false
 }
-
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
