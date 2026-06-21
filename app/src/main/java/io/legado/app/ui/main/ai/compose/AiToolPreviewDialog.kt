@@ -164,8 +164,7 @@ private fun BookResultPreview(
                                 name = book.name,
                                 author = book.author,
                                 loadOnlyWifi = false,
-                                sourceOrigin = book.origin,
-                                preferThumb = true
+                                sourceOrigin = book.origin
                             )
                         }
                     )

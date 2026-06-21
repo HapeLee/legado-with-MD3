@@ -7,6 +7,8 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssSource
 import io.legado.app.model.VideoPlay
@@ -22,6 +24,14 @@ class VideoPlayerViewModel(application: Application) : BaseViewModel(application
             }
         }.onSuccess {
             success?.invoke()
+        }
+    }
+
+    fun saveBook(book: Book, toc: List<BookChapter>) {
+        execute {
+            appDb.bookDao.insert(book)
+            appDb.bookChapterDao.delByBook(book.bookUrl)
+            appDb.bookChapterDao.insert(*toc.toTypedArray())
         }
     }
 

@@ -9,7 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.lib.theme.ThemeStore.Companion.accentColor
+import io.legado.app.lib.theme.accentColor
 
 class ChapterAdapter(
     private var chapters: List<BookChapter>,
@@ -65,7 +65,7 @@ class ChapterAdapter(
             tvChapterName.text = chapter.title
             tvChapterName.textSize = if (isVolume) 12f else if (isSelected) 14.5f else 13.5f
             if (isSelected) {
-                tvChapterName.setTextColor(accentColor)
+                tvChapterName.setTextColor(itemView.context.accentColor)
             } else {
                 tvChapterName.setTextColor(ContextCompat.getColor(itemView.context,R.color.primaryText))
             }

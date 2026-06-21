@@ -7,7 +7,6 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -114,8 +113,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     private var initIntroView = false
     private val introTextView by lazy {
         initIntroView = true
-        val inflater = LayoutInflater.from(this)
-        val view = inflater.inflate(R.layout.view_book_intro, binding.tvIntroContainer, false) as ScrollTextView
+        val view = ScrollTextView(this, null)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             view.revealOnFocusHint = false
         }
@@ -132,9 +130,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         GlideImageGetter(
             this,
             introTextView,
-            lifecycle,
-            imgAvailableWidth,
-            VideoPlay.source?.getKey()
+            ""
         )
     }
 
@@ -279,25 +275,21 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     }
 
     private fun prepareVideoBook() {
-        bookInfoViewModel.bookData.observe(this) { book ->
+        bookInfoViewModel.uiState.observe(this) { state ->
+            val book = state.book ?: return@observe
             if (preparedVideoStarted) {
                 return@observe
             }
             binding.titleBar.title = book.name
             VideoPlay.book = book
-            VideoPlay.source = bookInfoViewModel.bookSource
-            VideoPlay.inBookshelf = bookInfoViewModel.inBookshelf
-            initView()
-        }
-        bookInfoViewModel.chapterListData.observe(this) { chapters ->
-            val book = bookInfoViewModel.getBook(false) ?: return@observe
-            if (preparedVideoStarted || chapters.isEmpty()) {
+            VideoPlay.source = state.bookSource
+            VideoPlay.inBookshelf = state.inBookshelf
+            val chapters = state.chapterList
+            if (chapters.isEmpty()) {
+                initView()
                 return@observe
             }
             preparedVideoStarted = true
-            VideoPlay.book = book
-            VideoPlay.source = bookInfoViewModel.bookSource
-            VideoPlay.inBookshelf = bookInfoViewModel.inBookshelf
             VideoPlay.toc = chapters
             VideoPlay.volumes.clear()
             chapters.forEach { chapter ->
@@ -606,6 +598,16 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         upView()
         VideoPlay.startPlay(playerView)
         VideoPlay.saveRead()
+    }
+
+    override fun addToBookshelf(book: Book, toc: List<BookChapter>) {
+        book.removeType(BookType.notShelf)
+        viewModel.saveBook(book, toc)
+    }
+
+    override fun onRssStarSaved(rssStar: io.legado.app.data.entities.RssStar?) {
+        VideoPlay.rssStar = rssStar
+        upStarMenu()
     }
 
     private fun upView() {
