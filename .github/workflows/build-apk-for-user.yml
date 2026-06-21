@@ -51,11 +51,11 @@ jobs:
           echo "清空18PlusList.txt"
           echo "" > $GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
 
-      - name: Remove Aliyun mirrors (unreliable in CI)
+      - name: Remove China mirrors (unreliable in CI)
         run: |
-          sed -i.bak '/maven\.aliyun\.com/d' settings.gradle
-          echo "settings.gradle after removing aliyun mirrors:"
-          head -45 settings.gradle
+          sed -i '/mirrors\.aliyun\.com/d; /mirrors\.huaweicloud\.com/d; /mirrors\.cloud\.tencent\.com/d' settings.gradle
+          echo "settings.gradle after removing China mirrors:"
+          cat settings.gradle
 
       - name: Configure Gradle to use CI JDK (disable auto-download toolchains)
         run: |
