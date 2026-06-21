@@ -86,7 +86,8 @@ object SourceCallBack {
         event: String,
         source: BookSource?,
         book: Book?,
-        chapter: BookChapter? = null
+        chapter: BookChapter? = null,
+        result: String? = null
     ) {
         if (source == null || book == null || !source.eventListener) return
         val jsStr = source.getContentRule().callBackJs
@@ -96,7 +97,7 @@ object SourceCallBack {
                 runScriptWithContext(coroutineContext) {
                     source.evalJS(jsStr) {
                         put("event", event)
-                        put("result", null)
+                        put("result", result)
                         put("book", book)
                         put("chapter", chapter)
                     }

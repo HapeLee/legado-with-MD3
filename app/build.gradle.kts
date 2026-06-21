@@ -237,6 +237,7 @@ dependencies {
     implementation(libs.markwon.ext.tasklist)
     implementation(libs.markwon.linkify)
     implementation(libs.markwon.html)
+    implementation(libs.markwon.editor)
     implementation(libs.markdown.renderer.m3)
     implementation(libs.quick.chinese.transfer.core)
     implementation(libs.hutool.crypto)

@@ -3,6 +3,7 @@
 package io.legado.app.lib.theme
 
 import android.content.Context
+import android.graphics.Typeface
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -29,3 +30,5 @@ val Context.secondaryTextColor: Int
 fun Context.composePanelRadius(): Dp = 16.dp
 
 fun Context.composeActionRadius(): Dp = 12.dp
+
+fun Context.uiTypeface(): Typeface = Typeface.DEFAULT

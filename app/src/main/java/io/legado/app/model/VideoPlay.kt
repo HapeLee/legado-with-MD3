@@ -21,7 +21,6 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.ReadRecentBook
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
@@ -584,8 +583,6 @@ object VideoPlay : CoroutineScope by MainScope(){
                 book.durChapterTitle = chapter?.title
                 SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, source as BookSource?, book, chapter, durTime.toString())
                 book.update()
-                appDb.readRecentBookDao.insert(ReadRecentBook(book.bookUrl, durTime))
-                ReadRecordWidgetStore.updateRecentSnapshot(book, durTime)
             }
             rssStar?.let {
                 it.durPos = durPos

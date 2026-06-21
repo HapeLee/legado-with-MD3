@@ -15,10 +15,12 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.main.ai.AiChatMessage
+import io.legado.app.utils.invisible
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.setMarkdown
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.utils.visible
 import io.noties.markwon.Markwon
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.html.HtmlPlugin
@@ -58,8 +60,8 @@ class AiSelectionDialog() : BaseDialogFragment(R.layout.dialog_dict) {
             dismissAllowingStateLoss()
             return
         }
-        binding.tabLayout.setBackgroundColor(backgroundColor)
-        binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
+        binding.tabLayout.setBackgroundColor(requireContext().backgroundColor)
+        binding.tabLayout.setSelectedTabIndicatorColor(requireContext().accentColor)
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText(R.string.ai_reply))
         binding.tvDict.movementMethod = LinkMovementMethod()
         binding.tvDict.text = getString(R.string.dynamic_loading)
@@ -84,7 +86,7 @@ class AiSelectionDialog() : BaseDialogFragment(R.layout.dialog_dict) {
                     )
                 }
             }.getOrElse { it.localizedMessage ?: it.toString() }
-            binding.rotateLoading.inVisible()
+            binding.rotateLoading.invisible()
             renderMarkdown(result)
         }
     }

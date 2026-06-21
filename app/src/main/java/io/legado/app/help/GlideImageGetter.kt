@@ -6,17 +6,32 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
 import android.text.Html
 import android.widget.TextView
+import androidx.lifecycle.Lifecycle
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import java.lang.ref.WeakReference
 
-class GlideImageGetter(private val context: Context, textView: TextView, private val originalHtml: String) :
-    Html.ImageGetter {
+class GlideImageGetter private constructor(
+    private val context: Context,
+    textView: TextView,
+    private val originalHtml: String?,
+    private val lifecycle: Lifecycle?,
+    private val availableWidth: Int,
+    private val sourceOrigin: String?
+) : Html.ImageGetter {
     companion object {
         fun create(context: Context, textView: TextView, html: String): GlideImageGetter {
-            return GlideImageGetter(context, textView, html)
+            return GlideImageGetter(
+                context = context,
+                textView = textView,
+                originalHtml = html,
+                lifecycle = null,
+                availableWidth = 0,
+                sourceOrigin = null
+            )
         }
+
         private fun createEmptyDrawable(): Drawable {
             return object : Drawable() {
                 override fun draw(canvas: android.graphics.Canvas) = Unit
@@ -27,6 +42,34 @@ class GlideImageGetter(private val context: Context, textView: TextView, private
             }
         }
     }
+
+    constructor(
+        context: Context,
+        textView: TextView,
+        originalHtml: String
+    ) : this(
+        context = context,
+        textView = textView,
+        originalHtml = originalHtml,
+        lifecycle = null,
+        availableWidth = 0,
+        sourceOrigin = null
+    )
+
+    constructor(
+        context: Context,
+        textView: TextView,
+        lifecycle: Lifecycle,
+        availableWidth: Int,
+        sourceOrigin: String? = null
+    ) : this(
+        context = context,
+        textView = textView,
+        originalHtml = null,
+        lifecycle = lifecycle,
+        availableWidth = availableWidth,
+        sourceOrigin = sourceOrigin
+    )
 
     private val loadedDrawables = mutableMapOf<String, Drawable>()
     private val textViewRef = WeakReference(textView)
@@ -39,9 +82,13 @@ class GlideImageGetter(private val context: Context, textView: TextView, private
         val urlDrawable = GlideUrlDrawable()
         val target = createImageTarget(urlDrawable, source)
         targets.add(target)
-        Glide.with(context)
-            .load(source)
-            .into(target)
+        val requestManager = Glide.with(context)
+        val requestBuilder = if (lifecycle != null) {
+            requestManager.lifecycle(lifecycle).load(source)
+        } else {
+            requestManager.load(source)
+        }
+        requestBuilder.into(target)
         return urlDrawable
     }
 
@@ -56,8 +103,11 @@ class GlideImageGetter(private val context: Context, textView: TextView, private
             ) {
                 targets.remove(this)
                 val textView = textViewRef.get() ?: return
-                val availableWidth = textView.width - textView.paddingLeft - textView.paddingRight
-                val maxWidth = availableWidth.takeIf { it > 0 } ?: 700
+                val maxWidth = if (availableWidth > 0) {
+                    availableWidth
+                } else {
+                    textView.width - textView.paddingLeft - textView.paddingRight
+                }.takeIf { it > 0 } ?: 700
                 val drawableWidth = resource.intrinsicWidth.coerceAtLeast(1)
                 val drawableHeight = resource.intrinsicHeight.coerceAtLeast(1)
                 val scale = if (drawableWidth > maxWidth) {
@@ -105,11 +155,15 @@ class GlideImageGetter(private val context: Context, textView: TextView, private
     private fun refreshTextView() {
         val textView = textViewRef.get() ?: return
         textView.post {
-            // 创建新的ImageGetter，但使用缓存
-            val cachedImageGetter = CachedImageGetter(loadedDrawables)
-            val newHtml =
-                Html.fromHtml(originalHtml,  Html.FROM_HTML_MODE_COMPACT, cachedImageGetter, null)
-            textView.text = newHtml
+            if (originalHtml != null) {
+                val cachedImageGetter = CachedImageGetter(loadedDrawables)
+                val newHtml =
+                    Html.fromHtml(originalHtml, Html.FROM_HTML_MODE_COMPACT, cachedImageGetter, null)
+                textView.text = newHtml
+            } else {
+                // Trigger a redraw without re-parsing (compatible with 5-parameter constructor)
+                textView.text = textView.text
+            }
         }
     }
 

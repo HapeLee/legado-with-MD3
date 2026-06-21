@@ -187,7 +187,7 @@ class VideoPlayService : BaseService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
-                checkFloatPermission()
+                appCtx.toastOnUi("需要悬浮窗权限")
                 stopSelf()
                 return START_NOT_STICKY
             }

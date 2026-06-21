@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -66,6 +67,7 @@ import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.rss.favorites.RssFavoritesDialog
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.video.config.SettingsDialog
 import io.legado.app.ui.widget.dialog.PhotoDialog
@@ -113,7 +115,8 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     private var initIntroView = false
     private val introTextView by lazy {
         initIntroView = true
-        val view = ScrollTextView(this, null)
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.view_book_intro, binding.tvIntroContainer, false) as ScrollTextView
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             view.revealOnFocusHint = false
         }
@@ -130,7 +133,9 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         GlideImageGetter(
             this,
             introTextView,
-            ""
+            lifecycle,
+            imgAvailableWidth,
+            VideoPlay.source?.getKey()
         )
     }
 
@@ -275,21 +280,25 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     }
 
     private fun prepareVideoBook() {
-        bookInfoViewModel.uiState.observe(this) { state ->
-            val book = state.book ?: return@observe
+        bookInfoViewModel.bookData.observe(this) { book ->
             if (preparedVideoStarted) {
                 return@observe
             }
             binding.titleBar.title = book.name
             VideoPlay.book = book
-            VideoPlay.source = state.bookSource
-            VideoPlay.inBookshelf = state.inBookshelf
-            val chapters = state.chapterList
-            if (chapters.isEmpty()) {
-                initView()
+            VideoPlay.source = bookInfoViewModel.bookSource
+            VideoPlay.inBookshelf = bookInfoViewModel.inBookshelf
+            initView()
+        }
+        bookInfoViewModel.chapterListData.observe(this) { chapters ->
+            val book = bookInfoViewModel.getBook(false) ?: return@observe
+            if (preparedVideoStarted || chapters.isEmpty()) {
                 return@observe
             }
             preparedVideoStarted = true
+            VideoPlay.book = book
+            VideoPlay.source = bookInfoViewModel.bookSource
+            VideoPlay.inBookshelf = bookInfoViewModel.inBookshelf
             VideoPlay.toc = chapters
             VideoPlay.volumes.clear()
             chapters.forEach { chapter ->

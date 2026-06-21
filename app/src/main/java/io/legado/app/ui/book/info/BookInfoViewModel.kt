@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import coil.ImageLoader
 import coil.request.SuccessResult
@@ -95,6 +96,22 @@ class BookInfoViewModel(
 
     private val _effects = MutableSharedFlow<BookInfoEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
+
+    //region Compatibility API for legacy View-based screens (e.g. VideoPlayerActivity)
+    @Suppress("unused")
+    val bookData = MutableLiveData<Book>()
+
+    @Suppress("unused")
+    val chapterListData = MutableLiveData<List<BookChapter>>()
+
+    fun getBook(toastNull: Boolean = true): Book? {
+        val book = currentBook
+        if (book == null && toastNull) {
+            context.toastOnUi("未找到书籍")
+        }
+        return book
+    }
+    //endregion
 
     private var currentBook: Book? = null
         set(value) {
@@ -1291,6 +1308,9 @@ class BookInfoViewModel(
                 deleteOriginal = LocalConfig.deleteBookOriginal,
             )
         }
+        // Mirror state to legacy LiveData for View-based screens (e.g. VideoPlayerActivity)
+        currentBook?.let { bookData.value = it }
+        chapterListData.value = currentChapterList
     }
 
     private fun onRelatedBookClick(book: SearchBook) {
