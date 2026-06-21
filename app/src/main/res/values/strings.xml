@@ -1093,6 +1093,8 @@
     <string name="direct_link_upload_rule_summary">Generate Direct URLs for Exported Book Source Lists</string>
     <string name="direct_link_upload_config">Direct link upload configuration</string>
     <string name="copy_play_url">Copy Play URL</string>
+    <string name="float_window">Float Window</string>
+    <string name="open_other_video_player">Open with Other Player</string>
     <string name="set_source_variable">Set source variable</string>
     <string name="set_book_variable">Set book variable</string>
     <string name="summary">summary</string>
@@ -1954,6 +1956,7 @@
     <string name="eye_protection_end_time">End Time</string>
 
     <!-- AI Assistant -->
+    <string name="ai">AI</string>
     <string name="ai_assistant">AI 助手</string>
     <string name="ai_assistant_summary">与 AI 对话，查询书架、书源和阅读记录</string>
     <string name="ai_setting">AI 设置</string>

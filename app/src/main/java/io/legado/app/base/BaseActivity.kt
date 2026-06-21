@@ -109,7 +109,11 @@ abstract class BaseActivity<VB : ViewBinding>(
 
         observeLiveBus()
         //onActivityCreated(savedInstanceState)
+        onActivityCreated(savedInstanceState)
     }
+
+    @Suppress("DEPRECATION")
+    open fun onActivityCreated(savedInstanceState: Bundle?) {}
 
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)

@@ -290,10 +290,12 @@ fun TextView.setMarkdown(markwon: Markwon, spanned: Spanned, imgOnLongClickListe
                         cancelLongClick()
                         if (durSource != null) {
                             isLongClickable = false
-                            longClickRunnable = postDelayed(600) {
+                            val runnable = Runnable {
                                 isLongClick = true
                                 imgOnLongClickListener(durSource)
                             }
+                            longClickRunnable = runnable
+                            postDelayed(runnable, 600)
                             return true
                         }
                     }

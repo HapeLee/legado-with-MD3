@@ -168,6 +168,9 @@ media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
 markwon-image-glide = { module = "io.noties.markwon:image-glide", version.ref = "markwon" }
 markwon-ext-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
+markwon-ext-strikethrough = { module = "io.noties.markwon:ext-strikethrough", version.ref = "markwon" }
+markwon-ext-tasklist = { module = "io.noties.markwon:ext-tasklist", version.ref = "markwon" }
+markwon-linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
 markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
 
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }

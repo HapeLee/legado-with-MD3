@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="AlwaysShowAction">
+
+    <item
+        android:id="@+id/menu_custom_btn"
+        android:icon="@drawable/ic_menu"
+        android:title="@string/custom_button"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_rss_star"
+        android:icon="@drawable/ic_star_border"
+        android:title="@string/out_favorites"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_float_window"
+        android:icon="@drawable/ic_float_window"
+        android:title="@string/float_window"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_config_settings"
+        android:title="@string/setting"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_login"
+        android:title="@string/login"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_copy_video_url"
+        android:title="@string/copy_play_url"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_open_other_video_player"
+        android:title="@string/open_other_video_player"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_edit_source"
+        android:title="@string/edit_book_source"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_log"
+        android:title="@string/log"
+        app:showAsAction="never" />
+
+</menu>

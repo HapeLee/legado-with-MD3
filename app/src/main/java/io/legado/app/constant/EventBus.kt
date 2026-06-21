@@ -39,4 +39,6 @@ object EventBus {
     const val UP_TOC = "upToc"
 
     const val UP_ALL_BOOK_TOC = "upAllBookToc"
+    const val VIDEO_SUB_TITLE = "videoSubTitle"
+    const val UP_VIDEO_INFO = "upVideoInfo"
 }

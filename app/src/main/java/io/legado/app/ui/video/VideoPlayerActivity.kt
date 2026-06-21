@@ -67,7 +67,6 @@ import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.favorites.RssFavoritesDialog
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.video.config.SettingsDialog
 import io.legado.app.ui.widget.dialog.PhotoDialog
@@ -784,7 +783,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                 }
             }
             R.id.menu_rss_star -> viewModel.addFavorite {
-                VideoPlay.rssStar?.let { showDialogFragment(RssFavoritesDialog(it)) }
+                upStarMenu()
             }
             R.id.menu_float_window -> startFloatingWindow()
             R.id.menu_config_settings -> showDialogFragment(SettingsDialog(this))
@@ -817,8 +816,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                         VideoPlay.source as? BookSource,
                         it,
                         VideoPlay.chapter,
-                        BookType.video,
-                        url
+                        BookType.video
                     ) {
                         sendToClip(url)
                     }
@@ -918,16 +916,10 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
 
     override fun onStart() {
         super.onStart()
-        if (initGetter) {
-            glideImageGetter.start()
-        }
     }
 
     override fun onStop() {
         super.onStop()
-        if (initGetter) {
-            glideImageGetter.stop()
-        }
     }
 
     override fun onDestroy() {

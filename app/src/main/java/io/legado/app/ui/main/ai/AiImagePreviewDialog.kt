@@ -75,8 +75,8 @@ class AiImagePreviewDialog() : BaseDialogFragment(R.layout.dialog_ai_image_previ
         binding.btnGroup.isVisible = target.favorite
         binding.btnRename.isEnabled = target.favorite
         binding.btnRename.alpha = if (target.favorite) 1f else 0.45f
-        binding.btnGroup.setTextColor(secondaryTextColor)
-        binding.btnRename.setTextColor(secondaryTextColor)
+        binding.btnGroup.setTextColor(requireContext().secondaryTextColor)
+        binding.btnRename.setTextColor(requireContext().secondaryTextColor)
     }
 
     private fun toggleFavorite() {

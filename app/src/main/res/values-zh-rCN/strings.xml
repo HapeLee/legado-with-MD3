@@ -1057,6 +1057,8 @@
     <string name="direct_link_upload_rule_summary">用于导出书源书单时生成直链 URL</string>
     <string name="direct_link_upload_config">直链上传配置</string>
     <string name="copy_play_url">拷贝播放 URL</string>
+    <string name="float_window">悬浮窗</string>
+    <string name="open_other_video_player">用其他播放器打开</string>
     <string name="set_source_variable">设置源变量</string>
     <string name="set_book_variable">设置书籍变量</string>
     <string name="summary">注释</string>
