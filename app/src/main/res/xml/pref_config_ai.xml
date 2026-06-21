@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="@string/ai_assistant"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="aiAssistantEnabled"
+            android:summary="@string/ai_enable_summary"
+            android:title="@string/ai_enable"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiImportDefaultSkill"
+            android:summary="@string/ai_import_default_skill_summary"
+            android:title="@string/ai_import_default_skill"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiSkillPrompt"
+            android:summary="@string/ai_skill_prompt_summary_empty"
+            android:title="@string/ai_skill_prompt"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiManageNativeTools"
+            android:summary="@string/ai_manage_native_tools_summary"
+            android:title="@string/ai_manage_native_tools"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiReadToolMode"
+            android:summary="使用已启用工具"
+            android:title="正文问 AI 工具范围"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:key="aiEnterToSend"
+            android:defaultValue="true"
+            android:summary="@string/ai_enter_to_send_summary"
+            android:title="@string/ai_enter_to_send"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:key="aiThinkingToolbarEnabled"
+            android:defaultValue="true"
+            android:summary="关闭后聊天页不显示思考和工具调用过程卡片，不影响后台执行"
+            android:title="显示思考工具栏"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiContextCompression"
+            android:summary="@string/ai_context_compression_summary_default"
+            android:title="@string/ai_context_compression"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiWorldBookManage"
+            android:summary="全局或角色助手长期设定"
+            android:title="世界书管理"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiDefaultModelSettings"
+            android:summary="正文问 AI、文章总结、多角色、生图供应商"
+            android:title="默认模型"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiImageGallery"
+            android:summary="@string/ai_image_gallery_summary"
+            android:title="@string/ai_image_gallery"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiImageProviderManage"
+            android:summary="@string/ai_image_provider_summary_empty"
+            android:title="@string/ai_image_provider_manage"
+            app:iconSpaceReserved="false" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="@string/ai_provider"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiManageProviders"
+            android:summary="@string/ai_no_providers"
+            android:title="@string/ai_manage_providers"
+            app:iconSpaceReserved="false" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="@string/ai_mcp"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiAddMcpServer"
+            android:summary="@string/ai_add_mcp_server_summary"
+            android:title="@string/ai_add_mcp_server"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiManageMcpServers"
+            android:summary="@string/ai_no_mcp_servers"
+            android:title="@string/ai_manage_mcp_servers"
+            app:iconSpaceReserved="false" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="@string/ai_web_tools"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:key="aiTavilyEnabled"
+            android:defaultValue="false"
+            android:title="@string/ai_tavily_enable"
+            android:summary="@string/ai_tavily_enable_summary"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiTavilyApiKey"
+            android:title="@string/ai_tavily_api_key"
+            android:summary="@string/ai_tavily_api_key_summary"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiTavilyBaseUrl"
+            android:title="@string/ai_tavily_base_url"
+            android:summary="https://api.tavily.com/search"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiTavilyTopic"
+            android:title="@string/ai_tavily_topic"
+            android:summary="@string/ai_tavily_topic_general"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiTavilySearchDepth"
+            android:title="@string/ai_tavily_search_depth"
+            android:summary="@string/ai_tavily_search_depth_basic"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="aiTavilyMaxResults"
+            android:title="@string/ai_tavily_max_results"
+            android:summary="5"
+            app:iconSpaceReserved="false" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

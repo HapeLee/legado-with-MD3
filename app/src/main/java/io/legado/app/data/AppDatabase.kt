@@ -32,6 +32,16 @@ import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.data.dao.SearchKeywordDao
 import io.legado.app.data.dao.ServerDao
 import io.legado.app.data.dao.TxtTocRuleDao
+import io.legado.app.data.dao.AiAgentDao
+import io.legado.app.data.dao.AiGeneratedImageDao
+import io.legado.app.data.dao.AiImageGroupDao
+import io.legado.app.data.dao.AiMemoryDao
+import io.legado.app.data.dao.AiReadAloudRoleCacheDao
+import io.legado.app.data.dao.AiReadAloudUsageRecordDao
+import io.legado.app.data.dao.BookAiChapterSummaryDao
+import io.legado.app.data.dao.BookCharacterDao
+import io.legado.app.data.dao.ReadAloudBgmDao
+import io.legado.app.data.dao.ReadAloudSpeakerGroupDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
@@ -60,6 +70,25 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.entities.AiAgentJob
+import io.legado.app.data.entities.AiAgentSession
+import io.legado.app.data.entities.AiAgentTrace
+import io.legado.app.data.entities.AiGeneratedImage
+import io.legado.app.data.entities.AiImageGroup
+import io.legado.app.data.entities.AiMemoryFragment
+import io.legado.app.data.entities.AiMemoryItemFts
+import io.legado.app.data.entities.AiMemoryFragmentFts
+import io.legado.app.data.entities.AiMemoryItem
+import io.legado.app.data.entities.AiReadAloudRoleCache
+import io.legado.app.data.entities.AiReadAloudUsageRecord
+import io.legado.app.data.entities.BookAiChapterSummary
+import io.legado.app.data.entities.BookCharacter
+import io.legado.app.data.entities.BookCharacterRelation
+import io.legado.app.data.entities.ReadAloudBgmAssignmentCache
+import io.legado.app.data.entities.ReadAloudBgmGroup
+import io.legado.app.data.entities.ReadAloudBgmTrack
+import io.legado.app.data.entities.ReadAloudSpeakerGroup
+import io.legado.app.data.entities.ReadAloudSpeakerGroupItem
 import io.legado.app.help.DefaultData
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
@@ -75,7 +104,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 93,
+    version = 94,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -84,7 +113,15 @@ val appDb by lazy {
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
-        HighlightRule::class],
+        HighlightRule::class,
+        AiImageGroup::class, AiGeneratedImage::class,
+        BookCharacter::class, BookCharacterRelation::class,
+        BookAiChapterSummary::class, AiReadAloudRoleCache::class,
+        AiReadAloudUsageRecord::class,
+        AiAgentSession::class, AiAgentJob::class, AiAgentTrace::class,
+        AiMemoryItem::class, AiMemoryFragment::class, AiMemoryItemFts::class, AiMemoryFragmentFts::class,
+        ReadAloudBgmGroup::class, ReadAloudBgmTrack::class, ReadAloudBgmAssignmentCache::class,
+        ReadAloudSpeakerGroup::class, ReadAloudSpeakerGroupItem::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -136,7 +173,8 @@ val appDb by lazy {
         AutoMigration(from = 89, to = 90),
         AutoMigration(from = 90, to = 91),
         AutoMigration(from = 91, to = 92),
-        AutoMigration(from = 92, to = 93, spec = DatabaseMigrations.Migration_92_93::class)
+        AutoMigration(from = 92, to = 93, spec = DatabaseMigrations.Migration_92_93::class),
+        AutoMigration(from = 93, to = 94)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -167,6 +205,16 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val homepageModuleDao: HomepageModuleDao
     abstract val homepageCustomSetDao: HomepageCustomSetDao
     abstract val highlightRuleDao: HighlightRuleDao
+    abstract val aiAgentDao: AiAgentDao
+    abstract val aiGeneratedImageDao: AiGeneratedImageDao
+    abstract val aiImageGroupDao: AiImageGroupDao
+    abstract val aiMemoryDao: AiMemoryDao
+    abstract val aiReadAloudRoleCacheDao: AiReadAloudRoleCacheDao
+    abstract val aiReadAloudUsageRecordDao: AiReadAloudUsageRecordDao
+    abstract val bookAiChapterSummaryDao: BookAiChapterSummaryDao
+    abstract val bookCharacterDao: BookCharacterDao
+    abstract val readAloudBgmDao: ReadAloudBgmDao
+    abstract val readAloudSpeakerGroupDao: ReadAloudSpeakerGroupDao
 
     companion object {
 

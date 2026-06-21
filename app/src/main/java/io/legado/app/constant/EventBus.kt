@@ -41,4 +41,13 @@ object EventBus {
     const val UP_ALL_BOOK_TOC = "upAllBookToc"
     const val VIDEO_SUB_TITLE = "videoSubTitle"
     const val UP_VIDEO_INFO = "upVideoInfo"
+
+    // AI & Read Aloud config events
+    const val READ_ALOUD_CONFIG_CHANGED = "readAloudConfigChanged"
+    const val READ_ALOUD_CONFIG_SCOPE = "scope"
+    const val READ_ALOUD_CONFIG_SCOPE_AUDIO = "audio"
+    const val READ_ALOUD_CONFIG_SCOPE_SPEECH = "speech"
+    const val READ_ALOUD_CONFIG_SCOPE_ENGINE = "engine"
+    const val AI_READ_ALOUD_ROLE_STATE = "aiReadAloudRoleState"
+    const val AI_CONFIG_CHANGED = "aiConfigChanged"
 }

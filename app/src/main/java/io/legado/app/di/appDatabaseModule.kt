@@ -39,4 +39,14 @@ val appDatabaseModule = module {
     factory<HomepageModuleDao> { get<AppDatabase>().homepageModuleDao }
     factory<HomepageCustomSetDao> { get<AppDatabase>().homepageCustomSetDao }
     factory<HighlightRuleDao> { get<AppDatabase>().highlightRuleDao }
+    factory<AiAgentDao> { get<AppDatabase>().aiAgentDao }
+    factory<AiGeneratedImageDao> { get<AppDatabase>().aiGeneratedImageDao }
+    factory<AiImageGroupDao> { get<AppDatabase>().aiImageGroupDao }
+    factory<AiMemoryDao> { get<AppDatabase>().aiMemoryDao }
+    factory<AiReadAloudRoleCacheDao> { get<AppDatabase>().aiReadAloudRoleCacheDao }
+    factory<AiReadAloudUsageRecordDao> { get<AppDatabase>().aiReadAloudUsageRecordDao }
+    factory<BookAiChapterSummaryDao> { get<AppDatabase>().bookAiChapterSummaryDao }
+    factory<BookCharacterDao> { get<AppDatabase>().bookCharacterDao }
+    factory<ReadAloudBgmDao> { get<AppDatabase>().readAloudBgmDao }
+    factory<ReadAloudSpeakerGroupDao> { get<AppDatabase>().readAloudSpeakerGroupDao }
 }

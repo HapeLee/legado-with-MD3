@@ -200,6 +200,48 @@
             android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <!-- AI 相关界面 -->
+        <activity
+            android:name=".ui.book.read.config.AiReadAloudUsageRecordActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiProviderManageActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiProviderEditActivity"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.config.AiImageProviderManageActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiImageProviderEditActivity"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.main.ai.AiChatActivity"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.main.ai.AiImageGalleryActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiWorldBookManageActivity"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.book.character.BookCharacterManageActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.book.character.BookCharacterEditActivity"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.book.character.BookCharacterCardActivity"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.book.character.BookCharacterRelationActivity"
+            android:launchMode="standard" />
         <!-- 搜索界面 -->
         <activity
             android:name=".ui.book.search.SearchActivity"
@@ -442,6 +484,9 @@
             android:foregroundServiceType="dataSync" />
         <service
             android:name=".service.WebService"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".service.AiTaskKeepAliveService"
             android:foregroundServiceType="dataSync" />
         <service
             android:name=".service.WebTileService"
