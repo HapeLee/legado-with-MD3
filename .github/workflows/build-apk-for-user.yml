@@ -53,7 +53,7 @@ jobs:
 
       - name: Remove China mirrors (unreliable in CI)
         run: |
-          sed -i '/mirrors\.aliyun\.com/d; /mirrors\.huaweicloud\.com/d; /mirrors\.cloud\.tencent\.com/d' settings.gradle
+          sed -i '/maven\.aliyun\.com/d; /mirrors\.huaweicloud\.com/d; /mirrors\.cloud\.tencent\.com/d' settings.gradle
           echo "settings.gradle after removing China mirrors:"
           cat settings.gradle
 
