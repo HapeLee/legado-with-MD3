@@ -33,7 +33,7 @@ fragment = "1.8.9"
 hutool = "5.8.22"
 
 libarchive = "1.1.6"
-lifecycle = "2.10.0"
+lifecycle = "2.11.0"
 glide = "5.0.7"
 gson = "2.14.0"
 jsonPath = "3.0.0"
