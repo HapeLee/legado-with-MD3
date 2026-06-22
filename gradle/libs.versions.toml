@@ -2,7 +2,7 @@
 
 accompanistWebview = "0.36.0"
 adaptive = "1.3.0-beta02"
-adaptiveLayout = "1.3.0-beta02"
+adaptiveLayout = "1.3.0-rc01"
 adaptiveNavigation = "1.3.0-beta02"
 animation = "1.11.2"
 biometric = "1.4.0-alpha07"
