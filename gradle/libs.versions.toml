@@ -79,7 +79,7 @@ collection = "1.6.0"
 
 zxingLite = "3.4.1"
 
-koin-bom = "4.2.1"
+koin-bom = "4.2.2"
 biometricKtx = "1.1.0"
 
 reorderable = "3.1.0"
