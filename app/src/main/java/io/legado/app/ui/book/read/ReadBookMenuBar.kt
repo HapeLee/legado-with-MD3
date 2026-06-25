@@ -279,7 +279,7 @@ fun ReadBookMenuBar(
             isFloating = false,
         )
         AnimatedVisibility(
-            visible = brightnessMode == "2" && state.menuVisible,
+            visible = brightnessMode == "2" && state.menuVisible && currentRoute == ReadBookMenuRoute.Main,
             enter = slideInHorizontally(
                 initialOffsetX = { if (brightnessIsLeft) -it else it }
             ) + fadeIn(),
