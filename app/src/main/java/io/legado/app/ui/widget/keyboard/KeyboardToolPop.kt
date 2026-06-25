@@ -175,6 +175,8 @@ class KeyboardToolPop(
 
         fun sendText(text: String)
 
+        fun onUndoClicked() {}
+        fun onRedoClicked() {}
     }
 
 }

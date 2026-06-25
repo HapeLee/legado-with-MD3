@@ -72,8 +72,8 @@ class ExploreKindUiUseCase(
             activity = activity,
             source = source,
             callback = object : SourceLoginJsExtensions.Callback {
-                override fun upUiData(data: Map<String, String?>?) = Unit
-                override fun reUiView() = onRefreshKinds()
+                override fun upUiData(data: Map<String, Any?>?) = Unit
+                override fun reUiView(deltaUp: Boolean) = onRefreshKinds()
             }
         )
         withContext(Dispatchers.IO) {

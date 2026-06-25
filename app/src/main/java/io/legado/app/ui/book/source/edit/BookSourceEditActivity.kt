@@ -1,11 +1,13 @@
 package io.legado.app.ui.book.source.edit
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -24,9 +26,7 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
-//import io.legado.app.lib.theme.accentColor
-//import io.legado.app.lib.theme.backgroundColor
-//import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
@@ -146,6 +146,7 @@ class BookSourceEditActivity :
                 ErrorCorrectionLevel.L
             )
 
+            R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_help -> showHelp("ruleHelp")
             R.id.menu_login -> viewModel.save(getSource()) { source ->
                 startActivity<SourceLoginActivity> {
@@ -261,6 +262,8 @@ class BookSourceEditActivity :
                     else -> 0
                 }
             )
+            binding.cbIsEventListener.isChecked = it.eventListener
+            binding.cbIsCustomButton.isChecked = it.customButton
         }
         // 基本信息
         sourceEntities.clear()
@@ -361,6 +364,7 @@ class BookSourceEditActivity :
             add(EditEntity("imageStyle", cr.imageStyle, R.string.rule_image_style))
             add(EditEntity("imageDecode", cr.imageDecode, R.string.rule_image_decode))
             add(EditEntity("payAction", cr.payAction, R.string.rule_pay_action))
+            add(EditEntity("callBackJs", cr.callBackJs, R.string.rule_call_back))
         }
 
 //        val rr = bs.getReviewRule()
@@ -392,6 +396,8 @@ class BookSourceEditActivity :
             1 -> BookSourceType.audio
             else -> BookSourceType.default
         }
+        source.eventListener = binding.cbIsEventListener.isChecked
+        source.customButton = binding.cbIsCustomButton.isChecked
         val searchRule = SearchRule()
         val exploreRule = ExploreRule()
         val bookInfoRule = BookInfoRule()
@@ -559,6 +565,7 @@ class BookSourceEditActivity :
                 "imageStyle" -> contentRule.imageStyle = it.value
                 "imageDecode" -> contentRule.imageDecode = it.value
                 "payAction" -> contentRule.payAction = it.value
+                "callBackJs" -> contentRule.callBackJs = it.value
             }
         }
 //        reviewEntities.forEach {
@@ -590,6 +597,22 @@ class BookSourceEditActivity :
         source.ruleContent = contentRule
 //        source.ruleReview = reviewRule
         return source
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onUndoClicked() {
+        val editText = window.decorView.findFocus()
+        if (editText is EditText) {
+            editText.onTextContextMenuItem(android.R.id.undo)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onRedoClicked() {
+        val editText = window.decorView.findFocus()
+        if (editText is EditText) {
+            editText.onTextContextMenuItem(android.R.id.redo)
+        }
     }
 
     private fun alertGroups() {
@@ -643,18 +666,44 @@ class BookSourceEditActivity :
     }
 
     override fun sendText(text: String) {
-        if (text.isBlank()) return
         val view = window.decorView.findFocus()
         if (view is EditText) {
-            val start = view.selectionStart
-            val end = view.selectionEnd
-            val edit = view.editableText//获取EditText的文字
-            if (start < 0 || start >= edit.length) {
-                edit.append(text)
-            } else if (start > end) {
-                edit.replace(end, start, text)
-            } else {
-                edit.replace(start, end, text)//光标所在位置插入文字
+            var start = view.selectionStart
+            var end = view.selectionEnd
+            if (start > end) {
+                val temp = start
+                start = end
+                end = temp
+            }
+            if (text.isNotEmpty()) {
+                val edit = view.editableText//获取EditText的文字
+                if (start < 0 || start >= edit.length) {
+                    edit.append(text)
+                } else {
+                    edit.replace(start, end, text)//光标所在位置插入文字
+                }
+            }
+            if (adapter.editEntityMaxLine >= 999) {
+                view.post {
+                    val editTextLocation = IntArray(2)
+                    view.getLocationOnScreen(editTextLocation)
+                    val recyclerViewLocation = IntArray(2)
+                    binding.recyclerView.getLocationOnScreen(recyclerViewLocation)
+                    val layout = view.layout
+                    if (layout != null) {
+                        val line = layout.getLineForOffset(end)
+                        val cursorYInEditText = layout.getLineTop(line)
+                        val cursorYOnScreen = editTextLocation[1] + cursorYInEditText
+                        val cursorYInRecyclerView = cursorYOnScreen - recyclerViewLocation[1]
+                        val recyclerViewBottom = binding.recyclerView.height - 120
+                        if (cursorYInRecyclerView !in 0..recyclerViewBottom) {
+                            val scrollDistance = cursorYInRecyclerView - recyclerViewBottom / 3
+                            if (scrollDistance > 0 && binding.recyclerView.canScrollVertically(1) || scrollDistance < 0 && binding.recyclerView.canScrollVertically(-1)) {
+                                binding.recyclerView.smoothScrollBy(0, scrollDistance)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

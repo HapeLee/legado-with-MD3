@@ -1168,6 +1168,9 @@
     <string name="enable_record">Enable record</string>
     <string name="copy_all">Copy all</string>
     <string name="auto_complete">Automatic completion</string>
+    <string name="is_event_listener">EventListener</string>
+    <string name="custom_button">Custom Button</string>
+    <string name="rule_call_back">callBackJs</string>
     <string name="sort_by_size">Sort by size</string>
     <string name="welcome_style">Launch interface style</string>
     <string name="welcome_style_summary">Startup screen image and whether to display text, etc.</string>

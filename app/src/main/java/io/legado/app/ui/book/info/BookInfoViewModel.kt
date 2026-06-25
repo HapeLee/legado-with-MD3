@@ -74,6 +74,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -98,6 +101,35 @@ class BookInfoViewModel(
 
     private val _effects = MutableSharedFlow<BookInfoEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
+
+    init {
+        collectEventBus()
+    }
+
+    private fun collectEventBus() {
+        viewModelScope.launch {
+            eventFlow<Boolean>(EventBus.REFRESH_BOOK_INFO).collect {
+                currentBook?.let { book ->
+                    refreshBook(book)
+                }
+            }
+        }
+        viewModelScope.launch {
+            eventFlow<Boolean>(EventBus.REFRESH_BOOK_TOC).collect {
+                currentBook?.let { book ->
+                    loadChapter(book)
+                }
+            }
+        }
+    }
+
+    private inline fun <reified T> eventFlow(tag: String): Flow<T> = callbackFlow {
+        val obs = androidx.lifecycle.Observer<T> { trySend(it) }
+        com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).observeForever(obs)
+        awaitClose {
+            com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).removeObserver(obs)
+        }
+    }
 
     private var currentBook: Book? = null
         set(value) {
