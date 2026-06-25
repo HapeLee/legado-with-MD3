@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -89,6 +91,7 @@ fun BgTextConfigSheet(
             onDismissRequest()
         },
         title = styleName,
+        contentWindowInsets = { WindowInsets.navigationBars },
     ) {
         Column(
             modifier = Modifier

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -47,6 +48,7 @@ fun AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = LocalLegadoThemeColors.current.colorScheme
@@ -115,7 +117,8 @@ fun AppModalBottomSheet(
                     sheetState = sheetState,
                     containerColor = sheetContainerColor,
                     contentColor = sheetContentColor,
-                    dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) }
+                    dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
+                    contentWindowInsets = contentWindowInsets
                 ) {
                     Column(
                         modifier = Modifier
@@ -173,6 +176,7 @@ fun AppModalBottomSheet(
  * 专为 nullable 数据设计的 AppModalBottomSheet 重载。
  * 当 [data] 不为 null 时显示弹窗；当 [data] 变为 null 时，自动缓存最后一次数据并播放退出动画。
  */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun <T> AppModalBottomSheet(
     data: T?,
@@ -181,6 +185,7 @@ fun <T> AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     content: @Composable ColumnScope.(T) -> Unit
 ) {
     var cachedData by remember { mutableStateOf(data) }
@@ -197,6 +202,7 @@ fun <T> AppModalBottomSheet(
         title = title,
         startAction = startAction,
         endAction = endAction,
+        contentWindowInsets = contentWindowInsets,
         content = {
             if (currentData != null) {
                 content(currentData)
