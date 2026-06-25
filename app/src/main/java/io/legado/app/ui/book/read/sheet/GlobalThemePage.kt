@@ -86,13 +86,19 @@ fun GlobalThemePage(
     val pageAnim = styleConfig.pageAnim
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
-    // configList needs to be read from ReadBookConfig since it's a list of Config objects
-    // We use styleConfig.configCount to detect when the list changes
-    var configList by remember { mutableStateOf(ReadBookConfig.configList.toList()) }
 
-    // Re-read configList when configCount changes (indicates list was modified)
-    LaunchedEffect(styleConfig.configCount) {
-        configList = ReadBookConfig.configList.toList()
+    val configList = remember(
+        styleConfig.configCount,
+        styleConfig.styleName,
+        styleConfig.bgAlpha,
+        styleConfig.bgType,
+        styleConfig.bgStr,
+        styleConfig.textColor,
+        styleConfig.bgTypeNight,
+        styleConfig.bgStrNight,
+        styleConfig.textColorNight,
+    ) {
+        ReadBookConfig.configList.map { it.copy() }
     }
 
     Column(
