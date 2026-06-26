@@ -13,7 +13,7 @@ class TxtTocRuleActivity : BaseComposeActivity() {
         val initialRule = intent.getStringExtra("tocRegex")
 
         AppTheme {
-            TxtRuleScreen(
+            TxtRuleRouteScreen(
                 initialRule = initialRule,
                 onPickRule = if (initialRule != null) { rule ->
                     val data = Intent().apply {
