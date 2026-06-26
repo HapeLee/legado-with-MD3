@@ -84,7 +84,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ClipEntry
@@ -1376,7 +1376,9 @@ fun BookshelfPage(
                                     Modifier
                                 }
                             )
-                            .alpha(if (isDragging) 0.5f else 1f),
+                            .graphicsLayer {
+                                alpha = if (isDragging) 0.5f else 1f
+                            },
                         layoutMode = bookshelfLayoutMode,
                         isSelected = isSelected,
                         gridStyle = bookItemGridStyle,
