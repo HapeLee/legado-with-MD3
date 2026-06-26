@@ -24,6 +24,7 @@ import io.legado.app.model.Download
 import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
 import io.legado.app.ui.about.AboutViewModel
+import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowScreen
@@ -46,6 +47,9 @@ import io.legado.app.ui.book.searchContent.SearchContentScreen
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.config.ConfigNavScreen
+import io.legado.app.ui.config.ai.AiConfigRouteScreen
+import io.legado.app.ui.config.ai.AiModelEditRouteScreen
+import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.customTheme.CustomThemeScreen
@@ -178,6 +182,7 @@ fun MainActivity.mainEntryProvider(
             onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
             onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
             onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
+            onNavigateToAi = { backStack.add(MainRouteSettingsAi) },
             onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
             onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
             onNavigateToLab = { backStack.add(MainRouteSettingsLabConfig) }
@@ -208,12 +213,66 @@ fun MainActivity.mainEntryProvider(
         BackupConfigScreen(onBackClick = { onNavigateBack() })
     }
 
+    entry<MainRouteSettingsAi> {
+        AiConfigRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToProviderEdit = { providerId ->
+                backStack.add(MainRouteSettingsAiProviderEdit(providerId = providerId))
+            },
+            onNavigateToModelEdit = { providerId, modelProfileId ->
+                backStack.add(
+                    MainRouteSettingsAiModelEdit(
+                        providerId = providerId,
+                        modelProfileId = modelProfileId
+                    )
+                )
+            },
+            onNavigateToChat = { backStack.add(MainRouteAiChat) },
+            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
+        )
+    }
+
+    entry<MainRouteSettingsAiProviderEdit> { route ->
+        AiProviderEditRouteScreen(
+            providerId = route.providerId,
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiChat> {
+        AiChatRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onOpenBookInfo = { book ->
+                onNavigateToRoute(
+                    MainRouteBookInfo(
+                        name = book.name,
+                        author = book.author,
+                        bookUrl = book.bookUrl,
+                        origin = book.origin,
+                        coverPath = book.coverPath
+                    )
+                )
+            }
+        )
+    }
+
+    entry<MainRouteSettingsAiModelEdit> { route ->
+        AiModelEditRouteScreen(
+            providerId = route.providerId,
+            modelProfileId = route.modelProfileId,
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
     entry<MainRouteSettingsDownloadCache> {
         DownloadCacheConfigScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsTranslation> {
-        TranslationConfigScreen(onBackClick = { onNavigateBack() })
+        TranslationConfigScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToAi = { backStack.add(MainRouteSettingsAi) }
+        )
     }
 
     entry<MainRouteSettingsLabConfig> {

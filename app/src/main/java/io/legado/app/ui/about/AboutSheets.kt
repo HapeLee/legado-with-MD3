@@ -19,9 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownColor
-import com.mikepenz.markdown.m3.markdownTypography
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
@@ -31,6 +28,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.text.MarkdownBlock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,16 +49,8 @@ fun MarkdownSheet(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                Markdown(
+                MarkdownBlock(
                     content = content,
-                    colors = markdownColor(
-                        text = LegadoTheme.colorScheme.onBackground,
-                        codeBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                        inlineCodeBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                        dividerColor = LegadoTheme.colorScheme.outlineVariant,
-                        tableBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.02f),
-                    ),
-                    typography = markdownTypography(),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.heightIn(min = 16.dp))
@@ -164,16 +154,8 @@ fun UpdateSheet(
 
             val updateLog = updateInfo.updateLog
             if (updateLog.isNotBlank()) {
-                Markdown(
+                MarkdownBlock(
                     content = updateLog,
-                    colors = markdownColor(
-                        text = LegadoTheme.colorScheme.onBackground,
-                        codeBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                        inlineCodeBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                        dividerColor = LegadoTheme.colorScheme.outlineVariant,
-                        tableBackground = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.02f),
-                    ),
-                    typography = markdownTypography(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

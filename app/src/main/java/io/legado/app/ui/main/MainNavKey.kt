@@ -28,6 +28,23 @@ data object MainRouteSettingsTheme : MainRoute
 data object MainRouteSettingsBackup : MainRoute
 
 @Serializable
+data object MainRouteSettingsAi : MainRoute
+
+@Serializable
+data object MainRouteAiChat : MainRoute
+
+@Serializable
+data class MainRouteSettingsAiProviderEdit(
+    val providerId: String? = null
+) : MainRoute
+
+@Serializable
+data class MainRouteSettingsAiModelEdit(
+    val providerId: String? = null,
+    val modelProfileId: String? = null
+) : MainRoute
+
+@Serializable
 data object MainRouteSettingsCustomTheme : MainRoute
 
 @Serializable
@@ -118,6 +135,8 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_COVER = "settings/cover"
     const val ROUTE_SETTINGS_THEME = "settings/theme"
     const val ROUTE_SETTINGS_BACKUP = "settings/backup"
+    const val ROUTE_SETTINGS_AI = "settings/ai"
+    const val ROUTE_AI_CHAT = "ai/chat"
     const val ROUTE_SETTINGS_CUSTOM_THEME = "settings/custom_theme"
     const val ROUTE_SETTINGS_LAB_CONFIG = "settings/lab_config"
     const val ROUTE_SETTINGS_DOWNLOAD_CACHE = "settings/download_cache"
