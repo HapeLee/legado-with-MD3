@@ -35,8 +35,8 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +65,9 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -75,12 +78,35 @@ fun keyboardAsState(): State<Boolean> {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ReplaceEditScreen(
+fun ReplaceEditRouteScreen(
+    viewModel: ReplaceEditViewModel = koinViewModel(),
     onBack: () -> Unit,
     onSaveSuccess: () -> Unit,
-    viewModel: ReplaceEditViewModel = koinViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                ReplaceEditEffect.NavigateBack -> onSaveSuccess()
+            }
+        }
+    }
+
+    ReplaceEditScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBack = onBack,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ReplaceEditScreen(
+    state: ReplaceEditUiState,
+    onIntent: (ReplaceEditIntent) -> Unit,
+    onBack: () -> Unit,
+) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showMenu by remember { mutableStateOf(false) }
     val isKeyboardVisible by keyboardAsState()
@@ -101,9 +127,7 @@ fun ReplaceEditScreen(
                         exit = fadeOut()
                     ) {
                         TopBarActionButton(
-                            onClick = {
-                                viewModel.save(onSaveSuccess)
-                            },
+                            onClick = { onIntent(ReplaceEditIntent.Save) },
                             imageVector = Icons.Default.Save,
                             contentDescription = "保存"
                         )
@@ -121,14 +145,14 @@ fun ReplaceEditScreen(
                             text = "复制规则",
                             onClick = {
                                 showMenu = false
-                                viewModel.copyRule()
+                                onIntent(ReplaceEditIntent.CopyRule)
                             }
                         )
                         RoundDropdownMenuItem(
                             text = "粘贴规则",
                             onClick = {
                                 showMenu = false
-                                viewModel.pasteRule(onSuccess = {})
+                                onIntent(ReplaceEditIntent.PasteRule)
                             }
                         )
                     }
@@ -144,7 +168,7 @@ fun ReplaceEditScreen(
                         visible = !isKeyboardVisible,
                         alignment = Alignment.BottomEnd,
                     ),
-                onClick = { viewModel.save(onSaveSuccess) },
+                onClick = { onIntent(ReplaceEditIntent.Save) },
                 tooltipText = stringResource(R.string.action_save),
                 icon = Icons.Default.Save
             )
@@ -168,7 +192,7 @@ fun ReplaceEditScreen(
                     .zIndex(1f)
             ) {
                 QuickInputBar(
-                    onInsert = { text -> viewModel.insertTextAtCursor(text) }
+                    onInsert = { text -> onIntent(ReplaceEditIntent.InsertTextAtCursor(text)) }
                 )
             }
             Column(
@@ -181,13 +205,12 @@ fun ReplaceEditScreen(
 
                 AppTextField(
                     value = state.name,
-                    onValueChange = viewModel::onNameChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnNameChange(it)) },
                     label = "规则名称",
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Name
+                            if (it.isFocused) onIntent(ReplaceEditIntent.SetActiveField(ActiveField.Name))
                         },
                     singleLine = true
                 )
@@ -195,33 +218,31 @@ fun ReplaceEditScreen(
                 GroupSelector(
                     currentGroup = state.group,
                     allGroups = state.allGroups,
-                    onGroupChange = viewModel::onGroupChange,
-                    onManageClick = { viewModel.toggleGroupDialog(true) }
+                    onGroupChange = { onIntent(ReplaceEditIntent.OnGroupChange(it)) },
+                    onManageClick = { onIntent(ReplaceEditIntent.ToggleGroupDialog(true)) }
                 )
 
                 AppTextField(
                     value = state.pattern,
-                    onValueChange = viewModel::onPatternChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnPatternChange(it)) },
                     label = "匹配规则",
                     placeholder = { AppText("输入正则表达式或关键字") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Pattern
+                            if (it.isFocused) onIntent(ReplaceEditIntent.SetActiveField(ActiveField.Pattern))
                         }
                 )
 
                 AppTextField(
                     value = state.replacement,
-                    onValueChange = viewModel::onReplacementChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnReplacementChange(it)) },
                     label = "替换为",
                     placeholder = { AppText("输入替换内容或捕获组") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Replacement
+                            if (it.isFocused) onIntent(ReplaceEditIntent.SetActiveField(ActiveField.Replacement))
                         }
                 )
 
@@ -234,7 +255,7 @@ fun ReplaceEditScreen(
                         label = "标题",
                         selected = state.scopeTitle,
                         checkedContentDescription = "已选择",
-                        onToggle = { viewModel.onScopeTitleChange(!state.scopeTitle) }
+                        onToggle = { onIntent(ReplaceEditIntent.OnScopeTitleChange(!state.scopeTitle)) }
                     )
 
                     Spacer(Modifier.width(8.dp))
@@ -243,7 +264,7 @@ fun ReplaceEditScreen(
                         label = "内容",
                         selected = state.scopeContent,
                         checkedContentDescription = "已选择",
-                        onToggle = { viewModel.onScopeContentChange(!state.scopeContent) }
+                        onToggle = { onIntent(ReplaceEditIntent.OnScopeContentChange(!state.scopeContent)) }
                     )
 
                     Spacer(Modifier.weight(1f))
@@ -252,40 +273,38 @@ fun ReplaceEditScreen(
                         label = "使用正则",
                         selected = state.isRegex,
                         checkedContentDescription = "正则已启用",
-                        onToggle = { viewModel.onRegexChange(!state.isRegex) }
+                        onToggle = { onIntent(ReplaceEditIntent.OnRegexChange(!state.isRegex)) }
                     )
 
                 }
 
                 AppTextField(
                     value = state.scope,
-                    onValueChange = viewModel::onScopeChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnScopeChange(it)) },
                     label = "特定范围",
                     placeholder = { AppText("指定规则适用的范围") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Scope
+                            if (it.isFocused) onIntent(ReplaceEditIntent.SetActiveField(ActiveField.Scope))
                         }
                 )
 
                 AppTextField(
                     value = state.excludeScope,
-                    onValueChange = viewModel::onExcludeScopeChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnExcludeScopeChange(it)) },
                     label = "排除范围",
                     placeholder = { AppText("指定规则不适用的范围") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Exclude
+                            if (it.isFocused) onIntent(ReplaceEditIntent.SetActiveField(ActiveField.Exclude))
                         }
                 )
 
                 AppTextField(
                     value = state.timeout,
-                    onValueChange = viewModel::onTimeoutChange,
+                    onValueChange = { onIntent(ReplaceEditIntent.OnTimeoutChange(it)) },
                     label = "超时 (ms)",
                     placeholder = { AppText("3000") },
                     modifier = Modifier.fillMaxWidth()
@@ -298,8 +317,8 @@ fun ReplaceEditScreen(
             ManageGroupDialog(
                 show = state.showGroupDialog,
                 groups = state.allGroups.filter { it != "默认" },
-                onDismiss = { viewModel.toggleGroupDialog(false) },
-                onDelete = { viewModel.deleteGroups(it) }
+                onDismiss = { onIntent(ReplaceEditIntent.ToggleGroupDialog(false)) },
+                onDelete = { onIntent(ReplaceEditIntent.DeleteGroups(it)) }
             )
         }
     }

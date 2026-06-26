@@ -6,7 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -57,7 +55,6 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -66,16 +63,47 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
+@Composable
+fun ReplaceRuleRouteScreen(
+    viewModel: ReplaceRuleViewModel = koinViewModel(),
+    onBackClick: () -> Unit,
+    onNavigateToEdit: (ReplaceEditRoute) -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val importState by viewModel.importState.collectAsStateWithLifecycle()
+    val groups by viewModel.allGroups.collectAsStateWithLifecycle()
+
+    ReplaceRuleScreen(
+        state = uiState,
+        importState = importState,
+        events = viewModel.events,
+        groups = groups,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+        onNavigateToEdit = onNavigateToEdit,
+    )
+}
+
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
     ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
 fun ReplaceRuleScreen(
-    viewModel: ReplaceRuleViewModel = koinViewModel(),
+    state: ReplaceRuleUiState,
+    importState: BaseImportUiState<ReplaceRule>,
+    events: Flow<BaseRuleEvent>,
+    groups: List<String>,
+    onIntent: (ReplaceRuleIntent) -> Unit,
     onBackClick: () -> Unit,
     onNavigateToEdit: (ReplaceEditRoute) -> Unit,
 ) {
@@ -83,10 +111,8 @@ fun ReplaceRuleScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val rules = uiState.items
-    val groups by viewModel.allGroups.collectAsStateWithLifecycle()
-    val selectedIds = uiState.selectedIds
+    val rules = state.items
+    val selectedIds = state.selectedIds
     val inSelectionMode = selectedIds.isNotEmpty()
 
     val listState = rememberLazyListState()
@@ -101,18 +127,16 @@ fun ReplaceRuleScreen(
     var showDeleteRuleDialog by remember { mutableStateOf<ReplaceRule?>(null) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
 
-    val importState by viewModel.importState.collectAsStateWithLifecycle()
-
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = remember(groups) { listOf("全部") + groups }
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        viewModel.moveItemInList(from.index, to.index)
+        onIntent(ReplaceRuleIntent.MoveItem(from.index, to.index))
         hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
 
-    val canReorder = remember(uiState.sortMode) {
-        uiState.sortMode == "asc" || uiState.sortMode == "desc"
+    val canReorder = remember(state.sortMode) {
+        state.sortMode == "asc" || state.sortMode == "desc"
     }
 
     val importDoc = rememberLauncherForActivityResult(
@@ -121,7 +145,7 @@ fun ReplaceRuleScreen(
             uri?.let {
                 context.contentResolver.openInputStream(it)?.use { stream ->
                     val text = stream.reader().readText()
-                    viewModel.importSource(text)
+                    onIntent(ReplaceRuleIntent.ImportSource(text))
                 }
             }
         }
@@ -130,7 +154,7 @@ fun ReplaceRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { viewModel.exportToUri(it, rules, selectedIds) }
+            uri?.let { onIntent(ReplaceRuleIntent.ExportSelection(it)) }
         }
     )
 
@@ -140,7 +164,7 @@ fun ReplaceRuleScreen(
         onDismissRequest = { showUrlInput = false },
         onConfirm = {
             showUrlInput = false
-            viewModel.importSource(it)
+            onIntent(ReplaceRuleIntent.ImportSource(it))
         }
     )
 
@@ -168,7 +192,7 @@ fun ReplaceRuleScreen(
         },
         onUpload = {
             showExportSheet = false
-            viewModel.uploadSelectedRules(selectedIds, rules)
+            onIntent(ReplaceRuleIntent.UploadSelection)
         },
         allowExtensions = arrayOf("json")
     )
@@ -176,11 +200,11 @@ fun ReplaceRuleScreen(
     BatchImportDialog(
         title = stringResource(R.string.import_replace_rule),
         importState = importState,
-        onDismissRequest = { viewModel.cancelImport() },
-        onToggleItem = { viewModel.toggleImportSelection(it) },
-        onToggleAll = { viewModel.toggleImportAll(it) },
-        onUpdateItem = { index, rule -> viewModel.updateImportItem(index, rule) },
-        onConfirm = { viewModel.saveImportedRules() },
+        onDismissRequest = { onIntent(ReplaceRuleIntent.CancelImport) },
+        onToggleItem = { onIntent(ReplaceRuleIntent.ToggleImportSelection(it)) },
+        onToggleAll = { onIntent(ReplaceRuleIntent.ToggleImportAll(it)) },
+        onUpdateItem = { index, rule -> onIntent(ReplaceRuleIntent.UpdateImportItem(index, rule)) },
+        onConfirm = { onIntent(ReplaceRuleIntent.SaveImportedRules) },
         topBarActions = {},
         itemTitle = { rule -> rule.name },
         itemSubtitle = { rule ->
@@ -189,7 +213,7 @@ fun ReplaceRuleScreen(
     )
 
     if (importState is BaseImportUiState.Loading) {
-        Dialog(onDismissRequest = { viewModel.cancelImport() }) { LoadingIndicator() }
+        Dialog(onDismissRequest = { onIntent(ReplaceRuleIntent.CancelImport) }) { LoadingIndicator() }
     }
 
     LaunchedEffect(importState) {
@@ -197,13 +221,13 @@ fun ReplaceRuleScreen(
             scope.launch {
                 snackbarHostState.showSnackbar(it.msg)
             }
-            viewModel.cancelImport()
+            onIntent(ReplaceRuleIntent.CancelImport)
         }
     }
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
-            viewModel.saveSortOrder()
+            onIntent(ReplaceRuleIntent.SaveSortOrder)
         }
     }
 
@@ -211,12 +235,12 @@ fun ReplaceRuleScreen(
         val maxIndex = groups.size
         if (selectedTabIndex > maxIndex) {
             selectedTabIndex = 0
-            viewModel.setGroup("全部")
+            onIntent(ReplaceRuleIntent.SetGroup("全部"))
         }
     }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        events.collect { event ->
             when (event) {
                 is BaseRuleEvent.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
@@ -244,8 +268,8 @@ fun ReplaceRuleScreen(
         show = showGroupManageSheet,
         groups = groups,
         onDismissRequest = { showGroupManageSheet = false },
-        onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
-        onDeleteGroup = { viewModel.delGroup(it) }
+        onUpdateGroup = { old, new -> onIntent(ReplaceRuleIntent.UpGroup(old, new)) },
+        onDeleteGroup = { onIntent(ReplaceRuleIntent.DeleteGroup(it)) }
     )
 
 
@@ -255,7 +279,7 @@ fun ReplaceRuleScreen(
         title = stringResource(R.string.delete),
         confirmText = stringResource(R.string.ok),
         onConfirm = { rule ->
-            viewModel.delete(rule)
+            onIntent(ReplaceRuleIntent.DeleteRule(rule))
             showDeleteRuleDialog = null
         },
         dismissText = stringResource(R.string.cancel),
@@ -264,42 +288,30 @@ fun ReplaceRuleScreen(
 
     RuleListScaffold(
         title = "替换规则",
-        state = uiState,
+        state = state,
         onBackClick = { onBackClick() },
-        onSearchToggle = { viewModel.setSearchMode(!uiState.isSearch) },
-        onSearchQueryChange = { viewModel.setSearchKey(it) },
+        onSearchToggle = { onIntent(ReplaceRuleIntent.SetSearchMode(!state.isSearch)) },
+        onSearchQueryChange = { onIntent(ReplaceRuleIntent.UpdateSearchQuery(it)) },
         searchPlaceholder = stringResource(R.string.replace_purify_search),
-        onClearSelection = { viewModel.setSelection(emptySet()) },
-        onSelectAll = { viewModel.setSelection(rules.map { it.id }.toSet()) },
-        onSelectInvert = { viewModel.setSelection(rules.map { it.id }.toSet() - selectedIds) },
+        onClearSelection = { onIntent(ReplaceRuleIntent.ClearSelection) },
+        onSelectAll = { onIntent(ReplaceRuleIntent.SelectAll) },
+        onSelectInvert = { onIntent(ReplaceRuleIntent.InvertSelection) },
         selectionSecondaryActions = listOf(
             ActionItem(
                 text = stringResource(R.string.enable),
-                onClick = {
-                    viewModel.enableSelectionByIds(selectedIds)
-                    viewModel.setSelection(emptySet())
-                }
+                onClick = { onIntent(ReplaceRuleIntent.EnableSelection) }
             ),
             ActionItem(
                 text = stringResource(R.string.disable_selection),
-                onClick = {
-                    viewModel.disableSelectionByIds(selectedIds)
-                    viewModel.setSelection(emptySet())
-                }
+                onClick = { onIntent(ReplaceRuleIntent.DisableSelection) }
             ),
             ActionItem(
                 text = stringResource(R.string.to_top),
-                onClick = {
-                    viewModel.topSelectByIds(selectedIds)
-                    viewModel.setSelection(emptySet())
-                }
+                onClick = { onIntent(ReplaceRuleIntent.TopSelectByIds(selectedIds)) }
             ),
             ActionItem(
                 text = stringResource(R.string.to_bottom),
-                onClick = {
-                    viewModel.bottomSelectByIds(selectedIds)
-                    viewModel.setSelection(emptySet())
-                }
+                onClick = { onIntent(ReplaceRuleIntent.BottomSelectByIds(selectedIds)) }
             ),
             ActionItem(
                 text = stringResource(R.string.export),
@@ -308,8 +320,8 @@ fun ReplaceRuleScreen(
         ),
         onDeleteSelected = { ids ->
             @Suppress("UNCHECKED_CAST")
-            viewModel.delSelectionByIds(ids as Set<Long>)
-            viewModel.setSelection(emptySet())
+            onIntent(ReplaceRuleIntent.SetSelection(ids as Set<Long>))
+            onIntent(ReplaceRuleIntent.DeleteSelection)
         },
         bottomContent = {
             if (tabItems.size > 1) {
@@ -320,7 +332,7 @@ fun ReplaceRuleScreen(
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { index ->
                         selectedTabIndex = index
-                        viewModel.setGroup(tabItems[index])
+                        onIntent(ReplaceRuleIntent.SetGroup(tabItems[index]))
                     }
                 )
             }
@@ -355,16 +367,16 @@ fun ReplaceRuleScreen(
             PillDivider()
             RoundDropdownMenuItem(
                 text = "旧的在前",
-                onClick = { viewModel.setSortMode("asc"); dismiss() }
+                onClick = { onIntent(ReplaceRuleIntent.SetSortMode("asc")); dismiss() }
             )
             RoundDropdownMenuItem(
                 text = "新的在前",
-                onClick = { viewModel.setSortMode("desc"); dismiss() }
+                onClick = { onIntent(ReplaceRuleIntent.SetSortMode("desc")); dismiss() }
             )
             RoundDropdownMenuItem(
                 text = "名称升序",
                 onClick = {
-                    viewModel.setSortMode("name_asc")
+                    onIntent(ReplaceRuleIntent.SetSortMode("name_asc"))
                     dismiss()
                     scope.launch {
                         snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
@@ -374,7 +386,7 @@ fun ReplaceRuleScreen(
             RoundDropdownMenuItem(
                 text = "名称降序",
                 onClick = {
-                    viewModel.setSortMode("name_desc")
+                    onIntent(ReplaceRuleIntent.SetSortMode("name_desc"))
                     dismiss()
                     scope.launch {
                         snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
@@ -407,10 +419,10 @@ fun ReplaceRuleScreen(
                         inSelectionMode = inSelectionMode,
                         canReorder = canReorder,
                         onToggleSelection = {
-                            viewModel.toggleSelection(ui.id)
+                            onIntent(ReplaceRuleIntent.ToggleSelection(ui.id))
                         },
                         onEnabledChange = { enabled ->
-                            viewModel.update(ui.rule.copy(isEnabled = enabled))
+                            onIntent(ReplaceRuleIntent.SetRuleEnabled(ui.rule, enabled))
                         },
                         onClickEdit = {
                             onNavigateToEdit(
@@ -424,11 +436,11 @@ fun ReplaceRuleScreen(
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
                                 text = "移至顶部",
-                                onClick = { viewModel.toTop(ui.rule); dismiss() }
+                                onClick = { onIntent(ReplaceRuleIntent.ToTop(ui.rule)); dismiss() }
                             )
                             RoundDropdownMenuItem(
                                 text = "移至底部",
-                                onClick = { viewModel.toBottom(ui.rule); dismiss() }
+                                onClick = { onIntent(ReplaceRuleIntent.ToBottom(ui.rule)); dismiss() }
                             )
                             RoundDropdownMenuItem(
                                 text = "删除",
@@ -443,7 +455,7 @@ fun ReplaceRuleScreen(
                     listState = listState,
                     items = rules,
                     selectedIds = selectedIds,
-                    onSelectionChange = { viewModel.setSelection(it) },
+                    onSelectionChange = { onIntent(ReplaceRuleIntent.SetSelection(it)) },
                     idProvider = { it.id },
                     modifier = Modifier
                         .fillMaxHeight()

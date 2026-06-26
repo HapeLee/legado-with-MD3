@@ -1,7 +1,6 @@
 package io.legado.app.ui.replace
 
 import android.app.Application
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
@@ -14,8 +13,6 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.ui.widget.components.list.ListUiState
-import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.GSON
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJsonArray
@@ -37,27 +34,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Immutable
-data class ReplaceRuleItemUi(
-    override val id: Long,
-    val name: String,
-    val isEnabled: Boolean,
-    val group: String?,
-    val rule: ReplaceRule
-) : SelectableItem<Long>
-
-data class ReplaceRuleUiState(
-    override val items: List<ReplaceRuleItemUi> = emptyList(),
-    override val selectedIds: Set<Long> = emptySet(),
-    override val searchKey: String = "",
-    val sortMode: String = "desc",
-    val groups: List<String> = emptyList(),
-    val interaction: InteractionState = InteractionState()
-) : ListUiState<ReplaceRuleItemUi> {
-    override val isSearch: Boolean get() = interaction.isSearchMode
-    override val isLoading: Boolean get() = interaction.isUploading
-}
-
 class ReplaceRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository
@@ -68,6 +44,7 @@ class ReplaceRuleViewModel(
 ) {
     private val repository = ReplaceRuleRepository()
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
+    val sortMode = _sortMode.asStateFlow()
     private val _group = MutableStateFlow<String?>(null)
     val group = _group.asStateFlow()
 
@@ -78,7 +55,60 @@ class ReplaceRuleViewModel(
             initialValue = emptyList()
         )
 
-    fun setGroup(groupName: String?) {
+    fun onIntent(intent: ReplaceRuleIntent) {
+        when (intent) {
+            is ReplaceRuleIntent.SetSearchMode -> setSearchMode(intent.active)
+            is ReplaceRuleIntent.UpdateSearchQuery -> setSearchKey(intent.query)
+            ReplaceRuleIntent.ClearSelection -> setSelection(emptySet())
+            ReplaceRuleIntent.SelectAll -> selectAll()
+            ReplaceRuleIntent.InvertSelection -> invertSelection()
+            is ReplaceRuleIntent.SetSelection -> setSelection(intent.ids)
+            is ReplaceRuleIntent.ToggleSelection -> toggleSelection(intent.id)
+            ReplaceRuleIntent.EnableSelection -> {
+                enableSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            ReplaceRuleIntent.DisableSelection -> {
+                disableSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            ReplaceRuleIntent.DeleteSelection -> {
+                delSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            ReplaceRuleIntent.UploadSelection -> {
+                val state = uiState.value
+                uploadSelectedRules(state.selectedIds, state.items)
+            }
+            is ReplaceRuleIntent.ExportSelection -> {
+                val state = uiState.value
+                exportToUri(intent.uri, state.items, state.selectedIds)
+            }
+            is ReplaceRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
+            ReplaceRuleIntent.SaveSortOrder -> saveSortOrder()
+            is ReplaceRuleIntent.DeleteRule -> delete(intent.rule)
+            is ReplaceRuleIntent.SetRuleEnabled -> update(intent.rule.copy(isEnabled = intent.enabled))
+            is ReplaceRuleIntent.CopyRule -> { /* not implemented for ReplaceRule */ }
+            is ReplaceRuleIntent.ImportSource -> importSource(intent.text)
+            ReplaceRuleIntent.CancelImport -> cancelImport()
+            is ReplaceRuleIntent.ToggleImportSelection -> toggleImportSelection(intent.index)
+            is ReplaceRuleIntent.ToggleImportAll -> toggleImportAll(intent.isSelected)
+            is ReplaceRuleIntent.UpdateImportItem -> updateImportItem(intent.index, intent.rule)
+            ReplaceRuleIntent.SaveImportedRules -> saveImportedRules()
+            // ReplaceRule-specific
+            is ReplaceRuleIntent.SetGroup -> setGroup(intent.groupName)
+            is ReplaceRuleIntent.SetSortMode -> setSortMode(intent.mode)
+            is ReplaceRuleIntent.ToTop -> toTop(intent.rule)
+            is ReplaceRuleIntent.ToBottom -> toBottom(intent.rule)
+            is ReplaceRuleIntent.TopSelectByIds -> topSelectByIds(intent.ids)
+            is ReplaceRuleIntent.BottomSelectByIds -> bottomSelectByIds(intent.ids)
+            is ReplaceRuleIntent.AddGroup -> addGroup(intent.group)
+            is ReplaceRuleIntent.DeleteGroup -> delGroup(intent.group)
+            is ReplaceRuleIntent.UpGroup -> upGroup(intent.oldGroup, intent.newGroup)
+        }
+    }
+
+    private fun setGroup(groupName: String?) {
         _group.value = if (groupName == "全部" || groupName.isNullOrBlank()) {
             null
         } else {
@@ -129,6 +159,7 @@ class ReplaceRuleViewModel(
             items = items,
             selectedIds = selectedIds,
             searchKey = _searchKey.value,
+            sortMode = _sortMode.value,
             interaction = InteractionState(
                 isSearchMode = isSearch,
                 isUploading = isUploading || (importState is BaseImportUiState.Loading),
@@ -209,12 +240,12 @@ class ReplaceRuleViewModel(
         return if (comparator != null) rules.sortedWith(comparator) else rules
     }
 
-    fun setSortMode(mode: String) {
+    private fun setSortMode(mode: String) {
         _sortMode.value = mode
         context.putPrefString(PreferKey.replaceSortMode, mode)
     }
 
-    fun saveSortOrder() {
+    private fun saveSortOrder() {
         val currentLocal = _localItems.value ?: return
         viewModelScope.launch {
             repository.moveOrder(currentLocal.map { it.rule }, _sortMode.value == "desc")
@@ -223,8 +254,8 @@ class ReplaceRuleViewModel(
     }
 
 
-    fun update(vararg rule: ReplaceRule) = viewModelScope.launch { repository.update(*rule) }
-    fun delete(rule: ReplaceRule) = viewModelScope.launch { repository.delete(rule) }
+    private fun update(vararg rule: ReplaceRule) = viewModelScope.launch { repository.update(*rule) }
+    private fun delete(rule: ReplaceRule) = viewModelScope.launch { repository.delete(rule) }
     fun enableSelectionByIds(ids: Set<Long>) = viewModelScope.launch { repository.enableByIds(ids) }
     fun disableSelectionByIds(ids: Set<Long>) =
         viewModelScope.launch { repository.disableByIds(ids) }
@@ -234,22 +265,30 @@ class ReplaceRuleViewModel(
         _selectedIds.update { it - ids }
     }
 
-    fun addGroup(group: String) = viewModelScope.launch { repository.addGroup(group) }
-    fun delGroup(group: String) = viewModelScope.launch { repository.delGroup(group) }
+    private fun selectAll() {
+        setSelection(uiState.value.items.map { it.id }.toSet())
+    }
 
-    fun toTop(rule: ReplaceRule) =
+    private fun invertSelection() {
+        val state = uiState.value
+        setSelection(state.items.map { it.id }.toSet() - state.selectedIds)
+    }
+
+    private fun addGroup(group: String) = viewModelScope.launch { repository.addGroup(group) }
+    private fun delGroup(group: String) = viewModelScope.launch { repository.delGroup(group) }
+
+    private fun toTop(rule: ReplaceRule) =
         viewModelScope.launch { repository.toTop(rule, _sortMode.value == "desc") }
 
-    fun toBottom(rule: ReplaceRule) =
+    private fun toBottom(rule: ReplaceRule) =
         viewModelScope.launch { repository.toBottom(rule, _sortMode.value == "desc") }
 
-    fun upOrder() = viewModelScope.launch { repository.upOrder() }
-    fun topSelectByIds(ids: Set<Long>) =
+    private fun topSelectByIds(ids: Set<Long>) =
         viewModelScope.launch { repository.topByIds(ids, _sortMode.value == "desc") }
 
-    fun bottomSelectByIds(ids: Set<Long>) =
+    private fun bottomSelectByIds(ids: Set<Long>) =
         viewModelScope.launch { repository.bottomByIds(ids, _sortMode.value == "desc") }
 
-    fun upGroup(oldGroup: String, newGroup: String?) =
+    private fun upGroup(oldGroup: String, newGroup: String?) =
         viewModelScope.launch { repository.upGroup(oldGroup, newGroup) }
 }
