@@ -85,6 +85,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ClipEntry
@@ -1355,28 +1356,32 @@ fun BookshelfPage(
                     state = reorderableState,
                     key = bookUi.book.bookUrl,
                     enabled = canReorderBooks
-                ) {
+                ) { isDragging ->
                     BookItem(
                         bookUi = bookUi,
-                        modifier = Modifier.then(
-                            if (canReorderBooks) {
-                                Modifier.longPressDraggableHandle(
-                                    onDragStarted = {
-                                        onDragStarted(displayBooks)
-                                        hapticFeedback.performHapticFeedback(
-                                            HapticFeedbackType.GestureThresholdActivate
-                                        )
-                                    },
-                                    onDragStopped = {
-                                        hapticFeedback.performHapticFeedback(
-                                            HapticFeedbackType.GestureEnd
-                                        )
-                                    }
-                                )
-                            } else {
-                                Modifier
-                            }
-                        ),
+                        modifier = Modifier
+                            .then(
+                                if (canReorderBooks) {
+                                    Modifier.longPressDraggableHandle(
+                                        onDragStarted = {
+                                            onDragStarted(displayBooks)
+                                            hapticFeedback.performHapticFeedback(
+                                                HapticFeedbackType.GestureThresholdActivate
+                                            )
+                                        },
+                                        onDragStopped = {
+                                            hapticFeedback.performHapticFeedback(
+                                                HapticFeedbackType.GestureEnd
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .graphicsLayer {
+                                alpha = if (isDragging) 0.5f else 1f
+                            },
                         layoutMode = bookshelfLayoutMode,
                         isSelected = isSelected,
                         gridStyle = bookItemGridStyle,
