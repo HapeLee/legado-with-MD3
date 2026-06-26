@@ -38,6 +38,7 @@ import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.upKind
+import io.legado.app.help.book.parseHighlightedTags
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -139,6 +140,7 @@ class BookInfoViewModel(
     private var currentChapterList: List<BookChapter> = emptyList()
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
     private var currentRelatedBooks: List<RelatedBooksUi> = emptyList()
+    private var currentHighlightedTags: List<HighlightedTag> = emptyList()
     private var currentKindLabels: List<String> = emptyList()
     private var currentGroupNames: String? = null
     private var currentHasCustomGroup = false
@@ -871,14 +873,24 @@ class BookInfoViewModel(
             val normalizedGroupNames = groupNames.ifBlank { null }
             appDb.bookDao.update(book)
             val finalKinds = book.kind?.splitNotBlank(",", "\n").orEmpty().toList()
-            Triple(finalKinds, normalizedGroupNames, hasCustomGroup)
+            val enabledRules = appDb.highlightTagRuleDao.getEnabled()
+            val (highlighted, regular) = parseHighlightedTags(finalKinds, enabledRules)
+            HighlightMeta(highlighted, regular, normalizedGroupNames, hasCustomGroup)
         }.onSuccess {
-            currentKindLabels = it.first
-            currentGroupNames = it.second
-            currentHasCustomGroup = it.third
+            currentHighlightedTags = it.highlighted
+            currentKindLabels = it.regular
+            currentGroupNames = it.groupNames
+            currentHasCustomGroup = it.hasCustomGroup
             syncUiState()
         }
     }
+
+    private data class HighlightMeta(
+        val highlighted: List<HighlightedTag>,
+        val regular: List<String>,
+        val groupNames: String?,
+        val hasCustomGroup: Boolean,
+    )
 
     private fun loadChapter(
         book: Book,
@@ -1335,6 +1347,7 @@ class BookInfoViewModel(
                 hasChapters = currentChapterList.isNotEmpty(),
                 webFiles = currentWebFiles,
                 relatedBooks = currentRelatedBooks.toImmutableList(),
+                highlightedTags = currentHighlightedTags,
                 kindLabels = currentKindLabels,
                 groupNames = currentGroupNames,
                 hasCustomGroup = currentHasCustomGroup,

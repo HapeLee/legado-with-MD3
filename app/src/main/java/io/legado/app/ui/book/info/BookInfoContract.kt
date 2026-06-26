@@ -13,10 +13,17 @@ import kotlinx.collections.immutable.persistentListOf
 
 const val READER_RESULT_DELETED = 100
 
+@Stable
+data class HighlightedTag(
+    val matchedLabels: List<String>,
+    val title: String?,
+)
+
 data class BookInfoUiState(
     val book: BookInfoBookUi? = null,
     val hasChapters: Boolean = false,
     val webFiles: List<BookInfoWebFile> = emptyList(),
+    val highlightedTags: List<HighlightedTag> = emptyList(),
     val kindLabels: List<String> = emptyList(),
     val groupNames: String? = null,
     val hasCustomGroup: Boolean = false,
