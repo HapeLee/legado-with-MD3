@@ -99,6 +99,8 @@ class MainViewModel(
 
             PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
 
+            PrefClickEvent.OpenHighlightTagRule -> _effects.tryEmit(MainEffect.NavigateToHighlightTagRule)
+
             PrefClickEvent.OpenAbout -> _effects.tryEmit(MainEffect.NavigateToAbout)
 
             else -> Unit
@@ -118,6 +120,7 @@ sealed interface MainEffect {
 
     data object ExitApp : MainEffect
     data object NavigateToReadRecord : MainEffect
+    data object NavigateToHighlightTagRule : MainEffect
     data object NavigateToAbout : MainEffect
 }
 

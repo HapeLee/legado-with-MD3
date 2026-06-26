@@ -105,6 +105,9 @@ data class MainRouteSearchContent(
 ) : MainRoute
 
 @Serializable
+data object MainRouteHighlightTagRule : MainRoute
+
+@Serializable
 data object MainRouteAbout : MainRoute
 
 object MainRouteConst {

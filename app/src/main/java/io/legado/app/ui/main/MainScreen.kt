@@ -117,6 +117,7 @@ fun MainScreen(
     onNavigateToRssFavorites: () -> Unit,
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
+    onNavigateToHighlightTagRule: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -156,6 +157,7 @@ fun MainScreen(
 
                 MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
+                MainEffect.NavigateToHighlightTagRule -> onNavigateToHighlightTagRule()
                 MainEffect.NavigateToAbout -> onNavigateToAbout()
             }
         }

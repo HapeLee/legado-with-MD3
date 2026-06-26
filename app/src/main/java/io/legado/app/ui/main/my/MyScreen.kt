@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Web
@@ -71,7 +72,6 @@ fun MyScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.systemBars
@@ -159,6 +159,11 @@ fun MyScreen(
                             PrefClickEvent.StartActivity(DictRuleActivity::class.java)
                         )
                     }
+                )
+                ClickableSettingItem(
+                    title = stringResource(R.string.highlight_tag_config),
+                    imageVector = Icons.Default.Sell,
+                    onClick = { onNavigate(PrefClickEvent.OpenHighlightTagRule) }
                 )
             }
 

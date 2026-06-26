@@ -158,6 +158,7 @@ object MainNavigator {
                 }
             }
 
+            MainRouteHighlightTagRule,
             MainRouteReadRecord -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
