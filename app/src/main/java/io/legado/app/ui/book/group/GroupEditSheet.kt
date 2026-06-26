@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -98,6 +99,7 @@ fun GroupEditContent(
     onDismissRequest: () -> Unit,
     coverPath: String?,
     onCoverPathChange: (String?) -> Unit,
+    tagGroupRule: TagGroupRule? = null,
     viewModel: GroupViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
@@ -106,6 +108,8 @@ fun GroupEditContent(
     var isPrivate by remember(group) { mutableStateOf(group?.isPrivate ?: false) }
     var showDisablePrivateDialog by remember(group) { mutableStateOf(false) }
     var selectedSortIndex by remember(group) { mutableIntStateOf(group?.bookSort ?: -1) }
+    var pattern by remember(tagGroupRule) { mutableStateOf(tagGroupRule?.pattern ?: "") }
+    var showPattern by remember(tagGroupRule) { mutableStateOf(tagGroupRule != null || pattern.isNotBlank()) }
 
     val sortOptions = stringArrayResource(R.array.book_sort)
     val sortEntryValues = remember(sortOptions) {
@@ -210,6 +214,28 @@ fun GroupEditContent(
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        CompactSwitchSettingItem(
+            title = "标签匹配规则",
+            description = if (showPattern) "启用后分组将根据书籍标签自动匹配" else "关闭后分组为手动管理",
+            checked = showPattern,
+            onCheckedChange = { showPattern = it }
+        )
+
+        if (showPattern) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AppTextField(
+                value = pattern,
+                onValueChange = { pattern = it },
+                backgroundColor = LegadoTheme.colorScheme.onSheetContent,
+                label = stringResource(R.string.tag_group_pattern),
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         ConfirmDismissButtonsRow(
@@ -228,16 +254,36 @@ fun GroupEditContent(
                                 enableRefresh = enableRefresh,
                                 isPrivate = isPrivate
                             )
-                        ) {
-                            onDismissRequest()
+                        )
+                        if (showPattern && pattern.isNotBlank()) {
+                            val existingRule = tagGroupRule
+                            if (existingRule != null) {
+                                viewModel.saveTagGroupRule(
+                                    existingRule.copy(
+                                        groupName = groupName,
+                                        pattern = pattern
+                                    )
+                                )
+                            } else {
+                                viewModel.saveTagGroupRule(
+                                    TagGroupRule(
+                                        groupName = groupName,
+                                        pattern = pattern
+                                    )
+                                )
+                            }
+                        } else if (!showPattern && tagGroupRule != null) {
+                            viewModel.deleteTagGroupRule(tagGroupRule)
                         }
+                        onDismissRequest()
                     } else {
                         viewModel.addGroup(
                             groupName,
                             selectedSortIndex,
                             enableRefresh,
                             isPrivate,
-                            coverPath
+                            coverPath,
+                            pattern = pattern.takeIf { showPattern && it.isNotBlank() }
                         ) {
                             onDismissRequest()
                         }

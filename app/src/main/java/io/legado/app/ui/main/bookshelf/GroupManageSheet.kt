@@ -6,13 +6,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,9 +34,14 @@ import io.legado.app.ui.book.group.GroupDeleteAction
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
+import io.legado.app.ui.tagGroupRule.TagGroupRuleEditSheet
+import io.legado.app.ui.tagGroupRule.TagGroupRuleIntent
+import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.move
 import org.koin.androidx.compose.koinViewModel
@@ -44,13 +53,26 @@ fun GroupManageSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
     viewModel: GroupViewModel = koinViewModel(),
-    bookshelfViewModel: BookshelfViewModel = koinViewModel()
+    bookshelfViewModel: BookshelfViewModel = koinViewModel(),
+    tagGroupRuleViewModel: TagGroupRuleViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val groups by bookshelfViewModel.allGroupsFlow.collectAsState()
+
     var editingGroup by remember { mutableStateOf<BookGroup?>(null) }
     var isEditing by remember { mutableStateOf(false) }
     var coverPath by remember(editingGroup) { mutableStateOf(editingGroup?.cover) }
+
+    var editingTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
+    var showTagRuleEdit by remember { mutableStateOf(false) }
+
+    var editingGroupTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
+
+    LaunchedEffect(editingGroup) {
+        editingGroupTagRule = editingGroup?.let { group ->
+            viewModel.getTagGroupRule(group.groupName)
+        }
+    }
 
     var listData by remember { mutableStateOf(groups) }
     val listState = rememberLazyListState()
@@ -95,14 +117,42 @@ fun GroupManageSheet(
         },
         endAction = {
             if (!isEditing) {
-                SmallPlainButton(
-                    onClick = {
-                        editingGroup = null
-                        coverPath = null
-                        isEditing = true
-                    },
-                    icon = Icons.Default.Add
-                )
+                Box {
+                    var showMenu by remember { mutableStateOf(false) }
+                    SmallPlainButton(
+                        onClick = { showMenu = true },
+                        icon = Icons.Default.Add
+                    )
+                    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.group_add),
+                            leadingIcon = { Icon(Icons.Default.Add, null) },
+                            onClick = {
+                                showMenu = false
+                                editingGroup = null
+                                coverPath = null
+                                isEditing = true
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.tag_group_add_rule),
+                            leadingIcon = { Icon(Icons.Default.Add, null) },
+                            onClick = {
+                                showMenu = false
+                                editingTagRule = null
+                                showTagRuleEdit = true
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.tag_group_sync),
+                            leadingIcon = { Icon(Icons.Default.Sync, null) },
+                            onClick = {
+                                showMenu = false
+                                tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.SyncGroups)
+                            }
+                        )
+                    }
+                }
             } else {
                 GroupResetCoverAction(
                     group = editingGroup,
@@ -128,6 +178,7 @@ fun GroupManageSheet(
                     },
                     coverPath = coverPath,
                     onCoverPathChange = { coverPath = it },
+                    tagGroupRule = editingGroupTagRule,
                     viewModel = viewModel
                 )
             } else {
@@ -158,6 +209,26 @@ fun GroupManageSheet(
                 }
             }
         }
+
+        TagGroupRuleEditSheet(
+            show = showTagRuleEdit,
+            rule = editingTagRule,
+            onDismissRequest = {
+                showTagRuleEdit = false
+                editingTagRule = null
+            },
+            onSave = { rule ->
+                val isNew = editingTagRule == null
+                tagGroupRuleViewModel.onIntent(
+                    TagGroupRuleIntent.SaveRule(rule, isNew)
+                )
+                showTagRuleEdit = false
+                editingTagRule = null
+            },
+            onCopy = { rule ->
+                tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.CopyRule(rule))
+            },
+            onPaste = { tagGroupRuleViewModel.pasteRule() }
+        )
     }
 }
-
