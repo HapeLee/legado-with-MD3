@@ -686,6 +686,7 @@
     <string name="footer_font_size">Footer Font Size</string>
     <string name="select_image">Select a picture</string>
     <string name="group_manage">Group Management</string>
+    <string name="group_add">New Group</string>
     <string name="group_select">Group selection</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
@@ -1707,6 +1708,8 @@
     <string name="is_reading">Reading</string>
     <string name="is_unread">Unread</string>
     <string name="is_read_finished">Finished</string>
+    <string name="is_read_finished_update">Finished (Serial)</string>
+    <string name="is_read_finished_complete">Finished (Completed)</string>
     <string name="manga">Manga</string>
     <string name="noval">Novel</string>
     <string name="cover_show_shadow">Show Font Shadow</string>
@@ -1956,4 +1959,38 @@
     <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
     <string name="eye_protection_start_time">Start Time</string>
     <string name="eye_protection_end_time">End Time</string>
+
+    <!-- Tag Rules -->
+    <string name="highlight_tag_config">Tag Rules</string>
+    <string name="import_highlight_tag_rule">Import Tag Rules</string>
+    <string name="highlight_tag_title">Title</string>
+    <string name="highlight_tag_pattern">Pattern</string>
+    <string name="highlight_tag_empty_hint">No highlight tag rules configured. Add rules to highlight specific tags on the book info screen.</string>
+    <string name="highlight_tag_add_rule">Add Rule</string>
+    <string name="highlight_tag_edit_rule">Edit Rule</string>
+    <string name="highlight_tag_title_hint">Title (optional)</string>
+    <string name="highlight_tag_pattern_hint">Regex pattern (e.g. (\\d+)字)</string>
+    <string name="highlight_tag_display_mode">Display Mode</string>
+    <string name="highlight_tag_mode_horizontal">Horizontal</string>
+    <string name="highlight_tag_mode_vertical">Vertical</string>
+    <string name="highlight_tag_test_area">Test</string>
+    <string name="highlight_tag_test_input_hint">Enter test text</string>
+    <string name="highlight_tag_test_button">Test Match</string>
+    <string name="highlight_tag_test_match">Matched: %1$s</string>
+    <string name="highlight_tag_test_match_vertical">Matched: %1$s | %2$s</string>
+    <string name="highlight_tag_test_no_match">No match</string>
+    <string name="highlight_tag_test_error">Error: %1$s</string>
+
+    <!-- Tag Group Rules -->
+    <string name="tag_group_tab_highlight">Highlight</string>
+    <string name="tag_group_tab_group">Group</string>
+    <string name="tag_group_add_rule">New Tag Group</string>
+    <string name="tag_group_edit_rule">Edit Group Rule</string>
+    <string name="tag_group_name">Group Name</string>
+    <string name="tag_group_pattern">Pattern (matches kind tags)</string>
+    <string name="tag_group_empty_hint">No tag group rules configured. Add rules to auto-group books by their kind tags.</string>
+    <string name="tag_group_sync">Sync Tag Groups</string>
+    <string name="tag_group_rules">Tag Group Rules</string>
+    <string name="tag_group_sync_complete">Group sync complete</string>
+    <string name="import_tag_group_rule">Import Tag Group Rules</string>
 </resources>

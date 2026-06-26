@@ -660,6 +660,7 @@
     <string name="footer_font_size">页脚字号</string>
     <string name="select_image">选择图片</string>
     <string name="group_manage">分组管理</string>
+    <string name="group_add">新建分组</string>
     <string name="group_select">分组选择</string>
     <string name="group_edit">编辑分组</string>
     <string name="move_to_group">移入分组</string>
@@ -1670,6 +1671,8 @@
     <string name="is_reading">在读</string>
     <string name="is_unread">未读</string>
     <string name="is_read_finished">已读</string>
+    <string name="is_read_finished_update">连载已读</string>
+    <string name="is_read_finished_complete">完本已读</string>
     <string name="manga">漫画</string>
     <string name="noval">小说</string>
     <string name="cover_show_shadow">显示字体阴影</string>
@@ -1947,4 +1950,38 @@
     <string name="eye_protection_schedule_summary">仅在配置的时间段内生效</string>
     <string name="eye_protection_start_time">开始时间</string>
     <string name="eye_protection_end_time">结束时间</string>
+
+    <!-- 标签规则 -->
+    <string name="highlight_tag_config">标签规则</string>
+    <string name="import_highlight_tag_rule">导入标签规则</string>
+    <string name="highlight_tag_title">标题</string>
+    <string name="highlight_tag_pattern">匹配规则</string>
+    <string name="highlight_tag_empty_hint">暂无醒目标签规则。添加规则可在书籍信息页面突出显示特定标签。</string>
+    <string name="highlight_tag_add_rule">添加规则</string>
+    <string name="highlight_tag_edit_rule">编辑规则</string>
+    <string name="highlight_tag_title_hint">标题（可选）</string>
+    <string name="highlight_tag_pattern_hint">正则表达式（如 (\\d+)字）</string>
+    <string name="highlight_tag_display_mode">显示模式</string>
+    <string name="highlight_tag_mode_horizontal">水平</string>
+    <string name="highlight_tag_mode_vertical">竖向</string>
+    <string name="highlight_tag_test_area">测试</string>
+    <string name="highlight_tag_test_input_hint">输入测试文本</string>
+    <string name="highlight_tag_test_button">测试匹配</string>
+    <string name="highlight_tag_test_match">匹配：%1$s</string>
+    <string name="highlight_tag_test_match_vertical">匹配：%1$s | %2$s</string>
+    <string name="highlight_tag_test_no_match">未匹配</string>
+    <string name="highlight_tag_test_error">错误：%1$s</string>
+
+    <!-- 标签分组规则 -->
+    <string name="tag_group_tab_highlight">醒目标签</string>
+    <string name="tag_group_tab_group">标签分组</string>
+    <string name="tag_group_add_rule">新建标签分组</string>
+    <string name="tag_group_edit_rule">编辑分组规则</string>
+    <string name="tag_group_name">分组名称</string>
+    <string name="tag_group_pattern">匹配规则（匹配书籍标签）</string>
+    <string name="tag_group_empty_hint">暂无标签分组规则。添加规则可根据书籍标签自动分组。</string>
+    <string name="tag_group_sync">同步标签分组</string>
+    <string name="tag_group_rules">标签分组规则</string>
+    <string name="tag_group_sync_complete">分组同步完成</string>
+    <string name="import_tag_group_rule">导入分组规则</string>
 </resources>
