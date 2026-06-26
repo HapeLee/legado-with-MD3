@@ -114,7 +114,10 @@
       "Bash(Select-String -Pattern \"\\(BUILD|error:|FAILED\\)\")",
       "PowerShell(grep *)",
       "Bash(powershell -Command \"./gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 30\")",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "Bash(xargs grep -l \"ImeLazyListAutoScroller\")",
+      "Bash(xargs grep -l \"MarkdownBlock\")",
+      "Bash(./gradlew.bat assembleAppDebug)"
     ]
   }
 }

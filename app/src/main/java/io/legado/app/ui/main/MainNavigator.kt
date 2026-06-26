@@ -38,11 +38,26 @@ object MainNavigator {
                 }
             }
 
+            MainRouteAiChat -> {
+                if (currentRoute == MainRouteSettingsAi || currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(MainRouteSettings)
+                    backStack.add(MainRouteSettingsAi)
+                    backStack.add(route)
+                }
+            }
+
             MainRouteSettingsOther,
             MainRouteSettingsRead,
             MainRouteSettingsCover,
             MainRouteSettingsTheme,
             MainRouteSettingsBackup,
+            MainRouteSettingsAi,
+            is MainRouteSettingsAiProviderEdit,
+            is MainRouteSettingsAiModelEdit,
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
             MainRouteSettingsDownloadCache,
@@ -262,6 +277,8 @@ object MainNavigator {
             MainRouteConst.ROUTE_SETTINGS_COVER -> MainRouteSettingsCover
             MainRouteConst.ROUTE_SETTINGS_THEME -> MainRouteSettingsTheme
             MainRouteConst.ROUTE_SETTINGS_BACKUP -> MainRouteSettingsBackup
+            MainRouteConst.ROUTE_SETTINGS_AI -> MainRouteSettingsAi
+            MainRouteConst.ROUTE_AI_CHAT -> MainRouteAiChat
             MainRouteConst.ROUTE_SETTINGS_CUSTOM_THEME -> MainRouteSettingsCustomTheme
             MainRouteConst.ROUTE_SETTINGS_DOWNLOAD_CACHE -> MainRouteSettingsDownloadCache
             MainRouteConst.ROUTE_SETTINGS_TRANSLATION -> MainRouteSettingsTranslation

@@ -207,6 +207,7 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.json.path)
     implementation(libs.jsoupxpath)
+    implementation(libs.intellij.markdown)
     implementation(project(":modules:book"))
     implementation(project(":modules:rhino"))
     implementation(libs.okhttp)
@@ -233,7 +234,6 @@ dependencies {
     implementation(libs.markwon.image.glide)
     implementation(libs.markwon.ext.tables)
     implementation(libs.markwon.html)
-    implementation(libs.markdown.renderer.m3)
     implementation(libs.quick.chinese.transfer.core)
     implementation(libs.hutool.crypto)
     //noinspection GradleDependency

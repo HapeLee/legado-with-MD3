@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -17,8 +13,8 @@ import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
-import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -28,11 +24,10 @@ import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranslationConfigScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToAi: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-
-    var tempPrompt by remember { mutableStateOf(TranslationConfig.llmPrompt) }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -88,44 +83,13 @@ fun TranslationConfigScreen(
                 }
             }
 
-            if (TranslationConfig.llmProvider == TranslationConfig.PROVIDER_OPENAI) {
+            if (TranslationConfig.llmProvider == TranslationConfig.PROVIDER_APP_AI) {
                 item {
-                    SplicedColumnGroup(title = stringResource(R.string.openai_config)) {
-                        InputSettingItem(
-                            title = stringResource(R.string.llm_base_url),
-                            value = TranslationConfig.llmBaseUrl,
-                            onConfirm = { TranslationConfig.llmBaseUrl = it }
-                        )
-
-                        InputSettingItem(
-                            title = stringResource(R.string.llm_api_key),
-                            value = TranslationConfig.llmApiKey,
-                            onConfirm = { TranslationConfig.llmApiKey = it }
-                        )
-
-                        InputSettingItem(
-                            title = stringResource(R.string.llm_model),
-                            value = TranslationConfig.llmModel,
-                            onConfirm = { TranslationConfig.llmModel = it }
-                        )
-
-                        SliderSettingItem(
-                            title = stringResource(R.string.llm_temperature),
-                            value = TranslationConfig.llmTemperature,
-                            defaultValue = TranslationConfig.DEFAULT_TEMPERATURE,
-                            valueRange = TranslationConfig.MIN_TEMPERATURE..TranslationConfig.MAX_TEMPERATURE,
-                            steps = 19,
-                            description = stringResource(R.string.llm_temperature_description),
-                            onValueChange = { TranslationConfig.llmTemperature = it }
-                        )
-
-                        InputSettingItem(
-                            title = stringResource(R.string.llm_prompt),
-                            value = tempPrompt,
-                            onConfirm = {
-                                tempPrompt = it
-                                TranslationConfig.llmPrompt = it
-                            }
+                    SplicedColumnGroup(title = stringResource(R.string.ai_config)) {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.translation_app_ai_provider),
+                            description = stringResource(R.string.translation_app_ai_provider_summary),
+                            onClick = onNavigateToAi
                         )
                     }
                 }

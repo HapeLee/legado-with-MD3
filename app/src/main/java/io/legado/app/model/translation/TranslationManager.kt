@@ -43,7 +43,7 @@ object TranslationManager : KoinComponent {
      */
     fun hasTranslatedCache(book: Book, chapter: BookChapter): Boolean {
         val cacheFile =
-            translationCacheGateway.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
+            translationCacheGateway.getCacheFile(book, chapter, currentTargetLanguage())
         return cacheFile.exists()
     }
 
@@ -52,7 +52,7 @@ object TranslationManager : KoinComponent {
      */
     fun getCachedTranslation(book: Book, chapter: BookChapter): String? {
         val cacheFile =
-            translationCacheGateway.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
+            translationCacheGateway.getCacheFile(book, chapter, currentTargetLanguage())
         return if (cacheFile.exists()) cacheFile.readText() else null
     }
 
@@ -113,7 +113,6 @@ object TranslationManager : KoinComponent {
         val result = translateChapterUseCase.execute(
             book = book,
             bookChapter = bookChapter,
-            targetLanguage = TranslationConfig.llmTargetLanguage,
             onProgress = { progress ->
                 taskFlow.update {
                     it.copy(
@@ -163,17 +162,22 @@ object TranslationManager : KoinComponent {
      * Delete translation cache and state for a chapter.
      */
     suspend fun deleteTranslationCache(book: Book, bookChapter: BookChapter) {
+        val targetLanguage = currentTargetLanguage()
         translationCacheGateway.deleteTranslation(
             book,
             bookChapter,
-            TranslationConfig.llmTargetLanguage
+            targetLanguage
         )
         translationCacheGateway.clearChunkCacheForChapter(
             book,
             bookChapter,
-            TranslationConfig.llmTargetLanguage
+            targetLanguage
         )
         clearChapterState(book.bookUrl, bookChapter.index)
+    }
+
+    private fun currentTargetLanguage(): String {
+        return TranslationConfig.llmTargetLanguage
     }
 
 }

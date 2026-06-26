@@ -16,6 +16,10 @@ val appDatabaseModule = module {
 
     // 注册所有的 DAO 接口，通过 AppDatabase 实例获取
     factory<BookDao> { get<AppDatabase>().bookDao }
+    factory<AiProfileDao> { get<AppDatabase>().aiProfileDao }
+    factory<AiArtifactDao> { get<AppDatabase>().aiArtifactDao }
+    factory<AiChatDao> { get<AppDatabase>().aiChatDao }
+    factory<AiMemoryDao> { get<AppDatabase>().aiMemoryDao }
     factory<BookGroupDao> { get<AppDatabase>().bookGroupDao }
     factory<BookSourceDao> { get<AppDatabase>().bookSourceDao }
     factory<BookChapterDao> { get<AppDatabase>().bookChapterDao }
