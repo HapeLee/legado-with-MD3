@@ -118,6 +118,8 @@ import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
+import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
 import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -231,6 +233,8 @@ val appModule = module {
     }
 
     viewModelOf(::DictRuleViewModel)
+    viewModelOf(::HighlightTagRuleViewModel)
+    viewModelOf(::TagGroupRuleViewModel)
     viewModelOf(::DictViewModel)
     viewModelOf(::RssSourceViewModel)
     viewModelOf(::RssSortViewModel)

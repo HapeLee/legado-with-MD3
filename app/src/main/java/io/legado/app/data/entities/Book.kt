@@ -1,6 +1,7 @@
 package io.legado.app.data.entities
 
 import android.os.Parcelable
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
@@ -387,6 +388,7 @@ data class Book(
     }
 
     fun save() {
+        applyTagGroupRulesForBook(this)
         if (appDb.bookDao.has(bookUrl)) {
             appDb.bookDao.update(this)
         } else {

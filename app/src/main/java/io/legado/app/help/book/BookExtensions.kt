@@ -14,6 +14,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.ui.book.info.HighlightedTag
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
@@ -343,6 +345,168 @@ fun Book.upKind() {
     }
 
     kind = kinds.distinct().joinToString(",")
+}
+
+fun parseHighlightedTags(
+    kindLabels: List<String>,
+    rules: List<HighlightTagRule>,
+): Pair<List<HighlightedTag>, List<String>> {
+    if (rules.isEmpty()) {
+        return emptyList<HighlightedTag>() to kindLabels
+    }
+
+    val compiledRules = rules.mapNotNull { rule ->
+        val regex = try {
+            Regex(rule.pattern)
+        } catch (_: Exception) {
+            return@mapNotNull null
+        }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) {
+        return emptyList<HighlightedTag>() to kindLabels
+    }
+
+    // Group matched labels by rule
+    val ruleToLabels = linkedMapOf<HighlightTagRule, MutableList<String>>()
+    val regular = mutableListOf<String>()
+
+    for (tag in kindLabels) {
+        var matched = false
+        for ((rule, regex) in compiledRules) {
+            if (regex.containsMatchIn(tag)) {
+                matched = true
+                ruleToLabels.getOrPut(rule) { mutableListOf() }.add(tag)
+                break
+            }
+        }
+        if (!matched) {
+            regular.add(tag)
+        }
+    }
+
+    val highlighted = ruleToLabels.map { (rule, labels) ->
+        HighlightedTag(
+            matchedLabels = labels,
+            title = rule.title.takeIf { it.isNotBlank() },
+        )
+    }
+
+    return highlighted to regular
+}
+
+fun applyTagGroupRules(
+    books: List<Book>,
+    rules: List<io.legado.app.data.entities.TagGroupRule>,
+) {
+    if (rules.isEmpty()) return
+
+    val compiledRules = rules.mapNotNull { rule ->
+        val regex = try {
+            Regex(rule.pattern)
+        } catch (_: Exception) {
+            return@mapNotNull null
+        }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) return
+
+    val groupDao = appDb.bookGroupDao
+    val bookDao = appDb.bookDao
+
+    // Resolve groupName -> groupId (find or create BookGroup)
+    val groupCache = mutableMapOf<String, Long>()
+    for ((rule, _) in compiledRules) {
+        if (rule.groupName !in groupCache) {
+            val existing = groupDao.getByName(rule.groupName)
+            val groupId = existing?.groupId ?: run {
+                val newId = groupDao.getUnusedId()
+                groupDao.insert(
+                    io.legado.app.data.entities.BookGroup(
+                        groupId = newId,
+                        groupName = rule.groupName,
+                    )
+                )
+                newId
+            }
+            groupCache[rule.groupName] = groupId
+        }
+    }
+
+    // Mask of all group IDs managed by tag group rules
+    val allRuleGroupMask = groupCache.values.fold(0L) { acc, id -> acc or id }
+
+    val updatedBooks = mutableListOf<Book>()
+    for (book in books) {
+        val kinds = book.kind?.splitNotBlank(",", "\n").orEmpty()
+        var newGroupMask = 0L
+        for ((rule, regex) in compiledRules) {
+            if (kinds.any { regex.containsMatchIn(it) }) {
+                newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
+            }
+        }
+        // Clear old rule-managed bits, then set new ones
+        val clearedGroup = book.group and allRuleGroupMask.inv()
+        val finalGroup = clearedGroup or newGroupMask
+        if (book.group != finalGroup) {
+            book.group = finalGroup
+            updatedBooks.add(book)
+        }
+    }
+
+    if (updatedBooks.isNotEmpty()) {
+        appDb.runInTransaction {
+            bookDao.update(*updatedBooks.toTypedArray())
+        }
+    }
+}
+
+/**
+ * Apply tag group rules to a single book. Called from Book.save().
+ * Lightweight: only processes the given book, not all books.
+ */
+fun applyTagGroupRulesForBook(book: Book) {
+    val rules = appDb.tagGroupRuleDao.getAll()
+    if (rules.isEmpty()) return
+
+    val compiledRules = rules.mapNotNull { rule ->
+        val regex = try { Regex(rule.pattern) } catch (_: Exception) { return@mapNotNull null }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) return
+
+    val groupDao = appDb.bookGroupDao
+    val groupCache = mutableMapOf<String, Long>()
+    for ((rule, _) in compiledRules) {
+        if (rule.groupName !in groupCache) {
+            val existing = groupDao.getByName(rule.groupName)
+            val groupId = existing?.groupId ?: run {
+                val newId = groupDao.getUnusedId()
+                groupDao.insert(
+                    io.legado.app.data.entities.BookGroup(
+                        groupId = newId,
+                        groupName = rule.groupName,
+                    )
+                )
+                newId
+            }
+            groupCache[rule.groupName] = groupId
+        }
+    }
+
+    val allRuleGroupMask = groupCache.values.fold(0L) { acc, id -> acc or id }
+    val kinds = book.kind?.splitNotBlank(",", "\n").orEmpty()
+    var newGroupMask = 0L
+    for ((rule, regex) in compiledRules) {
+        if (kinds.any { regex.containsMatchIn(it) }) {
+            newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
+        }
+    }
+    val clearedGroup = book.group and allRuleGroupMask.inv()
+    val finalGroup = clearedGroup or newGroupMask
+    if (book.group != finalGroup) {
+        book.group = finalGroup
+    }
 }
 
 fun Book.sync(oldBook: Book) {
