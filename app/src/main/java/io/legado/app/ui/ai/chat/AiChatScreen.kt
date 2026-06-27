@@ -45,8 +45,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -70,6 +72,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -83,10 +86,12 @@ import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
@@ -99,6 +104,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun AiChatRouteScreen(
@@ -157,6 +166,7 @@ fun AiChatScreen(
         }
     ) {
         AppScaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 GlassMediumFlexibleTopAppBar(
@@ -461,7 +471,21 @@ private fun RecentChatsDrawer(
     onNewChat: () -> Unit,
     onSelectConversation: (String) -> Unit
 ) {
-    ModalDrawerSheet {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredConversations = remember(conversations, searchQuery) {
+        if (searchQuery.isBlank()) {
+            conversations
+        } else {
+            conversations.filter {
+                it.title.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    ModalDrawerSheet(
+        modifier = Modifier.width(280.dp),
+        drawerContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -480,30 +504,75 @@ private fun RecentChatsDrawer(
                 contentDescription = stringResource(R.string.ai_new_chat)
             )
         }
+        AppTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            backgroundColor = LegadoTheme.colorScheme.surface,
+            label = stringResource(R.string.search),
+            singleLine = true
+        )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(conversations, key = { it.id }) { conversation ->
-                val background = if (conversation.isSelected) {
-                    LegadoTheme.colorScheme.primaryContainer
-                } else {
-                    LegadoTheme.colorScheme.surface
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(background)
-                        .clickable(onClick = { onSelectConversation(conversation.id) })
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+            items(filteredConversations, key = { it.id }) { conversation ->
+                val isSelected = conversation.isSelected
+                NormalCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onSelectConversation(conversation.id) },
+                    containerColor = if (isSelected) {
+                        LegadoTheme.colorScheme.primaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surface
+                    }
                 ) {
-                    AppText(
-                        text = conversation.title,
-                        style = LegadoTheme.typography.bodyLarge,
-                        maxLines = 2
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        AppText(
+                            text = conversation.title,
+                            style = LegadoTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            color = if (isSelected) {
+                                LegadoTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                LegadoTheme.colorScheme.onSurface
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        AppText(
+                            text = formatRelativeTime(conversation.updatedAt),
+                            style = LegadoTheme.typography.labelSmall,
+                            color = LegadoTheme.colorScheme.outline
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+private fun formatRelativeTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
+    val hours = TimeUnit.MILLISECONDS.toHours(diff)
+    val days = TimeUnit.MILLISECONDS.toDays(diff)
+    return when {
+        minutes < 1 -> "刚刚"
+        minutes < 60 -> "${minutes}分钟前"
+        hours < 24 -> "${hours}小时前"
+        days < 7 -> "${days}天前"
+        days < 30 -> "${days / 7}周前"
+        else -> {
+            val sdf = SimpleDateFormat("MM/dd", Locale.getDefault())
+            sdf.format(Date(timestamp))
         }
     }
 }
