@@ -96,12 +96,7 @@ fun ContentEditSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = {
-            if (state.contentEditTitle.isNotEmpty()) {
-                onIntent(ReadBookIntent.SaveContentEdit(state.contentEditText, state.contentEditSaveToSource))
-            }
-            onDismissRequest()
-        },
+        onDismissRequest = onDismissRequest,
         title = state.contentEditTitle,
     ) {
         Column(

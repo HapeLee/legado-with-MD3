@@ -21,6 +21,28 @@ class SearchContentRepository {
 
     private var lastSearchResults: List<SearchResult>? = null
     private var lastQueryKey: String? = null
+    private var lastSearchSession: SearchSession? = null
+
+    data class SearchSession(
+        val bookUrl: String,
+        val query: String,
+        val replaceEnabled: Boolean,
+        val regexReplace: Boolean,
+        val results: List<SearchResult>,
+    )
+
+    fun getLastSession(bookUrl: String): SearchSession? {
+        return lastSearchSession?.takeIf { it.bookUrl == bookUrl }
+    }
+
+    fun beginSearch(
+        bookUrl: String,
+        query: String,
+        replaceEnabled: Boolean,
+        regexReplace: Boolean,
+    ) {
+        cacheResults(bookUrl, query, replaceEnabled, regexReplace, emptyList())
+    }
 
     fun getCache(
         bookUrl: String,
@@ -62,14 +84,33 @@ class SearchContentRepository {
 
                 if (chapterResults.isNotEmpty()) {
                     allResults.addAll(chapterResults)
+                    cacheResults(book.bookUrl, query, replaceEnabled, regexReplace, allResults)
                     emit(ArrayList(allResults))
                 }
             }
         }
-        lastSearchResults = allResults
-        lastQueryKey = searchKey(book.bookUrl, query, replaceEnabled, regexReplace)
+        cacheResults(book.bookUrl, query, replaceEnabled, regexReplace, allResults)
         emit(ArrayList(allResults))
     }.flowOn(Dispatchers.Default)
+
+    private fun cacheResults(
+        bookUrl: String,
+        query: String,
+        replaceEnabled: Boolean,
+        regexReplace: Boolean,
+        results: List<SearchResult>,
+    ) {
+        val cachedResults = ArrayList(results)
+        lastSearchResults = cachedResults
+        lastQueryKey = searchKey(bookUrl, query, replaceEnabled, regexReplace)
+        lastSearchSession = SearchSession(
+            bookUrl = bookUrl,
+            query = query,
+            replaceEnabled = replaceEnabled,
+            regexReplace = regexReplace,
+            results = cachedResults,
+        )
+    }
 
     private fun searchKey(
         bookUrl: String,

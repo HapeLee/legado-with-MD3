@@ -45,13 +45,19 @@ class SearchContentViewModel(
     private val searchContentRepository: SearchContentRepository
 ) : ViewModel() {
 
-    private val _searchQuery = MutableStateFlow(initialSearchWord ?: "")
+    private val restoredSession = if (initialSearchWord == null) {
+        searchContentRepository.getLastSession(bookUrl)
+    } else {
+        null
+    }
+
+    private val _searchQuery = MutableStateFlow(initialSearchWord ?: restoredSession?.query.orEmpty())
     val searchQuery = _searchQuery.asStateFlow()
 
-    private val _replaceEnabled = MutableStateFlow(false)
+    private val _replaceEnabled = MutableStateFlow(restoredSession?.replaceEnabled ?: false)
     val replaceEnabled = _replaceEnabled.asStateFlow()
 
-    private val _regexReplace = MutableStateFlow(false)
+    private val _regexReplace = MutableStateFlow(restoredSession?.regexReplace ?: false)
     val regexReplace = _regexReplace.asStateFlow()
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -138,6 +144,7 @@ class SearchContentViewModel(
             return
         }
 
+        searchContentRepository.beginSearch(bookUrl, query, replace, regex)
         searchJob = viewModelScope.launch {
             _uiState.value.book?.let { book ->
                 saveSearchHistory(book, query)

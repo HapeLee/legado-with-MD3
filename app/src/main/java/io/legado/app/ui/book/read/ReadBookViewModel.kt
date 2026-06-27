@@ -119,7 +119,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
-import java.net.URLEncoder
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -849,12 +848,11 @@ class ReadBookViewModel(
             is ReadBookIntent.ExportAllHttpTtsAsUrl -> {
                 execute {
                     val json = exportHttpTtsJson()
-                    val url = uploadRepository.upload(
+                    uploadRepository.upload(
                         fileName = "httpTTS.json",
                         file = json,
                         contentType = "application/json"
                     )
-                    "legado://import/httpTTS?src=" + URLEncoder.encode(url, "UTF-8")
                 }.onSuccess { url ->
                     context.sendToClip(url)
                     _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.copy_url)))

@@ -244,13 +244,18 @@ data class TextLine(
             null
 
         val lineY = height + (ReadBookConfig.durConfig.underlinePadding - 10).dpToPx()
+        val pageOffset = if (textPage.doublePage && !isLeftLine) {
+            ChapterProvider.viewWidth / 2f
+        } else {
+            0f
+        }
         val startX = if (ReadBookConfig.underlineExtend) {
-            ChapterProvider.paddingLeft.toFloat()
+            pageOffset + ChapterProvider.paddingLeft
         } else {
             lineStart + indentWidth
         }
         val endX = if (ReadBookConfig.underlineExtend) {
-            (ChapterProvider.paddingLeft + ChapterProvider.visibleWidth).toFloat()
+            pageOffset + ChapterProvider.paddingLeft + ChapterProvider.visibleWidth
         } else {
             lineEnd
         }

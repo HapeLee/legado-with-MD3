@@ -95,7 +95,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -175,7 +174,6 @@ import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
-import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.ceil
@@ -2244,7 +2242,7 @@ private fun ReadMenuSlider(
 ) {
     if (glassThumbEnabled && backdrop != null) {
         ReadMenuLiquidSlider(
-            value = { value },
+            value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
             visibilityThreshold = 0.001f,
@@ -2272,7 +2270,7 @@ private fun ReadMenuSlider(
 
 @Composable
 private fun ReadMenuLiquidSlider(
-    value: () -> Float,
+    value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     visibilityThreshold: Float,
@@ -2303,7 +2301,7 @@ private fun ReadMenuLiquidSlider(
         val dampedDragAnimation = remember(animationScope, trackWidth, rangeStart, rangeEnd, isLtr) {
             DampedDragAnimation(
                 animationScope = animationScope,
-                initialValue = value(),
+                initialValue = value,
                 valueRange = valueRange,
                 visibilityThreshold = visibilityThreshold,
                 initialScale = 1f,
@@ -2333,13 +2331,10 @@ private fun ReadMenuLiquidSlider(
             )
         }
 
-        LaunchedEffect(dampedDragAnimation) {
-            snapshotFlow { value() }
-                .collectLatest { currentValue ->
-                    if (dampedDragAnimation.targetValue != currentValue) {
-                        dampedDragAnimation.updateValue(currentValue)
-                    }
-                }
+        LaunchedEffect(dampedDragAnimation, value) {
+            if (dampedDragAnimation.targetValue != value) {
+                dampedDragAnimation.updateValue(value)
+            }
         }
 
         val progress = if (range == 0f) {

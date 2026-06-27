@@ -1057,6 +1057,10 @@ object ChapterProvider {
      * 更新View尺寸
      */
     fun upViewSize(width: Int, height: Int) {
+        upViewSizeRunnable?.let {
+            handler.removeCallbacks(it)
+            upViewSizeRunnable = null
+        }
         if (width <= 0 || height <= 0) {
             return
         }
@@ -1069,9 +1073,6 @@ object ChapterProvider {
             } else {
                 notifyViewSizeChange(width, height)
             }
-        } else if (upViewSizeRunnable != null) {
-            handler.removeCallbacks(upViewSizeRunnable!!)
-            upViewSizeRunnable = null
         }
     }
 
