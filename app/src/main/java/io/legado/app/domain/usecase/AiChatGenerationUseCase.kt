@@ -116,6 +116,29 @@ class AiChatGenerationUseCase(
         }
     }
 
+    suspend fun generateTitle(
+        userContent: String,
+        assistantContent: String,
+        reasoningLevel: AiReasoningLevel
+    ): String {
+        val preset = aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
+            ?: error("No AI model configured")
+        val prompt = """
+            请根据以下对话内容，生成一个简短的中文标题（不超过20个字）。
+            只输出标题，不要任何解释或前缀。
+
+            用户：${userContent.take(500)}
+            助手：${assistantContent.take(500)}
+        """.trimIndent()
+        val request = AiGenerateRequest(
+            model = preset.model,
+            messages = listOf(AiMessage(AiMessageRole.USER, prompt)),
+            params = preset.params.copy(reasoningLevel = reasoningLevel)
+        )
+        val result = aiTextGateway.generate(request)
+        return result.getOrNull()?.text?.trim()?.take(30) ?: userContent.take(20)
+    }
+
     private suspend fun buildRequestMessages(
         newContent: String,
         history: List<AiChatMessageUi>,

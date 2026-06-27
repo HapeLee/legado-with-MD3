@@ -76,4 +76,10 @@ interface AiChatDao {
 
     @Query("UPDATE ai_chat_conversations SET updatedAt = :updatedAt WHERE id = :conversationId")
     suspend fun touchConversation(conversationId: String, updatedAt: Long)
+
+    @Query("DELETE FROM ai_chat_conversations WHERE id = :conversationId")
+    suspend fun deleteConversation(conversationId: String)
+
+    @Query("DELETE FROM ai_chat_messages WHERE conversationId = :conversationId")
+    suspend fun deleteMessagesByConversation(conversationId: String)
 }

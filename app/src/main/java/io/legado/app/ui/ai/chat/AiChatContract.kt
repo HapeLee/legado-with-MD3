@@ -71,6 +71,8 @@ sealed interface AiChatIntent {
     data class UpdateReasoningLevel(val level: AiReasoningLevel) : AiChatIntent
     data class RegenerateMessage(val messageId: String) : AiChatIntent
     data class SwitchBranch(val messageId: String) : AiChatIntent
+    data class DeleteConversation(val id: String) : AiChatIntent
+    data class RenameConversation(val id: String, val title: String) : AiChatIntent
 }
 
 sealed interface AiChatEffect {

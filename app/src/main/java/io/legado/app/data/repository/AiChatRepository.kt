@@ -126,5 +126,10 @@ class AiChatRepository(
             )
         }
 
+    override suspend fun deleteConversation(conversationId: String) = withContext(Dispatchers.IO) {
+        aiChatDao.deleteMessagesByConversation(conversationId)
+        aiChatDao.deleteConversation(conversationId)
+    }
+
     private fun newId(prefix: String): String = "${prefix}_${UUID.randomUUID().toString().replace("-", "")}"
 }

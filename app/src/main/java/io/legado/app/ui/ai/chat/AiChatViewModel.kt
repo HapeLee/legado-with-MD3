@@ -9,6 +9,7 @@ import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessagePartJson
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolApprovalState
 import io.legado.app.domain.model.reasoningContent
 import io.legado.app.domain.model.textContent
@@ -17,6 +18,7 @@ import io.legado.app.domain.usecase.AiChatGenerationUseCase
 import io.legado.app.domain.usecase.PendingToolRun
 import io.legado.app.domain.usecase.ToolTraceBuilder
 import io.legado.app.utils.GSON
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,6 +68,8 @@ class AiChatViewModel(
             is AiChatIntent.UpdateReasoningLevel -> updateReasoningLevel(intent.level)
             is AiChatIntent.RegenerateMessage -> regenerateMessage(intent.messageId)
             is AiChatIntent.SwitchBranch -> switchBranch(intent.messageId)
+            is AiChatIntent.DeleteConversation -> deleteConversation(intent.id)
+            is AiChatIntent.RenameConversation -> renameConversation(intent.id, intent.title)
         }
     }
 
@@ -76,13 +80,17 @@ class AiChatViewModel(
             aiChatGateway.observeConversations().collect { conversations ->
                 val selectedId = currentConversationId.value
                 _uiState.update { current ->
+                    val previousConversations = current.conversations.associateBy { it.id }
                     current.copy(
                         conversations = conversations.map {
+                            val previous = previousConversations[it.id]
                             AiChatConversationUi(
                                 id = it.id,
                                 title = it.title,
                                 updatedAt = it.updatedAt,
-                                isSelected = it.id == selectedId
+                                isSelected = it.id == selectedId,
+                                providerName = previous?.providerName.orEmpty(),
+                                modelName = previous?.modelName.orEmpty()
                             )
                         }.toImmutableList()
                     )
@@ -152,18 +160,10 @@ class AiChatViewModel(
         currentConversationId.value = id
         viewModelScope.launch {
             val conversation = aiChatGateway.getConversation(id)
-
-            // Load provider/model info for the conversation
-            var providerName = ""
-            var modelName = ""
-            conversation?.modelProfileId?.let { profileId ->
-                val modelProfile = aiProfileGateway.getModel(profileId)
-                if (modelProfile != null) {
-                    modelName = modelProfile.displayName
-                    val provider = aiProfileGateway.getProvider(modelProfile.providerId)
-                    providerName = provider?.name ?: ""
-                }
-            }
+            val preset = aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
+                ?: aiProfileGateway.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
+            val providerName = preset?.model?.provider?.name.orEmpty()
+            val modelName = preset?.model?.displayName.orEmpty()
 
             _uiState.update { current ->
                 current.copy(
@@ -265,6 +265,42 @@ class AiChatViewModel(
         val conversationId = currentConversationId.value ?: return
         viewModelScope.launch {
             aiChatGateway.updateReasoningLevel(conversationId, level.name.lowercase())
+        }
+    }
+
+    private fun deleteConversation(conversationId: String) {
+        viewModelScope.launch {
+            aiChatGateway.deleteConversation(conversationId)
+            if (currentConversationId.value == conversationId) {
+                currentConversationId.value = null
+                _uiState.update { it.copy(messages = persistentListOf(), currentConversationId = null) }
+                createConversation()
+            }
+        }
+    }
+
+    private fun renameConversation(conversationId: String, title: String) {
+        viewModelScope.launch {
+            aiChatGateway.updateConversationTitle(conversationId, title)
+        }
+    }
+
+    private fun generateConversationTitle(conversationId: String, userContent: String, assistantContent: String) {
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                val shortTitle = generationUseCase.generateTitle(
+                    userContent = userContent,
+                    assistantContent = assistantContent,
+                    reasoningLevel = state.reasoningLevel
+                )
+                if (shortTitle.isNotBlank()) {
+                    aiChatGateway.updateConversationTitle(conversationId, shortTitle)
+                }
+            } catch (_: Exception) {
+                // Fallback to truncated user message
+                aiChatGateway.updateConversationTitle(conversationId, userContent.take(24))
+            }
         }
     }
 
@@ -390,9 +426,6 @@ class AiChatViewModel(
                 )
                 conversationIdForMsg = userMessage.conversationId
                 parentMessageId = userMessage.id
-                if (historySnapshot.none { it.role == AiMessageRole.USER }) {
-                    aiChatGateway.updateConversationTitle(conversationId, content.take(24))
-                }
                 val state = _uiState.value
                 val request = generationUseCase.buildRequest(
                     userContent = content,
@@ -447,6 +480,10 @@ class AiChatViewModel(
                             parentMessageId = parentMessageId,
                             thinkingDuration = duration
                         )
+                    }
+                    // Generate AI title for first conversation
+                    if (conversationIdForMsg != null && historySnapshot.none { it.role == AiMessageRole.ASSISTANT }) {
+                        generateConversationTitle(conversationIdForMsg, content, assistantContent)
                     }
                 }
                 _uiState.update {

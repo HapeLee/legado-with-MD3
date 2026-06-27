@@ -40,7 +40,8 @@ import kotlinx.coroutines.delay
 /**
  * Unified thinking/tool card.
  *
- * - Expands only while actively thinking or calling tools
+ * - Reasoning can expand while streaming
+ * - Tool calls can opt out and expand only after a user click
  * - Auto-collapses when streaming ends
  * - Header: left icon + title | right TextCard (time, reasoning only) + expand arrow
  */
@@ -50,6 +51,7 @@ fun AiThinkingCard(
     isStreaming: Boolean,
     durationSeconds: Int = 0,
     modifier: Modifier = Modifier,
+    autoExpandWhileStreaming: Boolean = true,
 ) {
     val hasTools = steps.any { it is AiThinkingStep.ToolStep }
     val hasReasoning = steps.any { it is AiThinkingStep.ReasoningStep }
@@ -74,10 +76,14 @@ fun AiThinkingCard(
     }
     val displaySeconds = if (durationSeconds > 0) durationSeconds else liveSeconds
 
-    // Expand while streaming, collapse when done
-    var expanded by remember { mutableStateOf(isStreaming) }
-    LaunchedEffect(isStreaming) {
-        expanded = isStreaming
+    // Tool cards disable this so only an explicit user click can expand them.
+    var expanded by remember {
+        mutableStateOf(isStreaming && autoExpandWhileStreaming)
+    }
+    LaunchedEffect(isStreaming, autoExpandWhileStreaming) {
+        if (autoExpandWhileStreaming) {
+            expanded = isStreaming
+        }
     }
 
     // Show time only for reasoning (not tool-only)

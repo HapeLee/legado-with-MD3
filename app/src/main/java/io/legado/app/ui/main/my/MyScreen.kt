@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FindReplace
@@ -67,6 +68,7 @@ import org.koin.androidx.compose.koinViewModel
 fun MyScreen(
     viewModel: MyViewModel = koinViewModel(),
     onOpenSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
 
@@ -170,6 +172,11 @@ fun MyScreen(
             SplicedColumnGroup(
                 title = stringResource(R.string.other)
             ) {
+                ClickableSettingItem(
+                    title = stringResource(R.string.ai_chat),
+                    imageVector = Icons.Default.AutoAwesome,
+                    onClick = onNavigateToChat
+                )
                 ClickableSettingItem(
                     title = stringResource(R.string.setting),
                     imageVector = Icons.Default.Settings,

@@ -95,6 +95,9 @@ fun MainActivity.mainEntryProvider(
             onOpenSettings = {
                 onNavigateToRoute(MainRouteSettings)
             },
+            onNavigateToChat = {
+                onNavigateToRoute(MainRouteAiChat)
+            },
             onNavigateToSearch = { key ->
                 onNavigateToRoute(
                     MainRouteSearch(
@@ -227,7 +230,6 @@ fun MainActivity.mainEntryProvider(
                     )
                 )
             },
-            onNavigateToChat = { backStack.add(MainRouteAiChat) },
             onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
         )
     }

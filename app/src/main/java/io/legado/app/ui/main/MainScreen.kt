@@ -105,6 +105,7 @@ fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     useRail: Boolean,
     onOpenSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
     onNavigateToSearch: (String?) -> Unit,
     onNavigateToRemoteImport: () -> Unit,
     onNavigateToLocalImport: () -> Unit,
@@ -424,6 +425,7 @@ fun MainScreen(
                             )
                             MainDestination.My -> MyScreen(
                                 onOpenSettings = onOpenSettings,
+                                onNavigateToChat = onNavigateToChat,
                                 onNavigate = { event ->
                                     when (event) {
                                         PrefClickEvent.OpenBookCacheManage -> onNavigateToBookCacheManage()

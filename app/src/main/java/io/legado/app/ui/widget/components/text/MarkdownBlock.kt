@@ -5,16 +5,22 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +36,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -45,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,6 +60,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import splitties.systemservices.clipboardManager
 import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
@@ -541,6 +550,13 @@ private fun MarkdownCodeBlock(
     language: String?,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+    val collapsedLines = 10
+    val codeLines = remember(code) { code.lines() }
+    var isExpanded by remember(code) { mutableStateOf(codeLines.size <= collapsedLines) }
+    val canCollapse = codeLines.size > collapsedLines
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -552,24 +568,63 @@ private fun MarkdownCodeBlock(
                 RoundedCornerShape(8.dp)
             )
     ) {
-        if (!language.isNullOrBlank()) {
-            AppText(
-                text = language,
-                style = LegadoTheme.typography.labelSmall,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-            )
-        }
-        AppText(
-            text = code,
-            style = LegadoTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 0.85.em),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        )
+                .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!language.isNullOrBlank()) {
+                Text(
+                    text = language,
+                    style = LegadoTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                painter = painterResource(R.drawable.ic_copy),
+                contentDescription = null,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable {
+                        val clip = android.content.ClipData.newPlainText("code", code)
+                        clipboardManager.setPrimaryClip(clip)
+                    }
+                    .padding(4.dp)
+                    .size(16.dp),
+                tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+        }
+        Row(
+            modifier = Modifier.then(
+                if (true) Modifier else Modifier.horizontalScroll(scrollState)
+            )
+        ) {
+            val displayCode = if (isExpanded) code else codeLines.take(collapsedLines).joinToString("\n")
+            AppText(
+                text = displayCode,
+                style = LegadoTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+        if (canCollapse) {
+            Text(
+                text = if (isExpanded) "▲ 收起" else "▼ 展开 (${codeLines.size} 行)",
+                style = LegadoTheme.typography.labelSmall,
+                color = LegadoTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(vertical = 4.dp)
+                    .padding(horizontal = 12.dp),
+            )
+        }
     }
 }
 
@@ -618,13 +673,17 @@ private fun MarkdownTable(
             }
         }
         // Rows
-        rows.forEach { row ->
+        rows.forEachIndexed { index, row ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(
+                        if (index % 2 == 0) LegadoTheme.colorScheme.surface
+                        else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                    )
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             ) {
-                row.forEachIndexed { index, cell ->
+                row.forEach { cell ->
                     AppText(
                         text = cell,
                         style = LegadoTheme.typography.bodySmall,
@@ -634,10 +693,6 @@ private fun MarkdownTable(
                     )
                 }
             }
-            HorizontalDivider(
-                thickness = 0.25.dp,
-                color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
         }
     }
 }

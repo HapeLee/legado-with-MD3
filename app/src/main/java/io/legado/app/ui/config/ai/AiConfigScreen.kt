@@ -34,7 +34,6 @@ fun AiConfigRouteScreen(
     onBackClick: () -> Unit,
     onNavigateToProviderEdit: (providerId: String?) -> Unit,
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
-    onNavigateToChat: () -> Unit,
     onNavigateToTranslation: () -> Unit,
     viewModel: AiConfigViewModel = koinViewModel()
 ) {
@@ -45,7 +44,6 @@ fun AiConfigRouteScreen(
         onBackClick = onBackClick,
         onNavigateToProviderEdit = onNavigateToProviderEdit,
         onNavigateToModelEdit = onNavigateToModelEdit,
-        onNavigateToChat = onNavigateToChat,
         onNavigateToTranslation = onNavigateToTranslation
     )
 }
@@ -59,7 +57,6 @@ fun AiConfigScreen(
     onBackClick: () -> Unit,
     onNavigateToProviderEdit: (providerId: String?) -> Unit,
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
-    onNavigateToChat: () -> Unit,
     onNavigateToTranslation: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -128,10 +125,6 @@ fun AiConfigScreen(
 
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_tasks)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_chat),
-                        onClick = onNavigateToChat
-                    )
                     ClickableSettingItem(
                         title = stringResource(R.string.translation_config),
                         onClick = onNavigateToTranslation
