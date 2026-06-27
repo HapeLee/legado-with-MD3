@@ -355,7 +355,7 @@ fun parseHighlightedTags(
         return emptyList<HighlightedTag>() to kindLabels
     }
 
-    val compiledRules = rules.mapNotNull { rule ->
+    val compiledRules = rules.sortedBy { it.order }.mapNotNull { rule ->
         val regex = try {
             Regex(rule.pattern)
         } catch (_: Exception) {
@@ -367,8 +367,7 @@ fun parseHighlightedTags(
         return emptyList<HighlightedTag>() to kindLabels
     }
 
-    // Group matched labels by rule
-    val ruleToLabels = linkedMapOf<HighlightTagRule, MutableList<String>>()
+    val ruleToLabels = mutableMapOf<HighlightTagRule, MutableList<String>>()
     val regular = mutableListOf<String>()
 
     for (tag in kindLabels) {
@@ -385,11 +384,13 @@ fun parseHighlightedTags(
         }
     }
 
-    val highlighted = ruleToLabels.map { (rule, labels) ->
-        HighlightedTag(
-            matchedLabels = labels,
-            title = rule.title.takeIf { it.isNotBlank() },
-        )
+    val highlighted = compiledRules.mapNotNull { (rule, _) ->
+        ruleToLabels[rule]?.let { labels ->
+            HighlightedTag(
+                matchedLabels = labels,
+                title = rule.title.takeIf { it.isNotBlank() },
+            )
+        }
     }
 
     return highlighted to regular
