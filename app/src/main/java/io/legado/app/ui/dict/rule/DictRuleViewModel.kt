@@ -70,6 +70,10 @@ class DictRuleViewModel(
             is DictRuleIntent.SaveRule -> {
                 if (intent.isNew) {
                     insert(intent.rule)
+                } else if (intent.originalName != null &&
+                    intent.originalName != intent.rule.name
+                ) {
+                    replacePrimaryKey(intent.originalName, intent.rule)
                 } else {
                     update(intent.rule)
                 }
@@ -188,6 +192,8 @@ class DictRuleViewModel(
 
     fun update(vararg rule: DictRule) = viewModelScope.launch { repository.update(*rule) }
     fun insert(vararg rule: DictRule) = viewModelScope.launch { repository.insert(*rule) }
+    fun replacePrimaryKey(oldName: String, rule: DictRule) =
+        viewModelScope.launch { repository.replacePrimaryKey(oldName, rule) }
     fun delete(vararg dictRule: DictRule) = viewModelScope.launch { repository.delete(*dictRule) }
 
     fun copyRule(dictRule: DictRule) {

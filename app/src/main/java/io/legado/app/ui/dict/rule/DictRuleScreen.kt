@@ -237,7 +237,13 @@ fun DictRuleScreen(
             editingRule = null
         },
         onSave = { updatedRule ->
-            onIntent(DictRuleIntent.SaveRule(updatedRule, isNew = editingRule == null))
+            onIntent(
+                DictRuleIntent.SaveRule(
+                    rule = updatedRule,
+                    isNew = editingRule == null,
+                    originalName = editingRule?.name,
+                )
+            )
             showEditSheet = false
             editingRule = null
         },

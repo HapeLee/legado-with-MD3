@@ -44,6 +44,12 @@ class DictRuleRepository {
         }
     }
 
+    suspend fun replacePrimaryKey(oldName: String, rule: DictRule) {
+        withContext(Dispatchers.IO) {
+            dao.replacePrimaryKey(oldName, rule)
+        }
+    }
+
     suspend fun findById(id: String): DictRule? = withContext(Dispatchers.IO) {
         dao.getByName(id)
     }

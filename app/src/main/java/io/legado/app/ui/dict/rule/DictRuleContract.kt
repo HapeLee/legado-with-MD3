@@ -47,7 +47,11 @@ sealed interface DictRuleIntent {
     data class ExportSelection(val uri: Uri) : DictRuleIntent
     data class MoveItem(val from: Int, val to: Int) : DictRuleIntent
     data object SaveSortOrder : DictRuleIntent
-    data class SaveRule(val rule: DictRule, val isNew: Boolean) : DictRuleIntent
+    data class SaveRule(
+        val rule: DictRule,
+        val isNew: Boolean,
+        val originalName: String? = null,
+    ) : DictRuleIntent
     data class DeleteRule(val rule: DictRule) : DictRuleIntent
     data class SetRuleEnabled(val rule: DictRule, val enabled: Boolean) : DictRuleIntent
     data class CopyRule(val rule: DictRule) : DictRuleIntent

@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import io.legado.app.data.entities.DictRule
 import kotlinx.coroutines.flow.Flow
@@ -44,5 +45,14 @@ interface DictRuleDao {
 
     @Query("DELETE FROM dictRules WHERE name IN (:names)")
     suspend fun deleteByIds(names: Set<String>)
+
+    @Query("DELETE FROM dictRules WHERE name = :name")
+    fun deleteByName(name: String)
+
+    @Transaction
+    fun replacePrimaryKey(oldName: String, rule: DictRule) {
+        deleteByName(oldName)
+        insert(rule)
+    }
 
 }
