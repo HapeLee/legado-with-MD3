@@ -455,7 +455,6 @@ fun MainActivity.mainEntryProvider(
         SearchScreen(
             viewModel = searchViewModel,
             onBack = {
-                searchViewModel.onIntent(SearchIntent.ClearSearchResults)
                 onNavigateBack()
             },
             onOpenBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->

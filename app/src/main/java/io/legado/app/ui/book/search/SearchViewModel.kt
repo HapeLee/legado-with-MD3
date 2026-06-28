@@ -23,6 +23,9 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -37,8 +40,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -87,10 +88,15 @@ class SearchViewModel(
     private var persistedSearchScopeRaw = ""
     private var hasTemporaryScope = false
     private val searchScope = SearchScope("")
+    private val searchScopeReady = CompletableDeferred<Unit>()
     private val preferenceWriteScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val searchControl = BookSearchControl()
     private val searchResultBooks = LinkedHashMap<SearchResultKey, SearchBook>()
 
+    private var initializeJob: Job? = null
+    private var lastInitializedKey: String? = null
+    private var lastInitializedScopeRaw: String? = null
+    private var hasInitialized = false
     private var searchJob: Job? = null
     private var currentSearchPage = 1
     private var resultCountBeforeCurrentPage = 0
@@ -323,6 +329,23 @@ class SearchViewModel(
     }
 
     private fun initialize(key: String?, scopeRaw: String?) {
+        initializeJob?.cancel()
+        initializeJob = viewModelScope.launch {
+            searchScopeReady.await()
+            initializeAfterScopeLoaded(key, scopeRaw)
+        }
+    }
+
+    private fun initializeAfterScopeLoaded(key: String?, scopeRaw: String?) {
+        val normalizedKey = key?.trim()
+        val normalizedScopeRaw = scopeRaw?.takeIf { it.isNotBlank() }
+        val isSameRequest = hasInitialized &&
+                lastInitializedKey == normalizedKey &&
+                lastInitializedScopeRaw == normalizedScopeRaw
+        lastInitializedKey = normalizedKey
+        lastInitializedScopeRaw = normalizedScopeRaw
+        hasInitialized = true
+
         val temporaryScope = scopeRaw?.takeIf { it.isNotBlank() }
         if (temporaryScope != null) {
             hasTemporaryScope = true
@@ -339,11 +362,11 @@ class SearchViewModel(
         // This happens when returning from BookInfo — the LaunchedEffect
         // re-fires but we must not wipe the existing results.
         val hasActiveSearch = _uiState.value.committedQuery.isNotEmpty()
-        if (hasActiveSearch) return
+        if (isSameRequest && hasActiveSearch) return
 
         clearSearchResults()
 
-        val initKey = key?.trim().orEmpty()
+        val initKey = normalizedKey.orEmpty()
         if (initKey.isNotEmpty()) {
             updateQuery(initKey, showSuggestions = false)
             submitSearch(initKey)
@@ -732,6 +755,7 @@ class SearchViewModel(
                         searchScope.update(scopeRaw, postValue = false)
                         syncScopeState()
                     }
+                    searchScopeReady.complete(Unit)
                 }
         }
     }
