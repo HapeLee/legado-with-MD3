@@ -391,7 +391,7 @@ fun AiChatScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(systemBottomPadding)
-                            .background(bottomGradientColor.copy(alpha = 0.68f))
+                            .background(bottomGradientColor.copy(alpha = 0.88f))
                     )
                 }
 
@@ -499,7 +499,7 @@ fun AiChatScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 24.dp),
+                            .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1252,7 +1252,7 @@ private fun ChatInputBar(
                 bottom = bottomPadding
             ),
         shape = RoundedCornerShape(32.dp),
-        color = LegadoTheme.colorScheme.surfaceContainerHigh
+        color = LegadoTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
             modifier = Modifier

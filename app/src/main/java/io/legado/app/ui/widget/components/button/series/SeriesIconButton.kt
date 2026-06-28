@@ -1,8 +1,9 @@
 package io.legado.app.ui.widget.components.button.series
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -19,13 +20,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ripple
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -298,7 +298,7 @@ private fun containerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
         SeriesIconButtonStyle.Tonal,
-        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surfaceContainerLow
+        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface
     }
 }
 
