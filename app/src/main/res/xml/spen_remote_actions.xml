@@ -11,6 +11,7 @@
         trigger_key="PAGE_DOWN">
         <preference name="gesture" value="click" />
     </action>
+
     <action
         id="prev_page"
         label="@string/prev_page"
@@ -19,5 +20,23 @@
         repeatable_interval="short"
         trigger_key="PAGE_UP">
         <preference name="gesture" value="double_click" />
+    </action>
+
+    <action
+        id="prev_chapter"
+        label="@string/previous_chapter"
+        priority="3"
+        repeatable="false"
+        trigger_key="MEDIA_PREVIOUS">
+        <preference name="gesture" value="move_left" />
+    </action>
+
+    <action
+        id="next_chapter"
+        label="@string/next_chapter"
+        priority="4"
+        repeatable="false"
+        trigger_key="MEDIA_NEXT">
+        <preference name="gesture" value="move_right" />
     </action>
 </remote-actions>

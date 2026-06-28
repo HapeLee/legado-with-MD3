@@ -975,6 +975,20 @@ class ReadBookController(
                 handleKeyPage(PageDirection.NEXT, longPress)
                 return true
             }
+
+            KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                if (ReadBook.book != null) {
+                    ReadBook.moveToNextChapter(true)
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                if (ReadBook.book != null) {
+                    ReadBook.moveToPrevChapter(upContent = true, toLast = false)
+                }
+                return true
+            }
         }
         return false
     }
