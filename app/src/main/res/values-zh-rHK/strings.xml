@@ -2205,4 +2205,11 @@
     <string name="weekday_tue">週二</string>
     <string name="weekday_wed">週三</string>
     <string name="welcome_title">歡迎！</string>
+
+    <!-- 日夜間/深淺色主題切換提醒 -->
+    <string name="auto_switch_theme_reminder_title">主題模式切換提醒</string>
+    <string name="auto_switch_theme_reminder_desc">根據環境光提醒切換淺色/深色模式</string>
+    <string name="switch_to_dark_mode_tip">當前環境光較暗，是否切換至深色模式？</string>
+    <string name="switch_to_light_mode_tip">當前環境光較亮，是否切換至淺色模式？</string>
+    <string name="switch_action">切換</string>
 </resources>

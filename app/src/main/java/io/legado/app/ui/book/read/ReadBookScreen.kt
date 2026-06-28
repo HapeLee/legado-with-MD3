@@ -503,4 +503,11 @@ fun ReadBookScreen(
         // Sheets using AppModalBottomSheet are composed unconditionally above
         else -> {}
     }
+
+    SwitchDayNightReminder(
+        show = state.showSwitchDayNightReminder,
+        targetIsNight = state.switchDayNightTargetIsNight,
+        onToggleDayNight = { onIntent(ReadBookIntent.ToggleDayNight) },
+        onDismiss = { onIntent(ReadBookIntent.DismissSwitchDayNightReminder) },
+    )
 }

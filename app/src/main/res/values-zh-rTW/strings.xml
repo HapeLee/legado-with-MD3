@@ -2210,4 +2210,11 @@
     <string name="export_complete">匯出完成</string>
     <string name="download_no_storage_permission">下載失敗：無儲存權限</string>
     <string name="already_in_download_list">已在下載列表中</string>
+
+    <!-- 日夜間/深淺色主題切換提醒 -->
+    <string name="auto_switch_theme_reminder_title">主題模式切換提醒</string>
+    <string name="auto_switch_theme_reminder_desc">根據環境光提醒切換淺色/深色模式</string>
+    <string name="switch_to_dark_mode_tip">目前環境光較暗，是否切換至深色模式？</string>
+    <string name="switch_to_light_mode_tip">目前環境光較亮，是否切換至淺色模式？</string>
+    <string name="switch_action">切換</string>
 </resources>

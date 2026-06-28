@@ -94,6 +94,8 @@ data class ReadBookUiState(
     val isLocalBook: Boolean = true,
     val msg: String? = null,
     val isInitFinish: Boolean = false,
+    val showSwitchDayNightReminder: Boolean = false,
+    val switchDayNightTargetIsNight: Boolean = true,
     // Search
     val searchMenuVisible: Boolean = false,
     val isShowingSearchResult: Boolean = false,
@@ -242,6 +244,8 @@ sealed interface ReadBookIntent {
     // Initialization
     data class InitData(val intent: android.content.Intent) : ReadBookIntent
     data class InitReadBookConfig(val intent: android.content.Intent) : ReadBookIntent
+    data class CheckSwitchDayNight(val lux: Float) : ReadBookIntent
+    data object DismissSwitchDayNightReminder : ReadBookIntent
 
     // Navigation
     data object NextPage : ReadBookIntent
@@ -1173,6 +1177,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class AutoChangeSource(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class AutoSuggestDayNight(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SelectText(val value: Boolean) : ConfigUpdate {

@@ -214,6 +214,9 @@ object ReadConfig {
     var autoChangeSource
         get() = ReadDataConfig.autoChangeSource
         set(value) { ReadDataConfig.autoChangeSource = value }
+    var autoSuggestDayNight
+        get() = ReadDataConfig.autoSuggestDayNight
+        set(value) { ReadDataConfig.autoSuggestDayNight = value }
     var defaultSourceChangeAll
         get() = ReadDataConfig.defaultSourceChangeAll
         set(value) { ReadDataConfig.defaultSourceChangeAll = value }
@@ -299,6 +302,7 @@ object ReadConfig {
             keepLight = preferences.keepLight
             screenOrientation = preferences.screenOrientation
             autoChangeSource = preferences.autoChangeSource
+            autoSuggestDayNight = preferences.autoSuggestDayNight
             defaultSourceChangeAll = preferences.defaultSourceChangeAll
             tocUiUseReplace = preferences.tocUiUseReplace
             tocCountWords = preferences.tocCountWords

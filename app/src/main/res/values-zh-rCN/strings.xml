@@ -2213,4 +2213,11 @@
     <string name="is_event_listener">EventListener</string>
     <string name="rule_call_back">callBackJs</string>
     <!-- Missing zh-rTW/HK translations (683 keys) -->
+
+    <!-- 日夜间/深浅色主题切换提醒 -->
+    <string name="auto_switch_theme_reminder_title">主题模式切换提醒</string>
+    <string name="auto_switch_theme_reminder_desc">根据环境光提醒切换浅色/深色模式</string>
+    <string name="switch_to_dark_mode_tip">当前环境光较暗，是否切换至深色模式？</string>
+    <string name="switch_to_light_mode_tip">当前环境光较亮，是否切换至浅色模式？</string>
+    <string name="switch_action">切换</string>
 </resources>

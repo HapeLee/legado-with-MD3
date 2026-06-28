@@ -2218,4 +2218,11 @@
     <string name="export_complete">Export complete</string>
     <string name="download_no_storage_permission">Download error: no storage permission</string>
     <string name="already_in_download_list">Already in download list</string>
+
+    <!-- Day/Night Theme Switch Reminder -->
+    <string name="auto_switch_theme_reminder_title">Theme Mode Switch Reminder</string>
+    <string name="auto_switch_theme_reminder_desc">Remind to switch light/dark mode based on ambient light</string>
+    <string name="switch_to_dark_mode_tip">Ambient light is low. Switch to dark mode?</string>
+    <string name="switch_to_light_mode_tip">Ambient light is bright. Switch to light mode?</string>
+    <string name="switch_action">Switch</string>
 </resources>

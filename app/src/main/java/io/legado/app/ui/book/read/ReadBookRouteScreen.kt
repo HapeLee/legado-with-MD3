@@ -17,10 +17,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.ui.config.readConfig.ReadConfig
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -231,6 +239,44 @@ fun ReadBookRouteScreen(
         StartActivityContract(BookInfoActivity::class.java)
     ) { result ->
         viewModel.onIntent(ReadBookIntent.BookInfoResult(result.resultCode == android.app.Activity.RESULT_OK))
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
+        var listener: SensorEventListener? = null
+
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (!ReadConfig.autoSuggestDayNight) return@LifecycleEventObserver
+                if (lightSensor != null) {
+                    listener = object : SensorEventListener {
+                        override fun onSensorChanged(sensorEvent: SensorEvent?) {
+                            sensorEvent?.values?.firstOrNull()?.let { lux ->
+                                //Log.d("fansangg","lux = $lux")
+                                viewModel.onIntent(ReadBookIntent.CheckSwitchDayNight(lux))
+                            }
+                            listener?.let { sensorManager.unregisterListener(it) }
+                            listener = null
+                        }
+
+                        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+                    }
+                    sensorManager.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+                }
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                listener?.let {
+                    sensorManager?.unregisterListener(it)
+                    listener = null
+                }
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            listener?.let { sensorManager?.unregisterListener(it) }
+        }
     }
 
     // ── Effect collection: route handles launcher effects, rest goes to bridge ──
