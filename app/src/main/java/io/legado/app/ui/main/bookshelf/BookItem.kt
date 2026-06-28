@@ -477,7 +477,7 @@ fun BookGroupItemList(
     val firstBookName = previewBooks.firstOrNull()?.book?.name
     val descAnnotated = if (firstBookName != null) {
         buildAnnotatedString {
-            append("最近阅读：")
+            append(stringResource(R.string.recently_read))
             withStyle(SpanStyle(fontWeight = FontWeight.Medium)) {
                 append(firstBookName)
             }

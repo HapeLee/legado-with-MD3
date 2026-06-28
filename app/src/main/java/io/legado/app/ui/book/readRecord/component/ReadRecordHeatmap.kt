@@ -35,7 +35,7 @@ fun HeatmapCalendarSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AppText(
-                text = HEATMAP_CALENDAR_TITLE,
+                text = heatmapCalendarTitle(),
                 style = LegadoTheme.typography.titleSmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant
             )

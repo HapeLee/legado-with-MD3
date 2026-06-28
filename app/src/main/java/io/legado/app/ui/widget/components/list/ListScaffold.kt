@@ -27,8 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.legado.app.R
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SelectionActions
@@ -66,7 +68,7 @@ fun <T> ListScaffold(
                     visible = state.selectedIds.isEmpty(),
                     alignment = Alignment.BottomEnd,
                 ),
-                tooltipText = "添加",
+                tooltipText = stringResource(R.string.add),
                 icon = Icons.Default.Add
             )
         }

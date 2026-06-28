@@ -494,7 +494,7 @@ fun BookshelfScreen(
                                     leadingIcon = { Icon(Icons.Default.Link, null) }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = "选择模式",
+                                    text = stringResource(R.string.selection_mode),
                                     onClick = {
                                         toggleEditMode()
                                         dismiss()

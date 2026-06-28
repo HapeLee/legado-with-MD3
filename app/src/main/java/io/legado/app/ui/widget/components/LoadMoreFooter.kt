@@ -26,8 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -64,13 +66,13 @@ fun LoadMoreFooter(
     AppAlertDialog(
         data = showFullError,
         onDismissRequest = { showFullError = null },
-        title = "错误详情",
-        confirmText = "复制",
+        title = stringResource(R.string.error_details),
+        confirmText = stringResource(R.string.copy_text),
         onConfirm = { error ->
             context.sendToClip(error)
             showFullError = null
         },
-        dismissText = "关闭",
+        dismissText = stringResource(R.string.close),
         onDismiss = { showFullError = null },
         content = { error ->
             SelectionContainer {
@@ -160,7 +162,7 @@ fun LoadMoreFooter(
                                     )
 
                                     AppText(
-                                        text = "重新加载",
+                                        text = stringResource(R.string.reload),
                                         color = LegadoTheme.colorScheme.error,
                                         style = LegadoTheme.typography.labelMedium
                                     )
@@ -179,7 +181,7 @@ fun LoadMoreFooter(
                         AppContainedLoadingIndicator()
 
                         AppText(
-                            text = "正在加载…",
+                            text = stringResource(R.string.loading),
                             color = LegadoTheme.colorScheme.outline,
                             style = LegadoTheme.typography.bodySmall
                         )
@@ -206,7 +208,7 @@ fun LoadMoreFooter(
                                         tint = LegadoTheme.colorScheme.onSurface
                                     )
                                     AppText(
-                                        text = "已经到底了~",
+                                        text = stringResource(R.string.no_more_data),
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),
@@ -236,7 +238,7 @@ fun LoadMoreFooter(
                                             tint = LegadoTheme.colorScheme.primary
                                         )
                                         AppText(
-                                            text = "尝试加载下一页",
+                                            text = stringResource(R.string.load_next_page),
                                             color = LegadoTheme.colorScheme.primary,
                                             style = LegadoTheme.typography.labelMedium
                                         )
@@ -263,7 +265,7 @@ fun LoadMoreFooter(
                                         tint = LegadoTheme.colorScheme.onSurface
                                     )
                                     AppText(
-                                        text = "已经到底了~",
+                                        text = stringResource(R.string.no_more_data),
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),
@@ -304,7 +306,7 @@ fun LoadMoreFooter(
                                     )
 
                                     AppText(
-                                        text = "加载更多",
+                                        text = stringResource(R.string.load_more),
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),

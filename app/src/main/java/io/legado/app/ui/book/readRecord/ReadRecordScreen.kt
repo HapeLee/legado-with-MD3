@@ -75,7 +75,7 @@ import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.heatmap.HEATMAP_CALENDAR_TITLE
+import io.legado.app.ui.widget.components.heatmap.heatmapCalendarTitle
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
@@ -368,7 +368,7 @@ fun ReadRecordScreen(
     AppModalBottomSheet(
         show = showCalendar,
         onDismissRequest = { showCalendar = false },
-        title = HEATMAP_CALENDAR_TITLE,
+        title = heatmapCalendarTitle(),
         startAction = {
             HeatmapCalendarStartAction(
                 currentMode = heatmapMode,

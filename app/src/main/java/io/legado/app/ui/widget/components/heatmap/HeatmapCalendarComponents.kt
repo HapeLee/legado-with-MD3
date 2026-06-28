@@ -35,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
@@ -44,7 +46,8 @@ import java.time.LocalDate
 /**
  * 热力图日历弹窗标题
  */
-const val HEATMAP_CALENDAR_TITLE = "时间线"
+@Composable
+fun heatmapCalendarTitle(): String = stringResource(R.string.timeline)
 
 /**
  * 热力图日历弹窗左侧操作
@@ -61,7 +64,7 @@ fun HeatmapCalendarStartAction(
         },
         icon = Icons.Default.FormatListNumbered,
         iconChecked = Icons.Default.AccessTime,
-        text = "按时长"
+        text = stringResource(R.string.by_duration)
     )
 }
 
@@ -91,7 +94,15 @@ fun WeekdayLabelsColumn(
         modifier = modifier
             .padding(top = 20.dp, end = 8.dp)
     ) {
-        val labels = listOf("一", "二", "三", "四", "五", "六", "日")
+        val labels = listOf(
+            stringResource(R.string.weekday_mon),
+            stringResource(R.string.weekday_tue),
+            stringResource(R.string.weekday_wed),
+            stringResource(R.string.weekday_thu),
+            stringResource(R.string.weekday_fri),
+            stringResource(R.string.weekday_sat),
+            stringResource(R.string.weekday_sun)
+        )
 
         labels.forEachIndexed { index, label ->
             if (index % 2 == 0) {
@@ -157,7 +168,7 @@ fun NoEarlierDataIndicator(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            "没有更早数据".forEach { char ->
+            stringResource(R.string.no_earlier_data).forEach { char ->
                 AppText(
                     text = char.toString(),
                     fontSize = 9.sp,
@@ -241,7 +252,7 @@ fun HeatmapWeekColumn(
         // 月份标签
         if (firstDayOfMonth != null) {
             AppText(
-                text = "${firstDayOfMonth.monthValue}月",
+                text = stringResource(R.string.month_format, firstDayOfMonth.monthValue),
                 fontSize = 10.sp,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -266,10 +277,10 @@ fun HeatmapLegend(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val legendUnit = if (mode == HeatmapMode.COUNT) "次" else "长"
+        val legendUnit = if (mode == HeatmapMode.COUNT) stringResource(R.string.count_unit) else stringResource(R.string.duration_unit)
 
         AppText(
-            "少($legendUnit)",
+            stringResource(R.string.less_count) + legendUnit + ")",
             style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
@@ -287,7 +298,7 @@ fun HeatmapLegend(
         }
 
         AppText(
-            "多($legendUnit)",
+            stringResource(R.string.more_count) + legendUnit + ")",
             style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )

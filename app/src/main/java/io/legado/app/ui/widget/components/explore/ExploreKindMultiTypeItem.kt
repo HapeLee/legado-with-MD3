@@ -25,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.LegadoTheme
@@ -166,13 +168,13 @@ fun ExploreKindMultiTypeItem(
     AppAlertDialog(
         data = showFullError,
         onDismissRequest = { showFullError = null },
-        title = "错误详情",
-        confirmText = "复制",
+        title = stringResource(R.string.error_details),
+        confirmText = stringResource(R.string.copy_text),
         onConfirm = { error ->
             context.sendToClip(error)
             showFullError = null
         },
-        dismissText = "关闭",
+        dismissText = stringResource(R.string.close),
         onDismiss = { showFullError = null },
         content = { error ->
             SelectionContainer {

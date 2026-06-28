@@ -287,7 +287,7 @@ fun ReplaceRuleScreen(
     )
 
     RuleListScaffold(
-        title = "替换规则",
+        title = stringResource(R.string.replace_purify),
         state = state,
         onBackClick = { onBackClick() },
         onSearchToggle = { onIntent(ReplaceRuleIntent.SetSearchMode(!state.isSearch)) },
@@ -357,39 +357,39 @@ fun ReplaceRuleScreen(
                 onClick = { showImportSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "分组管理",
+                text = stringResource(R.string.group_management),
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "帮助",
+                text = stringResource(R.string.help),
                 onClick = { /*TODO*/ dismiss() }
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = "旧的在前",
+                text = stringResource(R.string.sort_old_first),
                 onClick = { onIntent(ReplaceRuleIntent.SetSortMode("asc")); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "新的在前",
+                text = stringResource(R.string.sort_new_first),
                 onClick = { onIntent(ReplaceRuleIntent.SetSortMode("desc")); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "名称升序",
+                text = stringResource(R.string.sort_name_asc),
                 onClick = {
                     onIntent(ReplaceRuleIntent.SetSortMode("name_asc"))
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))
                     }
                 }
             )
             RoundDropdownMenuItem(
-                text = "名称降序",
+                text = stringResource(R.string.sort_name_desc),
                 onClick = {
                     onIntent(ReplaceRuleIntent.SetSortMode("name_desc"))
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))
                     }
                 }
             )
@@ -435,15 +435,15 @@ fun ReplaceRuleScreen(
                         modifier = Modifier,
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = "移至顶部",
+                                text = stringResource(R.string.move_to_top),
                                 onClick = { onIntent(ReplaceRuleIntent.ToTop(ui.rule)); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "移至底部",
+                                text = stringResource(R.string.move_to_bottom),
                                 onClick = { onIntent(ReplaceRuleIntent.ToBottom(ui.rule)); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "删除",
+                                text = stringResource(R.string.delete),
                                 onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
                             )
                         }

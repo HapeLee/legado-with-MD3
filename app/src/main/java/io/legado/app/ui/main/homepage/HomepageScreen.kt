@@ -496,7 +496,7 @@ private fun ModuleList(
                                                             )
 
                                                             AppText(
-                                                                text = "重试",
+                                                                text = stringResource(R.string.retry),
                                                                 color = LegadoTheme.colorScheme.error,
                                                                 style = LegadoTheme.typography.labelMedium
                                                             )

@@ -11,9 +11,11 @@ import androidx.compose.material.icons.filled.Compress
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
@@ -45,7 +47,7 @@ fun JsonRawEditor(
                         }
                     },
                     icon = Icons.Default.AutoFixHigh,
-                    contentDescription = "格式化"
+                    contentDescription = stringResource(R.string.format_json)
                 )
                 SmallPlainButton(
                     onClick = {
@@ -56,7 +58,7 @@ fun JsonRawEditor(
                         }
                     },
                     icon = Icons.Default.Compress,
-                    contentDescription = "压缩"
+                    contentDescription = stringResource(R.string.minify_json)
                 )
             }
         }

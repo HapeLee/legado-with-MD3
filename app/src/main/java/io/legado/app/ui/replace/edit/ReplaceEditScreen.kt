@@ -116,7 +116,7 @@ fun ReplaceEditScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = if (state.id > 0) "编辑替换规则" else "新增替换规则",
+                title = stringResource(if (state.id > 0) R.string.edit_replace_rule else R.string.add_replace_rule),
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBack)
                 },
@@ -129,27 +129,27 @@ fun ReplaceEditScreen(
                         TopBarActionButton(
                             onClick = { onIntent(ReplaceEditIntent.Save) },
                             imageVector = Icons.Default.Save,
-                            contentDescription = "保存"
+                            contentDescription = stringResource(R.string.action_save)
                         )
                     }
                     TopBarActionButton(
                         onClick = { showMenu = true },
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "更多操作"
+                        contentDescription = stringResource(R.string.more_actions)
                     )
                     RoundDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = "复制规则",
+                            text = stringResource(R.string.copy_rule),
                             onClick = {
                                 showMenu = false
                                 onIntent(ReplaceEditIntent.CopyRule)
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "粘贴规则",
+                            text = stringResource(R.string.paste_rule),
                             onClick = {
                                 showMenu = false
                                 onIntent(ReplaceEditIntent.PasteRule)
@@ -206,7 +206,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.name,
                     onValueChange = { onIntent(ReplaceEditIntent.OnNameChange(it)) },
-                    label = "规则名称",
+                    label = stringResource(R.string.rule_name),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -225,8 +225,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.pattern,
                     onValueChange = { onIntent(ReplaceEditIntent.OnPatternChange(it)) },
-                    label = "匹配规则",
-                    placeholder = { AppText("输入正则表达式或关键字") },
+                    label = stringResource(R.string.match_pattern),
+                    placeholder = { AppText(stringResource(R.string.input_regex_or_keyword)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -237,8 +237,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.replacement,
                     onValueChange = { onIntent(ReplaceEditIntent.OnReplacementChange(it)) },
-                    label = "替换为",
-                    placeholder = { AppText("输入替换内容或捕获组") },
+                    label = stringResource(R.string.replace_with),
+                    placeholder = { AppText(stringResource(R.string.input_replacement_or_group)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -252,27 +252,27 @@ fun ReplaceEditScreen(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     ToggleChip(
-                        label = "标题",
+                        label = stringResource(R.string.title),
                         selected = state.scopeTitle,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = stringResource(R.string.title),
                         onToggle = { onIntent(ReplaceEditIntent.OnScopeTitleChange(!state.scopeTitle)) }
                     )
 
                     Spacer(Modifier.width(8.dp))
 
                     ToggleChip(
-                        label = "内容",
+                        label = stringResource(R.string.content),
                         selected = state.scopeContent,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = stringResource(R.string.content),
                         onToggle = { onIntent(ReplaceEditIntent.OnScopeContentChange(!state.scopeContent)) }
                     )
 
                     Spacer(Modifier.weight(1f))
 
                     ToggleChip(
-                        label = "使用正则",
+                        label = stringResource(R.string.use_regex),
                         selected = state.isRegex,
-                        checkedContentDescription = "正则已启用",
+                        checkedContentDescription = stringResource(R.string.regex_enabled),
                         onToggle = { onIntent(ReplaceEditIntent.OnRegexChange(!state.isRegex)) }
                     )
 
@@ -281,8 +281,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.scope,
                     onValueChange = { onIntent(ReplaceEditIntent.OnScopeChange(it)) },
-                    label = "特定范围",
-                    placeholder = { AppText("指定规则适用的范围") },
+                    label = stringResource(R.string.specific_scope),
+                    placeholder = { AppText(stringResource(R.string.scope_hint)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -293,8 +293,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.excludeScope,
                     onValueChange = { onIntent(ReplaceEditIntent.OnExcludeScopeChange(it)) },
-                    label = "排除范围",
-                    placeholder = { AppText("指定规则不适用的范围") },
+                    label = stringResource(R.string.exclude_scope),
+                    placeholder = { AppText(stringResource(R.string.exclude_scope_hint)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -305,7 +305,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.timeout,
                     onValueChange = { onIntent(ReplaceEditIntent.OnTimeoutChange(it)) },
-                    label = "超时 (ms)",
+                    label = stringResource(R.string.timeout_ms),
                     placeholder = { AppText("3000") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -344,7 +344,7 @@ fun GroupSelector(
             AppTextField(
                 value = currentGroup,
                 onValueChange = onGroupChange,
-                label = "分组",
+                label = stringResource(R.string.group),
                 placeholder = { AppText("默认") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
@@ -388,10 +388,10 @@ fun ManageGroupDialog(
     AppAlertDialog(
         show = show,
         onDismissRequest = onDismiss,
-        title = "分组管理",
+        title = stringResource(R.string.group_management),
         content = {
             if (groups.isEmpty()) {
-                AppText("暂无其他分组")
+                AppText(stringResource(R.string.no_other_groups))
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -414,11 +414,11 @@ fun ManageGroupDialog(
                 }
             }
         },
-        confirmText = "删除选中",
+        confirmText = stringResource(R.string.delete_selected),
         onConfirm = {
             onDelete(selectedGroups.toList())
         },
-        dismissText = "关闭",
+        dismissText = stringResource(R.string.close),
         onDismiss = onDismiss
     )
 }

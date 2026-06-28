@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import io.legado.app.R
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
@@ -57,7 +58,7 @@ fun TextListInputDialog(
                 if (suggestions.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     AppText(
-                        text = "建议:",
+                        text = stringResource(R.string.suggestion_label),
                         style = LegadoTheme.typography.labelSmall,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )

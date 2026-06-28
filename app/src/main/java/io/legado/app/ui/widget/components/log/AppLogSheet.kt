@@ -54,7 +54,7 @@ fun AppLogSheet(
         }
     ) {
         if (logs.isEmpty()) {
-            EmptyMessage(message = "暂无日志")
+            EmptyMessage(message = stringResource(R.string.no_logs))
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
