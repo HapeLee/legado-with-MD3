@@ -39,6 +39,7 @@ import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
@@ -327,6 +328,16 @@ fun ReadBookScreen(
         sourceOrigin = photoSheet?.sourceOrigin,
         onDismissRequest = dismissSheet,
     )
+    val bookmarkSheet = state.activeSheet as? ReadBookSheet.Bookmark
+    bookmarkSheet?.let { sheet ->
+        BookmarkEditSheet(
+            show = true,
+            bookmark = sheet.bookmark,
+            onDismiss = dismissSheet,
+            onSave = { onIntent(ReadBookIntent.SaveBookmark(it)) },
+            onDelete = { onIntent(ReadBookIntent.DeleteBookmark(it)) },
+        )
+    }
 
     // AlertDialog-based sheets and special cases — conditionally composed
     when (state.activeSheet) {
@@ -382,9 +393,7 @@ fun ReadBookScreen(
             )
         }
 
-        is ReadBookSheet.Bookmark -> {
-            // Handled by ViewModel — redirects to menu route
-        }
+        is ReadBookSheet.Bookmark -> Unit
 
         is ReadBookSheet.InfoConfig -> {
             // Integrated into ReadStyleSheet's HeaderFooterPage

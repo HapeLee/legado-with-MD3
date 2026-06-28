@@ -167,7 +167,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppVerticalSlider
-import io.legado.app.ui.widget.components.bookmark.BookmarkEditContent
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
@@ -764,23 +763,6 @@ private fun ReadBookMenuSurface(
                     }
                 }
 
-                    is ReadBookMenuRoute.Bookmark -> {
-                        ReadBookMenuRoutePage(
-                            title = targetRoute.bookmark.chapterName,
-                            maxHeight = maxHeight,
-                            scrollContent = true,
-                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
-                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
-                        ) {
-                            Box(Modifier.padding(horizontal = 16.dp)) {
-                                BookmarkEditContent(
-                                    bookmark = targetRoute.bookmark,
-                                    onSave = { onIntent(ReadBookIntent.SaveBookmark(it)) },
-                                    onDelete = { onIntent(ReadBookIntent.DeleteBookmark(it)) },
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -2420,7 +2402,6 @@ private fun ReadMenuLiquidSlider(
         val rangeEnd = valueRange.endInclusive
         val range = rangeEnd - rangeStart
         val animationScope = rememberCoroutineScope()
-        var didDrag by remember { mutableStateOf(false) }
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val dampedDragAnimation = remember(animationScope, trackWidth, rangeStart, rangeEnd, isLtr) {
             DampedDragAnimation(
@@ -2432,17 +2413,10 @@ private fun ReadMenuLiquidSlider(
                 pressedScale = 1.5f,
                 onDragStarted = {},
                 onDragStopped = {
-                    if (didDrag) {
-                        onValueChange(targetValue)
-                        onValueCommit?.invoke(targetValue)
-                    } else {
-                        onValueChangeFinished?.invoke()
-                    }
+                    onValueChange(targetValue)
+                    onValueCommit?.invoke(targetValue) ?: onValueChangeFinished?.invoke()
                 },
                 onDrag = { _, dragAmount ->
-                    if (!didDrag) {
-                        didDrag = dragAmount.x != 0f
-                    }
                     val delta = range * (dragAmount.x / trackWidth)
                     val nextValue = if (isLtr) {
                         (targetValue + delta).coerceIn(valueRange)

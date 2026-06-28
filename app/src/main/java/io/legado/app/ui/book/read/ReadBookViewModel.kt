@@ -380,10 +380,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ShowSheet -> {
-                if (intent.sheet is ReadBookSheet.Bookmark) {
-                    // Bookmark is shown as a menu route, not a sheet
-                    openReadMenuRoute(ReadBookMenuRoute.Bookmark(intent.sheet.bookmark))
-                } else if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
+                if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
                     loadHighlightRules()
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 } else {
@@ -1076,13 +1073,8 @@ class ReadBookViewModel(
             is ReadBookIntent.TextActionBookmark -> {
                 _uiState.update {
                     it.copy(
-                        menuState = ReadBookMenuState(
-                            visible = true,
-                            routeStack = kotlinx.collections.immutable.persistentListOf(
-                                ReadBookMenuRoute.Main,
-                                ReadBookMenuRoute.Bookmark(intent.bookmark),
-                            ),
-                        ),
+                        menuState = ReadBookMenuState(),
+                        activeSheet = ReadBookSheet.Bookmark(intent.bookmark),
                     )
                 }
             }
@@ -1483,7 +1475,12 @@ class ReadBookViewModel(
                 content = "",
             )
             withContext(Main) {
-                openReadMenuRoute(ReadBookMenuRoute.Bookmark(bookmark))
+                _uiState.update {
+                    it.copy(
+                        menuState = ReadBookMenuState(),
+                        activeSheet = ReadBookSheet.Bookmark(bookmark),
+                    )
+                }
             }
         }
     }
