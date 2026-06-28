@@ -997,6 +997,7 @@ class BookInfoViewModel(
             return
         }
         if (!inBookshelf) {
+            book.addType(BookType.notShelf)
             saveBook(book) {
                 saveChapterList {
                     emitEffect(BookInfoEffect.OpenToc(book.bookUrl))
