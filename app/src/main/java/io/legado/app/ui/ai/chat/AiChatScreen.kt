@@ -1,7 +1,6 @@
 package io.legado.app.ui.ai.chat
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,16 +32,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
@@ -51,7 +49,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -61,7 +58,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -75,7 +71,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -91,17 +86,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.text.MarkdownBlock
 import kotlinx.coroutines.flow.Flow
@@ -386,8 +381,8 @@ fun AiChatScreen(
                                     colorStops = arrayOf(
                                         0f to bottomGradientColor.copy(alpha = 0f),
                                         0.58f to bottomGradientColor.copy(alpha = 0f),
-                                        0.82f to bottomGradientColor.copy(alpha = 0.24f),
-                                        1f to bottomGradientColor.copy(alpha = 0.68f)
+                                        0.82f to bottomGradientColor.copy(alpha = 0.64f),
+                                        1f to bottomGradientColor.copy(alpha = 0.88f)
                                     )
                                 )
                             )
@@ -492,9 +487,9 @@ fun AiChatScreen(
                             .background(
                                 Brush.verticalGradient(
                                     colorStops = arrayOf(
-                                        0f to LegadoTheme.colorScheme.surface.copy(alpha = 0.66f),
-                                        0.38f to LegadoTheme.colorScheme.surface.copy(alpha = 0.46f),
-                                        0.72f to LegadoTheme.colorScheme.surface.copy(alpha = 0.12f),
+                                        0f to LegadoTheme.colorScheme.surface.copy(alpha = 0.88f),
+                                        0.38f to LegadoTheme.colorScheme.surface.copy(alpha = 0.72f),
+                                        0.72f to LegadoTheme.colorScheme.surface.copy(alpha = 0.40f),
                                         1f to LegadoTheme.colorScheme.surface.copy(alpha = 0f)
                                     )
                                 )
@@ -512,11 +507,6 @@ fun AiChatScreen(
                             onClick = onBackClick,
                             icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                             contentDescription = stringResource(R.string.back),
-                            modifier = Modifier.shadow(
-                                elevation = 2.dp,
-                                shape = CircleShape,
-                                clip = false
-                            )
                         )
                         Box(
                             modifier = Modifier.weight(1f),
@@ -525,9 +515,7 @@ fun AiChatScreen(
                             Surface(
                                 modifier = Modifier.height(40.dp),
                                 shape = RoundedCornerShape(50),
-                                color = LegadoTheme.colorScheme.surfaceContainerLow,
-                                tonalElevation = 2.dp,
-                                shadowElevation = 2.dp
+                                color = LegadoTheme.colorScheme.surfaceContainerLow
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -556,22 +544,12 @@ fun AiChatScreen(
                             MediumTonalButton(
                                 onClick = { scope.launch { drawerState.open() } },
                                 icon = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.ai_recent_chats),
-                                modifier = Modifier.shadow(
-                                    elevation = 2.dp,
-                                    shape = CircleShape,
-                                    clip = false
-                                )
+                                contentDescription = stringResource(R.string.ai_recent_chats)
                             )
                             MediumTonalButton(
                                 onClick = { onIntent(AiChatIntent.NewConversation) },
                                 icon = Icons.Default.Add,
-                                contentDescription = stringResource(R.string.ai_new_chat),
-                                modifier = Modifier.shadow(
-                                    elevation = 2.dp,
-                                    shape = CircleShape,
-                                    clip = false
-                                )
+                                contentDescription = stringResource(R.string.ai_new_chat)
                             )
                         }
                     }
@@ -1223,14 +1201,7 @@ private fun ChatInputBar(
                 AiReasoningLevel.HIGH -> "High"
                 AiReasoningLevel.XHIGH -> "Max"
             }
-            val description = when (level) {
-                AiReasoningLevel.OFF -> "No thinking"
-                AiReasoningLevel.AUTO -> "Automatic"
-                AiReasoningLevel.LOW -> "1K tokens"
-                AiReasoningLevel.MEDIUM -> "2K tokens"
-                AiReasoningLevel.HIGH -> "8K tokens"
-                AiReasoningLevel.XHIGH -> "16K tokens"
-            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1253,12 +1224,6 @@ private fun ChatInputBar(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer
                         else LegadoTheme.colorScheme.onSurface
-                    )
-                    AppText(
-                        text = description,
-                        style = LegadoTheme.typography.bodySmall,
-                        color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        else LegadoTheme.colorScheme.outline
                     )
                 }
                 if (isSelected) {
@@ -1287,9 +1252,7 @@ private fun ChatInputBar(
                 bottom = bottomPadding
             ),
         shape = RoundedCornerShape(32.dp),
-        color = LegadoTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 2.dp,
-        shadowElevation = 8.dp
+        color = LegadoTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             modifier = Modifier
