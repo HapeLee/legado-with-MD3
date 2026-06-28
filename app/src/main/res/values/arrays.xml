@@ -260,7 +260,8 @@
 	<string-array name="default_home_page">
 		<item>@string/home</item>
 		<item>@string/bookshelf</item>
-		<item>@string/discovery</item>
+		<item>@string/discovery_modules</item>
+		<item>@string/classic_discovery</item>
 		<item>@string/rss</item>
 		<item>@string/my</item>
 	</string-array>
@@ -276,6 +277,7 @@
 	<string-array name="default_home_page_value">
 		<item>home</item>
 		<item>bookshelf</item>
+		<item>explore_modules</item>
 		<item>explore</item>
 		<item>rss</item>
 		<item>my</item>

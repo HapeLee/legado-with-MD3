@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <!--App-->
     <string name="app_name">阅读</string>
     <string name="app_name_a">阅读·A</string>
@@ -1022,7 +1022,6 @@
     <string name="hide_when_status_bar_show">状态栏显示时隐藏</string>
     <string name="reverse_toc">反转目录</string>
     <string name="show_discovery">显示发现</string>
-    <string name="show_home">显示主页</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
     <string name="export_file_name">导出文件名</string>
@@ -1832,6 +1831,28 @@
     <string name="homepage_layout_config_label">布局配置</string>
     <string name="homepage_edit_raw_json">编辑原始 JSON (LayoutConfig)</string>
     <string name="homepage_layout_settings">布局设置</string>
+    <string name="discovery_modules">发现模块</string>
+    <string name="classic_discovery">经典发现</string>
+    <string name="switch_to_discovery_modules">切换至发现模块</string>
+    <string name="switch_to_classic_discovery">切换至经典发现</string>
+    <string name="home_recent_reading">最近阅读</string>
+    <string name="home_no_recent_reading">暂无阅读记录</string>
+    <string name="home_total_read_books">累计阅读</string>
+    <string name="home_total_reading_time">阅读时长</string>
+    <string name="unit_books">本</string>
+    <string name="unit_hours">小时</string>
+    <string name="home_today_reading_goal">今日阅读目标</string>
+    <string name="home_set_goal">设定目标</string>
+    <string name="home_today_goal_value">%1$d / %2$d</string>
+    <string name="home_minutes">分钟</string>
+    <string name="home_set_reading_goal">设定阅读目标</string>
+    <string name="home_goal_minutes_label">目标（分钟）</string>
+    <string name="home_webdav_backup">WebDAV 备份</string>
+    <string name="home_latest_backup_value">最近备份：%1$s</string>
+    <string name="home_no_webdav_backup">暂无 WebDAV 备份</string>
+    <string name="home_loading_webdav_backup">正在获取备份信息…</string>
+    <string name="home_webdav_backup_confirmation">立即将当前数据备份到 WebDAV？</string>
+    <string name="home_webdav_restore_confirmation">恢复 WebDAV 备份 %1$s？当前数据可能被覆盖。</string>
     <string name="homepage_layout_mode">首页布局模式</string>
     <string name="homepage_layout_mixed">混合列表</string>
     <string name="homepage_layout_tabs">分源Tab</string>

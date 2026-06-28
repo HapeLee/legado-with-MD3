@@ -121,7 +121,7 @@ object AppIcons {
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {
         return when (destination) {
             MainDestination.Home -> if (isMiuix) {
-                if (selected) MiuixIcons.Regular.ContactsBook else MiuixIcons.Regular.ContactsBook
+                MiuixIcons.Regular.ContactsBook
             } else {
                 if (selected) Icons.Default.Home else Icons.Outlined.Home
             }

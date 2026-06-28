@@ -36,6 +36,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
@@ -88,6 +90,9 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -107,6 +112,7 @@ fun HomepageScreen(
     viewModel: HomepageViewModel = koinViewModel(),
     onBookClick: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
     onModuleHeaderClick: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    onSwitchToDiscovery: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -117,6 +123,7 @@ fun HomepageScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var showPageMenu by remember { mutableStateOf(false) }
 
     val layoutMode = HomepageConfig.homepageLayoutModeState.value
 
@@ -127,13 +134,13 @@ fun HomepageScreen(
         selectedSets.size.coerceAtLeast(1)
     })
 
-    val homeString = stringResource(R.string.home)
+    val discoveryString = stringResource(R.string.discovery)
     val currentTitle by remember(layoutMode, selectedSets) {
         derivedStateOf {
             if (layoutMode == 1) {
-                homeString
+                discoveryString
             } else {
-                selectedSets.getOrNull(pagerState.currentPage)?.sourceName ?: homeString
+                selectedSets.getOrNull(pagerState.currentPage)?.sourceName ?: discoveryString
             }
         }
     }
@@ -174,15 +181,42 @@ fun HomepageScreen(
                 scrollBehavior = scrollBehavior,
                 actions = {
                     TopBarActionButton(
-                        onClick = { viewModel.toggleConfigMode() },
-                        imageVector = AppIcons.MoreCircle,
-                        contentDescription = "Layout Settings",
-                    )
-                    TopBarActionButton(
                         onClick = { viewModel.toggleManageMode() },
                         imageVector = AppIcons.Settings,
                         contentDescription = "Manage Modules",
                     )
+                    Box {
+                        TopBarActionButton(
+                            onClick = { showPageMenu = true },
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "更多",
+                        )
+                        RoundDropdownMenu(
+                            expanded = showPageMenu,
+                            onDismissRequest = { showPageMenu = false },
+                        ) {
+                            RoundDropdownMenuItem(
+                                leadingIcon = {
+                                    MenuItemIcon(Icons.Default.GridView)
+                                },
+                                text = stringResource(R.string.homepage_layout_settings),
+                                onClick = {
+                                    showPageMenu = false
+                                    viewModel.toggleConfigMode()
+                                },
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = {
+                                    MenuItemIcon(Icons.Default.Explore)
+                                },
+                                text = stringResource(R.string.switch_to_classic_discovery),
+                                onClick = {
+                                    showPageMenu = false
+                                    onSwitchToDiscovery()
+                                },
+                            )
+                        }
+                    }
                 },
                 bottomContent = {
                     if (layoutMode == 1 && selectedSets.isNotEmpty()) {

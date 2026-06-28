@@ -1,20 +1,19 @@
 package io.legado.app.ui.config.backupConfig
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
+import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
-import io.legado.app.help.storage.Backup
-import io.legado.app.help.storage.Restore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 
 class BackupConfigViewModel(
-    private val webDavBackupUseCase: WebDavBackupUseCase
+    private val webDavBackupUseCase: WebDavBackupUseCase,
+    private val backupRestoreUseCase: BackupRestoreUseCase,
 ) : ViewModel() {
 
     private suspend fun syncWebDavConfig() {
@@ -53,7 +52,7 @@ class BackupConfigViewModel(
     fun backup(backupPath: String, mode: String = "both", onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Backup.backupLocked(appCtx, backupPath, mode)
+                backupRestoreUseCase.backup(backupPath, mode)
                 withContext(Dispatchers.Main) {
                     onSuccess()
                 }
@@ -86,10 +85,10 @@ class BackupConfigViewModel(
         }
     }
 
-    fun restore(context: Context, uri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun restore(uri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Restore.restore(context, uri)
+                backupRestoreUseCase.restoreLocal(uri.toString())
                 withContext(Dispatchers.Main) {
                     onSuccess()
                 }

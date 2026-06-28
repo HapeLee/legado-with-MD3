@@ -174,7 +174,6 @@ object ThemeImportExport {
             customTagColorsJson = ThemeConfig.customTagColorsJson,
 
             // 主界面设置
-            showHome = ThemeConfig.showHome,
             showDiscovery = ThemeConfig.showDiscovery,
             showRss = ThemeConfig.showRss,
             showStatusBar = ThemeConfig.showStatusBar,
@@ -344,7 +343,6 @@ object ThemeImportExport {
         ThemeConfig.customTagColorsJson = data.customTagColorsJson
 
         // 主界面设置
-        ThemeConfig.showHome = data.showHome
         ThemeConfig.showDiscovery = data.showDiscovery
         ThemeConfig.showRss = data.showRss
         ThemeConfig.showStatusBar = data.showStatusBar
@@ -581,7 +579,6 @@ data class ThemeExportData(
     val customTagColorsJson: String? = null,
 
     // 主界面设置
-    val showHome: Boolean = true,
     val showDiscovery: Boolean = true,
     val showRss: Boolean = true,
     val showStatusBar: Boolean = true,

@@ -19,6 +19,11 @@ class WebDavBackupUseCase(
         return webDavBackupGateway.test()
     }
 
+    suspend fun backup() {
+        webDavBackupGateway.syncConfig()
+        webDavBackupGateway.backup()
+    }
+
     suspend fun getBackupNames(): List<String> {
         webDavBackupGateway.syncConfig()
         return webDavBackupGateway.getBackupNames()

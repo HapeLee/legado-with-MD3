@@ -478,20 +478,6 @@ val Context.bookshelfLayoutGrid: Int
         AppConfig.bookshelfLayoutGridPortrait
     }
 
-var Context.exploreLayoutGrid: Int
-    get() = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-        AppConfig.exploreLayoutGridLandscape
-    } else {
-        AppConfig.exploreLayoutGridPortrait
-    }
-    set(value) {
-        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            AppConfig.exploreLayoutGridLandscape = value
-        } else {
-            AppConfig.exploreLayoutGridPortrait = value
-        }
-    }
-
 fun Context.themeColor(attr: Int): Int {
     val typedValue = TypedValue()
     theme.resolveAttribute(attr, typedValue, true)

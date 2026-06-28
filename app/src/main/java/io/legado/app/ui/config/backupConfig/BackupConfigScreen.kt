@@ -14,9 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Lan
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,8 +55,6 @@ import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
-import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
@@ -170,7 +165,6 @@ fun BackupConfigScreen(
             showLoadingDialog = true
             loadingText = context.getString(R.string.on_restore)
             viewModel.restore(
-                context = context,
                 uri = uri,
                 onSuccess = {
                     showLoadingDialog = false
@@ -451,86 +445,62 @@ fun BackupConfigScreen(
         }
     )
 
-    OptionSheet(
+    BackupOptionSheet(
         show = showBackupOptionSheet,
         onDismissRequest = { showBackupOptionSheet = false },
-        title = stringResource(R.string.backup)
-    ) {
-        OptionCard(
-            icon = Icons.Default.PhoneAndroid,
-            text = stringResource(R.string.backup_to_local),
-            onClick = {
-                showBackupOptionSheet = false
-                executeBackup("local", context, viewModel, scope, snackbarHostState, {
-                    showLoadingDialog = false
-                }, { showLoadingDialog = true; loadingText = it })
-            }
-        )
-        OptionCard(
-            icon = Icons.Default.Cloud,
-            text = stringResource(R.string.backup_to_network),
-            onClick = {
-                showBackupOptionSheet = false
-                executeBackup("webdav", context, viewModel, scope, snackbarHostState, {
-                    showLoadingDialog = false
-                }, { showLoadingDialog = true; loadingText = it })
-            }
-        )
-        OptionCard(
-            icon = Icons.Default.Lan,
-            text = stringResource(R.string.backup_to_local_and_network),
-            onClick = {
-                showBackupOptionSheet = false
-                executeBackup("both", context, viewModel, scope, snackbarHostState, {
-                    showLoadingDialog = false
-                }, { showLoadingDialog = true; loadingText = it })
-            }
-        )
-    }
+        onBackupToLocal = {
+            showBackupOptionSheet = false
+            executeBackup("local", context, viewModel, scope, snackbarHostState, {
+                showLoadingDialog = false
+            }, { showLoadingDialog = true; loadingText = it })
+        },
+        onBackupToNetwork = {
+            showBackupOptionSheet = false
+            executeBackup("webdav", context, viewModel, scope, snackbarHostState, {
+                showLoadingDialog = false
+            }, { showLoadingDialog = true; loadingText = it })
+        },
+        onBackupToLocalAndNetwork = {
+            showBackupOptionSheet = false
+            executeBackup("both", context, viewModel, scope, snackbarHostState, {
+                showLoadingDialog = false
+            }, { showLoadingDialog = true; loadingText = it })
+        },
+    )
 
-    OptionSheet(
+    RestoreOptionSheet(
         show = showRestoreOptionSheet,
         onDismissRequest = { showRestoreOptionSheet = false },
-        title = stringResource(R.string.restore)
-    ) {
-        OptionCard(
-            icon = Icons.Default.PhoneAndroid,
-            text = stringResource(R.string.restore_from_local),
-            onClick = {
-                showRestoreOptionSheet = false
-                restoreFileLauncher.launch(arrayOf("application/zip"))
-            }
-        )
-        OptionCard(
-            icon = Icons.Default.Cloud,
-            text = stringResource(R.string.restore_from_network),
-            onClick = {
-                showRestoreOptionSheet = false
-                scope.launch {
-                    showLoadingDialog = true
-                    loadingText = context.getString(R.string.loading)
-                    try {
-                        val names = viewModel.getBackupNames()
-                        backupNames = names
-                        showRestoreSheet = true
-                    } catch (e: Exception) {
-                        confirmDialogTitle = context.getString(R.string.restore)
-                        confirmDialogText =
-                            context.getString(
-                                R.string.webdav_restore_fallback_message,
-                                e.localizedMessage
-                            )
-                        onConfirmAction = {
-                            restoreFileLauncher.launch(arrayOf("application/zip"))
-                        }
-                        showConfirmDialog = true
-                    } finally {
-                        showLoadingDialog = false
+        onRestoreFromLocal = {
+            showRestoreOptionSheet = false
+            restoreFileLauncher.launch(arrayOf("application/zip"))
+        },
+        onRestoreFromNetwork = {
+            showRestoreOptionSheet = false
+            scope.launch {
+                showLoadingDialog = true
+                loadingText = context.getString(R.string.loading)
+                try {
+                    val names = viewModel.getBackupNames()
+                    backupNames = names
+                    showRestoreSheet = true
+                } catch (e: Exception) {
+                    confirmDialogTitle = context.getString(R.string.restore)
+                    confirmDialogText =
+                        context.getString(
+                            R.string.webdav_restore_fallback_message,
+                            e.localizedMessage
+                        )
+                    onConfirmAction = {
+                        restoreFileLauncher.launch(arrayOf("application/zip"))
                     }
+                    showConfirmDialog = true
+                } finally {
+                    showLoadingDialog = false
                 }
             }
-        )
-    }
+        },
+    )
 
     AppModalBottomSheet(
         show = showRestoreSheet && backupNames.isNotEmpty(),

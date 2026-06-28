@@ -8,6 +8,7 @@ import coil.decode.SvgDecoder
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.repository.AppStartupRepository
+import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
 import io.legado.app.data.repository.AiMemoryRepository
@@ -47,6 +48,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.data.repository.WebDavBackupRepository
 import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.domain.gateway.AppStartupGateway
+import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiMemoryGateway
@@ -69,6 +71,7 @@ import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
+import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
@@ -140,6 +143,7 @@ import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
+import io.legado.app.ui.main.home.HomeViewModel
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
@@ -184,6 +188,7 @@ val appModule = module {
     singleOf(::ExploreKindUiUseCase)
     singleOf(::SaveSearchBooksUseCase)
     singleOf(::AppStartupMaintenanceUseCase)
+    singleOf(::BackupRestoreUseCase)
     singleOf(::BatchCacheDownloadUseCase)
     singleOf(::CacheBookChaptersUseCase)
     singleOf(::ChangeBookSourceUseCase)
@@ -213,6 +218,7 @@ val appModule = module {
     single<AiTextGateway> { AiTextRepositoryImpl() }
     single<AiToolGateway> { AiToolRepository(get(), get(), get(), get(), get(), get()) }
     single<AppStartupGateway> { AppStartupRepository(get()) }
+    single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }
     single<BookSourceCallbackGateway> { BookSourceCallbackRepository(get(), get()) }
@@ -271,6 +277,7 @@ val appModule = module {
     viewModelOf(::MyViewModel)
     viewModelOf(::BookshelfViewModel)
     viewModelOf(::MainViewModel)
+    viewModelOf(::HomeViewModel)
     viewModelOf(::HomepageViewModel)
     viewModelOf(::AboutViewModel)
     viewModelOf(::GroupViewModel)

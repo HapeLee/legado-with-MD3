@@ -19,11 +19,13 @@ object LocalPreferencesKeys {
     val EXPLORE_LAYOUT_MODE = intPreferencesKey("explore_layout_mode")
     val EXPLORE_LAYOUT_GRID_PORTRAIT = intPreferencesKey("explore_layout_grid_portrait")
     val EXPLORE_LAYOUT_GRID_LANDSCAPE = intPreferencesKey("explore_layout_grid_landscape")
+    val EXPLORE_STYLE = stringPreferencesKey("explore_style")
     val READ_URL_IN_BROWSER = booleanPreferencesKey("read_url_in_browser")
     val LAST_BACKUP = longPreferencesKey("last_backup")
     val PASSWORD = stringPreferencesKey("password")
     val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
     val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
+    val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
 
     // Change source options
     val CHANGE_SOURCE_CHECK_AUTHOR = booleanPreferencesKey("changeSourceCheckAuthor")

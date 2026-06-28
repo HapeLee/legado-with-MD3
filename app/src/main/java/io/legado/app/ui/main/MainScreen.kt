@@ -71,7 +71,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
-import io.legado.app.ui.main.homepage.HomepageScreen
+import io.legado.app.ui.main.home.HomeRouteScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
@@ -111,6 +111,7 @@ fun MainScreen(
     onNavigateToLocalImport: () -> Unit,
     onNavigateToCache: (Long) -> Unit,
     onNavigateToBookCacheManage: () -> Unit,
+    onNavigateToBackupSettings: () -> Unit,
     onNavigateToBookInfo: (name: String, author: String, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
     onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
@@ -177,7 +178,14 @@ fun MainScreen(
     val destinations = mainUiState.destinations
 
     val initialPage = remember(destinations, mainUiState.defaultHomePage) {
-        val index = destinations.indexOfFirst { it.route == mainUiState.defaultHomePage }
+        val defaultRoute = if (
+            mainUiState.defaultHomePage == MainDestination.DISCOVERY_MODULES_ROUTE
+        ) {
+            MainDestination.Explore.route
+        } else {
+            mainUiState.defaultHomePage
+        }
+        val index = destinations.indexOfFirst { it.route == defaultRoute }
         if (index != -1) index else 0
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
@@ -370,20 +378,11 @@ fun MainScreen(
                     ) { page ->
                         val destination = destinations.getOrNull(page) ?: return@HorizontalPager
                         when (destination) {
-                            MainDestination.Home -> HomepageScreen(
-                                onBookClick = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
-                                    onNavigateToBookInfo(
-                                        name ?: "",
-                                        author ?: "",
-                                        bookUrl,
-                                        origin,
-                                        coverPath,
-                                        sharedCoverKey
-                                    )
+                            MainDestination.Home -> HomeRouteScreen(
+                                onOpenBook = { book ->
+                                    context.startActivityForBook(book)
                                 },
-                                onModuleHeaderClick = { title, sourceUrl, exploreUrl ->
-                                    onNavigateToExploreShow(title, sourceUrl, exploreUrl)
-                                },
+                                onOpenBackupSettings = onNavigateToBackupSettings,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )
@@ -411,7 +410,21 @@ fun MainScreen(
                             )
 
                             MainDestination.Explore -> ExploreScreen(
-                                onOpenExploreShow = onNavigateToExploreShow
+                                style = mainUiState.exploreStyle,
+                                onStyleChange = viewModel::setExploreStyle,
+                                onBookClick = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
+                                    onNavigateToBookInfo(
+                                        name ?: "",
+                                        author ?: "",
+                                        bookUrl,
+                                        origin,
+                                        coverPath,
+                                        sharedCoverKey
+                                    )
+                                },
+                                onOpenExploreShow = onNavigateToExploreShow,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                             )
                             MainDestination.Rss -> RssScreen(
                                 onOpenSort = { sourceUrl, sortUrl, key ->

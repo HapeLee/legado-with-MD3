@@ -45,7 +45,6 @@ object PreferKey {
     const val prevKeys = "prevKeyCodes"
     const val nextKeys = "nextKeyCodes"
     const val showDiscovery = "showDiscovery"
-    const val showHome = "showHome"
     const val enableReview = "enableReview"
     const val showRss = "showRss"
     const val showStatusBar = "showStatusBar"
@@ -275,9 +274,7 @@ object PreferKey {
     const val bookshelfListCoverWidth = "bookshelfListCoverWidth"
     const val bookshelfGridCoverWidth = "bookshelfGridCoverWidth"
 
-    const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
 
-    const val exploreLayoutGridPortrait = "exploreLayoutGridPortrait"
     const val tabletInterface = "tabletInterface"
     const val pureBlack = "pure_black"
     const val labelVisibilityMode = "labelVisibilityMode"
@@ -332,7 +329,6 @@ object PreferKey {
 
     const val exploreFilterState = "explore_filter_state"
 
-    const val exploreLayoutState = "exploreLayoutState"
 
     const val defaultSourceChangeAll = "defaultSourceChangeAll"
 

@@ -35,6 +35,8 @@ sealed class MainDestination(
     )
 
     companion object {
+        const val DISCOVERY_MODULES_ROUTE = "explore_modules"
+
         val mainDestinations = persistentListOf<MainDestination>(Home, Bookshelf, Explore, Rss, My)
     }
 }

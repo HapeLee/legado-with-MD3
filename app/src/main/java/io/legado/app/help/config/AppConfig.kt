@@ -283,18 +283,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             BookshelfConfig.bookshelfLayoutGridPortrait = value
         }
 
-    var exploreLayoutGridLandscape: Int
-        get() = appCtx.getPrefInt(PreferKey.exploreLayoutGridLandscape, 7)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.exploreLayoutGridLandscape, value)
-        }
-
-    var exploreLayoutGridPortrait: Int
-        get() = appCtx.getPrefInt(PreferKey.exploreLayoutGridPortrait, 3)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.exploreLayoutGridPortrait, value)
-        }
-
     var bookshelfLayoutGridLandscape: Int
         get() = BookshelfConfig.bookshelfLayoutGridLandscape
         set(value) {
@@ -328,9 +316,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val showDiscovery: Boolean
         get() = ThemeConfig.showDiscovery
-
-    val showHome: Boolean
-        get() = ThemeConfig.showHome
 
     val showRSS: Boolean
         get() = ThemeConfig.showRss
@@ -872,12 +857,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         get() = BookshelfConfig.shouldShowExpandButton
         set(value) {
             BookshelfConfig.shouldShowExpandButton = value
-        }
-
-    var exploreLayoutState: Int
-        get() = appCtx.getPrefInt(PreferKey.exploreLayoutState, 0)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.exploreLayoutState, value)
         }
 
     var defaultSourceChangeAll: Boolean

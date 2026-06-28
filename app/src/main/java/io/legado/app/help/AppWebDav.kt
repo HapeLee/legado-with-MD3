@@ -30,7 +30,8 @@ import io.legado.app.utils.normalizeFileName
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import splitties.init.appCtx
 import java.io.File
 
@@ -43,27 +44,26 @@ object AppWebDav {
     private val exportsWebDavUrl get() = "${rootWebDavUrl}books/"
     private val bgWebDavUrl get() = "${rootWebDavUrl}background/"
 
+    private val configMutex = Mutex()
+    private var appliedConfig: AppliedWebDavConfig? = null
+
+    @Volatile
     var authorization: Authorization? = null
         private set
 
+    @Volatile
     var defaultBookWebDav: RemoteBookWebDav? = null
 
     val isOk get() = authorization != null
 
     val isJianGuoYun get() = rootWebDavUrl.startsWith(defaultWebDavUrl, true)
 
-    init {
-        runBlocking {
-            upConfig()
-        }
-    }
-
     private val rootWebDavUrl: String
         get() {
             val configUrl = BackupConfig.webDavUrl.trim()
             var url = if (configUrl.isEmpty()) defaultWebDavUrl else configUrl
             if (!url.endsWith("/")) url = "${url}/"
-            AppConfig.webDavDir?.trim()?.let {
+            AppConfig.webDavDir.trim().let {
                 if (it.isNotEmpty()) {
                     url = "${url}${it}/"
                 }
@@ -72,24 +72,40 @@ object AppWebDav {
         }
 
     suspend fun upConfig() {
-        kotlin.runCatching {
-            authorization = null
-            defaultBookWebDav = null
-            val account = BackupConfig.webDavAccount
-            val password = BackupConfig.webDavPassword
-            if (!account.isNullOrEmpty() && !password.isNullOrEmpty()) {
-                val mAuthorization = Authorization(account, password)
-                checkAuthorization(mAuthorization)
-                WebDav(rootWebDavUrl, mAuthorization).makeAsDir()
-                WebDav(bookProgressUrl, mAuthorization).makeAsDir()
-                WebDav(exportsWebDavUrl, mAuthorization).makeAsDir()
-                WebDav(bgWebDavUrl, mAuthorization).makeAsDir()
-                val rootBooksUrl = "${rootWebDavUrl}books/"
-                defaultBookWebDav = RemoteBookWebDav(rootBooksUrl, mAuthorization)
-                authorization = mAuthorization
+        configMutex.withLock {
+            val config = AppliedWebDavConfig(
+                url = BackupConfig.webDavUrl,
+                account = BackupConfig.webDavAccount,
+                password = BackupConfig.webDavPassword,
+                dir = BackupConfig.webDavDir,
+            )
+            if (appliedConfig == config) return
+
+            kotlin.runCatching {
+                authorization = null
+                defaultBookWebDav = null
+                if (config.account.isNotEmpty() && config.password.isNotEmpty()) {
+                    val mAuthorization = Authorization(config.account, config.password)
+                    checkAuthorization(mAuthorization)
+                    WebDav(rootWebDavUrl, mAuthorization).makeAsDir()
+                    WebDav(bookProgressUrl, mAuthorization).makeAsDir()
+                    WebDav(exportsWebDavUrl, mAuthorization).makeAsDir()
+                    WebDav(bgWebDavUrl, mAuthorization).makeAsDir()
+                    val rootBooksUrl = "${rootWebDavUrl}books/"
+                    defaultBookWebDav = RemoteBookWebDav(rootBooksUrl, mAuthorization)
+                    authorization = mAuthorization
+                }
+                appliedConfig = config
             }
         }
     }
+
+    private data class AppliedWebDavConfig(
+        val url: String,
+        val account: String,
+        val password: String,
+        val dir: String,
+    )
 
     @Throws(WebDavException::class)
     private suspend fun checkAuthorization(authorization: Authorization) {

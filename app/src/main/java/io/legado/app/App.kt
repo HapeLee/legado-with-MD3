@@ -134,6 +134,9 @@ class App : Application(), ImageLoaderFactory {
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         Coroutine.async {
+            AppWebDav.upConfig()
+        }
+        Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
             LogUtils.logDeviceInfo()
@@ -181,6 +184,7 @@ class App : Application(), ImageLoaderFactory {
             SourceHelp.adjustSortNumber()
             //同步阅读记录
             if (AppConfig.syncBookProgress) {
+                AppWebDav.upConfig()
                 AppWebDav.downloadAllBookProgress()
             }
         }

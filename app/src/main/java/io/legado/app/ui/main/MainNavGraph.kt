@@ -117,6 +117,9 @@ fun MainActivity.mainEntryProvider(
             onNavigateToBookCacheManage = {
                 onNavigateToRoute(MainRouteBookCacheManage)
             },
+            onNavigateToBackupSettings = {
+                onNavigateToRoute(MainRouteSettingsBackup)
+            },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
                 onNavigateToRoute(
                     MainRouteBookInfo(

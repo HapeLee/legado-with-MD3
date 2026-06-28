@@ -2,10 +2,16 @@ package io.legado.app.ui.main.explore
 
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +32,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VerticalAlignTop
@@ -40,6 +47,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,6 +67,7 @@ import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.main.homepage.HomepageScreen
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -86,8 +95,64 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ExploreScreen(
+    style: ExploreStyle,
+    onStyleChange: (ExploreStyle) -> Unit,
+    onBookClick: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
+    onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    val stateHolder = rememberSaveableStateHolder()
+
+    AnimatedContent(
+        targetState = style,
+        modifier = Modifier.fillMaxSize(),
+        transitionSpec = {
+            fadeIn(
+                animationSpec = tween(
+                    durationMillis = 220,
+                    delayMillis = 90,
+                )
+            ) togetherWith fadeOut(
+                animationSpec = tween(durationMillis = 90)
+            )
+        },
+        contentKey = { it },
+        label = "ExploreStyle",
+    ) { page ->
+        stateHolder.SaveableStateProvider(page) {
+            when (page) {
+                ExploreStyle.DiscoveryModules -> HomepageScreen(
+                    onBookClick = onBookClick,
+                    onModuleHeaderClick = onOpenExploreShow,
+                    onSwitchToDiscovery = {
+                        onStyleChange(ExploreStyle.ClassicDiscovery)
+                    },
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+
+                else -> ExploreDiscoveryScreen(
+                    onOpenExploreShow = onOpenExploreShow,
+                    onSwitchToHomepage = {
+                        onStyleChange(ExploreStyle.DiscoveryModules)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalSharedTransitionApi::class,
+)
+@Composable
+private fun ExploreDiscoveryScreen(
     viewModel: ExploreViewModel = koinViewModel(),
-    onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit
+    onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    onSwitchToHomepage: () -> Unit,
 ) {
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
@@ -143,6 +208,14 @@ fun ExploreScreen(
         onSearchToggle = { viewModel.toggleSearchVisible(it) },
         searchPlaceholder = stringResource(R.string.search),
         dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.Default.Home) },
+                text = stringResource(R.string.switch_to_discovery_modules),
+                onClick = {
+                    dismiss()
+                    onSwitchToHomepage()
+                },
+            )
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
                 text = stringResource(R.string.all),
