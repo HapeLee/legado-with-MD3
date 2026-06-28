@@ -44,7 +44,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <activity
             android:name=".ui.main.Launcher0"
@@ -54,7 +59,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标1 -->
         <activity
@@ -65,7 +75,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标2 -->
         <activity
@@ -76,7 +91,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标3 -->
         <activity
@@ -87,7 +107,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标4 -->
         <activity
@@ -98,7 +123,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标5 -->
         <activity
@@ -109,7 +139,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 图标6 -->
         <activity
@@ -120,7 +155,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <!-- 主界面 -->
         <activity
@@ -132,7 +172,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
             </intent-filter>
+
+            <meta-data
+                android:name="com.samsung.android.support.REMOTE_ACTION"
+                android:resource="@xml/spen_remote_actions" />
         </activity>
         <activity
             android:name=".ui.welcome.WelcomeActivity"
