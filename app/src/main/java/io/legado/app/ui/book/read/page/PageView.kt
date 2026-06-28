@@ -26,13 +26,14 @@ import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
+import androidx.core.view.updateLayoutParams
 import io.legado.app.utils.activity
-import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.applyStatusBarPadding
 import io.legado.app.utils.canvasrecorder.CanvasRecorder
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
@@ -87,7 +88,21 @@ class PageView(
         callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
-        binding.vwNavigationBar.applyNavigationBarPadding()
+        if (ReadBookConfig.lastNavigationBarHeight > 0) {
+            binding.vwNavigationBar.updateLayoutParams {
+                height = ReadBookConfig.lastNavigationBarHeight
+            }
+        }
+        binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
+            val navHeight = windowInsets.navigationBarHeight
+            if (navHeight > 0) {
+                ReadBookConfig.lastNavigationBarHeight = navHeight
+            }
+            v.updateLayoutParams {
+                height = navHeight
+            }
+            windowInsets
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

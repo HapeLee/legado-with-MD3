@@ -36,6 +36,8 @@ import kotlin.reflect.KProperty
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
+    var lastNavigationBarHeight: Int = 0
+
     private val readStyleRepository: ReadStyleRepository
         get() = GlobalContext.get().get()
 
