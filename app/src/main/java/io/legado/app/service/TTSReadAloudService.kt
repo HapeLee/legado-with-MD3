@@ -32,6 +32,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     private var ttsInitFinish = false
     private val ttsUtteranceListener = TTSUtteranceListener()
     private var speakJob: Coroutine<*>? = null
+    private var utteranceStartPos = 0
     private val TAG = "TTSReadAloudService"
 
     override fun onCreate() {
@@ -161,6 +162,9 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         } else {
             val speechRate = (ReadConfig.ttsSpeechRate + 5) / 10f
             textToSpeech?.setSpeechRate(speechRate)
+            if (reset && !pause) {
+                play()
+            }
         }
     }
 
@@ -192,6 +196,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
         override fun onStart(s: String) {
             LogUtils.d(TAG, "onStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$s")
+            utteranceStartPos = paragraphStartPos
             textChapter?.let {
                 if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
                     nextParagraph()
@@ -214,6 +219,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             super.onRangeStart(utteranceId, start, end, frame)
+            paragraphStartPos = utteranceStartPos + start
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
             LogUtils.d(TAG, msg)
