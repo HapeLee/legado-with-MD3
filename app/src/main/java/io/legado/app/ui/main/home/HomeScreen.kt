@@ -93,6 +93,8 @@ import kotlin.math.roundToInt
 fun HomeRouteScreen(
     onOpenBook: (Book) -> Unit,
     onOpenBackupSettings: () -> Unit,
+    onNavigateToReadRecord: () -> Unit,
+    onNavigateToReadRecordOverview: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: HomeViewModel = koinViewModel(),
@@ -178,6 +180,8 @@ fun HomeRouteScreen(
     HomeScreen(
         state = state,
         onIntent = viewModel::onIntent,
+        onNavigateToReadRecord = onNavigateToReadRecord,
+        onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
     )
@@ -188,6 +192,8 @@ fun HomeRouteScreen(
 fun HomeScreen(
     state: HomeUiState,
     onIntent: (HomeIntent) -> Unit,
+    onNavigateToReadRecord: () -> Unit = {},
+    onNavigateToReadRecordOverview: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -231,6 +237,7 @@ fun HomeScreen(
                         title = stringResource(R.string.home_total_read_books),
                         value = state.totalReadBooks.toString(),
                         unit = stringResource(R.string.unit_books),
+                        onClick = onNavigateToReadRecord,
                     )
                     StatisticCard(
                         modifier = Modifier.weight(1f),
@@ -238,6 +245,7 @@ fun HomeScreen(
                         title = stringResource(R.string.home_total_reading_time),
                         value = String.format("%.1f", state.totalReadTimeMillis / 3_600_000.0),
                         unit = stringResource(R.string.unit_hours),
+                        onClick = onNavigateToReadRecordOverview,
                     )
                 }
             }
@@ -481,9 +489,11 @@ private fun StatisticCard(
     title: String,
     value: String,
     unit: String,
+    onClick: () -> Unit,
 ) {
     NormalCard(
         modifier = modifier,
+        onClick = onClick,
         cornerRadius = 20.dp,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
     ) {

@@ -122,6 +122,7 @@ fun MainScreen(
     onNavigateToRssFavorites: () -> Unit,
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
+    onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToHighlightTagRule: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -392,6 +393,8 @@ fun MainScreen(
                                     context.startActivityForBook(book)
                                 },
                                 onOpenBackupSettings = onNavigateToBackupSettings,
+                                onNavigateToReadRecord = onNavigateToReadRecord,
+                                onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )

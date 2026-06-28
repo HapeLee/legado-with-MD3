@@ -169,6 +169,9 @@ fun MainActivity.mainEntryProvider(
             onNavigateToReadRecord = {
                 onNavigateToRoute(MainRouteReadRecord)
             },
+            onNavigateToReadRecordOverview = {
+                onNavigateToRoute(MainRouteReadRecordOverview)
+            },
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
             },
