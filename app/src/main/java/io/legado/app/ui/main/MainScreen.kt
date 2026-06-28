@@ -10,6 +10,7 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,6 +87,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.navigation.AppNavigationBar
 import io.legado.app.ui.widget.components.navigation.AppNavigationBarItem
+import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.sendToClip
@@ -189,6 +192,11 @@ fun MainScreen(
         if (index != -1) index else 0
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
+    val pagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
+        state = pagerState,
+        orientation = Orientation.Horizontal,
+    )
+    var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
     LaunchedEffect(destinations) {
         if (destinations.isNotEmpty() && pagerState.currentPage !in destinations.indices) {
             pagerState.scrollToPage(destinations.lastIndex)
@@ -366,6 +374,7 @@ fun MainScreen(
                 ) {
                     HorizontalPager(
                         state = pagerState,
+                        pageNestedScrollConnection = pagerNestedScrollConnection,
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
@@ -388,6 +397,7 @@ fun MainScreen(
                             )
 
                             MainDestination.Bookshelf -> BookshelfScreen(
+                                scrollToTopRequest = bookshelfScrollToTopRequest,
                                 onBookClick = { book ->
                                     context.startActivityForBook(book)
                                 },
@@ -492,6 +502,16 @@ fun MainScreen(
                                         coroutineScope.launch {
                                             pagerState.animateScrollToPage(index)
                                         }
+                                    },
+                                    onDoubleClick = if (destination == MainDestination.Bookshelf) {
+                                        {
+                                            bookshelfScrollToTopRequest++
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(index)
+                                            }
+                                        }
+                                    } else {
+                                        null
                                     },
                                     modifier = Modifier
                                         .defaultMinSize(minWidth = 76.dp)

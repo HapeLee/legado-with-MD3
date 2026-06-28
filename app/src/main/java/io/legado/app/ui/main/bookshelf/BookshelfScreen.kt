@@ -27,7 +27,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -131,7 +130,6 @@ import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
@@ -157,6 +155,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 @Composable
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
+    scrollToTopRequest: Long = 0L,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (book: BookShelfItem, sharedCoverKey: String?) -> Unit,
     onNavigateToSearch: (String) -> Unit,
@@ -233,10 +232,6 @@ fun BookshelfScreen(
     val pagerState = rememberPagerState(
         initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
         pageCount = { uiState.groups.size }
-    )
-    val childPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
-        state = pagerState,
-        orientation = Orientation.Horizontal,
     )
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
@@ -819,6 +814,7 @@ fun BookshelfScreen(
                 } else {
                     if (isUsingStandaloneSearchGroup) {
                         BookshelfPage(
+                            scrollToTopRequest = scrollToTopRequest,
                             paddingValues = paddingValues,
                             books = uiState.items,
                             uiState = uiState,
@@ -840,7 +836,6 @@ fun BookshelfScreen(
                     } else {
                         HorizontalPager(
                             state = pagerState,
-                            pageNestedScrollConnection = childPagerNestedScrollConnection,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .then(
@@ -866,6 +861,7 @@ fun BookshelfScreen(
                                             ?: uiState.bookshelfSort) == 3 &&
                                         isSelectedGroup
                                 BookshelfPage(
+                                    scrollToTopRequest = scrollToTopRequest,
                                     paddingValues = paddingValues,
                                     books = books,
                                     uiState = uiState,
@@ -1215,6 +1211,7 @@ private data class BookshelfEditStickySummary(
 
 @Composable
 fun BookshelfPage(
+    scrollToTopRequest: Long,
     paddingValues: PaddingValues,
     books: ImmutableList<BookUiItem>,
     uiState: BookshelfUiState,
@@ -1301,6 +1298,11 @@ fun BookshelfPage(
     val hapticFeedback = LocalHapticFeedback.current
     val displayBooks = draggingBooks ?: pendingSavedBooks ?: books
     val gridState = rememberLazyGridState()
+    LaunchedEffect(scrollToTopRequest, isCurrentPage) {
+        if (scrollToTopRequest > 0L && isCurrentPage) {
+            gridState.animateScrollToItem(0)
+        }
+    }
     val reorderableState = rememberReorderableLazyGridState(gridState) { from, to ->
         if (canReorderBooks) {
             onMoveBook(from.index, to.index, displayBooks)
