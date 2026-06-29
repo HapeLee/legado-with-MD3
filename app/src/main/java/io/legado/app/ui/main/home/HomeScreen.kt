@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -994,7 +995,7 @@ private fun RecentBooksRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(books, key = { it.bookUrl.orEmpty() }) { book ->
+        itemsIndexed(books, key = { index, book -> "${book.bookUrl}_$index" }) { index, book ->
             RecentHistoryBookCard(
                 book = book,
                 onClick = { book.bookUrl?.let(onBookClick) },
