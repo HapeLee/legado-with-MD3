@@ -41,14 +41,15 @@ import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
+import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -244,6 +245,22 @@ fun TxtRuleScreen(
             editingRule = null
         },
         onSave = { updatedRule ->
+            when {
+                updatedRule.name.isBlank() -> {
+                    context.toastOnUi(R.string.cannot_empty)
+                    return@RuleEditSheet
+                }
+
+                updatedRule.rule.isBlank() -> {
+                    context.toastOnUi(R.string.cannot_empty)
+                    return@RuleEditSheet
+                }
+
+                runCatching { Regex(updatedRule.rule) }.isFailure -> {
+                    context.toastOnUi(R.string.invalid_format)
+                    return@RuleEditSheet
+                }
+            }
             onIntent(TxtTocRuleIntent.SaveRule(updatedRule, isNew = editingRule == null))
             showEditSheet = false
             editingRule = null

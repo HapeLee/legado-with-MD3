@@ -122,6 +122,7 @@ fun FloatingBottomBar(
     modifier: Modifier = Modifier,
     selectedIndex: () -> Int,
     onSelected: (index: Int) -> Unit,
+    onReselected: (index: Int) -> Unit = {},
     backdrop: Backdrop,
     tabsCount: Int,
     isBlurEnabled: Boolean = true,
@@ -202,6 +203,8 @@ fun FloatingBottomBar(
                 animateToValue(targetIndex.toFloat())
                 if (targetIndex != selectedIndex()) {
                     onSelected(targetIndex)
+                } else {
+                    onReselected(targetIndex)
                 }
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
@@ -273,7 +276,10 @@ fun FloatingBottomBar(
                         if (isBlurEnabled) {
                             vibrancy()
                             blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
-                            lens(ThemeConfig.bottomBarLensRadius.dp.toPx(), ThemeConfig.bottomBarLensRadius.dp.toPx())
+                            lens(
+                                ThemeConfig.bottomBarLensRadius.dp.toPx(),
+                                ThemeConfig.bottomBarLensRadius.dp.toPx()
+                            )
                         }
                     },
                     highlight = {
@@ -330,7 +336,10 @@ fun FloatingBottomBar(
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
                                 blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
-                                lens(ThemeConfig.bottomBarLensRadius.dp.toPx() * progress, ThemeConfig.bottomBarLensRadius.dp.toPx() * progress)
+                                lens(
+                                    ThemeConfig.bottomBarLensRadius.dp.toPx() * progress,
+                                    ThemeConfig.bottomBarLensRadius.dp.toPx() * progress
+                                )
                             }
                         },
                         highlight = {

@@ -28,8 +28,9 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
@@ -73,6 +79,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun RssScreen(
     viewModel: RssViewModel = koinViewModel(),
+    isActive: Boolean = true,
     onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     onOpenRuleSub: () -> Unit,
@@ -89,6 +96,7 @@ fun RssScreen(
     val currentOnOpenRead by rememberUpdatedState(onOpenRead)
     val currentOnOpenRuleSub by rememberUpdatedState(onOpenRuleSub)
     val currentOnOpenFavorites by rememberUpdatedState(onOpenFavorites)
+    val pageLifecycleOwner = rememberRssPageLifecycleOwner(isActive)
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
@@ -133,115 +141,117 @@ fun RssScreen(
         }
     }
 
-    ListScaffold(
-        title = stringResource(R.string.rss),
-        state = uiState,
-        subtitle = uiState.group.ifEmpty { stringResource(R.string.all) },
-        onBackClick = null,
-        onSearchToggle = { viewModel.toggleSearchVisible(it) },
-        onSearchQueryChange = { viewModel.search(it) },
-        searchPlaceholder = stringResource(R.string.search_rss_source),
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                onClick = {
-                    viewModel.openSourceManage()
-                    dismiss()
-                },
-                text = stringResource(R.string.rss_feed_management),
-            )
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.all),
-                onClick = {
-                    viewModel.setGroup("")
-                    dismiss()
-                }
-            )
-            uiState.groups.forEach { group ->
+    CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
+        ListScaffold(
+            title = stringResource(R.string.rss),
+            state = uiState,
+            subtitle = uiState.group.ifEmpty { stringResource(R.string.all) },
+            onBackClick = null,
+            onSearchToggle = { viewModel.toggleSearchVisible(it) },
+            onSearchQueryChange = { viewModel.search(it) },
+            searchPlaceholder = stringResource(R.string.search_rss_source),
+            dropDownMenuContent = { dismiss ->
                 RoundDropdownMenuItem(
-                    text = group,
                     onClick = {
-                        viewModel.setGroup(group)
+                        viewModel.openSourceManage()
+                        dismiss()
+                    },
+                    text = stringResource(R.string.rss_feed_management),
+                )
+                PillDivider()
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.all),
+                    onClick = {
+                        viewModel.setGroup("")
                         dismiss()
                     }
                 )
-            }
-        },
-        contentWindowInsets = WindowInsets(0)
-    ) { paddingValues ->
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 72.dp),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = adaptiveContentPadding(
-                top = paddingValues.calculateTopPadding(),
-                bottom = 120.dp
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GlassCard(
-                        modifier = Modifier.weight(1f),
-                        onClick = { viewModel.openRuleSub() }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(all = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            AppIcon(
-                                imageVector = Icons.Default.Subscriptions,
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            AppText(
-                                text = stringResource(R.string.rule_subscription),
-                                style = LegadoTheme.typography.labelMediumEmphasized
-                            )
+                uiState.groups.forEach { group ->
+                    RoundDropdownMenuItem(
+                        text = group,
+                        onClick = {
+                            viewModel.setGroup(group)
+                            dismiss()
                         }
-                    }
-                    GlassCard(
-                        modifier = Modifier.weight(1f),
-                        onClick = { viewModel.openFavorites() }
+                    )
+                }
+            },
+            contentWindowInsets = WindowInsets(0)
+        ) { paddingValues ->
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 72.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 120.dp
+                ),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(all = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        GlassCard(
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.openRuleSub() }
                         ) {
-                            AppIcon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            AppText(
-                                text = stringResource(R.string.favorite),
-                                style = LegadoTheme.typography.labelMediumEmphasized
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(all = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                AppIcon(
+                                    imageVector = Icons.Default.Subscriptions,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                AppText(
+                                    text = stringResource(R.string.rule_subscription),
+                                    style = LegadoTheme.typography.labelMediumEmphasized
+                                )
+                            }
+                        }
+                        GlassCard(
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.openFavorites() }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(all = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                AppIcon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                AppText(
+                                    text = stringResource(R.string.favorite),
+                                    style = LegadoTheme.typography.labelMediumEmphasized
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            items(uiState.items, key = { it.sourceUrl }) { source ->
-                RssSourceGridItem(
-                    modifier = Modifier.animateItem(),
-                    source = source,
-                    onClick = { viewModel.openSource(source) },
-                    onTop = { viewModel.topSource(source) },
-                    onEdit = { viewModel.openSourceEdit(source) },
-                    onDelete = { sourceToDeleteUrl = source.sourceUrl },
-                    onDisable = { viewModel.disable(source) },
-                    onLogin = { viewModel.login(source) }
-                )
+                items(uiState.items, key = { it.sourceUrl }) { source ->
+                    RssSourceGridItem(
+                        modifier = Modifier.animateItem(),
+                        source = source,
+                        onClick = { viewModel.openSource(source) },
+                        onTop = { viewModel.topSource(source) },
+                        onEdit = { viewModel.openSourceEdit(source) },
+                        onDelete = { sourceToDeleteUrl = source.sourceUrl },
+                        onDisable = { viewModel.disable(source) },
+                        onLogin = { viewModel.login(source) }
+                    )
+                }
             }
         }
     }
@@ -258,6 +268,51 @@ fun RssScreen(
         dismissText = stringResource(R.string.no),
         onDismiss = { sourceToDeleteUrl = null }
     )
+}
+
+@Composable
+private fun rememberRssPageLifecycleOwner(isActive: Boolean): LifecycleOwner {
+    val parentLifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentActive by rememberUpdatedState(isActive)
+    val owner = remember(parentLifecycle) { RssPageLifecycleOwner() }
+
+    DisposableEffect(parentLifecycle) {
+        val observer = LifecycleEventObserver { _, _ ->
+            owner.update(parentLifecycle.currentState, currentActive)
+        }
+        parentLifecycle.addObserver(observer)
+        owner.update(parentLifecycle.currentState, currentActive)
+        onDispose {
+            parentLifecycle.removeObserver(observer)
+            owner.destroy()
+        }
+    }
+
+    LaunchedEffect(isActive, parentLifecycle) {
+        owner.update(parentLifecycle.currentState, isActive)
+    }
+
+    return owner
+}
+
+private class RssPageLifecycleOwner : LifecycleOwner {
+
+    private val registry = LifecycleRegistry(this)
+
+    override val lifecycle: Lifecycle = registry
+
+    fun update(parentState: Lifecycle.State, isActive: Boolean) {
+        registry.currentState = when {
+            parentState == Lifecycle.State.DESTROYED -> Lifecycle.State.DESTROYED
+            !parentState.isAtLeast(Lifecycle.State.STARTED) -> Lifecycle.State.CREATED
+            isActive -> parentState
+            else -> Lifecycle.State.STARTED
+        }
+    }
+
+    fun destroy() {
+        registry.currentState = Lifecycle.State.DESTROYED
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

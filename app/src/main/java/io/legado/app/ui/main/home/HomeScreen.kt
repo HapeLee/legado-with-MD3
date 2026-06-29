@@ -575,6 +575,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp)
                                 .clickable { showSourceMenu = true },
+                            cornerRadius = 32.dp
                         ) {
                             Row(
                                 modifier = Modifier.padding(

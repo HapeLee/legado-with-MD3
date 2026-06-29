@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
@@ -92,7 +93,7 @@ class HomepageViewModel(
     val effects = _effects.asSharedFlow()
 
     private val loadJobs = ConcurrentHashMap<String, Job>()
-    private val exploreSourcesFlow = bookSourceRepository.flowExploreSources()
+    private val exploreSourcePartsFlow = bookSourceRepository.flowExploreSourceParts()
 
     // 1. 基础原始状态
     private val _isRefreshing = MutableStateFlow(false)
@@ -100,6 +101,7 @@ class HomepageViewModel(
     private val _configVersion = MutableStateFlow(0L)
     private val _moduleContentStates = MutableStateFlow<Map<String, ModuleLoadState>>(emptyMap())
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSource>>(emptyMap())
+    private val _bookSourcePartsCache = MutableStateFlow<Map<String, BookSourcePart>>(emptyMap())
     private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
     private val _pendingEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
@@ -138,7 +140,7 @@ class HomepageViewModel(
         }.toImmutableList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
 
-    val browseSourcesFlow = exploreSourcesFlow.map { sources ->
+    val browseSourcesFlow = exploreSourcePartsFlow.map { sources ->
         sources.map { source ->
             HomepageSourceManageUi(
                 sourceUrl = source.bookSourceUrl,
@@ -158,9 +160,9 @@ class HomepageViewModel(
         setsFlow,
         browseSourcesFlow,
         allModulesCache,
-        _bookSourcesCache,
+        _bookSourcePartsCache,
         _pendingEnabled
-    ) { sets, browseSources, allModules, sourcesCache, pendingEnabled ->
+    ) { sets, browseSources, allModules, sourcePartsCache, pendingEnabled ->
         HomepageManageUiState(
             sets = sets,
             browseSources = browseSources,
@@ -180,17 +182,25 @@ class HomepageViewModel(
                     originalTitle = module.title,
                 )
             }.toImmutableList(),
-            sourceNames = sourcesCache.mapValues { it.value.bookSourceName }
+            sourceNames = sourcePartsCache.mapValues { it.value.bookSourceName }
         )
+    }
+
+    private val sourceCachesFlow = combine(
+        _bookSourcePartsCache,
+        _bookSourcesCache
+    ) { sourceParts, sources ->
+        sourceParts to sources
     }
 
     private val rawModulesFlow = combine(
         orderedModuleDefsFlow,
         _moduleContentStates,
-        _bookSourcesCache,
+        sourceCachesFlow,
         customSetsFlow,
         _layoutConfigCache
-    ) { grouped, contentStates, sourcesCache, customSets, configCache ->
+    ) { grouped, contentStates, sourceCaches, customSets, configCache ->
+        val (sourcePartsCache, sourcesCache) = sourceCaches
         val setNames = customSets.associate { it.id to it.name }
         val sortedSetIds = customSets.sortedBy { it.sortOrder }.map { it.id }
 
@@ -199,7 +209,9 @@ class HomepageViewModel(
             val mods = grouped[setUrl] ?: emptyList()
             mods.map { module ->
                 val source = sourcesCache[module.sourceUrl]
-                val sourceName = source?.bookSourceName ?: module.sourceUrl
+                val sourcePart = sourcePartsCache[module.sourceUrl]
+                val sourceName =
+                    source?.bookSourceName ?: sourcePart?.bookSourceName ?: module.sourceUrl
                 val setName = module.customSetId?.let { setNames[it] } ?: sourceName
                 val exploreUrl = module.url ?: source?.exploreUrl
                 val configMap = configCache[module.id] ?: emptyMap()
@@ -300,7 +312,13 @@ class HomepageViewModel(
         }
 
         viewModelScope.launch {
-            exploreSourcesFlow.collect { sources ->
+            exploreSourcePartsFlow.collect { sources ->
+                _bookSourcePartsCache.value = sources.associateBy { it.bookSourceUrl }
+            }
+        }
+
+        viewModelScope.launch {
+            bookSourceRepository.flowHomepageModules().collect { sources ->
                 _bookSourcesCache.value = sources.associateBy { it.bookSourceUrl }
             }
         }
@@ -713,7 +731,9 @@ class HomepageViewModel(
             .groupBy { it.sourceUrl }
 
     fun getSourceName(sourceUrl: String): String =
-        _bookSourcesCache.value[sourceUrl]?.bookSourceName ?: sourceUrl
+        _bookSourcePartsCache.value[sourceUrl]?.bookSourceName
+            ?: _bookSourcesCache.value[sourceUrl]?.bookSourceName
+            ?: sourceUrl
 
     fun assignModuleToCustomSet(moduleId: String, customSetId: String?) {
         viewModelScope.launch {

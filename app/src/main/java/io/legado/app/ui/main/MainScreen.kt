@@ -2,6 +2,8 @@ package io.legado.app.ui.main
 
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
+import android.view.ViewConfiguration
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -193,6 +195,31 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
+    var lastBookshelfNavClickTime by remember { mutableLongStateOf(0L) }
+    fun requestBookshelfScrollToTop(index: Int) {
+        bookshelfScrollToTopRequest++
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(index)
+        }
+    }
+
+    fun handleMainDestinationClick(index: Int, destination: MainDestination) {
+        if (destination == MainDestination.Bookshelf) {
+            val now = SystemClock.uptimeMillis()
+            if (
+                (pagerState.currentPage == index || pagerState.targetPage == index) &&
+                now - lastBookshelfNavClickTime <= ViewConfiguration.getDoubleTapTimeout()
+            ) {
+                requestBookshelfScrollToTop(index)
+                lastBookshelfNavClickTime = 0L
+                return
+            }
+            lastBookshelfNavClickTime = now
+        }
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(index)
+        }
+    }
     LaunchedEffect(destinations) {
         if (destinations.isNotEmpty() && pagerState.currentPage !in destinations.indices) {
             pagerState.scrollToPage(destinations.lastIndex)
@@ -267,9 +294,7 @@ fun MainScreen(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
                         onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
+                            handleMainDestinationClick(index, destination)
                         },
                         icon = {
                             Box {
@@ -278,10 +303,10 @@ fun MainScreen(
                                     selected = selected,
                                     modifier = if (destination == MainDestination.Bookshelf) {
                                         Modifier.combinedClickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
                                             onClick = {
-                                                coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(index)
-                                                }
+                                                handleMainDestinationClick(index, destination)
                                             },
                                             onLongClick = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -330,7 +355,7 @@ fun MainScreen(
                                 },
                                 selected = selected,
                                 onClick = {
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                    handleMainDestinationClick(index, destination)
                                 },
                                 labelString = stringResource(destination.labelId),
                                 iconVector = AppIcons.mainDestination(destination, selected),
@@ -432,6 +457,7 @@ fun MainScreen(
                                 onOpenExploreShow = onNavigateToExploreShow,
                             )
                             MainDestination.Rss -> RssScreen(
+                                isActive = page == pagerState.currentPage,
                                 onOpenSort = { sourceUrl, sortUrl, key ->
                                     onNavigateToRssSort(sourceUrl, sortUrl, key)
                                 },
@@ -478,8 +504,13 @@ fun MainScreen(
                                 ),
                             selectedIndex = { pagerState.targetPage },
                             onSelected = { index ->
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
+                                destinations.getOrNull(index)?.let { destination ->
+                                    handleMainDestinationClick(index, destination)
+                                }
+                            },
+                            onReselected = { index ->
+                                destinations.getOrNull(index)?.let { destination ->
+                                    handleMainDestinationClick(index, destination)
                                 }
                             },
                             backdrop = floatingBarBackdrop,
@@ -494,16 +525,11 @@ fun MainScreen(
                                 val hasCustomIcon = destination.customIconPath.isNotEmpty()
                                 FloatingBottomBarItem(
                                     onClick = {
-                                        coroutineScope.launch {
-                                            pagerState.animateScrollToPage(index)
-                                        }
+                                        handleMainDestinationClick(index, destination)
                                     },
                                     onDoubleClick = if (destination == MainDestination.Bookshelf) {
                                         {
-                                            bookshelfScrollToTopRequest++
-                                            coroutineScope.launch {
-                                                pagerState.animateScrollToPage(index)
-                                            }
+                                            requestBookshelfScrollToTop(index)
                                         }
                                     } else {
                                         null

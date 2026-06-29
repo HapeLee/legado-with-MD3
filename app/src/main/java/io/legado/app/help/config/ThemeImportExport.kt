@@ -2,6 +2,7 @@ package io.legado.app.help.config
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.Keep
 import com.google.gson.GsonBuilder
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
@@ -530,6 +531,7 @@ object ThemeImportExport {
 /**
  * 主题导出数据类
  */
+@Keep
 data class ThemeExportData(
     // 基础主题设置
     val appTheme: String = "0",
@@ -639,6 +641,7 @@ data class ThemeExportData(
 /**
  * 已保存的主题
  */
+@Keep
 data class SavedTheme(
     val name: String,
     val data: ThemeExportData

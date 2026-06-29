@@ -25,6 +25,10 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         return bookSourceDao.flowExploreSources()
     }
 
+    fun flowExploreSourceParts(): Flow<List<BookSourcePart>> {
+        return bookSourceDao.flowExploreSourceParts()
+    }
+
     suspend fun getBookSource(sourceUrl: String): BookSource? {
         return withContext(Dispatchers.IO) {
             bookSourceDao.getBookSource(sourceUrl)
