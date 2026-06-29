@@ -8,6 +8,8 @@ import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
 import android.util.Base64
 import androidx.lifecycle.viewModelScope
+import androidx.core.graphics.toColorInt
+import androidx.core.graphics.ColorUtils as AndroidColorUtils
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppConst
@@ -76,6 +78,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
+import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
@@ -120,6 +123,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import kotlin.coroutines.coroutineContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 阅读界面 ViewModel — MVI/UDF 架构
@@ -196,6 +200,8 @@ class ReadBookViewModel(
                 justInitData = true
             }
             is ReadBookIntent.InitReadBookConfig -> initReadBookConfig(intent.intent)
+            is ReadBookIntent.CheckSwitchDayNight -> checkSwitchDayNight(intent.lux)
+            is ReadBookIntent.DismissReminder -> dismissReminder()
             is ReadBookIntent.NextPage -> ReadBook.moveToNextPage()
             is ReadBookIntent.PrevPage -> ReadBook.moveToPrevPage()
             is ReadBookIntent.NextChapter -> ReadBook.moveToNextChapter(upContent = true)
@@ -3430,6 +3436,12 @@ class ReadBookViewModel(
                     readSettingsRepository.setAutoChangeSource(update.value)
                 }
             }
+            is ConfigUpdate.AutoSuggestDayNight -> {
+                ReadConfig.autoSuggestDayNight = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setAutoSuggestDayNight(update.value)
+                }
+            }
             is ConfigUpdate.SelectText -> {
                 ReadConfig.selectText = update.value
                 viewModelScope.launch {
@@ -4007,6 +4019,86 @@ class ReadBookViewModel(
             context.toastOnUi("添加书籍失败")
         }
     }
+
+    private var lastSwitchDayNightReminderTime: Long = 0L
+    private val reminderQueue = ArrayDeque<ReminderUiState>()
+
+    private fun showReminder(reminder: ReminderUiState) {
+        if (_uiState.value.activeReminder == null && reminderQueue.isEmpty()) {
+            _uiState.update { it.copy(activeReminder = reminder) }
+        } else {
+            reminderQueue.addLast(reminder)
+        }
+    }
+
+    private fun isReadBgLight(colorInt: Int): Boolean {
+        // io.legado.app.utils.ColorUtils.isColorLight 判断条件是 >= 0.5
+        // 实际很多肉眼觉得亮的颜色会被判断为false，例如 0xFFC5B098
+        return AndroidColorUtils.calculateLuminance(colorInt) >= LIGHT_LUMINANCE_THRESHOLD
+    }
+
+    private fun checkSwitchDayNight(lux: Float) {
+        if (!ReadConfig.autoSuggestDayNight) return
+        if (System.currentTimeMillis() - lastSwitchDayNightReminderTime < REMINDER_COOLDOWN_MS) return
+
+        val isNight = ReadConfig.isNightTheme
+        val styleConfig = _uiState.value.styleConfig
+        if (!isNight && lux <= DARK_LUX_THRESHOLD) {
+            val bgType = styleConfig.bgType
+            val isLightBg = if (bgType == 0) {
+                val colorInt = runCatching { styleConfig.bgStr.toColorInt() }.getOrDefault(0xFFEEEEEE.toInt())
+                isReadBgLight(colorInt)
+            } else {
+                val meanColor = ReadBookConfig.bgMeanColor
+                //Log.d("fansangg","meanColor = ${ColorUtils.intToString(meanColor)},isLight = ${isReadBgLight(meanColor)}")
+                if (meanColor != 0) isReadBgLight(meanColor) else true
+            }
+            if (isLightBg) {
+                lastSwitchDayNightReminderTime = System.currentTimeMillis()
+                showReminder(
+                    ReminderUiState(
+                        message = context.getString(R.string.switch_to_dark_mode_tip),
+                        actionText = context.getString(R.string.switch_action),
+                        actionIntent = ReadBookIntent.ToggleDayNight,
+                    )
+                )
+            }
+        } else if (isNight && lux >= BRIGHT_LUX_THRESHOLD) {
+            val bgTypeNight = styleConfig.bgTypeNight
+            val isDarkBg = if (bgTypeNight == 0) {
+                val colorInt = runCatching { styleConfig.bgStrNight.toColorInt() }.getOrDefault(0xFF000000.toInt())
+                !isReadBgLight(colorInt)
+            } else {
+                val meanColor = ReadBookConfig.bgMeanColor
+                //Log.d("fansangg","meanColor = ${ColorUtils.intToString(meanColor)},isLight = ${isReadBgLight(meanColor)}")
+                if (meanColor != 0) !isReadBgLight(meanColor) else true
+            }
+            if (isDarkBg) {
+                lastSwitchDayNightReminderTime = System.currentTimeMillis()
+                showReminder(
+                    ReminderUiState(
+                        message = context.getString(R.string.switch_to_light_mode_tip),
+                        actionText = context.getString(R.string.switch_action),
+                        actionIntent = ReadBookIntent.ToggleDayNight,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun dismissReminder() {
+        _uiState.update { it.copy(activeReminder = null) }
+        if (reminderQueue.isNotEmpty()) {
+            viewModelScope.launch {
+                //延迟一下，让上一个提醒的动画结束
+                delay(500.milliseconds)
+                if (_uiState.value.activeReminder == null && reminderQueue.isNotEmpty()) {
+                    val next = reminderQueue.removeFirst()
+                    _uiState.update { it.copy(activeReminder = next) }
+                }
+            }
+        }
+    }
 }
 
 private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
@@ -4014,6 +4106,11 @@ private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
 private const val TOOL_BUTTON_KEY = "tool_buttons"
 private const val DEFAULT_ENABLED_BUTTON_COUNT = 5
+
+private const val DARK_LUX_THRESHOLD = 10f
+private const val BRIGHT_LUX_THRESHOLD = 100f
+private const val LIGHT_LUMINANCE_THRESHOLD = 0.35
+private const val REMINDER_COOLDOWN_MS = 10 * 60 * 1000L
 
 private data class SearchTextPoint(
     val pageIndex: Int,

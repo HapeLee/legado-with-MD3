@@ -21,6 +21,15 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import java.util.UUID
+
+@Stable
+data class ReminderUiState(
+    val id: String = UUID.randomUUID().toString(),
+    val message: String,
+    val actionText: String? = null,
+    val actionIntent: ReadBookIntent? = null,
+)
 
 @Stable
 data class ReadBookMenuState(
@@ -94,6 +103,7 @@ data class ReadBookUiState(
     val isLocalBook: Boolean = true,
     val msg: String? = null,
     val isInitFinish: Boolean = false,
+    val activeReminder: ReminderUiState? = null,
     // Search
     val searchMenuVisible: Boolean = false,
     val isShowingSearchResult: Boolean = false,
@@ -242,6 +252,8 @@ sealed interface ReadBookIntent {
     // Initialization
     data class InitData(val intent: android.content.Intent) : ReadBookIntent
     data class InitReadBookConfig(val intent: android.content.Intent) : ReadBookIntent
+    data class CheckSwitchDayNight(val lux: Float) : ReadBookIntent
+    data object DismissReminder : ReadBookIntent
 
     // Navigation
     data object NextPage : ReadBookIntent
@@ -1173,6 +1185,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class AutoChangeSource(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class AutoSuggestDayNight(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SelectText(val value: Boolean) : ConfigUpdate {

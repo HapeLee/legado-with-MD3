@@ -308,6 +308,15 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.auto_switch_theme_reminder_title),
+                    description = stringResource(R.string.auto_switch_theme_reminder_desc),
+                    checked = state.autoSuggestDayNight,
+                    onCheckedChange = {
+                        viewModel.onIntent(ReadConfigIntent.AutoSuggestDayNightChanged(it))
+                    }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.selectText),
                     checked = state.selectText,
                     onCheckedChange = {

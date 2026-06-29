@@ -503,4 +503,10 @@ fun ReadBookScreen(
         // Sheets using AppModalBottomSheet are composed unconditionally above
         else -> {}
     }
+
+    ActionReminder(
+        reminder = state.activeReminder,
+        onAction = { reminder -> reminder.actionIntent?.let { onIntent(it) } },
+        onDismiss = { onIntent(ReadBookIntent.DismissReminder) },
+    )
 }

@@ -103,6 +103,7 @@ object PreferKey {
     const val adaptSpecialStyle = "adaptSpecialStyle"
     const val autoClearExpired = "autoClearExpired"
     const val autoChangeSource = "autoChangeSource"
+    const val autoSuggestDayNight = "autoSuggestDayNight"
     const val importKeepName = "importKeepName"
     const val importKeepGroup = "importKeepGroup"
     const val screenOrientation = "screenOrientation"

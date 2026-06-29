@@ -25,6 +25,11 @@ object ReadDataConfig {
         true
     )
 
+    var autoSuggestDayNight by prefDelegate(
+        PreferKey.autoSuggestDayNight,
+        false
+    )
+
     var defaultSourceChangeAll by prefDelegate(
         PreferKey.defaultSourceChangeAll,
         true

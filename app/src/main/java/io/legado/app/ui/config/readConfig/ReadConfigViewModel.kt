@@ -166,6 +166,11 @@ class ReadConfigViewModel(
                     readSettingsRepository.setAutoChangeSource(intent.value)
                 }
 
+                is ReadConfigIntent.AutoSuggestDayNightChanged -> {
+                    ReadConfig.autoSuggestDayNight = intent.value
+                    readSettingsRepository.setAutoSuggestDayNight(intent.value)
+                }
+
                 is ReadConfigIntent.SelectTextChanged -> {
                     ReadConfig.selectText = intent.value
                     readSettingsRepository.setSelectText(intent.value)
@@ -267,6 +272,7 @@ class ReadConfigViewModel(
             sliderVibrator = sliderVibrator,
             selectVibrator = selectVibrator,
             autoChangeSource = autoChangeSource,
+            autoSuggestDayNight = autoSuggestDayNight,
             selectText = selectText,
             noAnimScrollPage = noAnimScrollPage,
             clickImgWay = clickImgWay,

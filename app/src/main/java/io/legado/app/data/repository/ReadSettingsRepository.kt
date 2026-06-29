@@ -45,6 +45,7 @@ data class ReadPreferences(
     val sliderVibrator: Boolean = false,
     val selectVibrator: Boolean = false,
     val autoChangeSource: Boolean = true,
+    val autoSuggestDayNight: Boolean = false,
     val selectText: Boolean = true,
     val noAnimScrollPage: Boolean = false,
     val clickImgWay: String = "2",
@@ -213,6 +214,9 @@ class ReadSettingsRepository(
 
     suspend fun setAutoChangeSource(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.autoChangeSource, value)
+
+    suspend fun setAutoSuggestDayNight(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.autoSuggestDayNight, value)
 
     suspend fun setSelectText(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.selectText, value)
@@ -422,6 +426,7 @@ class ReadSettingsRepository(
             sliderVibrator = this[Keys.SliderVibrator] ?: false,
             selectVibrator = this[Keys.SelectVibrator] ?: false,
             autoChangeSource = this[Keys.AutoChangeSource] ?: true,
+            autoSuggestDayNight = this[Keys.AutoSuggestDayNight] ?: false,
             selectText = this[Keys.SelectText] ?: true,
             noAnimScrollPage = this[Keys.NoAnimScrollPage] ?: false,
             clickImgWay = this[Keys.ClickImgWay] ?: "2",
@@ -522,6 +527,7 @@ class ReadSettingsRepository(
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val SelectVibrator = booleanPreferencesKey(PreferKey.selectVibrator)
         val AutoChangeSource = booleanPreferencesKey(PreferKey.autoChangeSource)
+        val AutoSuggestDayNight = booleanPreferencesKey(PreferKey.autoSuggestDayNight)
         val SelectText = booleanPreferencesKey(PreferKey.selectText)
         val NoAnimScrollPage = booleanPreferencesKey(PreferKey.noAnimScrollPage)
         val ClickImgWay = stringPreferencesKey(PreferKey.clickImgWay)
