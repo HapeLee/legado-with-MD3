@@ -123,6 +123,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import kotlin.coroutines.coroutineContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 阅读界面 ViewModel — MVI/UDF 架构
@@ -200,7 +201,7 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.InitReadBookConfig -> initReadBookConfig(intent.intent)
             is ReadBookIntent.CheckSwitchDayNight -> checkSwitchDayNight(intent.lux)
-            is ReadBookIntent.DismissSwitchDayNightReminder -> dismissSwitchDayNightReminder()
+            is ReadBookIntent.DismissReminder -> dismissReminder()
             is ReadBookIntent.NextPage -> ReadBook.moveToNextPage()
             is ReadBookIntent.PrevPage -> ReadBook.moveToPrevPage()
             is ReadBookIntent.NextChapter -> ReadBook.moveToNextChapter(upContent = true)
@@ -4020,6 +4021,15 @@ class ReadBookViewModel(
     }
 
     private var lastSwitchDayNightReminderTime: Long = 0L
+    private val reminderQueue = ArrayDeque<ReminderUiState>()
+
+    private fun showReminder(reminder: ReminderUiState) {
+        if (_uiState.value.activeReminder == null && reminderQueue.isEmpty()) {
+            _uiState.update { it.copy(activeReminder = reminder) }
+        } else {
+            reminderQueue.addLast(reminder)
+        }
+    }
 
     private fun isReadBgLight(colorInt: Int): Boolean {
         // io.legado.app.utils.ColorUtils.isColorLight 判断条件是 >= 0.5
@@ -4045,12 +4055,13 @@ class ReadBookViewModel(
             }
             if (isLightBg) {
                 lastSwitchDayNightReminderTime = System.currentTimeMillis()
-                _uiState.update {
-                    it.copy(
-                        showSwitchDayNightReminder = true,
-                        switchDayNightTargetIsNight = true
+                showReminder(
+                    ReminderUiState(
+                        message = context.getString(R.string.switch_to_dark_mode_tip),
+                        actionText = context.getString(R.string.switch_action),
+                        actionIntent = ReadBookIntent.ToggleDayNight,
                     )
-                }
+                )
             }
         } else if (isNight && lux >= BRIGHT_LUX_THRESHOLD) {
             val bgTypeNight = styleConfig.bgTypeNight
@@ -4064,18 +4075,29 @@ class ReadBookViewModel(
             }
             if (isDarkBg) {
                 lastSwitchDayNightReminderTime = System.currentTimeMillis()
-                _uiState.update {
-                    it.copy(
-                        showSwitchDayNightReminder = true,
-                        switchDayNightTargetIsNight = false
+                showReminder(
+                    ReminderUiState(
+                        message = context.getString(R.string.switch_to_light_mode_tip),
+                        actionText = context.getString(R.string.switch_action),
+                        actionIntent = ReadBookIntent.ToggleDayNight,
                     )
-                }
+                )
             }
         }
     }
 
-    private fun dismissSwitchDayNightReminder() {
-        _uiState.update { it.copy(showSwitchDayNightReminder = false) }
+    private fun dismissReminder() {
+        _uiState.update { it.copy(activeReminder = null) }
+        if (reminderQueue.isNotEmpty()) {
+            viewModelScope.launch {
+                //延迟一下，让上一个提醒的动画结束
+                delay(500.milliseconds)
+                if (_uiState.value.activeReminder == null && reminderQueue.isNotEmpty()) {
+                    val next = reminderQueue.removeFirst()
+                    _uiState.update { it.copy(activeReminder = next) }
+                }
+            }
+        }
     }
 }
 

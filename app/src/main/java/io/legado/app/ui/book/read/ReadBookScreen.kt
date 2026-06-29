@@ -504,10 +504,9 @@ fun ReadBookScreen(
         else -> {}
     }
 
-    SwitchDayNightReminder(
-        show = state.showSwitchDayNightReminder,
-        targetIsNight = state.switchDayNightTargetIsNight,
-        onToggleDayNight = { onIntent(ReadBookIntent.ToggleDayNight) },
-        onDismiss = { onIntent(ReadBookIntent.DismissSwitchDayNightReminder) },
+    ActionReminder(
+        reminder = state.activeReminder,
+        onAction = { reminder -> reminder.actionIntent?.let { onIntent(it) } },
+        onDismiss = { onIntent(ReadBookIntent.DismissReminder) },
     )
 }
