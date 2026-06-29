@@ -314,6 +314,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             BackupConfig.backupPath = value
         }
 
+    val showHome: Boolean
+        get() = ThemeConfig.showHome
+
     val showDiscovery: Boolean
         get() = ThemeConfig.showDiscovery
 

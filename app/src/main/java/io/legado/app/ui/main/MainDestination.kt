@@ -35,9 +35,17 @@ sealed class MainDestination(
     )
 
     companion object {
-        const val DISCOVERY_MODULES_ROUTE = "explore_modules"
-
         val mainDestinations = persistentListOf<MainDestination>(Home, Bookshelf, Explore, Rss, My)
+
+        fun ordered(order: String): List<MainDestination> {
+            val byRoute = mainDestinations.associateBy { it.route }
+            val ordered = order
+                .split(',')
+                .map(String::trim)
+                .distinct()
+                .mapNotNull(byRoute::get)
+            return ordered + mainDestinations.filterNot { it in ordered }
+        }
     }
 }
 

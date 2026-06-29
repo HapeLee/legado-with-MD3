@@ -174,6 +174,7 @@ object ThemeImportExport {
             customTagColorsJson = ThemeConfig.customTagColorsJson,
 
             // 主界面设置
+            showHome = ThemeConfig.showHome,
             showDiscovery = ThemeConfig.showDiscovery,
             showRss = ThemeConfig.showRss,
             showStatusBar = ThemeConfig.showStatusBar,
@@ -184,6 +185,7 @@ object ThemeImportExport {
             tabletInterface = ThemeConfig.tabletInterface,
             labelVisibilityMode = ThemeConfig.labelVisibilityMode,
             defaultHomePage = ThemeConfig.defaultHomePage,
+            mainNavigationOrder = ThemeConfig.mainNavigationOrder,
 
             // 导航栏图标
             navIconHome = ThemeConfig.navIconHome,
@@ -343,6 +345,7 @@ object ThemeImportExport {
         ThemeConfig.customTagColorsJson = data.customTagColorsJson
 
         // 主界面设置
+        ThemeConfig.showHome = data.showHome
         ThemeConfig.showDiscovery = data.showDiscovery
         ThemeConfig.showRss = data.showRss
         ThemeConfig.showStatusBar = data.showStatusBar
@@ -353,6 +356,7 @@ object ThemeImportExport {
         ThemeConfig.tabletInterface = data.tabletInterface
         ThemeConfig.labelVisibilityMode = data.labelVisibilityMode
         ThemeConfig.defaultHomePage = data.defaultHomePage
+        ThemeConfig.mainNavigationOrder = data.mainNavigationOrder
 
         // 导航栏图标
         ThemeConfig.navIconHome = data.navIconHome
@@ -579,6 +583,7 @@ data class ThemeExportData(
     val customTagColorsJson: String? = null,
 
     // 主界面设置
+    val showHome: Boolean = true,
     val showDiscovery: Boolean = true,
     val showRss: Boolean = true,
     val showStatusBar: Boolean = true,
@@ -589,6 +594,7 @@ data class ThemeExportData(
     val tabletInterface: String = "auto",
     val labelVisibilityMode: String = "auto",
     val defaultHomePage: String = "bookshelf",
+    val mainNavigationOrder: String = "home,bookshelf,explore,rss,my",
 
     // 导航栏图标
     val navIconHome: String = "",

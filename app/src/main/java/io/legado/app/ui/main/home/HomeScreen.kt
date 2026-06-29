@@ -2,14 +2,17 @@ package io.legado.app.ui.main.home
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,37 +25,51 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -62,28 +79,47 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.model.HomeDashboardSection
+import io.legado.app.domain.model.MAX_DAILY_READING_GOAL_MINUTES
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.config.backupConfig.BackupOptionSheet
 import io.legado.app.ui.config.backupConfig.RestoreOptionSheet
+import io.legado.app.ui.main.homepage.HomepageFeedActions
+import io.legado.app.ui.main.homepage.HomepageManageActions
+import io.legado.app.ui.main.homepage.HomepageModuleFeed
+import io.legado.app.ui.main.homepage.HomepageModuleManageSheet
+import io.legado.app.ui.main.homepage.HomepageUiState
+import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
-import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -92,15 +128,96 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeRouteScreen(
     onOpenBook: (Book) -> Unit,
+    onNavigateToBookInfo: (
+        name: String?,
+        author: String?,
+        bookUrl: String,
+        origin: String?,
+        coverPath: String?,
+        sharedCoverKey: String?,
+    ) -> Unit,
+    onOpenExploreShow: (
+        title: String?,
+        sourceUrl: String,
+        exploreUrl: String?,
+    ) -> Unit,
     onOpenBackupSettings: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: HomeViewModel = koinViewModel(),
+    homepageViewModel: HomepageViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val homepageState by homepageViewModel.uiState.collectAsStateWithLifecycle()
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
+
+    val feedActions = remember(homepageViewModel, onNavigateToBookInfo, onOpenExploreShow) {
+        HomepageFeedActions(
+            onModuleHeaderClick = { sourceUrl, exploreUrl, title ->
+                onOpenExploreShow(title, sourceUrl, exploreUrl)
+            },
+            onRetryModule = homepageViewModel::retryModule,
+            onLoadMoreModule = homepageViewModel::loadMoreModule,
+            onBookClick = { book: SearchBook, sharedCoverKey: String? ->
+                onNavigateToBookInfo(
+                    book.name,
+                    book.author,
+                    book.bookUrl,
+                    book.origin,
+                    book.coverUrl,
+                    sharedCoverKey,
+                )
+            },
+            onKindUrlClick = homepageViewModel::onKindUrlClick,
+            onRefreshButtonGroup = homepageViewModel::refreshButtonGroup,
+        )
+    }
+    val manageActions = remember(homepageViewModel) {
+        HomepageManageActions(
+            onToggleSet = { url, isEnabled ->
+                homepageViewModel.toggleSourceFilter(url, isEnabled)
+            },
+            onGetSourceModules = { url, setId ->
+                homepageViewModel.getSourceModules(url, setId)
+            },
+            onSyncSourceModules = { homepageViewModel.syncSourceModules(it) },
+            onToggleModule = { id, visible ->
+                homepageViewModel.setModuleVisible(id, visible)
+            },
+            onJoinModule = { sourceUrl, targetSetId, def ->
+                homepageViewModel.joinModule(sourceUrl, targetSetId, def)
+            },
+            onAddCustomModule = { sourceUrl, targetSetId, def ->
+                homepageViewModel.addCustomModule(sourceUrl, targetSetId, def)
+            },
+            onAddButtonGroupFromKinds = { sourceUrl, targetSetId, title, kinds ->
+                homepageViewModel.addButtonGroupFromKinds(sourceUrl, targetSetId, title, kinds)
+            },
+            onGetExploreKinds = { homepageViewModel.getSourceExploreKinds(it) },
+            onUpdateModule = { globalId, def ->
+                homepageViewModel.updateModule(globalId, def)
+            },
+            onDeleteModule = { homepageViewModel.deleteModule(it) },
+            onReorderModules = { homepageViewModel.reorderJoinedModules(it) },
+            onReorderSets = { homepageViewModel.reorderCustomSets(it) },
+            onSetCustomSetTitle = { id, title ->
+                homepageViewModel.setModuleCustomSetTitle(id, title)
+            },
+            onCreateCustomSet = { homepageViewModel.createCustomSet(it) },
+            onRenameCustomSet = { id, name ->
+                homepageViewModel.renameCustomSet(id, name)
+            },
+            onDeleteCustomSet = { homepageViewModel.deleteCustomSet(it) },
+            onAssignModuleToCustomSet = { id, setId ->
+                homepageViewModel.assignModuleToCustomSet(id, setId)
+            },
+        )
+    }
+
     var pendingBackupDestination by remember {
         mutableStateOf<HomeBackupDestination?>(null)
     }
@@ -177,27 +294,120 @@ fun HomeRouteScreen(
         }
     }
 
+    LaunchedEffect(homepageViewModel) {
+        homepageViewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is io.legado.app.ui.main.homepage.HomepageEffect.NavigateToBookInfo ->
+                    onNavigateToBookInfo(
+                        effect.name,
+                        effect.author,
+                        effect.bookUrl,
+                        effect.origin,
+                        effect.coverPath,
+                        effect.sharedCoverKey,
+                    )
+
+                is io.legado.app.ui.main.homepage.HomepageEffect.NavigateToExploreShow ->
+                    onOpenExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl)
+
+                is io.legado.app.ui.main.homepage.HomepageEffect.ShowSnackbar -> {}
+            }
+        }
+    }
+
     HomeScreen(
         state = state,
+        homepageState = homepageState,
+        homepageFeedActions = feedActions,
+        homepageManageActions = manageActions,
         onIntent = viewModel::onIntent,
+        onRefreshHomepage = homepageViewModel::onRefresh,
+        onToggleHomepageManage = homepageViewModel::toggleManageMode,
         onNavigateToReadRecord = onNavigateToReadRecord,
         onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
+        onHomepageBookLongClick = { book, sharedCoverKey ->
+            previewBook = book
+            previewSharedCoverKey = sharedCoverKey
+        },
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
     )
+
+    SearchBookPreviewSheet(
+        data = previewBook,
+        shelfState = previewBook?.let { homepageViewModel.getCurrentBookShelfState(it) },
+        sharedCoverKey = previewSharedCoverKey,
+        onDismissRequest = { previewBook = null },
+        onOpenDetail = { book, sharedCoverKey ->
+            previewBook = null
+            onNavigateToBookInfo(
+                book.name,
+                book.author,
+                book.bookUrl,
+                book.origin,
+                book.coverUrl,
+                sharedCoverKey,
+            )
+        },
+        onAddToShelf = { book ->
+            homepageViewModel.onAddToShelf(book)
+        },
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalSharedTransitionApi::class,
+)
 @Composable
 fun HomeScreen(
     state: HomeUiState,
+    homepageState: HomepageUiState,
+    homepageFeedActions: HomepageFeedActions,
+    homepageManageActions: HomepageManageActions,
     onIntent: (HomeIntent) -> Unit,
+    onRefreshHomepage: () -> Unit,
+    onToggleHomepageManage: () -> Unit,
     onNavigateToReadRecord: () -> Unit = {},
     onNavigateToReadRecordOverview: () -> Unit = {},
+    onHomepageBookLongClick: (SearchBook, String?) -> Unit = { _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val scope = rememberCoroutineScope()
+
+    val selectedSets = remember(homepageState.manageState.sets) {
+        homepageState.manageState.sets.filter { it.isSelected }
+    }
+    val pagerState = rememberPagerState(pageCount = {
+        selectedSets.size.coerceAtLeast(1)
+    })
+
+    var showPageMenu by remember { mutableStateOf(false) }
+    var showSourceMenu by remember { mutableStateOf(false) }
+
+    val currentPageSourceName by remember(selectedSets, pagerState) {
+        derivedStateOf { selectedSets.getOrNull(pagerState.currentPage)?.sourceName }
+    }
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect { page ->
+                val url = selectedSets.getOrNull(page)?.sourceUrl ?: return@collect
+                onIntent(HomeIntent.SelectSourceSet(url))
+            }
+    }
+
+    LaunchedEffect(state.selectedSourceSetUrl, pagerState) {
+        val targetUrl = state.selectedSourceSetUrl ?: return@LaunchedEffect
+        val targetIndex = selectedSets.indexOfFirst { it.sourceUrl == targetUrl }
+        if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -206,79 +416,366 @@ fun HomeScreen(
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.home),
                 scrollBehavior = scrollBehavior,
+                actions = {
+                    TopBarActionButton(
+                        onClick = onToggleHomepageManage,
+                        imageVector = AppIcons.Settings,
+                        contentDescription = stringResource(R.string.homepage_module_manage),
+                    )
+                    Box {
+                        TopBarActionButton(
+                            onClick = { showPageMenu = true },
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                        )
+                        RoundDropdownMenu(
+                            expanded = showPageMenu,
+                            onDismissRequest = { showPageMenu = false },
+                        ) {
+                            RoundDropdownMenuItem(
+                                leadingIcon = {
+                                    MenuItemIcon(Icons.Default.Settings)
+                                },
+                                text = stringResource(R.string.home_dashboard_settings),
+                                onClick = {
+                                    showPageMenu = false
+                                    onIntent(HomeIntent.DashboardSettingsClick)
+                                },
+                            )
+                        }
+                    }
+                },
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        AppPullToRefresh(
+            isRefreshing = homepageState.isRefreshing,
+            onRefresh = onRefreshHomepage,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = adaptiveContentPadding(
-                top = paddingValues.calculateTopPadding() + 8.dp,
-                bottom = 120.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(key = "recent_book") {
-                RecentBookCard(
-                    book = state.recentBook,
-                    onClick = { onIntent(HomeIntent.RecentBookClick) },
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
-            }
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val dashboardScrollState = rememberScrollState()
+                val moduleNestedScrollConnection = remember(dashboardScrollState) {
+                    object : NestedScrollConnection {
+                        override fun onPreScroll(
+                            available: Offset,
+                            source: NestedScrollSource,
+                        ): Offset {
+                            return if (available.y >= 0f) {
+                                Offset.Zero
+                            } else {
+                                val consumed = dashboardScrollState.dispatchRawDelta(-available.y)
+                                Offset(0f, -consumed)
+                            }
+                        }
 
-            item(key = "statistics") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        override fun onPostScroll(
+                            consumed: Offset,
+                            available: Offset,
+                            source: NestedScrollSource,
+                        ): Offset {
+                            return if (available.y <= 0f) {
+                                Offset.Zero
+                            } else {
+                                val c = dashboardScrollState.dispatchRawDelta(-available.y)
+                                Offset(0f, -c)
+                            }
+                        }
+                    }
+                }
+                val viewportHeight = maxHeight
+                val hasDashboard = state.visibleSections.isNotEmpty()
+                val isSourceSwitcherVisible by remember(hasDashboard, selectedSets) {
+                    derivedStateOf {
+                        selectedSets.size > 1 &&
+                                (!hasDashboard || dashboardScrollState.value > 0 || showSourceMenu)
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(dashboardScrollState),
                 ) {
+                    if (hasDashboard) {
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(paddingValues.calculateTopPadding() + 8.dp),
+                        )
+                        HomeDashboardContent(
+                            state = state,
+                            onIntent = onIntent,
+                            onNavigateToReadRecord = onNavigateToReadRecord,
+                            onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(viewportHeight),
+                    ) {
+                        if (selectedSets.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                AppText(stringResource(R.string.homepage_no_source_sets_selected))
+                            }
+                        } else {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .nestedScroll(moduleNestedScrollConnection),
+                                key = { index ->
+                                    selectedSets.getOrNull(index)?.sourceUrl ?: index
+                                },
+                            ) { pageIndex ->
+                                val source = selectedSets.getOrNull(pageIndex)
+                                val sourceModules = remember(homepageState.modules, source) {
+                                    homepageState.modules.filter { module ->
+                                        if (source?.isCustomSet == true) {
+                                            val setId =
+                                                HomepageViewModel.customSetIdFromUrl(source.sourceUrl)
+                                            module.customSetId == setId
+                                        } else {
+                                            module.sourceUrl == source?.sourceUrl
+                                        }
+                                    }
+                                }
+                                HomepageModuleFeed(
+                                    modules = sourceModules,
+                                    actions = homepageFeedActions,
+                                    modifier = Modifier.fillMaxSize(),
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    onBookLongClick = onHomepageBookLongClick,
+                                    onErrorClick = {},
+                                )
+                            }
+                        }
+                    }
+                }
+
+                TopFloatingStickyItem(
+                    item = if (isSourceSwitcherVisible) currentPageSourceName else null,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = paddingValues.calculateTopPadding() + 8.dp),
+                ) { name ->
+                    Box {
+                        GlassCard(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .clickable { showSourceMenu = true },
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp,
+                                    vertical = 12.dp,
+                                ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                AppText(
+                                    text = name,
+                                    style = LegadoTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                        RoundDropdownMenu(
+                            expanded = showSourceMenu,
+                            onDismissRequest = { showSourceMenu = false },
+                        ) { dismiss ->
+                            selectedSets.forEachIndexed { index, source ->
+                                RoundDropdownMenuItem(
+                                    text = source.sourceName,
+                                    isSelected = index == pagerState.currentPage,
+                                    onClick = {
+                                        dismiss()
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HomepageModuleManageSheet(
+            data = if (homepageState.isManageMode) Unit else null,
+            onDismissRequest = onToggleHomepageManage,
+            state = homepageState.manageState,
+            actions = homepageManageActions,
+        )
+
+        HomeDialogs(
+            dialog = state.activeDialog,
+            onIntent = onIntent,
+        )
+        HomeSheets(
+            sheet = state.activeSheet,
+            visibleSections = state.visibleSections,
+            onIntent = onIntent,
+        )
+    }
+}
+
+@Composable
+private fun HomeDashboardContent(
+    state: HomeUiState,
+    onIntent: (HomeIntent) -> Unit,
+    onNavigateToReadRecord: () -> Unit,
+    onNavigateToReadRecordOverview: () -> Unit,
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (HomeDashboardSection.RecentBook in state.visibleSections) {
+            RecentBookCard(
+                book = state.recentBook,
+                onClick = { onIntent(HomeIntent.RecentBookClick) },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }
+
+        val hasStatRead = HomeDashboardSection.TotalReadBooks in state.visibleSections
+        val hasStatTime = HomeDashboardSection.TotalReadTime in state.visibleSections
+        if (hasStatRead || hasStatTime) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (hasStatRead) {
                     StatisticCard(
                         modifier = Modifier.weight(1f),
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        icon = Icons.Default.Leaderboard,
                         title = stringResource(R.string.home_total_read_books),
                         value = state.totalReadBooks.toString(),
                         unit = stringResource(R.string.unit_books),
                         onClick = onNavigateToReadRecord,
                     )
+                }
+                if (hasStatTime) {
                     StatisticCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.AccessTime,
                         title = stringResource(R.string.home_total_reading_time),
-                        value = String.format("%.1f", state.totalReadTimeMillis / 3_600_000.0),
+                        value = String.format(
+                            "%.1f",
+                            state.totalReadTimeMillis / 3_600_000.0,
+                        ),
                         unit = stringResource(R.string.unit_hours),
                         onClick = onNavigateToReadRecordOverview,
                     )
                 }
             }
+        }
 
-            item(key = "daily_goal") {
-                ReadingGoalCard(
-                    todayReadTimeMillis = state.todayReadTimeMillis,
-                    goalMinutes = state.dailyGoalMinutes,
-                    onClick = { onIntent(HomeIntent.ReadingGoalClick) },
-                )
-            }
+        if (HomeDashboardSection.RecentBooks in state.visibleSections && state.recentBooks.isNotEmpty()) {
+            RecentBooksRow(
+                books = state.recentBooks,
+                onBookClick = { url -> onIntent(HomeIntent.RecentHistoryBookClick(url)) },
+            )
+        }
 
-            item(key = "webdav") {
-                WebDavBackupCard(
-                    latestBackup = state.latestBackup,
-                    isLoading = state.isBackupLoading,
-                    isActionRunning = state.isBackupActionRunning,
-                    onBackup = { onIntent(HomeIntent.BackupClick) },
-                    onRestore = { onIntent(HomeIntent.RestoreClick) },
-                    onOpenSettings = { onIntent(HomeIntent.BackupSettingsClick) },
+        if (HomeDashboardSection.DailyGoal in state.visibleSections) {
+            ReadingGoalCard(
+                todayReadTimeMillis = state.todayReadTimeMillis,
+                goalMinutes = state.dailyGoalMinutes,
+                onClick = { onIntent(HomeIntent.ReadingGoalClick) },
+            )
+        }
+
+        if (HomeDashboardSection.WebDavBackup in state.visibleSections) {
+            WebDavBackupCard(
+                latestBackup = state.latestBackup,
+                isLoading = state.isBackupLoading,
+                isLoadError = state.isBackupLoadError,
+                isActionRunning = state.isBackupActionRunning,
+                onBackup = { onIntent(HomeIntent.BackupClick) },
+                onRestore = { onIntent(HomeIntent.RestoreClick) },
+                onOpenSettings = { onIntent(HomeIntent.BackupSettingsClick) },
+                onRetry = { onIntent(HomeIntent.RetryBackupInfo) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatisticCard(
+    modifier: Modifier,
+    icon: ImageVector,
+    title: String,
+    value: String,
+    unit: String,
+    onClick: () -> Unit,
+) {
+    GlassCard(
+        modifier = modifier,
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 16.dp,
+                    top = 10.dp,
+                    end = 16.dp,
+                    bottom = 8.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            AppIcon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
+                Row {
+                    AppText(
+                        text = value,
+                        style = LegadoTheme.typography.titleMediumEmphasized,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .alignBy(FirstBaseline)
+                            .basicMarquee(),
+                    )
+                    AppText(
+                        text = unit,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .weight(1f)
+                            .alignBy(FirstBaseline)
+                            .padding(start = 2.dp),
+                    )
+                }
             }
         }
     }
-
-    HomeDialogs(
-        dialog = state.activeDialog,
-        onIntent = onIntent,
-    )
-    HomeSheets(
-        sheet = state.activeSheet,
-        onIntent = onIntent,
-    )
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -289,15 +786,13 @@ private fun RecentBookCard(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
-    NormalCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp)),
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
         onClick = if (book?.bookUrl != null) onClick else null,
-        cornerRadius = 20.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer,
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             book?.chapterProgress?.let { progress ->
                 RecentReadingProgress(
                     progress = progress,
@@ -308,15 +803,20 @@ private fun RecentBookCard(
             }
 
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 14.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     AppIcon(
-                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        imageVector = Icons.Default.Book,
                         contentDescription = null,
                         tint = LegadoTheme.colorScheme.primary,
                     )
@@ -342,7 +842,7 @@ private fun RecentBookCard(
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BookshelfCover(
@@ -351,7 +851,7 @@ private fun RecentBookCard(
                             path = book.coverPath,
                             sourceOrigin = book.origin,
                             modifier = Modifier
-                                .width(72.dp)
+                                .width(56.dp)
                                 .aspectRatio(5f / 7f),
                             coverModifier = Modifier.fillMaxSize(),
                             sharedTransitionScope = sharedTransitionScope,
@@ -370,6 +870,7 @@ private fun RecentBookCard(
                             )
                             AppText(
                                 text = book.author,
+                                style = LegadoTheme.typography.bodySmall,
                                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -483,65 +984,45 @@ private fun RecentReadingProgress(
 }
 
 @Composable
-private fun StatisticCard(
-    modifier: Modifier,
-    icon: ImageVector,
-    title: String,
-    value: String,
-    unit: String,
-    onClick: () -> Unit,
+private fun RecentBooksRow(
+    books: List<HomeRecentBookUi>,
+    onBookClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    NormalCard(
+    LazyRow(
         modifier = modifier,
-        onClick = onClick,
-        cornerRadius = 20.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = 16.dp,
-                    top = 10.dp,
-                    end = 16.dp,
-                    bottom = 8.dp,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            AppIcon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = LegadoTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
+        items(books, key = { it.bookUrl.orEmpty() }) { book ->
+            RecentHistoryBookCard(
+                book = book,
+                onClick = { book.bookUrl?.let(onBookClick) },
             )
-            Column {
-                AppText(
-                    text = title,
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-                Row {
-                    AppText(
-                        text = value,
-                        style = LegadoTheme.typography.titleMediumEmphasized,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .alignBy(FirstBaseline)
-                            .basicMarquee()
-                    )
-                    AppText(
-                        text = unit,
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .weight(1f)
-                            .alignBy(FirstBaseline)
-                            .padding(start = 2.dp)
-                    )
-                }
-            }
         }
+    }
+}
+
+@Composable
+private fun RecentHistoryBookCard(
+    book: HomeRecentBookUi,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .width(60.dp)
+            .aspectRatio(5f / 7f)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+    ) {
+        BookshelfCover(
+            name = book.name,
+            author = book.author,
+            path = book.coverPath,
+            sourceOrigin = book.origin,
+            modifier = Modifier.fillMaxSize(),
+            coverModifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
@@ -555,11 +1036,9 @@ private fun ReadingGoalCard(
     val progress = (todayReadTimeMillis / 60_000f / goalMinutes)
         .coerceIn(0f, 1f)
 
-    NormalCard(
+    GlassCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        cornerRadius = 20.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer,
     ) {
         Column(
             modifier = Modifier
@@ -669,10 +1148,12 @@ private fun SemiCircleProgress(
 private fun WebDavBackupCard(
     latestBackup: HomeBackupUi?,
     isLoading: Boolean,
+    isLoadError: Boolean,
     isActionRunning: Boolean,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
     onOpenSettings: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     val lastBackupText = when {
         isLoading -> stringResource(R.string.home_loading_webdav_backup)
@@ -686,13 +1167,12 @@ private fun WebDavBackupCard(
             stringResource(R.string.home_latest_backup_value, date)
         }
 
+        isLoadError -> stringResource(R.string.home_webdav_backup_load_error)
         else -> stringResource(R.string.home_no_webdav_backup)
     }
 
-    NormalCard(
+    GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 20.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -716,7 +1196,11 @@ private fun WebDavBackupCard(
                     AppText(
                         text = lastBackupText,
                         style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        color = if (isLoadError) {
+                            LegadoTheme.colorScheme.error
+                        } else {
+                            LegadoTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
                 if (isLoading || isActionRunning) {
@@ -726,30 +1210,68 @@ private fun WebDavBackupCard(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            if (isLoadError && !isLoading) {
                 SmallTonalButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onBackup,
-                    enabled = !isActionRunning,
-                    icon = Icons.Default.CloudUpload,
-                    text = stringResource(R.string.backup),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onRetry,
+                    icon = Icons.Default.Refresh,
+                    text = stringResource(R.string.retry),
                 )
-                SmallTonalButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onRestore,
-                    enabled = !isActionRunning,
-                    icon = Icons.Default.CloudDownload,
-                    text = stringResource(R.string.restore),
-                )
-                SmallTonalButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenSettings,
-                    enabled = !isActionRunning,
-                    icon = Icons.Default.Settings,
-                    text = stringResource(R.string.setting),
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SmallTonalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onBackup,
+                        enabled = !isActionRunning,
+                        icon = Icons.Default.CloudUpload,
+                        text = stringResource(R.string.backup),
+                    )
+                    SmallTonalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onRestore,
+                        enabled = !isActionRunning,
+                        icon = Icons.Default.CloudDownload,
+                        text = stringResource(R.string.restore),
+                    )
+                    SmallTonalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenSettings,
+                        enabled = !isActionRunning,
+                        icon = Icons.Default.Settings,
+                        text = stringResource(R.string.setting),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeDashboardSettingsSheet(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    visibleSections: Set<HomeDashboardSection>,
+    onSectionVisibilityChanged: (HomeDashboardSection, Boolean) -> Unit,
+) {
+    if (!show) return
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (section in HomeDashboardSection.entries) {
+                CompactSwitchSettingItem(
+                    title = stringResource(section.labelRes()),
+                    checked = section in visibleSections,
+                    onCheckedChange = { visible ->
+                        onSectionVisibilityChanged(section, visible)
+                    },
                 )
             }
         }
@@ -817,8 +1339,17 @@ private fun HomeDialogs(
 @Composable
 private fun HomeSheets(
     sheet: HomeSheet?,
+    visibleSections: Set<HomeDashboardSection>,
     onIntent: (HomeIntent) -> Unit,
 ) {
+    HomeDashboardSettingsSheet(
+        show = sheet is HomeSheet.DashboardSettings,
+        onDismissRequest = { onIntent(HomeIntent.DismissSheet) },
+        visibleSections = visibleSections,
+        onSectionVisibilityChanged = { section, visible ->
+            onIntent(HomeIntent.SetSectionVisible(section, visible))
+        },
+    )
     BackupOptionSheet(
         show = sheet is HomeSheet.BackupOptions,
         onDismissRequest = { onIntent(HomeIntent.DismissSheet) },
@@ -844,4 +1375,28 @@ private fun HomeSheets(
         onRestoreFromLocal = { onIntent(HomeIntent.RestoreFromLocal) },
         onRestoreFromNetwork = { onIntent(HomeIntent.RestoreFromNetwork) },
     )
+}
+
+@Composable
+private fun AppModalBottomSheet(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+    ) {
+        content()
+    }
+}
+
+@StringRes
+private fun HomeDashboardSection.labelRes(): Int = when (this) {
+    HomeDashboardSection.RecentBook -> R.string.home_recent_reading
+    HomeDashboardSection.TotalReadBooks -> R.string.home_total_read_books
+    HomeDashboardSection.TotalReadTime -> R.string.home_total_reading_time
+    HomeDashboardSection.RecentBooks -> R.string.home_recent_books
+    HomeDashboardSection.DailyGoal -> R.string.home_today_reading_goal
+    HomeDashboardSection.WebDavBackup -> R.string.home_webdav_backup
 }

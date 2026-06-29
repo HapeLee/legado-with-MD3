@@ -4,6 +4,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
 
 object MainConfig {
+    var showHome by prefDelegate(PreferKey.showHome, true)
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
     var showRSS by prefDelegate(PreferKey.showRss, true)
     var showBottomView by prefDelegate(PreferKey.showBottomView, true)
@@ -13,6 +14,10 @@ object MainConfig {
         false
     )
     var defaultHomePage by prefDelegate(PreferKey.defaultHomePage, "bookshelf")
+    var mainNavigationOrder by prefDelegate(
+        PreferKey.mainNavigationOrder,
+        "home,bookshelf,explore,rss,my",
+    )
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
     var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")
     var swipeAnimation by prefDelegate(PreferKey.swipeAnimation, true)

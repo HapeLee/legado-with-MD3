@@ -19,7 +19,6 @@ data class HomepageBookItemUi(
 data class HomepageUiState(
     val modules: ImmutableList<HomepageModuleUi> = persistentListOf(),
     val isManageMode: Boolean = false,
-    val isConfigMode: Boolean = false,
     val isRefreshing: Boolean = false,
     val manageState: HomepageManageUiState = HomepageManageUiState()
 )
@@ -51,6 +50,16 @@ data class HomepageManageActions(
     val onRenameCustomSet: (String, String) -> Unit = { _, _ -> },
     val onDeleteCustomSet: (String) -> Unit = {},
     val onAssignModuleToCustomSet: (String, String?) -> Unit = { _, _ -> },
+)
+
+@Stable
+data class HomepageFeedActions(
+    val onModuleHeaderClick: (String, String?, String?) -> Unit,
+    val onRetryModule: (String) -> Unit,
+    val onLoadMoreModule: (String) -> Unit,
+    val onBookClick: (SearchBook, String?) -> Unit,
+    val onKindUrlClick: (String, String, String) -> Unit,
+    val onRefreshButtonGroup: (String) -> Unit,
 )
 
 @Stable

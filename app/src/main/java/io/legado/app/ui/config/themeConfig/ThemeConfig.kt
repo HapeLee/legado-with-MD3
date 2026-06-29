@@ -142,6 +142,8 @@ object ThemeConfig {
         customTagColorsJson = GSON.toJson(colors)
     }
 
+    var showHome by prefDelegate(PreferKey.showHome, true)
+
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
 
     var showRss by prefDelegate(PreferKey.showRss, true)
@@ -164,6 +166,11 @@ object ThemeConfig {
     var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")
 
     var defaultHomePage by prefDelegate(PreferKey.defaultHomePage, "bookshelf")
+
+    var mainNavigationOrder by prefDelegate(
+        PreferKey.mainNavigationOrder,
+        "home,bookshelf,explore,rss,my",
+    )
 
     var navExtended by prefDelegate("navExtended", false)
 

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import io.legado.app.data.entities.readRecord.HomeRecentBookRow
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -24,6 +25,56 @@ interface ReadRecordDao {
     val allSession: List<ReadRecordSession>
     @Query("SELECT sum(readTime) FROM readRecord")
     fun getTotalReadTime(): Flow<Long?>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM (
+            SELECT 1
+            FROM readRecord
+            GROUP BY bookName, bookAuthor
+        )
+        """
+    )
+    fun observeTotalReadBookCount(): Flow<Int>
+
+    @Query("SELECT SUM(readTime) FROM readRecordDetail WHERE date = :date")
+    fun observeReadTimeByDate(date: String): Flow<Long?>
+
+    @Query(
+        """
+        WITH recent AS (
+            SELECT
+                bookName,
+                bookAuthor,
+                MAX(lastRead) AS lastRead
+            FROM readRecord
+            GROUP BY bookName, bookAuthor
+            ORDER BY lastRead DESC
+            LIMIT :limit
+        )
+        SELECT
+            recent.bookName AS recordName,
+            recent.bookAuthor AS recordAuthor,
+            book.bookUrl AS bookUrl,
+            book.origin AS origin,
+            book.coverUrl AS coverUrl,
+            book.customCoverUrl AS customCoverUrl,
+            book.durChapterTitle AS chapterTitle,
+            book.totalChapterNum AS totalChapterNum,
+            book.durChapterIndex AS chapterIndex
+        FROM recent
+        LEFT JOIN books AS book ON book.bookUrl = (
+            SELECT candidate.bookUrl
+            FROM books AS candidate
+            WHERE candidate.name = recent.bookName
+                AND candidate.author = recent.bookAuthor
+            ORDER BY candidate.durChapterTime DESC, candidate.bookUrl ASC
+            LIMIT 1
+        )
+        ORDER BY recent.lastRead DESC
+        """
+    )
+    fun observeRecentHomeBooks(limit: Int): Flow<List<HomeRecentBookRow>>
 
     @Query("select sum(readTime) from readRecord where bookName = :bookName")
     fun getReadTime(bookName: String): Long?

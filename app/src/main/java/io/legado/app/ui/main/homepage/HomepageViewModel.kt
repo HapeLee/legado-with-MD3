@@ -97,7 +97,6 @@ class HomepageViewModel(
     // 1. 基础原始状态
     private val _isRefreshing = MutableStateFlow(false)
     private val _isManageMode = MutableStateFlow(false)
-    private val _isConfigMode = MutableStateFlow(false)
     private val _configVersion = MutableStateFlow(0L)
     private val _moduleContentStates = MutableStateFlow<Map<String, ModuleLoadState>>(emptyMap())
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSource>>(emptyMap())
@@ -151,8 +150,8 @@ class HomepageViewModel(
 
     // 4. 聚合层
     private val uiFlagsFlow =
-        combine(_isRefreshing, _isManageMode, _isConfigMode) { refreshing, manage, config ->
-            HomepageUiFlags(refreshing, manage, config)
+        combine(_isRefreshing, _isManageMode) { refreshing, manage ->
+            HomepageUiFlags(refreshing, manage)
         }
 
     private val manageStateFlow = combine(
@@ -275,7 +274,6 @@ class HomepageViewModel(
             modules = modules,
             isRefreshing = flags.isRefreshing,
             isManageMode = flags.isManageMode,
-            isConfigMode = flags.isConfigMode,
             manageState = manageState
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageUiState())
@@ -550,7 +548,6 @@ class HomepageViewModel(
     }
 
     fun toggleManageMode() = _isManageMode.update { !it }
-    fun toggleConfigMode() = _isConfigMode.update { !it }
 
     fun setModuleVisible(id: String, visible: Boolean) {
         _pendingEnabled.update { it + (id to visible) }
@@ -576,11 +573,6 @@ class HomepageViewModel(
             .getOrDefault(emptyList()).toMutableSet()
         if (isEnabled) hidden.remove(sourceUrl) else hidden.add(sourceUrl)
         HomepageConfig.homepageSourceHidden = GSON.toJson(hidden.toList())
-        notifyConfigChanged()
-    }
-
-    fun setLayoutMode(mode: Int) {
-        HomepageConfig.homepageLayoutMode = mode
         notifyConfigChanged()
     }
 
@@ -875,6 +867,12 @@ class HomepageViewModel(
         }
     }
 
+    fun saveSearchBook(book: SearchBook) {
+        viewModelScope.launch {
+            saveSearchBooksUseCase.save(book)
+        }
+    }
+
     fun onBookClick(book: SearchBook, sharedCoverKey: String?) {
         viewModelScope.launch {
             saveSearchBooksUseCase.save(book)
@@ -940,6 +938,5 @@ class HomepageViewModel(
 
 private data class HomepageUiFlags(
     val isRefreshing: Boolean,
-    val isManageMode: Boolean,
-    val isConfigMode: Boolean
+    val isManageMode: Boolean
 )

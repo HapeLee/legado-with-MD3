@@ -44,9 +44,11 @@ object PreferKey {
     const val ttsSpeechRate = "ttsSpeechRate"
     const val prevKeys = "prevKeyCodes"
     const val nextKeys = "nextKeyCodes"
+    const val showHome = "showHome"
     const val showDiscovery = "showDiscovery"
     const val enableReview = "enableReview"
     const val showRss = "showRss"
+    const val mainNavigationOrder = "mainNavigationOrder"
     const val showStatusBar = "showStatusBar"
     const val swipeAnimation = "swipeAnimation"
     const val bookshelfLayout = "bookshelfLayout"
@@ -364,9 +366,6 @@ object PreferKey {
     const val llmTemperature = "llmTemperature"
     const val llmPrompt = "llmPrompt"
 
-    const val homepageModuleOrder = "homepageModuleOrder"
-    const val homepageModuleHidden = "homepageModuleHidden"
-    const val homepageLayoutMode = "homepageLayoutMode"
     const val navIconHome = "navIconHome"
 
     // Lab

@@ -39,7 +39,7 @@ class WebDavBackupRepository : WebDavBackupGateway {
 
     override suspend fun getLatestBackup(): WebDavBackup? {
         return withContext(IO) {
-            AppWebDav.lastBackUp().getOrNull()?.let {
+            AppWebDav.lastBackUp().getOrThrow()?.let {
                 WebDavBackup(
                     name = it.displayName,
                     lastModify = it.lastModify

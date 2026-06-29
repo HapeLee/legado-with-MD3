@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
-import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -37,7 +36,8 @@ fun ButtonGroupModule(
     kinds: List<ExploreKind>,
     sourceUrl: String,
     globalId: String,
-    viewModel: HomepageViewModel,
+    onOpenKind: (sourceUrl: String, url: String, title: String) -> Unit,
+    onRefreshKinds: (globalId: String) -> Unit,
     modifier: Modifier = Modifier,
     icon: String? = null,
     layoutConfig: String? = null,
@@ -91,10 +91,10 @@ fun ButtonGroupModule(
                         sourceUrl = sourceUrl,
                         activity = activity,
                         onOpenUrl = { url ->
-                            viewModel.onKindUrlClick(sourceUrl, url, kind.title)
+                            onOpenKind(sourceUrl, url, kind.title)
                         },
                         onRefreshKinds = {
-                            viewModel.refreshButtonGroup(globalId)
+                            onRefreshKinds(globalId)
                         },
                         useCase = useCase,
                         isMiuix = isMiuix,

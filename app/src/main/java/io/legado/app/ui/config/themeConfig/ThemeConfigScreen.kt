@@ -123,6 +123,7 @@ fun ThemeConfigScreen(
     var showLauncherIconPicker by remember { mutableStateOf(false) }
     var showBorderColorPicker by remember { mutableStateOf(false) }
     var showNavIconSheet by remember { mutableStateOf(false) }
+    var showMainNavigationSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
     val showThemeRefactorTip by viewModel.showThemeRefactorTip.collectAsStateWithLifecycle()
 
@@ -375,15 +376,10 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.main_activity)) {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.show_discovery),
-                        checked = ThemeConfig.showDiscovery,
-                        onCheckedChange = { ThemeConfig.showDiscovery = it }
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.show_rss),
-                        checked = ThemeConfig.showRss,
-                        onCheckedChange = { ThemeConfig.showRss = it }
+                    ClickableSettingItem(
+                        title = stringResource(R.string.main_navigation_settings),
+                        description = stringResource(R.string.main_navigation_settings_summary),
+                        onClick = { showMainNavigationSheet = true },
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_status),
@@ -445,13 +441,6 @@ fun ThemeConfigScreen(
                         displayEntries = stringArrayResource(R.array.label_vis_mode),
                         entryValues = stringArrayResource(R.array.label_vis_mode_value),
                         onValueChange = { ThemeConfig.labelVisibilityMode = it }
-                    )
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.default_home_page),
-                        selectedValue = ThemeConfig.defaultHomePage,
-                        displayEntries = stringArrayResource(R.array.default_home_page),
-                        entryValues = stringArrayResource(R.array.default_home_page_value),
-                        onValueChange = { ThemeConfig.defaultHomePage = it }
                     )
                 }
 
@@ -839,6 +828,11 @@ fun ThemeConfigScreen(
     NavIconManageSheet(
         show = showNavIconSheet,
         onDismissRequest = { showNavIconSheet = false }
+    )
+
+    MainNavigationSettingsSheet(
+        show = showMainNavigationSheet,
+        onDismissRequest = { showMainNavigationSheet = false },
     )
 
 

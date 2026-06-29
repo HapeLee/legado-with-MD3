@@ -6,12 +6,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
-import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.ui.main.explore.ExploreStyle
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.utils.eventBus.FlowEventBus
 import kotlinx.collections.immutable.ImmutableList
@@ -27,7 +24,6 @@ class MainViewModel(
     application: Application,
     private val appStartupMaintenanceUseCase: AppStartupMaintenanceUseCase,
     private val webDavBackupUseCase: WebDavBackupUseCase,
-    private val localPreferencesRepository: LocalPreferencesRepository,
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(readMainUiState())
@@ -36,24 +32,12 @@ class MainViewModel(
     val effects = _effects.asSharedFlow()
 
     init {
-        // 通过 snapshotFlow 直接观察 ThemeConfig 的 Compose State，全链路走 DS
+        // 通过 snapshotFlow 直接观察 ThemeConfig 的 Compose State
         viewModelScope.launch {
             snapshotFlow {
                 readMainUiState()
             }.collect { newState ->
-                _uiState.update { currentState ->
-                    newState.copy(exploreStyle = currentState.exploreStyle)
-                }
-            }
-        }
-        viewModelScope.launch {
-            localPreferencesRepository.getPreference(
-                LocalPreferencesKeys.EXPLORE_STYLE,
-                ExploreStyle.ClassicDiscovery.storageValue,
-            ).collect { storedValue ->
-                _uiState.update {
-                    it.copy(exploreStyle = ExploreStyle.fromStorageValue(storedValue))
-                }
+                _uiState.value = newState
             }
         }
         deleteNotShelfBook()
@@ -87,17 +71,6 @@ class MainViewModel(
         if (_uiState.value.navExtended == expanded) return
         _uiState.update { it.copy(navExtended = expanded) }
         ThemeConfig.navExtended = expanded
-    }
-
-    fun setExploreStyle(style: ExploreStyle) {
-        if (_uiState.value.exploreStyle == style) return
-        _uiState.update { it.copy(exploreStyle = style) }
-        viewModelScope.launch {
-            localPreferencesRepository.updatePreference(
-                LocalPreferencesKeys.EXPLORE_STYLE,
-                style.storageValue,
-            )
-        }
     }
 
     fun onPrefClickEvent(event: PrefClickEvent) {
@@ -158,12 +131,12 @@ data class MainUiState(
     val useFloatingBottomBarLiquidGlass: Boolean = false,
     val labelVisibilityMode: String = "auto",
     val navExtended: Boolean = false,
-    val exploreStyle: ExploreStyle = ExploreStyle.ClassicDiscovery,
 )
 
 private fun MainViewModel.readMainUiState(): MainUiState {
-    val destinations = MainDestination.mainDestinations.filter {
+    val destinations = MainDestination.ordered(ThemeConfig.mainNavigationOrder).filter {
         when (it) {
+            MainDestination.Home -> ThemeConfig.showHome
             MainDestination.Explore -> ThemeConfig.showDiscovery
             MainDestination.Rss -> ThemeConfig.showRss
             else -> true

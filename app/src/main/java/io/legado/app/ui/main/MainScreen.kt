@@ -182,14 +182,9 @@ fun MainScreen(
     val destinations = mainUiState.destinations
 
     val initialPage = remember(destinations, mainUiState.defaultHomePage) {
-        val defaultRoute = if (
-            mainUiState.defaultHomePage == MainDestination.DISCOVERY_MODULES_ROUTE
-        ) {
-            MainDestination.Explore.route
-        } else {
-            mainUiState.defaultHomePage
+        val index = destinations.indexOfFirst {
+            it.route == mainUiState.defaultHomePage
         }
-        val index = destinations.indexOfFirst { it.route == defaultRoute }
         if (index != -1) index else 0
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
@@ -392,6 +387,17 @@ fun MainScreen(
                                 onOpenBook = { book ->
                                     context.startActivityForBook(book)
                                 },
+                                onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
+                                    onNavigateToBookInfo(
+                                        name ?: "",
+                                        author ?: "",
+                                        bookUrl,
+                                        origin,
+                                        coverPath,
+                                        sharedCoverKey,
+                                    )
+                                },
+                                onOpenExploreShow = onNavigateToExploreShow,
                                 onOpenBackupSettings = onNavigateToBackupSettings,
                                 onNavigateToReadRecord = onNavigateToReadRecord,
                                 onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
@@ -423,21 +429,7 @@ fun MainScreen(
                             )
 
                             MainDestination.Explore -> ExploreScreen(
-                                style = mainUiState.exploreStyle,
-                                onStyleChange = viewModel::setExploreStyle,
-                                onBookClick = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
-                                    onNavigateToBookInfo(
-                                        name ?: "",
-                                        author ?: "",
-                                        bookUrl,
-                                        origin,
-                                        coverPath,
-                                        sharedCoverKey
-                                    )
-                                },
                                 onOpenExploreShow = onNavigateToExploreShow,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
                             )
                             MainDestination.Rss -> RssScreen(
                                 onOpenSort = { sourceUrl, sortUrl, key ->

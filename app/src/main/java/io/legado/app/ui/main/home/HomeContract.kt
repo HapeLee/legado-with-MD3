@@ -3,6 +3,13 @@ package io.legado.app.ui.main.home
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.Book
+import io.legado.app.domain.model.DEFAULT_DAILY_READING_GOAL_MINUTES
+import io.legado.app.domain.model.DEFAULT_HOME_DASHBOARD_SECTIONS
+import io.legado.app.domain.model.HomeDashboardSection
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableSet
 
 @Stable
 data class HomeUiState(
@@ -11,8 +18,13 @@ data class HomeUiState(
     val todayReadTimeMillis: Long = 0L,
     val dailyGoalMinutes: Int = DEFAULT_DAILY_READING_GOAL_MINUTES,
     val recentBook: HomeRecentBookUi? = null,
+    val recentBooks: ImmutableList<HomeRecentBookUi> = persistentListOf(),
+    val selectedSourceSetUrl: String? = null,
+    val visibleSections: ImmutableSet<HomeDashboardSection> =
+        DEFAULT_HOME_DASHBOARD_SECTIONS.toImmutableSet(),
     val latestBackup: HomeBackupUi? = null,
     val isBackupLoading: Boolean = true,
+    val isBackupLoadError: Boolean = false,
     val isBackupActionRunning: Boolean = false,
     val activeDialog: HomeDialog? = null,
     val activeSheet: HomeSheet? = null,
@@ -37,6 +49,13 @@ data class HomeBackupUi(
 
 sealed interface HomeIntent {
     data object RecentBookClick : HomeIntent
+    data class RecentHistoryBookClick(val bookUrl: String) : HomeIntent
+    data class SelectSourceSet(val sourceUrl: String) : HomeIntent
+    data object DashboardSettingsClick : HomeIntent
+    data class SetSectionVisible(
+        val section: HomeDashboardSection,
+        val visible: Boolean,
+    ) : HomeIntent
     data object ReadingGoalClick : HomeIntent
     data class UpdateReadingGoal(val minutes: Int) : HomeIntent
     data object BackupClick : HomeIntent
@@ -52,6 +71,7 @@ sealed interface HomeIntent {
     data class RestoreLocalFileSelected(val uri: String) : HomeIntent
     data object ConfirmRestore : HomeIntent
     data object BackupSettingsClick : HomeIntent
+    data object RetryBackupInfo : HomeIntent
     data object DismissDialog : HomeIntent
     data object DismissSheet : HomeIntent
 }
@@ -83,6 +103,7 @@ sealed interface HomeDialog {
 
 @Stable
 sealed interface HomeSheet {
+    data object DashboardSettings : HomeSheet
     data object BackupOptions : HomeSheet
     data object RestoreOptions : HomeSheet
 }
@@ -92,6 +113,3 @@ enum class HomeBackupDestination(val mode: String) {
     WebDav("webdav"),
     LocalAndWebDav("both"),
 }
-
-const val DEFAULT_DAILY_READING_GOAL_MINUTES = 30
-const val MAX_DAILY_READING_GOAL_MINUTES = 24 * 60
