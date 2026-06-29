@@ -18,7 +18,6 @@ import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class TxtTocRuleViewModel(
@@ -64,7 +63,7 @@ class TxtTocRuleViewModel(
             }
             is TxtTocRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             TxtTocRuleIntent.SaveSortOrder -> saveSortOrder()
-            is TxtTocRuleIntent.SaveRule -> save(intent.rule)
+            is TxtTocRuleIntent.SaveRule -> save(intent.rule, intent.isNew)
             is TxtTocRuleIntent.DeleteRule -> delete(intent.rule)
             is TxtTocRuleIntent.SetRuleEnabled -> update(intent.rule.copy(enable = intent.enabled))
             is TxtTocRuleIntent.CopyRule -> copyRule(intent.rule)
@@ -114,9 +113,9 @@ class TxtTocRuleViewModel(
         }
     }
 
-    private fun save(rule: TxtTocRule) {
+    private fun save(rule: TxtTocRule, isNew: Boolean) {
         viewModelScope.launch {
-            if (rule.id == 0L) {
+            if (isNew) {
                 repository.insert(rule)
             } else {
                 repository.update(rule)
