@@ -59,6 +59,12 @@ fun CustomThemeScreen(
     val secondaryTextColor = ThemeConfig.secondaryTextColor
     val themeBackgroundColor = ThemeConfig.themeBackgroundColor
     val labelContainerColor = ThemeConfig.labelContainerColor
+    val themeColorNight = ThemeConfig.themeColorNight
+    val secondaryThemeColorNight = ThemeConfig.secondaryThemeColorNight
+    val primaryTextColorNight = ThemeConfig.primaryTextColorNight
+    val secondaryTextColorNight = ThemeConfig.secondaryTextColorNight
+    val themeBackgroundColorNight = ThemeConfig.themeBackgroundColorNight
+    val labelContainerColorNight = ThemeConfig.labelContainerColorNight
 
     val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -101,153 +107,37 @@ fun CustomThemeScreen(
             // Color settings vs Seed color toggle based on enableDeepPersonalization
             if (enableDeepPersonalization) {
                 item {
-                    SplicedColumnGroup(title = stringResource(R.string.color_setting)) {
-                    // Primary colors
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_primary_color),
-                        option = if (themeColor != 0) "#${Integer.toHexString(themeColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "themeColor"
+                    CustomColorSettings(
+                        title = stringResource(R.string.day),
+                        primary = themeColor,
+                        secondary = secondaryThemeColor,
+                        primaryText = primaryTextColor,
+                        secondaryText = secondaryTextColor,
+                        background = themeBackgroundColor,
+                        labelContainer = labelContainerColor,
+                        keySuffix = "",
+                        onSelect = {
+                            currentColorKey = it
                             showColorPicker = true
                         },
-                        trailingContent = {
-                            if (themeColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(themeColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_secondary_color),
-                        option = if (secondaryThemeColor != 0) "#${Integer.toHexString(secondaryThemeColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "secondaryThemeColor"
-                            showColorPicker = true
-                        },
-                        trailingContent = {
-                            if (secondaryThemeColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(secondaryThemeColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_primary_text_color),
-                        option = if (primaryTextColor != 0) "#${Integer.toHexString(primaryTextColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "primaryTextColor"
-                            showColorPicker = true
-                        },
-                        trailingContent = {
-                            if (primaryTextColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(primaryTextColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_secondary_text_color),
-                        option = if (secondaryTextColor != 0) "#${Integer.toHexString(secondaryTextColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "secondaryTextColor"
-                            showColorPicker = true
-                        },
-                        trailingContent = {
-                            if (secondaryTextColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(secondaryTextColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_background_color),
-                        option = if (themeBackgroundColor != 0) "#${Integer.toHexString(themeBackgroundColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "themeBackgroundColor"
-                            showColorPicker = true
-                        },
-                        trailingContent = {
-                            if (themeBackgroundColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(themeBackgroundColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_label_container_color),
-                        option = if (labelContainerColor != 0) "#${Integer.toHexString(labelContainerColor).uppercase()}" else stringResource(R.string.click_to_select),
-                        onClick = {
-                            currentColorKey = "labelContainerColor"
-                            showColorPicker = true
-                        },
-                        trailingContent = {
-                            if (labelContainerColor != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(labelContainerColor))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
                     )
                 }
-            }
+                item {
+                    CustomColorSettings(
+                        title = stringResource(R.string.night),
+                        primary = themeColorNight,
+                        secondary = secondaryThemeColorNight,
+                        primaryText = primaryTextColorNight,
+                        secondaryText = secondaryTextColorNight,
+                        background = themeBackgroundColorNight,
+                        labelContainer = labelContainerColorNight,
+                        keySuffix = "Night",
+                        onSelect = {
+                            currentColorKey = it
+                            showColorPicker = true
+                        },
+                    )
+                }
             } else {
                 item {
                     SplicedColumnGroup(title = stringResource(R.string.custom_theme)) {
@@ -310,6 +200,12 @@ fun CustomThemeScreen(
                 "secondaryTextColor" -> secondaryTextColor
                 "themeBackgroundColor" -> themeBackgroundColor
                 "labelContainerColor" -> labelContainerColor
+                "themeColorNight" -> themeColorNight
+                "secondaryThemeColorNight" -> secondaryThemeColorNight
+                "primaryTextColorNight" -> primaryTextColorNight
+                "secondaryTextColorNight" -> secondaryTextColorNight
+                "themeBackgroundColorNight" -> themeBackgroundColorNight
+                "labelContainerColorNight" -> labelContainerColorNight
                 else -> 0
             },
             onDismissRequest = { showColorPicker = false },
@@ -321,6 +217,12 @@ fun CustomThemeScreen(
                     "secondaryTextColor" -> ThemeConfig.secondaryTextColor = it
                     "themeBackgroundColor" -> ThemeConfig.themeBackgroundColor = it
                     "labelContainerColor" -> ThemeConfig.labelContainerColor = it
+                    "themeColorNight" -> ThemeConfig.themeColorNight = it
+                    "secondaryThemeColorNight" -> ThemeConfig.secondaryThemeColorNight = it
+                    "primaryTextColorNight" -> ThemeConfig.primaryTextColorNight = it
+                    "secondaryTextColorNight" -> ThemeConfig.secondaryTextColorNight = it
+                    "themeBackgroundColorNight" -> ThemeConfig.themeBackgroundColorNight = it
+                    "labelContainerColorNight" -> ThemeConfig.labelContainerColorNight = it
                 }
             }
         )
@@ -355,6 +257,66 @@ fun CustomThemeScreen(
         )
 
     }
+}
+
+@Composable
+private fun CustomColorSettings(
+    title: String,
+    primary: Int,
+    secondary: Int,
+    primaryText: Int,
+    secondaryText: Int,
+    background: Int,
+    labelContainer: Int,
+    keySuffix: String,
+    onSelect: (String) -> Unit,
+) {
+    SplicedColumnGroup(title = title) {
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_primary_color),
+            colorValue = primary,
+            onClick = { onSelect("themeColor$keySuffix") },
+        )
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_secondary_color),
+            colorValue = secondary,
+            onClick = { onSelect("secondaryThemeColor$keySuffix") },
+        )
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_primary_text_color),
+            colorValue = primaryText,
+            onClick = { onSelect("primaryTextColor$keySuffix") },
+        )
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_secondary_text_color),
+            colorValue = secondaryText,
+            onClick = { onSelect("secondaryTextColor$keySuffix") },
+        )
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_background_color),
+            colorValue = background,
+            onClick = { onSelect("themeBackgroundColor$keySuffix") },
+        )
+        CustomColorSettingItem(
+            title = stringResource(R.string.theme_manage_label_container_color),
+            colorValue = labelContainer,
+            onClick = { onSelect("labelContainerColor$keySuffix") },
+        )
+    }
+}
+
+@Composable
+private fun CustomColorSettingItem(
+    title: String,
+    colorValue: Int,
+    onClick: () -> Unit,
+) {
+    ClickableSettingItem(
+        title = title,
+        option = formatColorOption(colorValue) ?: stringResource(R.string.click_to_select),
+        onClick = onClick,
+        trailingContent = { ColorSwatch(colorValue) },
+    )
 }
 
 private fun formatColorOption(colorValue: Int): String? {

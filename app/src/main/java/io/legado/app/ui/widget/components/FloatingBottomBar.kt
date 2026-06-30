@@ -130,13 +130,14 @@ fun FloatingBottomBar(
     content: @Composable RowScope.() -> Unit
 ) {
     val isInLightTheme = !LegadoTheme.isDark
-    val accentColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeColor != 0) {
-        Color(ThemeConfig.themeColor)
+    val customColors = ThemeConfig.customThemeColors(LegadoTheme.isDark)
+    val accentColor = if (ThemeConfig.isDeepPersonalizationActive && customColors.primary != 0) {
+        Color(customColors.primary)
     } else {
         LegadoTheme.colorScheme.primary
     }
-    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
-        Color(ThemeConfig.secondaryThemeColor).copy(alpha = if (isBlurEnabled) ThemeConfig.bottomBarBlurAlpha / 100f else 1f)
+    val containerColor = if (ThemeConfig.isDeepPersonalizationActive && customColors.secondary != 0) {
+        Color(customColors.secondary).copy(alpha = if (isBlurEnabled) ThemeConfig.bottomBarBlurAlpha / 100f else 1f)
     } else if (isBlurEnabled) {
         LegadoTheme.colorScheme.surfaceContainer.copy(alpha = ThemeConfig.bottomBarBlurAlpha / 100f)
     } else {

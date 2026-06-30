@@ -35,12 +35,7 @@ fun AppTheme(
 
     // 2. 深度个性化配置
     val enableDeepPersonalization = ThemeConfig.enableDeepPersonalization
-    val themeColor = ThemeConfig.themeColor
-    val secondaryThemeColor = ThemeConfig.secondaryThemeColor
-    val primaryTextColor = ThemeConfig.primaryTextColor
-    val secondaryTextColor = ThemeConfig.secondaryTextColor
-    val themeBackgroundColor = ThemeConfig.themeBackgroundColor
-    val customLabelContainerColor = ThemeConfig.labelContainerColor
+    val customColors = ThemeConfig.customThemeColors(effectiveDarkTheme)
 
     // 3. 加载自定义字体
     val customFontFamily = rememberCustomFont(appFontPath)
@@ -48,20 +43,20 @@ fun AppTheme(
     // 4. 解析配色方案 (Material 3 ColorScheme)
     val colorScheme = remember(
         context, appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
-        enableDeepPersonalization, themeColor, secondaryThemeColor, primaryTextColor,
-        secondaryTextColor, themeBackgroundColor, customLabelContainerColor,
+        enableDeepPersonalization, customColors,
         paletteStyleValue, materialVersion
     ) {
-        if (enableDeepPersonalization &&
-            (themeColor != 0 || secondaryThemeColor != 0 || primaryTextColor != 0 ||
-             secondaryTextColor != 0 || themeBackgroundColor != 0 || customLabelContainerColor != 0)) {
+        if (appThemeMode == AppThemeMode.Custom &&
+            enableDeepPersonalization &&
+            customColors.hasCustomColor
+        ) {
             val userPalette = UserColorPalette(
-                primaryColor = if (themeColor != 0) Color(themeColor) else Color(0xFF6750A4),
-                secondaryColor = if (secondaryThemeColor != 0) Color(secondaryThemeColor) else Color(0xFF625B71),
-                backgroundColor = if (themeBackgroundColor != 0) Color(themeBackgroundColor) else Color(0xFFFEF7FF),
-                primaryFontColor = if (primaryTextColor != 0) Color(primaryTextColor) else Color(0xFF1C1B1F),
-                secondaryFontColor = if (secondaryTextColor != 0) Color(secondaryTextColor) else Color(0xFF49454F),
-                labelContainerColor = if (customLabelContainerColor != 0) Color(customLabelContainerColor) else Color(0xFFF7F2FA)
+                primaryColor = if (customColors.primary != 0) Color(customColors.primary) else Color(0xFF6750A4),
+                secondaryColor = if (customColors.secondary != 0) Color(customColors.secondary) else Color(0xFF625B71),
+                backgroundColor = if (customColors.background != 0) Color(customColors.background) else Color(0xFFFEF7FF),
+                primaryFontColor = if (customColors.primaryText != 0) Color(customColors.primaryText) else Color(0xFF1C1B1F),
+                secondaryFontColor = if (customColors.secondaryText != 0) Color(customColors.secondaryText) else Color(0xFF49454F),
+                labelContainerColor = if (customColors.labelContainer != 0) Color(customColors.labelContainer) else Color(0xFFF7F2FA)
             )
             generateColorScheme(userPalette, effectiveDarkTheme)
         } else {

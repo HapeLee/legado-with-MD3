@@ -213,6 +213,12 @@ object PreferKey {
     const val secondaryTextColor = "colorMD3OnPrimaryContainer"
     const val themeBackgroundColor = "colorMD3Background"
     const val labelContainerColor = "colorMD3SurfaceContainerLow"
+    const val themeColorNight = "colorMD3PrimaryNight"
+    const val secondaryThemeColorNight = "colorMD3SecondaryNight"
+    const val primaryTextColorNight = "colorMD3OnSurfaceNight"
+    const val secondaryTextColorNight = "colorMD3OnPrimaryContainerNight"
+    const val themeBackgroundColorNight = "colorMD3BackgroundNight"
+    const val labelContainerColorNight = "colorMD3SurfaceContainerLowNight"
     // 中间单线间隔设置
     const val enableItemDivider = "enableItemDivider"
     const val itemDividerWidth = "itemDividerWidth"

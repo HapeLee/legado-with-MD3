@@ -146,6 +146,12 @@ object ThemeImportExport {
             secondaryTextColor = ThemeConfig.secondaryTextColor,
             themeBackgroundColor = ThemeConfig.themeBackgroundColor,
             labelContainerColor = ThemeConfig.labelContainerColor,
+            themeColorNight = ThemeConfig.themeColorNight,
+            secondaryThemeColorNight = ThemeConfig.secondaryThemeColorNight,
+            primaryTextColorNight = ThemeConfig.primaryTextColorNight,
+            secondaryTextColorNight = ThemeConfig.secondaryTextColorNight,
+            themeBackgroundColorNight = ThemeConfig.themeBackgroundColorNight,
+            labelContainerColorNight = ThemeConfig.labelContainerColorNight,
             bookInfoInputColor = ThemeConfig.bookInfoInputColor,
 
             // 容器设置
@@ -317,6 +323,12 @@ object ThemeImportExport {
         ThemeConfig.secondaryTextColor = data.secondaryTextColor
         ThemeConfig.themeBackgroundColor = data.themeBackgroundColor
         ThemeConfig.labelContainerColor = data.labelContainerColor
+        ThemeConfig.themeColorNight = data.themeColorNight
+        ThemeConfig.secondaryThemeColorNight = data.secondaryThemeColorNight
+        ThemeConfig.primaryTextColorNight = data.primaryTextColorNight
+        ThemeConfig.secondaryTextColorNight = data.secondaryTextColorNight
+        ThemeConfig.themeBackgroundColorNight = data.themeBackgroundColorNight
+        ThemeConfig.labelContainerColorNight = data.labelContainerColorNight
         ThemeConfig.bookInfoInputColor = data.bookInfoInputColor
 
         // 容器设置
@@ -556,6 +568,12 @@ data class ThemeExportData(
     val secondaryTextColor: Int = 0,
     val themeBackgroundColor: Int = 0,
     val labelContainerColor: Int = 0,
+    val themeColorNight: Int = 0,
+    val secondaryThemeColorNight: Int = 0,
+    val primaryTextColorNight: Int = 0,
+    val secondaryTextColorNight: Int = 0,
+    val themeBackgroundColorNight: Int = 0,
+    val labelContainerColorNight: Int = 0,
     val bookInfoInputColor: Int = 0,
 
     // 容器设置

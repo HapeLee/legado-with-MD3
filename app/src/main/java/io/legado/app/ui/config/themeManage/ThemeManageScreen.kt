@@ -301,13 +301,28 @@ private fun SavedThemeItem(
             else if (theme.data.cPrimary != 0) Color(theme.data.cPrimary)
             else MaterialTheme.colorScheme.primary
 
-            val darkPrimary = if (theme.data.cNPrimary != 0) Color(theme.data.cNPrimary)
-            else lightPrimary
+            val darkPrimary = if (theme.data.themeColorNight != 0) {
+                Color(theme.data.themeColorNight)
+            } else if (theme.data.cNPrimary != 0) {
+                Color(theme.data.cNPrimary)
+            } else {
+                lightPrimary
+            }
 
             val lightBg = if (theme.data.themeBackgroundColor != 0) Color(theme.data.themeBackgroundColor)
             else Color(0xFFF7F2FA)
 
-            val darkBg = if (theme.data.isPureBlack) Color.Black else Color(0xFF1C1B1F)
+            val darkBg = if (theme.data.themeBackgroundColorNight != 0) {
+                Color(theme.data.themeBackgroundColorNight)
+            } else if (theme.data.enableDeepPersonalization &&
+                theme.data.themeBackgroundColor != 0
+            ) {
+                Color(theme.data.themeBackgroundColor)
+            } else if (theme.data.isPureBlack) {
+                Color.Black
+            } else {
+                Color(0xFF1C1B1F)
+            }
 
             // 预览区域
             Column(
@@ -357,7 +372,15 @@ private fun SavedThemeItem(
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_night),
                         style = MaterialTheme.typography.labelMediumEmphasized,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = if (theme.data.primaryTextColorNight != 0) {
+                            Color(theme.data.primaryTextColorNight).copy(alpha = 0.6f)
+                        } else if (theme.data.enableDeepPersonalization &&
+                            theme.data.primaryTextColor != 0
+                        ) {
+                            Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
+                        } else {
+                            Color.White.copy(alpha = 0.5f)
+                        },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .padding(start = 12.dp)

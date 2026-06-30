@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LegadoTheme
 
 object GlassDefaults {
 
@@ -22,8 +23,9 @@ object GlassDefaults {
 
     @Composable
     fun secondaryColorOr(fallback: @Composable () -> Color): Color {
-        return if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
-            Color(ThemeConfig.secondaryThemeColor)
+        val secondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
+        return if (ThemeConfig.isDeepPersonalizationActive && secondaryColor != 0) {
+            Color(secondaryColor)
         } else {
             fallback()
         }

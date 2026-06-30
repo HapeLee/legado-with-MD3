@@ -14,7 +14,26 @@ data class TagColorPair(
     val bgColor: Int = 0
 )
 
+data class CustomThemeColors(
+    val primary: Int,
+    val secondary: Int,
+    val primaryText: Int,
+    val secondaryText: Int,
+    val background: Int,
+    val labelContainer: Int,
+) {
+    val hasCustomColor: Boolean
+        get() = primary != 0 ||
+                secondary != 0 ||
+                primaryText != 0 ||
+                secondaryText != 0 ||
+                background != 0 ||
+                labelContainer != 0
+}
+
 object ThemeConfig {
+
+    private const val CUSTOM_APP_THEME = "12"
 
     var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
 
@@ -104,6 +123,42 @@ object ThemeConfig {
     var themeBackgroundColor by prefDelegate(PreferKey.themeBackgroundColor, 0)
 
     var labelContainerColor by prefDelegate(PreferKey.labelContainerColor, 0)
+
+    var themeColorNight by prefDelegate(PreferKey.themeColorNight, 0)
+
+    var secondaryThemeColorNight by prefDelegate(PreferKey.secondaryThemeColorNight, 0)
+
+    var primaryTextColorNight by prefDelegate(PreferKey.primaryTextColorNight, 0)
+
+    var secondaryTextColorNight by prefDelegate(PreferKey.secondaryTextColorNight, 0)
+
+    var themeBackgroundColorNight by prefDelegate(PreferKey.themeBackgroundColorNight, 0)
+
+    var labelContainerColorNight by prefDelegate(PreferKey.labelContainerColorNight, 0)
+
+    val isDeepPersonalizationActive: Boolean
+        get() = appTheme == CUSTOM_APP_THEME && enableDeepPersonalization
+
+    fun customThemeColors(isDark: Boolean): CustomThemeColors {
+        if (!isDark) {
+            return CustomThemeColors(
+                primary = themeColor,
+                secondary = secondaryThemeColor,
+                primaryText = primaryTextColor,
+                secondaryText = secondaryTextColor,
+                background = themeBackgroundColor,
+                labelContainer = labelContainerColor,
+            )
+        }
+        return CustomThemeColors(
+            primary = themeColorNight.takeIf { it != 0 } ?: themeColor,
+            secondary = secondaryThemeColorNight.takeIf { it != 0 } ?: secondaryThemeColor,
+            primaryText = primaryTextColorNight.takeIf { it != 0 } ?: primaryTextColor,
+            secondaryText = secondaryTextColorNight.takeIf { it != 0 } ?: secondaryTextColor,
+            background = themeBackgroundColorNight.takeIf { it != 0 } ?: themeBackgroundColor,
+            labelContainer = labelContainerColorNight.takeIf { it != 0 } ?: labelContainerColor,
+        )
+    }
 
     var enableItemDivider by prefDelegate(PreferKey.enableItemDivider, false)
 

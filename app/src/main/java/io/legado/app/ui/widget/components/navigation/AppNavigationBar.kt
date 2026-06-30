@@ -50,6 +50,7 @@ fun AppNavigationBar(
         else -> NavigationBarDisplayMode.IconWithSelectedLabel
     }
     val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
+    val customSecondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
     val hazeState = LocalHazeState.current
     val hazeModifier = if (hazeState != null) {
         Modifier.regularHazeEffect(hazeState)
@@ -59,8 +60,8 @@ fun AppNavigationBar(
 
     if (isMiuix) {
         val baseColor =
-            if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
-                Color(ThemeConfig.secondaryThemeColor)
+            if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+                Color(customSecondaryColor)
             } else {
                 GlassDefaults.glassColor(
                     noBlurColor = MiuixTheme.colorScheme.surface,
@@ -77,8 +78,8 @@ fun AppNavigationBar(
         )
     } else {
         val baseColor =
-            if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
-                Color(ThemeConfig.secondaryThemeColor)
+            if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+                Color(customSecondaryColor)
             } else {
                 GlassDefaults.glassColor(
                     noBlurColor = BottomAppBarDefaults.containerColor,

@@ -108,14 +108,20 @@ fun MiuixThemeWrapper(
         }
 
         val miuixColorScheme = MiuixTheme.colorScheme
-        val mappedColorScheme = remember(miuixColorScheme) {
-            val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
-                Color(ThemeConfig.themeBackgroundColor)
+        val customColors = ThemeConfig.customThemeColors(darkTheme)
+        val isDeepPersonalizationActive = ThemeConfig.isDeepPersonalizationActive
+        val mappedColorScheme = remember(
+            miuixColorScheme,
+            customColors,
+            isDeepPersonalizationActive,
+        ) {
+            val customBgColor = if (isDeepPersonalizationActive && customColors.background != 0) {
+                Color(customColors.background)
             } else {
                 miuixColorScheme.background
             }
-            val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.primaryTextColor != 0) {
-                Color(ThemeConfig.primaryTextColor)
+            val customFontColor = if (isDeepPersonalizationActive && customColors.primaryText != 0) {
+                Color(customColors.primaryText)
             } else {
                 miuixColorScheme.onSurface
             }
@@ -237,20 +243,9 @@ fun MaterialThemeWrapper(
             materialTypography.toLegadoTypography().withFont(customFontFamily)
         }
         val semanticColors = remember(colorScheme) {
-            val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
-                Color(ThemeConfig.themeBackgroundColor)
-            } else {
-                colorScheme.background
-            }
-            val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.primaryTextColor != 0) {
-                Color(ThemeConfig.primaryTextColor)
-            } else {
-                colorScheme.onSurface
-            }
-
             colorScheme.toLegadoColorScheme(
-                customBgColor = customBgColor,
-                customFontColor = customFontColor,
+                customBgColor = colorScheme.background,
+                customFontColor = colorScheme.onSurface,
                 customTopBarColor = colorScheme.surface,
                 customNavBarColor = colorScheme.surface
             )

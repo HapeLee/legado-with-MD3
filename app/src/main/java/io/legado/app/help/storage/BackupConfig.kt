@@ -91,6 +91,8 @@ object BackupConfig {
         PreferKey.bgImageNBlurring,
         PreferKey.themeColor,
         PreferKey.secondaryThemeColor,
+        PreferKey.themeColorNight,
+        PreferKey.secondaryThemeColorNight,
         PreferKey.paletteStyle,
         PreferKey.materialVersion,
         PreferKey.composeEngine,
@@ -116,7 +118,11 @@ object BackupConfig {
         PreferKey.primaryTextColor,
         PreferKey.secondaryTextColor,
         PreferKey.themeBackgroundColor,
-        PreferKey.labelContainerColor
+        PreferKey.labelContainerColor,
+        PreferKey.primaryTextColorNight,
+        PreferKey.secondaryTextColorNight,
+        PreferKey.themeBackgroundColorNight,
+        PreferKey.labelContainerColorNight
     )
 
     private val coverPrefKeys = arrayOf(

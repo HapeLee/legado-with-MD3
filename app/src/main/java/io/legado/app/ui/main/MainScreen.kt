@@ -79,6 +79,7 @@ import io.legado.app.ui.main.home.HomeRouteScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
@@ -172,8 +173,9 @@ fun MainScreen(
     }
 
     val hazeState = remember { HazeState() }
-    val floatingBarSurfaceColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
-        Color(ThemeConfig.secondaryThemeColor)
+    val customSecondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
+    val floatingBarSurfaceColor = if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+        Color(customSecondaryColor)
     } else {
         MaterialTheme.colorScheme.surface
     }
