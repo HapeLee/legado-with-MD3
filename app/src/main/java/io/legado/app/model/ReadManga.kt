@@ -474,10 +474,11 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         chapter: BookChapter,
         content: String? = null,
     ) {
-        if (!book.isImage || BookHelp.hasImageContent(book, chapter)) return
+        if (!book.isImage) return
         val source = bookSource ?: return
-        val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return
         Coroutine.async(downloadScope, IO) {
+            if (BookHelp.hasImageContent(book, chapter)) return@async
+            val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return@async
             BookHelp.saveImages(source, book, chapter, resolvedContent)
         }.start()
     }

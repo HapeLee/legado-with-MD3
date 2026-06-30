@@ -528,13 +528,14 @@ class CacheBookModel(
         scope: CoroutineScope,
         context: CoroutineContext,
         chainImagesAfterContent: Boolean = false,
+        content: String? = null,
     ) {
         task.onSuccess(IO) {
             if (chainImagesAfterContent && book.isImage && !repository.hasImageContent(book, chapter)) {
-                startImageCacheTask(scope, context, chapter, chapterIndex)
+                startImageCacheTask(scope, context, chapter, chapterIndex, it as String)
                 return@onSuccess
             }
-            completeChapterCache(chapter, it as? String)
+            completeChapterCache(chapter, content ?: (it as? String))
         }.onError(IO) {
             onPreError(chapter, it)
             try {
@@ -566,6 +567,7 @@ class CacheBookModel(
         context: CoroutineContext,
         chapter: BookChapter,
         chapterIndex: Int,
+        content: String,
     ) {
         if (isStopped || isPaused || !onDownloadSet.contains(chapterIndex)) {
             return
@@ -582,7 +584,7 @@ class CacheBookModel(
                 reportImageDownloadProgress(chapter, completed, total)
             },
         )
-        attachCallbacks(imageTask, chapter, chapterIndex, scope, context)
+        attachCallbacks(imageTask, chapter, chapterIndex, scope, context, content = content)
         chapterTasks[chapterIndex] = imageTask
         tasks.add(imageTask)
         imageTask.start()

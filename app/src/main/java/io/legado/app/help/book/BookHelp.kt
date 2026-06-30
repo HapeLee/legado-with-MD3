@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.commons.text.similarity.JaccardSimilarity
 import splitties.init.appCtx
@@ -308,10 +309,14 @@ object BookHelp {
         val total = imageUrls.size
         onProgress?.invoke(0, total)
         if (total == 0) return@coroutineScope
-        val completed = java.util.concurrent.atomic.AtomicInteger(0)
+        val progressMutex = Mutex()
+        var completed = 0
         imageUrls.asFlow().onEachParallel(concurrency) { mSrc ->
             saveImage(bookSource, book, mSrc, bookChapter)
-            onProgress?.invoke(completed.incrementAndGet(), total)
+            progressMutex.withLock {
+                completed++
+                onProgress?.invoke(completed, total)
+            }
         }.collect()
     }
 
