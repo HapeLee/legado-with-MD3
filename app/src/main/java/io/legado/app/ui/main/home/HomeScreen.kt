@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -498,12 +497,12 @@ fun HomeScreen(
                         .fillMaxSize()
                         .verticalScroll(dashboardScrollState),
                 ) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(paddingValues.calculateTopPadding() + 8.dp),
+                    )
                     if (hasDashboard) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(paddingValues.calculateTopPadding() + 8.dp),
-                        )
                         HomeDashboardContent(
                             state = state,
                             onIntent = onIntent,
