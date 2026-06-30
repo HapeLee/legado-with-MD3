@@ -14,14 +14,39 @@ data class ReplaceRuleItemUi(
     val name: String,
     val isEnabled: Boolean,
     val group: String?,
-    val rule: ReplaceRule
-) : SelectableItem<Long>
+    val pattern: String,
+    val replacement: String,
+    val scope: String?,
+    val scopeTitle: Boolean,
+    val scopeContent: Boolean,
+    val excludeScope: String?,
+    val isRegex: Boolean,
+    val timeoutMillisecond: Long,
+    val order: Int
+) : SelectableItem<Long> {
+    fun toEntity() = ReplaceRule(
+        id = id,
+        name = name,
+        group = group,
+        pattern = pattern,
+        replacement = replacement,
+        scope = scope,
+        scopeTitle = scopeTitle,
+        scopeContent = scopeContent,
+        excludeScope = excludeScope,
+        isEnabled = isEnabled,
+        isRegex = isRegex,
+        timeoutMillisecond = timeoutMillisecond,
+        order = order
+    )
+}
 
 data class ReplaceRuleUiState(
     override val items: List<ReplaceRuleItemUi> = emptyList(),
     override val selectedIds: Set<Long> = emptySet(),
     override val searchKey: String = "",
     val sortMode: String = "desc",
+    val selectedGroup: String? = null,
     val interaction: InteractionState = InteractionState()
 ) : ListUiState<ReplaceRuleItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
@@ -44,7 +69,7 @@ sealed interface ReplaceRuleIntent {
     data class MoveItem(val from: Int, val to: Int) : ReplaceRuleIntent
     data object SaveSortOrder : ReplaceRuleIntent
     data class DeleteRule(val rule: ReplaceRule) : ReplaceRuleIntent
-    data class SetRuleEnabled(val rule: ReplaceRule, val enabled: Boolean) : ReplaceRuleIntent
+    data class SetRuleEnabled(val id: Long, val enabled: Boolean) : ReplaceRuleIntent
     data class CopyRule(val rule: ReplaceRule) : ReplaceRuleIntent
     data class ImportSource(val text: String) : ReplaceRuleIntent
     data object CancelImport : ReplaceRuleIntent

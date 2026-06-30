@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -110,6 +111,11 @@ fun ReplaceEditScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showMenu by remember { mutableStateOf(false) }
     val isKeyboardVisible by keyboardAsState()
+    val focusManager = LocalFocusManager.current
+    val onSave = {
+        focusManager.clearFocus(force = true)
+        onIntent(ReplaceEditIntent.Save)
+    }
 
     AppScaffold(
         modifier = Modifier
@@ -127,7 +133,7 @@ fun ReplaceEditScreen(
                         exit = fadeOut()
                     ) {
                         TopBarActionButton(
-                            onClick = { onIntent(ReplaceEditIntent.Save) },
+                            onClick = onSave,
                             imageVector = Icons.Default.Save,
                             contentDescription = stringResource(R.string.action_save)
                         )
@@ -168,7 +174,7 @@ fun ReplaceEditScreen(
                         visible = !isKeyboardVisible,
                         alignment = Alignment.BottomEnd,
                     ),
-                onClick = { onIntent(ReplaceEditIntent.Save) },
+                onClick = onSave,
                 tooltipText = stringResource(R.string.action_save),
                 icon = Icons.Default.Save
             )

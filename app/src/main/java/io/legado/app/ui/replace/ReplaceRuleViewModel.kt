@@ -87,7 +87,7 @@ class ReplaceRuleViewModel(
             is ReplaceRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             ReplaceRuleIntent.SaveSortOrder -> saveSortOrder()
             is ReplaceRuleIntent.DeleteRule -> delete(intent.rule)
-            is ReplaceRuleIntent.SetRuleEnabled -> update(intent.rule.copy(isEnabled = intent.enabled))
+            is ReplaceRuleIntent.SetRuleEnabled -> setEnabled(intent.id, intent.enabled)
             is ReplaceRuleIntent.CopyRule -> { /* not implemented for ReplaceRule */ }
             is ReplaceRuleIntent.ImportSource -> importSource(intent.text)
             ReplaceRuleIntent.CancelImport -> cancelImport()
@@ -160,6 +160,7 @@ class ReplaceRuleViewModel(
             selectedIds = selectedIds,
             searchKey = _searchKey.value,
             sortMode = _sortMode.value,
+            selectedGroup = _group.value,
             interaction = InteractionState(
                 isSearchMode = isSearch,
                 isUploading = isUploading || (importState is BaseImportUiState.Loading),
@@ -168,8 +169,23 @@ class ReplaceRuleViewModel(
         )
     }
 
-    override fun ReplaceRule.toUiItem() = ReplaceRuleItemUi(id, name, isEnabled, group, this)
-    override fun ruleItemToEntity(item: ReplaceRuleItemUi): ReplaceRule = item.rule
+    override fun ReplaceRule.toUiItem() = ReplaceRuleItemUi(
+        id = id,
+        name = name,
+        isEnabled = isEnabled,
+        group = group,
+        pattern = pattern,
+        replacement = replacement,
+        scope = scope,
+        scopeTitle = scopeTitle,
+        scopeContent = scopeContent,
+        excludeScope = excludeScope,
+        isRegex = isRegex,
+        timeoutMillisecond = timeoutMillisecond,
+        order = order
+    )
+
+    override fun ruleItemToEntity(item: ReplaceRuleItemUi): ReplaceRule = item.toEntity()
 
     override suspend fun generateJson(entities: List<ReplaceRule>): String = GSON.toJson(entities)
 
@@ -248,13 +264,15 @@ class ReplaceRuleViewModel(
     private fun saveSortOrder() {
         val currentLocal = _localItems.value ?: return
         viewModelScope.launch {
-            repository.moveOrder(currentLocal.map { it.rule }, _sortMode.value == "desc")
+            repository.moveOrder(currentLocal.map { it.toEntity() }, _sortMode.value == "desc")
             _localItems.value = null
         }
     }
 
 
-    private fun update(vararg rule: ReplaceRule) = viewModelScope.launch { repository.update(*rule) }
+    private fun setEnabled(id: Long, enabled: Boolean) =
+        viewModelScope.launch { repository.setEnabled(id, enabled) }
+
     private fun delete(rule: ReplaceRule) = viewModelScope.launch { repository.delete(rule) }
     fun enableSelectionByIds(ids: Set<Long>) = viewModelScope.launch { repository.enableByIds(ids) }
     fun disableSelectionByIds(ids: Set<Long>) =

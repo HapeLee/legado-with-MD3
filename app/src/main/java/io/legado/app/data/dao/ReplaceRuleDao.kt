@@ -47,16 +47,16 @@ interface ReplaceRuleDao {
     @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key OR name LIKE :key OR pattern LIKE :key OR replacement LIKE :key OR scope LIKE :key ORDER BY name COLLATE NOCASE DESC")
     fun flowSearchNameDesc(key: String): Flow<List<ReplaceRule>>
 
-    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE '%' || :key || '%' ORDER BY sortOrder ASC")
     fun flowGroupSearchAsc(key: String): Flow<List<ReplaceRule>>
 
-    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY sortOrder DESC")
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE '%' || :key || '%' ORDER BY sortOrder DESC")
     fun flowGroupSearchDesc(key: String): Flow<List<ReplaceRule>>
 
-    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY name COLLATE NOCASE ASC")
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE '%' || :key || '%' ORDER BY name COLLATE NOCASE ASC")
     fun flowGroupSearchNameAsc(key: String): Flow<List<ReplaceRule>>
 
-    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY name COLLATE NOCASE DESC")
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE '%' || :key || '%' ORDER BY name COLLATE NOCASE DESC")
     fun flowGroupSearchNameDesc(key: String): Flow<List<ReplaceRule>>
 
     // === 未分组 ===
@@ -75,7 +75,7 @@ interface ReplaceRuleDao {
     @Query("SELECT * FROM replace_rules where `group` like :key or name like :key or pattern like :key or replacement like :key or scope like :key ORDER BY sortOrder ASC")
     fun flowSearch(key: String): Flow<List<ReplaceRule>>
 
-    @Query("SELECT * FROM replace_rules where `group` like :key ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM replace_rules where `group` like '%' || :key || '%' ORDER BY sortOrder ASC")
     fun flowGroupSearch(key: String): Flow<List<ReplaceRule>>
 
     @Query("select `group` from replace_rules where `group` is not null and `group` <> ''")

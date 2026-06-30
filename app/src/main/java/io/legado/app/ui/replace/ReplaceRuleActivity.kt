@@ -144,7 +144,7 @@ class ReplaceRuleActivity : BaseComposeActivity() {
 
                     entry<ReplaceEditRoute> { route ->
                         val viewModel: ReplaceEditViewModel = koinViewModel(
-                            key = "replace_edit_${System.identityHashCode(route)}"
+                            key = "replace_edit_${route.sessionId}"
                         ) { parametersOf(route) }
 
                         ReplaceEditRouteScreen(

@@ -26,7 +26,6 @@ import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -127,8 +126,11 @@ fun ReplaceRuleScreen(
     var showDeleteRuleDialog by remember { mutableStateOf<ReplaceRule?>(null) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
 
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = remember(groups) { listOf("全部") + groups }
+    val selectedTabIndex = state.selectedGroup
+        ?.let(tabItems::indexOf)
+        ?.takeIf { it >= 0 }
+        ?: 0
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         onIntent(ReplaceRuleIntent.MoveItem(from.index, to.index))
@@ -231,10 +233,8 @@ fun ReplaceRuleScreen(
         }
     }
 
-    LaunchedEffect(groups) {
-        val maxIndex = groups.size
-        if (selectedTabIndex > maxIndex) {
-            selectedTabIndex = 0
+    LaunchedEffect(groups, state.selectedGroup) {
+        if (state.selectedGroup != null && state.selectedGroup !in groups) {
             onIntent(ReplaceRuleIntent.SetGroup("全部"))
         }
     }
@@ -331,7 +331,6 @@ fun ReplaceRuleScreen(
                     tabTitles = tabItems,
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { index ->
-                        selectedTabIndex = index
                         onIntent(ReplaceRuleIntent.SetGroup(tabItems[index]))
                     }
                 )
@@ -422,13 +421,13 @@ fun ReplaceRuleScreen(
                             onIntent(ReplaceRuleIntent.ToggleSelection(ui.id))
                         },
                         onEnabledChange = { enabled ->
-                            onIntent(ReplaceRuleIntent.SetRuleEnabled(ui.rule, enabled))
+                            onIntent(ReplaceRuleIntent.SetRuleEnabled(ui.id, enabled))
                         },
                         onClickEdit = {
                             onNavigateToEdit(
                                 ReplaceEditRoute(
                                     id = ui.id,
-                                    pattern = ui.rule.pattern
+                                    pattern = ui.pattern
                                 )
                             )
                         },
@@ -436,15 +435,24 @@ fun ReplaceRuleScreen(
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.move_to_top),
-                                onClick = { onIntent(ReplaceRuleIntent.ToTop(ui.rule)); dismiss() }
+                                onClick = {
+                                    onIntent(ReplaceRuleIntent.ToTop(ui.toEntity()))
+                                    dismiss()
+                                }
                             )
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.move_to_bottom),
-                                onClick = { onIntent(ReplaceRuleIntent.ToBottom(ui.rule)); dismiss() }
+                                onClick = {
+                                    onIntent(ReplaceRuleIntent.ToBottom(ui.toEntity()))
+                                    dismiss()
+                                }
                             )
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.delete),
-                                onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
+                                onClick = {
+                                    showDeleteRuleDialog = ui.toEntity()
+                                    dismiss()
+                                }
                             )
                         }
                     )

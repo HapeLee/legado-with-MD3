@@ -37,6 +37,12 @@ class ReplaceRuleRepository {
         }
     }
 
+    suspend fun setEnabled(id: Long, enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            appDb.replaceRuleDao.updateEnabled(id, enabled)
+        }
+    }
+
     suspend fun insert(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
             appDb.replaceRuleDao.insert(*rule)
@@ -125,19 +131,13 @@ class ReplaceRuleRepository {
     suspend fun enableByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
-
-            val rules = appDb.replaceRuleDao.getByIds(ids)
-            val updated = rules.map { it.copy(isEnabled = true) }
-            appDb.replaceRuleDao.update(*updated.toTypedArray())
+            appDb.replaceRuleDao.updateEnabled(ids.toList(), true)
         }
 
     suspend fun disableByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
-
-            val rules = appDb.replaceRuleDao.getByIds(ids)
-            val updated = rules.map { it.copy(isEnabled = false) }
-            appDb.replaceRuleDao.update(*updated.toTypedArray())
+            appDb.replaceRuleDao.updateEnabled(ids.toList(), false)
         }
 
     suspend fun deleteByIds(ids: Set<Long>) =
