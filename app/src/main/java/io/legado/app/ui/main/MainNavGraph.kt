@@ -51,6 +51,7 @@ import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
+import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.customTheme.CustomThemeScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
@@ -207,7 +208,16 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsCover> {
-        CoverConfigScreen(onBackClick = { onNavigateBack() })
+        CoverConfigScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToCoverAlbums = {
+                backStack.add(MainRouteSettingsCoverAlbums)
+            },
+        )
+    }
+
+    entry<MainRouteSettingsCoverAlbums> {
+        CoverAlbumManageRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsTheme> {

@@ -1439,9 +1439,11 @@
     <string name="theme_manage_save_current">保存当前设置</string>
     <string name="theme_manage_save_current_summary">保存当前主题配置为新主题</string>
     <string name="theme_manage_export_current">导出当前主题</string>
-    <string name="theme_manage_export_current_summary">将当前主题配置导出为 JSON 文件</string>
-    <string name="theme_manage_import_config">导入主题配置</string>
-    <string name="theme_manage_import_config_summary">从 JSON 文件导入主题配置</string>
+    <string name="theme_manage_export_current_summary">将配置、图片、字体和当前图集导出为主题包</string>
+    <string name="theme_manage_import_package">导入主题包</string>
+    <string name="theme_manage_import_package_summary">导入包含资源和封面图集的主题包</string>
+    <string name="theme_manage_import_config">导入旧版主题配置</string>
+    <string name="theme_manage_import_config_summary">从旧版 JSON 文件导入主题配置</string>
     <string name="theme_manage_saved_themes">已保存的主题</string>
     <string name="theme_manage_save_theme">保存主题</string>
     <string name="theme_manage_save">保存</string>
@@ -2217,4 +2219,20 @@
     <string name="switch_to_dark_mode_tip">当前环境光较暗，是否切换至深色模式？</string>
     <string name="switch_to_light_mode_tip">当前环境光较亮，是否切换至浅色模式？</string>
     <string name="switch_action">切换</string>
+    <string name="cover_albums">封面图集</string>
+    <string name="manage_cover_albums">管理封面图集</string>
+    <string name="select_cover_album">选择封面图集</string>
+    <string name="cover_album_none">应用内置封面</string>
+    <string name="cover_album_name">图集名称</string>
+    <string name="cover_album_empty">暂无封面图集</string>
+    <string name="cover_album_create">新建封面图集</string>
+    <string name="cover_album_rename">重命名封面图集</string>
+    <string name="cover_album_delete">删除封面图集</string>
+    <string name="cover_album_delete_confirmation">删除“%1$s”及其中的全部图片？</string>
+    <string name="cover_album_add_images">添加图片</string>
+    <string name="default_light_cover_album">默认日间封面</string>
+    <string name="default_dark_cover_album">默认夜间封面</string>
+    <string name="cover_album_imported_name">%1$s（导入）</string>
+    <string name="cover_album_day_night_count">日间 %1$d · 夜间 %2$d</string>
+    <string name="cover_album_selected">当前使用</string>
 </resources>

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemeImportExport
+import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -56,11 +58,14 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeManageScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: ThemeManageViewModel = koinViewModel(),
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
@@ -76,34 +81,53 @@ fun ThemeManageScreen(
     val savedThemes = remember(savedThemesVersion) { ThemeImportExport.savedThemes.toList() }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
+        ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let {
             val target = exportTarget
-            if (target != null) {
-                exportTarget = null
-                if (ThemeImportExport.exportSavedThemeToFile(context, target, it)) {
-                    context.toastOnUi(R.string.theme_manage_export_success)
-                } else {
-                    context.toastOnUi(R.string.theme_manage_export_failed)
-                }
-            } else if (ThemeImportExport.exportToFile(context, it)) {
-                context.toastOnUi(R.string.theme_manage_export_success)
-            } else {
-                context.toastOnUi(R.string.theme_manage_export_failed)
-            }
+            exportTarget = null
+            viewModel.onIntent(
+                ThemeManageIntent.ExportPackage(
+                    uri = it.toString(),
+                    themeName = target?.name,
+                    themeData = target?.data,
+                )
+            )
         }
     }
 
-    val importLauncher = rememberLauncherForActivityResult(
+    val importPackageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            if (ThemeImportExport.importFromUri(context, it)) {
-                context.toastOnUi(R.string.theme_manage_import_success)
-                showRestartDialog = true
-            } else {
-                context.toastOnUi(R.string.theme_manage_import_failed)
+            viewModel.onIntent(ThemeManageIntent.ImportPackage(it.toString()))
+        }
+    }
+
+    val importLegacyLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            viewModel.onIntent(ThemeManageIntent.ImportLegacyJson(it.toString()))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is ThemeManageEffect.ShowResult -> {
+                    val message = buildString {
+                        append(context.getString(effect.messageRes))
+                        effect.detail?.takeIf(String::isNotBlank)?.let {
+                            append('\n')
+                            append(it)
+                        }
+                    }
+                    context.toastOnUi(message)
+                    if (effect.restartRequired) {
+                        showRestartDialog = true
+                    }
+                }
             }
         }
     }
@@ -145,14 +169,26 @@ fun ThemeManageScreen(
                         description = stringResource(R.string.theme_manage_export_current_summary),
                         onClick = {
                             exportTarget = null
-                            exportLauncher.launch("legado_theme_${System.currentTimeMillis()}.json")
+                            exportLauncher.launch(
+                                "materado_theme_${System.currentTimeMillis()}." +
+                                    ThemePackageManager.FILE_EXTENSION
+                            )
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_manage_import_package),
+                        description = stringResource(R.string.theme_manage_import_package_summary),
+                        onClick = {
+                            importPackageLauncher.launch(
+                                arrayOf("application/zip", "application/octet-stream")
+                            )
                         }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_import_config),
                         description = stringResource(R.string.theme_manage_import_config_summary),
                         onClick = {
-                            importLauncher.launch(arrayOf("application/json"))
+                            importLegacyLauncher.launch(arrayOf("application/json", "text/json"))
                         }
                     )
                 }
@@ -175,7 +211,9 @@ fun ThemeManageScreen(
                         onEdit = { editTarget = theme },
                         onExport = {
                             exportTarget = theme
-                            exportLauncher.launch("${theme.name}.json")
+                            exportLauncher.launch(
+                                "${theme.name}.${ThemePackageManager.FILE_EXTENSION}"
+                            )
                         },
                         onDelete = { deleteTarget = theme }
                     )

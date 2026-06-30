@@ -32,28 +32,31 @@ import io.legado.app.help.glide.OkHttpModelLoader
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.domain.usecase.CoverAlbumUseCase
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.currentCoroutineContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import splitties.init.appCtx
 import java.io.File
 import kotlin.random.Random
 
 @Keep
-object BookCover {
+object BookCover : KoinComponent {
 
     private const val coverRuleConfigKey = "legadoCoverRuleConfig"
     const val configFileName = "coverRule.json"
+    private val coverAlbumUseCase: CoverAlbumUseCase by inject()
 
     val defaultDrawable: Drawable
         @SuppressLint("UseCompatLoadingForDrawables")
         get() {
             val isNightTheme = AppConfig.isNightTheme
-            val pathStr = if (isNightTheme) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
-            val paths = pathStr.split(",").filter { it.isNotBlank() }
+            val paths = coverAlbumUseCase.selectedImagePaths(isNightTheme)
 
-            if (paths.isNullOrEmpty()) {
+            if (paths.isEmpty()) {
                 return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
             }
 
@@ -67,9 +70,8 @@ object BookCover {
         seed: Any? = null,
         isNight: Boolean = AppConfig.isNightTheme
     ): String? {
-        val pathStr = if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
-        val paths = pathStr.split(",").filter { it.isNotBlank() }
-        if (paths.isNullOrEmpty()) return null
+        val paths = coverAlbumUseCase.selectedImagePaths(isNight)
+        if (paths.isEmpty()) return null
         val random = if (seed != null) Random(seed.hashCode()) else Random
         return paths[random.nextInt(paths.size)]
     }

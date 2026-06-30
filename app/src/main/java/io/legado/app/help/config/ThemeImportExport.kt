@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.annotation.Keep
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.reflect.TypeToken
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.EncoderUtils
@@ -41,7 +44,8 @@ object ThemeImportExport {
             if (file.isFile && file.extension == "json") {
                 kotlin.runCatching {
                     val json = file.readText()
-                    val data = EXPORT_GSON.fromJson(json, ThemeExportData::class.java)
+                    val data = parseThemeData(json)
+                        ?: error("不支持的主题配置格式")
                     val name = file.nameWithoutExtension
                     _savedThemes.add(SavedTheme(name = name, data = data))
                 }
@@ -121,7 +125,7 @@ object ThemeImportExport {
     /**
      * 从当前配置创建导出数据
      */
-    fun exportFromCurrent(): ThemeExportData {
+    fun exportFromCurrent(includeEmbeddedAssets: Boolean = true): ThemeExportData {
         return ThemeExportData(
             // 基础主题设置
             appTheme = ThemeConfig.appTheme,
@@ -229,7 +233,7 @@ object ThemeImportExport {
             coverShowNameN = CoverConfig.coverShowNameN,
             coverShowAuthorN = CoverConfig.coverShowAuthorN,
             coverInfoOrientation = CoverConfig.coverInfoOrientation,
-            assets = exportAssets()
+            assets = if (includeEmbeddedAssets) exportAssets() else null
         )
     }
 
@@ -417,6 +421,7 @@ object ThemeImportExport {
         val coverPaths = mutableMapOf<String, MutableList<String>>()
 
         assets.forEach { (key, base64) ->
+            if (base64.isBlank()) return@forEach
             try {
                 val bytes = EncoderUtils.base64DecodeToByteArray(base64)
                 val destFile = when {
@@ -499,7 +504,7 @@ object ThemeImportExport {
      */
     fun importFromJson(json: String): Boolean {
         return try {
-            val data = GSON.fromJson(json, ThemeExportData::class.java)
+            val data = parseThemeData(json) ?: return false
             applyToThemeConfig(data)
             true
         } catch (e: Exception) {
@@ -507,6 +512,123 @@ object ThemeImportExport {
             false
         }
     }
+
+    private fun parseThemeData(json: String): ThemeExportData? {
+        val root = JsonParser.parseString(json).asJsonObject
+        return when {
+            root.has("appTheme") && root.has("themeMode") ->
+                GSON.fromJson(root, ThemeExportData::class.java)
+
+            root.has("a") && root.has("A") && root.has("y0") ->
+                parseObfuscatedThemeV1(root)
+
+            else -> null
+        }
+    }
+
+    /**
+     * 兼容曾由 R8 混淆字段名导出的主题配置。
+     * 该映射对应加入首页开关、但尚未加入导航顺序和日夜独立配色的旧格式。
+     */
+    private fun parseObfuscatedThemeV1(root: JsonObject): ThemeExportData {
+        val assetsType = object : TypeToken<Map<String, String>>() {}.type
+        return ThemeExportData(
+            appTheme = root.string("a", "0"),
+            themeMode = root.string("b", "0"),
+            isPureBlack = root.boolean("c"),
+            composeEngine = root.string("d", "material"),
+            paletteStyle = root.string("e", "tonalSpot"),
+            materialVersion = root.string("f", "material3"),
+            customMode = root.nullableString("g"),
+            customContrast = root.string("h", "Default"),
+            launcherIcon = root.string("i", "ic_launcher"),
+            isPredictiveBackEnabled = root.boolean("j", true),
+            fontScale = root.int("k", 10),
+            enableDeepPersonalization = root.boolean("l"),
+            cPrimary = root.int("m"),
+            cNPrimary = root.int("n"),
+            themeColor = root.int("o"),
+            secondaryThemeColor = root.int("p"),
+            primaryTextColor = root.int("q"),
+            secondaryTextColor = root.int("r"),
+            themeBackgroundColor = root.int("s"),
+            labelContainerColor = root.int("t"),
+            bookInfoInputColor = root.int("u"),
+            containerOpacity = root.int("v", 100),
+            enableItemDivider = root.boolean("w"),
+            itemDividerWidth = root.float("x", 1f),
+            itemDividerLength = root.float("y", 80f),
+            itemDividerColor = root.int("z"),
+            enableBlur = root.boolean("A"),
+            enableProgressiveBlur = root.boolean("B"),
+            topBarBlurRadius = root.int("C", 24),
+            bottomBarBlurRadius = root.int("D", 8),
+            topBarBlurAlpha = root.int("E", 73),
+            bottomBarBlurAlpha = root.int("F", 40),
+            bottomBarLensRadius = root.float("G", 24f),
+            topBarOpacity = root.int("H", 100),
+            bottomBarOpacity = root.int("I", 100),
+            enableCustomTagColors = root.boolean("J"),
+            customTagColorsJson = root.nullableString("K"),
+            showHome = root.boolean("L", true),
+            showDiscovery = root.boolean("M", true),
+            showRss = root.boolean("N", true),
+            showStatusBar = root.boolean("O", true),
+            swipeAnimation = root.boolean("P", true),
+            showBottomView = root.boolean("Q", true),
+            useFloatingBottomBar = root.boolean("R"),
+            useFloatingBottomBarLiquidGlass = root.boolean("S"),
+            tabletInterface = root.string("T", "auto"),
+            labelVisibilityMode = root.string("U", "auto"),
+            defaultHomePage = root.string("V", "bookshelf"),
+            navIconHome = root.string("W"),
+            navIconBookshelf = root.string("X"),
+            navIconExplore = root.string("Y"),
+            navIconRss = root.string("Z"),
+            navIconMy = root.string("a0"),
+            useMiuixMonet = root.boolean("b0"),
+            useFlexibleTopAppBar = root.boolean("c0", true),
+            bgImageLight = root.nullableString("d0"),
+            bgImageDark = root.nullableString("e0"),
+            bgImageBlurring = root.int("f0"),
+            bgImageNBlurring = root.int("g0"),
+            appFontPath = root.nullableString("h0"),
+            coverLoadOnlyWifi = root.boolean("i0"),
+            coverUseDefault = root.boolean("j0"),
+            coverShowShadow = root.boolean("k0"),
+            coverShowStroke = root.boolean("l0", true),
+            coverDefaultColor = root.boolean("m0", true),
+            coverDefaultImage = root.string("n0"),
+            coverTextColor = root.int("o0", -16777216),
+            coverShadowColor = root.int("p0", -16777216),
+            coverShowName = root.boolean("q0", true),
+            coverShowAuthor = root.boolean("r0", true),
+            coverDefaultImageDark = root.string("s0"),
+            coverTextColorN = root.int("t0", -1),
+            coverShadowColorN = root.int("u0", -1),
+            coverShowNameN = root.boolean("v0", true),
+            coverShowAuthorN = root.boolean("w0", true),
+            coverInfoOrientation = root.string("x0", "0"),
+            assets = root.get("y0")?.takeUnless { it.isJsonNull }?.let {
+                GSON.fromJson(it, assetsType)
+            },
+        )
+    }
+
+    private fun JsonObject.string(key: String, default: String = ""): String =
+        get(key)?.takeUnless { it.isJsonNull }?.asString ?: default
+
+    private fun JsonObject.nullableString(key: String): String? =
+        get(key)?.takeUnless { it.isJsonNull }?.asString
+
+    private fun JsonObject.boolean(key: String, default: Boolean = false): Boolean =
+        get(key)?.takeUnless { it.isJsonNull }?.asBoolean ?: default
+
+    private fun JsonObject.int(key: String, default: Int = 0): Int =
+        get(key)?.takeUnless { it.isJsonNull }?.asInt ?: default
+
+    private fun JsonObject.float(key: String, default: Float = 0f): Float =
+        get(key)?.takeUnless { it.isJsonNull }?.asFloat ?: default
 
     /**
      * 从文件URI导入主题

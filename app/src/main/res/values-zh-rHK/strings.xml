@@ -2105,11 +2105,13 @@
     <string name="theme_manage_delete_theme">刪除主題</string>
     <string name="theme_manage_edit_theme">編輯主題</string>
     <string name="theme_manage_export_current">匯出目前主題</string>
-    <string name="theme_manage_export_current_summary">將目前主題設定匯出為 JSON 檔案</string>
+    <string name="theme_manage_export_current_summary">將設定、圖片、字體和目前圖集匯出為主題包</string>
     <string name="theme_manage_export_failed">主題匯出失敗</string>
     <string name="theme_manage_export_success">主題已匯出</string>
-    <string name="theme_manage_import_config">匯入主題檔案</string>
-    <string name="theme_manage_import_config_summary">從 JSON 檔案匯入主題設定</string>
+    <string name="theme_manage_import_package">匯入主題包</string>
+    <string name="theme_manage_import_package_summary">匯入包含資源和封面圖集的主題包</string>
+    <string name="theme_manage_import_config">匯入舊版主題設定</string>
+    <string name="theme_manage_import_config_summary">從舊版 JSON 檔案匯入主題設定</string>
     <string name="theme_manage_import_failed">主題匯入失敗</string>
     <string name="theme_manage_import_success">主題已匯入。部分更改需要重啟。</string>
     <string name="theme_manage_label_container_color">標籤容器色</string>
@@ -2209,4 +2211,20 @@
     <string name="switch_to_dark_mode_tip">當前環境光較暗，是否切換至深色模式？</string>
     <string name="switch_to_light_mode_tip">當前環境光較亮，是否切換至淺色模式？</string>
     <string name="switch_action">切換</string>
+    <string name="cover_albums">封面圖集</string>
+    <string name="manage_cover_albums">管理封面圖集</string>
+    <string name="select_cover_album">選擇封面圖集</string>
+    <string name="cover_album_none">應用程式內置封面</string>
+    <string name="cover_album_name">圖集名稱</string>
+    <string name="cover_album_empty">暫無封面圖集</string>
+    <string name="cover_album_create">新增封面圖集</string>
+    <string name="cover_album_rename">重新命名封面圖集</string>
+    <string name="cover_album_delete">刪除封面圖集</string>
+    <string name="cover_album_delete_confirmation">刪除「%1$s」及其中的全部圖片？</string>
+    <string name="cover_album_add_images">加入圖片</string>
+    <string name="default_light_cover_album">預設日間封面</string>
+    <string name="default_dark_cover_album">預設夜間封面</string>
+    <string name="cover_album_imported_name">%1$s（匯入）</string>
+    <string name="cover_album_day_night_count">日間 %1$d · 夜間 %2$d</string>
+    <string name="cover_album_selected">目前使用</string>
 </resources>

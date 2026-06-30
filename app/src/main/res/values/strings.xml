@@ -1474,9 +1474,11 @@
     <string name="theme_manage_save_current">Save Current Theme</string>
     <string name="theme_manage_save_current_summary">Save the current appearance settings as a theme</string>
     <string name="theme_manage_export_current">Export Current Theme</string>
-    <string name="theme_manage_export_current_summary">Export the current theme settings as a JSON file</string>
-    <string name="theme_manage_import_config">Import Theme File</string>
-    <string name="theme_manage_import_config_summary">Import theme settings from a JSON file</string>
+    <string name="theme_manage_export_current_summary">Export settings, assets, fonts, and active cover albums as a theme package</string>
+    <string name="theme_manage_import_package">Import theme package</string>
+    <string name="theme_manage_import_package_summary">Import a theme package with its assets and cover albums</string>
+    <string name="theme_manage_import_config">Import legacy theme configuration</string>
+    <string name="theme_manage_import_config_summary">Import a legacy JSON theme configuration</string>
     <string name="theme_manage_saved_themes">Saved Themes</string>
     <string name="theme_manage_save_theme">Save Theme</string>
     <string name="theme_manage_save">Save</string>
@@ -2222,4 +2224,20 @@
     <string name="switch_to_dark_mode_tip">Ambient light is low. Switch to dark mode?</string>
     <string name="switch_to_light_mode_tip">Ambient light is bright. Switch to light mode?</string>
     <string name="switch_action">Switch</string>
+    <string name="cover_albums">Cover albums</string>
+    <string name="manage_cover_albums">Manage cover albums</string>
+    <string name="select_cover_album">Select cover album</string>
+    <string name="cover_album_none">Built-in default cover</string>
+    <string name="cover_album_name">Album name</string>
+    <string name="cover_album_empty">No cover albums</string>
+    <string name="cover_album_create">Create cover album</string>
+    <string name="cover_album_rename">Rename cover album</string>
+    <string name="cover_album_delete">Delete cover album</string>
+    <string name="cover_album_delete_confirmation">Delete “%1$s” and all images in it?</string>
+    <string name="cover_album_add_images">Add images</string>
+    <string name="default_light_cover_album">Default light cover</string>
+    <string name="default_dark_cover_album">Default dark cover</string>
+    <string name="cover_album_imported_name">%1$s (Imported)</string>
+    <string name="cover_album_day_night_count">Light %1$d · Dark %2$d</string>
+    <string name="cover_album_selected">Currently selected</string>
 </resources>

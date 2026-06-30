@@ -22,6 +22,9 @@ data object MainRouteSettingsRead : MainRoute
 data object MainRouteSettingsCover : MainRoute
 
 @Serializable
+data object MainRouteSettingsCoverAlbums : MainRoute
+
+@Serializable
 data object MainRouteSettingsTheme : MainRoute
 
 @Serializable
@@ -133,6 +136,7 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_OTHER = "settings/other"
     const val ROUTE_SETTINGS_READ = "settings/read"
     const val ROUTE_SETTINGS_COVER = "settings/cover"
+    const val ROUTE_SETTINGS_COVER_ALBUMS = "settings/cover/albums"
     const val ROUTE_SETTINGS_THEME = "settings/theme"
     const val ROUTE_SETTINGS_BACKUP = "settings/backup"
     const val ROUTE_SETTINGS_AI = "settings/ai"

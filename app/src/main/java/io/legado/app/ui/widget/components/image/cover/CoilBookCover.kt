@@ -74,8 +74,10 @@ fun BookCoverImage(
 
     val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
+    val defaultCoverPaths =
+        if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
 
-    val randomPath = remember(name, author, path, isNight) {
+    val randomPath = remember(name, author, path, isNight, defaultCoverPaths) {
         BookCoverModel.getRandomDefaultPath(
             seed = name ?: author ?: path ?: "",
             isNight = isNight
@@ -164,8 +166,10 @@ fun CoilBookCover(
 
     val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
+    val defaultCoverPaths =
+        if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
 
-    val randomPath = remember(name, author, path, isNight) {
+    val randomPath = remember(name, author, path, isNight, defaultCoverPaths) {
         BookCoverModel.getRandomDefaultPath(
             seed = name ?: author ?: path ?: "",
             isNight = isNight
