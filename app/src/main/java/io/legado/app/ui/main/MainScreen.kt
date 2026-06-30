@@ -43,12 +43,15 @@ import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
 import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +65,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -401,7 +409,11 @@ fun MainScreen(
                         beyondViewportPageCount = 4
                     ) { page ->
                         val destination = destinations.getOrNull(page) ?: return@HorizontalPager
-                        when (destination) {
+                        val pageLifecycleOwner = rememberMainPageLifecycleOwner(
+                            isActive = page == pagerState.currentPage
+                        )
+                        CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
+                            when (destination) {
                             MainDestination.Home -> HomeRouteScreen(
                                 onOpenBook = { book ->
                                     context.startActivityForBook(book)
@@ -454,7 +466,6 @@ fun MainScreen(
                                 onOpenExploreShow = onNavigateToExploreShow,
                             )
                             MainDestination.Rss -> RssScreen(
-                                isActive = page == pagerState.currentPage,
                                 onOpenSort = { sourceUrl, sortUrl, key ->
                                     onNavigateToRssSort(sourceUrl, sortUrl, key)
                                 },
@@ -475,6 +486,7 @@ fun MainScreen(
                                     }
                                 }
                             )
+                        }
                         }
                     }
                 }
@@ -549,6 +561,52 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun rememberMainPageLifecycleOwner(isActive: Boolean): LifecycleOwner {
+    val parentLifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentActive by rememberUpdatedState(isActive)
+    val owner = remember(parentLifecycle) { MainPageLifecycleOwner() }
+
+    DisposableEffect(parentLifecycle) {
+        val observer = LifecycleEventObserver { _, _ ->
+            owner.update(parentLifecycle.currentState, currentActive)
+        }
+        parentLifecycle.addObserver(observer)
+        owner.update(parentLifecycle.currentState, currentActive)
+        onDispose {
+            parentLifecycle.removeObserver(observer)
+            owner.destroy()
+        }
+    }
+
+    LaunchedEffect(isActive, parentLifecycle) {
+        owner.update(parentLifecycle.currentState, isActive)
+    }
+
+    return owner
+}
+
+private class MainPageLifecycleOwner : LifecycleOwner {
+
+    private val registry = LifecycleRegistry(this)
+
+    override val lifecycle: Lifecycle = registry
+
+    fun update(parentState: Lifecycle.State, isActive: Boolean) {
+        registry.currentState = when {
+            parentState == Lifecycle.State.DESTROYED -> Lifecycle.State.DESTROYED
+            parentState == Lifecycle.State.INITIALIZED -> Lifecycle.State.INITIALIZED
+            parentState == Lifecycle.State.CREATED -> Lifecycle.State.CREATED
+            isActive -> parentState
+            else -> Lifecycle.State.STARTED
+        }
+    }
+
+    fun destroy() {
+        registry.currentState = Lifecycle.State.DESTROYED
     }
 }
 
