@@ -35,12 +35,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
@@ -83,6 +86,7 @@ data class TocActionState(
     val downloadSummary: String = "",
     val useReplace: Boolean = false,
     val showWordCount: Boolean = true,
+    val titleReplaceProgress: Float? = null,
 ) : ListUiState<TocItemUi>
 
 data class TocDomainItem(
@@ -114,6 +118,14 @@ private data class TitleCacheKey(
     val rulesFingerprint: Int,
     val chineseConverterType: Int,
     val chapterCount: Int
+)
+
+private data class TitleReplaceState(
+    val cacheKey: TitleCacheKey? = null,
+    val titles: Map<Int, String> = emptyMap(),
+    val completed: Int = 0,
+    val total: Int = 0,
+    val isRunning: Boolean = false
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -240,7 +252,7 @@ class TocViewModel(
         TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, isReverse)
     }
 
-    private val titleReplaceCache = MutableStateFlow<Map<Int, String>>(emptyMap())
+    private val titleReplaceState = MutableStateFlow(TitleReplaceState())
     private var titleCacheJob: Job? = null
     private var lastTitleCacheKey: TitleCacheKey? = null
 
@@ -249,8 +261,8 @@ class TocViewModel(
             .flatMapLatest { appDb.bookChapterDao.getChapterListFlow(it) },
         downloadContextFlow,
         uiConfigFlow,
-        titleReplaceCache
-    ) { originalChapters, downloadCtx, config, cachedTitles ->
+        titleReplaceState
+    ) { originalChapters, downloadCtx, config, titleState ->
         val book = bookState.value ?: return@combine emptyList()
 
         val processedChapters = if (config.isReverse) {
@@ -275,7 +287,7 @@ class TocViewModel(
                 val baseTitle = chapter.getDisplayTitle(useReplace = false)
                 TocDomainItem(
                     chapter = chapter,
-                    displayTitle = cachedTitles[chapter.index] ?: baseTitle,
+                    displayTitle = titleState.titles[chapter.index] ?: baseTitle,
                     downloadState = DownloadState.LOCAL
                 )
             }
@@ -296,7 +308,7 @@ class TocViewModel(
             val baseTitle = chapter.getDisplayTitle(useReplace = false)
             TocDomainItem(
                 chapter,
-                cachedTitles[chapter.index] ?: baseTitle,
+                titleState.titles[chapter.index] ?: baseTitle,
                 downloadState
             )
         }
@@ -352,6 +364,9 @@ class TocViewModel(
             downloadSummary = downloadSummary.value,
             useReplace = tocPreferences.value.useReplace,
             showWordCount = tocPreferences.value.showWordCount,
+            titleReplaceProgress = titleReplaceState.value
+                .takeIf { it.isRunning && it.total > 0 }
+                ?.let { it.completed.toFloat() / it.total },
         )
     }
 
@@ -622,8 +637,8 @@ class TocViewModel(
             titleCacheJob?.cancel()
             titleCacheJob = null
             lastTitleCacheKey = null
-            if (titleReplaceCache.value.isNotEmpty()) {
-                titleReplaceCache.value = emptyMap()
+            if (titleReplaceState.value != TitleReplaceState()) {
+                titleReplaceState.value = TitleReplaceState()
             }
             return
         }
@@ -646,20 +661,89 @@ class TocViewModel(
             chapterCount = chapters.size
         )
 
+        val currentTitleState = titleReplaceState.value
         val isJobActive = titleCacheJob?.isActive == true
-        if (key == lastTitleCacheKey && (isJobActive || titleReplaceCache.value.isNotEmpty())) {
+        val isCurrentCacheReady =
+            currentTitleState.cacheKey == key &&
+                    currentTitleState.completed == chapters.size
+        if (key == lastTitleCacheKey &&
+            (isJobActive || currentTitleState.isRunning || isCurrentCacheReady)
+        ) {
             return
         }
 
         lastTitleCacheKey = key
         titleCacheJob?.cancel()
-        titleReplaceCache.value = emptyMap()
+        titleReplaceState.value = TitleReplaceState(
+            cacheKey = key,
+            total = chapters.size,
+            isRunning = chapters.isNotEmpty()
+        )
+        if (chapters.isEmpty()) {
+            titleCacheJob = null
+            return
+        }
+
         titleCacheJob = viewModelScope.launch(Dispatchers.Default) {
             val newCache = HashMap<Int, String>(chapters.size)
-            chapters.forEach { chapter ->
-                newCache[chapter.index] = chapter.getDisplayTitle(replaceRules, true)
+            val workerCount = minOf(TITLE_REPLACE_WORKER_COUNT, chapters.size)
+            val publishBatchSize =
+                (chapters.size / MAX_TITLE_REPLACE_PROGRESS_UPDATES).coerceAtLeast(1)
+            var completed = 0
+            var lastPublishedCompleted = 0
+            var lastPublishedAt = System.nanoTime()
+
+            chapters.asFlow()
+                .flatMapMerge(concurrency = workerCount) { chapter ->
+                    flow {
+                        emit(chapter.index to chapter.getDisplayTitle(replaceRules, true))
+                    }
+                }
+                .collect { (chapterIndex, displayTitle) ->
+                    newCache[chapterIndex] = displayTitle
+                    completed++
+                    val now = System.nanoTime()
+                    val shouldPublish = completed < chapters.size &&
+                            (completed - lastPublishedCompleted >= publishBatchSize ||
+                                    now - lastPublishedAt >= TITLE_REPLACE_UPDATE_INTERVAL_NANOS)
+                    if (shouldPublish) {
+                        titleReplaceState.update { current ->
+                            if (current.cacheKey != key) {
+                                current
+                            } else {
+                                TitleReplaceState(
+                                    cacheKey = key,
+                                    titles = HashMap(newCache),
+                                    completed = completed,
+                                    total = chapters.size,
+                                    isRunning = true
+                                )
+                            }
+                        }
+                        lastPublishedCompleted = completed
+                        lastPublishedAt = now
+                    }
+                }
+
+            titleReplaceState.update { current ->
+                if (current.cacheKey != key) {
+                    current
+                } else {
+                    TitleReplaceState(
+                        cacheKey = key,
+                        titles = newCache,
+                        completed = chapters.size,
+                        total = chapters.size,
+                        isRunning = false
+                    )
+                }
             }
-            titleReplaceCache.value = newCache
         }
+    }
+
+    private companion object {
+        const val TITLE_REPLACE_WORKER_COUNT = 4
+        const val MAX_TITLE_REPLACE_PROGRESS_UPDATES = 100
+        const val TITLE_REPLACE_UPDATE_INTERVAL_NANOS = 100_000_000L
     }
 }

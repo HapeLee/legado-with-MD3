@@ -106,6 +106,7 @@ import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
@@ -601,6 +602,20 @@ fun TocScreen(
                         )
                     )
                 }
+            }
+
+            AnimatedVisibility(
+                visible = isOnTocPage && state.titleReplaceProgress != null,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = padding.calculateTopPadding())
+                    .fillMaxWidth()
+                    .zIndex(2f)
+            ) {
+                AppLinearProgressIndicator(
+                    progress = state.titleReplaceProgress ?: 0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             TopFloatingStickyItem(
