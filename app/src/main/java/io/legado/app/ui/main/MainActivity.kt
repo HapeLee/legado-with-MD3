@@ -35,7 +35,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
-import io.legado.app.constant.PreferKey
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
@@ -56,6 +55,7 @@ import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -391,8 +391,13 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             return
         }
         lifecycleScope.launch {
-            val lastBackupFile =
-                withContext(IO) { viewModel.getLatestWebDavBackup() } ?: return@launch
+            val lastBackupFile = try {
+                withContext(IO) { viewModel.getLatestWebDavBackup() }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                return@launch
+            } ?: return@launch
             if (lastBackupFile.lastModify - LocalConfig.lastBackup > DateUtils.MINUTE_IN_MILLIS) {
                 LocalConfig.lastBackup = lastBackupFile.lastModify
                 alert(R.string.restore, R.string.webdav_after_local_restore_confirm) {
