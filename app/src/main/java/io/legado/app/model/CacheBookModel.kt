@@ -570,6 +570,14 @@ class CacheBookModel(
         content: String,
     ) {
         if (isStopped || isPaused || !onDownloadSet.contains(chapterIndex)) {
+            if (!isStopped && isPaused && onDownloadSet.remove(chapterIndex)) {
+                queue.enqueue(ChapterSelection.Single(chapterIndex))
+            } else {
+                onDownloadSet.remove(chapterIndex)
+            }
+            host.stateStore.clearChapterProgress(book.bookUrl, chapterIndex)
+            notifyDownloadSetChanged()
+            host.onTaskQueuesChanged(book.bookUrl)
             return
         }
         reportImageDownloadProgress(chapter, completed = 0)

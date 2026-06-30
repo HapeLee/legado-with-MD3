@@ -490,7 +490,7 @@ object BookHelp {
     fun countImageCachedChapters(book: Book): Int {
         if (!book.isImage) return 0
         return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
-            chapter.isVolume || hasImageContent(book, chapter)
+            chapter.isVolume || hasImageFilesCached(book, chapter)
         }
     }
 
@@ -509,7 +509,24 @@ object BookHelp {
     }
 
     /**
-     * 检测图片是否下载
+     * UI/队列用：仅检查图片文件是否都存在，不做 bitmap 解码校验。
+     */
+    fun hasImageFilesCached(book: Book, bookChapter: BookChapter): Boolean {
+        if (!hasContent(book, bookChapter)) {
+            return false
+        }
+        var ret = true
+        forEachImageSrc(book, bookChapter) { src ->
+            if (!isImageExist(book, src)) {
+                ret = false
+                return@forEachImageSrc
+            }
+        }
+        return ret
+    }
+
+    /**
+     * 检测图片是否下载（含 bitmap 解码校验，用于实际下载决策）
      */
     fun hasImageContent(book: Book, bookChapter: BookChapter): Boolean {
         if (!hasContent(book, bookChapter)) {
