@@ -204,7 +204,7 @@
 	</string-array>
 
 	<string-array name="text_font_weight">
-		<item>Normal</item>
+		<item>Regular</item>
 		<item>Bold</item>
 		<item>Light</item>
 	</string-array>

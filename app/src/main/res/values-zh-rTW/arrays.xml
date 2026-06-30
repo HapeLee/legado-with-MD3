@@ -106,7 +106,7 @@
     </string-array>
 
     <string-array name="text_font_weight">
-        <item>正常</item>
+        <item>常規</item>
         <item>粗體</item>
         <item>細體</item>
     </string-array>

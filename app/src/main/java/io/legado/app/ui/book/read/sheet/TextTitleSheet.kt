@@ -1,11 +1,16 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,13 +20,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,9 +49,12 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -281,14 +288,11 @@ internal fun TextEffectsPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextItalic(it)))
             },
         )
-        TinySliderSettingItem(
-            title = stringResource(R.string.font_weight_text),
-            value = textBold.coerceAtLeast(100).toFloat(),
-            valueRange = 100f..900f,
-            imageVector = Icons.Default.FormatBold,
+        FontWeightSetting(
+            value = textBold,
             onValueChange = { value ->
-                textBold = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextBold(value.toInt())))
+                textBold = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextBold(value)))
             },
         )
 
@@ -400,12 +404,6 @@ internal fun TitleSettingsPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
 
-    val weightIconMap = mapOf(
-        0 to Icons.Default.TextFields,
-        1 to Icons.Default.TextFormat,
-        2 to Icons.Default.FormatBold,
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -429,14 +427,11 @@ internal fun TitleSettingsPage(
 
         Spacer(Modifier.height(8.dp))
 
-        TinySliderSettingItem(
-            title = stringResource(R.string.font_weight_text),
-            value = titleBold.coerceAtLeast(100).toFloat(),
-            valueRange = 100f..900f,
-            imageVector = weightIconMap[titleBold] ?: Icons.Default.FormatBold,
+        FontWeightSetting(
+            value = titleBold,
             onValueChange = { value ->
-                titleBold = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBold(value.toInt())))
+                titleBold = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBold(value)))
             },
         )
 
@@ -604,4 +599,108 @@ internal fun TitleSettingsPage(
             showColorPicker = false
         },
     )
+}
+
+@Composable
+private fun FontWeightSetting(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    var showVariableWeight by remember { mutableStateOf(false) }
+    var sliderValue by remember(value) {
+        mutableFloatStateOf(
+            when (value) {
+                2 -> 300f
+                0 -> 400f
+                1 -> 900f
+                else -> value.coerceIn(100, 900).toFloat()
+            }
+        )
+    }
+    val weightEntries = stringArrayResource(R.array.text_font_weight)
+    val presetValue = when (value) {
+        2 -> 2
+        1 -> 1
+        0 -> 0
+        in 100..350 -> 2
+        in 650..900 -> 1
+        else -> 0
+    }
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.font_weight_text),
+                    selectedValue = presetValue.toString(),
+                    displayEntries = arrayOf(
+                        weightEntries[2],
+                        weightEntries[0],
+                        weightEntries[1],
+                    ),
+                    entryValues = arrayOf("2", "0", "1"),
+                    onValueChange = { onValueChange(it.toInt()) },
+                )
+            }
+            NormalCard(
+                onClick = { showVariableWeight = !showVariableWeight },
+                modifier = Modifier
+                    .padding(bottom = 4.dp)
+                    .height(56.dp)
+                    .aspectRatio(1f),
+                containerColor = if (showVariableWeight) {
+                    LegadoTheme.colorScheme.secondaryContainer
+                } else {
+                    LegadoTheme.colorScheme.surfaceContainerLow
+                },
+                contentColor = if (showVariableWeight) {
+                    LegadoTheme.colorScheme.onSecondaryContainer
+                } else {
+                    LegadoTheme.colorScheme.onSurfaceVariant
+                },
+                cornerRadius = 12.dp,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = stringResource(R.string.font_weight_text),
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = showVariableWeight) {
+            NormalCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp)
+                    .height(56.dp),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppSlider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        onValueChangeFinished = {
+                            onValueChange(sliderValue.toInt())
+                        },
+                        valueRange = 100f..900f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+    }
 }
