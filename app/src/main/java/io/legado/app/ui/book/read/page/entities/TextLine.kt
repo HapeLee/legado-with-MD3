@@ -527,9 +527,12 @@ data class TextLine(
                 val sh = rectHeight * scale
                 val dx = startX + (rectWidth - sw) / 2f
                 val dy = top + (rectHeight - sh) / 2f
+                val destination = android.graphics.RectF(dx, dy, dx + sw, dy + sh)
                 canvas.save()
                 canvas.clipRect(startX, top, endX, bottom)
-                canvas.drawBitmap(bitmap, null, android.graphics.RectF(dx, dy, dx + sw, dy + sh), paint)
+                if (!drawNinePatchBitmap(canvas, bitmap, destination, paint, bgImage)) {
+                    canvas.drawBitmap(bitmap, null, destination, paint)
+                }
                 canvas.restore()
             }
             2 -> {
@@ -563,6 +566,124 @@ data class TextLine(
             }
         }
         PaintPool.recycle(paint)
+    }
+
+    private fun drawNinePatchBitmap(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        destination: android.graphics.RectF,
+        paint: Paint,
+        path: String,
+    ): Boolean {
+        bitmap.ninePatchChunk?.takeIf(android.graphics.NinePatch::isNinePatchChunk)?.let { chunk ->
+            android.graphics.NinePatch(bitmap, chunk, null).draw(
+                canvas,
+                android.graphics.Rect(
+                    destination.left.toInt(),
+                    destination.top.toInt(),
+                    destination.right.toInt(),
+                    destination.bottom.toInt(),
+                ),
+                paint,
+            )
+            return true
+        }
+        if (!isRawNinePatchPath(path) || bitmap.width < 3 || bitmap.height < 3) {
+            return false
+        }
+
+        val horizontalStretch = findNinePatchStretchRange(bitmap, horizontal = true) ?: return false
+        val verticalStretch = findNinePatchStretchRange(bitmap, horizontal = false) ?: return false
+        val sourceX = intArrayOf(
+            1,
+            horizontalStretch.first,
+            horizontalStretch.last + 1,
+            bitmap.width - 1,
+        )
+        val sourceY = intArrayOf(
+            1,
+            verticalStretch.first,
+            verticalStretch.last + 1,
+            bitmap.height - 1,
+        )
+
+        var leftWidth = (sourceX[1] - sourceX[0]).toFloat()
+        var rightWidth = (sourceX[3] - sourceX[2]).toFloat()
+        val fixedWidth = leftWidth + rightWidth
+        if (fixedWidth > destination.width() && fixedWidth > 0f) {
+            val ratio = destination.width() / fixedWidth
+            leftWidth *= ratio
+            rightWidth *= ratio
+        }
+
+        var topHeight = (sourceY[1] - sourceY[0]).toFloat()
+        var bottomHeight = (sourceY[3] - sourceY[2]).toFloat()
+        val fixedHeight = topHeight + bottomHeight
+        if (fixedHeight > destination.height() && fixedHeight > 0f) {
+            val ratio = destination.height() / fixedHeight
+            topHeight *= ratio
+            bottomHeight *= ratio
+        }
+
+        val destinationX = floatArrayOf(
+            destination.left,
+            destination.left + leftWidth,
+            destination.right - rightWidth,
+            destination.right,
+        )
+        val destinationY = floatArrayOf(
+            destination.top,
+            destination.top + topHeight,
+            destination.bottom - bottomHeight,
+            destination.bottom,
+        )
+
+        for (row in 0..2) {
+            for (column in 0..2) {
+                if (sourceX[column] == sourceX[column + 1] ||
+                    sourceY[row] == sourceY[row + 1] ||
+                    destinationX[column] == destinationX[column + 1] ||
+                    destinationY[row] == destinationY[row + 1]
+                ) {
+                    continue
+                }
+                canvas.drawBitmap(
+                    bitmap,
+                    android.graphics.Rect(
+                        sourceX[column],
+                        sourceY[row],
+                        sourceX[column + 1],
+                        sourceY[row + 1],
+                    ),
+                    android.graphics.RectF(
+                        destinationX[column],
+                        destinationY[row],
+                        destinationX[column + 1],
+                        destinationY[row + 1],
+                    ),
+                    paint,
+                )
+            }
+        }
+        return true
+    }
+
+    private fun findNinePatchStretchRange(bitmap: Bitmap, horizontal: Boolean): IntRange? {
+        val limit = if (horizontal) bitmap.width - 2 else bitmap.height - 2
+        var first = -1
+        var last = -1
+        for (position in 1..limit) {
+            val color = if (horizontal) bitmap.getPixel(position, 0) else bitmap.getPixel(0, position)
+            val isMarker = android.graphics.Color.alpha(color) == 0xFF &&
+                android.graphics.Color.red(color) == 0 &&
+                android.graphics.Color.green(color) == 0 &&
+                android.graphics.Color.blue(color) == 0
+            if (isMarker) {
+                if (first < 0) first = position
+                last = position
+            }
+        }
+        return if (first >= 0) first..last else null
     }
 
     fun checkFastDraw(): Boolean {
@@ -664,25 +785,26 @@ data class TextLine(
         private fun loadBgBitmap(path: String): Bitmap? {
             return try {
                 val ctx = appCtx
+                val sampleBitmap = !isRawNinePatchPath(path)
                 if (path.startsWith("assets://")) {
                     val assetPath = path.removePrefix("assets://")
                     ctx.assets.open(assetPath).use { input ->
-                        decodeSampledBitmap(input)
+                        decodeSampledBitmap(input, sampleBitmap)
                     }
                 } else if (path.startsWith("content://")) {
                     val uri = android.net.Uri.parse(path)
                     ctx.contentResolver.openInputStream(uri)?.use { input ->
-                        decodeSampledBitmap(input)
+                        decodeSampledBitmap(input, sampleBitmap)
                     }
                 } else {
                     val file = java.io.File(path)
                     if (file.exists()) {
-                        decodeSampledBitmapFile(path)
+                        decodeSampledBitmapFile(path, sampleBitmap)
                     } else {
                         val assetPath = if (path.startsWith("bg/")) path else "bg/$path"
                         runCatching {
                             ctx.assets.open(assetPath).use { input ->
-                                decodeSampledBitmap(input)
+                                decodeSampledBitmap(input, sampleBitmap)
                             }
                         }.getOrNull()
                     }
@@ -692,23 +814,38 @@ data class TextLine(
             }
         }
 
-        private fun decodeSampledBitmap(input: java.io.InputStream): Bitmap? {
+        private fun decodeSampledBitmap(
+            input: java.io.InputStream,
+            sampleBitmap: Boolean,
+        ): Bitmap? {
             val buffered = if (input.markSupported()) input else java.io.BufferedInputStream(input)
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             buffered.mark(buffered.available())
             BitmapFactory.decodeStream(buffered, null, options)
-            options.inSampleSize = calculateInSampleSize(options, bgSampleWidth, bgSampleHeight)
+            options.inSampleSize = if (sampleBitmap) {
+                calculateInSampleSize(options, bgSampleWidth, bgSampleHeight)
+            } else {
+                1
+            }
             options.inJustDecodeBounds = false
             buffered.reset()
             return BitmapFactory.decodeStream(buffered, null, options)
         }
 
-        private fun decodeSampledBitmapFile(path: String): Bitmap? {
+        private fun decodeSampledBitmapFile(path: String, sampleBitmap: Boolean): Bitmap? {
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path, options)
-            options.inSampleSize = calculateInSampleSize(options, bgSampleWidth, bgSampleHeight)
+            options.inSampleSize = if (sampleBitmap) {
+                calculateInSampleSize(options, bgSampleWidth, bgSampleHeight)
+            } else {
+                1
+            }
             options.inJustDecodeBounds = false
             return BitmapFactory.decodeFile(path, options)
+        }
+
+        private fun isRawNinePatchPath(path: String): Boolean {
+            return path.substringBefore('?').substringBefore('#').endsWith(".9.png", ignoreCase = true)
         }
 
         private fun calculateInSampleSize(

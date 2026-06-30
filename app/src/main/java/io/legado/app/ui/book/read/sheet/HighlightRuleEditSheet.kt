@@ -2,7 +2,9 @@ package io.legado.app.ui.book.read.sheet
 
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -135,14 +137,34 @@ fun HighlightRuleEditSheet(
     // Validation
     var patternError by remember(show, rule) { mutableStateOf<String?>(null) }
 
-    // SAF image picker
+    // System photo picker, with the contract's built-in fallback on older devices.
     val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
             val dir = File(appCtx.filesDir, "bg_images")
             if (!dir.exists()) dir.mkdirs()
-            val target = File(dir, "bg_${System.currentTimeMillis()}.jpg")
+            val displayName = context.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        .takeIf { it >= 0 }
+                        ?.let(cursor::getString)
+                } else {
+                    null
+                }
+            }
+            val suffix = when {
+                displayName?.endsWith(".9.png", ignoreCase = true) == true -> ".9.png"
+                displayName?.substringAfterLast('.', "").isNullOrBlank() -> ".img"
+                else -> ".${displayName.substringAfterLast('.')}"
+            }
+            val target = File(dir, "bg_${System.currentTimeMillis()}$suffix")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output ->
                     input.copyTo(output)
@@ -362,7 +384,11 @@ fun HighlightRuleEditSheet(
                 TinyClickableSettingItem(
                     title = stringResource(R.string.highlight_bg_image),
                     description = bgImage.ifBlank { null }?.let { File(it).name },
-                    onClick = { imagePicker.launch("image/*") },
+                    onClick = {
+                        imagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
                 )
             }
             if (hasBgImage && bgImage.isNotBlank()) {
