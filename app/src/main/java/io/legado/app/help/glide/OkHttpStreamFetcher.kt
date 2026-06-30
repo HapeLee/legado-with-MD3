@@ -9,7 +9,9 @@ import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.util.ContentLengthInputStream
 import com.script.rhino.runScriptWithContext
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.data.entities.Book
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.okHttpClient
@@ -45,6 +47,7 @@ class OkHttpStreamFetcher(
     private val coroutineContext = SupervisorJob()
     private val coroutineScope = CoroutineScope(coroutineContext)
     private lateinit var analyzedUrl: GlideUrl
+    private var dataSource = DataSource.REMOTE
 
     @Volatile
     private var call: Call? = null
@@ -68,6 +71,20 @@ class OkHttpStreamFetcher(
             source = SourceHelp.getSource(sourceUrl)
         }
 
+        this.callback = callback
+
+        if (manga) {
+            ReadManga.book?.let { book ->
+                val src = url.toString()
+                if (BookHelp.isImageExist(book, src)) {
+                    Coroutine.async(coroutineScope, executeContext = IO) {
+                        loadLocalImage(book, src)
+                    }
+                    return
+                }
+            }
+        }
+
         analyzedUrl = AnalyzeUrl(
             url.toString(),
             source = source,
@@ -77,13 +94,36 @@ class OkHttpStreamFetcher(
         val requestBuilder = Request.Builder().url(analyzedUrl.toStringUrl())
         requestBuilder.addHeaders(analyzedUrl.headers)
         val request: Request = requestBuilder.build()
-        this.callback = callback
+        dataSource = DataSource.REMOTE
         call = if (manga) {
             okHttpClientManga.newCall(request)
         } else {
             okHttpClient.newCall(request)
         }
         call?.enqueue(this)
+    }
+
+    private suspend fun loadLocalImage(book: Book, src: String) {
+        try {
+            val bytes = BookHelp.getImage(book, src).readBytes()
+            val decodeResult = if (ImageUtils.skipDecode(source, isCover = false)) {
+                ByteArrayInputStream(bytes)
+            } else {
+                runScriptWithContext(coroutineContext) {
+                    ImageUtils.decode(
+                        src,
+                        bytes,
+                        isCover = false,
+                        source,
+                        book
+                    )?.inputStream()
+                }
+            }
+            dataSource = DataSource.LOCAL
+            onStreamReady(decodeResult)
+        } catch (e: Exception) {
+            callback?.onLoadFailed(e)
+        }
     }
 
     override fun cleanup() {
@@ -105,7 +145,7 @@ class OkHttpStreamFetcher(
     }
 
     override fun getDataSource(): DataSource {
-        return DataSource.REMOTE
+        return dataSource
     }
 
     override fun onFailure(call: Call, e: IOException) {

@@ -37,8 +37,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
@@ -285,15 +287,31 @@ object BookHelp {
         }
     }
 
+    fun countImagesInContent(bookChapter: BookChapter, content: String): Int {
+        var count = 0
+        val matcher = AppPattern.imgPattern.matcher(content)
+        while (matcher.find()) {
+            if (matcher.group(1) != null) count++
+        }
+        return count
+    }
+
     suspend fun saveImages(
         bookSource: BookSource,
         book: Book,
         bookChapter: BookChapter,
         content: String,
-        concurrency: Int = OtherConfig.threadCount
+        concurrency: Int = OtherConfig.threadCount,
+        onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
     ) = coroutineScope {
-        flowImages(bookChapter, content).onEachParallel(concurrency) { mSrc ->
+        val imageUrls = flowImages(bookChapter, content).toList()
+        val total = imageUrls.size
+        onProgress?.invoke(0, total)
+        if (total == 0) return@coroutineScope
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
+        imageUrls.asFlow().onEachParallel(concurrency) { mSrc ->
             saveImage(bookSource, book, mSrc, bookChapter)
+            onProgress?.invoke(completed.incrementAndGet(), total)
         }.collect()
     }
 
@@ -464,6 +482,13 @@ object BookHelp {
     /**
      * 检测该章节是否下载
      */
+    fun countImageCachedChapters(book: Book): Int {
+        if (!book.isImage) return 0
+        return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
+            chapter.isVolume || hasImageContent(book, chapter)
+        }
+    }
+
     fun hasContent(book: Book, bookChapter: BookChapter): Boolean {
         return if (book.isLocalTxt ||
             (bookChapter.isVolume && bookChapter.url.startsWith(bookChapter.title))

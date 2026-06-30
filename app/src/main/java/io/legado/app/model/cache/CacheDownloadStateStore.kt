@@ -40,6 +40,7 @@ class CacheDownloadStateStore {
                 failedIndices = current.failedIndices - chapterIndex,
                 successCount = current.successCount + 1,
                 failureMessage = null,
+                chapterProgress = current.chapterProgress - chapterIndex,
             )
         }
     }
@@ -50,7 +51,24 @@ class CacheDownloadStateStore {
                 runningIndices = current.runningIndices - chapterIndex,
                 pausedIndices = current.pausedIndices - chapterIndex,
                 failedIndices = current.failedIndices + chapterIndex,
+                chapterProgress = current.chapterProgress - chapterIndex,
             )
+        }
+    }
+
+    fun updateChapterProgress(
+        bookUrl: String,
+        chapterIndex: Int,
+        progress: CacheChapterProgress,
+    ) {
+        updateBook(bookUrl) { current ->
+            current.copy(chapterProgress = current.chapterProgress + (chapterIndex to progress))
+        }
+    }
+
+    fun clearChapterProgress(bookUrl: String, chapterIndex: Int) {
+        updateBook(bookUrl) { current ->
+            current.copy(chapterProgress = current.chapterProgress - chapterIndex)
         }
     }
 
@@ -90,6 +108,7 @@ class CacheDownloadStateStore {
                         waitingCount = 0,
                         runningIndices = emptySet(),
                         successCount = 0,
+                        chapterProgress = emptyMap(),
                     )
                 }
                 .filterValues { bookState ->

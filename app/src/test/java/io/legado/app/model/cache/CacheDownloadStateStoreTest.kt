@@ -83,4 +83,25 @@ class CacheDownloadStateStoreTest {
         assertEquals(0, store.state.totalWaiting)
         assertEquals(0, store.state.totalRunning)
     }
+
+    @Test
+    fun chapterProgressUpdatesAndClearsOnSuccess() {
+        val store = CacheDownloadStateStore()
+
+        store.updateBookQueue("a", waitingCount = 0, runningIndices = setOf(3))
+        store.updateChapterProgress(
+            "a",
+            3,
+            CacheChapterProgress(CacheChapterProgressPhase.IMAGES, completed = 2, total = 10),
+        )
+
+        val progress = store.state.books.getValue("a").chapterProgress.getValue(3)
+        assertEquals(CacheChapterProgressPhase.IMAGES, progress.phase)
+        assertEquals(2, progress.completed)
+        assertEquals(10, progress.total)
+
+        store.markSuccess("a", 3)
+
+        assertFalse(store.state.books.getValue("a").chapterProgress.containsKey(3))
+    }
 }
