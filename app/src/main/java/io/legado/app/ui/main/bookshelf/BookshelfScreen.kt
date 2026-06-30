@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -76,6 +77,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -156,6 +158,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     scrollToTopRequest: Long = 0L,
+    onScrollStateChanged: (isAtTop: Boolean) -> Unit = {},
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (book: BookShelfItem, sharedCoverKey: String?) -> Unit,
     onNavigateToSearch: (String) -> Unit,
@@ -233,6 +236,14 @@ fun BookshelfScreen(
         initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
         pageCount = { uiState.groups.size }
     )
+    val folderGridState = rememberLazyGridState()
+    val standaloneSearchGridState = rememberLazyGridState()
+    val groupGridStates = mutableMapOf<Long, LazyGridState>()
+    uiState.groups.forEach { group ->
+        key(group.groupId) {
+            groupGridStates[group.groupId] = rememberLazyGridState()
+        }
+    }
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
 
@@ -279,6 +290,20 @@ fun BookshelfScreen(
     val isUsingStandaloneSearchGroup by remember {
         derivedStateOf {
             uiState.isSearch && uiState.groups.none { it.groupId == currentGroupId }
+        }
+    }
+    val isShowingFolderRoot =
+        bookGroupStyle == 2 && isInFolderRoot && !isUsingStandaloneSearchGroup
+    LaunchedEffect(folderGridState, isShowingFolderRoot) {
+        if (isShowingFolderRoot) {
+            snapshotFlow { !folderGridState.canScrollBackward }
+                .distinctUntilChanged()
+                .collect(onScrollStateChanged)
+        }
+    }
+    LaunchedEffect(scrollToTopRequest, isShowingFolderRoot) {
+        if (scrollToTopRequest > 0L && isShowingFolderRoot) {
+            folderGridState.animateScrollToItem(0)
         }
     }
     val currentGroupBookCount by remember { derivedStateOf { uiState.currentGroupBookCount } }
@@ -726,6 +751,9 @@ fun BookshelfScreen(
                 }
             ) { isRoot ->
                 if (uiState.groups.isEmpty() && !uiState.isSearch) {
+                    LaunchedEffect(Unit) {
+                        onScrollStateChanged(true)
+                    }
                     if (!uiState.isInitialLoading) {
                         EmptyMessage(
                             modifier = Modifier
@@ -743,6 +771,7 @@ fun BookshelfScreen(
                     val isGridMode = bookshelfFolderLayoutMode != 0
                     FastScrollLazyVerticalGrid(
                         columns = GridCells.Fixed(folderColumns.coerceAtLeast(1)),
+                        state = folderGridState,
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
@@ -815,6 +844,8 @@ fun BookshelfScreen(
                     if (isUsingStandaloneSearchGroup) {
                         BookshelfPage(
                             scrollToTopRequest = scrollToTopRequest,
+                            gridState = standaloneSearchGridState,
+                            onScrollStateChanged = onScrollStateChanged,
                             paddingValues = paddingValues,
                             books = uiState.items,
                             uiState = uiState,
@@ -862,6 +893,8 @@ fun BookshelfScreen(
                                         isSelectedGroup
                                 BookshelfPage(
                                     scrollToTopRequest = scrollToTopRequest,
+                                    gridState = groupGridStates.getValue(group.groupId),
+                                    onScrollStateChanged = onScrollStateChanged,
                                     paddingValues = paddingValues,
                                     books = books,
                                     uiState = uiState,
@@ -1212,6 +1245,8 @@ private data class BookshelfEditStickySummary(
 @Composable
 fun BookshelfPage(
     scrollToTopRequest: Long,
+    gridState: LazyGridState,
+    onScrollStateChanged: (isAtTop: Boolean) -> Unit,
     paddingValues: PaddingValues,
     books: ImmutableList<BookUiItem>,
     uiState: BookshelfUiState,
@@ -1230,6 +1265,11 @@ fun BookshelfPage(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    LaunchedEffect(books.isEmpty(), isCurrentPage) {
+        if (books.isEmpty() && isCurrentPage) {
+            onScrollStateChanged(true)
+        }
+    }
     if (books.isEmpty()) {
         if (!isCurrentPage) return
         if (uiState.isSearch) {
@@ -1297,10 +1337,16 @@ fun BookshelfPage(
     val gridInnerHorizontalPadding = totalHorizontalPadding / 2
     val hapticFeedback = LocalHapticFeedback.current
     val displayBooks = draggingBooks ?: pendingSavedBooks ?: books
-    val gridState = rememberLazyGridState()
     LaunchedEffect(scrollToTopRequest, isCurrentPage) {
         if (scrollToTopRequest > 0L && isCurrentPage) {
             gridState.animateScrollToItem(0)
+        }
+    }
+    LaunchedEffect(gridState, isCurrentPage) {
+        if (isCurrentPage) {
+            snapshotFlow { !gridState.canScrollBackward }
+                .distinctUntilChanged()
+                .collect(onScrollStateChanged)
         }
     }
     val reorderableState = rememberReorderableLazyGridState(gridState) { from, to ->

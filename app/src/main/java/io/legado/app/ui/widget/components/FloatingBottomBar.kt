@@ -9,7 +9,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,7 +77,6 @@ val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
 @Composable
 fun RowScope.FloatingBottomBarItem(
     onClick: () -> Unit,
-    onDoubleClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -86,23 +84,11 @@ fun RowScope.FloatingBottomBarItem(
     Column(
         modifier
             .clip(ContinuousCapsule)
-            .then(
-                if (onDoubleClick != null) {
-                    Modifier.combinedClickable(
-                        interactionSource = null,
-                        indication = null,
-                        role = Role.Tab,
-                        onClick = onClick,
-                        onDoubleClick = onDoubleClick,
-                    )
-                } else {
-                    Modifier.clickable(
-                        interactionSource = null,
-                        indication = null,
-                        role = Role.Tab,
-                        onClick = onClick,
-                    )
-                }
+            .clickable(
+                interactionSource = null,
+                indication = null,
+                role = Role.Tab,
+                onClick = onClick,
             )
             .fillMaxHeight()
             .weight(1f)

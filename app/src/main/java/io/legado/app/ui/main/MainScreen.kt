@@ -2,8 +2,6 @@ package io.legado.app.ui.main
 
 import android.content.Intent
 import android.os.Build
-import android.os.SystemClock
-import android.view.ViewConfiguration
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -197,26 +195,20 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
-    var lastBookshelfNavClickTime by remember { mutableLongStateOf(0L) }
-    fun requestBookshelfScrollToTop(index: Int) {
+    var isBookshelfAtTop by remember { mutableStateOf(true) }
+    fun requestBookshelfScrollToTop() {
         bookshelfScrollToTopRequest++
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(index)
-        }
     }
 
     fun handleMainDestinationClick(index: Int, destination: MainDestination) {
-        if (destination == MainDestination.Bookshelf) {
-            val now = SystemClock.uptimeMillis()
-            if (
-                (pagerState.currentPage == index || pagerState.targetPage == index) &&
-                now - lastBookshelfNavClickTime <= ViewConfiguration.getDoubleTapTimeout()
-            ) {
-                requestBookshelfScrollToTop(index)
-                lastBookshelfNavClickTime = 0L
-                return
-            }
-            lastBookshelfNavClickTime = now
+        if (
+            destination == MainDestination.Bookshelf &&
+            pagerState.currentPage == index &&
+            pagerState.targetPage == index &&
+            !isBookshelfAtTop
+        ) {
+            requestBookshelfScrollToTop()
+            return
         }
         coroutineScope.launch {
             pagerState.animateScrollToPage(index)
@@ -434,6 +426,9 @@ fun MainScreen(
 
                             MainDestination.Bookshelf -> BookshelfScreen(
                                 scrollToTopRequest = bookshelfScrollToTopRequest,
+                                onScrollStateChanged = { isAtTop ->
+                                    isBookshelfAtTop = isAtTop
+                                },
                                 onBookClick = { book ->
                                     context.startActivityForBook(book)
                                 },
@@ -528,13 +523,6 @@ fun MainScreen(
                                 FloatingBottomBarItem(
                                     onClick = {
                                         handleMainDestinationClick(index, destination)
-                                    },
-                                    onDoubleClick = if (destination == MainDestination.Bookshelf) {
-                                        {
-                                            requestBookshelfScrollToTop(index)
-                                        }
-                                    } else {
-                                        null
                                     },
                                     modifier = Modifier
                                         .defaultMinSize(minWidth = 76.dp)
