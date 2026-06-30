@@ -13,6 +13,7 @@ import io.legado.app.help.AppWebDav
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
@@ -468,6 +469,20 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         }.start()
     }
 
+    private fun cacheChapterImagesIfNeeded(
+        book: Book,
+        chapter: BookChapter,
+        content: String? = null,
+    ) {
+        if (!book.isImage) return
+        val source = bookSource ?: return
+        Coroutine.async(downloadScope, IO) {
+            if (BookHelp.hasImageContent(book, chapter)) return@async
+            val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return@async
+            BookHelp.saveImages(source, book, chapter, resolvedContent)
+        }.start()
+    }
+
     private fun preDownload() {
         if (book?.isLocal == true) return
         executor.execute {
@@ -515,6 +530,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: return
         if (BookHelp.hasContent(book, chapter)) {
             downloadedChapters.add(chapter.index)
+            cacheChapterImagesIfNeeded(book, chapter)
         } else {
             delay(1000)
             if (addLoading(index)) {
@@ -534,10 +550,11 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         val book = book ?: return removeLoading(chapter.index)
         val bookSource = bookSource
         if (bookSource != null) {
-            downloadNetworkContent(bookSource, scope, chapter, book, semaphore, success = {
+            downloadNetworkContent(bookSource, scope, chapter, book, semaphore, success = { content ->
+                cacheChapterImagesIfNeeded(book, chapter, content)
                 downloadedChapters.add(chapter.index)
                 downloadFailChapters.remove(chapter.index)
-                contentLoadFinish(chapter, it)
+                contentLoadFinish(chapter, content)
             }, error = {
                 downloadFailChapters[chapter.index] =
                     (downloadFailChapters[chapter.index] ?: 0) + 1

@@ -45,4 +45,19 @@ data class CacheBookDownloadState(
     val failedIndices: Set<Int> = emptySet(),
     val successCount: Int = 0,
     val failureMessage: String? = null,
+    val chapterProgress: Map<Int, CacheChapterProgress> = emptyMap(),
 )
+
+enum class CacheChapterProgressPhase {
+    CONTENT,
+    IMAGES,
+}
+
+data class CacheChapterProgress(
+    val phase: CacheChapterProgressPhase,
+    val completed: Int,
+    val total: Int,
+) {
+    val fraction: Float
+        get() = if (total <= 0) 0f else completed.toFloat() / total
+}

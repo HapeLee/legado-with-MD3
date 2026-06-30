@@ -410,6 +410,14 @@ private fun BookCacheChapterRow(
                     LegadoTheme.colorScheme.onSurfaceVariant
                 }
             )
+            if (item.isDownloading) {
+                AppLinearProgressIndicator(
+                    progress = item.downloadProgress,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                )
+            }
         }
         if (item.isWaiting || item.isDownloading) {
             SmallTonalButton(
@@ -433,6 +441,9 @@ private fun BookCacheChapterRow(
 }
 
 private fun chapterStatusText(item: BookCacheChapterItem): String {
+    if (item.isDownloading && !item.progressLabel.isNullOrBlank()) {
+        return item.progressLabel
+    }
     return when {
         item.isDownloading -> "下载中"
         item.isWaiting -> "等待下载"

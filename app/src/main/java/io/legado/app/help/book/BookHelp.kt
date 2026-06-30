@@ -37,10 +37,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.commons.text.similarity.JaccardSimilarity
 import splitties.init.appCtx
@@ -285,15 +288,35 @@ object BookHelp {
         }
     }
 
+    fun countImagesInContent(bookChapter: BookChapter, content: String): Int {
+        var count = 0
+        val matcher = AppPattern.imgPattern.matcher(content)
+        while (matcher.find()) {
+            if (matcher.group(1) != null) count++
+        }
+        return count
+    }
+
     suspend fun saveImages(
         bookSource: BookSource,
         book: Book,
         bookChapter: BookChapter,
         content: String,
-        concurrency: Int = OtherConfig.threadCount
+        concurrency: Int = OtherConfig.threadCount,
+        onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
     ) = coroutineScope {
-        flowImages(bookChapter, content).onEachParallel(concurrency) { mSrc ->
+        val imageUrls = flowImages(bookChapter, content).toList()
+        val total = imageUrls.size
+        onProgress?.invoke(0, total)
+        if (total == 0) return@coroutineScope
+        val progressMutex = Mutex()
+        var completed = 0
+        imageUrls.asFlow().onEachParallel(concurrency) { mSrc ->
             saveImage(bookSource, book, mSrc, bookChapter)
+            progressMutex.withLock {
+                completed++
+                onProgress?.invoke(completed, total)
+            }
         }.collect()
     }
 
@@ -464,6 +487,13 @@ object BookHelp {
     /**
      * 检测该章节是否下载
      */
+    fun countImageCachedChapters(book: Book): Int {
+        if (!book.isImage) return 0
+        return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
+            chapter.isVolume || hasImageFilesCached(book, chapter)
+        }
+    }
+
     fun hasContent(book: Book, bookChapter: BookChapter): Boolean {
         return if (book.isLocalTxt ||
             (bookChapter.isVolume && bookChapter.url.startsWith(bookChapter.title))
@@ -479,7 +509,24 @@ object BookHelp {
     }
 
     /**
-     * 检测图片是否下载
+     * UI/队列用：仅检查图片文件是否都存在，不做 bitmap 解码校验。
+     */
+    fun hasImageFilesCached(book: Book, bookChapter: BookChapter): Boolean {
+        if (!hasContent(book, bookChapter)) {
+            return false
+        }
+        var ret = true
+        forEachImageSrc(book, bookChapter) { src ->
+            if (!isImageExist(book, src)) {
+                ret = false
+                return@forEachImageSrc
+            }
+        }
+        return ret
+    }
+
+    /**
+     * 检测图片是否下载（含 bitmap 解码校验，用于实际下载决策）
      */
     fun hasImageContent(book: Book, bookChapter: BookChapter): Boolean {
         if (!hasContent(book, bookChapter)) {

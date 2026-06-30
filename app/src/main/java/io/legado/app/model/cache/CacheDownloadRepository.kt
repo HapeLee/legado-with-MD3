@@ -33,11 +33,21 @@ class CacheDownloadRepository {
         book: Book,
         chapter: BookChapter,
         start: CoroutineStart = CoroutineStart.LAZY,
+        onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
     ): Coroutine<Unit> {
         return Coroutine.async(scope, context, start = start, executeContext = context) {
-            BookHelp.getContent(book, chapter)?.let {
-                BookHelp.saveImages(bookSource, book, chapter, it, 1)
-            }
+            saveCachedImagesAwait(bookSource, book, chapter, onProgress)
+        }
+    }
+
+    suspend fun saveCachedImagesAwait(
+        bookSource: BookSource,
+        book: Book,
+        chapter: BookChapter,
+        onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
+    ) {
+        BookHelp.getContent(book, chapter)?.let { content ->
+            BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress)
         }
     }
 
