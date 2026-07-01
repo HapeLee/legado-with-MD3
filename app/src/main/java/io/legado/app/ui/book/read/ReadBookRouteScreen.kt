@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -166,14 +165,14 @@ fun ReadBookRouteScreen(
     }
 
     val readStyleImagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
+        ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleImageSelected(it)) }
     }
 
     var pendingReadStyleImageIsNight by remember { mutableStateOf(false) }
     val readStyleImagePickerForMode = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
+        ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
             viewModel.onIntent(ReadBookIntent.ReadStyleImageSelectedForMode(it, pendingReadStyleImageIsNight))
@@ -368,15 +367,11 @@ fun ReadBookRouteScreen(
                                 booksDirPicker.launch(null)
                             }
                             is ReadBookEffect.OpenReadStyleImagePicker -> {
-                                readStyleImagePicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                                readStyleImagePicker.launch("image/*")
                             }
                             is ReadBookEffect.OpenReadStyleImagePickerForMode -> {
                                 pendingReadStyleImageIsNight = effect.isNight
-                                readStyleImagePickerForMode.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                                readStyleImagePickerForMode.launch("image/*")
                             }
                             is ReadBookEffect.OpenReadStyleImport -> {
                                 readStyleImportPicker.launch(
