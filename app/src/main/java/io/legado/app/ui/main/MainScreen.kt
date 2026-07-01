@@ -203,7 +203,6 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
-    var isBookshelfAtTop by remember { mutableStateOf(true) }
     fun requestBookshelfScrollToTop() {
         bookshelfScrollToTopRequest++
     }
@@ -212,8 +211,7 @@ fun MainScreen(
         if (
             destination == MainDestination.Bookshelf &&
             pagerState.currentPage == index &&
-            pagerState.targetPage == index &&
-            !isBookshelfAtTop
+            pagerState.targetPage == index
         ) {
             requestBookshelfScrollToTop()
             return
@@ -438,9 +436,6 @@ fun MainScreen(
 
                             MainDestination.Bookshelf -> BookshelfScreen(
                                 scrollToTopRequest = bookshelfScrollToTopRequest,
-                                onScrollStateChanged = { isAtTop ->
-                                    isBookshelfAtTop = isAtTop
-                                },
                                 onBookClick = { book ->
                                     context.startActivityForBook(book)
                                 },

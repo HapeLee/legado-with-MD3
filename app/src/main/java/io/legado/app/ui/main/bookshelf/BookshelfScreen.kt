@@ -158,7 +158,6 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     scrollToTopRequest: Long = 0L,
-    onScrollStateChanged: (isAtTop: Boolean) -> Unit = {},
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (book: BookShelfItem, sharedCoverKey: String?) -> Unit,
     onNavigateToSearch: (String) -> Unit,
@@ -294,13 +293,6 @@ fun BookshelfScreen(
     }
     val isShowingFolderRoot =
         bookGroupStyle == 2 && isInFolderRoot && !isUsingStandaloneSearchGroup
-    LaunchedEffect(folderGridState, isShowingFolderRoot) {
-        if (isShowingFolderRoot) {
-            snapshotFlow { !folderGridState.canScrollBackward }
-                .distinctUntilChanged()
-                .collect(onScrollStateChanged)
-        }
-    }
     LaunchedEffect(scrollToTopRequest, isShowingFolderRoot) {
         if (scrollToTopRequest > 0L && isShowingFolderRoot) {
             folderGridState.animateScrollToItem(0)
@@ -752,9 +744,6 @@ fun BookshelfScreen(
                 }
             ) { isRoot ->
                 if (uiState.groups.isEmpty() && !uiState.isSearch) {
-                    LaunchedEffect(Unit) {
-                        onScrollStateChanged(true)
-                    }
                     if (!uiState.isInitialLoading) {
                         EmptyMessage(
                             modifier = Modifier
@@ -846,7 +835,6 @@ fun BookshelfScreen(
                         BookshelfPage(
                             scrollToTopRequest = scrollToTopRequest,
                             gridState = standaloneSearchGridState,
-                            onScrollStateChanged = onScrollStateChanged,
                             paddingValues = paddingValues,
                             books = uiState.items,
                             uiState = uiState,
@@ -895,7 +883,6 @@ fun BookshelfScreen(
                                 BookshelfPage(
                                     scrollToTopRequest = scrollToTopRequest,
                                     gridState = groupGridStates.getValue(group.groupId),
-                                    onScrollStateChanged = onScrollStateChanged,
                                     paddingValues = paddingValues,
                                     books = books,
                                     uiState = uiState,
@@ -1247,7 +1234,6 @@ private data class BookshelfEditStickySummary(
 fun BookshelfPage(
     scrollToTopRequest: Long,
     gridState: LazyGridState,
-    onScrollStateChanged: (isAtTop: Boolean) -> Unit,
     paddingValues: PaddingValues,
     books: ImmutableList<BookUiItem>,
     uiState: BookshelfUiState,
@@ -1266,11 +1252,6 @@ fun BookshelfPage(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    LaunchedEffect(books.isEmpty(), isCurrentPage) {
-        if (books.isEmpty() && isCurrentPage) {
-            onScrollStateChanged(true)
-        }
-    }
     if (books.isEmpty()) {
         if (!isCurrentPage) return
         if (uiState.isSearch) {
@@ -1341,13 +1322,6 @@ fun BookshelfPage(
     LaunchedEffect(scrollToTopRequest, isCurrentPage) {
         if (scrollToTopRequest > 0L && isCurrentPage) {
             gridState.animateScrollToItem(0)
-        }
-    }
-    LaunchedEffect(gridState, isCurrentPage) {
-        if (isCurrentPage) {
-            snapshotFlow { !gridState.canScrollBackward }
-                .distinctUntilChanged()
-                .collect(onScrollStateChanged)
         }
     }
     val reorderableState = rememberReorderableLazyGridState(gridState) { from, to ->
