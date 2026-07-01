@@ -542,6 +542,7 @@ class SearchViewModel(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Throwable) {
+                wasSearching = false
                 _uiState.update { it.copy(isSearching = false) }
                 exception.localizedMessage
                     ?.takeIf { it.isNotBlank() }
@@ -571,6 +572,7 @@ class SearchViewModel(
             }
 
             is SearchRunEvent.Finished -> {
+                wasSearching = false
                 _uiState.update { state ->
                     val emptyAction = if (searchResultBooks.isEmpty() && event.isEmpty && !searchScope.isAll()) {
                         SearchEmptyScopeAction(
