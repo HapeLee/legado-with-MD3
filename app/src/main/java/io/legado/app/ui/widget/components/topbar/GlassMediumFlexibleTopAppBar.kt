@@ -16,6 +16,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -187,11 +188,14 @@ object GlassTopAppBarDefaults {
         val composeEngine = ThemeConfig.composeEngine
 
         return if (ThemeResolver.isMiuixEngine(composeEngine)) {
-            MiuixGlassScrollBehavior(MiuixScrollBehavior())
+            val miuixBehavior = MiuixScrollBehavior()
+            remember(miuixBehavior) { MiuixGlassScrollBehavior(miuixBehavior) }
         } else if (ThemeConfig.useFlexibleTopAppBar) {
-            M3GlassScrollBehavior(TopAppBarDefaults.exitUntilCollapsedScrollBehavior())
+            val m3Behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            remember(m3Behavior) { M3GlassScrollBehavior(m3Behavior) }
         } else {
-            M3GlassScrollBehavior(TopAppBarDefaults.pinnedScrollBehavior())
+            val m3Behavior = TopAppBarDefaults.pinnedScrollBehavior()
+            remember(m3Behavior) { M3GlassScrollBehavior(m3Behavior) }
         }
     }
 

@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
+import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
+import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.PullToRefresh as MiuixPullToRefresh
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState as miuixRememberPullToRefreshState
@@ -33,6 +36,7 @@ fun AppPullToRefresh(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     topPadding: Dp = 0.dp,
+    scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     content: @Composable () -> Unit,
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
@@ -58,6 +62,7 @@ fun AppPullToRefresh(
             modifier = modifier,
             contentPadding = PaddingValues(top = topPadding + 16.dp),
             pullToRefreshState = miuixRememberPullToRefreshState(),
+            topAppBarScrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
             refreshTexts = listOf(
                 stringResource(R.string.pull_to_refresh),
                 stringResource(R.string.release_to_refresh),
@@ -69,22 +74,31 @@ fun AppPullToRefresh(
         }
     } else {
         val state = rememberPullToRefreshState()
+        val actualEnabled = enabled && (
+                isRefreshing ||
+                state.distanceFraction > 0f ||
+                scrollBehavior == null ||
+                if (scrollBehavior is M3GlassScrollBehavior) {
+                    val appbarState = scrollBehavior.m3Behavior.state
+                    (appbarState.heightOffsetLimit == 0f || appbarState.heightOffset >= 0f) && appbarState.contentOffset >= 0f
+                } else {
+                    scrollBehavior.collapsedFraction <= 0f
+                }
+            )
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             modifier = modifier,
             state = state,
-            enabled = enabled,
+            enabled = actualEnabled,
             indicator = {
-                if (enabled) {
-                    PullToRefreshDefaults.LoadingIndicator(
-                        state = state,
-                        isRefreshing = isRefreshing,
-                        modifier = Modifier
-                            .padding(top = topPadding)
-                            .align(Alignment.TopCenter),
-                    )
-                }
+                PullToRefreshDefaults.LoadingIndicator(
+                    state = state,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier
+                        .padding(top = topPadding)
+                        .align(Alignment.TopCenter),
+                )
             }
         ) {
             content()

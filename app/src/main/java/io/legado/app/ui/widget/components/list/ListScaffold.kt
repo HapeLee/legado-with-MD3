@@ -75,10 +75,10 @@ fun <T> ListScaffold(
     },
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-
+    val scrollBehavior = scrollBehavior ?: GlassTopAppBarDefaults.defaultScrollBehavior()
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = {

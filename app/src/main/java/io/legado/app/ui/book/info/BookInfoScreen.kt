@@ -193,7 +193,8 @@ private fun BookInfoScreenContent(
                     modifier = Modifier.fillMaxSize(),
                     isRefreshing = state.isTocLoading,
                     onRefresh = { onIntent(BookInfoIntent.MenuAction(BookInfoMenuAction.Refresh)) },
-                    topPadding = paddingValues.calculateTopPadding()
+                    topPadding = paddingValues.calculateTopPadding(),
+                    scrollBehavior = scrollBehavior
                 ) {
                     LazyColumn(
                         state = listState,

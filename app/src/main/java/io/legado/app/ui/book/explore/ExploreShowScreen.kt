@@ -288,7 +288,8 @@ fun ExploreShowScreen(
             modifier = Modifier.fillMaxSize(),
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
-            topPadding = paddingValues.calculateTopPadding()
+            topPadding = paddingValues.calculateTopPadding(),
+            scrollBehavior = scrollBehavior
         ) {
             Crossfade(
                 targetState = isGridMode,
