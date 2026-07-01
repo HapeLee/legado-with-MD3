@@ -181,6 +181,7 @@ data class HighlightRuleConfigUiState(
     val editingRule: HighlightRule? = null,
     val showNewRule: Boolean = false,
     val deleteRule: HighlightRule? = null,
+    val importState: BaseImportUiState<HighlightRule> = BaseImportUiState.Idle,
 )
 
 @Stable
@@ -429,6 +430,21 @@ sealed interface ReadBookIntent {
     data class RequestDeleteHighlightRule(val rule: HighlightRule) : ReadBookIntent
     data object ConfirmDeleteHighlightRule : ReadBookIntent
     data object DismissDeleteHighlightRule : ReadBookIntent
+    data class MoveHighlightRule(val from: Int, val to: Int) : ReadBookIntent
+    data object SaveHighlightRuleOrder : ReadBookIntent
+    data class ImportHighlightRuleSource(val text: String) : ReadBookIntent
+    data object OpenHighlightRuleImportPicker : ReadBookIntent
+    data class HighlightRuleImportFileSelected(val uri: Uri) : ReadBookIntent
+    data object CancelHighlightRuleImport : ReadBookIntent
+    data class ToggleHighlightRuleImportSelection(val index: Int) : ReadBookIntent
+    data class ToggleHighlightRuleImportAll(val isSelected: Boolean) : ReadBookIntent
+    data class UpdateHighlightRuleImportItem(
+        val index: Int,
+        val rule: HighlightRule,
+    ) : ReadBookIntent
+    data object SaveImportedHighlightRules : ReadBookIntent
+    data object ExportHighlightRules : ReadBookIntent
+    data class ExportHighlightRulesToFile(val uri: Uri) : ReadBookIntent
 
     // Icon picker — file IO handled by ViewModel
     data class SaveMenuCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
@@ -645,6 +661,8 @@ sealed interface ReadBookEffect {
     data object OpenHttpTtsImportPicker : ReadBookEffect
     data object OpenHttpTtsExportPicker : ReadBookEffect
     data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
+    data object OpenHighlightRuleImportPicker : ReadBookEffect
+    data object OpenHighlightRuleExportPicker : ReadBookEffect
 
     // Day/night toggle
     data object ToggleDayNight : ReadBookEffect
@@ -1127,6 +1145,9 @@ sealed interface ConfigUpdate {
     }
     data class ReadBodyToLh(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class DefaultSourceChangeAll(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
     }
     data class TextFullJustify(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.ReloadContent)

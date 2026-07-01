@@ -122,6 +122,10 @@ fun ReadBookRouteScreen(
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
 
+    LaunchedEffect(state.menuVisible) {
+        controller.onMenuVisibilityChanged(state.menuVisible)
+    }
+
     // ── ActivityResult Launchers ──────────────────────────────────────
 
     val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
@@ -233,6 +237,18 @@ fun ReadBookRouteScreen(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let { viewModel.onIntent(ReadBookIntent.ExportHttpTtsToFile(it)) }
+    }
+
+    val importHighlightRulePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.HighlightRuleImportFileSelected(it)) }
+    }
+
+    val exportHighlightRulePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ExportHighlightRulesToFile(it)) }
     }
 
     val bookInfoLauncher = rememberLauncherForActivityResult(
@@ -406,6 +422,19 @@ fun ReadBookRouteScreen(
 
                             is ReadBookEffect.OpenHttpTtsExportPicker -> {
                                 exportHttpTtsPicker.launch("httpTTS.json")
+                            }
+
+                            is ReadBookEffect.OpenHighlightRuleImportPicker -> {
+                                importHighlightRulePicker.launch(
+                                    arrayOf(
+                                        "application/json",
+                                        "text/plain"
+                                    )
+                                )
+                            }
+
+                            is ReadBookEffect.OpenHighlightRuleExportPicker -> {
+                                exportHighlightRulePicker.launch("highlightRule.json")
                             }
 
                             // All other effects — delegate to bridge (View/Window/Activity operations)

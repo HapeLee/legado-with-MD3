@@ -1,22 +1,33 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.configNames
@@ -25,8 +36,15 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
+import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun HighlightRuleConfigSheet(
@@ -35,16 +53,105 @@ fun HighlightRuleConfigSheet(
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
+    var showImportSheet by remember { mutableStateOf(false) }
+    var showSourceInput by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val hapticFeedback = LocalHapticFeedback.current
+    var orderChanged by remember { mutableStateOf(false) }
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        orderChanged = true
+        onIntent(ReadBookIntent.MoveHighlightRule(from.index, to.index))
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+    }
+
+    LaunchedEffect(reorderableState.isAnyItemDragging) {
+        if (!reorderableState.isAnyItemDragging && orderChanged) {
+            orderChanged = false
+            onIntent(ReadBookIntent.SaveHighlightRuleOrder)
+        }
+    }
+
+    SourceInputDialog(
+        show = showSourceInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showSourceInput = false },
+        onConfirm = {
+            showSourceInput = false
+            onIntent(ReadBookIntent.ImportHighlightRuleSource(it))
+        },
+    )
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.highlight_rule_config),
+        onSelectSysFile = {
+            showImportSheet = false
+            onIntent(ReadBookIntent.OpenHighlightRuleImportPicker)
+        },
+        onManualInput = {
+            showImportSheet = false
+            showSourceInput = true
+        },
+        allowExtensions = arrayOf("json", "txt"),
+    )
+    BatchImportDialog(
+        title = stringResource(R.string.highlight_rule_config),
+        importState = state.importState,
+        onDismissRequest = { onIntent(ReadBookIntent.CancelHighlightRuleImport) },
+        onToggleItem = {
+            onIntent(ReadBookIntent.ToggleHighlightRuleImportSelection(it))
+        },
+        onToggleAll = {
+            onIntent(ReadBookIntent.ToggleHighlightRuleImportAll(it))
+        },
+        onUpdateItem = { index, rule ->
+            onIntent(ReadBookIntent.UpdateHighlightRuleImportItem(index, rule))
+        },
+        onConfirm = {
+            onIntent(ReadBookIntent.SaveImportedHighlightRules)
+        },
+        itemTitle = { it.name.ifBlank { it.displayPattern() } },
+        itemSubtitle = { it.pattern.takeIf(String::isNotBlank) },
+    )
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.highlight_rule_config),
-        endAction = {
+        startAction = {
             SmallTonalButton(
                 onClick = { onIntent(ReadBookIntent.AddHighlightRule) },
                 icon = Icons.Default.Add
             )
-        }
+        },
+        endAction = {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                SmallTonalButton(
+                    onClick = { expanded = true },
+                    icon = Icons.Default.MoreVert
+                )
+                RoundDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.import_action),
+                        onClick = {
+                            expanded = false
+                            showImportSheet = true
+                        },
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.export),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ExportHighlightRules)
+                        },
+                    )
+                }
+            }
+        },
     ) {
         Column(
             modifier = Modifier
@@ -52,26 +159,34 @@ fun HighlightRuleConfigSheet(
                 .padding(bottom = 16.dp),
         ) {
             LazyColumn(
+                state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                itemsIndexed(state.rules, key = { _, rule -> rule.id }) { _, rule ->
-                    HighlightRuleItem(
-                        rule = rule,
-                        onToggle = { enabled ->
-                            onIntent(ReadBookIntent.ToggleHighlightRule(rule, enabled))
-                        },
-                        onEditClick = { onIntent(ReadBookIntent.EditHighlightRule(rule)) },
-                        onDeleteClick = {
-                            onIntent(ReadBookIntent.RequestDeleteHighlightRule(rule))
-                        },
-                    )
+                items(state.rules, key = { it.id }) { rule ->
+                    ReorderableItem(reorderableState, key = rule.id) { isDragging ->
+                        HighlightRuleItem(
+                            rule = rule,
+                            onToggle = { enabled ->
+                                onIntent(ReadBookIntent.ToggleHighlightRule(rule, enabled))
+                            },
+                            onEditClick = {
+                                onIntent(ReadBookIntent.EditHighlightRule(rule))
+                            },
+                            onDeleteClick = {
+                                onIntent(ReadBookIntent.RequestDeleteHighlightRule(rule))
+                            },
+                            modifier = Modifier
+                                .longPressDraggableHandle()
+                                .zIndex(if (isDragging) 1f else 0f)
+                                .animateItem(),
+                        )
+                    }
                 }
             }
         }
     }
 
-    // Edit existing rule
     val editingRuleValue = state.editingRule
 
     HighlightRuleEditSheet(
@@ -83,7 +198,6 @@ fun HighlightRuleConfigSheet(
         },
     )
 
-    // Add new rule
     HighlightRuleEditSheet(
         show = show && state.showNewRule,
         rule = null,
@@ -93,7 +207,6 @@ fun HighlightRuleConfigSheet(
         },
     )
 
-    // Delete confirmation
     val deletingRule = state.deleteRule
     val sureDeleteText = stringResource(R.string.sure_delete)
     AppAlertDialog(
@@ -106,7 +219,6 @@ fun HighlightRuleConfigSheet(
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.DismissDeleteHighlightRule) },
     )
-
 }
 
 @Composable
@@ -115,12 +227,14 @@ private fun HighlightRuleItem(
     onToggle: (Boolean) -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val configLabel = rule.configName?.configNames()?.joinToString("、") ?: "全局"
     TinySettingItem(
         title = rule.name.ifBlank { rule.displayPattern() },
         description = "${rule.styleSummary()} · $configLabel",
         onClick = onEditClick,
+        modifier = modifier,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TinySwitch(

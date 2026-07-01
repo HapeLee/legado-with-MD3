@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 
 object MainNavigator {
 
-    private var backNavigationInProgress = false
+    var backNavigationInProgress = false
+        private set
     private val navigationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var backNavigationResetJob: Job? = null
 

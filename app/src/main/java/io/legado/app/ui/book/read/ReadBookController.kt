@@ -177,6 +177,16 @@ class ReadBookController(
         newRefs.readView.upBattery(activity.sysBattery)
     }
 
+    fun onMenuVisibilityChanged(visible: Boolean) {
+        val autoPager = refs?.readView?.autoPager ?: return
+        if (!autoPager.isRunning) return
+        if (visible) {
+            autoPager.pause()
+        } else {
+            autoPager.resume()
+        }
+    }
+
     fun onRouteInitialized() {
         applyReadBrightness()
         upScreenTimeOut()
@@ -261,7 +271,10 @@ class ReadBookController(
                 ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)
             )
 
-            isAutoPage -> viewModel.onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
+            isAutoPage -> {
+                refs?.readView?.autoPager?.pause()
+                viewModel.onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
+            }
             state.isShowingSearchResult -> viewModel.onIntent(ReadBookIntent.ShowSearchMenu)
             else -> viewModel.onIntent(ReadBookIntent.ShowMenu)
         }
@@ -833,6 +846,8 @@ class ReadBookController(
             is ReadBookEffect.OpenHttpTtsImportPicker,
             is ReadBookEffect.OpenHttpTtsExportPicker,
             is ReadBookEffect.OpenHttpTtsLogin,
+            is ReadBookEffect.OpenHighlightRuleImportPicker,
+            is ReadBookEffect.OpenHighlightRuleExportPicker,
             is ReadBookEffect.TtsCacheCleared,
             is ReadBookEffect.ExportJson,
             // DB query + bookmark effects — handled by ViewModel, ignored here
@@ -908,6 +923,9 @@ class ReadBookController(
             stopAutoPage()
         } else {
             refs?.readView?.autoPager?.start()
+            if (viewModel.uiState.value.menuVisible) {
+                refs?.readView?.autoPager?.pause()
+            }
             viewModel.setAutoPage(true)
             onScreenOffTimerStart?.invoke()
         }

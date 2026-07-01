@@ -125,6 +125,9 @@ fun MoreConfigSheet(
                 onAutoChangeSourceChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.AutoChangeSource(it)))
                 },
+                onDefaultSourceChangeAllChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DefaultSourceChangeAll(it)))
+                },
                 onAutoSuggestDayNightChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.AutoSuggestDayNight(it)))
                 },
@@ -301,6 +304,7 @@ private fun OtherSettings(
     onSliderVibratorChange: (Boolean) -> Unit,
     onSelectVibratorChange: (Boolean) -> Unit,
     onAutoChangeSourceChange: (Boolean) -> Unit,
+    onDefaultSourceChangeAllChange: (Boolean) -> Unit,
     onAutoSuggestDayNightChange: (Boolean) -> Unit,
     onSelectTextChange: (Boolean) -> Unit,
     onNoAnimScrollPageChange: (Boolean) -> Unit,
@@ -332,6 +336,12 @@ private fun OtherSettings(
         title = stringResource(R.string.auto_change_source),
         checked = preferences.autoChangeSource,
         onCheckedChange = onAutoChangeSourceChange,
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.read_change_all),
+        description = stringResource(R.string.read_change_all_s),
+        checked = preferences.defaultSourceChangeAll,
+        onCheckedChange = onDefaultSourceChangeAllChange,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.auto_switch_theme_reminder_title),

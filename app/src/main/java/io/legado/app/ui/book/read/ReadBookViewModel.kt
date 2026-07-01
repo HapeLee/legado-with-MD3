@@ -83,6 +83,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StringUtils
+import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
@@ -410,6 +411,7 @@ class ReadBookViewModel(
                             editingRule = null,
                             showNewRule = false,
                             deleteRule = null,
+                            importState = BaseImportUiState.Idle,
                         ),
                     )
                 } else {
@@ -657,6 +659,36 @@ class ReadBookViewModel(
             is ReadBookIntent.ConfirmDeleteHighlightRule -> deletePendingHighlightRule()
             is ReadBookIntent.DismissDeleteHighlightRule -> _uiState.update {
                 it.copy(highlightRuleConfig = it.highlightRuleConfig.copy(deleteRule = null))
+            }
+            is ReadBookIntent.MoveHighlightRule -> moveHighlightRule(intent.from, intent.to)
+            is ReadBookIntent.SaveHighlightRuleOrder -> {
+                saveHighlightRules(_uiState.value.highlightRuleConfig.rules)
+            }
+            is ReadBookIntent.ImportHighlightRuleSource -> {
+                importHighlightRuleSource(intent.text)
+            }
+            is ReadBookIntent.OpenHighlightRuleImportPicker -> {
+                _effects.tryEmit(ReadBookEffect.OpenHighlightRuleImportPicker)
+            }
+            is ReadBookIntent.HighlightRuleImportFileSelected -> {
+                importHighlightRuleFile(intent.uri)
+            }
+            is ReadBookIntent.CancelHighlightRuleImport -> cancelHighlightRuleImport()
+            is ReadBookIntent.ToggleHighlightRuleImportSelection -> {
+                toggleHighlightRuleImportSelection(intent.index)
+            }
+            is ReadBookIntent.ToggleHighlightRuleImportAll -> {
+                toggleHighlightRuleImportAll(intent.isSelected)
+            }
+            is ReadBookIntent.UpdateHighlightRuleImportItem -> {
+                updateHighlightRuleImportItem(intent.index, intent.rule)
+            }
+            is ReadBookIntent.SaveImportedHighlightRules -> saveImportedHighlightRules()
+            is ReadBookIntent.ExportHighlightRules -> {
+                _effects.tryEmit(ReadBookEffect.OpenHighlightRuleExportPicker)
+            }
+            is ReadBookIntent.ExportHighlightRulesToFile -> {
+                exportHighlightRules(intent.uri)
             }
             is ReadBookIntent.SaveMenuCustomIcon -> saveMenuCustomIcon(intent.id, intent.uri)
             is ReadBookIntent.SaveTitleBarCustomIcon -> saveTitleBarCustomIcon(intent.id, intent.uri)
@@ -3306,6 +3338,12 @@ class ReadBookViewModel(
                     readSettingsRepository.setReadBodyToLh(update.value)
                 }
             }
+            is ConfigUpdate.DefaultSourceChangeAll -> {
+                ReadConfig.defaultSourceChangeAll = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setDefaultSourceChangeAll(update.value)
+                }
+            }
             is ConfigUpdate.TextFullJustify -> {
                 ReadBookConfig.textFullJustify = update.value
                 viewModelScope.launch {
@@ -3526,6 +3564,223 @@ class ReadBookViewModel(
         }
     }
 
+    private fun moveHighlightRule(from: Int, to: Int) {
+        val rules = _uiState.value.highlightRuleConfig.rules
+        if (from !in rules.indices || to !in rules.indices) return
+        val reordered = rules.toMutableList().apply {
+            add(to, removeAt(from))
+        }
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    rules = reordered.toImmutableList()
+                )
+            )
+        }
+    }
+
+    private fun importHighlightRuleSource(text: String) {
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    importState = BaseImportUiState.Loading
+                )
+            )
+        }
+        execute {
+            val importedRules = importHighlightRuleSourceAwait(text.trim())
+                .map(highlightRuleRepository::sanitizeRule)
+            if (importedRules.isEmpty()) {
+                throw NoStackTraceException(context.getString(R.string.wrong_format))
+            }
+            val oldRules = highlightRuleRepository.load(ReadBookConfig.durConfig.name)
+                .associateBy { it.id }
+            BaseImportUiState.Success(
+                source = text,
+                items = importedRules.map { rule ->
+                    val oldRule = oldRules[rule.id]
+                    val status = when {
+                        oldRule == null -> ImportStatus.New
+                        oldRule != rule -> ImportStatus.Update
+                        else -> ImportStatus.Existing
+                    }
+                    ImportItemWrapper(
+                        data = rule,
+                        oldData = oldRule,
+                        status = status,
+                        isSelected = status != ImportStatus.Existing,
+                    )
+                }
+            )
+        }.onSuccess { importState ->
+            _uiState.update {
+                it.copy(
+                    highlightRuleConfig = it.highlightRuleConfig.copy(
+                        importState = importState
+                    )
+                )
+            }
+        }.onError {
+            AppLog.put("导入高亮规则失败\n${it.localizedMessage}", it, true)
+            _uiState.update { state ->
+                state.copy(
+                    highlightRuleConfig = state.highlightRuleConfig.copy(
+                        importState = BaseImportUiState.Error(
+                            it.localizedMessage ?: context.getString(R.string.wrong_format)
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun importHighlightRuleSourceAwait(text: String): List<HighlightRule> {
+        return when {
+            text.isJsonArray() -> GSON.fromJsonArray<HighlightRule>(text).getOrThrow()
+            text.isJsonObject() -> listOf(
+                GSON.fromJsonObject<HighlightRule>(text).getOrThrow()
+            )
+            text.isAbsUrl() -> {
+                val body = okHttpClient.newCallResponseBody {
+                    if (text.endsWith("#requestWithoutUA")) {
+                        url(text.substringBeforeLast("#requestWithoutUA"))
+                        header(AppConst.UA_NAME, "null")
+                    } else {
+                        url(text)
+                    }
+                }.decompressed().text()
+                importHighlightRuleSourceAwait(body)
+            }
+            else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
+        }
+    }
+
+    private fun importHighlightRuleFile(uri: Uri) {
+        execute<String?> {
+            context.contentResolver.openInputStream(uri)?.use {
+                it.reader().readText()
+            }
+        }.onSuccess { text ->
+            if (text.isNullOrBlank()) {
+                _uiState.update { state ->
+                    state.copy(
+                        highlightRuleConfig = state.highlightRuleConfig.copy(
+                            importState = BaseImportUiState.Error(
+                                context.getString(R.string.wrong_format)
+                            )
+                        )
+                    )
+                }
+            } else {
+                importHighlightRuleSource(text)
+            }
+        }.onError {
+            _uiState.update { state ->
+                state.copy(
+                    highlightRuleConfig = state.highlightRuleConfig.copy(
+                        importState = BaseImportUiState.Error(
+                            it.localizedMessage ?: context.getString(R.string.wrong_format)
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    private fun cancelHighlightRuleImport() {
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    importState = BaseImportUiState.Idle
+                )
+            )
+        }
+    }
+
+    private fun toggleHighlightRuleImportSelection(index: Int) {
+        val importState = _uiState.value.highlightRuleConfig.importState
+            as? BaseImportUiState.Success<HighlightRule> ?: return
+        if (index !in importState.items.indices) return
+        val items = importState.items.toMutableList()
+        val item = items[index]
+        items[index] = item.copy(isSelected = !item.isSelected)
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    importState = importState.copy(items = items)
+                )
+            )
+        }
+    }
+
+    private fun toggleHighlightRuleImportAll(isSelected: Boolean) {
+        val importState = _uiState.value.highlightRuleConfig.importState
+            as? BaseImportUiState.Success<HighlightRule> ?: return
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    importState = importState.copy(
+                        items = importState.items.map { item ->
+                            item.copy(isSelected = isSelected)
+                        }
+                    )
+                )
+            )
+        }
+    }
+
+    private fun updateHighlightRuleImportItem(index: Int, rule: HighlightRule) {
+        val importState = _uiState.value.highlightRuleConfig.importState
+            as? BaseImportUiState.Success<HighlightRule> ?: return
+        if (index !in importState.items.indices) return
+        val items = importState.items.toMutableList()
+        items[index] = items[index].copy(data = rule)
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    importState = importState.copy(
+                        items = items,
+                        version = importState.version + 1,
+                    )
+                )
+            )
+        }
+    }
+
+    private fun saveImportedHighlightRules() {
+        val state = _uiState.value.highlightRuleConfig
+        val importState = state.importState
+            as? BaseImportUiState.Success<HighlightRule> ?: return
+        val importedRules = importState.items
+            .filter { it.isSelected }
+            .map { highlightRuleRepository.sanitizeRule(it.data) }
+        if (importedRules.isEmpty()) return
+        val importedById = importedRules.associateBy { it.id }
+        val mergedRules = state.rules.map { importedById[it.id] ?: it } +
+                importedRules.filter { imported -> state.rules.none { it.id == imported.id } }
+        saveHighlightRules(mergedRules)
+        cancelHighlightRuleImport()
+    }
+
+    private fun exportHighlightRules(uri: Uri) {
+        val rules = _uiState.value.highlightRuleConfig.rules
+        execute {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                output.bufferedWriter().use { writer ->
+                    writer.write(GSON.toJson(rules))
+                }
+            } ?: throw NoStackTraceException(context.getString(R.string.error))
+        }.onSuccess {
+            _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.export_success)))
+        }.onError {
+            _effects.tryEmit(
+                ReadBookEffect.ShowToast(
+                    it.localizedMessage ?: context.getString(R.string.error)
+                )
+            )
+        }
+    }
+
     private fun loadHighlightRules() {
         val configName = ReadBookConfig.durConfig.name
         _uiState.update {
@@ -3535,6 +3790,7 @@ class ReadBookViewModel(
                     editingRule = null,
                     showNewRule = false,
                     deleteRule = null,
+                    importState = BaseImportUiState.Idle,
                 ),
             )
         }
