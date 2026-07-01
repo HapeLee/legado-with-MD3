@@ -94,6 +94,11 @@ class PageView(
             }
         }
         binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
+            val isImeVisible = windowInsets.isVisible(WindowInsetsCompat.Type.ime())
+            if (isImeVisible) {
+                return@setOnApplyWindowInsetsListenerCompat windowInsets
+            }
+            //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
             val navHeight = windowInsets.navigationBarHeight
             if (navHeight > 0) {
                 ReadBookConfig.lastNavigationBarHeight = navHeight
