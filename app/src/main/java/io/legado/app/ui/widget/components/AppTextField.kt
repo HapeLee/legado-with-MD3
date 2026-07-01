@@ -30,6 +30,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.InputField as MiuixSearchBarInputField
 import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
+import top.yukonga.miuix.kmp.basic.TextFieldDefaults as MiuixTextFieldDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +68,13 @@ fun AppTextField(
             modifier = modifier,
             enabled = enabled,
             readOnly = readOnly,
-            backgroundColor = if (backgroundColor != Color.Unspecified) backgroundColor else MiuixTheme.colorScheme.surfaceContainerHigh,
+            colors = MiuixTextFieldDefaults.textFieldColors(
+                backgroundColor = if (backgroundColor != Color.Unspecified) {
+                    backgroundColor
+                } else {
+                    MiuixTheme.colorScheme.surfaceContainerHigh
+                },
+            ),
             label = label ?: "",
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
@@ -166,7 +173,13 @@ fun AppTextField(
             modifier = modifier,
             enabled = enabled,
             readOnly = readOnly,
-            backgroundColor = if (backgroundColor != Color.Unspecified) backgroundColor else MiuixTheme.colorScheme.surfaceContainerHigh,
+            colors = MiuixTextFieldDefaults.textFieldColors(
+                backgroundColor = if (backgroundColor != Color.Unspecified) {
+                    backgroundColor
+                } else {
+                    MiuixTheme.colorScheme.surfaceContainerHigh
+                },
+            ),
             label = label ?: "",
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
