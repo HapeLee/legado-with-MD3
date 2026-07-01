@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +35,14 @@ fun AppLogSheet(
     show: Boolean,
     onDismissRequest: () -> Unit
 ) {
-    var logs by remember(show) { mutableStateOf(loadAllLogs()) }
+    var logs by remember { mutableStateOf(emptyList<LogEntry>()) }
     var showDetail by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(show) {
+        if (show) {
+            logs = loadAllLogs()
+        }
+    }
 
     AppModalBottomSheet(
         show = show,
