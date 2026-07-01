@@ -249,7 +249,7 @@ fun ReadBookRouteScreen(
 
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                if (!ReadConfig.autoSuggestDayNight) return@LifecycleEventObserver
+                if (!ReadConfig.autoSuggestDayNight || viewModel.isDayNightSwitchCoolingDown()) return@LifecycleEventObserver
                 if (lightSensor != null) {
                     listener = object : SensorEventListener {
                         override fun onSensorChanged(sensorEvent: SensorEvent?) {

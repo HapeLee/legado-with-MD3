@@ -4023,6 +4023,10 @@ class ReadBookViewModel(
     private var lastSwitchDayNightReminderTime: Long = 0L
     private val reminderQueue = ArrayDeque<ReminderUiState>()
 
+    fun isDayNightSwitchCoolingDown(): Boolean {
+        return System.currentTimeMillis() - lastSwitchDayNightReminderTime < REMINDER_COOLDOWN_MS
+    }
+
     private fun showReminder(reminder: ReminderUiState) {
         if (_uiState.value.activeReminder == null && reminderQueue.isEmpty()) {
             _uiState.update { it.copy(activeReminder = reminder) }
@@ -4038,9 +4042,7 @@ class ReadBookViewModel(
     }
 
     private fun checkSwitchDayNight(lux: Float) {
-        if (!ReadConfig.autoSuggestDayNight) return
-        if (System.currentTimeMillis() - lastSwitchDayNightReminderTime < REMINDER_COOLDOWN_MS) return
-
+        if (!ReadConfig.autoSuggestDayNight || isDayNightSwitchCoolingDown()) return
         val isNight = ReadConfig.isNightTheme
         val styleConfig = _uiState.value.styleConfig
         if (!isNight && lux <= DARK_LUX_THRESHOLD) {
