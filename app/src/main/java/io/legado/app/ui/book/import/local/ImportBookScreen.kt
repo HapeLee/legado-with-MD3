@@ -71,6 +71,7 @@ import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.startActivityForBook
@@ -98,9 +99,11 @@ private fun ImportBookContent(
     onDeleteSelection: () -> Unit,
     onItemClick: (ImportBook) -> Unit
 ) {
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     ListScaffold(
         title = state.pathNames.lastOrNull() ?: stringResource(R.string.local_book),
         state = state,
+        scrollBehavior = scrollBehavior,
         onBackClick = onBackClick,
         onSearchToggle = onSearchToggle,
         onSearchQueryChange = onSearchQueryChange,
@@ -197,7 +200,8 @@ private fun ImportBookContent(
                 .padding(paddingValues),
             isRefreshing = state.isLoading,
             onRefresh = onScanFolder,
-            topPadding = paddingValues.calculateTopPadding()
+            topPadding = paddingValues.calculateTopPadding(),
+            scrollBehavior = scrollBehavior
         ) {
             when {
                 state.items.isEmpty() && state.isLoading -> {

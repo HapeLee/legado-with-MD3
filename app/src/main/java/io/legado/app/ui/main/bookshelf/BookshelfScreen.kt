@@ -717,7 +717,8 @@ fun BookshelfScreen(
                 isRefreshing = uiState.isRefreshing,
                 onRefresh = { viewModel.refreshBooks(uiState.items) },
                 enabled = pullToRefreshEnabled,
-                topPadding = paddingValues.calculateTopPadding()
+                topPadding = paddingValues.calculateTopPadding(),
+                scrollBehavior = scrollBehavior
             ) {
                 folderTransition.AnimatedContent(
                 transitionSpec = {

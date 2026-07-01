@@ -87,6 +87,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.startActivityForBook
@@ -209,6 +210,8 @@ fun RemoteBookScreen(
         }
     }
 
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+
     LaunchedEffect(viewModel) {
         viewModel.dispatch(RemoteBookIntent.Initialize)
         viewModel.effects.collect { effect ->
@@ -252,6 +255,7 @@ fun RemoteBookScreen(
     ListScaffold(
         title = "远程书籍",
         state = uiState,
+        scrollBehavior = scrollBehavior,
         onBackClick = onBackClick,
         onSearchToggle = { viewModel.dispatch(RemoteBookIntent.SearchToggle(it)) },
         onSearchQueryChange = { viewModel.dispatch(RemoteBookIntent.SearchChange(it)) },
@@ -322,7 +326,8 @@ fun RemoteBookScreen(
                 .padding(paddingValues),
             isRefreshing = uiState.isLoading,
             onRefresh = { viewModel.dispatch(RemoteBookIntent.Refresh) },
-            topPadding = paddingValues.calculateTopPadding()
+            topPadding = paddingValues.calculateTopPadding(),
+            scrollBehavior = scrollBehavior
         ) {
             if (uiState.items.isEmpty()) {
                 if (uiState.isLoading) {

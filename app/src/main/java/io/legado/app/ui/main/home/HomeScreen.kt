@@ -452,6 +452,7 @@ fun HomeScreen(
             isRefreshing = homepageState.isRefreshing,
             onRefresh = onRefreshHomepage,
             modifier = Modifier.fillMaxSize(),
+            scrollBehavior = scrollBehavior,
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val dashboardScrollState = rememberScrollState()
