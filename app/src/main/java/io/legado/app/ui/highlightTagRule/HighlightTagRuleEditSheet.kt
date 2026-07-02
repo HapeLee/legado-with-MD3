@@ -54,15 +54,15 @@ fun HighlightTagRuleEditSheet(
     val scope = rememberCoroutineScope()
 
     val isNew = rule == null || rule.id == 0L
-    val initial = remember(rule) {
+    val initial = remember(show, rule) {
         rule ?: HighlightTagRule()
     }
 
-    var title by remember(initial) { mutableStateOf(initial.title) }
-    var pattern by remember(initial) { mutableStateOf(initial.pattern) }
-    var enabled by remember(initial) { mutableStateOf(initial.enabled) }
+    var title by remember(show, rule) { mutableStateOf(initial.title) }
+    var pattern by remember(show, rule) { mutableStateOf(initial.pattern) }
+    var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
 
-    var showMenu by remember { mutableStateOf(false) }
+    var showMenu by remember(show, rule) { mutableStateOf(false) }
 
     fun getCurrentRule(): HighlightTagRule {
         return initial.copy(

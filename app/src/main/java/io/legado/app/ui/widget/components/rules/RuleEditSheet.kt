@@ -62,12 +62,12 @@ fun <T> RuleEditSheet(
 ) {
     val scope = rememberCoroutineScope()
 
-    val initialFields = remember(rule) { toFields(rule) }
-    var name by remember(initialFields) { mutableStateOf(initialFields.name) }
-    var rule1 by remember(initialFields) { mutableStateOf(initialFields.rule1) }
-    var rule2 by remember(initialFields) { mutableStateOf(initialFields.rule2) }
+    val initialFields = remember(show, rule) { toFields(rule) }
+    var name by remember(show, rule) { mutableStateOf(initialFields.name) }
+    var rule1 by remember(show, rule) { mutableStateOf(initialFields.rule1) }
+    var rule2 by remember(show, rule) { mutableStateOf(initialFields.rule2) }
 
-    var showMenu by remember { mutableStateOf(false) }
+    var showMenu by remember(show, rule) { mutableStateOf(false) }
 
     fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
 

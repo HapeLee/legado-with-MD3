@@ -49,13 +49,13 @@ fun TagGroupRuleEditSheet(
     val scope = rememberCoroutineScope()
 
     val isNew = rule == null || rule.id == 0L
-    val initial = remember(rule) {
+    val initial = remember(show, rule) {
         rule ?: TagGroupRule()
     }
 
-    var pattern by remember(initial) { mutableStateOf(initial.pattern) }
-    var groupName by remember(initial) { mutableStateOf(initial.groupName) }
-    var showMenu by remember { mutableStateOf(false) }
+    var pattern by remember(show, rule) { mutableStateOf(initial.pattern) }
+    var groupName by remember(show, rule) { mutableStateOf(initial.groupName) }
+    var showMenu by remember(show, rule) { mutableStateOf(false) }
 
     fun getCurrentRule(): TagGroupRule {
         return initial.copy(
