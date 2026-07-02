@@ -11,4 +11,5 @@ interface ExploreBooksGateway {
         page: Int,
         key: String? = null
     ): List<SearchBook>
+    suspend fun saveSearchBooks(books: List<SearchBook>)
 }

@@ -85,6 +85,12 @@ class ExploreRepositoryImpl(
         return WebBook.exploreBookSuspend(bookSource, url, page, key = key, isSearch = key != null)
     }
 
+    override suspend fun saveSearchBooks(books: List<SearchBook>) {
+        if (books.isNotEmpty()) {
+            appDb.searchBookDao.insert(books)
+        }
+    }
+
     override suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {
         val source = appDb.bookSourceDao.getBookSource(sourceUrl)
         return@withContext source?.exploreKinds() ?: emptyList()
