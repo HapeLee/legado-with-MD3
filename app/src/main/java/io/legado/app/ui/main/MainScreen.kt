@@ -436,6 +436,11 @@ fun MainScreen(
 
                             MainDestination.Bookshelf -> BookshelfScreen(
                                 scrollToTopRequest = bookshelfScrollToTopRequest,
+                                onScrollToTopRequestHandled = { handledRequest ->
+                                    if (bookshelfScrollToTopRequest == handledRequest) {
+                                        bookshelfScrollToTopRequest = 0L
+                                    }
+                                },
                                 onBookClick = { book ->
                                     context.startActivityForBook(book)
                                 },
