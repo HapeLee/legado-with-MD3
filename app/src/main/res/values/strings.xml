@@ -1471,6 +1471,8 @@
     <string name="theme_manage_export_failed">Could not export theme</string>
     <string name="theme_manage_import_success">Theme imported. Some changes require a restart.</string>
     <string name="theme_manage_import_failed">Could not import theme</string>
+    <string name="theme_manage_save_failed">Could not save theme</string>
+    <string name="theme_manage_apply_failed">Could not apply theme</string>
     <string name="theme_manage_save_current">Save Current Theme</string>
     <string name="theme_manage_save_current_summary">Save the current appearance settings as a theme</string>
     <string name="theme_manage_export_current">Export Current Theme</string>

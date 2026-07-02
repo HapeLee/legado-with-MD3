@@ -72,6 +72,13 @@ object ThemeImportExport {
         return saveThemeData(name, data)
     }
 
+    fun uniqueSavedThemeName(name: String): String {
+        if (_savedThemes.none { it.name == name }) return name
+        var index = 2
+        while (_savedThemes.any { it.name == "$name $index" }) index++
+        return "$name $index"
+    }
+
     private fun saveThemeData(name: String, data: ThemeExportData): SavedTheme {
         val file = File(baseDir, "$name.json")
         baseDir.mkdirs()
@@ -80,19 +87,6 @@ object ThemeImportExport {
         _savedThemes.removeAll { it.name == name }
         _savedThemes.add(theme)
         return theme
-    }
-
-    /**
-     * 应用已保存的主题
-     */
-    fun applySavedTheme(theme: SavedTheme): Boolean {
-        return try {
-            applyToThemeConfig(theme.data)
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
     }
 
     /**
@@ -305,7 +299,10 @@ object ThemeImportExport {
     /**
      * 将导出数据应用到当前配置
      */
-    fun applyToThemeConfig(data: ThemeExportData) {
+    internal fun applyToThemeConfig(
+        data: ThemeExportData,
+        applyEmbeddedCoverAssets: Boolean = true,
+    ): AppliedThemeAssets {
         // 基础主题设置
         ThemeConfig.appTheme = data.appTheme
         ThemeConfig.themeMode = data.themeMode
@@ -416,16 +413,31 @@ object ThemeImportExport {
         CoverConfig.coverInfoOrientation = data.coverInfoOrientation
 
         // 应用嵌入的资源
-        data.assets?.let { assets ->
-            applyAssets(assets)
-        }
+        val embeddedAssets = data.assets?.let { assets ->
+            applyAssets(
+                assets = assets,
+                applyCoverAssets = applyEmbeddedCoverAssets,
+            )
+        } ?: AppliedThemeAssets()
+        return AppliedThemeAssets(
+            lightCoverPaths = embeddedAssets.lightCoverPaths.ifEmpty {
+                data.coverDefaultImage.toCoverPaths()
+            },
+            darkCoverPaths = embeddedAssets.darkCoverPaths.ifEmpty {
+                data.coverDefaultImageDark.toCoverPaths()
+            },
+        )
     }
 
-    private fun applyAssets(assets: Map<String, String>) {
+    private fun applyAssets(
+        assets: Map<String, String>,
+        applyCoverAssets: Boolean,
+    ): AppliedThemeAssets {
         val coverPaths = mutableMapOf<String, MutableList<String>>()
 
         assets.forEach { (key, base64) ->
             if (base64.isBlank()) return@forEach
+            if (!applyCoverAssets && key.startsWith("coverDefaultImage")) return@forEach
             try {
                 val bytes = EncoderUtils.base64DecodeToByteArray(base64)
                 val destFile = when {
@@ -493,6 +505,10 @@ object ThemeImportExport {
         coverPaths["coverDefaultImageDark"]?.let { paths ->
             CoverConfig.defaultCoverDark = paths.joinToString(",")
         }
+        return AppliedThemeAssets(
+            lightCoverPaths = coverPaths["coverDefaultImage"].orEmpty(),
+            darkCoverPaths = coverPaths["coverDefaultImageDark"].orEmpty(),
+        )
     }
 
     /**
@@ -507,15 +523,21 @@ object ThemeImportExport {
      * 从JSON字符串导入主题
      */
     fun importFromJson(json: String): Boolean {
+        return importFromJsonWithAssets(json) != null
+    }
+
+    internal fun importFromJsonWithAssets(json: String): AppliedThemeAssets? {
         return try {
-            val data = parseThemeData(json) ?: return false
+            val data = parseThemeData(json) ?: return null
             applyToThemeConfig(data)
-            true
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            null
         }
     }
+
+    private fun String.toCoverPaths(): List<String> =
+        split(",").map(String::trim).filter(String::isNotEmpty)
 
     private fun parseThemeData(json: String): ThemeExportData? {
         val root = JsonParser.parseString(json).asJsonObject
@@ -761,6 +783,7 @@ data class ThemeExportData(
     val bgImageBlurring: Int = 0,
     val bgImageNBlurring: Int = 0,
     val appFontPath: String? = null,
+    val selectedCoverAlbumId: String? = null,
 
     // 封面配置 (CoverConfig)
     val coverLoadOnlyWifi: Boolean = false,
@@ -791,4 +814,9 @@ data class ThemeExportData(
 data class SavedTheme(
     val name: String,
     val data: ThemeExportData
+)
+
+internal data class AppliedThemeAssets(
+    val lightCoverPaths: List<String> = emptyList(),
+    val darkCoverPaths: List<String> = emptyList(),
 )

@@ -322,6 +322,11 @@ fun ThemeConfigScreen(
                             }
                         )
                     }
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_pack),
+                        description = stringResource(R.string.theme_pack_s),
+                        onClick = onNavigateToThemeManage
+                    )
                 }
 
                 SplicedColumnGroup {
@@ -331,7 +336,7 @@ fun ThemeConfigScreen(
                     )
                     if (selectedTheme == "12" && (!isMiuixEngine || useMiuixMonet)) {
                         ClickableSettingItem(
-                            title = stringResource(R.string.custom_theme),
+                            title = stringResource(R.string.custom_theme_colors),
                             onClick = onNavigateToCustomTheme
                         )
                     }
@@ -803,16 +808,6 @@ fun ThemeConfigScreen(
                 }
             }
 
-            // Theme management
-            item {
-                SplicedColumnGroup(title = stringResource(R.string.theme_pack)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_pack),
-                        description = stringResource(R.string.theme_pack_s),
-                        onClick = onNavigateToThemeManage
-                    )
-                }
-            }
         }
     }
 

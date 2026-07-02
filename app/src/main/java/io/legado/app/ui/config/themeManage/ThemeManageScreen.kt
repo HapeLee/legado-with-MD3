@@ -115,6 +115,14 @@ fun ThemeManageScreen(
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
+                ThemeManageEffect.SavedThemesChanged -> {
+                    savedThemesVersion++
+                }
+
+                ThemeManageEffect.RestartRequired -> {
+                    showRestartDialog = true
+                }
+
                 is ThemeManageEffect.ShowResult -> {
                     val message = buildString {
                         append(context.getString(effect.messageRes))
@@ -124,6 +132,9 @@ fun ThemeManageScreen(
                         }
                     }
                     context.toastOnUi(message)
+                    if (effect.savedThemesChanged) {
+                        savedThemesVersion++
+                    }
                     if (effect.restartRequired) {
                         showRestartDialog = true
                     }
@@ -249,8 +260,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.theme_manage_save),
         onConfirm = {
             if (newThemeName.isNotBlank()) {
-                ThemeImportExport.saveCurrentAsTheme(newThemeName)
-                savedThemesVersion++
+                viewModel.onIntent(ThemeManageIntent.SaveTheme(newThemeName))
                 showSaveDialog = false
             }
         },
@@ -275,8 +285,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.theme_manage_apply),
         onConfirm = {
             applyTarget?.let { theme ->
-                ThemeImportExport.applySavedTheme(theme)
-                showRestartDialog = true
+                viewModel.onIntent(ThemeManageIntent.ApplySavedTheme(theme))
             }
             applyTarget = null
         },
@@ -310,11 +319,13 @@ fun ThemeManageScreen(
         themeName = editTarget?.name ?: "",
         onDismissRequest = { editTarget = null },
         onSave = { newName, newData ->
-            editTarget?.let { old ->
-                ThemeImportExport.deleteSavedTheme(old)
-            }
-            ThemeImportExport.saveCurrentAsTheme(newName, newData)
-            savedThemesVersion++
+            viewModel.onIntent(
+                ThemeManageIntent.SaveTheme(
+                    name = newName,
+                    data = newData,
+                    replacedTheme = editTarget,
+                )
+            )
             editTarget = null
         }
     )

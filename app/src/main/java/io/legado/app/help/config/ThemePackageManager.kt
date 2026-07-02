@@ -2,14 +2,13 @@ package io.legado.app.help.config
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.annotation.Keep
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.domain.model.CoverAlbumImageInput
 import io.legado.app.domain.usecase.CoverAlbumUseCase
-import io.legado.app.ui.config.coverConfig.CoverConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +59,10 @@ class ThemePackageManager(
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 ZipOutputStream(BufferedOutputStream(output)).use { zip ->
                     val assetEntries = exportAssets(zip, rawConfig)
-                    val coverData = exportCoverAlbums(zip)
+                    val coverData = exportCoverAlbums(
+                        zip = zip,
+                        preferredAlbumId = rawConfig.selectedCoverAlbumId,
+                    )
                     val manifest = ThemePackageManifest(
                         formatVersion = FORMAT_VERSION,
                         name = themeName,
@@ -126,6 +128,10 @@ class ThemePackageManager(
                     )
                 )
                 coverAlbumUseCase.selectAlbum(selectedAlbumId)
+                saveImportedTheme(
+                    name = importedThemeName(uri, manifest.name),
+                    selectedCoverAlbumId = selectedAlbumId,
+                )
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -145,12 +151,60 @@ class ThemePackageManager(
             val json = context.contentResolver.openInputStream(uri)?.use {
                 it.bufferedReader().readText()
             } ?: error("无法读取旧主题配置")
-            check(ThemeImportExport.importFromJson(json)) {
-                "旧主题配置格式无效或字段已被混淆"
-            }
-            importLegacyCoverAlbums()
+            val appliedAssets = ThemeImportExport.importFromJsonWithAssets(json)
+                ?: error("旧主题配置格式无效或字段已被混淆")
+            val name = importedThemeName(uri)
+            val selectedCoverAlbumId = importLegacyCoverAlbums(
+                albumName = name,
+                appliedAssets = appliedAssets,
+            )
+            saveImportedTheme(
+                name = name,
+                selectedCoverAlbumId = selectedCoverAlbumId,
+            )
         }
     }
+
+    fun saveTheme(
+        name: String,
+        data: ThemeExportData = ThemeImportExport.exportFromCurrent(),
+    ): SavedTheme {
+        val selectedCoverAlbumId = data.selectedCoverAlbumId
+            ?: coverAlbumUseCase.selection.value.albumId
+        return ThemeImportExport.saveCurrentAsTheme(
+            name = name,
+            data = data.copy(selectedCoverAlbumId = selectedCoverAlbumId),
+        )
+    }
+
+    suspend fun applySavedTheme(theme: SavedTheme): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runSuspendCatching {
+                val savedAlbumId = theme.data.selectedCoverAlbumId
+                    ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
+                val appliedAssets = ThemeImportExport.applyToThemeConfig(
+                    data = theme.data,
+                    applyEmbeddedCoverAssets = savedAlbumId == null,
+                )
+                val selectedCoverAlbumId = if (savedAlbumId != null) {
+                    coverAlbumUseCase.selectAlbum(savedAlbumId)
+                    savedAlbumId
+                } else {
+                    importLegacyCoverAlbums(
+                        albumName = theme.name,
+                        appliedAssets = appliedAssets,
+                    )
+                }
+                if (selectedCoverAlbumId != theme.data.selectedCoverAlbumId) {
+                    ThemeImportExport.saveCurrentAsTheme(
+                        name = theme.name,
+                        data = theme.data.copy(
+                            selectedCoverAlbumId = selectedCoverAlbumId,
+                        ),
+                    )
+                }
+            }
+        }
 
     private fun exportAssets(
         zip: ZipOutputStream,
@@ -183,10 +237,15 @@ class ThemePackageManager(
         return result
     }
 
-    private fun exportCoverAlbums(zip: ZipOutputStream): ExportedCoverData {
-        val selection = coverAlbumUseCase.selection.value
+    private fun exportCoverAlbums(
+        zip: ZipOutputStream,
+        preferredAlbumId: String?,
+    ): ExportedCoverData {
         val albumsById = coverAlbumUseCase.albums.value.associateBy { it.id }
-        val selectedIds = listOfNotNull(selection.albumId)
+        val selectedAlbumId = preferredAlbumId
+            ?.takeIf(albumsById::containsKey)
+            ?: coverAlbumUseCase.selection.value.albumId
+        val selectedIds = listOfNotNull(selectedAlbumId)
         val refById = selectedIds.associateWith { "album_0" }
         val exportedAlbums = selectedIds.mapNotNull { albumId ->
             val album = albumsById[albumId] ?: return@mapNotNull null
@@ -217,7 +276,7 @@ class ThemePackageManager(
         return ExportedCoverData(
             albums = exportedAlbums,
             selection = ThemePackageCoverSelection(
-                albumRef = selection.albumId?.let(refById::get),
+                albumRef = selectedAlbumId?.let(refById::get),
             ),
         )
     }
@@ -289,15 +348,18 @@ class ThemePackageManager(
         return result
     }
 
-    private suspend fun importLegacyCoverAlbums() {
+    private suspend fun importLegacyCoverAlbums(
+        albumName: String,
+        appliedAssets: AppliedThemeAssets,
+    ): String? {
         val importedIds = mutableListOf<String>()
         try {
-            val lightFiles = CoverConfig.defaultCover.toExistingFiles()
-            val darkFiles = CoverConfig.defaultCoverDark.toExistingFiles()
+            val lightFiles = appliedAssets.lightCoverPaths.toExistingFiles()
+            val darkFiles = appliedAssets.darkCoverPaths.toExistingFiles()
             val albumId = if (lightFiles.isNotEmpty() || darkFiles.isNotEmpty()) {
                 val existingNames = coverAlbumUseCase.albums.value.mapTo(mutableSetOf()) { it.name }
                 val name = uniqueImportedAlbumName(
-                    context.getString(R.string.default_cover),
+                    albumName,
                     existingNames,
                 )
                 coverAlbumUseCase.importAlbum(
@@ -311,6 +373,7 @@ class ThemePackageManager(
                 null
             }
             coverAlbumUseCase.selectAlbum(albumId)
+            return albumId
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -319,6 +382,43 @@ class ThemePackageManager(
             }
             throw error
         }
+    }
+
+    private fun saveImportedTheme(
+        name: String,
+        selectedCoverAlbumId: String?,
+    ) {
+        saveTheme(
+            name = ThemeImportExport.uniqueSavedThemeName(name),
+            data = ThemeImportExport.exportFromCurrent().copy(
+                selectedCoverAlbumId = selectedCoverAlbumId,
+            ),
+        )
+    }
+
+    private fun importedThemeName(
+        uri: Uri,
+        packageName: String? = null,
+    ): String {
+        val displayName = context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+        val rawName = packageName
+            ?.takeIf(String::isNotBlank)
+            ?: displayName?.substringBeforeLast('.')
+            ?: uri.lastPathSegment?.substringBeforeLast('.')
+            ?: context.getString(R.string.import_theme)
+        return rawName
+            .replace(Regex("""[\\/:*?"<>|]"""), "_")
+            .trim()
+            .trim('.')
+            .ifBlank { context.getString(R.string.import_theme) }
     }
 
     private fun extractPackage(uri: Uri, root: File) {
@@ -410,6 +510,7 @@ class ThemePackageManager(
         appFontPath = null,
         coverDefaultImage = "",
         coverDefaultImageDark = "",
+        selectedCoverAlbumId = null,
         assets = null,
     )
 
@@ -456,9 +557,8 @@ class ThemePackageManager(
         return entryBytes
     }
 
-    private fun String.toExistingFiles(): List<File> =
-        split(",")
-            .map(String::trim)
+    private fun List<String>.toExistingFiles(): List<File> =
+        map(String::trim)
             .filter(String::isNotEmpty)
             .map(::File)
             .filter(File::isFile)
