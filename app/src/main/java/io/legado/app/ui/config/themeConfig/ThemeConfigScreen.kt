@@ -444,6 +444,22 @@ fun ThemeConfigScreen(
                     )
                 }
 
+                SplicedColumnGroup(title = stringResource(R.string.book_info_page)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.book_info_follow_cover_color),
+                        description = stringResource(R.string.book_info_follow_cover_color_summary),
+                        checked = ThemeConfig.bookInfoFollowCoverColor,
+                        onCheckedChange = { ThemeConfig.bookInfoFollowCoverColor = it }
+                    )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.book_info_background_blur),
+                        selectedValue = ThemeConfig.bookInfoBackgroundBlur,
+                        displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
+                        entryValues = stringArrayResource(R.array.book_info_background_blur_values),
+                        onValueChange = { ThemeConfig.bookInfoBackgroundBlur = it }
+                    )
+                }
+
                 SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {
                     var eyeProtectionEnabled by remember {
                         mutableStateOf(ThemeConfig.eyeProtectionEnabled)

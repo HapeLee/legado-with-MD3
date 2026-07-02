@@ -1473,6 +1473,13 @@
     <string name="theme_manage_page_turn_animation">翻页动画</string>
     <string name="theme_manage_label_visibility">标签显示</string>
     <string name="theme_manage_section_blur">模糊效果</string>
+    <string name="book_info_page">书籍详情页</string>
+    <string name="book_info_follow_cover_color">界面颜色跟随封面取色</string>
+    <string name="book_info_follow_cover_color_summary">从书籍封面提取详情页配色</string>
+    <string name="book_info_background_blur">背景模糊</string>
+    <string name="book_info_background_blur_off">关闭</string>
+    <string name="book_info_background_blur_on">开启</string>
+    <string name="book_info_background_blur_off_for_default">显示默认封面时关闭</string>
     <string name="theme_manage_top_bar_blur_radius">顶栏模糊半径</string>
     <string name="theme_manage_bottom_bar_blur_radius">底栏模糊半径</string>
     <string name="theme_manage_top_bar_blur_opacity">顶栏模糊不透明度</string>

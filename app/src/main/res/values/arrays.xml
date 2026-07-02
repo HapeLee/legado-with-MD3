@@ -329,6 +329,12 @@
 		<item>Unlabeled</item>
 	</string-array>
 
+	<string-array name="book_info_background_blur_entries">
+		<item>@string/book_info_background_blur_off</item>
+		<item>@string/book_info_background_blur_on</item>
+		<item>@string/book_info_background_blur_off_for_default</item>
+	</string-array>
+
 	<string-array name="customContrast">
 		<item>Default</item>
 		<item>High</item>

@@ -2132,6 +2132,13 @@
     <string name="theme_manage_secondary_text_color">副文字色</string>
     <string name="theme_manage_section_basic">基本設定</string>
     <string name="theme_manage_section_blur">模糊效果</string>
+    <string name="book_info_page">書籍詳情頁</string>
+    <string name="book_info_follow_cover_color">介面顏色跟隨封面取色</string>
+    <string name="book_info_follow_cover_color_summary">從書籍封面擷取詳情頁配色</string>
+    <string name="book_info_background_blur">背景模糊</string>
+    <string name="book_info_background_blur_off">關閉</string>
+    <string name="book_info_background_blur_on">開啟</string>
+    <string name="book_info_background_blur_off_for_default">顯示預設封面時關閉</string>
     <string name="theme_manage_section_colors">顏色</string>
     <string name="theme_manage_section_container">容器</string>
     <string name="theme_manage_section_layout">介面佈局</string>

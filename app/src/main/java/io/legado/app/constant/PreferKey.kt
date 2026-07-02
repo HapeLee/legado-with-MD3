@@ -204,6 +204,8 @@ object PreferKey {
     const val bottomBarBlurAlpha = "bottomBarBlurAlpha"
     const val bottomBarLensRadius = "bottomBarLensRadius"
     const val useFlexibleTopAppBar = "useFlexibleTopAppBar"
+    const val bookInfoFollowCoverColor = "bookInfoFollowCoverColor"
+    const val bookInfoBackgroundBlur = "bookInfoBackgroundBlur"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val enableDeepPersonalization = "enableDeepPersonalization"

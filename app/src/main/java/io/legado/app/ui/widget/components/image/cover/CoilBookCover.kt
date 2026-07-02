@@ -50,7 +50,12 @@ import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
 private const val SharedCoverRadiusCacheMaxSize = 256
+private const val DefaultCoverPath = "use_default_cover"
 private val sharedCoverRadiusCache = mutableStateMapOf<String, Dp>()
+
+internal fun usesDefaultBookCover(path: String?): Boolean {
+    return CoverConfig.useDefaultCover || path.isNullOrBlank() || path == DefaultCoverPath
+}
 
 @Composable
 fun BookCoverImage(
@@ -66,13 +71,16 @@ fun BookCoverImage(
     onLoadFinish: (() -> Unit)? = null,
     onSuccess: (() -> Unit)? = null,
     onError: (() -> Unit)? = null,
+    onDefaultCoverVisibilityChange: ((Boolean) -> Unit)? = null,
     sharedCoverKey: String? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
 
-    val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
+    val useDefault = (!ignoreUseDefaultCover && CoverConfig.useDefaultCover) ||
+            path.isNullOrBlank() ||
+            path == DefaultCoverPath
     val finalPath = if (useDefault) null else path
     val defaultCoverPaths =
         if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
@@ -86,11 +94,25 @@ fun BookCoverImage(
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
     var isOnlineCoverLoaded by remember(finalPath) { mutableStateOf(false) }
+    var onlineCoverLoadFailed by remember(finalPath) { mutableStateOf(false) }
 
     LaunchedEffect(finalPath) {
         if (finalPath == null) {
             isOnlineCoverLoaded = false
+            onlineCoverLoadFailed = false
         }
+    }
+
+    val showDefaultIcon = !hasCustomDefault &&
+        (
+            finalPath == null ||
+                onlineCoverLoadFailed ||
+                (showLoadingPlaceholder && !isOnlineCoverLoaded)
+        )
+    val isDefaultCoverVisible =
+        (hasCustomDefault && !isOnlineCoverLoaded) || showDefaultIcon
+    LaunchedEffect(isDefaultCoverVisible) {
+        onDefaultCoverVisibilityChange?.invoke(isDefaultCoverVisible)
     }
 
     Box(modifier = modifier) {
@@ -111,6 +133,17 @@ fun BookCoverImage(
             )
         }
 
+        if (showDefaultIcon) {
+            Icon(
+                Icons.Default.Book,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .fillMaxSize(0.35f)
+                    .align(Alignment.Center)
+            )
+        }
+
         if (finalPath != null) {
             AsyncImage(
                 model = buildCoverImageRequest(
@@ -128,11 +161,13 @@ fun BookCoverImage(
                 modifier = Modifier.fillMaxSize(),
                 onSuccess = {
                     isOnlineCoverLoaded = true
+                    onlineCoverLoadFailed = false
                     onSuccess?.invoke()
                     onLoadFinish?.invoke()
                 },
                 onError = {
                     isOnlineCoverLoaded = false
+                    onlineCoverLoadFailed = true
                     onError?.invoke()
                     onLoadFinish?.invoke()
                 }
@@ -164,7 +199,9 @@ fun CoilBookCover(
 ) {
     val isNight = LegadoTheme.isDark
 
-    val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
+    val useDefault = (!ignoreUseDefaultCover && CoverConfig.useDefaultCover) ||
+            path.isNullOrBlank() ||
+            path == DefaultCoverPath
     val finalPath = if (useDefault) null else path
     val defaultCoverPaths =
         if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
@@ -178,10 +215,12 @@ fun CoilBookCover(
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
     var isOnlineCoverLoaded by remember(finalPath) { mutableStateOf(false) }
+    var onlineCoverLoadFailed by remember(finalPath) { mutableStateOf(false) }
 
     LaunchedEffect(finalPath) {
         if (finalPath == null) {
             isOnlineCoverLoaded = false
+            onlineCoverLoadFailed = false
         }
     }
 
@@ -229,26 +268,22 @@ fun CoilBookCover(
             showLoadingPlaceholder = showLoadingPlaceholder,
             onSuccess = {
                 isOnlineCoverLoaded = true
+                onlineCoverLoadFailed = false
                 onLoadFinish?.invoke()
             },
             onError = {
                 isOnlineCoverLoaded = false
+                onlineCoverLoadFailed = true
                 onLoadFinish?.invoke()
             },
             sharedCoverKey = sharedCoverKey
         )
 
-        if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
-            if (!hasCustomDefault) {
-                Icon(
-                    Icons.Default.Book,
-                    contentDescription = null,
-                    tint = LegadoTheme.colorScheme.secondary,
-                    modifier = Modifier
-                        .fillMaxSize(0.35f)
-                        .align(Alignment.Center)
-                )
-            }
+        if (
+            finalPath == null ||
+            onlineCoverLoadFailed ||
+            (showLoadingPlaceholder && !isOnlineCoverLoaded)
+        ) {
             CoverTextOverlay(
                 name = name,
                 author = author,

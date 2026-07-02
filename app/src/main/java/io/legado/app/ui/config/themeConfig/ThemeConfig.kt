@@ -35,6 +35,10 @@ object ThemeConfig {
 
     private const val CUSTOM_APP_THEME = "12"
 
+    const val BOOK_INFO_BACKGROUND_BLUR_OFF = "off"
+    const val BOOK_INFO_BACKGROUND_BLUR_ON = "on"
+    const val BOOK_INFO_BACKGROUND_BLUR_OFF_FOR_DEFAULT = "off_for_default"
+
     var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
 
     var topBarOpacity by prefDelegate(PreferKey.topBarOpacity, 100)
@@ -56,6 +60,13 @@ object ThemeConfig {
     var bottomBarLensRadius by prefDelegate(PreferKey.bottomBarLensRadius, 24f)
 
     var useFlexibleTopAppBar by prefDelegate(PreferKey.useFlexibleTopAppBar, true)
+
+    var bookInfoFollowCoverColor by prefDelegate(PreferKey.bookInfoFollowCoverColor, true)
+
+    var bookInfoBackgroundBlur by prefDelegate(
+        PreferKey.bookInfoBackgroundBlur,
+        BOOK_INFO_BACKGROUND_BLUR_ON
+    )
 
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 

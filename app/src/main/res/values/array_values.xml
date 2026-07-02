@@ -132,6 +132,12 @@
         <item>unlabeled</item>
     </string-array>
 
+    <string-array name="book_info_background_blur_values">
+        <item>off</item>
+        <item>on</item>
+        <item>off_for_default</item>
+    </string-array>
+
     <string-array name="read_slider_mode_value">
         <item>0</item>
         <item>1</item>

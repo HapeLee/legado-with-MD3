@@ -110,6 +110,8 @@ object BackupConfig {
         PreferKey.bottomBarBlurAlpha,
         PreferKey.bottomBarLensRadius,
         PreferKey.useFlexibleTopAppBar,
+        PreferKey.bookInfoFollowCoverColor,
+        PreferKey.bookInfoBackgroundBlur,
         PreferKey.cBackground,
         PreferKey.cBBackground,
         PreferKey.cNBackground,

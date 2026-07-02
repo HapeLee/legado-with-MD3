@@ -1620,6 +1620,13 @@
     <string name="theme_manage_page_turn_animation">翻頁動畫</string>
     <string name="theme_manage_label_visibility">標籤可見性</string>
     <string name="theme_manage_section_blur">模糊效果</string>
+    <string name="book_info_page">書籍詳情頁</string>
+    <string name="book_info_follow_cover_color">介面顏色跟隨封面取色</string>
+    <string name="book_info_follow_cover_color_summary">從書籍封面擷取詳情頁配色</string>
+    <string name="book_info_background_blur">背景模糊</string>
+    <string name="book_info_background_blur_off">關閉</string>
+    <string name="book_info_background_blur_on">開啟</string>
+    <string name="book_info_background_blur_off_for_default">顯示預設封面時關閉</string>
     <string name="theme_manage_top_bar_blur_radius">頂部工具列模糊半徑</string>
     <string name="theme_manage_bottom_bar_blur_radius">底部工具列模糊半徑</string>
     <string name="theme_manage_top_bar_blur_opacity">頂部工具列模糊不透明度</string>

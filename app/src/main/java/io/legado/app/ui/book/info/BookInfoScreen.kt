@@ -2,8 +2,11 @@ package io.legado.app.ui.book.info
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,14 +71,16 @@ import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
-import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.LocalLegadoThemeColors
+import io.legado.app.ui.theme.ProvideColorSchemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.animateColorSchemeAsState
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
@@ -92,6 +97,7 @@ import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -121,7 +127,30 @@ fun BookInfoScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    val bookColorTheme = rememberBookInfoColorTheme(state.book)
+    val waitForSharedTransition = sharedCoverKey != null && animatedVisibilityScope != null
+    val transition = animatedVisibilityScope?.transition
+    val transitionSettled = transition?.let {
+        it.currentState == EnterExitState.Visible &&
+                it.targetState == EnterExitState.Visible &&
+                !it.isRunning
+    } == true
+    val sharedTransitionFinished = !waitForSharedTransition || transitionSettled
+    var canApplyCoverTheme by remember(
+        sharedCoverKey,
+        state.book?.bookUrl,
+        waitForSharedTransition,
+    ) {
+        mutableStateOf(!waitForSharedTransition)
+    }
+    LaunchedEffect(sharedTransitionFinished) {
+        if (sharedTransitionFinished) {
+            canApplyCoverTheme = true
+        }
+    }
+    val bookColorTheme = rememberBookInfoColorTheme(
+        book = state.book,
+        enabled = canApplyCoverTheme,
+    )
 
     BookInfoColorTheme(theme = bookColorTheme) {
         BookInfoScreenContent(
@@ -344,7 +373,26 @@ private fun BookInfoColorTheme(
     theme: ThemeOverrideState?,
     content: @Composable () -> Unit,
 ) {
-    ProvideThemeOverride(theme = theme, content = content)
+    val baseTheme = LocalLegadoThemeColors.current
+    val animationSpec = tween<Color>(
+        durationMillis = 400,
+        easing = FastOutSlowInEasing,
+    )
+    val targetColorScheme = theme?.colorScheme ?: baseTheme.colorScheme
+    val targetSeedColor = theme?.seedColor ?: baseTheme.seedColor
+    val animatedColorScheme = targetColorScheme.animateColorSchemeAsState(animationSpec)
+    val animatedSeedColor by animateColorAsState(
+        targetValue = targetSeedColor,
+        animationSpec = animationSpec,
+        label = "book_info_theme_seed",
+    )
+
+    ProvideColorSchemeOverride(
+        colorScheme = animatedColorScheme,
+        seedColor = animatedSeedColor,
+        overrideIsDark = theme?.isDark ?: baseTheme.isDark,
+        content = content,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -418,9 +466,17 @@ private fun BookInfoTransparentTopAppBar(
 }
 
 @Composable
-private fun rememberBookInfoColorTheme(book: BookInfoBookUi?): ThemeOverrideState? {
-    val useDefaultCover = AppConfig.useDefaultCover || book?.coverPath == "use_default_cover"
-    if (useDefaultCover) return null
+private fun rememberBookInfoColorTheme(
+    book: BookInfoBookUi?,
+    enabled: Boolean,
+): ThemeOverrideState? {
+    if (
+        !enabled ||
+        !ThemeConfig.bookInfoFollowCoverColor ||
+        usesDefaultBookCover(book?.coverPath)
+    ) {
+        return null
+    }
 
     val imageLoader = koinInject<ImageLoader>()
     val coverPath = book?.coverPath
@@ -481,6 +537,19 @@ private fun BookInfoTopBarActions(
 private fun BookInfoBackdrop(
     book: BookInfoBookUi,
 ) {
+    val initiallyUsesDefaultCover = usesDefaultBookCover(book.coverPath)
+    var usesDefaultCover by remember(
+        book.coverPath,
+        initiallyUsesDefaultCover,
+    ) {
+        mutableStateOf(initiallyUsesDefaultCover)
+    }
+    val blurBackground = when (ThemeConfig.bookInfoBackgroundBlur) {
+        ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_OFF -> false
+        ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_OFF_FOR_DEFAULT -> !usesDefaultCover
+        else -> true
+    }
+
     val backdropState = remember(
         book.name,
         book.author,
@@ -514,9 +583,16 @@ private fun BookInfoBackdrop(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(480.dp)
-                    .blur(24.dp),
+                    .then(
+                        if (blurBackground) {
+                            Modifier.blur(24.dp)
+                        } else {
+                            Modifier
+                        }
+                ),
                 contentScale = ContentScale.Crop,
                 showLoadingPlaceholder = false,
+                onDefaultCoverVisibilityChange = { usesDefaultCover = it },
                 requestBuilder = {
                     size(Size(384, 384))
                 }
