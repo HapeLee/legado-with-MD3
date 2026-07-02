@@ -148,6 +148,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
@@ -187,6 +188,7 @@ import kotlin.math.tanh
 @Composable
 fun ReadBookMenuBar(
     state: ReadBookUiState,
+    preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
@@ -371,6 +373,7 @@ fun ReadBookMenuBar(
                 ReadBookMenuSurface(
                     contentTarget = contentTarget,
                     state = state,
+                    preferences = preferences,
                     colors = menuColors,
                     onIntent = onIntent,
                     context = context,
@@ -393,6 +396,7 @@ private sealed interface ReadBookMenuContent {
 private fun ReadBookMenuSurface(
     contentTarget: ReadBookMenuContent,
     state: ReadBookUiState,
+    preferences: ReadPreferences,
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     context: Context,
@@ -648,6 +652,7 @@ private fun ReadBookMenuSurface(
                                 onPageChanged = onReadStylePageChanged,
                                 readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
                                 bottomBarButtons = state.menuConfig.bottomBarButtons,
+                                preferences = preferences,
                                 onIntent = onIntent,
                                 styleConfig = state.styleConfig,
                             )
@@ -1109,14 +1114,16 @@ private fun MenuTitleBar(
                                     },
                                 )
                             }
-                            RoundDropdownMenuItem(
-                                leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
-                                text = stringResource(R.string.chapter_pay),
-                                onClick = {
-                                    sourceMenuExpanded = false
-                                    onIntent(ReadBookIntent.PayAction)
-                                },
-                            )
+                            if (!state.bookSource.getContentRule().payAction.isNullOrBlank()) {
+                                RoundDropdownMenuItem(
+                                    leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
+                                    text = stringResource(R.string.chapter_pay),
+                                    onClick = {
+                                        sourceMenuExpanded = false
+                                        onIntent(ReadBookIntent.PayAction)
+                                    },
+                                )
+                            }
                             RoundDropdownMenuItem(
                                 leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
                                 text = stringResource(R.string.edit_source),

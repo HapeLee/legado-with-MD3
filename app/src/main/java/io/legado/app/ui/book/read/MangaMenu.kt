@@ -215,6 +215,8 @@ class MangaMenu @JvmOverloads constructor(
         tvChapterUrl.setOnClickListener(chapterViewClickListener)
         tvChapterUrl.setOnLongClickListener(chapterViewLongClickListener)
         tvSourceAction.setOnLongClickListener {
+            sourceMenu.menu.findItem(R.id.menu_chapter_pay).isVisible =
+                !ReadManga.bookSource?.getContentRule()?.payAction.isNullOrBlank()
             sourceMenu.show()
             true
         }

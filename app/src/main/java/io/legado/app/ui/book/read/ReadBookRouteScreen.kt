@@ -496,6 +496,7 @@ fun ReadBookRouteScreen(
         ) {
             ReadBookMenuBar(
                 state = state,
+                preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,

@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -49,6 +50,7 @@ fun ReadStyleContent(
     onPageChanged: (Int) -> Unit = {},
     readMenuCustomIcons: Map<String, String> = emptyMap(),
     bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
+    preferences: ReadPreferences,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
     styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
@@ -109,6 +111,7 @@ fun ReadStyleContent(
                     )
 
                     1 -> SystemMenuPage(
+                        preferences = preferences,
                         customIcons = readMenuCustomIcons,
                         bottomBarButtons = bottomBarButtons,
                         onIntent = onIntent,

@@ -149,6 +149,13 @@ fun HighlightRuleConfigSheet(
                             onIntent(ReadBookIntent.ExportHighlightRules)
                         },
                     )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.copy_url),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ExportHighlightRulesAsUrl)
+                        },
+                    )
                 }
             }
         },

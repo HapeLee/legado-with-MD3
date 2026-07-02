@@ -687,6 +687,9 @@ class ReadBookViewModel(
             is ReadBookIntent.ExportHighlightRules -> {
                 _effects.tryEmit(ReadBookEffect.OpenHighlightRuleExportPicker)
             }
+            is ReadBookIntent.ExportHighlightRulesAsUrl -> {
+                exportHighlightRulesAsUrl()
+            }
             is ReadBookIntent.ExportHighlightRulesToFile -> {
                 exportHighlightRules(intent.uri)
             }
@@ -3778,6 +3781,20 @@ class ReadBookViewModel(
                     it.localizedMessage ?: context.getString(R.string.error)
                 )
             )
+        }
+    }
+
+    private fun exportHighlightRulesAsUrl() {
+        val rules = _uiState.value.highlightRuleConfig.rules
+        execute {
+            uploadRepository.upload(
+                fileName = HighlightRuleRepository.backupFileName,
+                file = GSON.toJson(rules),
+                contentType = "application/json",
+            )
+        }.onSuccess { url ->
+            context.sendToClip(url)
+            _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.copy_url)))
         }
     }
 
