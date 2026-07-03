@@ -73,7 +73,13 @@ import org.koin.androidx.compose.koinViewModel
 fun RssScreen(
     viewModel: RssViewModel = koinViewModel(),
     onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
-    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    onOpenRead: (
+        title: String?,
+        origin: String,
+        link: String?,
+        openUrl: String?,
+        startPage: Boolean
+    ) -> Unit,
     onOpenRuleSub: () -> Unit,
     onOpenFavorites: () -> Unit,
 ) {
@@ -97,7 +103,13 @@ fun RssScreen(
                 }
 
                 is RssEffect.OpenRead -> {
-                    currentOnOpenRead(effect.title, effect.origin, effect.link, effect.openUrl)
+                    currentOnOpenRead(
+                        effect.title,
+                        effect.origin,
+                        effect.link,
+                        effect.openUrl,
+                        effect.startPage
+                    )
                 }
 
                 is RssEffect.OpenExternalUrl -> {

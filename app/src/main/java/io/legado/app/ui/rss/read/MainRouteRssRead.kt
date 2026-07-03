@@ -8,5 +8,6 @@ data class MainRouteRssRead(
     val title: String? = null,
     val origin: String,
     val link: String? = null,
-    val openUrl: String? = null
+    val openUrl: String? = null,
+    val startPage: Boolean = false
 ) : NavKey

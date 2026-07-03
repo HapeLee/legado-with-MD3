@@ -151,13 +151,14 @@ fun MainActivity.mainEntryProvider(
                     )
                 )
             },
-            onNavigateToRssRead = { title, origin, link, openUrl ->
+            onNavigateToRssRead = { title, origin, link, openUrl, startPage ->
                 onNavigateToRoute(
                     MainRouteRssRead(
                         title = title,
                         origin = origin,
                         link = link,
-                        openUrl = openUrl
+                        openUrl = openUrl,
+                        startPage = startPage
                     )
                 )
             },
@@ -532,7 +533,16 @@ fun MainActivity.mainEntryProvider(
             origin = route.origin,
             link = route.link,
             openUrl = route.openUrl,
-            onBackClick = { onNavigateBack() }
+            startPage = route.startPage,
+            onBackClick = { onNavigateBack() },
+            onOpenArticles = { sortUrl ->
+                onNavigateToRoute(
+                    MainRouteRssSort(
+                        sourceUrl = route.origin,
+                        sortUrl = sortUrl
+                    )
+                )
+            }
         )
     }
 

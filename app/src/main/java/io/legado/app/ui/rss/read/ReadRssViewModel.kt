@@ -15,6 +15,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.TTS
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.rss.Rss
 import io.legado.app.utils.ImageSaveUtils
@@ -30,7 +31,8 @@ data class ReadRssArgs(
     val title: String? = null,
     val origin: String,
     val link: String? = null,
-    val openUrl: String? = null
+    val openUrl: String? = null,
+    val startPage: Boolean = false
 )
 
 class ReadRssViewModel(application: Application) : BaseViewModel(application) {
@@ -38,6 +40,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
     var rssArticle: RssArticle? = null
     var tts: TTS? = null
     var headerMap: Map<String, String> = emptyMap()
+    private var isStartPage = false
 
     private val _contentState = MutableStateFlow<String?>(null)
     val contentState: StateFlow<String?> = _contentState.asStateFlow()
@@ -68,6 +71,11 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             rssSource = appDb.rssSourceDao.getByKey(args.origin)
             headerMap = runScriptWithContext {
                 rssSource?.getHeaderMap() ?: emptyMap()
+            }
+            isStartPage = args.startPage
+            if (isStartPage) {
+                _contentState.value = resolveStartHtml()
+                return@execute
             }
 
             val link = args.link
@@ -120,6 +128,24 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             hasLoginHeader = false
         )
         _urlState.value = analyzeUrl
+    }
+
+    private suspend fun resolveStartHtml(): String {
+        val source = rssSource ?: return ""
+        val startHtml = source.startHtml ?: return ""
+        return when {
+            startHtml.startsWith("@js:") -> runScriptWithContext {
+                source.evalJS(startHtml.substring(4))?.toString().orEmpty()
+            }
+
+            startHtml.startsWith("<js>") -> runScriptWithContext {
+                source.evalJS(startHtml.substring(4, startHtml.lastIndexOf("<")))
+                    ?.toString()
+                    .orEmpty()
+            }
+
+            else -> startHtml
+        }
     }
 
     private fun loadContent(rssArticle: RssArticle, ruleContent: String) {
@@ -217,18 +243,56 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
     }
 
     fun clHtml(content: String): String {
+        val contentWithPreloadJs = if (
+            isStartPage &&
+            !rssSource?.preloadJs.isNullOrBlank() &&
+            !content.contains(WebJsExtensions.JS_URL)
+        ) {
+            val headIndex = content.indexOf("<head>")
+            if (headIndex >= 0) {
+                buildString(content.length + WebJsExtensions.JS_URL.length) {
+                    append(content, 0, headIndex + 6)
+                    append(WebJsExtensions.JS_URL)
+                    append(content, headIndex + 6, content.length)
+                }
+            } else {
+                "<head>${WebJsExtensions.JS_URL}</head>$content"
+            }
+        } else {
+            content
+        }
+        val contentWithStartJs = if (isStartPage && !rssSource?.startJs.isNullOrBlank()) {
+            val startJs = rssSource?.startJs.orEmpty()
+            val bodyEndIndex = contentWithPreloadJs.indexOf("</body>")
+            if (bodyEndIndex >= 0) {
+                buildString(contentWithPreloadJs.length + startJs.length + 20) {
+                    append(contentWithPreloadJs, 0, bodyEndIndex)
+                    append("<script>$startJs</script>")
+                    append(contentWithPreloadJs, bodyEndIndex, contentWithPreloadJs.length)
+                }
+            } else {
+                "$contentWithPreloadJs<script>$startJs</script>"
+            }
+        } else {
+            contentWithPreloadJs
+        }
+        val style = if (isStartPage) {
+            rssSource?.startStyle ?: rssSource?.style
+        } else {
+            rssSource?.style
+        }
         return when {
-            !rssSource?.style.isNullOrEmpty() -> {
+            !style.isNullOrEmpty() -> {
                 """
                     <style>
-                        ${rssSource?.style}
+                        $style
                     </style>
-                    $content
+                    $contentWithStartJs
                 """.trimIndent()
             }
 
-            content.contains("<style>".toRegex()) -> {
-                content
+            contentWithStartJs.contains("<style>".toRegex()) -> {
+                contentWithStartJs
             }
 
             else -> {
@@ -238,7 +302,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
                         video{object-fit:fill; max-width:100% !important; width:auto; height:auto;}
                         body{word-wrap:break-word; height:auto;max-width: 100%; width:auto;}
                     </style>
-                    $content
+                    $contentWithStartJs
                 """.trimIndent()
             }
         }

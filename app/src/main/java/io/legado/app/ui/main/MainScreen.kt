@@ -127,7 +127,13 @@ fun MainScreen(
     onNavigateToBookInfo: (name: String, author: String, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
     onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
-    onNavigateToRssRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    onNavigateToRssRead: (
+        title: String?,
+        origin: String,
+        link: String?,
+        openUrl: String?,
+        startPage: Boolean
+    ) -> Unit,
     onNavigateToRssFavorites: () -> Unit,
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
@@ -469,8 +475,8 @@ fun MainScreen(
                                 onOpenSort = { sourceUrl, sortUrl, key ->
                                     onNavigateToRssSort(sourceUrl, sortUrl, key)
                                 },
-                                onOpenRead = { title, origin, link, openUrl ->
-                                    onNavigateToRssRead(title, origin, link, openUrl)
+                                onOpenRead = { title, origin, link, openUrl, startPage ->
+                                    onNavigateToRssRead(title, origin, link, openUrl, startPage)
                                 },
                                 onOpenFavorites = onNavigateToRssFavorites,
                                 onOpenRuleSub = onNavigateToRuleSub

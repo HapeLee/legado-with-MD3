@@ -93,7 +93,9 @@ fun RssReadRouteScreen(
     origin: String,
     link: String?,
     openUrl: String?,
+    startPage: Boolean,
     onBackClick: () -> Unit,
+    onOpenArticles: (sortUrl: String?) -> Unit,
     viewModel: ReadRssViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
@@ -133,13 +135,14 @@ fun RssReadRouteScreen(
         activity?.toggleSystemBar(AppConfig.showStatusBar)
     }
 
-    LaunchedEffect(origin, link, openUrl, title) {
+    LaunchedEffect(origin, link, openUrl, title, startPage) {
         viewModel.initData(
             ReadRssArgs(
                 title = title,
                 origin = origin,
                 link = link,
-                openUrl = openUrl
+                openUrl = openUrl,
+                startPage = startPage
             )
         )
     }
@@ -152,8 +155,10 @@ fun RssReadRouteScreen(
         val body = content ?: return@LaunchedEffect
         val currentWebView = webView ?: return@LaunchedEffect
         currentWebView.settings.userAgentString = viewModel.headerMap[AppConst.UA_NAME] ?: fallbackUserAgent
-        val article = viewModel.rssArticle ?: return@LaunchedEffect
-        val url = NetworkUtils.getAbsoluteURL(article.origin, article.link)
+        val article = viewModel.rssArticle
+        val url = article?.let {
+            NetworkUtils.getAbsoluteURL(it.origin, it.link)
+        } ?: origin
         val html = viewModel.clHtml(body)
         if (currentWebView.url != url) {
             if (viewModel.rssSource?.loadWithBaseUrl == true) {
@@ -217,16 +222,18 @@ fun RssReadRouteScreen(
                             contentDescription = stringResource(R.string.refresh),
                             onClick = { viewModel.refresh { webView?.reload() } }
                         )
-                        TopBarActionButton(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = stringResource(R.string.favorite),
-                            onClick = {
-                                viewModel.addFavorite()
-                                favoriteTitle = viewModel.rssArticle?.title.orEmpty()
-                                favoriteGroup = viewModel.rssArticle?.group.orEmpty()
-                                showFavoriteSheet = true
-                            }
-                        )
+                        if (!startPage) {
+                            TopBarActionButton(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = stringResource(R.string.favorite),
+                                onClick = {
+                                    viewModel.addFavorite()
+                                    favoriteTitle = viewModel.rssArticle?.title.orEmpty()
+                                    favoriteGroup = viewModel.rssArticle?.group.orEmpty()
+                                    showFavoriteSheet = true
+                                }
+                            )
+                        }
                         Box {
                         TopBarActionButton(
                             imageVector = Icons.Default.MoreVert,
@@ -335,40 +342,44 @@ fun RssReadRouteScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                VisibleWebViewCompose(
-                    modifier = Modifier.fillMaxSize(),
-                    onCreated = { createdWebView ->
-                        webView = createdWebView
-                        configureRssReadWebView(
-                            webView = createdWebView,
-                            context = context,
-                            activity = activity,
-                            appCompatActivity = appCompatActivity,
-                            viewModel = viewModel,
-                            initialTitle = title,
-                            redirectPolicyProvider = { redirectPolicy },
-                            callbacks = RssReadWebControllerCallbacks(
-                                onProgressChanged = { webProgress = it },
-                                onPageTitleResolved = { resolved ->
-                                    pageTitle = resolved.ifBlank { defaultTopBarTitle }
-                                },
-                                onShowCustomView = { view, callback ->
-                                    if (view == null) {
-                                        callback?.onCustomViewHidden()
-                                    } else if (customView != null) {
-                                        callback?.onCustomViewHidden()
-                                    } else {
-                                        customView = view
-                                        customViewCallback = callback
-                                        activity?.keepScreenOn(true)
-                                        activity?.toggleSystemBar(false)
-                                    }
-                                },
-                                onHideCustomView = { hideCustomView() }
-                        )
+                if (!startPage || content != null) {
+                    VisibleWebViewCompose(
+                        modifier = Modifier.fillMaxSize(),
+                        onCreated = { createdWebView ->
+                            webView = createdWebView
+                            configureRssReadWebView(
+                                webView = createdWebView,
+                                context = context,
+                                activity = activity,
+                                appCompatActivity = appCompatActivity,
+                                viewModel = viewModel,
+                                initialTitle = title,
+                                isStartPage = startPage,
+                                redirectPolicyProvider = { redirectPolicy },
+                                callbacks = RssReadWebControllerCallbacks(
+                                    onProgressChanged = { webProgress = it },
+                                    onPageTitleResolved = { resolved ->
+                                        pageTitle = resolved.ifBlank { defaultTopBarTitle }
+                                    },
+                                    onShowCustomView = { view, callback ->
+                                        if (view == null) {
+                                            callback?.onCustomViewHidden()
+                                        } else if (customView != null) {
+                                            callback?.onCustomViewHidden()
+                                        } else {
+                                            customView = view
+                                            customViewCallback = callback
+                                            activity?.keepScreenOn(true)
+                                            activity?.toggleSystemBar(false)
+                                        }
+                                    },
+                                    onHideCustomView = { hideCustomView() },
+                                    navigateToArticles = onOpenArticles
+                                )
+                            )
+                        }
                     )
                 }
-                )
                 if (webProgress in 0..99) {
                     AppLinearProgressIndicator(
                         progress = webProgress / 100f,

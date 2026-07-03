@@ -15,6 +15,7 @@ import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -27,7 +28,9 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.help.WebCacheManager
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.Download
@@ -38,14 +41,22 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
+import java.io.ByteArrayInputStream
 import java.net.URLDecoder
 
 internal data class RssReadWebControllerCallbacks(
     val onProgressChanged: (Int) -> Unit,
     val onPageTitleResolved: (String) -> Unit,
     val onShowCustomView: (View?, WebChromeClient.CustomViewCallback?) -> Unit,
-    val onHideCustomView: () -> Unit
-)
+    val onHideCustomView: () -> Unit,
+    val navigateToArticles: (String?) -> Unit
+) : WebJsExtensions.Callback {
+    override fun upConfig(config: String) = Unit
+
+    override fun onNavigateToArticles(sortUrl: String?) {
+        navigateToArticles(sortUrl)
+    }
+}
 
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 internal fun configureRssReadWebView(
@@ -55,6 +66,7 @@ internal fun configureRssReadWebView(
     appCompatActivity: AppCompatActivity?,
     viewModel: ReadRssViewModel,
     initialTitle: String?,
+    isStartPage: Boolean,
     redirectPolicyProvider: () -> RedirectPolicy,
     callbacks: RssReadWebControllerCallbacks
 ) {
@@ -78,6 +90,7 @@ internal fun configureRssReadWebView(
 
     webView.webViewClient = object : WebViewClient() {
         private var lastUrl: String? = null
+        private var preloadJsInjected = false
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             val targetUri = request.url
@@ -103,6 +116,35 @@ internal fun configureRssReadWebView(
             lastUrl = targetUrl
             if (handleRedirect(view, currentUrl, targetUrl)) return true
             return handleCustomScheme(targetUri)
+        }
+
+        override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest
+        ): WebResourceResponse? {
+            val source = viewModel.rssSource
+            val preloadJs = source?.preloadJs
+            if (
+                isStartPage &&
+                !preloadJsInjected &&
+                !preloadJs.isNullOrBlank() &&
+                request.url.toString() == WebJsExtensions.nameUrl
+            ) {
+                preloadJsInjected = true
+                val jsContent = buildString {
+                    append("(() => {")
+                    append(WebJsExtensions.JS_INJECTION)
+                    append("\n")
+                    append(preloadJs)
+                    append("\n})();")
+                }
+                return WebResourceResponse(
+                    "text/javascript",
+                    "utf-8",
+                    ByteArrayInputStream(jsContent.toByteArray())
+                )
+            }
+            return super.shouldInterceptRequest(view, request)
         }
 
         private fun handleRedirect(view: WebView, fromUrl: String?, toUrl: String): Boolean {
@@ -244,8 +286,29 @@ internal fun configureRssReadWebView(
         userAgentString = viewModel.headerMap[AppConst.UA_NAME] ?: AppConfig.userAgent
         viewModel.rssSource?.let { source ->
             javaScriptEnabled = source.enableJs
+            cacheMode = if (source.cacheFirst == true) {
+                WebSettings.LOAD_CACHE_ELSE_NETWORK
+            } else {
+                WebSettings.LOAD_DEFAULT
+            }
         }
-        cacheMode = WebSettings.LOAD_DEFAULT
+    }
+
+    val source = viewModel.rssSource
+    if (
+        isStartPage &&
+        !source?.preloadJs.isNullOrBlank() &&
+        appCompatActivity != null
+    ) {
+        val webJsExtensions = WebJsExtensions(
+            source,
+            appCompatActivity,
+            webView,
+            callback = callbacks
+        )
+        webView.addJavascriptInterface(webJsExtensions, WebJsExtensions.nameJava)
+        webView.addJavascriptInterface(source, WebJsExtensions.nameSource)
+        webView.addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
     }
 
     webView.addJavascriptInterface(object {

@@ -138,7 +138,19 @@ class RssViewModel(
 
     fun openSource(rssSource: RssSource) {
         if (!rssSource.singleUrl) {
-            _effects.tryEmit(RssEffect.OpenSort(rssSource.sourceUrl, null, null))
+            if (rssSource.startHtml.isNullOrBlank()) {
+                _effects.tryEmit(RssEffect.OpenSort(rssSource.sourceUrl, null, null))
+            } else {
+                _effects.tryEmit(
+                    RssEffect.OpenRead(
+                        title = rssSource.sourceName,
+                        origin = rssSource.sourceUrl,
+                        link = null,
+                        openUrl = null,
+                        startPage = true
+                    )
+                )
+            }
             return
         }
 
@@ -202,7 +214,8 @@ sealed interface RssEffect {
         val title: String?,
         val origin: String,
         val link: String?,
-        val openUrl: String?
+        val openUrl: String?,
+        val startPage: Boolean = false
     ) : RssEffect
 
     data class OpenExternalUrl(val url: String) : RssEffect
