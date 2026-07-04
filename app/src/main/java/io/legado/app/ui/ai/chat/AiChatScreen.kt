@@ -91,6 +91,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -203,6 +204,9 @@ fun AiChatScreen(
                 onSelectConversation = {
                     onIntent(AiChatIntent.SelectConversation(it))
                     scope.launch { drawerState.close() }
+                },
+                onDeleteConversation = {
+                    onIntent(AiChatIntent.DeleteConversation(it))
                 }
             )
         }
@@ -612,10 +616,12 @@ private fun PendingToolConfirmationCard(
 private fun RecentChatsDrawer(
     conversations: List<AiChatConversationUi>,
     onNewChat: () -> Unit,
-    onSelectConversation: (String) -> Unit
+    onSelectConversation: (String) -> Unit,
+    onDeleteConversation: (String) -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showSearch by rememberSaveable { mutableStateOf(false) }
+    var conversationToDelete by remember { mutableStateOf<AiChatConversationUi?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
     val filteredConversations = remember(conversations, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -692,6 +698,7 @@ private fun RecentChatsDrawer(
                 NormalCard(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onSelectConversation(conversation.id) },
+                    onLongClick = { conversationToDelete = conversation },
                     containerColor = if (isSelected) {
                         LegadoTheme.colorScheme.primaryContainer
                     } else {
@@ -724,6 +731,20 @@ private fun RecentChatsDrawer(
             }
         }
     }
+
+    AppAlertDialog(
+        show = conversationToDelete != null,
+        onDismissRequest = { conversationToDelete = null },
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = {
+            conversationToDelete?.let { onDeleteConversation(it.id) }
+            conversationToDelete = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { conversationToDelete = null }
+    )
 }
 
 private fun formatRelativeTime(timestamp: Long): String {

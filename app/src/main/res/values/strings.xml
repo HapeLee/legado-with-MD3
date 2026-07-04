@@ -1925,6 +1925,10 @@
     <string name="ai_save_model">Save Model</string>
     <string name="ai_advanced">Advanced</string>
     <string name="ai_models_url_summary">Optional. Leave blank to use the protocol default models endpoint.</string>
+    <string name="ai_delete_provider">Delete Provider</string>
+    <string name="ai_delete_provider_confirm">Are you sure you want to delete this provider and all its models?</string>
+    <string name="ai_delete_model">Delete Model</string>
+    <string name="ai_delete_model_confirm">Are you sure you want to delete this model?</string>
     <string name="ai_translation_task">Translation Task</string>
     <string name="ai_translation_target_language">Target Language</string>
     <string name="ai_max_input_chars">Max Input Characters</string>

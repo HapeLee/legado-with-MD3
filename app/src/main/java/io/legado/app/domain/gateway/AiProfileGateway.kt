@@ -23,4 +23,6 @@ interface AiProfileGateway {
     suspend fun importProviderModels(providerId: String, models: List<AiAvailableModel>): List<AiModelProfile>
     suspend fun setDefaultModel(modelProfileId: String): AiTaskPresetConfig
     suspend fun saveDefaultChatProfile(draft: AiProfileDraft): AiTaskPresetConfig
+    suspend fun deleteProvider(providerId: String)
+    suspend fun deleteModel(modelId: String)
 }

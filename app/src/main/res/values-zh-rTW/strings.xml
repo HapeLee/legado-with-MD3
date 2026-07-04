@@ -2000,6 +2000,10 @@
     <string name="ai_save_and_sync_models">儲存並同步模型</string>
     <string name="ai_save_model">儲存模型</string>
     <string name="ai_advanced">進階</string>
+    <string name="ai_delete_provider">刪除供應商</string>
+    <string name="ai_delete_provider_confirm">確定要刪除此供應商及其所有模型嗎？</string>
+    <string name="ai_delete_model">刪除模型</string>
+    <string name="ai_delete_model_confirm">確定要刪除此模型嗎？</string>
     <string name="ai_models_url_summary">選填。留空則使用協定預設的模型端點。</string>
     <string name="ai_translation_task">翻譯任務</string>
     <string name="ai_translation_target_language">目標語言</string>

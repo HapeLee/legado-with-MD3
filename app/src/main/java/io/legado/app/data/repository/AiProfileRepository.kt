@@ -150,6 +150,15 @@ class AiProfileRepository(
             ?: error("Failed to save default model")
     }
 
+    override suspend fun deleteProvider(providerId: String) = withContext(Dispatchers.IO) {
+        aiProfileDao.deleteModelsByProvider(providerId)
+        aiProfileDao.deleteProvider(providerId)
+    }
+
+    override suspend fun deleteModel(modelId: String) = withContext(Dispatchers.IO) {
+        aiProfileDao.deleteModel(modelId)
+    }
+
     override suspend fun saveDefaultChatProfile(draft: AiProfileDraft): AiTaskPresetConfig = withContext(Dispatchers.IO) {
         require(draft.baseUrl.isNotBlank()) { "Base URL is required" }
         require(draft.modelId.isNotBlank()) { "Model is required" }

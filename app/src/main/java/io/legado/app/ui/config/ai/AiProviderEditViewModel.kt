@@ -116,6 +116,8 @@ class AiProviderEditViewModel(
             AiProviderEditIntent.SaveEditingModel -> saveEditingModel()
             AiProviderEditIntent.SaveProvider -> saveProvider()
             AiProviderEditIntent.SyncModels -> syncModels()
+            AiProviderEditIntent.DeleteProvider -> deleteProvider()
+            is AiProviderEditIntent.DeleteModel -> deleteModel(intent.modelProfileId)
         }
     }
 
@@ -237,6 +239,33 @@ class AiProviderEditViewModel(
                 _effects.tryEmit(AiProviderEditEffect.ShowMessage(error.message ?: "Failed to save AI provider"))
             }
             _uiState.update { it.copy(isSaving = false, isFetchingModels = false) }
+        }
+    }
+
+    private fun deleteProvider() {
+        val providerId = _uiState.value.providerId ?: return
+        viewModelScope.launch {
+            runCatching {
+                aiProfileGateway.deleteProvider(providerId)
+            }.onSuccess {
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage("AI provider deleted"))
+                _effects.tryEmit(AiProviderEditEffect.NavigateBackAfterDelete)
+            }.onFailure { error ->
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage(error.message ?: "Failed to delete AI provider"))
+            }
+        }
+    }
+
+    private fun deleteModel(modelProfileId: String) {
+        viewModelScope.launch {
+            runCatching {
+                aiProfileGateway.deleteModel(modelProfileId)
+            }.onSuccess {
+                _uiState.update { it.copy(editingModel = null) }
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage("AI model deleted"))
+            }.onFailure { error ->
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage(error.message ?: "Failed to delete AI model"))
+            }
         }
     }
 

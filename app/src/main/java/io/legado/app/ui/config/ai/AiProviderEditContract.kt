@@ -81,9 +81,12 @@ sealed interface AiProviderEditIntent {
     data object SaveEditingModel : AiProviderEditIntent
     data object SaveProvider : AiProviderEditIntent
     data object SyncModels : AiProviderEditIntent
+    data object DeleteProvider : AiProviderEditIntent
+    data class DeleteModel(val modelProfileId: String) : AiProviderEditIntent
 }
 
 sealed interface AiProviderEditEffect {
     data class ShowMessage(val message: String) : AiProviderEditEffect
     data object NavigateBack : AiProviderEditEffect
+    data object NavigateBackAfterDelete : AiProviderEditEffect
 }

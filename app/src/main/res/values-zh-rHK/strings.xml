@@ -1423,6 +1423,10 @@
     <string name="add_tag">添加標籤</string>
     <string name="ai_add_model_manually">手動添加模型</string>
     <string name="ai_advanced">進階設定</string>
+    <string name="ai_delete_provider">刪除供應商</string>
+    <string name="ai_delete_provider_confirm">確定要刪除此供應商及其所有模型嗎？</string>
+    <string name="ai_delete_model">刪除模型</string>
+    <string name="ai_delete_model_confirm">確定要刪除此模型嗎？</string>
     <string name="ai_api_key">API Key</string>
     <string name="ai_api_key_summary">儲存在本機。留空則保留已儲存的金鑰。</string>
     <string name="ai_assistant">助手</string>

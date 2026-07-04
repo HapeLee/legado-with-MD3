@@ -1994,6 +1994,10 @@
     <string name="ai_save_and_sync_models">保存并同步模型</string>
     <string name="ai_save_model">保存模型</string>
     <string name="ai_advanced">高级</string>
+    <string name="ai_delete_provider">删除供应商</string>
+    <string name="ai_delete_provider_confirm">确定要删除此供应商及其所有模型吗？</string>
+    <string name="ai_delete_model">删除模型</string>
+    <string name="ai_delete_model_confirm">确定要删除此模型吗？</string>
     <string name="ai_models_url_summary">可选。留空时使用该协议默认的模型列表端点。</string>
     <string name="ai_translation_task">翻译任务</string>
     <string name="ai_translation_target_language">目标语言</string>

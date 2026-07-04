@@ -90,12 +90,15 @@ fun AiProviderEditScreen(
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var apiKeyDraft by remember { mutableStateOf("") }
     var apiKeyVisible by remember { mutableStateOf(false) }
+    var showDeleteProviderDialog by remember { mutableStateOf(false) }
+    var showDeleteModelDialog by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
                 is AiProviderEditEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 AiProviderEditEffect.NavigateBack -> onBackClick()
+                AiProviderEditEffect.NavigateBackAfterDelete -> onBackClick()
             }
         }
     }
@@ -200,6 +203,15 @@ fun AiProviderEditScreen(
                     )
                 }
             }
+
+            if (state.providerId != null) {
+                item {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_delete_provider),
+                        onClick = { showDeleteProviderDialog = true }
+                    )
+                }
+            }
         }
     }
 
@@ -284,12 +296,49 @@ fun AiProviderEditScreen(
                     label = stringResource(R.string.ai_temperature),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
+                if (model.modelProfileId != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_delete_model),
+                        onClick = {
+                            showDeleteModelDialog = model.modelProfileId
+                        }
+                    )
+                }
             }
         },
         confirmText = stringResource(R.string.ai_save_model),
         onConfirm = { onIntent(AiProviderEditIntent.SaveEditingModel) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(AiProviderEditIntent.DismissModelEditor) }
+    )
+
+    AppAlertDialog(
+        show = showDeleteProviderDialog,
+        onDismissRequest = { showDeleteProviderDialog = false },
+        title = stringResource(R.string.ai_delete_provider),
+        text = stringResource(R.string.ai_delete_provider_confirm),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = {
+            onIntent(AiProviderEditIntent.DeleteProvider)
+            showDeleteProviderDialog = false
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteProviderDialog = false }
+    )
+
+    AppAlertDialog(
+        show = showDeleteModelDialog != null,
+        onDismissRequest = { showDeleteModelDialog = null },
+        title = stringResource(R.string.ai_delete_model),
+        text = stringResource(R.string.ai_delete_model_confirm),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = {
+            showDeleteModelDialog?.let { onIntent(AiProviderEditIntent.DeleteModel(it)) }
+            showDeleteModelDialog = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteModelDialog = null }
     )
 }
 

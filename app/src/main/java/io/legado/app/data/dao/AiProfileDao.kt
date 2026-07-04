@@ -59,6 +59,15 @@ interface AiProfileDao {
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updatePreset(preset: AiTaskPreset)
 
+    @Query("DELETE FROM ai_provider_profiles WHERE id = :providerId")
+    suspend fun deleteProvider(providerId: String)
+
+    @Query("DELETE FROM ai_model_profiles WHERE id = :modelId")
+    suspend fun deleteModel(modelId: String)
+
+    @Query("DELETE FROM ai_model_profiles WHERE providerId = :providerId")
+    suspend fun deleteModelsByProvider(providerId: String)
+
     @Transaction
     suspend fun upsertProfile(
         provider: AiProviderProfile,
