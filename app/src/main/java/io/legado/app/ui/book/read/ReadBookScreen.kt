@@ -505,7 +505,7 @@ fun ReadBookScreen(
     }
 
     ActionReminder(
-        reminder = state.activeReminder,
+        reminder = if (state.menuVisible) null else state.activeReminder,
         onAction = { reminder -> reminder.actionIntent?.let { onIntent(it) } },
         onDismiss = { onIntent(ReadBookIntent.DismissReminder) },
     )
