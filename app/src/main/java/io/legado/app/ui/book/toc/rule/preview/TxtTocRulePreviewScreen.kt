@@ -33,12 +33,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.utils.toastOnUi
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -64,6 +66,7 @@ fun TxtTocRulePreviewRouteScreen(
     onApplyRule: (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(bookUrl) {
         viewModel.init(bookUrl, currentTocRegex)
@@ -73,7 +76,7 @@ fun TxtTocRulePreviewRouteScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is TxtTocRulePreviewEffect.ApplyRule -> onApplyRule(effect.rule)
-                is TxtTocRulePreviewEffect.ShowToast -> { /* no-op */ }
+                is TxtTocRulePreviewEffect.ShowToast -> context.toastOnUi(effect.message)
             }
         }
     }
@@ -213,7 +216,7 @@ fun TxtTocRulePreviewScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                itemsIndexed(state.rules, key = { index, item -> "${index}_${item.rule.id}" }) { index, item ->
+                itemsIndexed(state.rules, key = { _, item -> item.rule.id }) { _, item ->
                     RulePreviewCard(
                         item = item,
                         isSelected = item.rule.rule == state.selectedRule,
@@ -237,7 +240,7 @@ fun TxtTocRulePreviewScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                itemsIndexed(state.rules, key = { index, item -> "${index}_${item.rule.id}" }) { index, item ->
+                itemsIndexed(state.rules, key = { _, item -> item.rule.id }) { _, item ->
                     RulePreviewListItem(
                         item = item,
                         isSelected = item.rule.rule == state.selectedRule,

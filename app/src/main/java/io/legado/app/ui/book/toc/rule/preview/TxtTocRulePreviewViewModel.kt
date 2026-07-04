@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
@@ -176,12 +178,12 @@ class TxtTocRulePreviewViewModel(private val app: Application) : ViewModel() {
         if (repository.count() == 0) {
             val defaultRules = DefaultData.txtTocRules
             repository.insert(*defaultRules.toTypedArray())
-            rules = defaultRules
+            rules = repository.all()
         }
         return rules.filter { it.rule.isNotBlank() }.sortedBy { it.serialNumber }
     }
 
-    private fun analyzeWithPattern(book: Book, pattern: Pattern): Pair<List<String>, Int> {
+       private suspend fun analyzeWithPattern(book: Book, pattern: Pattern): Pair<List<String>, Int> {
         val chapters = mutableListOf<String>()
         var totalCount = 0
         val charset = book.fileCharset()
@@ -198,9 +200,10 @@ class TxtTocRulePreviewViewModel(private val app: Application) : ViewModel() {
                 }
                 var length: Int
                 while (bis.read(buffer, bufferStart, bufferSize - bufferStart).also { length = it } > 0) {
+                    coroutineContext.ensureActive()
                     var end = bufferStart + length
                     if (end == bufferSize) {
-                        for (i in bufferStart + length - 1 downTo 0) {
+                        for (i in bufferStart + length - 1 downTo (bufferStart + length - 4096).coerceAtLeast(0)) {
                             if (buffer[i] == blank) {
                                 end = i
                                 break
