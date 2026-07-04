@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.lifecycleScope
@@ -73,6 +74,11 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
         searchView.onActionViewExpanded()
         searchView.isSubmitButtonEnabled = true
         searchView.queryHint = getString(R.string.search_book_key)
+        searchView.contentDescription = getString(R.string.search_book_key)
+        searchView.findViewById<EditText>(androidx.appcompat.R.id.search_src_text)?.apply {
+            hint = getString(R.string.search_book_key)
+            contentDescription = getString(R.string.search_book_key)
+        }
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 searchView.clearFocus()
@@ -98,6 +104,7 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
                 binding.textMy.text = it
             }
         }
+        updateHelpContentDescriptions()
         binding.textMy.onClick {
             searchView.setQuery(binding.textMy.text, true)
         }
@@ -131,6 +138,7 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
                 }
                 exploreKinds?.firstOrNull()?.let {
                     binding.textFx.text = "${it.title}::${it.url}"
+                    updateHelpContentDescriptions()
                     if (it.title.startsWith("ERROR:")) {
                         adapter.addItem("获取发现出错\n${it.url}")
                         openOrCloseHelp(false)
@@ -145,6 +153,7 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
                         selector("选择发现", exploreKindTitles) { _, index ->
                             val explore = exploreKinds[index]
                             binding.textFx.text = "${explore.title}::${explore.url}"
+                            updateHelpContentDescriptions()
                             searchView.setQuery(binding.textFx.text, true)
                         }
                     }
@@ -155,6 +164,15 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
                 searchView.clearFocus()
             }
         }
+    }
+
+    private fun updateHelpContentDescriptions() = binding.run {
+        textMy.contentDescription = getString(R.string.a11y_debug_example, textMy.text)
+        textXt.contentDescription = getString(R.string.a11y_debug_example, textXt.text)
+        textFx.contentDescription = getString(R.string.a11y_debug_example, textFx.text)
+        textInfo.contentDescription = getString(R.string.a11y_debug_example, textInfo.text)
+        textToc.contentDescription = getString(R.string.a11y_debug_example, textToc.text)
+        textContent.contentDescription = getString(R.string.a11y_debug_example, textContent.text)
     }
 
     private fun prefixAutoComplete(prefix: String) {

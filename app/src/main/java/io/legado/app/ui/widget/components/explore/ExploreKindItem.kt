@@ -9,6 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -47,6 +52,17 @@ fun ExploreKindItem(
         } else {
             LegadoTheme.colorScheme.primary
         }
+        val itemModifier = if (isClickable) {
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = displayText
+                role = Role.Button
+                if (isSelected) {
+                    selected = true
+                }
+            }
+        } else {
+            modifier
+        }
 
         if (isClickable) {
             GlassCard(
@@ -54,7 +70,7 @@ fun ExploreKindItem(
                 cornerRadius = cornerRadius,
                 containerColor = containerColor,
                 contentColor = contentColor,
-                modifier = modifier,
+                modifier = itemModifier,
             ) {
                 KindText(
                     text = displayText,
@@ -68,7 +84,7 @@ fun ExploreKindItem(
                 cornerRadius = cornerRadius,
                 containerColor = containerColor,
                 contentColor = contentColor,
-                modifier = modifier,
+                modifier = itemModifier,
             ) {
                 KindText(
                     text = displayText,

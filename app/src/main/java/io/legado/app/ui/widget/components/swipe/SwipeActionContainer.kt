@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 
@@ -70,7 +73,9 @@ fun SwipeActionContainer(
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier,
+        modifier = modifier.then(
+            swipeActionsSemantics(startAction, endAction)
+        ),
         enableDismissFromStartToEnd = startAction != null,
         enableDismissFromEndToStart = endAction != null,
         backgroundContent = {
@@ -112,6 +117,34 @@ fun SwipeActionContainer(
             }
         }
     )
+}
+
+private fun swipeActionsSemantics(
+    startAction: SwipeAction?,
+    endAction: SwipeAction?
+): Modifier {
+    val accessibilityActions = buildList {
+        startAction?.contentDescription?.let { label ->
+            add(
+                CustomAccessibilityAction(label = label) {
+                    startAction.onSwipe()
+                    true
+                }
+            )
+        }
+        endAction?.contentDescription?.let { label ->
+            add(
+                CustomAccessibilityAction(label = label) {
+                    endAction.onSwipe()
+                    true
+                }
+            )
+        }
+    }
+    if (accessibilityActions.isEmpty()) return Modifier
+    return Modifier.semantics {
+        customActions = accessibilityActions
+    }
 }
 
 @Composable

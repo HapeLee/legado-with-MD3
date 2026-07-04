@@ -38,6 +38,7 @@ import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.SplicedColumnDivider
+import io.legado.app.ui.widget.components.sliderAccessibility
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
@@ -63,6 +64,8 @@ fun SliderSettingItem(
     LaunchedEffect(value) {
         sliderValue = value
     }
+
+    val sliderAccessibilityValue = description ?: sliderValue.toString()
 
     LaunchedEffect(isInputMode) {
         if (isInputMode) {
@@ -138,7 +141,12 @@ fun SliderSettingItem(
                                 },
                                 valueRange = valueRange,
                                 steps = steps,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sliderAccessibility(
+                                        label = title,
+                                        value = sliderAccessibilityValue,
+                                    )
                             )
                         }
                     }
@@ -222,7 +230,12 @@ fun SliderSettingItem(
                                 },
                                 valueRange = valueRange,
                                 steps = steps,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sliderAccessibility(
+                                        label = title,
+                                        value = sliderAccessibilityValue,
+                                    )
                             )
                         }
                     }
@@ -252,4 +265,3 @@ fun SliderSettingItem(
         )
     }
 }
-

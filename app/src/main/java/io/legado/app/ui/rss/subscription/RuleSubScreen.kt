@@ -169,7 +169,7 @@ fun RuleSubScreen(
                             SmallPlainButton(
                                 onClick = { showEditDialog = ruleSub },
                                 icon = Icons.Default.Edit,
-                                contentDescription = "Edit"
+                                contentDescription = stringResource(R.string.edit)
                             )
                         },
                         dropdownContent = { dismiss ->

@@ -43,11 +43,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.R
 import io.legado.app.ui.book.readRecord.component.ReadingTimeBarChartCard
 import io.legado.app.ui.book.readRecord.component.StatItem
 import io.legado.app.ui.book.readRecord.component.StatsGridCard
@@ -82,7 +88,7 @@ fun ReadRecordOverviewScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "阅读总览",
+                title = stringResource(R.string.read_record_overview),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -120,14 +126,14 @@ fun ReadRecordOverviewScreen(
 
                 item {
                     val stats = listOf(
-                        StatItem("阅读时间", ReadRecordFormatter.formatDuration(state.totalTime)),
-                        StatItem("阅读天数", "${state.readingDays}天"),
-                        StatItem("累计读过", "${state.totalBooks}本"),
-                        StatItem("读完书籍", "${state.finishedBooks}本"),
-                        StatItem("在读书籍", "${state.readingBooks}本"),
-                        StatItem("阅读字数", ReadRecordFormatter.formatWords(state.totalWords))
+                        StatItem(stringResource(R.string.reading_time), ReadRecordFormatter.formatDuration(state.totalTime)),
+                        StatItem(stringResource(R.string.reading_days), stringResource(R.string.days_format, state.readingDays)),
+                        StatItem(stringResource(R.string.total_read_books), stringResource(R.string.books_format, state.totalBooks)),
+                        StatItem(stringResource(R.string.finished_books), stringResource(R.string.books_format, state.finishedBooks)),
+                        StatItem(stringResource(R.string.reading_books), stringResource(R.string.books_format, state.readingBooks)),
+                        StatItem(stringResource(R.string.reading_words), ReadRecordFormatter.formatWords(state.totalWords))
                     )
-                    StatsGridCard(title = "阅读数据", items = stats)
+                    StatsGridCard(title = stringResource(R.string.reading_data), items = stats)
                 }
 
                 item {
@@ -189,7 +195,8 @@ fun DateNavigator(
     ) {
         MediumPlainButton(
             onClick = onPrevClick,
-            icon = Icons.AutoMirrored.Filled.ArrowLeft
+            icon = Icons.AutoMirrored.Filled.ArrowLeft,
+            contentDescription = stringResource(R.string.previous)
         )
         AnimatedContent(
             targetState = referenceDate,
@@ -226,7 +233,8 @@ fun DateNavigator(
         }
         MediumPlainButton(
             onClick = onNextClick,
-            icon = Icons.AutoMirrored.Filled.ArrowRight
+            icon = Icons.AutoMirrored.Filled.ArrowRight,
+            contentDescription = stringResource(R.string.next)
         )
     }
 }
@@ -247,7 +255,7 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText("阅读热力图", style = LegadoTheme.typography.titleMedium)
+                AppText(stringResource(R.string.reading_heatmap), style = LegadoTheme.typography.titleMedium)
             }
             Spacer(modifier = Modifier.height(8.dp))
             HeatmapCalendarSection(
@@ -285,7 +293,7 @@ fun TopReadingListCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = "阅读时长榜",
+                    text = stringResource(R.string.reading_time_ranking),
                     style = LegadoTheme.typography.titleMedium
                 )
             }
@@ -296,11 +304,22 @@ fun TopReadingListCard(
                 LaunchedEffect(book.bookName, book.bookAuthor) {
                     coverPath = viewModel.getBookCover(book.bookName, book.bookAuthor)
                 }
+                val rankingDescription = stringResource(
+                    R.string.a11y_reading_ranking_item,
+                    index + 1,
+                    book.bookName,
+                    book.bookAuthor,
+                    ReadRecordFormatter.formatDuration(book.readTime)
+                )
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onBookClick(book.bookName, book.bookAuthor) }
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = rankingDescription
+                            role = Role.Button
+                        }
                         .padding(vertical = 8.dp, horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -368,7 +387,7 @@ fun ReadingCalendarCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText("读书日历", style = LegadoTheme.typography.titleMedium)
+                AppText(stringResource(R.string.reading_calendar), style = LegadoTheme.typography.titleMedium)
             }
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -426,12 +445,25 @@ fun CalendarDayCell(
             coverPath = viewModel.getBookCover(name, author)
         }
     }
+    val dayDescription = if (topBook != null) {
+        stringResource(
+            R.string.a11y_reading_calendar_day_with_book,
+            date.toString(),
+            topBook.first,
+            topBook.second
+        )
+    } else {
+        stringResource(R.string.a11y_reading_calendar_day_empty, date.toString())
+    }
     
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(4.dp))
-            .background(LegadoTheme.colorScheme.surfaceVariant),
+            .background(LegadoTheme.colorScheme.surfaceVariant)
+            .semantics {
+                contentDescription = dayDescription
+            },
         contentAlignment = Alignment.Center
     ) {
         if (topBook != null) {

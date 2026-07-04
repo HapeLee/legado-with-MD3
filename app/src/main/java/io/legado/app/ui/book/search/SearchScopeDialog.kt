@@ -56,6 +56,7 @@ class SearchScopeDialog : BaseBottomSheetDialogFragment(R.layout.dialog_search_s
 
     private fun initSearchView() {
         val searchView = binding.toolBar.menu.findItem(R.id.menu_screen).actionView as SearchView
+        searchView.queryHint = getString(R.string.screen)
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return false

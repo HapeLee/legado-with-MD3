@@ -122,7 +122,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -799,7 +808,8 @@ private fun ReadBookMenuRoutePage(
         ) {
             SmallTonalButton(
                 onClick = onBack,
-                icon = Icons.AutoMirrored.Filled.ArrowBack
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back),
             )
             Text(
                 text = title,
@@ -934,7 +944,7 @@ private fun MenuTitleBar(
                 MenuTitleGlassButton(
                     onClick = { onIntent(ReadBookIntent.CloseReadBook()) },
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.back),
                     state = state,
                     colors = colors,
                     backdrop = backdrop,
@@ -1022,6 +1032,7 @@ private fun MenuTitleBar(
                         MenuTitleGlassButton(
                             onClick = { expanded = true },
                             icon = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.more_actions),
                             state = state,
                             colors = colors,
                             backdrop = backdrop,
@@ -1198,10 +1209,11 @@ private fun ReadMenuGlassIconButton(
         modifier = modifier,
         onLongClick = onLongClick,
         selected = selected,
+        contentDescription = contentDescription,
     ) { tint ->
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = tint,
             modifier = Modifier.size(20.dp),
         )
@@ -1219,6 +1231,7 @@ private fun ReadMenuGlassButtonSurface(
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     selected: Boolean = false,
+    contentDescription: String? = null,
     content: @Composable (Color) -> Unit,
 ) {
     val shape = CircleShape
@@ -1272,6 +1285,16 @@ private fun ReadMenuGlassButtonSurface(
                     role = Role.Button,
                     onLongClick = onLongClick,
                     onClick = onClick,
+                )
+                .then(
+                    if (contentDescription != null) {
+                        Modifier.semantics {
+                            this.contentDescription = contentDescription
+                            role = Role.Button
+                        }
+                    } else {
+                        Modifier
+                    }
                 ),
         ) {
             content(tint)
@@ -1379,6 +1402,7 @@ private fun MenuTitleBarMergedGlassButton(
             ) {
             // SwapHoriz - change source
             if (!state.isLocalBook) {
+                val changeSourceDescription = stringResource(R.string.change_origin)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -1389,11 +1413,15 @@ private fun MenuTitleBarMergedGlassButton(
                             role = Role.Button,
                             onClick = { onIntent(ReadBookIntent.MenuChangeSource) },
                             onLongClick = { sourceExpanded = true },
-                        ),
+                        )
+                        .semantics {
+                            contentDescription = changeSourceDescription
+                            role = Role.Button
+                        },
                 ) {
                     Icon(
                         imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = stringResource(R.string.change_origin),
+                        contentDescription = null,
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1404,9 +1432,11 @@ private fun MenuTitleBarMergedGlassButton(
                         .width(1.dp)
                         .height(20.dp)
                         .background(tint.copy(alpha = 0.15f))
+                        .clearAndSetSemantics { }
                 )
 
                 // Refresh
+                val refreshDescription = stringResource(R.string.menu_refresh_after)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -1417,11 +1447,15 @@ private fun MenuTitleBarMergedGlassButton(
                             role = Role.Button,
                             onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
                             onLongClick = { refreshExpanded = true },
-                        ),
+                        )
+                        .semantics {
+                            contentDescription = refreshDescription
+                            role = Role.Button
+                        },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.menu_refresh_after),
+                        contentDescription = null,
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1432,9 +1466,11 @@ private fun MenuTitleBarMergedGlassButton(
                         .width(1.dp)
                         .height(20.dp)
                         .background(tint.copy(alpha = 0.15f))
+                        .clearAndSetSemantics { }
                 )
 
                 // Download
+                val downloadDescription = stringResource(R.string.offline_cache)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -1444,11 +1480,15 @@ private fun MenuTitleBarMergedGlassButton(
                             interactionSource = remember { MutableInteractionSource() },
                             role = Role.Button,
                             onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
-                        ),
+                        )
+                        .semantics {
+                            contentDescription = downloadDescription
+                            role = Role.Button
+                        },
                 ) {
                     Icon(
                         imageVector = Icons.Default.CloudDownload,
-                        contentDescription = stringResource(R.string.offline_cache),
+                        contentDescription = null,
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1459,10 +1499,12 @@ private fun MenuTitleBarMergedGlassButton(
                         .width(1.dp)
                         .height(20.dp)
                         .background(tint.copy(alpha = 0.15f))
+                        .clearAndSetSemantics { }
                 )
             } else {
                 // TXT directory rule
                 if (state.isLocalTxt) {
+                    val tocRuleDescription = stringResource(R.string.txt_toc_rule)
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -1472,11 +1514,15 @@ private fun MenuTitleBarMergedGlassButton(
                                 interactionSource = remember { MutableInteractionSource() },
                                 role = Role.Button,
                                 onClick = { onIntent(ReadBookIntent.MenuTocRegex) },
-                            ),
+                            )
+                            .semantics {
+                                contentDescription = tocRuleDescription
+                                role = Role.Button
+                            },
                     ) {
                         Icon(
                             imageVector = Icons.Default.Toc,
-                            contentDescription = stringResource(R.string.txt_toc_rule),
+                            contentDescription = null,
                             tint = tint,
                             modifier = Modifier.size(20.dp),
                         )
@@ -1487,10 +1533,12 @@ private fun MenuTitleBarMergedGlassButton(
                             .width(1.dp)
                             .height(20.dp)
                             .background(tint.copy(alpha = 0.15f))
+                            .clearAndSetSemantics { }
                     )
                 }
 
                 // Text encoding
+                val charsetDescription = stringResource(R.string.set_charset)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -1500,11 +1548,15 @@ private fun MenuTitleBarMergedGlassButton(
                             interactionSource = remember { MutableInteractionSource() },
                             role = Role.Button,
                             onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) },
-                        ),
+                        )
+                        .semantics {
+                            contentDescription = charsetDescription
+                            role = Role.Button
+                        },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Translate,
-                        contentDescription = stringResource(R.string.set_charset),
+                        contentDescription = null,
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1515,10 +1567,12 @@ private fun MenuTitleBarMergedGlassButton(
                         .width(1.dp)
                         .height(20.dp)
                         .background(tint.copy(alpha = 0.15f))
+                        .clearAndSetSemantics { }
                 )
             }
 
             // MoreVert - overflow menu
+            val moreActionsDescription = stringResource(R.string.more_actions)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -1528,7 +1582,11 @@ private fun MenuTitleBarMergedGlassButton(
                         interactionSource = remember { MutableInteractionSource() },
                         role = Role.Button,
                         onClick = { overflowExpanded = true },
-                    ),
+                    )
+                    .semantics {
+                        contentDescription = moreActionsDescription
+                        role = Role.Button
+                    },
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
@@ -1750,11 +1808,12 @@ private fun FloatingIconRow(
                 selected = iconDef.isActive,
                 modifier = Modifier.padding(horizontal = 4.dp),
                 onLongClick = iconDef.onLongClick,
+                contentDescription = iconDef.label,
             ) {
                 if (isCustom) {
                     AsyncImage(
                         model = customPath,
-                        contentDescription = iconDef.label,
+                        contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(36.dp)
@@ -1763,7 +1822,7 @@ private fun FloatingIconRow(
                 } else {
                     Icon(
                         imageVector = iconDef.icon,
-                        contentDescription = iconDef.label,
+                        contentDescription = null,
                         tint = if (iconDef.isActive) LegadoTheme.colorScheme.primary else colors.content,
                         modifier = Modifier.size(20.dp),
                     )
@@ -2052,13 +2111,13 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Search,
-                text = "搜索内容",
+                text = stringResource(R.string.search),
                 onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
             )
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Menu,
-                text = "主菜单",
+                text = stringResource(R.string.main_menu),
                 onClick = {
                     onIntent(ReadBookIntent.HideSearchMenu)
                     onIntent(ReadBookIntent.ShowMenu)
@@ -2067,7 +2126,7 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(0.55f),
                 icon = Icons.Default.Close,
-                text = "退出",
+                text = stringResource(R.string.exit),
                 onClick = { onIntent(ReadBookIntent.ExitSearch) },
             )
         }
@@ -2149,6 +2208,17 @@ private fun MenuBottomBar(
         0.dp
     }
     val progressBarBehavior = ReadConfig.progressBarBehavior
+    val progressCurrent = sliderValue.roundToInt().coerceIn(0, seekMax) + 1
+    val progressTotal = seekMax + 1
+    val progressValueDescription = stringResource(
+        if (progressBarBehavior == "page") {
+            R.string.a11y_read_progress_page
+        } else {
+            R.string.a11y_read_progress_chapter
+        },
+        progressCurrent,
+        progressTotal,
+    )
 
     fun commitSliderValue(value: Float) {
         val target = value.roundToInt().coerceIn(0, seekMax)
@@ -2230,6 +2300,7 @@ private fun MenuBottomBar(
                     backdrop = backdrop,
                     menuConfig = state.menuConfig,
                     glassEnabled = buttonGlassEnabled,
+                    contentDescription = stringResource(R.string.previous_chapter),
                 )
 
                 ReadMenuSlider(
@@ -2244,6 +2315,8 @@ private fun MenuBottomBar(
                     enabled = seekMax > 0,
                     backdrop = backdrop,
                     glassThumbEnabled = buttonGlassEnabled,
+                    accessibilityLabel = stringResource(R.string.progress),
+                    accessibilityValue = progressValueDescription,
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp)
@@ -2256,6 +2329,7 @@ private fun MenuBottomBar(
                     backdrop = backdrop,
                     menuConfig = state.menuConfig,
                     glassEnabled = buttonGlassEnabled,
+                    contentDescription = stringResource(R.string.next_chapter),
                 )
             }
         }
@@ -2352,18 +2426,23 @@ private fun ReadMenuSlider(
     onValueCommit: ((Float) -> Unit)? = null,
     backdrop: Backdrop?,
     glassThumbEnabled: Boolean,
+    accessibilityLabel: String? = null,
+    accessibilityValue: String? = null,
 ) {
     if (glassThumbEnabled && backdrop != null) {
         ReadMenuLiquidSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
+            steps = steps,
             visibilityThreshold = 0.001f,
             backdrop = backdrop,
             modifier = modifier,
             enabled = enabled,
             onValueChangeFinished = onValueChangeFinished,
             onValueCommit = onValueCommit,
+            accessibilityLabel = accessibilityLabel,
+            accessibilityValue = accessibilityValue,
         )
         return
     }
@@ -2378,6 +2457,8 @@ private fun ReadMenuSlider(
         valueRange = valueRange,
         steps = steps,
         onValueChangeFinished = commitAction,
+        accessibilityLabel = accessibilityLabel,
+        accessibilityValue = accessibilityValue,
     )
 }
 
@@ -2386,12 +2467,15 @@ private fun ReadMenuLiquidSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
     visibilityThreshold: Float,
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onValueChangeFinished: (() -> Unit)? = null,
     onValueCommit: ((Float) -> Unit)? = null,
+    accessibilityLabel: String? = null,
+    accessibilityValue: String? = null,
 ) {
     val accentColor = LegadoTheme.colorScheme.secondary
     val trackColor = LegadoTheme.colorScheme.surfaceContainerLow
@@ -2401,7 +2485,30 @@ private fun ReadMenuLiquidSlider(
     val trackBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
-        modifier.fillMaxWidth(),
+        modifier
+            .fillMaxWidth()
+            .semantics {
+                accessibilityLabel?.let { contentDescription = it }
+                accessibilityValue?.let { stateDescription = it }
+                progressBarRangeInfo = ProgressBarRangeInfo(
+                    current = value.coerceIn(valueRange),
+                    range = valueRange,
+                    steps = steps,
+                )
+                if (!enabled) {
+                    disabled()
+                }
+                setProgress { target ->
+                    if (!enabled) {
+                        false
+                    } else {
+                        val nextValue = target.coerceIn(valueRange)
+                        onValueChange(nextValue)
+                        onValueCommit?.invoke(nextValue) ?: onValueChangeFinished?.invoke()
+                        true
+                    }
+                }
+            },
         contentAlignment = Alignment.CenterStart,
     ) {
         val trackWidth = constraints.maxWidth
@@ -2604,6 +2711,7 @@ private fun ToolButtonItem(
                 glassEnabled = true,
                 selected = button.isActive,
                 onLongClick = button.onLongClick,
+                contentDescription = button.description,
             ) { tint ->
                 ToolButtonContent(
                     button = button,
@@ -2630,7 +2738,11 @@ private fun ToolButtonItem(
                         role = Role.Button,
                         onLongClick = button.onLongClick,
                         onClick = button.onClick,
-                    ),
+                    )
+                    .semantics {
+                        contentDescription = button.description
+                        role = Role.Button
+                    },
             ) {
                 ToolButtonContent(
                     button = button,
@@ -2674,14 +2786,14 @@ private fun ToolButtonContent(
         if (button.customIconPath.isNullOrBlank()) {
             Icon(
                 imageVector = button.icon,
-                contentDescription = button.description,
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = tint,
             )
         } else {
             AsyncImage(
                 model = button.customIconPath,
-                contentDescription = button.description,
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(36.dp)
@@ -3208,6 +3320,11 @@ private fun BrightnessBar(
         onToggleAuto()
     }
 
+    val brightnessValueDescription = stringResource(
+        R.string.a11y_percent_value,
+        sliderValue.roundToInt().coerceIn(0, 100),
+    )
+
     if (vertical) {
         Column(
             modifier = modifier
@@ -3238,6 +3355,8 @@ private fun BrightnessBar(
                 valueRange = 0f..100f,
                 enabled = !brightnessAuto,
                 height = 168.dp,
+                accessibilityLabel = stringResource(R.string.brightness),
+                accessibilityValue = brightnessValueDescription,
             )
             ReadMenuGlassIconButton(
                 onClick = onTogglePosition,
@@ -3277,10 +3396,13 @@ private fun BrightnessBar(
                 onValueChangeFinished = {
                     commitSliderValue(sliderValue)
                 },
+                onValueCommit = ::commitSliderValue,
                 valueRange = 0f..100f,
                 enabled = !brightnessAuto,
                 backdrop = backdrop,
                 glassThumbEnabled = glassThumbEnabled,
+                accessibilityLabel = stringResource(R.string.brightness),
+                accessibilityValue = brightnessValueDescription,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 8.dp),

@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -919,12 +920,19 @@ fun ThemeModeSelector(
         val modifiers = listOf(Modifier.weight(1.2f), Modifier.weight(1f), Modifier.weight(1f))
 
         modes.forEachIndexed { index, (value, label, icon) ->
+            val checked = selectedIndex == index
+            val modeStateDescription = stringResource(
+                if (checked) R.string.a11y_selected else R.string.a11y_not_selected
+            )
 
             ToggleButton(
-                checked = selectedIndex == index,
+                checked = checked,
                 onCheckedChange = { onModeSelected(value) },
                 modifier = modifiers[index]
-                    .semantics { role = Role.RadioButton },
+                    .semantics {
+                        role = Role.RadioButton
+                        stateDescription = modeStateDescription
+                    },
 
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
@@ -1261,4 +1269,3 @@ private fun getThemeColors(
         onSurfaceVariant = colorScheme.onSurfaceVariant
     )
 }
-

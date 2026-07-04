@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -57,8 +59,12 @@ fun <T> DynamicTopAppBar(
         modifier = Modifier
             .fillMaxWidth(),
         title = when {
-            state.isLoading -> "请稍后..."
-            isSelecting -> "已选择 ${state.selectedIds.size}/${state.items.size}"
+            state.isLoading -> stringResource(R.string.list_loading_title)
+            isSelecting -> stringResource(
+                R.string.list_selected_count,
+                state.selectedIds.size,
+                state.items.size
+            )
             else -> title
         },
         useCharMode = isSelecting || state.isLoading,
@@ -68,7 +74,9 @@ fun <T> DynamicTopAppBar(
                 TopBarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
                     imageVector = if (isSelecting) AppIcons.Close else backNavigationIcon,
-                    contentDescription = if (isSelecting) "取消选择" else "返回"
+                    contentDescription = stringResource(
+                        if (isSelecting) R.string.cancel_select else R.string.back
+                    )
                 )
             }
         },
@@ -78,7 +86,7 @@ fun <T> DynamicTopAppBar(
                     TopBarActionButton(
                         onClick = { onSearchToggle(!state.isSearch) },
                         imageVector = AppIcons.Search,
-                        contentDescription = "搜索"
+                        contentDescription = stringResource(R.string.search)
                     )
                 }
 
@@ -89,7 +97,7 @@ fun <T> DynamicTopAppBar(
                         TopBarActionButton(
                             onClick = { showMenu = true },
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "更多"
+                            contentDescription = stringResource(R.string.more_menu)
                         )
                         RoundDropdownMenu(
                             expanded = showMenu,
@@ -124,4 +132,3 @@ fun <T> DynamicTopAppBar(
         }
     )
 }
-

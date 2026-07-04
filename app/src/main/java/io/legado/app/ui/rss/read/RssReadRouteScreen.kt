@@ -237,7 +237,7 @@ fun RssReadRouteScreen(
                         Box {
                         TopBarActionButton(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu",
+                            contentDescription = stringResource(R.string.more_menu),
                             onClick = { showMenu = true }
                         )
                             RoundDropdownMenu(

@@ -25,6 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
@@ -108,6 +113,9 @@ fun TextSelectMenuFilterSheet(
                 ) {
                     items(apps) { app ->
                         val isEnabled = !disabledSet.contains(app.componentName)
+                        val switchStateDescription = stringResource(
+                            if (isEnabled) R.string.a11y_on else R.string.a11y_off
+                        )
                         NormalCard(
                             onClick = {
                                 val nextSet = if (isEnabled) {
@@ -116,6 +124,10 @@ fun TextSelectMenuFilterSheet(
                                     disabledSet - app.componentName
                                 }
                                 pendingFilterString = nextSet.joinToString(",")
+                            },
+                            modifier = Modifier.semantics(mergeDescendants = true) {
+                                role = Role.Switch
+                                stateDescription = switchStateDescription
                             },
                             cornerRadius = 12.dp,
                             containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
@@ -149,6 +161,7 @@ fun TextSelectMenuFilterSheet(
                                     )
                                 }
                                 AdaptiveSwitch(
+                                    modifier = Modifier.clearAndSetSemantics { },
                                     checked = isEnabled,
                                     onCheckedChange = { checked ->
                                         val nextSet = if (checked) {
@@ -157,7 +170,8 @@ fun TextSelectMenuFilterSheet(
                                             disabledSet + app.componentName
                                         }
                                         pendingFilterString = nextSet.joinToString(",")
-                                    }
+                                    },
+                                    includeStateSemantics = false
                                 )
                             }
                         }

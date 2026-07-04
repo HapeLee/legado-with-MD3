@@ -72,6 +72,12 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -426,7 +432,7 @@ fun HomeScreen(
                         TopBarActionButton(
                             onClick = { showPageMenu = true },
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.more_menu),
                         )
                         RoundDropdownMenu(
                             expanded = showPageMenu,
@@ -575,7 +581,10 @@ fun HomeScreen(
                         GlassCard(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp)
-                                .clickable { showSourceMenu = true },
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = { showSourceMenu = true },
+                                ),
                             cornerRadius = 32.dp
                         ) {
                             Row(
@@ -1015,7 +1024,14 @@ private fun RecentHistoryBookCard(
             .width(60.dp)
             .aspectRatio(5f / 7f)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+            .clickable(
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .semantics {
+                contentDescription = bookAccessibilityLabel(book.name, book.author)
+                role = Role.Button
+            },
     ) {
         BookshelfCover(
             name = book.name,
@@ -1115,7 +1131,12 @@ private fun SemiCircleProgress(
     val progressColor = LegadoTheme.colorScheme.primary
 
     Box(
-        modifier = modifier,
+        modifier = modifier.semantics {
+            progressBarRangeInfo = ProgressBarRangeInfo(
+                current = animatedProgress.coerceIn(0f, 1f),
+                range = 0f..1f,
+            )
+        },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1401,4 +1422,11 @@ private fun HomeDashboardSection.labelRes(): Int = when (this) {
     HomeDashboardSection.RecentBooks -> R.string.home_recent_books
     HomeDashboardSection.DailyGoal -> R.string.home_today_reading_goal
     HomeDashboardSection.WebDavBackup -> R.string.home_webdav_backup
+}
+
+private fun bookAccessibilityLabel(
+    name: String,
+    author: String,
+): String {
+    return if (author.isBlank()) name else "$name, $author"
 }

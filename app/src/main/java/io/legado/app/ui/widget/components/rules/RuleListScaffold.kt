@@ -62,7 +62,7 @@ fun <T> RuleListScaffold(
                     visible = state.selectedIds.isEmpty(),
                     alignment = Alignment.BottomEnd,
                 ),
-                tooltipText = "添加",
+                tooltipText = stringResource(R.string.add),
                 icon = Icons.Default.Add
             )
         }

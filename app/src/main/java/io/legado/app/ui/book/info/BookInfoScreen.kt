@@ -63,6 +63,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -536,18 +541,18 @@ private fun BookInfoTopBarActions(
         TopBarActionButton(
             onClick = { onMenuAction(BookInfoMenuAction.Edit) },
             imageVector = Icons.Default.Edit,
-            contentDescription = "编辑"
+            contentDescription = stringResource(R.string.edit)
         )
     }
     TopBarActionButton(
         onClick = { onMenuAction(BookInfoMenuAction.Share) },
         imageVector = Icons.Default.Share,
-        contentDescription = "分享"
+        contentDescription = stringResource(R.string.share)
     )
     TopBarActionButton(
         onClick = { onShowMenuChange(true) },
         imageVector = Icons.Default.MoreVert,
-        contentDescription = "更多"
+        contentDescription = stringResource(R.string.more_actions)
     )
     BookInfoOverflowMenu(
         expanded = showMenu,
@@ -587,7 +592,11 @@ private fun BookInfoBackdrop(
         LegadoTheme.seedColor,
         0.42f
     )
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clearAndSetSemantics { }
+    ) {
         if (showBackgroundCover) {
             Crossfade(
                 targetState = backdropState,
@@ -755,6 +764,7 @@ private fun BookInfoHeader(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
 ) {
+    val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -784,6 +794,10 @@ private fun BookInfoHeader(
                     modifier = Modifier
                         .width(112.dp)
                         .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = coverDescription
+                        }
                 ) {
                     CoilBookCover(
                         name = book.name,
@@ -984,7 +998,10 @@ private fun BookInfoActionCard(
     onClick: () -> Unit
 ) {
     GlassCard(
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = label
+        },
         onLongClick = onLongClick,
         onClick = onClick,
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
@@ -1221,7 +1238,7 @@ private fun RelatedBooksBanner(
                 SmallTonalButton(
                     onClick = onMoreClick,
                     icon = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "more",
+                    contentDescription = stringResource(R.string.a11y_related_books_more, title),
                 )
             }
         }

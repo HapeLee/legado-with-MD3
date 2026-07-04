@@ -29,7 +29,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -66,6 +68,9 @@ fun SelectionBottomBar(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val selectAllDescription = stringResource(R.string.select_all)
+    val invertSelectionDescription = stringResource(R.string.invert_selection)
+    val moreActionsDescription = stringResource(R.string.more_menu)
 
     if (isMiuix) {
         MiuixFloatingToolbar(
@@ -79,13 +84,13 @@ fun SelectionBottomBar(
                 MiuixIconButton(onClick = onSelectAll) {
                     MiuixIcon(
                         imageVector = Icons.Default.SelectAll,
-                        contentDescription = "Select All"
+                        contentDescription = selectAllDescription
                     )
                 }
                 MiuixIconButton(onClick = onSelectInvert) {
                     MiuixIcon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Invert Selection"
+                        contentDescription = invertSelectionDescription
                     )
                 }
 
@@ -96,7 +101,7 @@ fun SelectionBottomBar(
                 ) {
                     MiuixIcon(
                         imageVector = primaryAction.icon,
-                        contentDescription = null,
+                        contentDescription = primaryAction.text,
                         tint = MiuixTheme.colorScheme.onSecondaryContainer
                     )
                 }
@@ -106,7 +111,7 @@ fun SelectionBottomBar(
                         MiuixIconButton(onClick = { showMenu = true }) {
                             MiuixIcon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More actions"
+                                contentDescription = moreActionsDescription
                             )
                         }
                         RoundDropdownMenu(
@@ -135,13 +140,13 @@ fun SelectionBottomBar(
                 IconButton(onClick = onSelectAll) {
                     AppIcon(
                         imageVector = Icons.Default.SelectAll,
-                        contentDescription = "Select All"
+                        contentDescription = selectAllDescription
                     )
                 }
                 IconButton(onClick = onSelectInvert) {
                     AppIcon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Invert Selection"
+                        contentDescription = invertSelectionDescription
                     )
                 }
             },
@@ -151,7 +156,7 @@ fun SelectionBottomBar(
                         IconButton(onClick = { showMenu = true }) {
                             AppIcon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More actions"
+                                contentDescription = moreActionsDescription
                             )
                         }
                         RoundDropdownMenu(
@@ -193,7 +198,10 @@ fun SelectionBottomBar(
                             contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                         ),
                     ) {
-                        AppIcon(imageVector = primaryAction.icon, contentDescription = null)
+                        AppIcon(
+                            imageVector = primaryAction.icon,
+                            contentDescription = primaryAction.text
+                        )
                     }
                 }
             }

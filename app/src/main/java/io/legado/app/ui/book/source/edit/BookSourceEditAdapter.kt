@@ -72,6 +72,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
+            editText.hint = editEntity.hint
             val textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,

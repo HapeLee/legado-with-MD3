@@ -232,7 +232,7 @@ fun RssFavoritesScreen(
                             SmallPlainButton(
                                 onClick = openAction,
                                 icon = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = "Open"
+                                contentDescription = stringResource(R.string.open)
                             )
                         },
                         dropdownContent = { dismiss ->
@@ -257,4 +257,3 @@ fun RssFavoritesScreen(
         }
     }
 }
-

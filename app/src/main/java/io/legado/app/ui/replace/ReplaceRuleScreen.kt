@@ -409,6 +409,28 @@ fun ReplaceRuleScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(rules, key = { it.id }) { ui ->
+                    val enabledState = stringResource(
+                        if (ui.isEnabled) R.string.enabled else R.string.disabled
+                    )
+                    val selectedState = stringResource(
+                        if (selectedIds.contains(ui.id)) {
+                            R.string.a11y_selected
+                        } else {
+                            R.string.a11y_not_selected
+                        }
+                    )
+                    val reorderHint = if (canReorder && !inSelectionMode) {
+                        stringResource(R.string.a11y_long_press_reorder)
+                    } else {
+                        null
+                    }
+                    val itemDescription = listOfNotNull(
+                        ui.name,
+                        ui.pattern.takeIf { it.isNotBlank() },
+                        enabledState,
+                        selectedState,
+                        reorderHint
+                    ).joinToString()
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = ui.id,
@@ -423,6 +445,17 @@ fun ReplaceRuleScreen(
                         onEnabledChange = { enabled ->
                             onIntent(ReplaceRuleIntent.SetRuleEnabled(ui.id, enabled))
                         },
+                        contentDescription = itemDescription,
+                        stateDescription = selectedState,
+                        enableSwitchContentDescription = stringResource(
+                            R.string.a11y_rule_enabled_switch,
+                            ui.name
+                        ),
+                        editContentDescription = stringResource(R.string.a11y_edit_named, ui.name),
+                        moreContentDescription = stringResource(
+                            R.string.a11y_more_actions_for,
+                            ui.name
+                        ),
                         onClickEdit = {
                             onNavigateToEdit(
                                 ReplaceEditRoute(

@@ -11,7 +11,7 @@
         android:id="@+id/vw_menu_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:contentDescription="@string/content"
+        android:importantForAccessibility="no"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp" />
 
@@ -91,6 +91,8 @@
                 android:layout_height="wrap_content"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
                 app:backgroundTint="?attr/colorSurfaceContainer"
+                android:contentDescription="@string/previous_chapter"
+                android:tooltipText="@string/previous_chapter"
                 app:icon="@drawable/ic_previous"
                 tools:ignore="TouchTargetSizeCheck" />
 
@@ -106,6 +108,7 @@
                     android:id="@+id/seek_read_page"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:contentDescription="@string/progress"
                     android:layout_gravity="center_vertical" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -115,6 +118,8 @@
                 android:layout_height="wrap_content"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
                 app:backgroundTint="?attr/colorSurfaceContainer"
+                android:contentDescription="@string/next_chapter"
+                android:tooltipText="@string/next_chapter"
                 app:icon="@drawable/ic_next"
                 tools:ignore="TouchTargetSizeCheck" />
         </LinearLayout>

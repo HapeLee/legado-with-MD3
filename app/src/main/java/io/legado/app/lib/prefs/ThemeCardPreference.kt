@@ -12,6 +12,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -66,6 +67,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
 
             holder.label.text = label
             holder.card.isChecked = (value == currentValue)
+            holder.card.contentDescription = label
 
             val colors = getThemeColors(value)
             holder.colorTop.setCardBackgroundColor(colors[0])
@@ -78,6 +80,10 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
             val isSelected = (value == currentValue)
             holder.background.strokeColor = if (isSelected) colors[4] else colors[7]
             holder.card.checkedIconTint = ColorStateList.valueOf(colors[2])
+            ViewCompat.setStateDescription(
+                holder.card,
+                context.getString(if (isSelected) R.string.a11y_selected else R.string.a11y_not_selected)
+            )
 
 
             holder.card.setOnClickListener {
@@ -172,5 +178,4 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
         val background : MaterialCardView = view.findViewById(R.id.cardView)
     }
 }
-
 

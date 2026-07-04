@@ -29,6 +29,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
+        android:contentDescription="@string/delete"
         app:backgroundTint="@android:color/transparent"
         app:iconTint="?attr/colorOnSurface"
         app:icon="@drawable/ic_baseline_close" />

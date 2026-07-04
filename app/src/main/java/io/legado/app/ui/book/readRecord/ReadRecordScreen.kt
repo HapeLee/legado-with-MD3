@@ -51,6 +51,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +65,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
+import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -120,6 +127,7 @@ fun ReadRecordScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val state by viewModel.uiState.collectAsState()
     val displayMode by viewModel.displayMode.collectAsState()
@@ -182,12 +190,12 @@ fun ReadRecordScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = "阅读记录",
+                    title = stringResource(R.string.read_record),
                     subtitle = run {
                         val subTitle = when (displayMode) {
-                            DisplayMode.AGGREGATE -> "汇总视图"
-                            DisplayMode.TIMELINE -> "时间线视图"
-                            DisplayMode.LATEST -> "最后阅读"
+                            DisplayMode.AGGREGATE -> stringResource(R.string.read_record_view_aggregate)
+                            DisplayMode.TIMELINE -> stringResource(R.string.read_record_view_timeline)
+                            DisplayMode.LATEST -> stringResource(R.string.read_record_view_latest)
                         }
                         subTitle
                     },
@@ -208,17 +216,21 @@ fun ReadRecordScreen(
                                 DisplayMode.TIMELINE -> Icons.Default.Schedule
                                 DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
                             }
-                            val description = if (displayMode == DisplayMode.AGGREGATE) "Switch to Timeline" else "Switch to Aggregate"
+                            val description = when (displayMode) {
+                                DisplayMode.AGGREGATE -> stringResource(R.string.a11y_switch_to_timeline_view)
+                                DisplayMode.TIMELINE -> stringResource(R.string.a11y_switch_to_latest_view)
+                                DisplayMode.LATEST -> stringResource(R.string.a11y_switch_to_aggregate_view)
+                            }
                             AppIcon(icon, description)
                         }
                         AppIconButton(onClick = { showCalendar = !showCalendar }) {
                             AppIcon(
                                 Icons.Default.CalendarMonth,
-                                contentDescription = "Toggle Calendar"
+                                contentDescription = stringResource(R.string.a11y_toggle_read_calendar)
                             )
                         }
                         AppIconButton(onClick = { showSearch = !showSearch }) {
-                            AppIcon(Icons.Default.Search, contentDescription = null)
+                            AppIcon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                         }
                     },
                     scrollBehavior = scrollBehavior
@@ -256,7 +268,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "加载中",
+                        message = stringResource(R.string.loading),
                         isLoading = true
                     )
                 }
@@ -269,7 +281,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "没有记录"
+                        message = stringResource(R.string.no_read_record)
                     )
                 }
 
@@ -296,7 +308,9 @@ fun ReadRecordScreen(
                                     scope.launch {
                                         val candidates = viewModel.getMergeCandidates(record)
                                         if (candidates.isEmpty()) {
-                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.no_merge_candidates)
+                                            )
                                         } else {
                                             mergeDialogData = record to candidates
                                         }
@@ -341,25 +355,25 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = pendingDeleteAction,
         onDismissRequest = { pendingDeleteAction = null },
-        title = "确认删除",
+        title = stringResource(R.string.confirm_delete_read_record),
         content = { _ ->
             Column {
-                AppText("确定要删除这条记录吗？")
+                AppText(stringResource(R.string.delete_read_record_message))
                 Spacer(modifier = Modifier.height(8.dp))
                 CheckboxItem(
-                    title = "不再提示",
+                    title = stringResource(R.string.do_not_remind_again),
                     checked = skipDeleteConfirmTemp,
                     onCheckedChange = { skipDeleteConfirmTemp = it }
                 )
             }
         },
-        confirmText = "删除",
+        confirmText = stringResource(R.string.delete),
         onConfirm = { action ->
             action.invoke()
             pendingDeleteAction = null
             skipDeleteConfirm = skipDeleteConfirmTemp
         },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = {
             pendingDeleteAction = null
         }
@@ -407,14 +421,21 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = mergeDialogData,
         onDismissRequest = { mergeDialogData = null },
-        title = "合并阅读记录",
+        title = stringResource(R.string.merge_read_records),
         content = { (targetRecord, candidates) ->
+            val unknownAuthor = stringResource(R.string.unknown_author)
             Column {
-                AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                AppText(
+                    stringResource(
+                        R.string.merge_read_records_message,
+                        targetRecord.bookName,
+                        targetRecord.bookAuthor.ifBlank { unknownAuthor }
+                    )
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 candidates.forEach { candidate ->
-                    val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                    val author = candidate.bookAuthor.ifBlank { unknownAuthor }
                     val isChecked = selectedAuthors.contains(candidate.bookAuthor)
 
                     CheckboxItem(
@@ -431,7 +452,7 @@ fun ReadRecordScreen(
                 }
             }
         },
-        confirmText = "合并",
+        confirmText = stringResource(R.string.merge),
         onConfirm = { (targetRecord, candidates) ->
             viewModel.mergeReadRecords(
                 targetRecord,
@@ -439,7 +460,7 @@ fun ReadRecordScreen(
             )
             mergeDialogData = null
         },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { mergeDialogData = null }
     )
 }
@@ -461,7 +482,11 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                title = stringResource(
+                    R.string.read_record_date_overview,
+                    selectedDate.monthValue,
+                    selectedDate.dayOfMonth
+                ),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
@@ -475,7 +500,7 @@ fun SummarySection(
 
         if (allBooksCount > 0) {
             ReadingSummaryCard(
-                title = "累计阅读成就",
+                title = stringResource(R.string.read_record_total_achievement),
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
@@ -581,6 +606,7 @@ fun LazyListScope.renderListByMode(
                     items = details,
                     key = { "agg_item_${date}|${it.bookName}_${it.bookAuthor}_${it.date}" }
                 ) { detail ->
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -588,7 +614,8 @@ fun LazyListScope.renderListByMode(
                             background = LegadoTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteDetail(detail) }
-                            }
+                            },
+                            contentDescription = deleteActionDescription
                         )
                     ) {
                         ReadRecordItem(
@@ -604,6 +631,7 @@ fun LazyListScope.renderListByMode(
             state.timelineRecords.forEach { (date, sessions) ->
                 item(key = "timeline_header_$date") { DateHeader(date) }
                 items(items = sessions, key = { "timeline_item_${date}|${it.id}" }) { session ->
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -611,7 +639,8 @@ fun LazyListScope.renderListByMode(
                             background = LegadoTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteSession(session) }
-                            }
+                            },
+                            contentDescription = deleteActionDescription
                         )
                     ) {
                         TimelineSessionItem(
@@ -626,6 +655,8 @@ fun LazyListScope.renderListByMode(
 
         DisplayMode.LATEST -> {
             items(items = state.latestRecords, key = { "${it.bookName}_${it.bookAuthor}" }) { record ->
+                val deleteActionDescription = stringResource(R.string.del_read_record)
+                val mergeActionDescription = stringResource(R.string.a11y_merge_same_name_read_records)
                 SwipeActionContainer(
                     modifier = Modifier.animateItem(),
                     startAction = SwipeAction(
@@ -633,14 +664,16 @@ fun LazyListScope.renderListByMode(
                         background = LegadoTheme.colorScheme.error,
                         onSwipe = {
                             onConfirmDelete { viewModel.deleteReadRecord(record) }
-                        }
+                        },
+                        contentDescription = deleteActionDescription
                     ),
                     endAction = SwipeAction(
                         icon = Icons.Default.Merge,
                         background = LegadoTheme.colorScheme.primary,
                         onSwipe = {
                             onMergeClick(record)
-                        }
+                        },
+                        contentDescription = mergeActionDescription
                     )
                 ) {
                         LatestReadItem(
@@ -666,11 +699,25 @@ fun LatestReadItem(
     LaunchedEffect(record.bookName, record.bookAuthor) {
         coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
     }
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = record.bookAuthor.ifBlank { unknownAuthor }
+    val lastReadText = DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_latest_item,
+        record.bookName,
+        author,
+        formatDuring(record.readTime),
+        lastReadText
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
             .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -691,7 +738,7 @@ fun LatestReadItem(
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = record.bookAuthor.ifBlank { "未知作者" },
+                text = author,
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
@@ -711,7 +758,7 @@ fun LatestReadItem(
                         append(" • ")
                     }
                     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                        append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
+                        append(lastReadText)
                     }
                 },
                 style = LegadoTheme.typography.labelSmall,
@@ -730,15 +777,28 @@ fun TimelineSessionItem(
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
-    var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
+    val loadingText = stringResource(R.string.loading)
+    val fallbackChapterTitle = stringResource(R.string.chapter_index_format, session.words)
+    var chapterTitle by remember { mutableStateOf<String?>(loadingText) }
 
-    LaunchedEffect(session.bookName, session.bookAuthor) {
+    LaunchedEffect(session.bookName, session.bookAuthor, session.words, fallbackChapterTitle) {
         coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
         val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
-        chapterTitle = title ?: "第 ${session.words} 章"
+        chapterTitle = title ?: fallbackChapterTitle
     }
 
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = session.bookAuthor.ifBlank { unknownAuthor }
+    val duration = formatDuring(session.endTime - session.startTime)
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_timeline_item,
+        session.bookName,
+        author,
+        chapterTitle.orEmpty(),
+        duration,
+        endTimeText
+    )
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
@@ -752,6 +812,10 @@ fun TimelineSessionItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onBookClick(session.bookName, session.bookAuthor) }
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
             .drawBehind {
                 val x = timelineX.toPx()
                 val h = size.height
@@ -805,7 +869,7 @@ fun TimelineSessionItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     AppText(
-                        text = session.bookAuthor.ifBlank { "未知作者" },
+                        text = author,
                         style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
@@ -837,11 +901,23 @@ fun ReadRecordItem(
     LaunchedEffect(detail.bookName, detail.bookAuthor) {
         coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
     }
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = detail.bookAuthor.ifBlank { unknownAuthor }
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_detail_item,
+        detail.bookName,
+        author,
+        formatDuring(detail.readTime)
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
             .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -861,13 +937,13 @@ fun ReadRecordItem(
                 maxLines = 1
             )
             AppText(
-                text = detail.bookAuthor.ifBlank { "未知作者" },
+                text = author,
                 style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
-                text = "阅读时长: ${formatDuring(detail.readTime)}",
+                text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
                 color = MaterialTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
@@ -895,7 +971,7 @@ fun DateHeader(
             )
             dailyTotalTime?.let { total ->
                 AppText(
-                    text = "已读 ${formatDuring(total)}",
+                    text = stringResource(R.string.read_duration_done, formatDuring(total)),
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurface
                 )
@@ -921,11 +997,21 @@ fun ReadingSummaryCard(
     }
 
     val totalDurationMinutes = totalTimeMillis / 60000
+    val cardDescription = stringResource(
+        R.string.a11y_reading_summary_card,
+        title,
+        bookCount,
+        formatDuring(totalTimeMillis)
+    )
 
     GlassCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = cardDescription
+                role = Role.Button
+            }
             .adaptiveHorizontalPadding(vertical = 8.dp),
         containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
@@ -948,8 +1034,8 @@ fun ReadingSummaryCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
-                    AppText(
-                        text = "已读 ",
+                AppText(
+                    text = stringResource(R.string.read_books_prefix),
                         style = LegadoTheme.typography.titleMedium
                     )
                     AppText(
@@ -958,8 +1044,8 @@ fun ReadingSummaryCard(
                         color = LegadoTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
-                    AppText(
-                        text = " 本书",
+                AppText(
+                    text = stringResource(R.string.read_books_suffix),
                         style = LegadoTheme.typography.titleMedium
                     )
                 }
@@ -968,10 +1054,14 @@ fun ReadingSummaryCard(
 
                 val hours = totalDurationMinutes / 60
                 val minutes = totalDurationMinutes % 60
-                val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
+                val timeString = if (hours > 0) {
+                    stringResource(R.string.hours_minutes_format, hours, minutes)
+                } else {
+                    stringResource(R.string.minutes_format, minutes)
+                }
 
                 AppText(
-                    text = "共阅读 $timeString",
+                    text = stringResource(R.string.total_reading_time_format, timeString),
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )

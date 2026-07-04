@@ -31,6 +31,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.formatReadDuration
 import java.time.LocalDate
 
 /**
@@ -196,10 +201,29 @@ fun HeatmapCalendarCell(
 ) {
     val level = rememberHeatmapLevel(day, mode, dailyReadCounts, dailyReadTimes)
     val cellColor = heatmapColorForLevel(level)
+    val readCount = dailyReadCounts[day] ?: 0
+    val readDuration = formatReadDuration(dailyReadTimes[day] ?: 0L)
+    val cellDescription = if (mode == HeatmapMode.COUNT) {
+        stringResource(R.string.a11y_heatmap_day_count, day.toString(), readCount)
+    } else {
+        stringResource(R.string.a11y_heatmap_day_duration, day.toString(), readDuration)
+    }
+    val selectedStateDescription = if (isSelected) {
+        stringResource(R.string.a11y_selected)
+    } else {
+        stringResource(R.string.a11y_not_selected)
+    }
 
     Box(
         modifier = modifier
             .size(config.cellSize)
+            .semantics {
+                contentDescription = cellDescription
+                stateDescription = selectedStateDescription
+                if (isSelected) {
+                    selected = true
+                }
+            }
             .clip(RoundedCornerShape(config.cornerRadius))
             .background(cellColor)
             .border(

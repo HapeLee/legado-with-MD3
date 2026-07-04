@@ -92,7 +92,7 @@ fun MyScreen(
                             )
                         },
                         imageVector = Icons.AutoMirrored.Filled.HelpOutline,
-                        contentDescription = null
+                        contentDescription = stringResource(R.string.help)
                     )
                 },
                 scrollBehavior = scrollBehavior
@@ -283,4 +283,3 @@ fun WebServiceSettingBlock(
         }
     }
 }
-

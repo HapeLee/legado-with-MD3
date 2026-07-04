@@ -5,11 +5,13 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.View
 import android.view.LayoutInflater
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.TooltipCompat
+import androidx.core.view.ViewCompat
 import io.legado.app.R
 import io.legado.app.databinding.ViewSimpleSliderBinding
 import io.legado.app.lib.dialogs.alert
@@ -35,6 +37,7 @@ class SimpleSliderView @JvmOverloads constructor(
     private val repeatInterval = 320L
 
     private val tvTit: TextView
+    private var titleText: CharSequence? = null
 
     var progress: Int
         get() = _progress
@@ -63,6 +66,7 @@ class SimpleSliderView @JvmOverloads constructor(
         val typedArray = context.obtainStyledAttributes(attrs, R.styleable.DetailSeekBar)
         isBottomBackground = typedArray.getBoolean(R.styleable.DetailSeekBar_isBottomBackground, false)
         val title = typedArray.getText(R.styleable.DetailSeekBar_title)
+        titleText = title
         _max = typedArray.getInt(R.styleable.DetailSeekBar_max, 100)
         _min = typedArray.getInt(R.styleable.DetailSeekBar_min, 0)
         _progress = _progress.coerceIn(_min, _max)
@@ -88,6 +92,8 @@ class SimpleSliderView @JvmOverloads constructor(
         typedArray.recycle()
 
         tvTit.text = title
+        tvTit.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        slider.contentDescription = title
         TooltipCompat.setTooltipText(tvTit, title)
 
         binding.tvSeekValue.setOnClickListener {
@@ -128,7 +134,14 @@ class SimpleSliderView @JvmOverloads constructor(
     }
 
     private fun updateValue() {
-        binding.tvSeekValue.text = valueFormat?.invoke(_progress) ?: _progress.toString()
+        val displayValue = valueFormat?.invoke(_progress) ?: _progress.toString()
+        binding.tvSeekValue.text = displayValue
+        binding.tvSeekValue.contentDescription = context.getString(
+            R.string.a11y_slider_value,
+            titleText ?: tvTit.text,
+            displayValue,
+        )
+        ViewCompat.setStateDescription(binding.slider, displayValue)
         if (binding.slider.value.toInt() != _progress) {
             binding.slider.value = _progress.toFloat()
         }

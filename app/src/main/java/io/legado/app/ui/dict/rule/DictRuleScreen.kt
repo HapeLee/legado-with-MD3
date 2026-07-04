@@ -194,7 +194,7 @@ fun DictRuleScreen(
     )
 
     BatchImportDialog(
-        title = "导入词典规则",
+        title = stringResource(R.string.import_dict_rule),
         importState = importState,
         onDismissRequest = { onIntent(DictRuleIntent.CancelImport) },
         onToggleItem = { onIntent(DictRuleIntent.ToggleImportSelection(it)) },
@@ -270,14 +270,14 @@ fun DictRuleScreen(
     )
 
     RuleListScaffold(
-        title = "字典规则",
+        title = stringResource(R.string.dict_rule),
         state = state,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->
             onIntent(DictRuleIntent.SetSearchMode(active))
         },
         onSearchQueryChange = { onIntent(DictRuleIntent.UpdateSearchQuery(it)) },
-        searchPlaceholder = stringResource(R.string.replace_purify_search),
+        searchPlaceholder = stringResource(R.string.search_dict_rule),
         onClearSelection = { onIntent(DictRuleIntent.ClearSelection) },
         onSelectAll = { onIntent(DictRuleIntent.SelectAll) },
         onSelectInvert = {
@@ -325,6 +325,23 @@ fun DictRuleScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(rules, key = { it.id }) { item ->
+                    val enabledState = stringResource(
+                        if (item.isEnabled) R.string.enabled else R.string.disabled
+                    )
+                    val selectedState = stringResource(
+                        if (selectedIds.contains(item.id)) {
+                            R.string.a11y_selected
+                        } else {
+                            R.string.a11y_not_selected
+                        }
+                    )
+                    val itemDescription = listOfNotNull(
+                        item.id,
+                        item.urlRule.takeIf { it.isNotBlank() },
+                        enabledState,
+                        selectedState,
+                        stringResource(R.string.a11y_long_press_reorder)
+                    ).joinToString()
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
@@ -336,11 +353,22 @@ fun DictRuleScreen(
                         onEnabledChange = { enabled ->
                             onIntent(DictRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
+                        contentDescription = itemDescription,
+                        stateDescription = selectedState,
+                        enableSwitchContentDescription = stringResource(
+                            R.string.a11y_rule_enabled_switch,
+                            item.id
+                        ),
+                        editContentDescription = stringResource(R.string.a11y_edit_named, item.id),
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {
                             SmallPlainButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                icon = AppIcons.Delete
+                                icon = AppIcons.Delete,
+                                contentDescription = stringResource(
+                                    R.string.a11y_delete_named,
+                                    item.id
+                                )
                             )
                         }
                     )

@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.core.view.ViewCompat
 import androidx.preference.PreferenceViewHolder
 import io.legado.app.R
 //import io.legado.app.lib.theme.accentColor
@@ -47,6 +48,7 @@ open class Preference(context: Context, attrs: AttributeSet?) :
             isBottomBackground: Boolean = false
         ): T? {
             if (viewHolder == null) return null
+            ViewCompat.setScreenReaderFocusable(viewHolder.itemView, true)
             val tvTitle = viewHolder.findViewById(R.id.preference_title) as? TextView
             tvTitle?.let {
                 tvTitle.text = title

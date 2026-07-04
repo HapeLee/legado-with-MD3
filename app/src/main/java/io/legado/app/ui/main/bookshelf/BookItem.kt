@@ -36,6 +36,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -84,6 +89,7 @@ fun BookshelfItem(
     coverShadow: Boolean = false,
     titleColor: Color? = null,
     descAnnotated: AnnotatedString? = null,
+    accessibilityLabel: String? = null,
     coverWidth: Int = 84,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
@@ -95,6 +101,14 @@ fun BookshelfItem(
         Color(bookshelfCardColor)
     } else {
         LegadoTheme.colorScheme.cardContainer
+    }
+    val itemAccessibilityLabel = accessibilityLabel ?: title
+    val accessibilityModifier = Modifier.semantics(mergeDescendants = true) {
+        contentDescription = itemAccessibilityLabel
+        role = Role.Button
+        if (isSelected) {
+            selected = true
+        }
     }
 
     if (isGrid) {
@@ -110,9 +124,11 @@ fun BookshelfItem(
                     }
                 )
                 .combinedClickable(
+                    role = Role.Button,
                     onClick = onClick,
                     onLongClick = onLongClick
                 )
+                .then(accessibilityModifier)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -183,7 +199,8 @@ fun BookshelfItem(
             NormalCard(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .then(accessibilityModifier),
                 cornerRadius = 8.dp,
                 containerColor = if (isSelected) {
                     LegadoTheme.colorScheme.secondaryContainer
@@ -436,6 +453,7 @@ fun BookGroupItemGrid(
             )
         },
         title = group.groupName,
+        accessibilityLabel = groupAccessibilityLabel(group.groupName, countText),
         modifier = modifier,
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,
@@ -493,6 +511,11 @@ fun BookGroupItemList(
         title = group.groupName,
         subTitle = countText,
         descAnnotated = descAnnotated,
+        accessibilityLabel = groupAccessibilityLabel(
+            group.groupName,
+            countText,
+            firstBookName?.let { "${stringResource(R.string.recently_read)}$it" },
+        ),
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
@@ -521,7 +544,11 @@ fun BookGroupItemHorizontalCovers(
         NormalCard(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(all = 4.dp),
+                .padding(all = 4.dp)
+                .semantics {
+                    contentDescription = groupAccessibilityLabel(group.groupName, countText)
+                    role = Role.Button
+                },
             cornerRadius = 12.dp,
             containerColor = if (bookshelfCardColor != 0) {
                 Color(bookshelfCardColor)
@@ -560,7 +587,7 @@ fun BookGroupItemHorizontalCovers(
                     AppIcon(
                         modifier = Modifier.padding(end = 4.dp),
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "",
+                        contentDescription = null,
                         tint = LegadoTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -578,7 +605,17 @@ fun BookGroupItemHorizontalCovers(
                                 .weight(1f)
                                 .aspectRatio(5f / 7f)
                                 .clip(RoundedCornerShape(4.dp))
-                                .clickable { onBookClick?.invoke(book) }
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = { onBookClick?.invoke(book) }
+                                )
+                                .semantics(mergeDescendants = true) {
+                                    contentDescription = bookAccessibilityLabel(
+                                        book.name,
+                                        book.author,
+                                    )
+                                    role = Role.Button
+                                }
                         ) {
                             CoilBookCover(
                                 name = book.name,
@@ -767,8 +804,44 @@ fun BookItem(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
+        accessibilityLabel = bookAccessibilityLabel(
+            name = book.name,
+            author = book.author,
+            unreadText?.let { "$it ${stringResource(R.string.is_unread)}" },
+            if (isUpdating) stringResource(R.string.loading) else null,
+            book.durChapterTitle,
+            book.latestChapterTitle,
+            matchedSourceLabel,
+            bookTypeLabel,
+        ),
         coverWidth = if (layoutMode == 0) BookshelfConfig.bookshelfListCoverWidth else BookshelfConfig.bookshelfGridCoverWidth,
         onClick = onClick,
         onLongClick = onLongClick
     )
+}
+
+private fun groupAccessibilityLabel(
+    groupName: String,
+    countText: String?,
+    detail: String? = null,
+): String {
+    return listOfNotNull(
+        groupName.takeIf { it.isNotBlank() },
+        countText?.takeIf { it.isNotBlank() },
+        detail?.takeIf { it.isNotBlank() },
+    ).joinToString(separator = ", ")
+}
+
+private fun bookAccessibilityLabel(
+    name: String,
+    author: String,
+    vararg details: String?,
+): String {
+    return buildList {
+        name.takeIf { it.isNotBlank() }?.let(::add)
+        author.takeIf { it.isNotBlank() }?.let(::add)
+        details.forEach { detail ->
+            detail?.takeIf { it.isNotBlank() }?.let(::add)
+        }
+    }.distinct().joinToString(separator = ", ")
 }
