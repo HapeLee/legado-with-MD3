@@ -24,10 +24,12 @@ import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
-class TxtTocRulePreviewViewModel(private val app: Application) : ViewModel() {
+class TxtTocRulePreviewViewModel(
+    private val app: Application,
+    private val repository: TxtTocRuleRepository,
+) : ViewModel() {
 
     private val context get() = app.applicationContext
-    private val repository = TxtTocRuleRepository()
 
     private val _uiState = MutableStateFlow(TxtTocRulePreviewUiState())
     val uiState = _uiState.asStateFlow()
@@ -102,14 +104,12 @@ class TxtTocRulePreviewViewModel(private val app: Application) : ViewModel() {
 
     private fun computeChaptersLazy(book: Book, rules: List<TxtTocRule>) {
         viewModelScope.launch(Dispatchers.IO) {
-            for (tocRule in rules) {
-                val item = computePreview(book, tocRule)
-                _uiState.update { state ->
-                    val newRules = state.rules.map { existing ->
-                        if (existing.rule.id == item.rule.id) item else existing
-                    }.toImmutableList()
-                    state.copy(rules = newRules)
-                }
+            val results = rules.map { tocRule -> computePreview(book, tocRule) }
+            _uiState.update { state ->
+                val newRules = state.rules.map { existing ->
+                    results.find { it.rule.id == existing.rule.id } ?: existing
+                }.toImmutableList()
+                state.copy(rules = newRules)
             }
         }
     }
@@ -141,7 +141,7 @@ class TxtTocRulePreviewViewModel(private val app: Application) : ViewModel() {
             _uiState.update { it.copy(editingRule = null) }
             return
         }
-        if (runCatching { Regex(updatedRule.rule) }.isFailure) {
+        if (runCatching { updatedRule.rule.toPattern(Pattern.MULTILINE) }.isFailure) {
             _effects.tryEmit(TxtTocRulePreviewEffect.ShowToast(context.getString(R.string.invalid_format)))
             _uiState.update { it.copy(editingRule = null) }
             return

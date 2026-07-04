@@ -21,11 +21,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,19 +42,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.utils.toastOnUi
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
+import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -151,12 +155,15 @@ fun TxtTocRulePreviewScreen(
         )
     }
 
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+
     AppScaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { _ ->
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.select_toc_rule),
                 subtitle = stringResource(R.string.select_rule_to_preview_chapters),
-                scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior(),
+                scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onBack) },
                 actions = {
                     TopBarActionButton(
@@ -173,23 +180,12 @@ fun TxtTocRulePreviewScreen(
                 },
             )
         },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            ) {
-                ConfirmDismissButtonsRow(
-                    onDismiss = onBack,
-                    onConfirm = {
-                        if (state.hasSelection) {
-                            onApplyRule(state.selectedRule)
-                        }
-                    },
-                    dismissText = stringResource(R.string.cancel),
-                    confirmText = stringResource(R.string.ok),
-                    confirmEnabled = state.hasSelection,
-                    modifier = Modifier.fillMaxWidth(),
+        floatingActionButton = {
+            if (state.hasSelection) {
+                AppFloatingActionButton(
+                    onClick = { onApplyRule(state.selectedRule) },
+                    icon = Icons.Default.Check,
+                    tooltipText = stringResource(R.string.ok),
                 )
             }
         },
@@ -206,12 +202,10 @@ fun TxtTocRulePreviewScreen(
         } else if (state.isGridLayout) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = adaptiveContentPadding(
-                    top = 8.dp,
-                    bottom = 8.dp,
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding() + 80.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -231,12 +225,10 @@ fun TxtTocRulePreviewScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = adaptiveContentPadding(
-                    top = 8.dp,
-                    bottom = 8.dp,
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding() + 80.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -266,68 +258,53 @@ private fun RulePreviewCard(
     NormalCard(
         onClick = onClick,
         border = if (isSelected) {
-            BorderStroke(
-                width = 1.5.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            BorderStroke(1.5.dp, LegadoTheme.colorScheme.primary)
         } else {
             null
         },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
                     .padding(12.dp)
                     .padding(bottom = 28.dp),
             ) {
-                // Rule name
-                Text(
+                AppText(
                     text = item.rule.name,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.titleSmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
-                // Example text (subtitle)
                 item.rule.example?.let { example ->
-                    Text(
+                    AppText(
                         text = example,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-
-            // Chapter count badge - bottom right
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = LegadoTheme.colorScheme.primaryContainer,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp),
             ) {
                 if (item.totalCount < 0) {
-                    CircularProgressIndicator(
+                    AppCircularProgressIndicator(
                         modifier = Modifier
                             .size(16.dp)
-                            .padding(4.dp),
-                        strokeWidth = 2.dp,
+                            .padding(4.dp)
                     )
                 } else {
-                    Text(
-                        text = stringResource(
-                            R.string.chapter_count_format,
-                            item.totalCount
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    AppText(
+                        text = stringResource(R.string.chapter_count_format, item.totalCount),
+                        style = LegadoTheme.typography.labelSmall,
+                        color = LegadoTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -345,10 +322,7 @@ private fun RulePreviewListItem(
     NormalCard(
         onClick = onClick,
         border = if (isSelected) {
-            BorderStroke(
-                width = 1.5.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            BorderStroke(1.5.dp, LegadoTheme.colorScheme.primary)
         } else {
             null
         },
@@ -366,7 +340,7 @@ private fun RulePreviewListItem(
             ) {
                 Text(
                     text = item.rule.name,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = LegadoTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -374,8 +348,8 @@ private fun RulePreviewListItem(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = example,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -386,7 +360,7 @@ private fun RulePreviewListItem(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = LegadoTheme.colorScheme.primaryContainer,
             ) {
                 if (item.totalCount < 0) {
                     CircularProgressIndicator(
@@ -401,8 +375,8 @@ private fun RulePreviewListItem(
                             R.string.chapter_count_format,
                             item.totalCount
                         ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = LegadoTheme.typography.labelSmall,
+                        color = LegadoTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     )
                 }
@@ -428,7 +402,7 @@ private fun ChapterListSheetContent(
         ) {
             Text(
                 text = item.rule.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -449,8 +423,8 @@ private fun ChapterListSheetContent(
                     R.string.chapter_count_format,
                     item.totalCount
                 ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = LegadoTheme.typography.bodyMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -465,7 +439,7 @@ private fun ChapterListSheetContent(
             itemsIndexed(item.chapters.toList()) { _, chapter ->
                 Text(
                     text = chapter,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp, horizontal = 4.dp),
@@ -477,8 +451,8 @@ private fun ChapterListSheetContent(
                 item {
                     Text(
                         text = stringResource(R.string.chapter_list_preview_limit),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(8.dp),
                     )
                 }
