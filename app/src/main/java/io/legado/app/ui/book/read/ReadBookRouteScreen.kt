@@ -1,6 +1,11 @@
 package io.legado.app.ui.book.read
 
+import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -17,19 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.ui.config.readConfig.ReadConfig
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -55,9 +53,15 @@ import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 
 data class ReadBookViewRefs(
@@ -257,43 +261,11 @@ fun ReadBookRouteScreen(
         viewModel.onIntent(ReadBookIntent.BookInfoResult(result.resultCode == android.app.Activity.RESULT_OK))
     }
 
-    DisposableEffect(lifecycleOwner) {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-        val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
-        var listener: SensorEventListener? = null
-
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                if (!ReadConfig.autoSuggestDayNight || viewModel.isDayNightSwitchCoolingDown()) return@LifecycleEventObserver
-                if (lightSensor != null) {
-                    listener = object : SensorEventListener {
-                        override fun onSensorChanged(sensorEvent: SensorEvent?) {
-                            sensorEvent?.values?.firstOrNull()?.let { lux ->
-                                //Log.d("fansangg","lux = $lux")
-                                viewModel.onIntent(ReadBookIntent.CheckSwitchDayNight(lux))
-                            }
-                            listener?.let { sensorManager.unregisterListener(it) }
-                            listener = null
-                        }
-
-                        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-                    }
-                    sensorManager.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
-                }
-            } else if (event == Lifecycle.Event.ON_PAUSE) {
-                listener?.let {
-                    sensorManager?.unregisterListener(it)
-                    listener = null
-                }
-            }
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            listener?.let { sensorManager?.unregisterListener(it) }
-        }
-    }
+    AutoSuggestDayNightObserver(
+        viewModel = viewModel,
+        autoSuggestDayNight = readPreferences.autoSuggestDayNight,
+        lifecycleOwner = lifecycleOwner,
+    )
 
     // ── Effect collection: route handles launcher effects, rest goes to bridge ──
 
@@ -588,4 +560,57 @@ private fun ReadBookViewLayer(
             }
         },
     )
+}
+
+@Composable
+private fun AutoSuggestDayNightObserver(
+    viewModel: ReadBookViewModel,
+    autoSuggestDayNight: Boolean,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
+) {
+    val context = LocalContext.current
+    LaunchedEffect(autoSuggestDayNight) {
+        if (!autoSuggestDayNight) return@LaunchedEffect
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
+            if (sensorManager != null && lightSensor != null) {
+                while (isActive) {
+                    if (!viewModel.isDayNightSwitchCoolingDown()) {
+                        val finalLux = AtomicReference<Float?>(null)
+                        val listener = object : SensorEventListener {
+                            override fun onSensorChanged(event: SensorEvent?) {
+                                event?.values?.firstOrNull()?.let { lux ->
+                                    finalLux.set(lux)
+                                }
+                            }
+
+                            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+                        }
+                        try {
+                            sensorManager.registerListener(
+                                listener,
+                                lightSensor,
+                                SensorManager.SENSOR_DELAY_NORMAL
+                            )
+                            delay(1.seconds)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLog.put("lightSensor收集异常", e)
+                        } finally {
+                            sensorManager.unregisterListener(listener)
+                        }
+
+                        finalLux.get()?.let { lux ->
+                            viewModel.onIntent(ReadBookIntent.CheckSwitchDayNight(lux))
+                        }
+
+                    }
+
+                    delay(15.minutes)
+                }
+            }
+        }
+    }
 }

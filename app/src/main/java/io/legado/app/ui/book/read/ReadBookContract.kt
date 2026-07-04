@@ -29,7 +29,12 @@ data class ReminderUiState(
     val message: String,
     val actionText: String? = null,
     val actionIntent: ReadBookIntent? = null,
+    val type: ReminderType? = null,
 )
+
+sealed interface ReminderType {
+    data class DayNightReminder(val targetIsNight: Boolean) : ReminderType
+}
 
 @Stable
 data class ReadBookMenuState(

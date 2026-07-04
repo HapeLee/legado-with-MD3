@@ -47,7 +47,7 @@ fun ActionReminder(
 
     LaunchedEffect(show, reminder?.id) {
         if (show) {
-            delay(4.seconds)
+            delay(5.seconds)
             onDismiss()
         }
     }

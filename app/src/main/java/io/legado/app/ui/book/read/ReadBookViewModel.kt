@@ -3926,6 +3926,10 @@ class ReadBookViewModel(
             }
             is ConfigUpdate.AutoSuggestDayNight -> {
                 ReadConfig.autoSuggestDayNight = update.value
+                if (update.value) {
+                    hasDismissedDarkReminder = false
+                    hasDismissedLightReminder = false
+                }
                 viewModelScope.launch {
                     readSettingsRepository.setAutoSuggestDayNight(update.value)
                 }
@@ -4339,9 +4343,23 @@ class ReadBookViewModel(
     }
 
     private fun toggleDayNight() {
+        lastSwitchDayNightReminderTime = System.currentTimeMillis()
+        hasDismissedDarkReminder = false
+        hasDismissedLightReminder = false
         val nextMode = if (ReadConfig.isNightTheme) "1" else "2"
         ThemeConfig.themeMode = nextMode
-        _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+        _uiState.update {
+            val newActiveReminder = if (it.activeReminder?.type is ReminderType.DayNightReminder) {
+                null
+            } else {
+                it.activeReminder
+            }
+            it.copy(
+                activeReminder = newActiveReminder,
+                styleConfig = buildStyleConfig()
+            )
+        }
+        reminderQueue.removeAll { it.type is ReminderType.DayNightReminder }
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(
                 ConfigUpdateAction.UpdateBackground,
@@ -4742,6 +4760,8 @@ class ReadBookViewModel(
 
     private var lastSwitchDayNightReminderTime: Long = 0L
     private val reminderQueue = ArrayDeque<ReminderUiState>()
+    private var hasDismissedDarkReminder = false
+    private var hasDismissedLightReminder = false
 
     fun isDayNightSwitchCoolingDown(): Boolean {
         return System.currentTimeMillis() - lastSwitchDayNightReminderTime < REMINDER_COOLDOWN_MS
@@ -4766,13 +4786,13 @@ class ReadBookViewModel(
         val isNight = ReadConfig.isNightTheme
         val styleConfig = _uiState.value.styleConfig
         if (!isNight && lux <= DARK_LUX_THRESHOLD) {
+            if (hasDismissedDarkReminder) return
             val bgType = styleConfig.bgType
             val isLightBg = if (bgType == 0) {
                 val colorInt = runCatching { styleConfig.bgStr.toColorInt() }.getOrDefault(0xFFEEEEEE.toInt())
                 isReadBgLight(colorInt)
             } else {
                 val meanColor = ReadBookConfig.bgMeanColor
-                //Log.d("fansangg","meanColor = ${ColorUtils.intToString(meanColor)},isLight = ${isReadBgLight(meanColor)}")
                 if (meanColor != 0) isReadBgLight(meanColor) else true
             }
             if (isLightBg) {
@@ -4782,17 +4802,18 @@ class ReadBookViewModel(
                         message = context.getString(R.string.switch_to_dark_mode_tip),
                         actionText = context.getString(R.string.switch_action),
                         actionIntent = ReadBookIntent.ToggleDayNight,
+                        type = ReminderType.DayNightReminder(targetIsNight = true),
                     )
                 )
             }
         } else if (isNight && lux >= BRIGHT_LUX_THRESHOLD) {
+            if (hasDismissedLightReminder) return
             val bgTypeNight = styleConfig.bgTypeNight
             val isDarkBg = if (bgTypeNight == 0) {
                 val colorInt = runCatching { styleConfig.bgStrNight.toColorInt() }.getOrDefault(0xFF000000.toInt())
                 !isReadBgLight(colorInt)
             } else {
                 val meanColor = ReadBookConfig.bgMeanColor
-                //Log.d("fansangg","meanColor = ${ColorUtils.intToString(meanColor)},isLight = ${isReadBgLight(meanColor)}")
                 if (meanColor != 0) !isReadBgLight(meanColor) else true
             }
             if (isDarkBg) {
@@ -4802,6 +4823,7 @@ class ReadBookViewModel(
                         message = context.getString(R.string.switch_to_light_mode_tip),
                         actionText = context.getString(R.string.switch_action),
                         actionIntent = ReadBookIntent.ToggleDayNight,
+                        type = ReminderType.DayNightReminder(targetIsNight = false),
                     )
                 )
             }
@@ -4809,6 +4831,19 @@ class ReadBookViewModel(
     }
 
     private fun dismissReminder() {
+        val currentReminder = _uiState.value.activeReminder
+        if (currentReminder != null) {
+            when (val type = currentReminder.type) {
+                is ReminderType.DayNightReminder -> {
+                    if (type.targetIsNight) {
+                        hasDismissedDarkReminder = true
+                    } else {
+                        hasDismissedLightReminder = true
+                    }
+                }
+                else -> {}
+            }
+        }
         _uiState.update { it.copy(activeReminder = null) }
         if (reminderQueue.isNotEmpty()) {
             viewModelScope.launch {
@@ -4836,7 +4871,7 @@ private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "setting",
 )
 
-private const val DARK_LUX_THRESHOLD = 10f
+private const val DARK_LUX_THRESHOLD = 8f
 private const val BRIGHT_LUX_THRESHOLD = 100f
 private const val LIGHT_LUMINANCE_THRESHOLD = 0.35
 private const val REMINDER_COOLDOWN_MS = 10 * 60 * 1000L
