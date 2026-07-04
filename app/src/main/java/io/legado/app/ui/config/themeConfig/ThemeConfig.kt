@@ -37,7 +37,7 @@ object ThemeConfig {
 
     const val BOOK_INFO_BACKGROUND_BLUR_OFF = "off"
     const val BOOK_INFO_BACKGROUND_BLUR_ON = "on"
-    const val BOOK_INFO_BACKGROUND_BLUR_OFF_FOR_DEFAULT = "off_for_default"
+    const val BOOK_INFO_BACKGROUND_COVER_HIDDEN = "off_for_default"
 
     var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
 

@@ -71,7 +71,6 @@ fun BookCoverImage(
     onLoadFinish: (() -> Unit)? = null,
     onSuccess: (() -> Unit)? = null,
     onError: (() -> Unit)? = null,
-    onDefaultCoverVisibilityChange: ((Boolean) -> Unit)? = null,
     sharedCoverKey: String? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
 ) {
@@ -93,6 +92,12 @@ fun BookCoverImage(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
+    val customDefaultMemoryCacheKey =
+        if (finalPath == null && sharedCoverKey != null) {
+            "$sharedCoverKey:default:$randomPath"
+        } else {
+            randomPath
+        }
     var isOnlineCoverLoaded by remember(finalPath) { mutableStateOf(false) }
     var onlineCoverLoadFailed by remember(finalPath) { mutableStateOf(false) }
 
@@ -113,12 +118,6 @@ fun BookCoverImage(
             isUsingDefaultCover ||
                 (showLoadingPlaceholder && showLoadingDefault)
         )
-    val isDefaultCoverVisible =
-        showCustomDefault || showDefaultIcon
-    LaunchedEffect(isDefaultCoverVisible) {
-        onDefaultCoverVisibilityChange?.invoke(isDefaultCoverVisible)
-    }
-
     Box(modifier = modifier) {
         if (showCustomDefault) {
             AsyncImage(
@@ -128,7 +127,7 @@ fun BookCoverImage(
                     sourceOrigin = null,
                     loadOnlyWifi = false,
                     crossfade = showLoadingPlaceholder,
-                    memoryCacheKey = randomPath,
+                    memoryCacheKey = customDefaultMemoryCacheKey,
                 ),
                 contentDescription = null,
                 imageLoader = koinInject(),
@@ -156,7 +155,9 @@ fun BookCoverImage(
                     sourceOrigin = sourceOrigin,
                     loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
                     crossfade = showLoadingPlaceholder,
-                    memoryCacheKey = memoryCacheKey ?: finalPath,
+                    memoryCacheKey = sharedCoverKey?.let {
+                        "$it:cover:${memoryCacheKey ?: finalPath}"
+                    } ?: memoryCacheKey ?: finalPath,
                     configure = requestBuilder,
                 ),
                 contentDescription = null,

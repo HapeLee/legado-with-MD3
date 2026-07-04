@@ -322,11 +322,6 @@ fun ThemeConfigScreen(
                             }
                         )
                     }
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_pack),
-                        description = stringResource(R.string.theme_pack_s),
-                        onClick = onNavigateToThemeManage
-                    )
                 }
 
                 SplicedColumnGroup {
@@ -377,6 +372,11 @@ fun ThemeConfigScreen(
                             fontScaleValue.floatValue = value
                             ThemeConfig.fontScale = value.toInt()
                         }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_pack),
+                        description = stringResource(R.string.theme_pack_s),
+                        onClick = onNavigateToThemeManage
                     )
                 }
 
