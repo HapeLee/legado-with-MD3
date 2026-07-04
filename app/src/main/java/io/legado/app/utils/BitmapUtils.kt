@@ -12,6 +12,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import android.graphics.ColorSpace
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -23,6 +24,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import androidx.core.graphics.get
 
 
 @Suppress("WeakerAccess", "MemberVisibilityCanBePrivate")
@@ -48,6 +50,7 @@ object BitmapUtils {
             op.inSampleSize = calculateInSampleSize(op, width, height)
             op.inJustDecodeBounds = false
             op.inPreferredConfig = Config.ARGB_8888
+            op.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
             BitmapFactory.decodeFileDescriptor(fis.fd, null, op)
         }
     }
@@ -90,6 +93,7 @@ object BitmapUtils {
             BitmapFactory.decodeFileDescriptor(fis.fd, null, opts)
             opts.inSampleSize = computeSampleSize(opts, -1, 128 * 128)
             opts.inJustDecodeBounds = false
+            opts.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
             BitmapFactory.decodeFileDescriptor(fis.fd, null, opts)
         }
     }
@@ -120,6 +124,7 @@ object BitmapUtils {
         BitmapFactory.decodeResource(context.resources, resId, op) //获取尺寸信息
         op.inSampleSize = calculateInSampleSize(op, width, height)
         op.inJustDecodeBounds = false
+        op.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
         return BitmapFactory.decodeResource(context.resources, resId, op)
     }
 
@@ -147,6 +152,7 @@ object BitmapUtils {
             op.inSampleSize = calculateInSampleSize(op, width, height)
             inputStream = context.assets.open(fileNameInAssets)
             op.inJustDecodeBounds = false
+            op.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
             BitmapFactory.decodeStream(inputStream, null, op)
         }
     }
