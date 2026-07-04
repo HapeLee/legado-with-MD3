@@ -14,6 +14,7 @@ import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.ContentChunker
 import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.MD5Utils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -26,10 +27,11 @@ class GenerateChapterSummaryUseCase(
     suspend fun execute(
         book: Book,
         bookChapter: BookChapter,
+        contentOverride: String? = null,
         maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK
     ): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-            val content = BookHelp.getContent(book, bookChapter)
+            val content = contentOverride ?: BookHelp.getContent(book, bookChapter)
                 ?: error("Failed to read chapter content")
             val preset = resolvePreset() ?: error("No AI model configured for chapter summary")
             val contentHash = MD5Utils.md5Encode(content)
@@ -77,6 +79,8 @@ class GenerateChapterSummaryUseCase(
                 )
             )
             summary
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
         }
     }
 
@@ -99,6 +103,7 @@ class GenerateChapterSummaryUseCase(
             )
         )
         return response.getOrThrow().text.trim()
+            .ifEmpty { error("AI returned an empty chapter summary") }
     }
 
     private companion object {

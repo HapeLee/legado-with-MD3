@@ -148,10 +148,10 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.R
-import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.animation.InteractiveHighlight
@@ -2781,6 +2781,9 @@ private fun loadToolButtons(
         infoMap.getValue("translate").toButton {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
+        infoMap.getValue("ai_summary").toButton {
+            onIntent(ReadBookIntent.OpenChapterSummary)
+        },
     )
 
     val allMap = allButtons.associateBy { it.id }
@@ -3112,6 +3115,7 @@ private fun loadFloatingIcons(
             }
         },
         "translate" to { onIntent(ReadBookIntent.ToggleTranslation) },
+        "ai_summary" to { onIntent(ReadBookIntent.OpenChapterSummary) },
     )
 
     val activeIds = buildSet {

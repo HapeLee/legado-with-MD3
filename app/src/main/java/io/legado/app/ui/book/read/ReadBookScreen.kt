@@ -14,12 +14,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
+import io.legado.app.ui.book.read.sheet.ChapterSummarySheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
-import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
@@ -36,13 +37,14 @@ import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
+import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
+import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -230,6 +232,18 @@ fun ReadBookScreen(
     ContentEditSheet(
         show = state.activeSheet is ReadBookSheet.ContentEdit,
         state = state,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    ChapterSummarySheet(
+        show = state.activeSheet is ReadBookSheet.ChapterSummary,
+        state = state.chapterSummary,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    AiTextCleanSheet(
+        show = state.activeSheet is ReadBookSheet.AiTextClean,
+        state = state.aiTextClean,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )

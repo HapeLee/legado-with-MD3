@@ -90,6 +90,28 @@ data class ReadBookStyleConfig(
 }
 
 @Stable
+data class ChapterSummaryUiState(
+    val bookUrl: String = "",
+    val chapterIndex: Int = -1,
+    val chapterTitle: String = "",
+    val isLoading: Boolean = false,
+    val summary: String = "",
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class AiTextCleanUiState(
+    val bookUrl: String = "",
+    val chapterIndex: Int = -1,
+    val chapterTitle: String = "",
+    val isLoading: Boolean = false,
+    val isApplying: Boolean = false,
+    val originalText: String = "",
+    val replacementText: String = "",
+    val errorMessage: String? = null,
+)
+
+@Stable
 data class ReadBookUiState(
     val book: Book? = null,
     val bookSource: BookSource? = null,
@@ -170,6 +192,8 @@ data class ReadBookUiState(
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
     val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
+    val chapterSummary: ChapterSummaryUiState = ChapterSummaryUiState(),
+    val aiTextClean: AiTextCleanUiState = AiTextCleanUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
@@ -235,6 +259,7 @@ data class ReadBookButtonConfigItem(
 )
 
 internal val ReadBookButtonIds = listOf(
+    "ai_summary",
     "search",
     "auto_page",
     "catalog",
@@ -297,6 +322,8 @@ sealed interface ReadBookIntent {
     data object RefreshContentAfter : ReadBookIntent
     data class ChangeReplaceRule(val enabled: Boolean) : ReadBookIntent
     data object ToggleTranslation : ReadBookIntent
+    data object OpenChapterSummary : ReadBookIntent
+    data object RetryChapterSummary : ReadBookIntent
 
     // Change source
     data class ChangeSourceBook(val book: Book) : ReadBookIntent
@@ -468,6 +495,14 @@ sealed interface ReadBookIntent {
     data class TextActionReplace(val text: String) : ReadBookIntent
     data class TextActionSearchContent(val text: String) : ReadBookIntent
     data class TextActionDict(val text: String) : ReadBookIntent
+    data class OpenAiTextClean(
+        val text: String,
+        val chapterIndex: Int,
+        val chapterPosition: Int,
+    ) : ReadBookIntent
+
+    data object RetryAiTextClean : ReadBookIntent
+    data object ConfirmAiTextClean : ReadBookIntent
 
     // Screen / selection config
     data class KeepLightChanged(val value: String) : ReadBookIntent
@@ -697,6 +732,8 @@ sealed interface ReadBookSheet {
     data object TitleBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentEdit : ReadBookSheet
+    data object ChapterSummary : ReadBookSheet
+    data object AiTextClean : ReadBookSheet
     data object AppLog : ReadBookSheet
     data class ChangeChapterSource(val chapterIndex: Int, val chapterTitle: String) : ReadBookSheet
     data object ChangeBookSource : ReadBookSheet

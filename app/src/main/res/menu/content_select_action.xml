@@ -7,6 +7,10 @@
         android:title="@string/replace" />
 
     <item
+        android:id="@+id/menu_ai_clean"
+        android:title="@string/ai_text_clean" />
+
+    <item
         android:id="@+id/menu_copy"
         android:title="@android:string/copy" />
 
