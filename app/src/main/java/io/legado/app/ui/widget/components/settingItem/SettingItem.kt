@@ -31,6 +31,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.SettingCard
@@ -52,6 +57,9 @@ fun SettingItem(
     dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    semanticRole: Role? = null,
+    semanticStateDescription: String? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null
@@ -71,7 +79,14 @@ fun SettingItem(
         Column {
             ListItem(
                 modifier = Modifier
+                    .semantics(mergeDescendants = true) {
+                        semanticRole?.let { role = it }
+                        semanticStateDescription?.let { stateDescription = it }
+                        if (!enabled) disabled()
+                    }
                     .combinedClickable(
+                        enabled = enabled,
+                        role = semanticRole,
                         onClick = {
                             when {
                                 dropdownMenu != null -> showMenu = true

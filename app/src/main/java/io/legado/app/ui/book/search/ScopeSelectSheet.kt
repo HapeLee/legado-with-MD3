@@ -93,7 +93,8 @@ fun ScopeSelectSheet(
             {
                 MediumPlainButton(
                     onClick = it,
-                    icon = AppIcons.Settings
+                    icon = AppIcons.Settings,
+                    contentDescription = stringResource(R.string.book_source_manage),
                 )
             }
         },
@@ -105,6 +106,7 @@ fun ScopeSelectSheet(
                         onDismissRequest()
                     },
                     icon = AppIcons.Check,
+                    contentDescription = stringResource(R.string.ok),
                 )
             }
         },

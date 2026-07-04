@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.View
+import androidx.core.view.ViewCompat
 import androidx.preference.PreferenceViewHolder
 import com.google.android.material.button.MaterialButtonToggleGroup
 import io.legado.app.R
@@ -34,6 +36,7 @@ class ThemeModePreference(context: Context, attrs: AttributeSet) : Preference(co
         }
 
         setupToggleGroup(toggleGroup)
+        updateButtonStateDescriptions(toggleGroup)
     }
 
 
@@ -58,6 +61,7 @@ class ThemeModePreference(context: Context, attrs: AttributeSet) : Preference(co
                     currentValue = newValue
                     persistString(newValue)
                     callChangeListener(newValue)
+                    updateButtonStateDescriptions(group)
                     Handler(Looper.getMainLooper()).postDelayed({
                         ThemeConfigStore.applyDayNight(context)
                     }, 300)
@@ -68,6 +72,18 @@ class ThemeModePreference(context: Context, attrs: AttributeSet) : Preference(co
 
     override fun onSetInitialValue(defaultValue: Any?) {
         currentValue = getPersistedString(defaultValue as? String ?: "0")
+    }
+
+    private fun updateButtonStateDescriptions(group: MaterialButtonToggleGroup) {
+        for (index in 0 until group.childCount) {
+            val child = group.getChildAt(index)
+            val selected = child.id == group.checkedButtonId
+            ViewCompat.setStateDescription(
+                child,
+                context.getString(if (selected) R.string.a11y_selected else R.string.a11y_not_selected)
+            )
+            child.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        }
     }
 
 }

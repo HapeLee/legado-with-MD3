@@ -117,7 +117,8 @@ fun TopBarActionButton(
             MediumPlainButton(
                 onClick = onClick,
                 modifier = modifier,
-                icon = imageVector
+                icon = imageVector,
+                contentDescription = contentDescription,
             )
         }
     }

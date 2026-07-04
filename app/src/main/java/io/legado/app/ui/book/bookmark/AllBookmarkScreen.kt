@@ -45,7 +45,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -123,7 +131,7 @@ fun AllBookmarkScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.exportBookmark(it, pendingExportIsMd)
-            Toast.makeText(context, "开始导出...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.export_started), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -132,7 +140,7 @@ fun AllBookmarkScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = "所有书签",
+                    title = stringResource(R.string.all_bookmark),
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         TopBarNavigationButton(onClick = onBack)
@@ -142,7 +150,13 @@ fun AllBookmarkScreen(
                             TopBarActionButton(
                                 onClick = { viewModel.toggleAllCollapse(allKeys) },
                                 imageVector = if (isAllCollapsed) Icons.Default.UnfoldMore else Icons.Default.UnfoldLess,
-                                contentDescription = null
+                                contentDescription = stringResource(
+                                    if (isAllCollapsed) {
+                                        R.string.a11y_expand_all_bookmark_groups
+                                    } else {
+                                        R.string.a11y_collapse_all_bookmark_groups
+                                    }
+                                )
                             )
                         }
                         TopBarActionButton(
@@ -153,19 +167,19 @@ fun AllBookmarkScreen(
                                 }
                             },
                             imageVector = Icons.Default.Search,
-                            contentDescription = null
+                            contentDescription = stringResource(R.string.search)
                         )
                         TopBarActionButton(
                             onClick = { showMenu = true },
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu"
+                            contentDescription = stringResource(R.string.more_menu)
                         )
                         RoundDropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
                             RoundDropdownMenuItem(
-                                text = "导出 JSON",
+                                text = stringResource(R.string.export_bookmarks_json),
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = false
@@ -173,7 +187,7 @@ fun AllBookmarkScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "导出 Markdown",
+                                text = stringResource(R.string.export_bookmarks_markdown),
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = true
@@ -193,7 +207,7 @@ fun AllBookmarkScreen(
                     SearchBar(
                         query = searchText,
                         onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = "搜索...",
+                        placeholder = stringResource(R.string.search),
                         scrollState = listState,
                         scope = scope
                     )
@@ -212,7 +226,7 @@ fun AllBookmarkScreen(
                 when (state) {
                     "LOADING" -> {
                         EmptyMessage(
-                            message = "加载中...",
+                            message = stringResource(R.string.loading),
                             isLoading = true,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -225,7 +239,7 @@ fun AllBookmarkScreen(
 
                     "EMPTY" -> {
                         EmptyMessage(
-                            message = "没有书签！",
+                            message = stringResource(R.string.no_bookmark),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(
@@ -362,10 +376,23 @@ private fun BookmarkGroupHeaderContent(
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
+    val headerDescription = listOfNotNull(title, subtitle).joinToString()
+    val headerStateDescription = stringResource(
+        if (isCollapsed) R.string.a11y_collapsed else R.string.a11y_expanded
+    )
+    val clickLabel = stringResource(
+        if (isCollapsed) R.string.expand else R.string.collapse
+    )
 
     ListItem(
         modifier = modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.Button
+                contentDescription = headerDescription
+                stateDescription = headerStateDescription
+                onClick(label = clickLabel, action = null)
+            }
             .combinedClickable(onClick = onToggle),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,

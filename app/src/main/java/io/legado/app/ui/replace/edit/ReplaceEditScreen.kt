@@ -377,7 +377,8 @@ fun GroupSelector(
         }
         MediumPlainButton(
             onClick = onManageClick,
-            icon = Icons.Default.Settings
+            icon = Icons.Default.Settings,
+            contentDescription = stringResource(R.string.group_management)
         )
     }
 }

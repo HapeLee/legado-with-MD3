@@ -21,17 +21,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.sliderAccessibility
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -134,6 +143,7 @@ fun CompactSliderSettingItem(
 
     var sliderValue by remember(value) { mutableFloatStateOf(value) }
     var displayValue by remember(value) { mutableFloatStateOf(value) }
+    val sliderAccessibilityValue = description ?: displayValue.toString()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -168,7 +178,12 @@ fun CompactSliderSettingItem(
                         },
                         valueRange = valueRange,
                         steps = steps,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sliderAccessibility(
+                                label = title,
+                                value = sliderAccessibilityValue,
+                            )
                     )
                 }
             }
@@ -202,7 +217,12 @@ fun CompactSliderSettingItem(
                     },
                     valueRange = valueRange,
                     steps = steps,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .sliderAccessibility(
+                            label = title,
+                            value = sliderAccessibilityValue,
+                        )
                 )
             }
         )
@@ -227,12 +247,21 @@ fun CompactSwitchSettingItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val switchStateDescription = stringResource(
+        if (checked) R.string.a11y_on else R.string.a11y_off
+    )
+
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         SwitchPreference(
             title = title,
             summary = description,
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                role = Role.Switch
+                stateDescription = switchStateDescription
+                if (!enabled) disabled()
+            },
             enabled = enabled,
         )
     } else {
@@ -242,10 +271,15 @@ fun CompactSwitchSettingItem(
             imageVector = imageVector,
             color = color,
             shape = shape,
+            enabled = enabled,
+            semanticRole = Role.Switch,
+            semanticStateDescription = switchStateDescription,
             onClick = { if (enabled) onCheckedChange(!checked) },
             trailingContent = {
                 Switch(
-                    modifier = Modifier.scale(0.8f),
+                    modifier = Modifier
+                        .scale(0.8f)
+                        .clearAndSetSemantics { },
                     checked = checked,
                     onCheckedChange = onCheckedChange,
                     enabled = enabled

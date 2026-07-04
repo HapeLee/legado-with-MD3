@@ -362,7 +362,8 @@ fun RssSourceScreen(
                         trailingAction = {
                             SmallPlainButton(
                                 onClick = { showDeleteRuleDialog = item.source },
-                                icon = Icons.Default.Delete
+                                icon = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete)
                             )
                         }
                     )
@@ -384,4 +385,3 @@ fun RssSourceScreen(
         }
     }
 }
-

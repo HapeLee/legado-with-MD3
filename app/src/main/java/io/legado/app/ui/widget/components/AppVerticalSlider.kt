@@ -31,11 +31,17 @@ fun AppVerticalSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     height: Dp = 160.dp,
+    accessibilityLabel: String? = null,
+    accessibilityValue: String? = null,
 ) {
     val sliderModifier = Modifier
         .requiredWidth(height)
         .requiredHeight(48.dp)
         .graphicsLayer { rotationZ = -90f }
+        .sliderAccessibility(
+            label = accessibilityLabel,
+            value = accessibilityValue,
+        )
 
     Box(
         modifier = modifier

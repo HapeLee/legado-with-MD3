@@ -25,6 +25,7 @@
                 android:layout_height="wrap_content"
                 android:paddingVertical="16dp"
                 android:minHeight="0dp"
+                android:importantForAccessibility="no"
                 android:layout_gravity="center_horizontal" />
 
             <TextView

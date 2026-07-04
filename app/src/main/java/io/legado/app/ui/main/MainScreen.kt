@@ -266,7 +266,9 @@ fun MainScreen(
                                     Icons.AutoMirrored.Filled.MenuOpen
                                 else
                                     Icons.Default.Menu,
-                                contentDescription = null
+                                contentDescription = stringResource(
+                                    if (expanded) R.string.collapse else R.string.expand
+                                )
                             )
                         }
 
@@ -286,10 +288,11 @@ fun MainScreen(
                     val selected = pagerState.targetPage == index
                     var showGroupMenu by remember { mutableStateOf(false) }
                     val haptic = LocalHapticFeedback.current
+                    val destinationLabel = stringResource(destination.labelId)
 
                     WideNavigationRailItem(
                         modifier = Modifier.semantics(mergeDescendants = true) {
-                            contentDescription = "nav_${destination.route}"
+                            contentDescription = destinationLabel
                         },
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
@@ -349,9 +352,10 @@ fun MainScreen(
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
                             val customIconPath = destination.customIconPath
+                            val destinationLabel = stringResource(destination.labelId)
                             AppNavigationBarItem(
                                 modifier = Modifier.semantics(mergeDescendants = true) {
-                                    contentDescription = "nav_${destination.route}"
+                                    contentDescription = destinationLabel
                                 },
                                 selected = selected,
                                 onClick = {
@@ -532,6 +536,7 @@ fun MainScreen(
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index
                                 val hasCustomIcon = destination.customIconPath.isNotEmpty()
+                                val destinationLabel = stringResource(destination.labelId)
                                 FloatingBottomBarItem(
                                     onClick = {
                                         handleMainDestinationClick(index, destination)
@@ -539,7 +544,7 @@ fun MainScreen(
                                     modifier = Modifier
                                         .defaultMinSize(minWidth = 76.dp)
                                         .semantics(mergeDescendants = true) {
-                                            contentDescription = "nav_${destination.route}"
+                                            contentDescription = destinationLabel
                                         }
                                 ) {
                                     NavigationIcon(

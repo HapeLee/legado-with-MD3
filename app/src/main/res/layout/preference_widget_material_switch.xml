@@ -6,4 +6,5 @@
     android:layout_height="wrap_content"
     android:focusable="false"
     android:clickable="false"
+    android:importantForAccessibility="no"
     android:background="@null" />

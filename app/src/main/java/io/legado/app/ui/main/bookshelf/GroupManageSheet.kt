@@ -121,7 +121,8 @@ fun GroupManageSheet(
                     var showMenu by remember { mutableStateOf(false) }
                     SmallPlainButton(
                         onClick = { showMenu = true },
-                        icon = Icons.Default.Add
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add),
                     )
                     RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         RoundDropdownMenuItem(

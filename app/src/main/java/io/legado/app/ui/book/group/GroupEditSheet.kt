@@ -322,7 +322,8 @@ fun GroupDeleteAction(
         onClick = {
             showDeleteDialog = true
         },
-        icon = Icons.Default.Delete
+        icon = Icons.Default.Delete,
+        contentDescription = stringResource(R.string.delete),
     )
 
     AppAlertDialog(
@@ -361,6 +362,7 @@ fun GroupResetCoverAction(
                 onCoverPathChange(null)
             }
         },
-        icon = Icons.Default.Restore
+        icon = Icons.Default.Restore,
+        contentDescription = stringResource(R.string.reset),
     )
 }

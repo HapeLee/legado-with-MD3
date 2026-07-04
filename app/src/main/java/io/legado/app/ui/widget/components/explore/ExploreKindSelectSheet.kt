@@ -84,7 +84,7 @@ fun ExploreKindSelectSheet(
                         onDismissRequest()
                     },
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Confirm"
+                    contentDescription = stringResource(R.string.confirm)
                 )
             }
         }

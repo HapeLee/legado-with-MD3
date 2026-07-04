@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -206,7 +207,10 @@ fun HomepageModuleFeed(
                                                     Box(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .clickable {
+                                                            .clickable(
+                                                                role = Role.Button,
+                                                                onClickLabel = stringResource(R.string.retry),
+                                                            ) {
                                                                 actions.onRetryModule(moduleUi.globalId)
                                                             }
                                                             .padding(vertical = 10.dp),
@@ -486,7 +490,8 @@ private fun ModuleHeader(
         if (onNavigate != null) {
             SmallTonalButton(
                 onClick = onNavigate,
-                icon = Icons.AutoMirrored.Filled.ArrowForward
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.homepage_show_all),
             )
         }
     }

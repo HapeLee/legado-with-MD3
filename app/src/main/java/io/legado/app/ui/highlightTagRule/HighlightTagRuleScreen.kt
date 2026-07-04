@@ -179,7 +179,7 @@ private fun HighlightTagRuleContent(
     FilePickerSheet(
         show = showImportSheet,
         onDismissRequest = { showImportSheet = false },
-        title = stringResource(R.string.import_str),
+        title = stringResource(R.string.import_highlight_tag_rule),
         onSelectSysFile = { types ->
             importDoc.launch(types)
             showImportSheet = false
@@ -246,7 +246,7 @@ private fun HighlightTagRuleContent(
             onIntent(HighlightTagRuleIntent.SetSearchMode(active))
         },
         onSearchQueryChange = { onIntent(HighlightTagRuleIntent.UpdateSearchQuery(it)) },
-        searchPlaceholder = stringResource(R.string.replace_purify_search),
+        searchPlaceholder = stringResource(R.string.search_highlight_tag_rule),
         onClearSelection = { onIntent(HighlightTagRuleIntent.ClearSelection) },
         onSelectAll = { onIntent(HighlightTagRuleIntent.SelectAll) },
         onSelectInvert = {
@@ -294,6 +294,27 @@ private fun HighlightTagRuleContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(rules, key = { it.id }) { item ->
+                    val enabledState = stringResource(
+                        if (item.isEnabled) R.string.enabled else R.string.disabled
+                    )
+                    val selectedState = stringResource(
+                        if (selectedIds.contains(item.id)) {
+                            R.string.a11y_selected
+                        } else {
+                            R.string.a11y_not_selected
+                        }
+                    )
+                    val itemDescription = listOfNotNull(
+                        item.displayName,
+                        item.pattern.takeIf { it.isNotBlank() },
+                        enabledState,
+                        selectedState,
+                        if (!inSelectionMode) {
+                            stringResource(R.string.a11y_long_press_reorder)
+                        } else {
+                            null
+                        }
+                    ).joinToString()
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
@@ -306,11 +327,25 @@ private fun HighlightTagRuleContent(
                         onEnabledChange = { enabled ->
                             onIntent(HighlightTagRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
+                        contentDescription = itemDescription,
+                        stateDescription = selectedState,
+                        enableSwitchContentDescription = stringResource(
+                            R.string.a11y_rule_enabled_switch,
+                            item.displayName
+                        ),
+                        editContentDescription = stringResource(
+                            R.string.a11y_edit_named,
+                            item.displayName
+                        ),
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {
                             SmallPlainButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                icon = AppIcons.Delete
+                                icon = AppIcons.Delete,
+                                contentDescription = stringResource(
+                                    R.string.a11y_delete_named,
+                                    item.displayName
+                                )
                             )
                         }
                     )

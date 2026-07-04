@@ -11,7 +11,8 @@
     android:clickable="true"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:focusable="true">
+    android:focusable="true"
+    android:screenReaderFocusable="true">
 
     <ImageView
         android:id="@+id/preference_icon"
@@ -20,6 +21,7 @@
         android:visibility="visible"
         android:layout_width="28dp"
         android:layout_height="28dp"
+        android:importantForAccessibility="no"
         app:tint="?attr/colorPrimary"
         tools:ignore="ContentDescription,RtlHardcoded" />
 

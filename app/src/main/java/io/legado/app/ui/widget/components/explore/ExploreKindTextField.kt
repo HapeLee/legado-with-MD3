@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -41,7 +43,10 @@ fun ExploreKindCompactTextField(
         modifier = modifier
             .height(34.dp)
             .clip(shape)
-            .background(backgroundColor),
+            .background(backgroundColor)
+            .semantics {
+                contentDescription = placeholder
+            },
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier

@@ -27,9 +27,11 @@
             tools:ignore="VisualLintBounds">
 
             <TextView
+                android:id="@+id/tv_book_type"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:gravity="center"
+                android:labelFor="@id/sp_type"
                 android:text="@string/book_type"
                 tools:ignore="RtlHardcoded" />
 
@@ -37,7 +39,9 @@
                 android:id="@+id/sp_type"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:contentDescription="@string/book_type"
                 android:entries="@array/book_type"
+                android:prompt="@string/book_type"
                 tools:ignore="TouchTargetSizeCheck" />
 
             <io.legado.app.lib.theme.view.ThemeCheckBox

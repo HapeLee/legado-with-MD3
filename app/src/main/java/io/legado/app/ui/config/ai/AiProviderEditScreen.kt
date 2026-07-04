@@ -219,8 +219,13 @@ fun AiProviderEditScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         val image = if (apiKeyVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val description = if (apiKeyVisible) {
+                            stringResource(R.string.hide_password)
+                        } else {
+                            stringResource(R.string.show_password)
+                        }
                         IconButton(onClick = { apiKeyVisible = !apiKeyVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
+                            Icon(imageVector = image, contentDescription = description)
                         }
                     }
                 )

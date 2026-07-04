@@ -171,7 +171,7 @@ fun RssSortScreen(
                     TopBarActionButton(
                         onClick = { showMainMenu = true },
                         imageVector = AppIcons.MoreVert,
-                        contentDescription = "Menu"
+                        contentDescription = stringResource(R.string.more_menu)
                     )
                     RoundDropdownMenu(
                         expanded = showMainMenu,

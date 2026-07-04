@@ -41,6 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -179,12 +183,19 @@ fun RssScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
+                    val ruleSubscriptionLabel = stringResource(R.string.rule_subscription)
+                    val favoriteLabel = stringResource(R.string.favorite)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         GlassCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics(mergeDescendants = true) {
+                                    contentDescription = ruleSubscriptionLabel
+                                    role = Role.Button
+                                },
                             onClick = { viewModel.openRuleSub() }
                         ) {
                             Row(
@@ -200,13 +211,18 @@ fun RssScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 AppText(
-                                    text = stringResource(R.string.rule_subscription),
+                                    text = ruleSubscriptionLabel,
                                     style = LegadoTheme.typography.labelMediumEmphasized
                                 )
                             }
                         }
                         GlassCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics(mergeDescendants = true) {
+                                    contentDescription = favoriteLabel
+                                    role = Role.Button
+                                },
                             onClick = { viewModel.openFavorites() }
                         ) {
                             Row(
@@ -222,7 +238,7 @@ fun RssScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 AppText(
-                                    text = stringResource(R.string.favorite),
+                                    text = favoriteLabel,
                                     style = LegadoTheme.typography.labelMediumEmphasized
                                 )
                             }
@@ -272,14 +288,23 @@ fun RssSourceGridItem(
     onLogin: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val openLabel = stringResource(R.string.open)
+    val moreMenuLabel = stringResource(R.string.more_menu)
 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
+                role = Role.Button,
+                onClickLabel = openLabel,
+                onLongClickLabel = moreMenuLabel,
                 onClick = onClick,
                 onLongClick = { showMenu = true }
             )
+            .semantics(mergeDescendants = true) {
+                contentDescription = source.sourceName
+                role = Role.Button
+            }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

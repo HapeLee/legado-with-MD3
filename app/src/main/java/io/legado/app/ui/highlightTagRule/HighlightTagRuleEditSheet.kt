@@ -82,7 +82,7 @@ fun HighlightTagRuleEditSheet(
             MediumPlainButton(
                 onClick = onDismissRequest,
                 icon = Icons.Default.Close,
-                contentDescription = "Close",
+                contentDescription = stringResource(R.string.close),
             )
         },
         endAction = {
@@ -90,7 +90,7 @@ fun HighlightTagRuleEditSheet(
                 MediumPlainButton(
                     onClick = { showMenu = true },
                     icon = Icons.Default.MoreVert,
-                    contentDescription = "More"
+                    contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     RoundDropdownMenuItem(
@@ -169,6 +169,7 @@ fun HighlightTagRuleEditSheet(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
+                tooltipText = stringResource(R.string.action_save),
                 icon = Icons.Default.Save
             )
         }

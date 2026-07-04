@@ -45,6 +45,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -332,12 +336,21 @@ private fun RssArticleItem(
         RssArticleLayout.GridCard -> 2
         RssArticleLayout.Waterfall -> 3
     }
+    val articleAccessibilityLabel = remember(article.title, article.pubDate) {
+        listOfNotNull(article.title, article.pubDate?.takeIf { it.isNotBlank() })
+            .joinToString()
+    }
 
     GlassCard(
         onClick = { onClick(article) },
         cornerRadius = 12.dp,
         containerColor = containerColor,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = articleAccessibilityLabel
+                role = Role.Button
+            }
     ) {
         when (layout) {
             RssArticleLayout.List -> {

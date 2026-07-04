@@ -49,6 +49,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -280,6 +285,10 @@ private fun ExploreDiscoveryScreen(
                     cornerRadius = 12.dp,
                     horizontalPadding = 12.dp,
                     verticalPadding = 8.dp,
+                    modifier = Modifier.semantics {
+                        contentDescription = item.bookSourceName
+                        role = Role.Button
+                    },
                     onClick = {
                         scope.launch {
                             val index = listItems.indexOfFirst {
@@ -327,6 +336,9 @@ fun ExploreSourceHeader(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (isExpanded) 90f else 0f, label = "rotation")
+    val expandActionLabel = stringResource(if (isExpanded) R.string.collapse else R.string.expand)
+    val loadingLabel = stringResource(R.string.loading)
+    val moreMenuLabel = stringResource(R.string.more_menu)
 
     val containerColor by animateColorAsState(
         targetValue = if (isExpanded)
@@ -356,9 +368,19 @@ fun ExploreSourceHeader(
         ListItem(
             modifier = Modifier
                 .combinedClickable(
+                    role = Role.Button,
+                    onClickLabel = expandActionLabel,
+                    onLongClickLabel = moreMenuLabel,
                     onClick = onClick,
                     onLongClick = { showMenu = true }
                 )
+                .semantics(mergeDescendants = true) {
+                    contentDescription = item.bookSourceName
+                    role = Role.Button
+                    if (loadingKinds) {
+                        stateDescription = loadingLabel
+                    }
+                }
                 .fillMaxWidth(),
             colors = ListItemDefaults.colors(
                 containerColor = Color.Transparent
@@ -435,5 +457,3 @@ fun ExploreSourceHeader(
         )
     }
 }
-
-

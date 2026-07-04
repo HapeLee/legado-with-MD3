@@ -1,8 +1,17 @@
 package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
@@ -21,6 +30,9 @@ fun SwitchSettingItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
+    val switchStateDescription = stringResource(
+        if (checked) R.string.a11y_on else R.string.a11y_off
+    )
     SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
@@ -29,6 +41,11 @@ fun SwitchSettingItem(
             summary = description,
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                role = Role.Switch
+                stateDescription = switchStateDescription
+                if (!enabled) disabled()
+            },
             enabled = enabled,
         )
     } else {
@@ -37,12 +54,17 @@ fun SwitchSettingItem(
             description = description,
             imageVector = imageVector,
             color = color,
+            enabled = enabled,
+            semanticRole = Role.Switch,
+            semanticStateDescription = switchStateDescription,
             onClick = { if (enabled) onCheckedChange(!checked) },
             trailingContent = {
                 AdaptiveSwitch(
+                    modifier = Modifier.clearAndSetSemantics { },
                     checked = checked,
                     onCheckedChange = onCheckedChange,
-                    enabled = enabled
+                    enabled = enabled,
+                    includeStateSemantics = false
                 )
             }
         )

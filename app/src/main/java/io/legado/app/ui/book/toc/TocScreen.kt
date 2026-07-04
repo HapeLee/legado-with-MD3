@@ -72,6 +72,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -614,7 +620,9 @@ fun TocScreen(
             ) {
                 AppLinearProgressIndicator(
                     progress = state.titleReplaceProgress ?: 0f,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clearAndSetSemantics { }
                 )
             }
 
@@ -754,10 +762,53 @@ fun ChapterItem(
             else -> LegadoTheme.colorScheme.onSurfaceVariant
         }, label = "BgColor"
     )
+    val selectedDescription = stringResource(R.string.a11y_selected)
+    val currentReadingDescription = stringResource(R.string.a11y_current_reading)
+    val lockedDescription = stringResource(R.string.a11y_vip_locked)
+    val downloadedDescription = stringResource(R.string.a11y_downloaded)
+    val downloadingDescription = stringResource(R.string.a11y_downloading)
+    val downloadFailedDescription = stringResource(R.string.a11y_download_failed)
+    val notDownloadedDescription = stringResource(R.string.a11y_not_downloaded)
+    val wordCountDescription = item.wordCount?.let {
+        stringResource(R.string.a11y_word_count, it)
+    }
+    val downloadStateDescription = when (item.downloadState) {
+        DownloadState.SUCCESS -> downloadedDescription
+        DownloadState.DOWNLOADING -> downloadingDescription
+        DownloadState.ERROR -> downloadFailedDescription
+        DownloadState.NONE -> notDownloadedDescription
+        DownloadState.LOCAL -> null
+    }
+    val chapterContentDescription = buildList {
+        add(item.title)
+        item.tag?.takeIf { it.isNotBlank() }?.let(::add)
+        if (item.isDur) add(currentReadingDescription)
+        if (item.isSelected) add(selectedDescription)
+        if (item.isVip && !item.isPay) add(lockedDescription)
+        if (showWordCount) wordCountDescription?.let(::add)
+        downloadStateDescription?.let(::add)
+    }.joinToString(", ")
+    val canDownload = item.downloadState == DownloadState.NONE ||
+            item.downloadState == DownloadState.ERROR
+    val downloadActionDescription = stringResource(
+        if (item.downloadState == DownloadState.ERROR) {
+            R.string.a11y_retry_chapter
+        } else {
+            R.string.download_chapter
+        },
+        item.title
+    )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.Button
+                contentDescription = chapterContentDescription
+                if (item.isSelected) {
+                    stateDescription = selectedDescription
+                }
+            }
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -817,12 +868,18 @@ fun ChapterItem(
                         .padding(start = 8.dp)
                         .wrapContentSize()
                         .clip(MaterialTheme.shapes.medium)
-                        .combinedClickable(
-                            enabled = item.downloadState != DownloadState.LOCAL,
-                            onClick = {
-                                if (item.downloadState == DownloadState.NONE) {
-                                    onDownloadClick()
-                                }
+                        .then(
+                            if (canDownload) {
+                                Modifier
+                                    .combinedClickable(
+                                        role = Role.Button,
+                                        onClick = onDownloadClick
+                                    )
+                                    .semantics {
+                                        contentDescription = downloadActionDescription
+                                    }
+                            } else {
+                                Modifier.clearAndSetSemantics { }
                             }
                         ),
                     contentAlignment = Alignment.Center

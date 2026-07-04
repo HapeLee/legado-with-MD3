@@ -13,8 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -34,14 +40,30 @@ fun BookmarkItem(
         else Color.Transparent,
         label = "BgColor"
     )
+    val itemDescription = listOfNotNull(
+        bookmark.chapterName,
+        bookmark.bookText.takeIf { it.isNotBlank() }?.let {
+            stringResource(R.string.bookmark_original_text_description, it)
+        },
+        bookmark.content.takeIf { it.isNotBlank() }?.let {
+            stringResource(R.string.bookmark_note_description, it)
+        }
+    ).joinToString()
+    val editLabel = stringResource(R.string.edit)
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
+                onClickLabel = editLabel,
+                onLongClickLabel = editLabel,
                 onClick = onClick,
                 onLongClick = onLongClick
-            ),
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            },
         color = backgroundColor
     ) {
         Column(

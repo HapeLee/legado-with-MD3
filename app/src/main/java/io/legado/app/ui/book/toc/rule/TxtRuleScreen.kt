@@ -299,7 +299,7 @@ fun TxtRuleScreen(
             onIntent(TxtTocRuleIntent.SetSearchMode(active))
         },
         onSearchQueryChange = { onIntent(TxtTocRuleIntent.UpdateSearchQuery(it)) },
-        searchPlaceholder = stringResource(R.string.replace_purify_search),
+        searchPlaceholder = stringResource(R.string.search_txt_toc_rule),
         onClearSelection = { onIntent(TxtTocRuleIntent.ClearSelection) },
         onSelectAll = { onIntent(TxtTocRuleIntent.SelectAll) },
         onSelectInvert = { onIntent(TxtTocRuleIntent.InvertSelection) },
@@ -351,6 +351,27 @@ fun TxtRuleScreen(
                     } else {
                         selectedIds.contains(item.id)
                     }
+                    val enabledState = stringResource(
+                        if (item.isEnabled) R.string.enabled else R.string.disabled
+                    )
+                    val selectedState = stringResource(
+                        if (isItemHighLighted) {
+                            R.string.a11y_selected
+                        } else {
+                            R.string.a11y_not_selected
+                        }
+                    )
+                    val itemDescription = listOfNotNull(
+                        item.name,
+                        item.example.takeIf { it.isNotBlank() },
+                        enabledState,
+                        selectedState,
+                        if (!isPickMode && !inSelectionMode) {
+                            stringResource(R.string.a11y_long_press_reorder)
+                        } else {
+                            null
+                        }
+                    ).joinToString()
 
                     ReorderableSelectionItem(
                         state = reorderableState,
@@ -371,11 +392,22 @@ fun TxtRuleScreen(
                         onEnabledChange = { enabled ->
                             onIntent(TxtTocRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
+                        contentDescription = itemDescription,
+                        stateDescription = selectedState,
+                        enableSwitchContentDescription = stringResource(
+                            R.string.a11y_rule_enabled_switch,
+                            item.name
+                        ),
+                        editContentDescription = stringResource(R.string.a11y_edit_named, item.name),
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {
                             SmallPlainButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                icon = AppIcons.Delete
+                                icon = AppIcons.Delete,
+                                contentDescription = stringResource(
+                                    R.string.a11y_delete_named,
+                                    item.name
+                                )
                             )
                         }
                     )

@@ -9,5 +9,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/preview"
+        android:importantForAccessibility="no"
         android:scaleType="centerCrop"/>
 </com.google.android.material.card.MaterialCardView>

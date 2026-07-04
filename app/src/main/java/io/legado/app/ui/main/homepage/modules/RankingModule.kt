@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,7 +90,7 @@ fun RankingModule(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickable(role = Role.Button) {
                             visibleCount =
                                 if (visibleCount == INITIAL_COUNT) MAX_COUNT else INITIAL_COUNT
                         }

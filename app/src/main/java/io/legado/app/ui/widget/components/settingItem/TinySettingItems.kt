@@ -46,6 +46,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -74,6 +80,8 @@ fun TinySettingItem(
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null,
     enabled: Boolean = true,
+    semanticRole: Role? = null,
+    semanticStateDescription: String? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -93,7 +101,12 @@ fun TinySettingItem(
         modifier = modifier
             .padding(bottom = 4.dp)
             .heightIn(min = 56.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                semanticRole?.let { role = it }
+                semanticStateDescription?.let { stateDescription = it }
+                if (!enabled) disabled()
+            },
         cornerRadius = 12.dp,
         containerColor = color?.copy(alpha = alpha),
         contentColor = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
@@ -281,6 +294,8 @@ fun TinySliderSettingItem(
                 steps = steps,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
+                accessibilityLabel = title,
+                accessibilityValue = description ?: displayValue.toString(),
             )
         },
     )
@@ -304,6 +319,10 @@ fun TinySwitchSettingItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val switchStateDescription = stringResource(
+        if (checked) R.string.a11y_on else R.string.a11y_off
+    )
+
     TinySettingItem(
         title = title,
         description = description,
@@ -311,11 +330,15 @@ fun TinySwitchSettingItem(
         modifier = modifier,
         color = color,
         enabled = enabled,
+        semanticRole = Role.Switch,
+        semanticStateDescription = switchStateDescription,
         trailingContent = {
             TinySwitch(
+                modifier = Modifier.clearAndSetSemantics { },
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 enabled = enabled,
+                includeStateSemantics = false,
             )
         },
         onClick = { onCheckedChange(!checked) },

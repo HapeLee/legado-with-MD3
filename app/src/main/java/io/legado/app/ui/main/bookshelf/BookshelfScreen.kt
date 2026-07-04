@@ -94,7 +94,9 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -938,6 +940,7 @@ fun BookshelfScreen(
                     .align(Alignment.TopCenter)
                     .padding(top = paddingValues.calculateTopPadding() + 6.dp),
             ) { summary ->
+                val closeDescription = stringResource(R.string.close)
                 Box {
                     NormalCard(
                         cornerRadius = 32.dp,
@@ -950,6 +953,10 @@ fun BookshelfScreen(
                         ) {
                             TextCard(
                                 icon = AppIcons.Close,
+                                modifier = Modifier.semantics {
+                                    contentDescription = closeDescription
+                                    role = Role.Button
+                                },
                                 backgroundColor = LegadoTheme.colorScheme.surfaceContainerHighest,
                                 cornerRadius = 16.dp,
                                 verticalPadding = 8.dp,
@@ -982,6 +989,9 @@ fun BookshelfScreen(
                                     cornerRadius = 16.dp,
                                     verticalPadding = 8.dp,
                                     horizontalPadding = 12.dp,
+                                    modifier = Modifier.semantics {
+                                        role = Role.Button
+                                    },
                                     onClick = {
                                         viewModel.showOverlay(BookshelfOverlay.GroupMenu)
                                     }
@@ -1208,8 +1218,12 @@ private fun BookshelfOverlays(
     )
 
     if (uiState.isLoading) {
+        val loadingDescription = uiState.loadingText ?: stringResource(R.string.loading)
         Dialog(onDismissRequest = {}) {
             NormalCard(
+                modifier = Modifier.semantics {
+                    contentDescription = loadingDescription
+                },
                 cornerRadius = 12.dp,
                 containerColor = LegadoTheme.colorScheme.surfaceContainerHigh
             ) {
@@ -1320,6 +1334,7 @@ fun BookshelfPage(
     val bookItemTitleMaxLines by BookshelfConfig.bookshelfTitleMaxLinesState
     val bookItemCoverShadow by BookshelfConfig.bookshelfCoverShadowState
     val showFastScroll by BookshelfConfig.showBookshelfFastScrollerState
+    val listContentDescription = stringResource(R.string.bookshelf)
     val totalHorizontalPadding =
         if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
     val gridContentHorizontalPadding = totalHorizontalPadding / 2
@@ -1352,7 +1367,7 @@ fun BookshelfPage(
             state = gridState,
             modifier = Modifier
                 .fillMaxSize()
-                .semantics(mergeDescendants = true) { contentDescription = "bookshelf_list" }
+                .semantics { contentDescription = listContentDescription }
                 .then(
                     with(sharedTransitionScope) {
                         if (this != null) Modifier.skipToLookaheadSize() else Modifier

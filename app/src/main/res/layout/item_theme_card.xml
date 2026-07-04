@@ -19,7 +19,8 @@
         android:checkable="true"
         app:strokeWidth="4dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+        android:screenReaderFocusable="true">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -34,6 +35,7 @@
                 app:strokeWidth="0dp"
                 app:cardCornerRadius="8dp"
                 app:cardBackgroundColor="#FF0000"
+                android:importantForAccessibility="no"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
@@ -46,6 +48,7 @@
                 app:strokeWidth="0dp"
                 app:cardCornerRadius="8dp"
                 app:cardBackgroundColor="#FFFF00"
+                android:importantForAccessibility="no"
                 app:layout_constraintTop_toBottomOf="@id/cv_title"
                 app:layout_constraintStart_toStartOf="@id/cv_title" />
 
@@ -58,6 +61,7 @@
                 app:strokeWidth="0dp"
                 app:cardCornerRadius="4dp"
                 app:cardBackgroundColor="#0000FF"
+                android:importantForAccessibility="no"
                 app:layout_constraintTop_toTopOf="@id/cv_book"
                 app:layout_constraintEnd_toEndOf="@id/cv_book" />
 
@@ -70,6 +74,7 @@
                 app:strokeWidth="0dp"
                 app:cardCornerRadius="0dp"
                 app:cardBackgroundColor="#FFFF00"
+                android:importantForAccessibility="no"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" >
@@ -117,4 +122,3 @@
         android:textSize="14sp" />
 
 </LinearLayout>
-

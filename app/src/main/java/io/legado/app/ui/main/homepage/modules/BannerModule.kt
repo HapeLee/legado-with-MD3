@@ -19,6 +19,10 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
@@ -66,9 +70,14 @@ fun BannerModule(
                     modifier = Modifier
                         .width(96.dp)
                         .combinedClickable(
+                            role = Role.Button,
                             onClick = { onClick(book, sharedCoverKey) },
                             onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
-                        ),
+                        )
+                        .semantics {
+                            contentDescription = bookAccessibilityLabel(book.name, book.author)
+                            role = Role.Button
+                        },
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     sharedCoverKey = sharedCoverKey,
@@ -93,4 +102,11 @@ fun BannerModule(
             }
         }
     }
+}
+
+private fun bookAccessibilityLabel(
+    name: String,
+    author: String,
+): String {
+    return if (author.isBlank()) name else "$name, $author"
 }

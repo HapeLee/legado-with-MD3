@@ -2,11 +2,13 @@ package io.legado.app.lib.prefs
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.View
 import androidx.appcompat.widget.SwitchCompat
 import androidx.preference.PreferenceViewHolder
 import androidx.preference.SwitchPreferenceCompat
-import io.legado.app.R
 import androidx.core.content.withStyledAttributes
+import androidx.core.view.ViewCompat
+import io.legado.app.R
 
 //import io.legado.app.lib.theme.accentColor
 
@@ -25,7 +27,7 @@ class SwitchPreference(context: Context, attrs: AttributeSet) :
     }
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
-        Preference.bindView<SwitchCompat>(
+        val switchView = Preference.bindView<SwitchCompat>(
             context, holder, icon, title, summary,
             widgetLayoutResource,
             androidx.preference.R.id.switchWidget,
@@ -33,6 +35,14 @@ class SwitchPreference(context: Context, attrs: AttributeSet) :
         )
 
         super.onBindViewHolder(holder)
+        val stateDescription = context.getString(
+            if (isChecked) R.string.a11y_on else R.string.a11y_off
+        )
+        ViewCompat.setScreenReaderFocusable(holder.itemView, true)
+        ViewCompat.setStateDescription(holder.itemView, stateDescription)
+        switchView?.let {
+            it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
         onLongClick?.let { listener ->
             holder.itemView.setOnLongClickListener {
                 listener.invoke(this)

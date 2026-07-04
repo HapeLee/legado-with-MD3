@@ -31,6 +31,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,12 +98,16 @@ private fun BookCacheManageScreen(
     val allBooks = state.shelfBooks + state.notShelfBooks
     val hasRunningDownload = allBooks.any { it.hasActiveDownload }
     val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
+    val bookshelfSectionTitle = stringResource(R.string.cache_section_bookshelf)
+    val bookshelfSectionEmptyText = stringResource(R.string.cache_empty_bookshelf)
+    val notBookshelfSectionTitle = stringResource(R.string.cache_section_not_in_bookshelf)
+    val notBookshelfSectionEmptyText = stringResource(R.string.cache_empty_not_in_bookshelf)
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "缓存管理",
+                title = stringResource(R.string.cache_management),
                 subtitle = state.downloadSummary.takeIf { it.isNotBlank() },
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -105,7 +116,7 @@ private fun BookCacheManageScreen(
                     TopBarActionButton(
                         onClick = { onIntent(BookCacheManageIntent.Refresh) },
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "刷新"
+                        contentDescription = stringResource(R.string.refresh)
                     )
                 },
                 scrollBehavior = scrollBehavior
@@ -122,7 +133,13 @@ private fun BookCacheManageScreen(
                         }
                     },
                     icon = if (hasRunningDownload) Icons.Default.Stop else Icons.Default.Download,
-                    tooltipText = if (hasRunningDownload) "停止下载" else "开始下载"
+                    tooltipText = stringResource(
+                        if (hasRunningDownload) {
+                            R.string.stop_download
+                        } else {
+                            R.string.start_download
+                        }
+                    )
                 )
             }
         }
@@ -147,8 +164,8 @@ private fun BookCacheManageScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 cacheSection(
-                    title = "书架书籍",
-                    emptyText = "没有书架内书籍缓存或下载任务",
+                    title = bookshelfSectionTitle,
+                    emptyText = bookshelfSectionEmptyText,
                     books = state.shelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -160,8 +177,8 @@ private fun BookCacheManageScreen(
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
                 cacheSection(
-                    title = "未在书架",
-                    emptyText = "没有未在书架的书籍下载状态",
+                    title = notBookshelfSectionTitle,
+                    emptyText = notBookshelfSectionEmptyText,
                     books = state.notShelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -288,8 +305,38 @@ private fun BookCacheBookCard(
         targetValue = if (expanded) 90f else 0f,
         label = "BookCacheExpandArrow"
     )
+    val progressPercent = (item.progress * 100).toInt().coerceIn(0, 100)
+    val statusSummary = stringResource(
+        R.string.cache_download_status_summary,
+        item.downloadingCount,
+        item.waitingCount,
+        item.pausedCount,
+        item.errorCount
+    )
+    val progressDescription = stringResource(
+        R.string.cache_progress_description,
+        item.cachedCount,
+        item.totalCount,
+        progressPercent
+    )
+    val expandedState = stringResource(
+        if (expanded) R.string.a11y_expanded else R.string.a11y_collapsed
+    )
+    val bookDescription = stringResource(
+        R.string.a11y_cache_book_item,
+        item.name,
+        item.author,
+        progressDescription,
+        statusSummary
+    )
     NormalCard(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = bookDescription
+                stateDescription = expandedState
+                role = Role.Button
+            },
         onClick = onToggleExpanded,
         containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
@@ -333,7 +380,12 @@ private fun BookCacheBookCard(
             }
             AppLinearProgressIndicator(
                 progress = item.progress,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = progressDescription
+                        progressBarRangeInfo = ProgressBarRangeInfo(item.progress, 0f..1f)
+                    }
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -341,7 +393,7 @@ private fun BookCacheBookCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = "下载中 ${item.downloadingCount} · 等待 ${item.waitingCount} · 暂停 ${item.pausedCount} · 失败 ${item.errorCount}",
+                    text = statusSummary,
                     modifier = Modifier.weight(1f),
                     style = LegadoTheme.typography.labelMediumEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
@@ -357,16 +409,22 @@ private fun BookCacheBookCard(
                         },
                         icon = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
                         contentDescription = when {
-                            item.hasActiveDownload -> "暂停本书下载"
-                            item.isPaused -> "继续本书下载"
-                            else -> "开始本书下载"
+                            item.hasActiveDownload -> stringResource(
+                                R.string.pause_book_download,
+                                item.name
+                            )
+                            item.isPaused -> stringResource(
+                                R.string.resume_book_download,
+                                item.name
+                            )
+                            else -> stringResource(R.string.start_book_download, item.name)
                         }
                     )
                 }
                 SmallTonalButton(
                     onClick = { onDeleteBook(item) },
                     icon = Icons.Default.Delete,
-                    contentDescription = null
+                    contentDescription = stringResource(R.string.delete_book_cache, item.name)
                 )
             }
         }
@@ -381,6 +439,18 @@ private fun BookCacheChapterRow(
     onStop: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val statusText = chapterStatusText(item)
+    val chapterDescription = stringResource(
+        R.string.a11y_cache_chapter_item,
+        item.title,
+        statusText
+    )
+    val chapterDownloadProgress = item.downloadProgress ?: 0f
+    val downloadProgressDescription = item.progressLabel?.takeIf { it.isNotBlank() }
+        ?: stringResource(
+            R.string.cache_chapter_progress_description,
+            (chapterDownloadProgress * 100).toInt().coerceIn(0, 100)
+        )
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -391,7 +461,13 @@ private fun BookCacheChapterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = chapterDescription
+                }
+        ) {
             AppText(
                 text = item.title,
                 maxLines = 1,
@@ -399,7 +475,7 @@ private fun BookCacheChapterRow(
                 style = LegadoTheme.typography.titleSmallEmphasized
             )
             AppText(
-                text = chapterStatusText(item),
+                text = statusText,
                 maxLines = 1,
                 style = LegadoTheme.typography.labelSmall,
                 color = if (item.isError) {
@@ -416,6 +492,13 @@ private fun BookCacheChapterRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
+                        .semantics {
+                            contentDescription = downloadProgressDescription
+                            progressBarRangeInfo = ProgressBarRangeInfo(
+                                chapterDownloadProgress,
+                                0f..1f
+                            )
+                        }
                 )
             }
         }
@@ -423,34 +506,39 @@ private fun BookCacheChapterRow(
             SmallTonalButton(
                 onClick = onStop,
                 icon = Icons.Default.Stop,
-                contentDescription = "暂停章节下载"
+                contentDescription = stringResource(R.string.pause_chapter_download, item.title)
             )
         } else if (item.isPaused || !item.isCached) {
             SmallTonalButton(
                 onClick = onDownload,
                 icon = Icons.Default.Download,
-                contentDescription = if (item.isPaused) "继续章节下载" else "下载章节"
+                contentDescription = if (item.isPaused) {
+                    stringResource(R.string.resume_chapter_download, item.title)
+                } else {
+                    stringResource(R.string.download_chapter, item.title)
+                }
             )
         }
         SmallTonalButton(
             onClick = onDelete,
             icon = Icons.Default.Delete,
-            contentDescription = null
+            contentDescription = stringResource(R.string.delete_chapter_cache, item.title)
         )
     }
 }
 
+@Composable
 private fun chapterStatusText(item: BookCacheChapterItem): String {
     if (item.isDownloading && !item.progressLabel.isNullOrBlank()) {
         return item.progressLabel
     }
     return when {
-        item.isDownloading -> "下载中"
-        item.isWaiting -> "等待下载"
-        item.isPaused -> "已暂停"
-        item.isError -> "下载失败"
-        item.isCached -> "已缓存"
-        else -> "未缓存"
+        item.isDownloading -> stringResource(R.string.downloading)
+        item.isWaiting -> stringResource(R.string.wait_download)
+        item.isPaused -> stringResource(R.string.download_paused)
+        item.isError -> stringResource(R.string.download_error)
+        item.isCached -> stringResource(R.string.download_success)
+        else -> stringResource(R.string.not_cached)
     }
 }
 
@@ -464,7 +552,7 @@ private fun DeleteBookCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除《${item?.name.orEmpty()}》的全部缓存，并从下载队列移除？",
+        text = stringResource(R.string.delete_book_cache_message, item?.name.orEmpty()),
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let(onConfirm) },
         dismissText = stringResource(android.R.string.cancel),
@@ -482,7 +570,7 @@ private fun DeleteChapterCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除章节缓存：${item?.second?.title.orEmpty()}？",
+        text = stringResource(R.string.delete_chapter_cache_message, item?.second?.title.orEmpty()),
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let { onConfirm(it.first, it.second) } },
         dismissText = stringResource(android.R.string.cancel),
