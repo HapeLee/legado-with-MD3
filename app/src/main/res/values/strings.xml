@@ -1596,6 +1596,9 @@
     <string name="local_book_options">Local Book Options</string>
     <string name="local_book_toc_rule">Local Book Chapter Rule</string>
     <string name="select_toc_rule">Select Chapter Rule</string>
+    <string name="select_rule_to_preview_chapters">Select rule to preview chapter list</string>
+    <string name="chapter_count_format">%d chapters</string>
+    <string name="chapter_list_preview_limit">Only showing first 500 chapters</string>
     <string name="split_long_chapters">Split Long Chapters</string>
     <string name="export_bookmarks_json">Export Bookmarks as JSON</string>
     <string name="export_bookmarks_markdown">Export Bookmarks as Markdown</string>

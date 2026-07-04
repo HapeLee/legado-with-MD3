@@ -45,7 +45,6 @@ import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -344,7 +343,11 @@ fun ReadBookRouteScreen(
                                 replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
                             }
                             is ReadBookEffect.MenuTocRegex -> {
-                                val intent = Intent(context, TxtTocRuleActivity::class.java)
+                                val intent = Intent(
+                                    context,
+                                    io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity::class.java
+                                )
+                                intent.putExtra("bookUrl", effect.bookUrl)
                                 intent.putExtra("tocRegex", effect.tocRegex)
                                 txtTocRuleLauncher.launch(intent)
                             }

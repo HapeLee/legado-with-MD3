@@ -263,6 +263,11 @@
             android:name=".ui.book.toc.rule.TxtTocRuleActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
+        <!-- txt目录规则预览(阅读界面) -->
+        <activity
+            android:name=".ui.book.toc.rule.preview.TxtTocRulePreviewActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="singleTop" />
         <!-- 替换规则界面 -->
         <activity
             android:name=".ui.replace.ReplaceRuleActivity"
