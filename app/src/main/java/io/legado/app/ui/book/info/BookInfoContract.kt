@@ -140,6 +140,15 @@ sealed interface BookInfoIntent {
         val book: Book,
         val toc: List<BookChapter>,
     ) : BookInfoIntent
+
+    data class ReplaceConflictingBook(
+        val oldBook: Book,
+        val source: BookSource,
+        val book: Book,
+        val toc: List<BookChapter>,
+        val options: ChangeSourceMigrationOptions,
+    ) : BookInfoIntent
+
     data class SelectWebFile(
         val webFile: BookInfoWebFile,
         val openAfterImport: Boolean,

@@ -1756,6 +1756,11 @@
     <string name="change_source_option_title">選擇操作</string>
     <string name="replace_current_book">取代此書</string>
     <string name="add_as_new_book">新增為新書</string>
+    <string name="bookshelf_book_conflict_title">書架中已有同名書籍</string>
+    <string name="bookshelf_book_conflict_message">偵測到書名和作者相同的書籍。可取代現有書並保留閱讀資料，或仍然新增一本。</string>
+    <string name="existing_book_source">現有書源：%1$s</string>
+    <string name="new_book_source">將加入書源：%1$s</string>
+    <string name="latest_chapter_info">最新章節：%1$s</string>
     <string name="quick_add_to_shelf">快速放入書架</string>
     <string name="book_added_to_shelf">已放入書架</string>
     <string name="seed_photo_summary">從圖片生成主題色彩</string>

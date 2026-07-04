@@ -116,23 +116,11 @@ object Restore : KoinComponent {
                 .forEach { book ->
                     book.coverUrl = LocalBook.getCoverPath(book)
                 }
-            val newBooks = arrayListOf<Book>()
             val ignoreLocalBook = BackupConfig.ignoreLocalBook
-            it.forEach { book ->
-                if (ignoreLocalBook && book.isLocal) {
-                    return@forEach
-                }
-                if (appDb.bookDao.has(book.bookUrl)) {
-                    try {
-                        appDb.bookDao.update(book)
-                    } catch (_: SQLiteConstraintException) {
-                        appDb.bookDao.insert(book)
-                    }
-                } else {
-                    newBooks.add(book)
-                }
+            val restoredBooks = it.filterNot { book ->
+                ignoreLocalBook && book.isLocal
             }
-            appDb.bookDao.insert(*newBooks.toTypedArray())
+            appDb.bookDao.replaceAll(restoredBooks)
         }
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
             try {

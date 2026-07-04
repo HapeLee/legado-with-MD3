@@ -1650,6 +1650,11 @@
     <string name="change_source_option_title">Choose an Action</string>
     <string name="replace_current_book">Replace This Book</string>
     <string name="add_as_new_book">Add as New Book</string>
+    <string name="bookshelf_book_conflict_title">Book Already on Bookshelf</string>
+    <string name="bookshelf_book_conflict_message">A book with the same title and author already exists. Replace it while keeping its reading data, or add another copy.</string>
+    <string name="existing_book_source">Existing source: %1$s</string>
+    <string name="new_book_source">New source: %1$s</string>
+    <string name="latest_chapter_info">Latest chapter: %1$s</string>
     <string name="quick_add_to_shelf">Quick Add to Bookshelf</string>
     <string name="book_added_to_shelf">Book added to bookshelf</string>
     <string name="seed_photo_summary">Generate theme colors from an image</string>

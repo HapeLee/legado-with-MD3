@@ -291,6 +291,17 @@ class BookInfoViewModel(
                 }
             }
 
+            is BookInfoIntent.ReplaceConflictingBook -> {
+                dismissSheet()
+                changeTo(
+                    source = intent.source,
+                    book = intent.book,
+                    toc = intent.toc,
+                    options = intent.options,
+                    replacedBook = intent.oldBook,
+                )
+            }
+
             is BookInfoIntent.SelectWebFile -> handleWebFileSelection(
                 intent.webFile,
                 intent.openAfterImport
@@ -787,19 +798,24 @@ class BookInfoViewModel(
         book: Book,
         toc: List<BookChapter>,
         options: ChangeSourceMigrationOptions,
+        replacedBook: Book? = null,
     ) {
+        val shouldPersist = replacedBook != null || inBookshelf
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
-            val oldBook = currentBook ?: return@execute book
-            bookSource = source
-            if (inBookshelf) {
+            val oldBook = replacedBook ?: currentBook ?: return@execute book
+            if (shouldPersist) {
                 changeBookSourceUseCase.changeTo(oldBook, book, toc, options)
             } else {
                 changeBookSourceUseCase.applyMigration(oldBook, book, toc, options)
             }
             book
         }.onSuccess {
+            bookSource = source
             currentBook = it
+            if (shouldPersist) {
+                inBookshelf = true
+            }
             currentChapterList = toc
             currentRelatedBooks = emptyList()
             currentGroupNames = null
@@ -807,7 +823,6 @@ class BookInfoViewModel(
             currentKindLabels = emptyList()
             syncUiState(isTocLoading = false)
             refreshMeta(it)
-        }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
     }

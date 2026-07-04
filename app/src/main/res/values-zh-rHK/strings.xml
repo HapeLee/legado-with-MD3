@@ -1935,6 +1935,11 @@
     <string name="release_to_refresh">釋放刷新</string>
     <string name="reload">重新載入</string>
     <string name="replace_current_book">替換此書</string>
+    <string name="bookshelf_book_conflict_title">書架中已有同名書籍</string>
+    <string name="bookshelf_book_conflict_message">偵測到書名和作者相同的書籍。可替換現有書並保留閱讀資料，或仍然新增一本。</string>
+    <string name="existing_book_source">現有書源：%1$s</string>
+    <string name="new_book_source">將加入書源：%1$s</string>
+    <string name="latest_chapter_info">最新章節：%1$s</string>
     <string name="replace_purify_badge">計數替換與淨化規則</string>
     <string name="replace_rule_title_setting">配置替換規則</string>
     <string name="replace_with">替換為</string>

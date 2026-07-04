@@ -37,6 +37,7 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
@@ -71,6 +72,7 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
+import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -143,6 +145,7 @@ class ReadBookViewModel(
     private val localPreferencesRepository: LocalPreferencesRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
     private val uploadRepository: UploadRepository,
+    private val changeBookSourceUseCase: ChangeBookSourceUseCase,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -2249,11 +2252,11 @@ class ReadBookViewModel(
         changeSourceCoroutine = execute {
             ReadBook.upMsg(context.getString(R.string.loading))
             applyChangeSource(book, toc)
+        }.onSuccess {
+            postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }.onError {
             AppLog.put("换源失败\n$it", it, true)
             ReadBook.upMsg(null)
-        }.onFinally {
-            postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
     }
 
@@ -2268,11 +2271,11 @@ class ReadBookViewModel(
             }
             val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
             applyChangeSource(book, toc)
+        }.onSuccess {
+            postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }.onError {
             AppLog.put("换源失败\n$it", it, true)
             ReadBook.upMsg(null)
-        }.onFinally {
-            postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
     }
 
@@ -2280,11 +2283,13 @@ class ReadBookViewModel(
         if (toc.isEmpty()) {
             throw NoStackTraceException("换源目录为空")
         }
-        ReadBook.book?.migrateTo(book, toc)
-        book.removeType(BookType.updateError)
-        ReadBook.book?.delete()
-        appDb.bookDao.insert(book)
-        appDb.bookChapterDao.insert(*toc.toTypedArray())
+        val oldBook = ReadBook.book ?: throw NoStackTraceException("书籍不存在")
+        changeBookSourceUseCase.changeTo(
+            oldBook = oldBook,
+            newBook = book,
+            chapters = toc,
+            options = ChangeSourceConfig.getMigrationOptions(),
+        )
         ReadBook.resetData(book)
         ReadBook.upMsg(null)
         ReadBook.loadContent(resetPageOffset = true)

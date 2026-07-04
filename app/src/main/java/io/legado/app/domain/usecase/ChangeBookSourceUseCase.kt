@@ -1,7 +1,9 @@
 package io.legado.app.domain.usecase
 
+import androidx.room.withTransaction
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
@@ -66,6 +68,7 @@ enum class BatchChangeSourcePreviewStatus {
 }
 
 class ChangeBookSourceUseCase(
+    private val database: AppDatabase,
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao,
 ) {
@@ -81,7 +84,7 @@ class ChangeBookSourceUseCase(
         return newBook
     }
 
-    fun changeTo(
+    suspend fun changeTo(
         oldBook: Book,
         newBook: Book,
         chapters: List<BookChapter>,
@@ -94,11 +97,15 @@ class ChangeBookSourceUseCase(
         } else if (oldBook.bookUrl != newBook.bookUrl) {
             BookHelp.updateCacheFolder(oldBook, newBook)
         }
-        bookChapterDao.delByBook(oldBook.bookUrl)
-        bookDao.delete(oldBook)
-        bookDao.insert(newBook)
+        database.withTransaction {
+            bookChapterDao.delByBook(oldBook.bookUrl)
+            bookDao.delete(oldBook)
+            bookDao.insert(newBook)
+            if (options.migrateChapters) {
+                bookChapterDao.insert(*chapters.toTypedArray())
+            }
+        }
         if (options.migrateChapters) {
-            bookChapterDao.insert(*chapters.toTypedArray())
             ReadBook.onChapterListUpdated(newBook)
         }
         return ChangeBookSourceResult(oldBookUrl, newBook)
@@ -273,6 +280,9 @@ class ChangeBookSourceUseCase(
         }
         if (options.migrateReadConfig) {
             newBook.readConfig = readConfig
+        }
+        if (newBook.wordCount.isNullOrBlank()) {
+            newBook.wordCount = wordCount
         }
     }
 }

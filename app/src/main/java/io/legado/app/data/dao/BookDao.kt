@@ -703,6 +703,17 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE name = :name and author = :author")
     fun getBook(name: String, author: String): Book?
 
+    @Query(
+        """
+        SELECT * FROM books
+        WHERE name = :name AND author = :author
+            AND type & ${BookType.notShelf} = 0
+        ORDER BY durChapterTime DESC
+        LIMIT 1
+        """
+    )
+    fun getShelfBookConflict(name: String, author: String): Book?
+
     @Query("""select distinct bs.* from books, book_sources bs 
         where origin == bookSourceUrl and origin not like '${BookType.localTag}%' 
         and origin not like '${BookType.webDavTag}%'""")
@@ -762,10 +773,21 @@ interface BookDao {
     @Delete
     fun delete(vararg book: Book)
 
+    @Query("DELETE FROM books")
+    fun deleteAll()
+
     @Transaction
     fun replace(oldBook: Book, newBook: Book) {
         delete(oldBook)
         insert(newBook)
+    }
+
+    @Transaction
+    fun replaceAll(books: List<Book>) {
+        deleteAll()
+        if (books.isNotEmpty()) {
+            insert(*books.toTypedArray())
+        }
     }
 
     @Query("update books set durChapterPos = :pos where bookUrl = :bookUrl")

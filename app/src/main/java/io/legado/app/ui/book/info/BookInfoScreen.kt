@@ -333,6 +333,17 @@ private fun BookInfoScreenContent(
                 onAddAsNew = { newBook, toc ->
                     onIntent(BookInfoIntent.AddSourceAsNewBook(newBook, toc))
                 },
+                onReplaceConflict = { oldBook, source, newBook, toc, options ->
+                    onIntent(
+                        BookInfoIntent.ReplaceConflictingBook(
+                            oldBook = oldBook,
+                            source = source,
+                            book = newBook,
+                            toc = toc,
+                            options = options,
+                        )
+                    )
+                },
             )
         }
         BookInfoSheet.ReadRecord -> BookReadRecordSheet(

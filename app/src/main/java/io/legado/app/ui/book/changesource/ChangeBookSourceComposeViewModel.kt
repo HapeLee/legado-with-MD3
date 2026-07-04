@@ -2,6 +2,7 @@ package io.legado.app.ui.book.changesource
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -14,16 +15,19 @@ import io.legado.app.domain.usecase.GetChapterContentUseCase
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.primaryStr
 import io.legado.app.ui.book.search.SearchScope
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChangeBookSourceComposeViewModel(
     private val changeSourceSearchUseCase: ChangeSourceSearchUseCase,
     private val getChapterContentUseCase: GetChapterContentUseCase,
     private val searchRepository: SearchRepository,
+    private val bookDao: BookDao,
 ) : ViewModel() {
 
     // Public state for the sheet
@@ -61,7 +65,16 @@ class ChangeBookSourceComposeViewModel(
     var totalSourceCount: Int = 0
         private set
 
-    fun getBookFromMap(key: String): Book? = bookMap[key]?.toBook()
+    fun getBookFromMap(key: String): Book? = bookMap[key]
+
+    fun findShelfConflict(book: Book, onResult: (Book?) -> Unit) {
+        viewModelScope.launch {
+            val conflict = withContext(IO) {
+                bookDao.getShelfBookConflict(book.name, book.author)
+            }
+            onResult(conflict)
+        }
+    }
 
     // Options
     val checkAuthor: Boolean get() = ChangeSourceConfig.checkAuthor
@@ -77,13 +90,27 @@ class ChangeBookSourceComposeViewModel(
     private var bookAuthor: String = ""
     private var fromReadBookActivity: Boolean = false
     private var screenKey: String = ""
+    private var knownEnabledSourceUrls: Set<String>? = null
+    private var cachedTocChapterCount = 0
     private val searchResults = mutableListOf<SearchBook>()
-    private val bookMap = mutableMapOf<String, SearchBook>()
+    private val bookMap = mutableMapOf<String, Book>()
     private val tocMap = mutableMapOf<String, List<BookChapter>>()
 
     init {
         viewModelScope.launch {
-            searchRepository.enabledGroups.collect { /* handled by sheet */ }
+            searchRepository.enabledSources.collect { sources ->
+                val sourceUrls = sources.mapTo(linkedSetOf()) { it.bookSourceUrl }
+                val previousSourceUrls = knownEnabledSourceUrls
+                knownEnabledSourceUrls = sourceUrls
+                if (oldBook != null && previousSourceUrls != null) {
+                    val addedSources = sources.filter {
+                        it.bookSourceUrl !in previousSourceUrls
+                    }
+                    if (addedSources.isNotEmpty()) {
+                        startSearch(addedSources)
+                    }
+                }
+            }
         }
     }
 
@@ -94,12 +121,21 @@ class ChangeBookSourceComposeViewModel(
         this.fromReadBookActivity = fromReadBookActivity
         if (searchJob?.isActive != true) {
             viewModelScope.launch {
-                val dbBooks = getDbSearchBooks()
+                val dbBooks = withContext(IO) { getDbSearchBooks() }
                 if (dbBooks.isNotEmpty()) {
                     searchResults.clear()
                     searchResults.addAll(dbBooks)
-                    searchResults.forEach { bookMap[it.primaryStr()] = it }
+                    searchResults.forEach { bookMap[it.primaryStr()] = it.toBook() }
                     filterResults()
+                    val cachedOrigins = dbBooks.mapTo(hashSetOf()) { it.origin }
+                    val missingSources = withContext(IO) {
+                        SearchScope(ChangeSourceConfig.searchScope)
+                            .getBookSourceParts()
+                            .filter { it.bookSourceUrl !in cachedOrigins }
+                    }
+                    if (missingSources.isNotEmpty()) {
+                        startSearch(missingSources)
+                    }
                 } else {
                     startSearch()
                 }
@@ -129,61 +165,102 @@ class ChangeBookSourceComposeViewModel(
     }
 
     fun startSearch() {
-        val book = oldBook ?: return
-        stopSearch()
-        if (searchResults.isNotEmpty()) {
-            io.legado.app.data.appDb.searchBookDao.delete(*searchResults.toTypedArray())
-        }
-        searchResults.clear()
-        bookMap.clear()
-        tocMap.clear()
-        val scope = SearchScope(ChangeSourceConfig.searchScope)
-        totalSourceCount = scope.getBookSourceParts().size
-        _changeSourceProgress.value = 0 to ""
-        _searchDataFlow.value = emptyList()
-
-        searchJob = viewModelScope.launch {
-            changeSourceSearchUseCase.search(
-                name = book.name,
-                author = book.author,
-                scope = scope,
-                oldBook = book,
-                fromReadBookActivity = fromReadBookActivity,
-            ).collect { event ->
-                when (event) {
-                    is ChangeSourceSearchEvent.Started -> {
-                        _isSearching.value = true
-                        totalSourceCount = event.totalSources
-                    }
-
-                    is ChangeSourceSearchEvent.Progress -> {
-                        totalSourceCount = event.totalSources
-                        _changeSourceProgress.value = event.processedSources to event.sourceName
-                    }
-
-                    is ChangeSourceSearchEvent.Result -> {
-                        searchResults.add(event.searchBook)
-                        bookMap[event.searchBook.primaryStr()] = event.searchBook
-                        // 持久化到 DB
-                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
-                        filterResults()
-                    }
-
-                    is ChangeSourceSearchEvent.Finished -> {
-                        _isSearching.value = false
-                    }
-                }
-            }
-        }
+        startSearch(
+            scope = SearchScope(ChangeSourceConfig.searchScope),
+            replacedOrigins = null,
+        )
     }
 
     fun startSearch(origin: String) {
-        // Reload a single source
         viewModelScope.launch {
-            changeSourceSearchUseCase.topSource(
-                searchResults.find { it.origin == origin } ?: return@launch
-            )
-            startSearch()
+            val source = withContext(IO) {
+                io.legado.app.data.appDb.bookSourceDao.getBookSourcePart(origin)
+            } ?: return@launch
+            startSearch(listOf(source))
+        }
+    }
+
+    private fun startSearch(sources: List<BookSourcePart>) {
+        val scope = SearchScope("").apply { updateSources(sources) }
+        startSearch(
+            scope = scope,
+            replacedOrigins = sources.mapTo(hashSetOf()) { it.bookSourceUrl },
+        )
+    }
+
+    private fun startSearch(
+        scope: SearchScope,
+        replacedOrigins: Set<String>?,
+    ) {
+        val book = oldBook ?: return
+        stopSearch()
+        val removedResults = if (replacedOrigins == null) {
+            searchResults.toList()
+        } else {
+            searchResults.filter { it.origin in replacedOrigins }
+        }
+        val removedKeys = removedResults.mapTo(hashSetOf()) { it.primaryStr() }
+        searchResults.removeAll(removedResults.toSet())
+        removedKeys.forEach {
+            bookMap.remove(it)
+            tocMap.remove(it)
+        }
+        if (replacedOrigins == null) {
+            cachedTocChapterCount = 0
+        }
+        _changeSourceProgress.value = 0 to ""
+        filterResults()
+
+        searchJob = viewModelScope.launch {
+            if (removedResults.isNotEmpty()) {
+                withContext(IO) {
+                    io.legado.app.data.appDb.searchBookDao.delete(*removedResults.toTypedArray())
+                }
+            }
+            val pendingBooks = arrayListOf<SearchBook>()
+            try {
+                changeSourceSearchUseCase.search(
+                    name = book.name,
+                    author = book.author,
+                    scope = scope,
+                    oldBook = book,
+                    fromReadBookActivity = fromReadBookActivity,
+                ).collect { event ->
+                    when (event) {
+                        is ChangeSourceSearchEvent.Started -> {
+                            _isSearching.value = true
+                            totalSourceCount = event.totalSources
+                        }
+
+                        is ChangeSourceSearchEvent.Progress -> {
+                            totalSourceCount = event.totalSources
+                            _changeSourceProgress.value =
+                                event.processedSources to event.sourceName
+                            filterResults()
+                        }
+
+                        is ChangeSourceSearchEvent.Result -> {
+                            val key = event.searchBook.primaryStr()
+                            searchResults.add(event.searchBook)
+                            pendingBooks.add(event.searchBook)
+                            bookMap[key] = event.book
+                            event.toc?.let { toc ->
+                                if (cachedTocChapterCount < MAX_CACHED_CHAPTERS) {
+                                    cachedTocChapterCount += toc.size
+                                    tocMap[key] = toc
+                                }
+                            }
+                        }
+
+                        is ChangeSourceSearchEvent.Finished -> {
+                            filterResults()
+                            searchRepository.saveSearchBooks(pendingBooks)
+                        }
+                    }
+                }
+            } finally {
+                _isSearching.value = false
+            }
         }
     }
 
@@ -206,13 +283,9 @@ class ChangeBookSourceComposeViewModel(
         }
     }
 
-    fun pause() {
-        // No-op for now
-    }
+    fun pause() = Unit
 
-    fun resume() {
-        // No-op for now
-    }
+    fun resume() = Unit
 
     private fun filterResults() {
         val filtered = if (screenKey.isEmpty()) {
@@ -247,18 +320,23 @@ class ChangeBookSourceComposeViewModel(
         onSuccess: (toc: List<BookChapter>, source: BookSource) -> Unit,
         onError: (e: Throwable) -> Unit,
     ) {
+        stopSearch()
         viewModelScope.launch {
             try {
                 val cachedToc = tocMap[book.primaryStr()]
                 if (cachedToc != null) {
-                    val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = withContext(IO) {
+                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    }
                     if (source != null) {
                         onSuccess(cachedToc, source)
                         return@launch
                     }
                 }
                 if (book.isWebFile) {
-                    val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = withContext(IO) {
+                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    }
                         ?: throw io.legado.app.exception.NoStackTraceException("书源不存在")
                     onSuccess(emptyList(), source)
                     return@launch
@@ -300,15 +378,19 @@ class ChangeBookSourceComposeViewModel(
     }
 
     fun refresh() {
-        searchResults.clear()
-        bookMap.clear()
-        val dbBooks = getDbSearchBooks()
-        if (dbBooks.isNotEmpty()) {
-            searchResults.addAll(dbBooks)
-            searchResults.forEach { bookMap[it.primaryStr()] = it }
-            filterResults()
-        } else {
-            startSearch()
+        viewModelScope.launch {
+            val dbBooks = withContext(IO) { getDbSearchBooks() }
+            searchResults.clear()
+            bookMap.clear()
+            tocMap.clear()
+            cachedTocChapterCount = 0
+            if (dbBooks.isNotEmpty()) {
+                searchResults.addAll(dbBooks)
+                searchResults.forEach { bookMap[it.primaryStr()] = it.toBook() }
+                filterResults()
+            } else {
+                startSearch()
+            }
         }
     }
 
@@ -428,5 +510,9 @@ class ChangeBookSourceComposeViewModel(
             sourceUrls = searchScope.sourceUrls
         )
         refresh()
+    }
+
+    private companion object {
+        const val MAX_CACHED_CHAPTERS = 30_000
     }
 }
