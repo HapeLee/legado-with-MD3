@@ -627,7 +627,7 @@ sealed interface ReadBookEffect {
     data object MenuBookChangeSource : ReadBookEffect
     data object MenuChapterChangeSource : ReadBookEffect
     data object MenuSettingReplace : ReadBookEffect
-    data class MenuTocRegex(val tocRegex: String?) : ReadBookEffect
+    data class MenuTocRegex(val bookUrl: String, val tocRegex: String?) : ReadBookEffect
     data class MenuImageStyleChanged(val style: String) : ReadBookEffect
     data class SyncBookProgress(val book: Book) : ReadBookEffect
 

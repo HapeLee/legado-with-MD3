@@ -42,4 +42,10 @@ class TxtTocRuleRepository {
         }
         dao.update(*rules.toTypedArray())
     }
+
+    fun all(): List<TxtTocRule> = dao.all
+
+    fun enabled(): List<TxtTocRule> = dao.enabled
+
+    fun count(): Int = dao.count
 }

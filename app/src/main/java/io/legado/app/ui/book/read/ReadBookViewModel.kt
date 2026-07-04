@@ -530,7 +530,8 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.MenuTocRegex -> {
                 closeReadMenu()
-                _effects.tryEmit(ReadBookEffect.MenuTocRegex(ReadBook.book?.tocUrl))
+                val book = ReadBook.book
+                _effects.tryEmit(ReadBookEffect.MenuTocRegex(book?.bookUrl ?: "", book?.tocUrl))
             }
             is ReadBookIntent.TocRegexResult -> {
                 ReadBook.book?.let {

@@ -1561,6 +1561,9 @@
     <string name="local_book_options">本地书籍选项</string>
     <string name="local_book_toc_rule">本地书籍目录规则</string>
     <string name="select_toc_rule">选择目录规则</string>
+    <string name="select_rule_to_preview_chapters">选择规则立即预览章节列表</string>
+    <string name="chapter_count_format">%d 章</string>
+    <string name="chapter_list_preview_limit">仅显示前 500 章</string>
     <string name="split_long_chapters">拆分超长章节</string>
     <string name="export_bookmarks_json">导出书签为 JSON</string>
     <string name="export_bookmarks_markdown">导出书签为 Markdown</string>
