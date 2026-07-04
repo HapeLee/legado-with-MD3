@@ -103,20 +103,24 @@ fun BookCoverImage(
         }
     }
 
+    val isUsingDefaultCover = finalPath == null || onlineCoverLoadFailed
+    val showLoadingDefault = sharedCoverKey == null && !isOnlineCoverLoaded
+    val showCustomDefault = hasCustomDefault &&
+        !isOnlineCoverLoaded &&
+        (isUsingDefaultCover || showLoadingDefault)
     val showDefaultIcon = !hasCustomDefault &&
         (
-            finalPath == null ||
-                onlineCoverLoadFailed ||
-                (showLoadingPlaceholder && !isOnlineCoverLoaded)
+            isUsingDefaultCover ||
+                (showLoadingPlaceholder && showLoadingDefault)
         )
     val isDefaultCoverVisible =
-        (hasCustomDefault && !isOnlineCoverLoaded) || showDefaultIcon
+        showCustomDefault || showDefaultIcon
     LaunchedEffect(isDefaultCoverVisible) {
         onDefaultCoverVisibilityChange?.invoke(isDefaultCoverVisible)
     }
 
     Box(modifier = modifier) {
-        if (hasCustomDefault && !isOnlineCoverLoaded) {
+        if (showCustomDefault) {
             AsyncImage(
                 model = buildCoverImageRequest(
                     context = context,
@@ -282,7 +286,11 @@ fun CoilBookCover(
         if (
             finalPath == null ||
             onlineCoverLoadFailed ||
-            (showLoadingPlaceholder && !isOnlineCoverLoaded)
+            (
+                sharedCoverKey == null &&
+                    showLoadingPlaceholder &&
+                    !isOnlineCoverLoaded
+                )
         ) {
             CoverTextOverlay(
                 name = name,
