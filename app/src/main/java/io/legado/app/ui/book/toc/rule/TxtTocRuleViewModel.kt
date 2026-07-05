@@ -9,6 +9,7 @@ import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
+import io.legado.app.help.DefaultData
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
@@ -17,6 +18,7 @@ import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -73,6 +75,7 @@ class TxtTocRuleViewModel(
             is TxtTocRuleIntent.ToggleImportAll -> toggleImportAll(intent.isSelected)
             is TxtTocRuleIntent.UpdateImportItem -> updateImportItem(intent.index, intent.rule)
             TxtTocRuleIntent.SaveImportedRules -> saveImportedRules()
+            TxtTocRuleIntent.ImportBuiltInRules -> importBuiltInRules()
         }
     }
 
@@ -175,6 +178,13 @@ class TxtTocRuleViewModel(
 
     private fun copyRule(rule: TxtTocRule) {
         context.sendToClip(GSON.toJson(rule))
+    }
+
+    private fun importBuiltInRules() {
+        viewModelScope.launch(Dispatchers.IO) {
+            DefaultData.importDefaultTocRules()
+            context.toastOnUi(R.string.import_built_in_rules)
+        }
     }
 
     fun pasteRule(): TxtTocRule? {
