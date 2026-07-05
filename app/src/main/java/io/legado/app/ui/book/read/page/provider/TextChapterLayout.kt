@@ -35,6 +35,7 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
+import io.legado.app.ui.book.read.page.entities.TitleSegment
 import io.legado.app.ui.book.read.page.entities.column.BaseColumn
 import io.legado.app.ui.book.read.page.entities.column.ImageColumn
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
@@ -106,6 +107,8 @@ class TextChapterLayout(
 
     private val highlightRuleRepository: HighlightRuleRepository
         get() = GlobalContext.get().get()
+
+    private var highlightStyleContext: HighlightStyleContext? = null
 
     @Volatile
     private var listener: LayoutProgressListener? = textChapter
@@ -283,7 +286,10 @@ class TextChapterLayout(
             }
         } else null
 
-        var currentOffset = 0
+        highlightStyleContext = buildHighlightStyleContext(allTitleSegments, contents)
+
+        var titleHighlightOffset = 0
+        var bodyHighlightOffset = 0
 
         if (allTitleSegments != null) {
             allTitleSegments.forEachIndexed { index, segment ->
@@ -323,9 +329,9 @@ class TextChapterLayout(
                     isTitle = true,
                     emptyContent = contents.isEmpty(),
                     isVolumeTitle = bookChapter.isVolume,
-                    offset = currentOffset
+                    offset = titleHighlightOffset
                 )
-                currentOffset += text.length + 1
+                titleHighlightOffset += segment.text.length + 1
 
                 if (segment.scale != 1.0f) {
                     val currentLines = pendingTextPage.lines
@@ -356,11 +362,9 @@ class TextChapterLayout(
                 val text = content.trim()
                 if (text == "[newpage]") {
                     prepareNextPageIfNeed()
-                    currentOffset += content.length + 1
                     return@forEach
                 } else if (text.startsWith("<usehtml>")) {
                     setTypeHtml(imageStyle, book, text.substring(9, text.lastIndexOf("<")))
-                    currentOffset += content.length + 1
                     return@forEach
                 }
             }
@@ -387,9 +391,9 @@ class TextChapterLayout(
                     contentPaintFontMetrics,
                     imageStyle,
                     srcList = srcList,
-                    offset = currentOffset
+                    offset = bodyHighlightOffset
                 )
-                currentOffset += text.length
+                bodyHighlightOffset += text.length
             } else {
                 if (isSingleImageStyle && isSetTypedImage) {
                     isSetTypedImage = false
@@ -459,9 +463,9 @@ class TextChapterLayout(
                                     book, textBefore, contentPaint, contentPaintTextHeight,
                                     contentPaintFontMetrics, "TEXT", isFirstLine = isFirstLine,
                                     srcList = srcList, clickList = clickList,
-                                    offset = currentOffset
+                                    offset = bodyHighlightOffset
                                 )
-                                currentOffset += textBefore.length
+                                bodyHighlightOffset += textBefore.length
                                 sb.setLength(0)
                                 isFirstLine = false
                             }
@@ -473,7 +477,7 @@ class TextChapterLayout(
                                 imgSize,
                                 click
                             ) // 传递点击信息
-                            currentOffset += 1
+                            bodyHighlightOffset += 1
                             isSetTypedImage = true
                         }
                         start = matcher.end()
@@ -501,14 +505,14 @@ class TextChapterLayout(
                         isFirstLine = isFirstLine,
                         srcList = srcList.ifEmpty { null },
                         clickList = clickList.ifEmpty { null },
-                        offset = currentOffset
+                        offset = bodyHighlightOffset
                     )
-                    currentOffset += textToType.length
+                    bodyHighlightOffset += text.length
                 }
             }
             pendingTextPage.lines.last().isParagraphEnd = true
             stringBuilder.append("\n")
-            currentOffset += 1
+            bodyHighlightOffset += 1
         }
         val chapterWordCount = StringUtils.wordCountFormat(wordCount.toString())
         bookChapter.wordCount = chapterWordCount
@@ -921,7 +925,7 @@ class TextChapterLayout(
         clickList: LinkedList<String?>? = null,
         offset: Int = -1
     ) {
-        val charStyles = applyHighlightRules(text, isTitle)
+        val charStyles = applyHighlightRules(text, isTitle, offset)
         val widthsArray = allocateFloatArray(text.length)
         textPaint.getTextWidthsCompat(text, widthsArray)
         // 用高亮规则字体重新测量字符宽度，确保排版和绘制使用同一套字体
@@ -1397,45 +1401,149 @@ class TextChapterLayout(
      */
     private fun applyHighlightRules(
         text: String,
-        isTitle: Boolean = false
+        isTitle: Boolean = false,
+        offset: Int = -1
     ): Array<CharStyle?>? {
-        if (compiledHighlightRules.isEmpty()) return null
-        var hasMatch = false
-        // 先检查是否有任何规则匹配
-        for (compiled in compiledHighlightRules) {
-            if (!compiled.rule.appliesTo(isTitle)) continue
-            if (compiled.regex.containsMatchIn(text)) {
-                hasMatch = true
-                break
+        if (offset >= 0) {
+            return highlightStyleContext?.stylesFor(isTitle, offset, text.length)
+        }
+        return createHighlightStyles(text, isTitle, compiledHighlightRules)
+    }
+
+    private fun buildHighlightStyleContext(
+        titleSegments: List<TitleSegment>?,
+        contents: List<String>,
+    ): HighlightStyleContext? {
+        val rules = compiledHighlightRules
+        if (rules.isEmpty()) return null
+        val titleStyles = createHighlightStyles(
+            text = buildTitleHighlightText(titleSegments),
+            isTitle = true,
+            rules = rules
+        )
+        val bodyStyles = createHighlightStyles(
+            text = buildBodyHighlightText(contents),
+            isTitle = false,
+            rules = rules
+        )
+        if (titleStyles == null && bodyStyles == null) return null
+        return HighlightStyleContext(titleStyles, bodyStyles)
+    }
+
+    private fun buildTitleHighlightText(titleSegments: List<TitleSegment>?): String {
+        if (titleSegments.isNullOrEmpty()) return ""
+        return buildString {
+            titleSegments.forEach { segment ->
+                append(segment.text)
+                append('\n')
             }
         }
-        if (!hasMatch) return null
-        // 填充样式数组
-        val styles = arrayOfNulls<CharStyle>(text.length)
-        for (compiled in compiledHighlightRules) {
+    }
+
+    private fun buildBodyHighlightText(contents: List<String>): String {
+        if (contents.isEmpty()) return ""
+        return buildString {
+            contents.forEach { content ->
+                if (adaptSpecialStyle) {
+                    val text = content.trim()
+                    if (text == "[newpage]" || text.startsWith("<usehtml>")) {
+                        return@forEach
+                    }
+                }
+                append(
+                    content.replace(srcReplaceCharC, srcReplaceCharD)
+                        .replaceImagesForHighlight()
+                )
+                append('\n')
+            }
+        }
+    }
+
+    private fun String.replaceImagesForHighlight(): String {
+        val matcher = AppPattern.imgPattern.matcher(this)
+        if (!matcher.find()) return this
+        return buildString(length) {
+            var start = 0
+            do {
+                append(this@replaceImagesForHighlight, start, matcher.start())
+                append(srcReplaceChar)
+                start = matcher.end()
+            } while (matcher.find())
+            append(this@replaceImagesForHighlight, start, this@replaceImagesForHighlight.length)
+        }
+    }
+
+    private fun createHighlightStyles(
+        text: String,
+        isTitle: Boolean,
+        rules: List<CompiledHighlightRule>,
+    ): Array<CharStyle?>? {
+        if (text.isEmpty() || rules.isEmpty()) return null
+        var styles: Array<CharStyle?>? = null
+        for (compiled in rules) {
             if (!compiled.rule.appliesTo(isTitle)) continue
-            val rule = compiled.rule
-            val charStyle = CharStyle(
-                textColor = rule.textColor,
-                bgColor = rule.bgColor,
-                underlineMode = rule.underlineMode,
-                underlineColor = rule.underlineColor ?: rule.textColor ?: 0xFF63C37D.toInt(),
-                underlineWidth = rule.underlineWidth,
-                underlineOffset = rule.underlineOffset,
-                underlineSvgPath = rule.underlineSvgPath.orEmpty(),
-                bgImage = rule.bgImage.orEmpty(),
-                bgImageFit = rule.bgImageFit,
-                bgImageScale = rule.bgImageScale,
-                fontPath = rule.fontPath.orEmpty()
-            )
+            var charStyle: CharStyle? = null
             compiled.regex.findAll(text).forEach { match ->
-                for (i in match.range) {
+                val start = match.range.first.coerceAtLeast(0)
+                val end = match.range.last.coerceAtMost(text.lastIndex)
+                if (start > end) return@forEach
+                val activeStyle = charStyle ?: compiled.rule.toCharStyle().also {
+                    charStyle = it
+                }
+                val activeStyles = styles ?: arrayOfNulls<CharStyle>(text.length).also {
+                    styles = it
+                }
+                for (i in start..end) {
                     // 后来的规则覆盖先前的（与 Legado_Max 行为一致）
-                    styles[i] = charStyle
+                    activeStyles[i] = activeStyle
                 }
             }
         }
         return styles
+    }
+
+    private fun HighlightRule.toCharStyle(): CharStyle {
+        return CharStyle(
+            textColor = textColor,
+            bgColor = bgColor,
+            underlineMode = underlineMode,
+            underlineColor = underlineColor ?: textColor ?: 0xFF63C37D.toInt(),
+            underlineWidth = underlineWidth,
+            underlineOffset = underlineOffset,
+            underlineSvgPath = underlineSvgPath.orEmpty(),
+            bgImage = bgImage.orEmpty(),
+            bgImageFit = bgImageFit,
+            bgImageScale = bgImageScale,
+            fontPath = fontPath.orEmpty()
+        )
+    }
+
+    private data class HighlightStyleContext(
+        val titleStyles: Array<CharStyle?>?,
+        val bodyStyles: Array<CharStyle?>?,
+    ) {
+        fun stylesFor(isTitle: Boolean, offset: Int, length: Int): Array<CharStyle?>? {
+            if (length <= 0) return null
+            val source = if (isTitle) titleStyles else bodyStyles
+            if (source == null || offset !in source.indices) return null
+            val copyLength = length.coerceAtMost(source.size - offset)
+            if (copyLength <= 0) return null
+            var hasStyle = false
+            for (i in 0 until copyLength) {
+                if (source[offset + i] != null) {
+                    hasStyle = true
+                    break
+                }
+            }
+            if (!hasStyle) return null
+            val result = arrayOfNulls<CharStyle>(length)
+            for (i in 0 until copyLength) {
+                source[offset + i]?.let { style ->
+                    result[i] = style
+                }
+            }
+            return result
+        }
     }
 
     private data class CompiledHighlightRule(

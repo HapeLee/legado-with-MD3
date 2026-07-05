@@ -1,4 +1,15 @@
-import os, sys, telebot
+import datetime
+import os
+import sys
+
+import telebot
+
+
+# 日志打印
+def log(msg):
+    china_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+    print(f"[{china_time.strftime('%Y.%m.%d %H:%M:%S')}] {msg}")
+
 
 # 上传文件
 def upload_file(tb, chat_id, file_dir):
