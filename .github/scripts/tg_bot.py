@@ -7,8 +7,7 @@ import telebot
 
 # 日志打印
 def log(msg):
-    utc_time = datetime.datetime.utcnow()
-    china_time = utc_time + datetime.timedelta(hours=8)
+    china_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
     print(f"[{china_time.strftime('%Y.%m.%d %H:%M:%S')}] {msg}")
 
 

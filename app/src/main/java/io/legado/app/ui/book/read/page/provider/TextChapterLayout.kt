@@ -1482,17 +1482,20 @@ class TextChapterLayout(
         var styles: Array<CharStyle?>? = null
         for (compiled in rules) {
             if (!compiled.rule.appliesTo(isTitle)) continue
-            val charStyle = compiled.rule.toCharStyle()
+            var charStyle: CharStyle? = null
             compiled.regex.findAll(text).forEach { match ->
                 val start = match.range.first.coerceAtLeast(0)
                 val end = match.range.last.coerceAtMost(text.lastIndex)
                 if (start > end) return@forEach
+                val activeStyle = charStyle ?: compiled.rule.toCharStyle().also {
+                    charStyle = it
+                }
                 val activeStyles = styles ?: arrayOfNulls<CharStyle>(text.length).also {
                     styles = it
                 }
                 for (i in start..end) {
                     // 后来的规则覆盖先前的（与 Legado_Max 行为一致）
-                    activeStyles[i] = charStyle
+                    activeStyles[i] = activeStyle
                 }
             }
         }
@@ -1526,14 +1529,20 @@ class TextChapterLayout(
             val copyLength = length.coerceAtMost(source.size - offset)
             if (copyLength <= 0) return null
             var hasStyle = false
+            for (i in 0 until copyLength) {
+                if (source[offset + i] != null) {
+                    hasStyle = true
+                    break
+                }
+            }
+            if (!hasStyle) return null
             val result = arrayOfNulls<CharStyle>(length)
             for (i in 0 until copyLength) {
                 source[offset + i]?.let { style ->
                     result[i] = style
-                    hasStyle = true
                 }
             }
-            return if (hasStyle) result else null
+            return result
         }
     }
 
