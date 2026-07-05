@@ -147,63 +147,33 @@ fun BgTextConfigSheet(
                 },
             )
 
-            // Background mode switch: color vs image
-            val isDayBgImage = styleConfig.isDayBgImage
-            val isNightBgImage = styleConfig.isNightBgImage
-            val useBgImage = isDayBgImage || isNightBgImage
-
-            TinySwitchSettingItem(
-                title = stringResource(R.string.use_bg_image),
-                checked = useBgImage,
-                onCheckedChange = { useImage ->
-                    if (useImage) {
-                        // Switch to image mode: set bgType to 1 (assets image) with empty path
-                        // This will show the image picker UI
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(1)))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("")))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(1)))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("")))
-                    } else {
-                        // Switch to color mode: reset both day and night to color
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#EEEEEE")))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#000000")))
-                    }
+            TinyColorModeSettingItem(
+                title = stringResource(R.string.bg_color),
+                dayColor = dayBgColor,
+                nightColor = nightBgColor,
+                onClickColor = { isNight ->
+                    colorPickerIsNight = isNight
+                    showColorPicker = true
                 },
             )
 
-            if (!useBgImage) {
-                // Color mode
-                TinyColorModeSettingItem(
-                    title = stringResource(R.string.bg_color),
-                    dayColor = dayBgColor,
-                    nightColor = nightBgColor,
-                    onClickColor = { isNight ->
-                        colorPickerIsNight = isNight
-                        showColorPicker = true
-                    },
-                )
-            } else {
-                // Image mode
-                TinyBgImageModeSettingItem(
-                    title = stringResource(R.string.bg_image),
-                    dayBgImage = dayBgImage,
-                    nightBgImage = nightBgImage,
-                    onClickImage = { isNight ->
-                        onSelectImageForMode(isNight)
-                    },
-                    onClearImage = { isNight ->
-                        if (isNight) {
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#000000")))
-                        } else {
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#EEEEEE")))
-                        }
-                    },
-                )
-            }
+            TinyBgImageModeSettingItem(
+                title = stringResource(R.string.bg_image),
+                dayBgImage = dayBgImage,
+                nightBgImage = nightBgImage,
+                onClickImage = { isNight ->
+                    onSelectImageForMode(isNight)
+                },
+                onClearImage = { isNight ->
+                    if (isNight) {
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#000000")))
+                    } else {
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#EEEEEE")))
+                    }
+                },
+            )
 
             TinySliderSettingItem(
                 title = stringResource(R.string.bg_alpha),
