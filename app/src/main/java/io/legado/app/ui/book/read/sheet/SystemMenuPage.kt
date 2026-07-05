@@ -9,9 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -400,8 +398,6 @@ private fun GlobalMenuTab(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
         SectionTitle(stringResource(R.string.show_brightness_view))
 
         TinyDropdownSettingItem(
@@ -424,8 +420,6 @@ private fun GlobalMenuTab(
                 },
             )
         }
-
-        Spacer(Modifier.height(8.dp))
 
         val borderEnabled = preferences.readMenuBorderWidth > 0
         TinySwitchSettingItem(
@@ -466,8 +460,6 @@ private fun GlobalMenuTab(
                 )
             }
         }
-
-        Spacer(Modifier.height(8.dp))
 
         TinySliderSettingItem(
             title = stringResource(R.string.read_menu_blur_radius),
@@ -730,7 +722,7 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleBarIconConfig))
             },
         )
-        Spacer(Modifier.height(8.dp))
+
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_bar_blur),
             checked = topBarBlurEnabled,

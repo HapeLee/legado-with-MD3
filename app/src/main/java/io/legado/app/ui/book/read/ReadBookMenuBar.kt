@@ -688,6 +688,7 @@ private fun ReadBookMenuSurface(
                             title = stringResource(R.string.header_footer),
                             maxHeight = maxHeight,
                             scrollContent = false,
+                            animateSize = false,
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
@@ -2367,23 +2368,27 @@ private fun MenuBottomBar(
             ) {
                 pageButtons.chunked(itemsPerRow).forEach { rowButtons ->
                     Row(
-                        horizontalArrangement = when {
-                            rowButtons.size > 1 -> Arrangement.SpaceBetween
-                            else -> Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         rowButtons.forEach { button ->
-                            ToolButtonItem(
-                                button = button,
-                                state = state,
-                                colors = colors,
-                                backdrop = backdrop,
-                                glassEnabled = buttonGlassEnabled,
-                                labelColor = labelColor,
-                                modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
-                            )
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolButtonItem(
+                                    button = button,
+                                    state = state,
+                                    colors = colors,
+                                    backdrop = backdrop,
+                                    glassEnabled = buttonGlassEnabled,
+                                    labelColor = labelColor,
+                                    modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
+                                )
+                            }
+                        }
+                        repeat(itemsPerRow - rowButtons.size) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
