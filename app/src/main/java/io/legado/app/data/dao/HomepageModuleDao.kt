@@ -50,4 +50,18 @@ interface HomepageModuleDao {
 
     @Query("SELECT * FROM homepage_modules ORDER BY sortOrder ASC")
     fun flowAll(): Flow<List<HomepageModule>>
+
+    @Query("SELECT * FROM homepage_modules ORDER BY sortOrder ASC")
+    fun getAll(): List<HomepageModule>
+
+    @Query("DELETE FROM homepage_modules")
+    fun deleteAll()
+
+    @androidx.room.Transaction
+    suspend fun replaceAll(modules: List<HomepageModule>) {
+        deleteAll()
+        if (modules.isNotEmpty()) {
+            upsertAll(modules)
+        }
+    }
 }

@@ -36,4 +36,14 @@ interface HighlightTagRuleDao {
     @Query("DELETE FROM highlight_tag_rules")
     suspend fun deleteAll()
 
+    @Query("SELECT * FROM highlight_tag_rules ORDER BY `order` ASC")
+    fun getAll(): List<HighlightTagRule>
+
+    @androidx.room.Transaction
+    suspend fun replaceAll(rules: List<HighlightTagRule>) {
+        deleteAll()
+        if (rules.isNotEmpty()) {
+            insert(*rules.toTypedArray())
+        }
+    }
 }

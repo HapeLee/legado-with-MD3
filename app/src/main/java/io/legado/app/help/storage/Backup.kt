@@ -74,6 +74,11 @@ object Backup {
             "httpTTS.json",
             "keyboardAssists.json",
             "dictRule.json",
+            "homepageModules.json",
+            "homepageCustomSets.json",
+            "highlightRule.json",
+            "highlightTagRule.json",
+            "tagGroupRule.json",
             "servers.json",
             DirectLinkUpload.ruleFileName,
             ReadBookConfig.configFileName,
@@ -148,6 +153,11 @@ object Backup {
         writeListToJson(appDb.httpTTSDao.all, "httpTTS.json", backupPath)
         writeListToJson(appDb.keyboardAssistsDao.all, "keyboardAssists.json", backupPath)
         writeListToJson(appDb.dictRuleDao.all, "dictRule.json", backupPath)
+        writeListToJson(appDb.homepageModuleDao.getAll(), "homepageModules.json", backupPath)
+        writeListToJson(appDb.homepageCustomSetDao.getAll(), "homepageCustomSets.json", backupPath)
+        writeListToJson(appDb.highlightRuleDao.getAll(), "highlightRule.json", backupPath)
+        writeListToJson(appDb.highlightTagRuleDao.getAll(), "highlightTagRule.json", backupPath)
+        writeListToJson(appDb.tagGroupRuleDao.getAll(), "tagGroupRule.json", backupPath)
         GSON.toJson(appDb.serverDao.all).let { json ->
             aes.runCatching {
                 encryptBase64(json)

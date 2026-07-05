@@ -41,4 +41,12 @@ interface TagGroupRuleDao {
 
     @Query("DELETE FROM tag_group_rules")
     suspend fun deleteAll()
+
+    @androidx.room.Transaction
+    suspend fun replaceAll(rules: List<TagGroupRule>) {
+        deleteAll()
+        if (rules.isNotEmpty()) {
+            insert(*rules.toTypedArray())
+        }
+    }
 }

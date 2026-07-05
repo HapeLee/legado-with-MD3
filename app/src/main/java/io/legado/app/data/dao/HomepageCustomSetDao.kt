@@ -32,4 +32,21 @@ interface HomepageCustomSetDao {
 
     @Query("DELETE FROM homepage_custom_sets WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("SELECT * FROM homepage_custom_sets ORDER BY sortOrder ASC")
+    fun getAll(): List<HomepageCustomSet>
+
+    @Query("DELETE FROM homepage_custom_sets")
+    fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(sets: List<HomepageCustomSet>)
+
+    @androidx.room.Transaction
+    fun replaceAll(sets: List<HomepageCustomSet>) {
+        deleteAll()
+        if (sets.isNotEmpty()) {
+            insertAll(sets)
+        }
+    }
 }

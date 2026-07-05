@@ -16,6 +16,10 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.DictRule
+import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.data.entities.HomepageCustomSet
+import io.legado.app.data.entities.HomepageModule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.ReplaceRule
@@ -24,6 +28,7 @@ import io.legado.app.data.entities.RssStar
 import io.legado.app.data.entities.RuleSub
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
@@ -117,10 +122,14 @@ object Restore : KoinComponent {
                     book.coverUrl = LocalBook.getCoverPath(book)
                 }
             val ignoreLocalBook = BackupConfig.ignoreLocalBook
-            val restoredBooks = it.filterNot { book ->
-                ignoreLocalBook && book.isLocal
+            if (ignoreLocalBook) {
+                val backupNonLocal = it.filterNot { book -> book.isLocal }
+                val existingLocal = appDb.bookDao.all.filter { book -> book.isLocal }
+                val mergedBooks = existingLocal + backupNonLocal
+                appDb.bookDao.replaceAll(mergedBooks)
+            } else {
+                appDb.bookDao.replaceAll(it)
             }
-            appDb.bookDao.replaceAll(restoredBooks)
         }
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
             try {
@@ -129,10 +138,7 @@ object Restore : KoinComponent {
             }
         }
         fileToListT<BookGroup>(path, "bookGroup.json")?.let {
-            try {
-                appDb.bookGroupDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
+            appDb.bookGroupDao.replaceAll(it)
         }
         fileToListT<BookSource>(path, "bookSource.json")?.let {
             try {
@@ -199,6 +205,21 @@ object Restore : KoinComponent {
                 appDb.keyboardAssistsDao.insert(*it.toTypedArray())
             } catch (_: SQLiteConstraintException) {
             }
+        }
+        fileToListT<HomepageModule>(path, "homepageModules.json")?.let {
+            appDb.homepageModuleDao.replaceAll(it)
+        }
+        fileToListT<HomepageCustomSet>(path, "homepageCustomSets.json")?.let {
+            appDb.homepageCustomSetDao.replaceAll(it)
+        }
+        fileToListT<HighlightRule>(path, "highlightRule.json")?.let {
+            appDb.highlightRuleDao.replaceAll(it)
+        }
+        fileToListT<HighlightTagRule>(path, "highlightTagRule.json")?.let {
+            appDb.highlightTagRuleDao.replaceAll(it)
+        }
+        fileToListT<TagGroupRule>(path, "tagGroupRule.json")?.let {
+            appDb.tagGroupRuleDao.replaceAll(it)
         }
         fileToListT<ReadRecord>(path, "readRecord.json")?.let {
             it.forEach { readRecord ->
