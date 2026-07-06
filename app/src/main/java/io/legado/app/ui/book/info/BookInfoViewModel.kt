@@ -929,7 +929,6 @@ class BookInfoViewModel(
             }.onError {
                 currentChapterList = emptyList()
                 syncUiState(isTocLoading = false)
-                context.toastOnUi("LoadTocError:${it.localizedMessage}")
             }
         } else {
             val source = bookSource ?: run {
@@ -957,7 +956,6 @@ class BookInfoViewModel(
                     currentChapterList = emptyList()
                     syncUiState(isTocLoading = false)
                     AppLog.put("获取目录失败\n${it.localizedMessage}", it)
-                    context.toastOnUi(R.string.error_get_chapter_list)
                 }
         }
     }

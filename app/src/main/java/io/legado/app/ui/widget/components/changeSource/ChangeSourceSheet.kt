@@ -37,6 +37,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -205,6 +206,7 @@ fun ChangeSourceSheet(
             },
             onError = {
                 loadingAction = false
+                AppLog.put("${if (replace) "换源" else "添加书籍"}获取目录出错\n${it.localizedMessage}", it, true)
                 context.toastOnUi(if (replace) "换源失败" else "添加书籍失败")
             }
         )
