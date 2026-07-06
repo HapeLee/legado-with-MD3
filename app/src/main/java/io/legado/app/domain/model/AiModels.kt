@@ -241,7 +241,53 @@ data class AiGenerationParams(
     val maxOutputTokens: Int? = null,
     val topP: Float? = null,
     val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO
-)
+) {
+    fun mergeWithFallback(
+        modelParams: AiGenerationParams,
+        modelMaxOutputTokens: Int = 0,
+        taskType: String? = null
+    ): AiGenerationParams {
+        val mergedTemperature = this.temperature
+            ?: modelParams.temperature
+            ?: TranslationConstants.DEFAULT_TEMPERATURE
+
+        val effectiveModelMaxTokens = when {
+            modelMaxOutputTokens > 0 -> modelMaxOutputTokens
+            modelParams.maxOutputTokens != null && modelParams.maxOutputTokens > 0 -> modelParams.maxOutputTokens
+            else -> null
+        }
+        val effectivePresetMaxTokens = if (this.maxOutputTokens != null && this.maxOutputTokens > 0) {
+            this.maxOutputTokens
+        } else {
+            null
+        }
+
+        val mergedMaxTokens = effectivePresetMaxTokens
+            ?: effectiveModelMaxTokens
+            ?: when (taskType) {
+                AiTaskType.SUMMARIZE_CHAPTER,
+                AiTaskType.SUMMARIZE_BOOK,
+                AiTaskType.CLEAN_SELECTION -> 1200
+                else -> null
+            }
+
+        val mergedTopP = this.topP ?: modelParams.topP
+        val mergedReasoningLevel = if (this.reasoningLevel != AiReasoningLevel.AUTO) {
+            this.reasoningLevel
+        } else if (modelParams.reasoningLevel != AiReasoningLevel.AUTO) {
+            modelParams.reasoningLevel
+        } else {
+            AiReasoningLevel.AUTO
+        }
+
+        return AiGenerationParams(
+            temperature = mergedTemperature,
+            maxOutputTokens = mergedMaxTokens,
+            topP = mergedTopP,
+            reasoningLevel = mergedReasoningLevel
+        )
+    }
+}
 
 @Keep
 data class AiTaskRuntimeOptions(

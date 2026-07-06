@@ -23,6 +23,7 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.text.MarkdownBlock
 
 @Composable
 fun ChapterSummarySheet(
@@ -78,15 +79,19 @@ fun ChapterSummarySheet(
 
             else -> {
                 SelectionContainer {
-                    AppText(
-                        text = state.summary,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 520.dp)
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = 24.dp),
-                        style = LegadoTheme.typography.bodyLarge,
-                    )
+                    ) {
+                        MarkdownBlock(
+                            content = state.summary,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = LegadoTheme.typography.bodyLarge,
+                        )
+                    }
                 }
             }
         }

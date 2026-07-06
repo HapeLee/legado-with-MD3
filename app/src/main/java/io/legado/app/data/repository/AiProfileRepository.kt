@@ -254,7 +254,7 @@ class AiProfileRepository(
                 name = "Default Chapter Summary",
                 modelProfileId = modelProfileId,
                 promptTemplate = AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY,
-                paramsJson = GSON.toJson(params.copy(maxOutputTokens = 1200)),
+                paramsJson = GSON.toJson(params),
                 isDefault = true,
                 createdAt = existingSummaryPreset?.createdAt ?: now,
                 updatedAt = now
@@ -279,13 +279,20 @@ class AiProfileRepository(
     private suspend fun AiTaskPreset.toConfig(): AiTaskPresetConfig? {
         val model = aiProfileDao.getModel(modelProfileId) ?: return null
         val provider = aiProfileDao.getProvider(model.providerId) ?: return null
+        val presetParams = parseParams(paramsJson)
+        val modelParams = parseParams(model.defaultParamsJson)
+        val mergedParams = presetParams.mergeWithFallback(
+            modelParams = modelParams,
+            modelMaxOutputTokens = model.maxOutputTokens,
+            taskType = taskType
+        )
         return AiTaskPresetConfig(
             id = id,
             taskType = taskType,
             name = name,
             model = model.toConfig(provider),
             promptTemplate = promptTemplate,
-            params = parseParams(paramsJson),
+            params = mergedParams,
             runtimeOptions = parseRuntimeOptions(chunkPolicyJson)
         )
     }
