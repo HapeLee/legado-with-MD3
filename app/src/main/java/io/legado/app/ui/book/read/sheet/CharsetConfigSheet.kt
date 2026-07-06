@@ -1,8 +1,12 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -11,20 +15,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharsetConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
     var charset by remember { mutableStateOf(ReadBook.book?.charset ?: "UTF-8") }
-    val charsetEntries = remember { AppConst.charsets.toTypedArray() }
+    val charsetEntries = remember { AppConst.charsets }
+    var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -32,20 +38,39 @@ fun CharsetConfigSheet(
         title = { Text(stringResource(R.string.set_charset)) },
         text = {
             Column {
-                OutlinedTextField(
-                    value = charset,
-                    onValueChange = { charset = it },
-                    label = { Text(stringResource(R.string.set_charset)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                )
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.set_charset),
-                    selectedValue = charset,
-                    displayEntries = charsetEntries,
-                    entryValues = charsetEntries,
-                    onValueChange = { charset = it },
-                )
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = charset,
+                        onValueChange = { charset = it },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryEditable)
+                            .fillMaxWidth(),
+                        readOnly = false,
+                        label = { Text(stringResource(R.string.set_charset)) },
+                        singleLine = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                    ) {
+                        charsetEntries.forEach { entry ->
+                            DropdownMenuItem(
+                                text = { Text(entry) },
+                                onClick = {
+                                    charset = entry
+                                    expanded = false
+                                },
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
