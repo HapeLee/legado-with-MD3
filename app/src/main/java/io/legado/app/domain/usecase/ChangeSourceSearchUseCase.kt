@@ -1,5 +1,6 @@
 package io.legado.app.domain.usecase
 
+import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -69,7 +70,7 @@ class ChangeSourceSearchUseCase(
 
         var processedSources = 0
         var resultCount = 0
-        val concurrency = threadCount.coerceAtLeast(1)
+        val concurrency = threadCount.coerceIn(1, AppConst.MAX_THREAD)
 
         bookSourceParts.asFlow()
             .mapNotNull { it.getBookSource() }
@@ -115,9 +116,78 @@ class ChangeSourceSearchUseCase(
         emit(ChangeSourceSearchEvent.Finished(isEmpty = resultCount == 0))
     }.flowOn(Dispatchers.IO)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun refresh(
+        books: List<SearchBook>,
+        oldBook: Book,
+        fromReadBookActivity: Boolean,
+    ): Flow<ChangeSourceSearchEvent> = flow {
+        val contentProcessor = ContentProcessor.get(oldBook)
+        val totalBooks = books.size
+        val concurrency = threadCount.coerceIn(1, AppConst.MAX_THREAD)
+        var processedBooks = 0
+        var resultCount = 0
+
+        emit(ChangeSourceSearchEvent.Started(totalBooks))
+
+        books.asFlow()
+            .flatMapMerge(concurrency) { searchBook ->
+                flow {
+                    val loadedBook = try {
+                        gateway.getBookSource(searchBook.origin)?.let { source ->
+                            withTimeout(60000L) {
+                                loadBookInfo(
+                                    source = source,
+                                    book = searchBook.toBook(),
+                                    loadToc = ChangeSourceConfig.loadToc,
+                                    loadWordCount = ChangeSourceConfig.loadWordCount,
+                                    oldBook = oldBook,
+                                    fromReadBookActivity = fromReadBookActivity,
+                                    contentProcessor = contentProcessor,
+                                )
+                            }
+                        }
+                    } catch (_: Throwable) {
+                        currentCoroutineContext().ensureActive()
+                        null
+                    }
+                    emit(ChangeSourceRefreshResult(searchBook.originName, loadedBook))
+                }.flowOn(Dispatchers.IO)
+            }
+            .collect { result ->
+                currentCoroutineContext().ensureActive()
+                result.loadedBook?.let { loadedBook ->
+                    resultCount++
+                    emit(
+                        ChangeSourceSearchEvent.Result(
+                            searchBook = loadedBook.searchBook,
+                            book = loadedBook.book,
+                            toc = loadedBook.toc,
+                        )
+                    )
+                }
+                processedBooks++
+                emit(
+                    ChangeSourceSearchEvent.Progress(
+                        processedSources = processedBooks,
+                        totalSources = totalBooks,
+                        resultCount = resultCount,
+                        sourceName = result.sourceName,
+                    )
+                )
+            }
+
+        emit(ChangeSourceSearchEvent.Finished(isEmpty = resultCount == 0))
+    }.flowOn(Dispatchers.IO)
+
     private data class ChangeSourceResult(
         val source: BookSource,
         val books: List<LoadedSearchBook>,
+    )
+
+    private data class ChangeSourceRefreshResult(
+        val sourceName: String,
+        val loadedBook: LoadedSearchBook?,
     )
 
     private data class LoadedSearchBook(

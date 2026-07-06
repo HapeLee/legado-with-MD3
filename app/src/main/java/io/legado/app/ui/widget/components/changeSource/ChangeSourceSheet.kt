@@ -43,6 +43,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
+import io.legado.app.ui.book.changesource.ChangeBookSourceEffect
 import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.search.ScopeSelectSheet
@@ -63,6 +64,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
 @Stable
@@ -101,6 +103,7 @@ fun ChangeSourceSheet(
     val groups by viewModel.enabledGroups.collectAsStateWithLifecycle(initialValue = emptyList<String>())
     val enabledSources by viewModel.enabledSources.collectAsStateWithLifecycle(initialValue = emptyList<io.legado.app.data.entities.BookSourcePart>())
     val scopeState by viewModel.scopeUiState.collectAsStateWithLifecycle()
+    val emptyScopeName by viewModel.emptyScopeName.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val checkAuthor = viewModel.checkAuthor
     val loadInfo = viewModel.loadInfo
@@ -122,6 +125,16 @@ fun ChangeSourceSheet(
 
     LaunchedEffect(oldBook.bookUrl, fromReadBookActivity) {
         viewModel.initData(oldBook.name, oldBook.author, oldBook, fromReadBookActivity)
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is ChangeBookSourceEffect.ShowMessage -> context.toastOnUi(effect.message)
+                is ChangeBookSourceEffect.ShowMessageResource ->
+                    context.toastOnUi(context.getString(effect.messageRes))
+            }
+        }
     }
 
     DisposableEffect(lifecycleOwner, viewModel) {
@@ -511,6 +524,21 @@ fun ChangeSourceSheet(
                 )
             }
         },
+    )
+    AppAlertDialog(
+        data = emptyScopeName,
+        onDismissRequest = viewModel::dismissEmptyScopeSearch,
+        title = stringResource(R.string.draw),
+        textProvider = {
+            stringResource(
+                R.string.search_empty_scope_switch_all,
+                emptyScopeName.orEmpty(),
+            )
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { viewModel.confirmEmptyScopeSearch() },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = viewModel::dismissEmptyScopeSearch,
     )
     AppAlertDialog(
         show = loadingAction,
