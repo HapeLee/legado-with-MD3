@@ -801,6 +801,15 @@ class ReadBookViewModel(
                 }
             }
 
+            is ReadBookIntent.OpenParagraphIntervalPicker -> {
+                _uiState.update {
+                    it.copy(
+                        readAloudParagraphInterval = ReadConfig.ttsParagraphInterval,
+                        activeSheet = ReadBookSheet.ParagraphIntervalConfig,
+                    )
+                }
+            }
+
             is ReadBookIntent.OpenCacheCleanTimePicker -> {
                 _uiState.update {
                     it.copy(
@@ -839,6 +848,15 @@ class ReadBookViewModel(
                     it.copy(
                         audioCacheCleanTime = intent.value,
                         activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+            }
+
+            is ReadBookIntent.ApplyParagraphInterval -> {
+                ReadConfig.ttsParagraphInterval = intent.value
+                _uiState.update {
+                    it.copy(
+                        readAloudParagraphInterval = intent.value
                     )
                 }
             }

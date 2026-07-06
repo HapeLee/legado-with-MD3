@@ -171,6 +171,9 @@ object ReadConfig {
     var ttsTimer
         get() = ReadTtsConfig.ttsTimer
         set(value) { ReadTtsConfig.ttsTimer = value }
+    var ttsParagraphInterval
+        get() = ReadTtsConfig.ttsParagraphInterval
+        set(value) { ReadTtsConfig.ttsParagraphInterval = value }
     var ignoreAudioFocus
         get() = ReadTtsConfig.ignoreAudioFocus
         set(value) { ReadTtsConfig.ignoreAudioFocus = value }

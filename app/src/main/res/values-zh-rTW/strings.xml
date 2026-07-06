@@ -1855,6 +1855,8 @@
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">音訊快取保留時間（分鐘）</string>
     <string name="audio_cache_clean_time_summary">目前：%1$d。輸入 0 則退出時立即清除。</string>
+    <string name="tts_paragraph_interval">段落間隔（毫秒）</string>
+    <string name="tts_paragraph_interval_summary">當前: %1$d 毫秒。朗讀時段落之間的停頓時間。</string>
     <string name="show_swipe_animation">滑動時啟用動畫</string>
     <string name="click_image_way">圖片點擊操作</string>
     <string name="show_web_log">輸出日誌</string>

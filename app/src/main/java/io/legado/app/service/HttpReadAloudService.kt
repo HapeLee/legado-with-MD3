@@ -194,7 +194,23 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val file = getSpeakFileAsMd5(fileName)
                     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
                     launch(Main) {
-                        exoPlayer.addMediaItem(mediaItem)
+                        if (ReadConfig.ttsParagraphInterval > 0) {
+                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
+                                exoPlayer.setMediaItem(mediaItem)
+                                if (!pause) {
+                                    exoPlayer.prepare()
+                                }
+                            }
+                        } else {
+                            if (exoPlayer.mediaItemCount == 0) {
+                                exoPlayer.setMediaItem(mediaItem)
+                                if (!pause) {
+                                    exoPlayer.prepare()
+                                }
+                            } else {
+                                exoPlayer.addMediaItem(mediaItem)
+                            }
+                        }
                     }
                 }
                 preDownloadAudios(httpTts)
@@ -308,7 +324,23 @@ class HttpReadAloudService : BaseReadAloudService(),
                     downloaderChannel.send(downloader)
                     val mediaSource = createMediaSource(dataSourceFactory, fileName)
                     launch(Main) {
-                        exoPlayer.addMediaSource(mediaSource)
+                        if (ReadConfig.ttsParagraphInterval > 0) {
+                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
+                                exoPlayer.setMediaSource(mediaSource)
+                                if (!pause) {
+                                    exoPlayer.prepare()
+                                }
+                            }
+                        } else {
+                            if (exoPlayer.mediaItemCount == 0) {
+                                exoPlayer.setMediaSource(mediaSource)
+                                if (!pause) {
+                                    exoPlayer.prepare()
+                                }
+                            } else {
+                                exoPlayer.addMediaSource(mediaSource)
+                            }
+                        }
                     }
                 }
                 preDownloadAudiosStream(httpTts, downloaderChannel)
@@ -620,9 +652,31 @@ class HttpReadAloudService : BaseReadAloudService(),
             Player.STATE_ENDED -> {
                 // 结束
                 playErrorNo = 0
-                updateNextPos()
-                exoPlayer.stop()
-                exoPlayer.clearMediaItems()
+                val interval = ReadConfig.ttsParagraphInterval.toLong()
+                if (interval > 0) {
+                    val isLastParagraph = nowSpeak >= contentList.lastIndex
+                    updateNextPos()
+                    exoPlayer.stop()
+                    exoPlayer.clearMediaItems()
+                    if (!pause && !isLastParagraph) {
+                        AppLog.putDebug("HttpTTS段落开始停顿: $interval 毫秒")
+                        execute {
+                            delay(interval)
+                            if (!pause) {
+                                launch(Main) {
+                                    if (!pause) {
+                                        play()
+                                        AppLog.putDebug("HttpTTS段落停顿结束，恢复播放")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    updateNextPos()
+                    exoPlayer.stop()
+                    exoPlayer.clearMediaItems()
+                }
             }
         }
     }

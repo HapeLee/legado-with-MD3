@@ -137,6 +137,10 @@ fun ReadAloudConfigSheet(
                 onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
             )
             TinyClickableSettingItem(
+                title = stringResource(R.string.tts_paragraph_interval),
+                onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
+            )
+            TinyClickableSettingItem(
                 title = stringResource(R.string.audio_cache_clean_time),
                 onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
             )

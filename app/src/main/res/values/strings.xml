@@ -1763,6 +1763,8 @@
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">Audio Cache Retention Time (minutes)</string>
     <string name="audio_cache_clean_time_summary">Current: %1$d. Enter 0 to clear immediately on exit.</string>
+    <string name="tts_paragraph_interval">Paragraph Interval (ms)</string>
+    <string name="tts_paragraph_interval_summary">Current: %1$d ms. Pause between paragraphs during read-aloud.</string>
     <string name="show_swipe_animation">Enable Animation While Swiping</string>
     <string name="click_image_way">Image Tap Action</string>
     <string name="show_web_log">Output Logs</string>
