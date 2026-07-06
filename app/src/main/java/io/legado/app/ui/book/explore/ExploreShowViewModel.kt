@@ -67,6 +67,7 @@ class ExploreShowViewModel(
 
     private var sourceUrl: String? = null
     private var exploreUrl: String? = null
+    private var initialExploreUrl: String? = null
     private var initialized = false
     private var page = 1
     private var autoPageCount = 0
@@ -173,11 +174,12 @@ class ExploreShowViewModel(
     }
 
     private fun initData(incomingSourceUrl: String, incomingExploreUrl: String?) {
-        if (initialized && sourceUrl == incomingSourceUrl && exploreUrl == incomingExploreUrl) {
+        if (initialized && sourceUrl == incomingSourceUrl && initialExploreUrl == incomingExploreUrl) {
             return
         }
         initialized = true
         sourceUrl = incomingSourceUrl
+        initialExploreUrl = incomingExploreUrl
         exploreUrl = incomingExploreUrl
         page = 1
         autoPageCount = 0
