@@ -73,7 +73,9 @@ fun ExploreKindMultiTypeItem(
 
     val BaseItem = @Composable { text: String, click: () -> Unit ->
         if (content != null) {
-            content(text, isSelected, click, trailingIcon)
+            Box(modifier = modifier) {
+                content(text, isSelected, click, trailingIcon)
+            }
         } else {
             ExploreKindItem(
                 kind = kind,
