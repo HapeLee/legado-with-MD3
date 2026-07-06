@@ -2895,7 +2895,7 @@ private fun loadToolButtons(
                 onIntent(ReadBookIntent.HideMenu)
             }
         },
-        infoMap.getValue("translate").toButton {
+        infoMap.getValue("translate").toButton(isActive = state.translationMode) {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
         infoMap.getValue("ai_summary").toButton {
