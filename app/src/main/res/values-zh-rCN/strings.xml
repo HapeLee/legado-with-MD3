@@ -2070,6 +2070,9 @@
     <string name="ai_profile_status">档案</string>
     <string name="ai_save_profile">保存默认档案</string>
     <string name="ai_test_connection">测试连接</string>
+    <string name="ai_test_success_no_models">AI 连接测试成功，但未找到任何模型</string>
+    <string name="ai_test_success_with_models">AI 连接测试成功（共找到 %1$d 个模型）</string>
+    <string name="ai_test_failed">AI 连接测试失败</string>
     <string name="ai_profile_counts">供应商：%1$d，模型：%2$d，预设：%3$d</string>
     <string name="read_menu_bg_color_summary">阅读顶栏和底栏背景色</string>
     <string name="read_menu_color_source">色板来源</string>

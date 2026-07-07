@@ -2,6 +2,7 @@ package io.legado.app.ui.config.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiAvailableModel
@@ -13,6 +14,7 @@ import io.legado.app.domain.model.AiProviderPresets
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 
 class AiProviderEditViewModel(
     private val initialProviderId: String?,
@@ -114,6 +117,7 @@ class AiProviderEditViewModel(
             is AiProviderEditIntent.UpdateEditingMaxOutputTokens -> updateEditingModel { copy(maxOutputTokens = intent.value) }
             is AiProviderEditIntent.UpdateEditingTemperature -> updateEditingModel { copy(temperature = intent.value) }
             AiProviderEditIntent.SaveEditingModel -> saveEditingModel()
+            AiProviderEditIntent.TestConnection -> testConnection()
             AiProviderEditIntent.SaveProvider -> saveProvider()
             AiProviderEditIntent.SyncModels -> syncModels()
             AiProviderEditIntent.DeleteProvider -> deleteProvider()
@@ -206,6 +210,31 @@ class AiProviderEditViewModel(
         }
     }
 
+    private fun testConnection() {
+        if (_uiState.value.isTesting || _uiState.value.isSaving || _uiState.value.isFetchingModels) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isTesting = true) }
+            try {
+                val models = aiTextGateway.fetchModels(_uiState.value.toProviderConfig()).getOrThrow()
+                val count = models.size
+                val message = if (count == 0) {
+                    appCtx.getString(R.string.ai_test_success_no_models)
+                } else {
+                    appCtx.getString(R.string.ai_test_success_with_models, count)
+                }
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage(message))
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                val errorMsg = error.message
+                val failMsg = appCtx.getString(R.string.ai_test_failed)
+                val message = if (errorMsg.isNullOrBlank()) failMsg else "$failMsg: $errorMsg"
+                _effects.tryEmit(AiProviderEditEffect.ShowMessage(message))
+            } finally {
+                _uiState.update { it.copy(isTesting = false) }
+            }
+        }
+    }
+
     private fun syncModels() {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, isFetchingModels = true) }
@@ -215,16 +244,7 @@ class AiProviderEditViewModel(
                 _uiState.update { it.copy(providerId = provider.id) }
                 val state = _uiState.value
                 runCatching {
-                    aiTextGateway.fetchModels(
-                        AiProviderConfig(
-                            id = provider.id,
-                            name = state.providerName,
-                            protocol = state.protocol,
-                            baseUrl = state.baseUrl,
-                            apiKey = state.apiKey,
-                            modelsUrl = state.modelsUrl.ifBlank { null }
-                        )
-                    ).getOrThrow()
+                    aiTextGateway.fetchModels(state.toProviderConfig(provider.id)).getOrThrow()
                 }.onSuccess { models ->
                     aiProfileGateway.importProviderModels(provider.id, models)
                     applyFetchedModels(provider.id, models)
@@ -300,6 +320,17 @@ class AiProviderEditViewModel(
             baseUrl = baseUrl,
             modelsUrl = modelsUrl,
             apiKey = apiKey
+        )
+    }
+
+    private fun AiProviderEditUiState.toProviderConfig(id: String = providerId ?: "test_connection_id"): AiProviderConfig {
+        return AiProviderConfig(
+            id = id,
+            name = providerName,
+            protocol = protocol,
+            baseUrl = baseUrl,
+            apiKey = apiKey,
+            modelsUrl = modelsUrl.ifBlank { null }
         )
     }
 

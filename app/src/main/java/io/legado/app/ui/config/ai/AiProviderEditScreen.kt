@@ -168,6 +168,14 @@ fun AiProviderEditScreen(
                             showApiKeyDialog = true
                         }
                     )
+                    ClickableSettingItem(
+                        title = if (state.isTesting) "${stringResource(R.string.ai_test_connection)}..." else stringResource(R.string.ai_test_connection),
+                        onClick = {
+                            if (!state.isTesting && !state.isSaving && !state.isFetchingModels) {
+                                onIntent(AiProviderEditIntent.TestConnection)
+                            }
+                        }
+                    )
                 }
             }
 

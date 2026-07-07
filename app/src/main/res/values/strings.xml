@@ -2000,6 +2000,9 @@
     <string name="ai_profile_status">Profile</string>
     <string name="ai_save_profile">Save Default Profile</string>
     <string name="ai_test_connection">Test Connection</string>
+    <string name="ai_test_success_no_models">AI connection test succeeded, but no models found</string>
+    <string name="ai_test_success_with_models">AI connection test succeeded (%1$d models found)</string>
+    <string name="ai_test_failed">AI connection test failed</string>
     <string name="ai_profile_counts">Providers: %1$d, models: %2$d, presets: %3$d</string>
     <string name="homepage_load_more_failed">Failed to load more: %1$s</string>
     <string name="homepage_module_duplicate_infinite">This group already has an infinite loading module</string>

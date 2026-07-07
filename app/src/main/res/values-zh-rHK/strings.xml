@@ -1494,6 +1494,9 @@
     <string name="ai_tasks">任務</string>
     <string name="ai_temperature">Temperature</string>
     <string name="ai_test_connection">測試連線</string>
+    <string name="ai_test_success_no_models">AI 連線測試成功，但未找到任何模型</string>
+    <string name="ai_test_success_with_models">AI 連線測試成功（共找到 %1$d 個模型）</string>
+    <string name="ai_test_failed">AI 連線測試失敗</string>
     <string name="ai_thinking_auto">自動</string>
     <string name="ai_thinking_collapse">收起</string>
     <string name="ai_thinking_deep">深度</string>
