@@ -1856,6 +1856,16 @@
     <string name="ai_provider_database">Providers</string>
     <string name="ai_tasks">Tasks</string>
     <string name="ai_chapter_summary">Chapter Summary</string>
+    <string name="ai_chapter_summary_config">Chapter Summary Configuration</string>
+    <string name="ai_prompt_setting">Prompt Settings</string>
+    <string name="ai_param_setting">Parameter Settings</string>
+    <string name="ai_custom_prompt">Custom Prompt</string>
+    <string name="ai_custom_prompt_desc">Click to view or edit chapter summary prompt</string>
+    <string name="ai_prompt_template">Prompt Template</string>
+    <string name="ai_reset_prompt">Reset Prompt</string>
+    <string name="ai_prompt_reset_success">Prompt reset to default</string>
+    <string name="ai_config_saved_success">Chapter summary configuration saved</string>
+    <string name="ai_config_save_failed">Failed to save configuration</string>
     <string name="ai_chapter_summary_loading">Summarizing the current chapter…</string>
     <string name="ai_chapter_changed">The current chapter has changed. Please try again.</string>
     <string name="ai_chapter_content_unavailable">The chapter content is unavailable.</string>

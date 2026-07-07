@@ -22,6 +22,7 @@ import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -159,6 +160,62 @@ class AiProfileRepository(
         aiProfileDao.deleteModel(modelId)
     }
 
+    override suspend fun saveTaskPreset(
+        taskType: String,
+        promptTemplate: String,
+        temperature: Float,
+        maxOutputTokens: Int
+    ): AiTaskPresetConfig = withContext(Dispatchers.IO) {
+        runCatching {
+            val existingPreset = aiProfileDao.getDefaultPreset(taskType)
+            val presetId = existingPreset?.id ?: when (taskType) {
+                AiTaskType.TRANSLATE_CHAPTER -> DEFAULT_TRANSLATE_PRESET_ID
+                AiTaskType.SUMMARIZE_CHAPTER -> DEFAULT_SUMMARY_PRESET_ID
+                AiTaskType.CHAT -> DEFAULT_CHAT_PRESET_ID
+                else -> newId("preset")
+            }
+            val modelsList = aiProfileDao.observeModels().firstOrNull()
+            val modelProfileId = existingPreset?.modelProfileId
+                ?: modelsList?.firstOrNull()?.id
+                ?: ""
+            val currentParams = parseParams(existingPreset?.paramsJson)
+            val updatedParams = currentParams.copy(
+                temperature = temperature,
+                maxOutputTokens = maxOutputTokens
+            )
+            val now = System.currentTimeMillis()
+            val preset = AiTaskPreset(
+                id = presetId,
+                taskType = taskType,
+                name = existingPreset?.name ?: when (taskType) {
+                    AiTaskType.TRANSLATE_CHAPTER -> "Default Translation"
+                    AiTaskType.SUMMARIZE_CHAPTER -> "Default Chapter Summary"
+                    AiTaskType.CHAT -> "Default Chat"
+                    else -> "Default Preset"
+                },
+                modelProfileId = modelProfileId,
+                promptTemplate = promptTemplate.ifBlank {
+                    when (taskType) {
+                        AiTaskType.TRANSLATE_CHAPTER -> TranslationConstants.DEFAULT_PROMPT
+                        AiTaskType.SUMMARIZE_CHAPTER -> AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY
+                        else -> "You are a helpful AI assistant."
+                    }
+                },
+                paramsJson = GSON.toJson(updatedParams),
+                chunkPolicyJson = existingPreset?.chunkPolicyJson,
+                enabled = existingPreset?.enabled ?: true,
+                isDefault = existingPreset?.isDefault ?: true,
+                sortNumber = existingPreset?.sortNumber ?: 0,
+                createdAt = existingPreset?.createdAt ?: now,
+                updatedAt = now
+            )
+            aiProfileDao.insertPreset(preset)
+            preset.toConfig() ?: error("Failed to save task preset")
+        }.getOrElse { error ->
+            throw IllegalStateException("保存 AI 预设配置失败: ${error.localizedMessage ?: "未知错误"}", error)
+        }
+    }
+
     override suspend fun saveDefaultChatProfile(draft: AiProfileDraft): AiTaskPresetConfig = withContext(Dispatchers.IO) {
         require(draft.baseUrl.isNotBlank()) { "Base URL is required" }
         require(draft.modelId.isNotBlank()) { "Model is required" }
@@ -253,8 +310,8 @@ class AiProfileRepository(
                 taskType = AiTaskType.SUMMARIZE_CHAPTER,
                 name = "Default Chapter Summary",
                 modelProfileId = modelProfileId,
-                promptTemplate = AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY,
-                paramsJson = GSON.toJson(params),
+                promptTemplate = existingSummaryPreset?.promptTemplate ?: AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY,
+                paramsJson = existingSummaryPreset?.paramsJson ?: GSON.toJson(params),
                 isDefault = true,
                 createdAt = existingSummaryPreset?.createdAt ?: now,
                 updatedAt = now

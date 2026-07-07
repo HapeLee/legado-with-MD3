@@ -35,6 +35,7 @@ fun AiConfigRouteScreen(
     onNavigateToProviderEdit: (providerId: String?) -> Unit,
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
     onNavigateToTranslation: () -> Unit,
+    onNavigateToAiSummary: () -> Unit,
     viewModel: AiConfigViewModel = koinViewModel()
 ) {
     AiConfigScreen(
@@ -44,7 +45,8 @@ fun AiConfigRouteScreen(
         onBackClick = onBackClick,
         onNavigateToProviderEdit = onNavigateToProviderEdit,
         onNavigateToModelEdit = onNavigateToModelEdit,
-        onNavigateToTranslation = onNavigateToTranslation
+        onNavigateToTranslation = onNavigateToTranslation,
+        onNavigateToAiSummary = onNavigateToAiSummary
     )
 }
 
@@ -57,7 +59,8 @@ fun AiConfigScreen(
     onBackClick: () -> Unit,
     onNavigateToProviderEdit: (providerId: String?) -> Unit,
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
-    onNavigateToTranslation: () -> Unit
+    onNavigateToTranslation: () -> Unit,
+    onNavigateToAiSummary: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -131,7 +134,7 @@ fun AiConfigScreen(
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_chapter_summary),
-                        onClick = {}
+                        onClick = onNavigateToAiSummary
                     )
                 }
             }

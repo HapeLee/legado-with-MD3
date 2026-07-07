@@ -50,6 +50,7 @@ import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
+import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
@@ -247,8 +248,13 @@ fun MainActivity.mainEntryProvider(
                     )
                 )
             },
-            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
+            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
+            onNavigateToAiSummary = { backStack.add(MainRouteSettingsAiSummary) }
         )
+    }
+
+    entry<MainRouteSettingsAiSummary> {
+        AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsAiProviderEdit> { route ->

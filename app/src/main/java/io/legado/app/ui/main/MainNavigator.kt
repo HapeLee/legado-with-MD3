@@ -59,6 +59,7 @@ object MainNavigator {
             MainRouteSettingsAi,
             is MainRouteSettingsAiProviderEdit,
             is MainRouteSettingsAiModelEdit,
+            MainRouteSettingsAiSummary,
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
             MainRouteSettingsDownloadCache,

@@ -139,6 +139,7 @@ import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
 import io.legado.app.ui.config.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditViewModel
+import io.legado.app.ui.config.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
@@ -316,6 +317,7 @@ val appModule = module {
     viewModelOf(::ThemeManageViewModel)
     viewModelOf(::BackupConfigViewModel)
     viewModelOf(::AiConfigViewModel)
+    viewModelOf(::AiSummaryConfigViewModel)
     viewModelOf(::AiChatViewModel)
     viewModel { (providerId: String?) ->
         AiProviderEditViewModel(

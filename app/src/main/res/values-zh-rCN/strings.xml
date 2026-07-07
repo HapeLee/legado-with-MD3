@@ -1926,6 +1926,16 @@
     <string name="ai_provider_database">供应商</string>
     <string name="ai_tasks">任务</string>
     <string name="ai_chapter_summary">章节梗概</string>
+    <string name="ai_chapter_summary_config">章节梗概配置</string>
+    <string name="ai_prompt_setting">提示词设置</string>
+    <string name="ai_param_setting">参数设置</string>
+    <string name="ai_custom_prompt">自定义提示词</string>
+    <string name="ai_custom_prompt_desc">点击修改或查看当前章节梗概提示词</string>
+    <string name="ai_prompt_template">提示词模板</string>
+    <string name="ai_reset_prompt">重置提示词</string>
+    <string name="ai_prompt_reset_success">提示词已重置为默认</string>
+    <string name="ai_config_saved_success">章节梗概配置已保存</string>
+    <string name="ai_config_save_failed">保存配置失败</string>
     <string name="ai_chapter_summary_loading">正在提炼当前章节梗概…</string>
     <string name="ai_chapter_changed">当前章节已变化，请重新操作。</string>
     <string name="ai_chapter_content_unavailable">无法读取当前章节正文。</string>

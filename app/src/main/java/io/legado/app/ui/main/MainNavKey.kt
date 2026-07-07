@@ -48,6 +48,9 @@ data class MainRouteSettingsAiModelEdit(
 ) : MainRoute
 
 @Serializable
+data object MainRouteSettingsAiSummary : MainRoute
+
+@Serializable
 data object MainRouteSettingsCustomTheme : MainRoute
 
 @Serializable
@@ -140,6 +143,7 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_THEME = "settings/theme"
     const val ROUTE_SETTINGS_BACKUP = "settings/backup"
     const val ROUTE_SETTINGS_AI = "settings/ai"
+    const val ROUTE_SETTINGS_AI_SUMMARY = "settings/ai/summary"
     const val ROUTE_AI_CHAT = "ai/chat"
     const val ROUTE_SETTINGS_CUSTOM_THEME = "settings/custom_theme"
     const val ROUTE_SETTINGS_LAB_CONFIG = "settings/lab_config"
