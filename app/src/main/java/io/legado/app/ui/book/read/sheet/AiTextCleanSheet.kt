@@ -16,6 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.AiMessagePart
+import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.ui.ai.chat.AiChatMessageUi
+import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
 import io.legado.app.ui.book.read.AiTextCleanUiState
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
@@ -25,6 +29,7 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun AiTextCleanSheet(
@@ -64,17 +69,6 @@ fun AiTextCleanSheet(
                 Spacer(Modifier.height(8.dp))
 
                 when {
-                    state.isLoading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            AppCircularProgressIndicator()
-                        }
-                    }
-
                     state.errorMessage != null -> {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -92,14 +86,42 @@ fun AiTextCleanSheet(
                         }
                     }
 
-                    else -> {
+                    state.isLoading &&
+                            state.streamingText.isBlank() &&
+                            state.reasoningText.isBlank() -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            AppCircularProgressIndicator()
+                        }
+                    }
+
+                    !state.isLoading && state.replacementText.isEmpty() -> {
                         TextPreview(
-                            text = state.replacementText.ifEmpty {
-                                stringResource(R.string.ai_text_clean_delete)
-                            },
+                            text = stringResource(R.string.ai_text_clean_delete),
                             showTitle = false,
-                            deleted = state.replacementText.isEmpty(),
+                            deleted = true,
                         )
+                    }
+
+                    else -> {
+                        NormalCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            AiGeneratedMessageContent(
+                                isUser = false,
+                                isAssistant = true,
+                                isStreaming = state.isLoading,
+                                message = state.toAiChatMessage(),
+                                showHeader = false,
+                                reasoningAutoExpandWhileStreaming = false,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
                     }
                 }
 
@@ -124,6 +146,28 @@ fun AiTextCleanSheet(
             )
         }
     }
+}
+
+private fun AiTextCleanUiState.toAiChatMessage(): AiChatMessageUi {
+    val displayText = replacementText.ifBlank { streamingText }
+    val parts = buildList {
+        if (reasoningText.isNotBlank()) {
+            add(AiMessagePart.Reasoning(reasoningText))
+        }
+        if (displayText.isNotBlank()) {
+            add(AiMessagePart.Text(displayText))
+        }
+    }.toImmutableList()
+    return AiChatMessageUi(
+        id = "read_ai_clean",
+        role = AiMessageRole.ASSISTANT,
+        parts = parts,
+        content = displayText,
+        reasoning = reasoningText.ifBlank { null },
+        toolTrace = null,
+        thinkingDuration = thinkingDuration,
+        createdAt = System.currentTimeMillis(),
+    )
 }
 
 @Composable

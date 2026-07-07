@@ -1922,6 +1922,14 @@ private fun OverflowDropdownMenu(
             },
         )
         RoundDropdownMenuItem(
+            text = stringResource(R.string.content_processes),
+            leadingIcon = menuIcon(Icons.Default.Edit),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
+            },
+        )
+        RoundDropdownMenuItem(
             text = stringResource(R.string.same_title_removed),
             leadingIcon = menuIcon(Icons.Default.CleanHands),
             isSelected = state.sameTitleRemoved,
@@ -2369,26 +2377,19 @@ private fun MenuBottomBar(
                 pageButtons.chunked(itemsPerRow).forEach { rowButtons ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         rowButtons.forEach { button ->
-                            Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ToolButtonItem(
-                                    button = button,
-                                    state = state,
-                                    colors = colors,
-                                    backdrop = backdrop,
-                                    glassEnabled = buttonGlassEnabled,
-                                    labelColor = labelColor,
-                                    modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
-                                )
-                            }
-                        }
-                        repeat(itemsPerRow - rowButtons.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            ToolButtonItem(
+                                button = button,
+                                state = state,
+                                colors = colors,
+                                backdrop = backdrop,
+                                glassEnabled = buttonGlassEnabled,
+                                labelColor = labelColor,
+                                modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
+                            )
                         }
                     }
                 }
@@ -2901,6 +2902,9 @@ private fun loadToolButtons(
         infoMap.getValue("ai_summary").toButton {
             onIntent(ReadBookIntent.OpenChapterSummary)
         },
+        infoMap.getValue("ai_rewrite").toButton {
+            onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite)
+        },
     )
 
     val allMap = allButtons.associateBy { it.id }
@@ -3233,6 +3237,7 @@ private fun loadFloatingIcons(
         },
         "translate" to { onIntent(ReadBookIntent.ToggleTranslation) },
         "ai_summary" to { onIntent(ReadBookIntent.OpenChapterSummary) },
+        "ai_rewrite" to { onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite) },
     )
 
     val activeIds = buildSet {

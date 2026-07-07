@@ -14,13 +14,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
+import io.legado.app.ui.book.read.sheet.AiTextRewriteSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.ChapterSummarySheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
+import io.legado.app.ui.book.read.sheet.ContentProcessesSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
@@ -168,6 +171,15 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.DismissSheet)
             onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
         },
+        onOpenContentProcesses = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
+        },
+    )
+    ContentProcessesSheet(
+        show = state.activeSheet is ReadBookSheet.ContentProcesses,
+        state = state.contentProcessConfig,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
     )
     UnderlineConfigSheet(
         show = state.activeSheet is ReadBookSheet.UnderlineConfig,
@@ -246,6 +258,18 @@ fun ReadBookScreen(
         state = state.aiTextClean,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
+    )
+    AiTextRewriteSheet(
+        show = state.activeSheet is ReadBookSheet.AiTextRewrite,
+        state = state.aiTextRewrite,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    AiRewritePresetConfigSheet(
+        show = state.activeSheet is ReadBookSheet.AiRewritePresetConfig,
+        state = state.aiRewritePresetConfig,
+        onIntent = onIntent,
+        onDismissRequest = { onIntent(ReadBookIntent.CloseAiRewritePresetConfig) },
     )
     MoreConfigSheet(
         show = state.activeSheet is ReadBookSheet.MoreConfig,

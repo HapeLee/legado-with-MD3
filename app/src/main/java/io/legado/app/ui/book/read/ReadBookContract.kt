@@ -101,6 +101,8 @@ data class ChapterSummaryUiState(
     val chapterTitle: String = "",
     val isLoading: Boolean = false,
     val summary: String = "",
+    val reasoningText: String = "",
+    val thinkingDuration: Int = 0,
     val errorMessage: String? = null,
 )
 
@@ -113,6 +115,45 @@ data class AiTextCleanUiState(
     val isApplying: Boolean = false,
     val originalText: String = "",
     val replacementText: String = "",
+    val streamingText: String = "",
+    val reasoningText: String = "",
+    val thinkingDuration: Int = 0,
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class AiRewritePresetUi(
+    val id: String,
+    val name: String,
+    val instruction: String,
+)
+
+@Stable
+data class AiTextRewriteUiState(
+    val bookUrl: String = "",
+    val chapterIndex: Int = -1,
+    val chapterTitle: String = "",
+    val isLoading: Boolean = false,
+    val isApplying: Boolean = false,
+    val originalText: String = "",
+    val rewrittenText: String = "",
+    val reasoningText: String = "",
+    val thinkingDuration: Int = 0,
+    val selectedPresetId: String = "",
+    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
+    val temporaryInstruction: String = "",
+    val referenceCount: Int = 0,
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class AiRewritePresetConfigUiState(
+    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
+    val editing: Boolean = false,
+    val editingPresetId: String? = null,
+    val editingName: String = "",
+    val editingInstruction: String = "",
+    val deletePreset: AiRewritePresetUi? = null,
     val errorMessage: String? = null,
 )
 
@@ -147,6 +188,7 @@ data class ReadBookUiState(
     // Replace rules
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
+    val effectiveContentProcessCount: Int = 0,
     // Translation
     val translationMode: Boolean = false,
     // Chapter info
@@ -197,8 +239,11 @@ data class ReadBookUiState(
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
     val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
+    val contentProcessConfig: ContentProcessConfigUiState = ContentProcessConfigUiState(),
     val chapterSummary: ChapterSummaryUiState = ChapterSummaryUiState(),
     val aiTextClean: AiTextCleanUiState = AiTextCleanUiState(),
+    val aiTextRewrite: AiTextRewriteUiState = AiTextRewriteUiState(),
+    val aiRewritePresetConfig: AiRewritePresetConfigUiState = AiRewritePresetConfigUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
@@ -211,6 +256,26 @@ data class HighlightRuleConfigUiState(
     val showNewRule: Boolean = false,
     val deleteRule: HighlightRule? = null,
     val importState: BaseImportUiState<HighlightRule> = BaseImportUiState.Idle,
+)
+
+@Stable
+data class ContentProcessConfigUiState(
+    val isLoading: Boolean = false,
+    val items: ImmutableList<ContentProcessItemUi> = persistentListOf(),
+    val deleteItem: ContentProcessItemUi? = null,
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class ContentProcessItemUi(
+    val id: String,
+    val kind: String,
+    val actionType: String,
+    val enabled: Boolean,
+    val chapterIndex: Int,
+    val selectedText: String,
+    val replacementText: String,
+    val createdAt: Long,
 )
 
 @Stable
@@ -265,6 +330,7 @@ data class ReadBookButtonConfigItem(
 
 internal val ReadBookButtonIds = listOf(
     "ai_summary",
+    "ai_rewrite",
     "search",
     "auto_page",
     "catalog",
@@ -328,7 +394,13 @@ sealed interface ReadBookIntent {
     data class ChangeReplaceRule(val enabled: Boolean) : ReadBookIntent
     data object ToggleTranslation : ReadBookIntent
     data object OpenChapterSummary : ReadBookIntent
+    data object OpenAiCurrentChapterRewrite : ReadBookIntent
     data object RetryChapterSummary : ReadBookIntent
+    data object LoadContentProcesses : ReadBookIntent
+    data class ToggleContentProcess(val id: String, val enabled: Boolean) : ReadBookIntent
+    data class RequestDeleteContentProcess(val item: ContentProcessItemUi) : ReadBookIntent
+    data object ConfirmDeleteContentProcess : ReadBookIntent
+    data object DismissDeleteContentProcess : ReadBookIntent
 
     // Change source
     data class ChangeSourceBook(val book: Book) : ReadBookIntent
@@ -508,6 +580,28 @@ sealed interface ReadBookIntent {
 
     data object RetryAiTextClean : ReadBookIntent
     data object ConfirmAiTextClean : ReadBookIntent
+    data class OpenAiTextRewrite(
+        val text: String,
+        val chapterIndex: Int,
+        val chapterPosition: Int,
+    ) : ReadBookIntent
+
+    data class SelectAiRewritePreset(val presetId: String) : ReadBookIntent
+    data class SetAiRewriteTemporaryInstruction(val instruction: String) : ReadBookIntent
+    data object GenerateAiTextRewrite : ReadBookIntent
+    data object RetryAiTextRewrite : ReadBookIntent
+    data object ConfirmAiTextRewrite : ReadBookIntent
+    data object OpenAiRewritePresetConfig : ReadBookIntent
+    data object CloseAiRewritePresetConfig : ReadBookIntent
+    data object AddAiRewritePreset : ReadBookIntent
+    data class EditAiRewritePreset(val preset: AiRewritePresetUi) : ReadBookIntent
+    data class SetAiRewritePresetName(val name: String) : ReadBookIntent
+    data class SetAiRewritePresetInstruction(val instruction: String) : ReadBookIntent
+    data object SaveAiRewritePreset : ReadBookIntent
+    data object CancelAiRewritePresetEdit : ReadBookIntent
+    data class RequestDeleteAiRewritePreset(val preset: AiRewritePresetUi) : ReadBookIntent
+    data object ConfirmDeleteAiRewritePreset : ReadBookIntent
+    data object DismissDeleteAiRewritePreset : ReadBookIntent
 
     // Screen / selection config
     data class KeepLightChanged(val value: String) : ReadBookIntent
@@ -736,9 +830,12 @@ sealed interface ReadBookSheet {
     data object ToolButtonConfig : ReadBookSheet
     data object TitleBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
+    data object ContentProcesses : ReadBookSheet
     data object ContentEdit : ReadBookSheet
     data object ChapterSummary : ReadBookSheet
     data object AiTextClean : ReadBookSheet
+    data object AiTextRewrite : ReadBookSheet
+    data object AiRewritePresetConfig : ReadBookSheet
     data object AppLog : ReadBookSheet
     data class ChangeChapterSource(val chapterIndex: Int, val chapterTitle: String) : ReadBookSheet
     data object ChangeBookSource : ReadBookSheet

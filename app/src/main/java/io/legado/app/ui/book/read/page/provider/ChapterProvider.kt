@@ -323,7 +323,8 @@ object ChapterProvider {
             bookContent.sameTitleRemoved,
             bookChapter.isVip,
             bookChapter.isPay,
-            bookContent.effectiveReplaceRules
+            bookContent.effectiveReplaceRules,
+            bookContent.effectiveContentProcesses,
         )
     }
     */
@@ -344,7 +345,8 @@ object ChapterProvider {
             bookContent.sameTitleRemoved,
             bookChapter.isVip,
             bookChapter.isPay,
-            bookContent.effectiveReplaceRules
+            bookContent.effectiveReplaceRules,
+            bookContent.effectiveContentProcesses,
         ).apply {
             createLayout(scope, book, bookContent)
         }

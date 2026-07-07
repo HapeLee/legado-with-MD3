@@ -11,6 +11,10 @@
         android:title="@string/ai_text_clean" />
 
     <item
+        android:id="@+id/menu_ai_rewrite"
+        android:title="@string/ai_text_rewrite" />
+
+    <item
         android:id="@+id/menu_copy"
         android:title="@android:string/copy" />
 

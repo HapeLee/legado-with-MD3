@@ -372,6 +372,7 @@ object PreferKey {
     const val llmRetryCount = "llmRetryCount"
     const val llmTemperature = "llmTemperature"
     const val llmPrompt = "llmPrompt"
+    const val aiRewritePresets = "aiRewritePresets"
 
     const val navIconHome = "navIconHome"
 

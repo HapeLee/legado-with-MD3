@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ fun EffectiveReplacesSheet(
     onOpenReplaceEditor: (id: Long, pattern: String?) -> Unit,
     onReplaceRuleChanged: () -> Unit,
     onNavigateToTextEffects: () -> Unit,
+    onOpenContentProcesses: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val chineseConvertActive = ReadConfig.chineseConverterType > 0
@@ -73,6 +75,14 @@ fun EffectiveReplacesSheet(
         },
         title = stringResource(R.string.effective_replaces),
     ) {
+        MediumTonalButton(
+            onClick = onOpenContentProcesses,
+            icon = Icons.Default.Edit,
+            text = stringResource(R.string.content_processes),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+        )
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
         ) {

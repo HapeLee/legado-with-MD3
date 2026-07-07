@@ -65,7 +65,7 @@ class OpenAiChatHandler : AiProtocolHandler {
         }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            val response = okHttpClient.newCallStrResponse {
+            val response = aiOkHttpClient.newCallStrResponse {
                 url(provider.baseUrl + provider.chatPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
@@ -114,7 +114,7 @@ class OpenAiChatHandler : AiProtocolHandler {
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
         val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            okHttpClient.newCallResponse {
+            aiOkHttpClient.newCallResponse {
                 url(provider.baseUrl + provider.chatPath)
                 postJson(GSON.toJson(body))
                 addHeaders(

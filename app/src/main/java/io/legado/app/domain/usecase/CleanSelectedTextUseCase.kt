@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import io.legado.app.data.entities.AiArtifact
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
@@ -15,6 +16,9 @@ import io.legado.app.domain.model.AiTaskType
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class CleanSelectedTextUseCase(
@@ -22,6 +26,16 @@ class CleanSelectedTextUseCase(
     private val aiTextGateway: AiTextGateway,
     private val aiArtifactGateway: AiArtifactGateway,
 ) {
+
+    sealed interface StreamEvent {
+        data class Content(val text: String) : StreamEvent
+        data class Reasoning(val text: String) : StreamEvent
+        data class Done(
+            val replacement: String,
+            val rawText: String,
+            val reasoning: String,
+        ) : StreamEvent
+    }
 
     suspend fun execute(
         bookUrl: String,
@@ -93,6 +107,101 @@ class CleanSelectedTextUseCase(
             if (error is CancellationException) throw error
         }
     }
+
+    fun executeStream(
+        bookUrl: String,
+        chapterIndex: Int,
+        chapterTitle: String,
+        selectedText: String,
+        contextBefore: String,
+        contextAfter: String,
+    ): Flow<StreamEvent> = flow {
+        require(selectedText.isNotBlank()) { "Selected text is empty" }
+        require(selectedText.length <= MAX_SELECTED_TEXT_CHARS) {
+            "Selected text is too long"
+        }
+
+        val preset = resolvePreset() ?: error("No AI model configured")
+        val prompt = AiPromptTemplate.DEFAULT_CLEAN_SELECTION
+        val input = buildUserContent(
+            chapterTitle = chapterTitle,
+            selectedText = selectedText,
+            contextBefore = contextBefore.takeLast(MAX_CONTEXT_CHARS),
+            contextAfter = contextAfter.take(MAX_CONTEXT_CHARS),
+        )
+        val contentHash = MD5Utils.md5Encode(input)
+        val promptHash = MD5Utils.md5Encode(prompt)
+
+        aiArtifactGateway.getCachedArtifact(
+            bookUrl = bookUrl,
+            chapterIndex = chapterIndex,
+            taskType = AiTaskType.CLEAN_SELECTION,
+            contentHash = contentHash,
+            promptHash = promptHash,
+            modelProfileId = preset.model.id,
+        )?.output?.let { cached ->
+            emit(StreamEvent.Content(cached))
+            emit(StreamEvent.Done(cached, cached, ""))
+            return@flow
+        }
+
+        val rawBuilder = StringBuilder()
+        val reasoningBuilder = StringBuilder()
+        aiTextGateway.generateStream(
+            AiGenerateRequest(
+                model = preset.model,
+                messages = listOf(
+                    AiMessage(AiMessageRole.SYSTEM, prompt),
+                    AiMessage(AiMessageRole.USER, input),
+                ),
+                params = preset.params.copy(
+                    maxOutputTokens = preset.params.maxOutputTokens
+                        ?.coerceAtMost(MAX_OUTPUT_TOKENS)
+                        ?: MAX_OUTPUT_TOKENS,
+                ),
+            )
+        ).collect { event ->
+            when (event) {
+                is AiStreamEvent.Content -> {
+                    rawBuilder.append(event.text)
+                    emit(StreamEvent.Content(event.text))
+                }
+
+                is AiStreamEvent.Reasoning -> {
+                    reasoningBuilder.append(event.text)
+                    emit(StreamEvent.Reasoning(event.text))
+                }
+
+                is AiStreamEvent.ToolCallDelta -> Unit
+            }
+        }
+
+        val rawText = rawBuilder.toString()
+        val replacement = parseCleanReplacement(rawText)
+        val now = System.currentTimeMillis()
+        aiArtifactGateway.upsertArtifact(
+            AiArtifact(
+                id = "${bookUrl}_${chapterIndex}_${AiTaskType.CLEAN_SELECTION}_${contentHash}_${preset.model.id}",
+                taskType = AiTaskType.CLEAN_SELECTION,
+                bookUrl = bookUrl,
+                chapterIndex = chapterIndex,
+                contentHash = contentHash,
+                promptHash = promptHash,
+                modelProfileId = preset.model.id,
+                status = AiArtifact.STATUS_SUCCESS,
+                output = replacement,
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        emit(
+            StreamEvent.Done(
+                replacement = replacement,
+                rawText = rawText,
+                reasoning = reasoningBuilder.toString(),
+            )
+        )
+    }.flowOn(Dispatchers.IO)
 
     private suspend fun resolvePreset(): AiTaskPresetConfig? {
         return aiProfileGateway.getTaskPreset(AiTaskType.CLEAN_SELECTION)

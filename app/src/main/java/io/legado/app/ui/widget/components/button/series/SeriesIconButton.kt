@@ -298,7 +298,7 @@ private fun containerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
         SeriesIconButtonStyle.Tonal,
-        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface
+        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface.copy(alpha = 0f)
     }
 }
 

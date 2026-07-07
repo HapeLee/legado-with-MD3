@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -828,6 +829,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         "ai_summary",
         Icons.Default.AutoAwesome,
         context.getString(R.string.ai_chapter_summary)
+    ),
+    ReadMenuButtonInfo(
+        "ai_rewrite",
+        Icons.Default.Edit,
+        context.getString(R.string.ai_text_rewrite)
     ),
 )
 

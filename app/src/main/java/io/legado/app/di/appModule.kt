@@ -11,11 +11,13 @@ import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
 import io.legado.app.data.repository.AiMemoryRepository
 import io.legado.app.data.repository.AiProfileRepository
+import io.legado.app.data.repository.AiPromptPresetRepository
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
 import io.legado.app.data.repository.AppStartupRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
+import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
@@ -55,12 +57,14 @@ import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiMemoryGateway
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.AppStartupGateway
 import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
+import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
@@ -77,6 +81,7 @@ import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.AiChatGenerationUseCase
+import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
@@ -100,6 +105,7 @@ import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
+import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
@@ -234,6 +240,7 @@ val appModule = module {
     single<AiArtifactGateway> { AiArtifactRepository(get()) }
     single<AiChatGateway> { AiChatRepository(get()) }
     single<AiMemoryGateway> { AiMemoryRepository(get()) }
+    single<AiPromptPresetGateway> { AiPromptPresetRepository(get()) }
     single<AiTextGateway> { AiTextRepositoryImpl() }
     single<AiToolGateway> { AiToolRepository(get(), get(), get(), get(), get(), get()) }
     single<AppStartupGateway> { AppStartupRepository(get()) }
@@ -248,6 +255,7 @@ val appModule = module {
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
+    single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
     single { ExploreRepositoryImpl(get()) }
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
@@ -261,7 +269,9 @@ val appModule = module {
     singleOf(::ChangeSourceSearchUseCase)
     singleOf(::GetChapterContentUseCase)
     singleOf(::GenerateChapterSummaryUseCase)
+    singleOf(::AiTextFactoryUseCase)
     singleOf(::CleanSelectedTextUseCase)
+    singleOf(::SaveBookContentProcessUseCase)
     singleOf(::ReplaceRuleRepository)
     single<DictionaryGateway> { DictionaryRepositoryImpl() }
     singleOf(::TranslateChapterUseCase)
@@ -354,7 +364,10 @@ val appModule = module {
             changeBookSourceUseCase = get(),
             generateChapterSummaryUseCase = get(),
             cleanSelectedTextUseCase = get(),
-            replaceRuleRepository = get(),
+            aiTextFactoryUseCase = get(),
+            saveBookContentProcessUseCase = get(),
+            bookContentProcessGateway = get(),
+            aiPromptPresetGateway = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)
