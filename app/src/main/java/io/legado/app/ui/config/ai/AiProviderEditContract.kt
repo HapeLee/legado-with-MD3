@@ -18,6 +18,7 @@ data class AiProviderEditUiState(
     val apiKey: String = "",
     val providerModels: ImmutableList<AiProviderModelUi> = persistentListOf(),
     val editingModel: AiProviderModelEditorUi? = null,
+    val isTesting: Boolean = false,
     val isSaving: Boolean = false,
     val isFetchingModels: Boolean = false,
     val initialized: Boolean = false
@@ -79,6 +80,7 @@ sealed interface AiProviderEditIntent {
     data class UpdateEditingMaxOutputTokens(val value: String) : AiProviderEditIntent
     data class UpdateEditingTemperature(val value: String) : AiProviderEditIntent
     data object SaveEditingModel : AiProviderEditIntent
+    data object TestConnection : AiProviderEditIntent
     data object SaveProvider : AiProviderEditIntent
     data object SyncModels : AiProviderEditIntent
     data object DeleteProvider : AiProviderEditIntent

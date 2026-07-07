@@ -2013,6 +2013,9 @@
     <string name="ai_profile_status">設定檔</string>
     <string name="ai_save_profile">儲存預設設定檔</string>
     <string name="ai_test_connection">測試連線</string>
+    <string name="ai_test_success_no_models">AI 連線測試成功，但未找到任何模型</string>
+    <string name="ai_test_success_with_models">AI 連線測試成功（共找到 %1$d 個模型）</string>
+    <string name="ai_test_failed">AI 連線測試失敗</string>
     <string name="ai_profile_counts">供應商：%1$d，模型：%2$d，預設：%3$d</string>
     <string name="homepage_select_from_kinds">從分類中選擇</string>
     <string name="homepage_select_multiple_kinds">選擇多個分類</string>
