@@ -444,7 +444,9 @@
 	<string name="sort_order">Sort Order</string>
 	<string name="layout_mode">Layout Mode</string>
 	<string name="layout_mode_list">List</string>
-	<string name="layout_mode_grid">Grid</string>
+    <string name="layout_mode_grid">Grid</string>
+    <string name="manage">Manage</string>
+    <string name="import_built_in_rules">Import Built-in Rules</string>
 	<string name="grid_style">Grid Style</string>
 	<string name="compact_title_font">Compact Title Font</string>
 	<string name="center_aligned_title">Center-Aligned Title</string>

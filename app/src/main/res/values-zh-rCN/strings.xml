@@ -423,7 +423,9 @@
 	<string name="sort_order">排序方向</string>
 	<string name="layout_mode">布局模式</string>
 	<string name="layout_mode_list">列表</string>
-	<string name="layout_mode_grid">网格</string>
+    <string name="layout_mode_grid">网格</string>
+    <string name="manage">管理</string>
+    <string name="import_built_in_rules">导入内置规则</string>
 	<string name="grid_style">网格模式</string>
 	<string name="compact_title_font">标题小字体</string>
 	<string name="center_aligned_title">标题居中</string>
