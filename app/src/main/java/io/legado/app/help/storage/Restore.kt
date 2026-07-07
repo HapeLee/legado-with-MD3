@@ -121,14 +121,24 @@ object Restore : KoinComponent {
                 .forEach { book ->
                     book.coverUrl = LocalBook.getCoverPath(book)
                 }
+            val newBooks = arrayListOf<Book>()
             val ignoreLocalBook = BackupConfig.ignoreLocalBook
-            if (ignoreLocalBook) {
-                val backupNonLocal = it.filterNot { book -> book.isLocal }
-                val existingLocal = appDb.bookDao.all.filter { book -> book.isLocal }
-                val mergedBooks = existingLocal + backupNonLocal
-                appDb.bookDao.replaceAll(mergedBooks)
-            } else {
-                appDb.bookDao.replaceAll(it)
+            it.forEach { book ->
+                if (ignoreLocalBook && book.isLocal) {
+                    return@forEach
+                }
+                if (appDb.bookDao.has(book.bookUrl)) {
+                    try {
+                        appDb.bookDao.update(book)
+                    } catch (_: SQLiteConstraintException) {
+                        appDb.bookDao.insert(book)
+                    }
+                } else {
+                    newBooks.add(book)
+                }
+            }
+            if (newBooks.isNotEmpty()) {
+                appDb.bookDao.insert(*newBooks.toTypedArray())
             }
         }
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
