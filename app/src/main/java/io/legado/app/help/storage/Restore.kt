@@ -7,7 +7,6 @@ import androidx.core.content.edit
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.BuildConfig
 import io.legado.app.R
-import io.legado.app.constant.AppConst.androidId
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
@@ -233,27 +232,16 @@ object Restore : KoinComponent {
         }
         fileToListT<ReadRecord>(path, "readRecord.json")?.let {
             it.forEach { readRecord ->
-                if (readRecord.deviceId != androidId) {
-                    try {
-                        appDb.readRecordDao.insert(readRecord)
-                    } catch (_: SQLiteConstraintException) {
-                    }
-                } else {
-                    val time = appDb.readRecordDao
-                        .getReadTime(readRecord.deviceId, readRecord.bookName, readRecord.bookAuthor)
-                    if (time == null || time < readRecord.readTime) {
-                        try {
-                            appDb.readRecordDao.insert(readRecord)
-                        } catch (_: SQLiteConstraintException) {
-                        }
-                    }
+                try {
+                    restoreReadRecord(readRecord)
+                } catch (_: SQLiteConstraintException) {
                 }
             }
         }
         fileToListT<ReadRecordDetail>(path, "readRecordDetail.json")?.let {
             it.forEach { detail ->
                 try {
-                    appDb.readRecordDao.insertDetail(detail)
+                    restoreReadRecordDetail(detail)
                 } catch (_: SQLiteConstraintException) {
                 }
             }
@@ -261,7 +249,7 @@ object Restore : KoinComponent {
         fileToListT<ReadRecordSession>(path, "readRecordSession.json")?.let {
             it.forEach { session ->
                 try {
-                    appDb.readRecordDao.insertSession(session)
+                    restoreReadRecordSession(session)
                 } catch (_: SQLiteConstraintException) {
                 }
             }
@@ -351,6 +339,58 @@ object Restore : KoinComponent {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }
             ThemeConfigStore.applyDayNight(appCtx)
+        }
+    }
+
+    private suspend fun restoreReadRecord(readRecord: ReadRecord) {
+        val existing = appDb.readRecordDao.getReadRecord(
+            readRecord.deviceId,
+            readRecord.bookName,
+            readRecord.bookAuthor
+        )
+        appDb.readRecordDao.insert(
+            existing?.copy(
+                readTime = maxOf(existing.readTime, readRecord.readTime),
+                lastRead = maxOf(existing.lastRead, readRecord.lastRead)
+            ) ?: readRecord
+        )
+    }
+
+    private suspend fun restoreReadRecordDetail(detail: ReadRecordDetail) {
+        val existing = appDb.readRecordDao.getDetail(
+            detail.deviceId,
+            detail.bookName,
+            detail.bookAuthor,
+            detail.date
+        )
+        appDb.readRecordDao.insertDetail(
+            existing?.copy(
+                readTime = maxOf(existing.readTime, detail.readTime),
+                readWords = maxOf(existing.readWords, detail.readWords),
+                firstReadTime = minPositive(existing.firstReadTime, detail.firstReadTime),
+                lastReadTime = maxOf(existing.lastReadTime, detail.lastReadTime)
+            ) ?: detail
+        )
+    }
+
+    private suspend fun restoreReadRecordSession(session: ReadRecordSession) {
+        val existing = appDb.readRecordDao.getSession(
+            session.deviceId,
+            session.bookName,
+            session.bookAuthor,
+            session.startTime,
+            session.endTime
+        )
+        if (existing == null) {
+            appDb.readRecordDao.insertSession(session)
+        }
+    }
+
+    private fun minPositive(left: Long, right: Long): Long {
+        return when {
+            left <= 0L -> right
+            right <= 0L -> left
+            else -> minOf(left, right)
         }
     }
 

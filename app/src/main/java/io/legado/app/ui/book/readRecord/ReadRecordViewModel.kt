@@ -49,6 +49,12 @@ class ReadRecordViewModel(
     val displayMode = _displayMode.asStateFlow()
     private val _searchKey = MutableStateFlow("")
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
+    val readRecordEnabled: StateFlow<Boolean> = repository.readRecordEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val loadedDataFlow = _searchKey
@@ -140,6 +146,14 @@ class ReadRecordViewModel(
 
     fun deleteReadRecord(record: ReadRecord) {
         viewModelScope.launch { repository.deleteReadRecord(record) }
+    }
+
+    fun clearReadRecords() {
+        viewModelScope.launch { repository.clearReadRecords() }
+    }
+
+    fun setReadRecordEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.setReadRecordEnabled(enabled) }
     }
 
     private fun mergeContinuousSessions(sessions: List<ReadRecordSession>): List<ReadRecordSession> {
