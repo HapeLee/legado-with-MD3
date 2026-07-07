@@ -1473,6 +1473,7 @@
     <string name="theme_manage_import_failed">Could not import theme</string>
     <string name="theme_manage_save_failed">Could not save theme</string>
     <string name="theme_manage_apply_failed">Could not apply theme</string>
+    <string name="theme_manage_delete_failed">Could not delete theme</string>
     <string name="theme_manage_save_current">Save Current Theme</string>
     <string name="theme_manage_save_current_summary">Save the current appearance settings as a theme</string>
     <string name="theme_manage_export_current">Export Current Theme</string>

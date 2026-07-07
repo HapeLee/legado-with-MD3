@@ -1438,6 +1438,7 @@
     <string name="theme_manage_import_failed">主题导入失败</string>
     <string name="theme_manage_save_failed">主题保存失败</string>
     <string name="theme_manage_apply_failed">主题应用失败</string>
+    <string name="theme_manage_delete_failed">主题删除失败</string>
     <string name="theme_manage_save_current">保存当前设置</string>
     <string name="theme_manage_save_current_summary">保存当前主题配置为新主题</string>
     <string name="theme_manage_export_current">导出当前主题</string>

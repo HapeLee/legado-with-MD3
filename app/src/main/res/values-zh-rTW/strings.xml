@@ -1585,6 +1585,7 @@
     <string name="theme_manage_import_failed">無法匯入主題</string>
     <string name="theme_manage_save_failed">無法儲存主題</string>
     <string name="theme_manage_apply_failed">無法套用主題</string>
+    <string name="theme_manage_delete_failed">無法刪除主題</string>
     <string name="theme_manage_save_current">儲存目前主題</string>
     <string name="theme_manage_save_current_summary">將目前外觀設定儲存為主題</string>
     <string name="theme_manage_export_current">匯出目前主題</string>

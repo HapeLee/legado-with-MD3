@@ -9,6 +9,7 @@ import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.domain.model.CoverAlbumImageInput
 import io.legado.app.domain.usecase.CoverAlbumUseCase
+import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.URLEncoder
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -33,6 +35,7 @@ class ThemePackageManager(
         const val FILE_EXTENSION = "zip"
         private const val FORMAT_VERSION = 1
         private const val MANIFEST_PATH = "manifest.json"
+        private const val SAVED_THEME_DIR = "saved_themes"
         private const val MAX_ENTRY_COUNT = 4_096
         private const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
         private const val MAX_TOTAL_BYTES = 512L * 1024 * 1024
@@ -51,8 +54,15 @@ class ThemePackageManager(
         uri: Uri,
         themeName: String? = null,
         themeData: ThemeExportData? = null,
+        savedTheme: SavedTheme? = null,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runSuspendCatching {
+            val savedRoot = savedTheme?.packageRootPath?.let(::File)
+            if (savedRoot?.isDirectory == true && savedTheme.packageManifest != null) {
+                exportSavedThemeFolder(uri, savedRoot)
+                return@runSuspendCatching
+            }
+
             val rawConfig = themeData ?: ThemeImportExport.exportFromCurrent(
                 includeEmbeddedAssets = false
             )
@@ -165,21 +175,55 @@ class ThemePackageManager(
         }
     }
 
-    fun saveTheme(
+    suspend fun loadSavedThemes(): List<SavedTheme> = withContext(Dispatchers.IO) {
+        savedThemesRoot.mkdirs()
+        val folderThemes = savedThemesRoot
+            .listFiles()
+            .orEmpty()
+            .filter(File::isDirectory)
+            .mapNotNull(::readSavedThemeFolder)
+        ThemeImportExport.reload()
+        val folderThemeNames = folderThemes.mapTo(mutableSetOf()) { it.name }
+        folderThemes + ThemeImportExport.savedThemes.filter { it.name !in folderThemeNames }
+    }
+
+    suspend fun saveTheme(
         name: String,
-        data: ThemeExportData = ThemeImportExport.exportFromCurrent(),
-    ): SavedTheme {
-        val selectedCoverAlbumId = data.selectedCoverAlbumId
+        data: ThemeExportData? = null,
+    ): SavedTheme = withContext(Dispatchers.IO) {
+        val themeData = data ?: ThemeImportExport.exportFromCurrent(includeEmbeddedAssets = false)
+        val selectedCoverAlbumId = themeData.selectedCoverAlbumId
             ?: coverAlbumUseCase.selection.value.albumId
-        return ThemeImportExport.saveCurrentAsTheme(
+        saveThemeFolder(
             name = name,
-            data = data.copy(selectedCoverAlbumId = selectedCoverAlbumId),
+            data = themeData.copy(selectedCoverAlbumId = selectedCoverAlbumId),
         )
+    }
+
+    suspend fun deleteSavedTheme(theme: SavedTheme): Result<Unit> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val folder = theme.packageRootPath
+                ?.let(::File)
+                ?.takeIf(File::exists)
+                ?: savedThemeDir(theme.name).takeIf(File::exists)
+            if (folder != null && !folder.deleteRecursively()) {
+                error("Failed to delete saved theme: ${theme.name}")
+            }
+
+            ThemeImportExport.deleteSavedTheme(theme)
+        }
     }
 
     suspend fun applySavedTheme(theme: SavedTheme): Result<Unit> =
         withContext(Dispatchers.IO) {
             runSuspendCatching {
+                val packageRoot = theme.packageRootPath?.let(::File)
+                val packageManifest = theme.packageManifest
+                if (packageRoot?.isDirectory == true && packageManifest != null) {
+                    applySavedThemeFolder(theme, packageRoot, packageManifest)
+                    return@runSuspendCatching
+                }
+
                 val savedAlbumId = theme.data.selectedCoverAlbumId
                     ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
                 val appliedAssets = ThemeImportExport.applyToThemeConfig(
@@ -206,26 +250,291 @@ class ThemePackageManager(
             }
         }
 
+    private val savedThemesRoot: File
+        get() = File(context.filesDir, SAVED_THEME_DIR)
+
+    private fun readSavedThemeFolder(root: File): SavedTheme? {
+        return runCatching {
+            val manifestFile = resolvePackageFile(root, MANIFEST_PATH)
+            if (!manifestFile.isFile) return null
+            val manifestJson = manifestFile.readText()
+            val manifest = GSON.fromJson(manifestJson, ThemePackageManifest::class.java)
+            require(manifest.formatVersion == FORMAT_VERSION) {
+                "Unsupported saved theme version: ${manifest.formatVersion}"
+            }
+            val localAssets = resolveSavedAssets(root, manifest.assets)
+            val data = manifest.config.copy(
+                bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
+                bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
+                navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
+                navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
+                navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
+                navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
+                appFontPath = localAssets[ASSET_FONT],
+                assets = null,
+            )
+            SavedTheme(
+                name = manifest.name?.takeIf(String::isNotBlank) ?: root.name,
+                data = data,
+                packageRootPath = root.absolutePath,
+                packageManifest = manifest,
+            )
+        }.getOrNull()
+    }
+
+    private fun saveThemeFolder(
+        name: String,
+        data: ThemeExportData,
+    ): SavedTheme {
+        savedThemesRoot.mkdirs()
+        val targetRoot = savedThemeDir(name)
+        val tempRoot = File(savedThemesRoot, "${targetRoot.name}_${UUID.randomUUID()}.tmp")
+        tempRoot.mkdirs()
+        try {
+            val assetEntries = copyAssetsToFolder(tempRoot, data)
+            val coverData = copyCoverAlbumsToFolder(
+                root = tempRoot,
+                preferredAlbumId = data.selectedCoverAlbumId,
+            )
+            val manifest = ThemePackageManifest(
+                formatVersion = FORMAT_VERSION,
+                name = name,
+                config = data.toSavedConfig(),
+                assets = assetEntries,
+                coverAlbums = coverData.albums,
+                coverSelection = coverData.selection,
+            )
+            writeSavedManifest(tempRoot, manifest)
+            if (targetRoot.exists() && !targetRoot.deleteRecursively()) {
+                error("Failed to replace saved theme: $name")
+            }
+            if (!tempRoot.renameTo(targetRoot)) {
+                tempRoot.copyRecursively(targetRoot, overwrite = true)
+                tempRoot.deleteRecursively()
+            }
+            File(savedThemesRoot, "$name.json").takeIf(File::exists)?.delete()
+            return readSavedThemeFolder(targetRoot) ?: SavedTheme(name = name, data = data)
+        } catch (error: Exception) {
+            tempRoot.deleteRecursively()
+            throw error
+        }
+    }
+
+    private fun exportSavedThemeFolder(
+        uri: Uri,
+        root: File,
+    ) {
+        context.contentResolver.openOutputStream(uri)?.use { output ->
+            ZipOutputStream(BufferedOutputStream(output)).use { zip ->
+                root.walkTopDown()
+                    .filter(File::isFile)
+                    .forEach { file ->
+                        val entryPath = root.toPath()
+                            .relativize(file.toPath())
+                            .toString()
+                            .replace(File.separatorChar, '/')
+                        file.inputStream().use { input ->
+                            zip.writeEntry(entryPath, input)
+                        }
+                    }
+            }
+        } ?: error("Unable to create theme package")
+    }
+
+    private suspend fun applySavedThemeFolder(
+        theme: SavedTheme,
+        root: File,
+        manifest: ThemePackageManifest,
+    ) {
+        val localAssets = resolveSavedAssets(root, manifest.assets)
+        val savedAlbumId = theme.data.selectedCoverAlbumId
+            ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
+        val selectedAlbumId = if (savedAlbumId != null) {
+            coverAlbumUseCase.selectAlbum(savedAlbumId)
+            savedAlbumId
+        } else {
+            importSavedCoverAlbum(root, manifest)
+        }
+        ThemeImportExport.applyToThemeConfig(
+            data = manifest.config.copy(
+                bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
+                bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
+                navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
+                navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
+                navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
+                navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
+                appFontPath = localAssets[ASSET_FONT],
+                coverDefaultImage = "",
+                coverDefaultImageDark = "",
+                selectedCoverAlbumId = selectedAlbumId,
+                assets = null,
+            ),
+            applyEmbeddedCoverAssets = false,
+        )
+        coverAlbumUseCase.selectAlbum(selectedAlbumId)
+        if (selectedAlbumId != manifest.config.selectedCoverAlbumId) {
+            writeSavedManifest(
+                root = root,
+                manifest = manifest.copy(
+                    config = manifest.config.copy(selectedCoverAlbumId = selectedAlbumId),
+                ),
+            )
+        }
+    }
+
+    private suspend fun importSavedCoverAlbum(
+        root: File,
+        manifest: ThemePackageManifest,
+    ): String? {
+        val albumRef = manifest.coverSelection.albumRef ?: return null
+        val importedIds = mutableListOf<String>()
+        return try {
+            val albumIdMap = importCoverAlbums(
+                root = root,
+                albums = manifest.coverAlbums,
+                importedIds = importedIds,
+            )
+            resolveAlbumRef(albumRef, albumIdMap)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            importedIds.forEach { id ->
+                runCatching { coverAlbumUseCase.deleteAlbum(id) }
+            }
+            throw error
+        }
+    }
+
+    private fun copyAssetsToFolder(
+        root: File,
+        config: ThemeExportData,
+    ): Map<String, String> {
+        val result = linkedMapOf<String, String>()
+        assetSources(config).forEach { source ->
+            val path = source.sourcePath?.takeIf(String::isNotBlank)
+            if (path != null) {
+                val extension = sourceExtension(path, source.key)
+                val entryPath = "${source.entryBase}.$extension"
+                openSource(path).use { input ->
+                    input.copyToPackageFile(root, entryPath)
+                }
+                result[source.key] = entryPath
+            }
+        }
+        copyEmbeddedAssetsToFolder(root, config, result)
+        return result
+    }
+
+    private fun copyEmbeddedAssetsToFolder(
+        root: File,
+        config: ThemeExportData,
+        result: MutableMap<String, String>,
+    ) {
+        val sources = mapOf(
+            "bgImageLight" to AssetSource(ASSET_BACKGROUND_LIGHT, null, "assets/background/light"),
+            "bgImageDark" to AssetSource(ASSET_BACKGROUND_DARK, null, "assets/background/dark"),
+            "navIconHome" to AssetSource(ASSET_NAV_HOME, null, "assets/navigation/home"),
+            "navIconBookshelf" to AssetSource(
+                ASSET_NAV_BOOKSHELF,
+                null,
+                "assets/navigation/bookshelf",
+            ),
+            "navIconExplore" to AssetSource(ASSET_NAV_EXPLORE, null, "assets/navigation/explore"),
+            "navIconRss" to AssetSource(ASSET_NAV_RSS, null, "assets/navigation/rss"),
+            "navIconMy" to AssetSource(ASSET_NAV_MY, null, "assets/navigation/my"),
+            "appFontPath" to AssetSource(ASSET_FONT, null, "assets/fonts/app"),
+        )
+        config.assets.orEmpty().forEach { (legacyKey, base64) ->
+            val source = sources[legacyKey] ?: return@forEach
+            if (source.key in result || base64.isBlank()) return@forEach
+            val extension = if (source.key == ASSET_FONT) "ttf" else "img"
+            val entryPath = "${source.entryBase}.$extension"
+            val target = resolvePackageFile(root, entryPath)
+            target.parentFile?.mkdirs()
+            FileOutputStream(target).use { output ->
+                output.write(EncoderUtils.base64DecodeToByteArray(base64))
+            }
+            result[source.key] = entryPath
+        }
+    }
+
+    private fun copyCoverAlbumsToFolder(
+        root: File,
+        preferredAlbumId: String?,
+    ): ExportedCoverData {
+        val albumsById = coverAlbumUseCase.albums.value.associateBy { it.id }
+        val selectedAlbumId = preferredAlbumId
+            ?.takeIf(albumsById::containsKey)
+            ?: coverAlbumUseCase.selection.value.albumId
+        val selectedIds = listOfNotNull(selectedAlbumId)
+        val refById = selectedIds.associateWith { "album_0" }
+        val exportedAlbums = selectedIds.mapNotNull { albumId ->
+            val album = albumsById[albumId] ?: return@mapNotNull null
+            val albumRef = refById.getValue(albumId)
+            fun copyImages(
+                group: String,
+                images: List<io.legado.app.domain.model.CoverAlbumImage>,
+            ) = images.mapIndexed { index, image ->
+                val file = File(image.path)
+                require(file.isFile) { "Cover album image does not exist: ${image.path}" }
+                val extension = file.extension
+                    .lowercase()
+                    .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+                    ?: "img"
+                val entryPath = "cover-albums/$albumRef/$group/image_$index.$extension"
+                file.inputStream().use { input ->
+                    input.copyToPackageFile(root, entryPath)
+                }
+                ThemePackageCoverImage(path = entryPath)
+            }
+            ThemePackageCoverAlbum(
+                ref = albumRef,
+                name = album.name,
+                lightImages = copyImages("light", album.lightImages),
+                darkImages = copyImages("dark", album.darkImages),
+            )
+        }
+        return ExportedCoverData(
+            albums = exportedAlbums,
+            selection = ThemePackageCoverSelection(
+                albumRef = selectedAlbumId?.let(refById::get),
+            ),
+        )
+    }
+
+    private fun resolveSavedAssets(
+        root: File,
+        entries: Map<String, String>,
+    ): Map<String, String> {
+        return entries.mapNotNull { (key, entryPath) ->
+            val source = resolvePackageFile(root, entryPath)
+            if (source.isFile) key to source.absolutePath else null
+        }.toMap()
+    }
+
+    private fun savedThemeDir(name: String): File {
+        val encoded = URLEncoder.encode(name, Charsets.UTF_8.name())
+            .ifBlank { "theme" }
+        return File(savedThemesRoot, "theme_$encoded")
+    }
+
+    private fun writeSavedManifest(
+        root: File,
+        manifest: ThemePackageManifest,
+    ) {
+        val manifestFile = resolvePackageFile(root, MANIFEST_PATH)
+        manifestFile.parentFile?.mkdirs()
+        manifestFile.writeText(GSON.toJson(manifest))
+    }
+
     private fun exportAssets(
         zip: ZipOutputStream,
         config: ThemeExportData,
     ): Map<String, String> {
         val result = linkedMapOf<String, String>()
-        val sources = listOf(
-            AssetSource(ASSET_BACKGROUND_LIGHT, config.bgImageLight, "assets/background/light"),
-            AssetSource(ASSET_BACKGROUND_DARK, config.bgImageDark, "assets/background/dark"),
-            AssetSource(ASSET_NAV_HOME, config.navIconHome, "assets/navigation/home"),
-            AssetSource(
-                ASSET_NAV_BOOKSHELF,
-                config.navIconBookshelf,
-                "assets/navigation/bookshelf",
-            ),
-            AssetSource(ASSET_NAV_EXPLORE, config.navIconExplore, "assets/navigation/explore"),
-            AssetSource(ASSET_NAV_RSS, config.navIconRss, "assets/navigation/rss"),
-            AssetSource(ASSET_NAV_MY, config.navIconMy, "assets/navigation/my"),
-            AssetSource(ASSET_FONT, config.appFontPath, "assets/fonts/app"),
-        )
-        sources.forEach { source ->
+        assetSources(config).forEach { source ->
             val path = source.sourcePath?.takeIf(String::isNotBlank) ?: return@forEach
             val extension = sourceExtension(path, source.key)
             val entryPath = "${source.entryBase}.$extension"
@@ -384,7 +693,7 @@ class ThemePackageManager(
         }
     }
 
-    private fun saveImportedTheme(
+    private suspend fun saveImportedTheme(
         name: String,
         selectedCoverAlbumId: String?,
     ) {
@@ -514,6 +823,25 @@ class ThemePackageManager(
         assets = null,
     )
 
+    private fun ThemeExportData.toSavedConfig() = toPortableConfig().copy(
+        selectedCoverAlbumId = selectedCoverAlbumId,
+    )
+
+    private fun assetSources(config: ThemeExportData) = listOf(
+        AssetSource(ASSET_BACKGROUND_LIGHT, config.bgImageLight, "assets/background/light"),
+        AssetSource(ASSET_BACKGROUND_DARK, config.bgImageDark, "assets/background/dark"),
+        AssetSource(ASSET_NAV_HOME, config.navIconHome, "assets/navigation/home"),
+        AssetSource(
+            ASSET_NAV_BOOKSHELF,
+            config.navIconBookshelf,
+            "assets/navigation/bookshelf",
+        ),
+        AssetSource(ASSET_NAV_EXPLORE, config.navIconExplore, "assets/navigation/explore"),
+        AssetSource(ASSET_NAV_RSS, config.navIconRss, "assets/navigation/rss"),
+        AssetSource(ASSET_NAV_MY, config.navIconMy, "assets/navigation/my"),
+        AssetSource(ASSET_FONT, config.appFontPath, "assets/fonts/app"),
+    )
+
     private fun openSource(path: String): InputStream {
         return if (path.startsWith("content://")) {
             context.contentResolver.openInputStream(Uri.parse(path))
@@ -535,6 +863,14 @@ class ThemePackageManager(
         putNextEntry(ZipEntry(path))
         input.use { it.copyTo(this) }
         closeEntry()
+    }
+
+    private fun InputStream.copyToPackageFile(root: File, path: String) {
+        val target = resolvePackageFile(root, path)
+        target.parentFile?.mkdirs()
+        FileOutputStream(target).use { output ->
+            use { input -> input.copyTo(output) }
+        }
     }
 
     private fun InputStream.copyLimitedTo(

@@ -2125,6 +2125,7 @@
     <string name="theme_manage_import_success">主題已匯入。部分更改需要重啟。</string>
     <string name="theme_manage_save_failed">主題儲存失敗</string>
     <string name="theme_manage_apply_failed">主題套用失敗</string>
+    <string name="theme_manage_delete_failed">主題刪除失敗</string>
     <string name="theme_manage_label_container_color">標籤容器色</string>
     <string name="theme_manage_label_visibility">標籤可見性</string>
     <string name="theme_manage_name_hint">輸入主題名稱</string>
