@@ -88,7 +88,7 @@ object AppConst {
     private val isBeta = sha256Signature == BETA_SIGNATURE || BuildConfig.DEBUG
 
     val charsets =
-        arrayListOf("UTF-8", "GB2312", "GB18030", "GBK", "Unicode", "UTF-16", "UTF-16LE", "ASCII")
+        arrayListOf("UTF-8", "GB2312", "GB18030", "GBK", "Unicode", "UTF-16", "UTF-16LE", "UTF-16BE", "ASCII")
 
     @Keep
     data class AppInfo(

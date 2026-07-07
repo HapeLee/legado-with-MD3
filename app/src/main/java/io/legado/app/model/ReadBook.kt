@@ -16,6 +16,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
@@ -1107,6 +1108,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     fun setCharset(charset: String) {
         book?.let {
             it.charset = charset
+            if (it.isLocalTxt) {
+                TextFile.clear()
+                clearTextChapter()
+            }
             callBack?.loadChapterList(it)
         }
         saveRead()
