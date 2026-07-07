@@ -314,8 +314,6 @@ internal fun TextEffectsPage(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
         // Colors
         SectionTitle(stringResource(R.string.read_color))
         TinyColorSettingItem(
@@ -425,8 +423,6 @@ internal fun TitleSettingsPage(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
         FontWeightSetting(
             value = titleBold,
             onValueChange = { value ->
@@ -453,16 +449,12 @@ internal fun TitleSettingsPage(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
         // Title font
         TinyClickableSettingItem(
             title = stringResource(R.string.read_config_title_settings),
             imageVector = Icons.Default.TextFields,
             onClick = onOpenTitleFontSelect,
         )
-
-        Spacer(Modifier.height(8.dp))
 
         // Title segmentation
         TinyDropdownSettingItem(
@@ -524,8 +516,6 @@ internal fun TitleSettingsPage(
                 onDismiss = { showFlagDialog = false },
             )
         }
-
-        Spacer(Modifier.height(8.dp))
 
         // Title spacing sliders
         TinySliderSettingItem(
