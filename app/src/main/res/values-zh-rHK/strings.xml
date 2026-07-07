@@ -1520,6 +1520,8 @@
     <string name="ascending_order">升序</string>
     <string name="audio_cache_clean_time">音頻緩存保留時間（分鐘）</string>
     <string name="audio_cache_clean_time_summary">目前：%1$d。輸入 0 則退出時立即清除。</string>
+    <string name="tts_paragraph_interval">段落間隔（毫秒）</string>
+    <string name="tts_paragraph_interval_summary">當前: %1$d 毫秒。朗讀時段落之間的停頓時間。</string>
     <string name="audio_focus_not_acquired">未能獲取音頻焦點</string>
     <string name="author_read">%1$s • %2$d 未讀</string>
     <string name="auto_change_source_failed">自動換源失敗</string>

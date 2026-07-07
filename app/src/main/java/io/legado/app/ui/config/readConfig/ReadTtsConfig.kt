@@ -35,6 +35,11 @@ object ReadTtsConfig {
         0
     )
 
+    var ttsParagraphInterval by prefDelegate(
+        PreferKey.ttsParagraphInterval,
+        0
+    )
+
     var ignoreAudioFocus by prefDelegate(
         PreferKey.ignoreAudioFocus,
         false

@@ -234,6 +234,7 @@ data class ReadBookUiState(
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
     val readAloudTtsTimer: Int = 0,
+    val readAloudParagraphInterval: Int = 0,
     // Style config (reactive state for ReadBookConfig)
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
     // Menu config (from ReadBookConfig via repository)
@@ -621,10 +622,12 @@ sealed interface ReadBookIntent {
     data object ShowReadAloudConfig : ReadBookIntent
     data object SelectSpeakEngine : ReadBookIntent
     data object OpenPreDownloadNumPicker : ReadBookIntent
+    data object OpenParagraphIntervalPicker : ReadBookIntent
     data object OpenCacheCleanTimePicker : ReadBookIntent
     data class ApplySpeakEngine(val value: String?) : ReadBookIntent
     data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
     data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
+    data class ApplyParagraphInterval(val value: Int) : ReadBookIntent
     data class EditHttpTts(val engineId: Long? = null) : ReadBookIntent
     data class DeleteHttpTts(val engineId: Long) : ReadBookIntent
     data class SaveHttpTts(val httpTTS: HttpTTS) : ReadBookIntent
@@ -851,6 +854,7 @@ sealed interface ReadBookSheet {
     data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet
     data object AudioCacheCleanConfig : ReadBookSheet
+    data object ParagraphIntervalConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet
     data object PageKeyConfig : ReadBookSheet
     data object TextSelectMenuFilterConfig : ReadBookSheet
