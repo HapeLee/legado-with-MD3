@@ -7,8 +7,10 @@ import io.legado.app.constant.AppPattern.spaceRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.exception.RegexTimeoutException
+import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.utils.ChineseUtils
@@ -101,6 +103,7 @@ class ContentProcessor private constructor(
         var mContent = content
         var sameTitleRemoved = false
         var effectiveReplaceRules: ArrayList<ReplaceRule>? = null
+        var effectiveContentProcesses: List<BookContentProcess> = emptyList()
         if (content != "null") {
             //去除重复标题
             val fileName = chapter.getFileName("nr")
@@ -191,6 +194,15 @@ class ContentProcessor private constructor(
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 mContent = mContent.replace(placeholder, originalContent)
             }
+            val contentProcesses = appDb.bookContentProcessDao.getForChapterSync(
+                bookUrl = book.bookUrl,
+                chapterIndex = chapter.index,
+            )
+            if (contentProcesses.isNotEmpty()) {
+                val applyResult = BookContentProcessEngine.apply(mContent, contentProcesses)
+                mContent = applyResult.text
+                effectiveContentProcesses = applyResult.effectiveProcesses
+            }
         }
         if (includeTitle) {
             //重新添加标题
@@ -215,7 +227,7 @@ class ContentProcessor private constructor(
                 }
             }
         }
-        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules)
+        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules, effectiveContentProcesses)
     }
 
 }

@@ -401,7 +401,7 @@ fun ManageGroupDialog(
                 AppText(stringResource(R.string.no_other_groups))
             } else {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     groups.forEach { group ->
                         val isSelected = selectedGroups.contains(group)

@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Refresh
@@ -31,9 +34,14 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +69,7 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -92,6 +101,9 @@ fun HomepageModuleFeed(
             val others = modules.filter { !isInfinite(it) }
             if (infinite != null) others + infinite else others
         }
+        var selectedRankingSources by rememberSaveable {
+            mutableStateOf(hashMapOf<String, String>())
+        }
 
         val gridColumns = remember(processedModules) {
             val infiniteModule = processedModules.find { m ->
@@ -117,24 +129,38 @@ fun HomepageModuleFeed(
             ),
         ) {
             processedModules.forEach { moduleUi ->
+                val rankingSources =
+                    (moduleUi.state as? ModuleLoadState.Rankings)?.sources
+                val selectedRankingSource = rankingSources?.firstOrNull {
+                    it.title == selectedRankingSources[moduleUi.globalId]
+                } ?: rankingSources?.firstOrNull()
+                val displayState = selectedRankingSource?.state ?: moduleUi.state
+
                 item(key = "header_${moduleUi.globalId}", span = StaggeredGridItemSpan.FullLine) {
                     ModuleHeader(
-                        title = moduleUi.title,
+                        title = rankingSources?.firstOrNull()?.title ?: moduleUi.title,
+                        sourceTabs = rankingSources,
+                        selectedSourceTitle = selectedRankingSource?.title,
+                        onSourceSelected = { sourceTitle ->
+                            selectedRankingSources = HashMap(selectedRankingSources).apply {
+                                put(moduleUi.globalId, sourceTitle)
+                            }
+                        },
                         onNavigate = if (moduleUi.type == HomepageModuleType.ButtonGroup) {
                             null
                         } else {
                             {
                                 actions.onModuleHeaderClick(
                                     moduleUi.sourceUrl,
-                                    moduleUi.exploreUrl,
-                                    moduleUi.title,
+                                    selectedRankingSource?.url ?: moduleUi.exploreUrl,
+                                    selectedRankingSource?.title ?: moduleUi.title,
                                 )
                             }
                         },
                     )
                 }
 
-                when (val state = moduleUi.state) {
+                when (val state = displayState) {
                     is ModuleLoadState.Loading,
                     is ModuleLoadState.Error -> {
                         item(
@@ -462,6 +488,8 @@ fun HomepageModuleFeed(
                             else -> {}
                         }
                     }
+
+                    is ModuleLoadState.Rankings -> Unit
                 }
             }
         }
@@ -471,22 +499,47 @@ fun HomepageModuleFeed(
 @Composable
 private fun ModuleHeader(
     title: String,
+    sourceTabs: ImmutableList<HomepageRankingSourceUi>?,
+    selectedSourceTitle: String?,
+    onSourceSelected: (String) -> Unit,
     onNavigate: (() -> Unit)? = null,
 ) {
+    val sourceTabItems = sourceTabs.orEmpty()
+    val hasSourceTabs = sourceTabItems.size > 1
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 4.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppText(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        if (hasSourceTabs) {
+            LazyRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items(
+                    items = sourceTabItems,
+                    key = { it.title },
+                ) { source ->
+                    val isSelected = selectedSourceTitle == source.title
+                    ModuleHeaderTab(
+                        title = source.title,
+                        selected = isSelected,
+                        onClick = { onSourceSelected(source.title) },
+                    )
+                }
+            }
+        } else {
+            ModuleHeaderTab(
+                title = title,
+                selected = true,
+                highlightSelected = false,
+                onClick = {},
+                modifier = Modifier.weight(1f),
+            )
+        }
         if (onNavigate != null) {
             SmallTonalButton(
                 onClick = onNavigate,
@@ -495,4 +548,33 @@ private fun ModuleHeader(
             )
         }
     }
+}
+
+@Composable
+private fun ModuleHeaderTab(
+    title: String,
+    selected: Boolean,
+    highlightSelected: Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppText(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = when {
+            selected && highlightSelected -> LegadoTheme.colorScheme.primary
+            selected -> Color.Unspecified
+            else -> LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .selectable(
+                selected = selected,
+                role = Role.Tab,
+                onClick = onClick,
+            )
+            .padding(vertical = 4.dp),
+    )
 }

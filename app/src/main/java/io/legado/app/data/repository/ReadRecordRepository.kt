@@ -9,7 +9,10 @@ import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Date
 import kotlin.math.max
@@ -18,8 +21,16 @@ import kotlin.math.min
 class ReadRecordRepository(
     private val dao: ReadRecordDao,
     private val database: AppDatabase,
+    private val localPreferencesRepository: LocalPreferencesRepository,
 ) {
     private fun getCurrentDeviceId(): String = ""
+
+    val readRecordEnabled: Flow<Boolean> =
+        localPreferencesRepository.getPreference(LocalPreferencesKeys.ENABLE_READ_RECORD, true)
+
+    suspend fun setReadRecordEnabled(enabled: Boolean) {
+        localPreferencesRepository.updatePreference(LocalPreferencesKeys.ENABLE_READ_RECORD, enabled)
+    }
 
     /**
      * 获取总阅读时长流
@@ -76,7 +87,7 @@ class ReadRecordRepository(
     }
 
     suspend fun getMergeCandidates(targetRecord: ReadRecord): List<ReadRecord> {
-        return dao.getReadRecordsByNameExcludingAuthor(
+        return dao.getMergeCandidates(
             targetRecord.deviceId,
             targetRecord.bookName,
             targetRecord.bookAuthor
@@ -87,8 +98,18 @@ class ReadRecordRepository(
      * 保存一个完整的阅读会话.
      */
     suspend fun saveReadSession(newSession: ReadRecordSession) {
+        if (!readRecordEnabled.first()) return
         if (newSession.endTime <= newSession.startTime) return
         database.withTransaction {
+            val existingSession = dao.getSession(
+                newSession.deviceId,
+                newSession.bookName,
+                newSession.bookAuthor,
+                newSession.startTime,
+                newSession.endTime
+            )
+            if (existingSession != null) return@withTransaction
+
             val segmentDuration = newSession.endTime - newSession.startTime
             dao.insertSession(newSession)
             val dateString =
@@ -264,6 +285,14 @@ class ReadRecordRepository(
         }
     }
 
+    suspend fun clearReadRecords() {
+        database.withTransaction {
+            dao.clearReadRecordSessions()
+            dao.clearReadRecordDetails()
+            dao.clearReadRecords()
+        }
+    }
+
     suspend fun mergeReadRecordInto(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
         database.withTransaction {
             sourceRecords.forEach { sourceRecord ->
@@ -275,7 +304,6 @@ class ReadRecordRepository(
     private suspend fun mergeSingleReadRecordInto(targetRecord: ReadRecord, sourceRecord: ReadRecord) {
         if (targetRecord == sourceRecord) return
         if (targetRecord.deviceId != sourceRecord.deviceId) return
-        if (targetRecord.bookName != sourceRecord.bookName) return
 
         val source = dao.getReadRecord(
             sourceRecord.deviceId,
@@ -311,6 +339,7 @@ class ReadRecordRepository(
             if (existingTargetDetail == null) {
                 dao.insertDetail(
                     detail.copy(
+                        bookName = targetRecord.bookName,
                         bookAuthor = targetRecord.bookAuthor
                     )
                 )
@@ -333,7 +362,12 @@ class ReadRecordRepository(
             sourceRecord.bookAuthor
         )
         sourceSessions.forEach { session ->
-            dao.updateSession(session.copy(bookAuthor = targetRecord.bookAuthor))
+            dao.updateSession(
+                session.copy(
+                    bookName = targetRecord.bookName,
+                    bookAuthor = targetRecord.bookAuthor
+                )
+            )
         }
 
         dao.deleteReadRecord(source)

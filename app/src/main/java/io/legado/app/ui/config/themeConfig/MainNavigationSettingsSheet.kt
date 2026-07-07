@@ -2,6 +2,7 @@ package io.legado.app.ui.config.themeConfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,8 +24,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
-import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.move
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -33,27 +32,9 @@ fun MainNavigationSettingsSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
 ) {
-    val homeLabel = stringResource(R.string.home)
-    val bookshelfLabel = stringResource(R.string.bookshelf)
-    val discoveryLabel = stringResource(R.string.discovery)
-    val rssLabel = stringResource(R.string.rss)
-    val myLabel = stringResource(R.string.my)
-    val destinations = listOfNotNull(
-        if (ThemeConfig.showHome) homeLabel to MainDestination.Home.route else null,
-        bookshelfLabel to MainDestination.Bookshelf.route,
-        if (ThemeConfig.showDiscovery) {
-            discoveryLabel to MainDestination.Explore.route
-        } else {
-            null
-        },
-        if (ThemeConfig.showRss) rssLabel to MainDestination.Rss.route else null,
-        myLabel to MainDestination.My.route,
-    )
-    val selectedDefault = ThemeConfig.defaultHomePage.takeIf { route ->
-        destinations.any { it.second == route }
-    } ?: MainDestination.Bookshelf.route
-    val configuredOrder = MainDestination.ordered(ThemeConfig.mainNavigationOrder)
-    var navigationItems by remember(show) { mutableStateOf(configuredOrder) }
+    var navigationItems by remember(show) {
+        mutableStateOf(MainDestination.ordered(ThemeConfig.mainNavigationOrder))
+    }
     val navigationListState = rememberLazyListState()
     val reorderableState =
         rememberReorderableLazyListState(navigationListState) { from, to ->
@@ -62,11 +43,6 @@ fun MainNavigationSettingsSheet(
             }
         }
 
-    LaunchedEffect(configuredOrder, reorderableState.isAnyItemDragging) {
-        if (!reorderableState.isAnyItemDragging) {
-            navigationItems = configuredOrder
-        }
-    }
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
             ThemeConfig.mainNavigationOrder =
@@ -85,6 +61,35 @@ fun MainNavigationSettingsSheet(
         }
     }
 
+    fun isRouteVisible(route: String): Boolean = when (route) {
+        MainDestination.Home.route -> ThemeConfig.showHome
+        MainDestination.Explore.route -> ThemeConfig.showDiscovery
+        MainDestination.Rss.route -> ThemeConfig.showRss
+        else -> true
+    }
+
+    fun getVisibilityForRoute(route: String): Boolean = isRouteVisible(route)
+
+    fun setVisibilityForRoute(route: String, visible: Boolean) {
+        when (route) {
+            MainDestination.Home.route -> updateVisibility(route, visible) { ThemeConfig.showHome = it }
+            MainDestination.Explore.route -> updateVisibility(route, visible) { ThemeConfig.showDiscovery = it }
+            MainDestination.Rss.route -> updateVisibility(route, visible) { ThemeConfig.showRss = it }
+        }
+        if (!visible) {
+            val item = navigationItems.find { it.route == route } ?: return
+            navigationItems = navigationItems.filter { it.route != route } + item
+            ThemeConfig.mainNavigationOrder =
+                navigationItems.joinToString(",") { it.route }
+        }
+    }
+
+    val visibleItems = navigationItems.filter { isRouteVisible(it.route) }
+    val hiddenItems = navigationItems.filter { !isRouteVisible(it.route) }
+    val selectedDefault = ThemeConfig.defaultHomePage.takeIf { route ->
+        visibleItems.any { it.route == route }
+    } ?: MainDestination.Bookshelf.route
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
@@ -95,70 +100,53 @@ fun MainNavigationSettingsSheet(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
         ) {
-            CompactSwitchSettingItem(
-                title = stringResource(R.string.show_home),
-                checked = ThemeConfig.showHome,
-                onCheckedChange = {
-                    updateVisibility(
-                        MainDestination.Home.route,
-                        it,
-                    ) { value -> ThemeConfig.showHome = value }
-                },
-            )
-            CompactSwitchSettingItem(
-                title = stringResource(R.string.show_discovery),
-                checked = ThemeConfig.showDiscovery,
-                onCheckedChange = {
-                    updateVisibility(
-                        MainDestination.Explore.route,
-                        it,
-                    ) { value -> ThemeConfig.showDiscovery = value }
-                },
-            )
-            CompactSwitchSettingItem(
-                title = stringResource(R.string.show_rss),
-                checked = ThemeConfig.showRss,
-                onCheckedChange = {
-                    updateVisibility(
-                        MainDestination.Rss.route,
-                        it,
-                    ) { value -> ThemeConfig.showRss = value }
-                },
-            )
             CompactDropdownSettingItem(
                 title = stringResource(R.string.default_home_page),
                 selectedValue = selectedDefault,
-                displayEntries = destinations.map { it.first }.toTypedArray(),
-                entryValues = destinations.map { it.second }.toTypedArray(),
+                displayEntries = visibleItems.map { stringResource(it.labelId) }.toTypedArray(),
+                entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = { ThemeConfig.defaultHomePage = it },
             )
-            AppText(
-                text = stringResource(R.string.navigation_order),
-                style = LegadoTheme.typography.titleSmallEmphasized,
-                modifier = Modifier.padding(
-                    start = 16.dp,
-                    top = 16.dp,
-                    end = 16.dp,
-                    bottom = 8.dp,
-                ),
-            )
+            Spacer(modifier = Modifier.padding(bottom = 4.dp))
             LazyColumn(
                 state = navigationListState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 360.dp),
+                    .heightIn(max = 400.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(
-                    items = navigationItems,
+                    items = visibleItems,
                     key = { it.route },
                 ) { destination ->
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = destination.route,
                         title = stringResource(destination.labelId),
+                        isEnabled = true,
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
+                        onEnabledChange = {
+                            setVisibilityForRoute(destination.route, false)
+                        },
                     )
+                }
+                if (hiddenItems.isNotEmpty()) {
+                    items(
+                        items = hiddenItems,
+                        key = { it.route },
+                    ) { destination ->
+                        ReorderableSelectionItem(
+                            state = reorderableState,
+                            key = destination.route,
+                            title = stringResource(destination.labelId),
+                            isEnabled = false,
+                            canReorder = false,
+                            containerColor = LegadoTheme.colorScheme.onSheetContent,
+                            onEnabledChange = {
+                                setVisibilityForRoute(destination.route, true)
+                            },
+                        )
+                    }
                 }
             }
         }

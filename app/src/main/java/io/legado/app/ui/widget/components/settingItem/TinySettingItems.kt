@@ -256,6 +256,7 @@ fun TinySliderSettingItem(
     modifier: Modifier = Modifier,
     color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     enabled: Boolean = true,
+    showDecimal: Boolean = false,
     onValueChange: (Float) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -278,6 +279,7 @@ fun TinySliderSettingItem(
                 valueRange = valueRange,
                 onValueChange = onValueChange,
                 enabled = enabled,
+                showDecimal = showDecimal,
             )
         },
         expandContent = {

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.main.homepage.manage.AddCustomModuleDialog
 import io.legado.app.ui.main.homepage.manage.AddDialogPrefill
 import io.legado.app.ui.main.homepage.manage.BrowseSourcesPage
@@ -69,9 +70,12 @@ fun <T> HomepageModuleManageSheet(
     var browseModuleType by remember(data != null) { mutableStateOf("card") }
     var selectedKindTitles by remember(data != null) { mutableStateOf<Set<String>>(emptySet()) }
     var showCustomSetAddModules by remember(data != null) { mutableStateOf(false) }
-    var showAddButtonGroupDialog by remember(data != null) { mutableStateOf(false) }
+    var showAddKindGroupDialog by remember(data != null) { mutableStateOf(false) }
     val defaultQuickActionsTitle = stringResource(R.string.homepage_quick_actions)
-    var tempButtonGroupTitle by remember(data != null) { mutableStateOf(defaultQuickActionsTitle) }
+    var tempKindGroupTitle by remember(data != null) { mutableStateOf(defaultQuickActionsTitle) }
+    val supportsMultipleKinds = browseModuleType == HomepageModuleType.ButtonGroup.key ||
+            browseModuleType == HomepageModuleType.Ranking.key ||
+            browseModuleType == HomepageModuleType.GridRanking.key
 
     val effectiveTargetSetId = remember(selectingSetUrl, browsingSourceUrl) {
         val url =
@@ -148,9 +152,14 @@ fun <T> HomepageModuleManageSheet(
             }
         },
         endAction = {
-            if (browsingDetail && browseTab == 2 && browseModuleType == "buttonGroup" && selectedKindTitles.isNotEmpty()) {
+            if (
+                browsingDetail &&
+                browseTab == 2 &&
+                supportsMultipleKinds &&
+                selectedKindTitles.isNotEmpty()
+            ) {
                 SmallPlainButton(
-                    onClick = { showAddButtonGroupDialog = true },
+                    onClick = { showAddKindGroupDialog = true },
                     icon = Icons.Default.Check
                 )
             } else if ((showSourceBrowser || browsingSourceUrl != null) && !browsingDetail) {
@@ -250,7 +259,7 @@ fun <T> HomepageModuleManageSheet(
                         onEditModule = { editingModule = it },
                         onRequestDeleteModule = { deleteConfirmId = it },
                         onAddDialogPrefill = { addDialogPrefill = it },
-                        onShowAddButtonGroupDialog = { showAddButtonGroupDialog = true },
+                        onShowAddKindGroupDialog = { showAddKindGroupDialog = true },
                         browseTab = browseTab,
                         onBrowseTabChange = { browseTab = it },
                         browseModuleType = browseModuleType,
@@ -443,32 +452,54 @@ fun <T> HomepageModuleManageSheet(
 
         var titleState by remember { mutableStateOf("") }
         AppAlertDialog(
-            data = if (showAddButtonGroupDialog) Unit else null,
-            onDismissRequest = { showAddButtonGroupDialog = false },
-            title = stringResource(R.string.homepage_add_button_group),
+            data = if (showAddKindGroupDialog) Unit else null,
+            onDismissRequest = { showAddKindGroupDialog = false },
+            title = if (browseModuleType == HomepageModuleType.ButtonGroup.key) {
+                stringResource(R.string.homepage_add_button_group)
+            } else {
+                stringResource(R.string.homepage_add_module)
+            },
             content = {
                 val quickActionsLabel = stringResource(R.string.homepage_quick_actions)
-                LaunchedEffect(Unit) { tempButtonGroupTitle = quickActionsLabel }
+                LaunchedEffect(browseModuleType, selectedKindTitles) {
+                    tempKindGroupTitle =
+                        if (browseModuleType == HomepageModuleType.ButtonGroup.key) {
+                            quickActionsLabel
+                        } else {
+                            selectedKindTitles.firstOrNull()
+                                ?: HomepageModuleType.fromKey(browseModuleType).title
+                        }
+                }
                 AppTextField(
-                    value = tempButtonGroupTitle,
-                    onValueChange = { tempButtonGroupTitle = it },
+                    value = tempKindGroupTitle,
+                    onValueChange = { tempKindGroupTitle = it },
                     label = stringResource(R.string.homepage_module_title_label),
                     modifier = Modifier.fillMaxWidth()
                 )
             },
             onConfirm = {
-                actions.onAddButtonGroupFromKinds(
-                    browsingSourceUrl!!,
-                    effectiveTargetSetId,
-                    tempButtonGroupTitle,
-                    selectedKindTitles.toList()
-                )
+                if (browseModuleType == HomepageModuleType.ButtonGroup.key) {
+                    actions.onAddButtonGroupFromKinds(
+                        browsingSourceUrl!!,
+                        effectiveTargetSetId,
+                        tempKindGroupTitle,
+                        selectedKindTitles.toList()
+                    )
+                } else {
+                    actions.onAddRankingFromKinds(
+                        browsingSourceUrl!!,
+                        effectiveTargetSetId,
+                        tempKindGroupTitle,
+                        browseModuleType,
+                        selectedKindTitles.toList()
+                    )
+                }
                 selectedKindTitles = emptySet()
-                showAddButtonGroupDialog = false
+                showAddKindGroupDialog = false
             },
             confirmText = stringResource(R.string.dialog_confirm),
             dismissText = stringResource(R.string.dialog_cancel),
-            onDismiss = { showAddButtonGroupDialog = false }
+            onDismiss = { showAddKindGroupDialog = false }
         )
 
         AppAlertDialog(

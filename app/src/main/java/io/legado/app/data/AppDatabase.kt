@@ -8,6 +8,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import io.legado.app.data.dao.BookChapterDao
+import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.dao.BookSourceDao
@@ -16,6 +17,7 @@ import io.legado.app.data.dao.AiArtifactDao
 import io.legado.app.data.dao.AiChatDao
 import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiProfileDao
+import io.legado.app.data.dao.AiPromptPresetDao
 import io.legado.app.data.dao.CacheDao
 import io.legado.app.data.dao.CookieDao
 import io.legado.app.data.dao.DictRuleDao
@@ -40,6 +42,7 @@ import io.legado.app.data.dao.ServerDao
 import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
@@ -49,6 +52,7 @@ import io.legado.app.data.entities.AiChatConversation
 import io.legado.app.data.entities.AiChatMessage
 import io.legado.app.data.entities.AiMemory
 import io.legado.app.data.entities.AiModelProfile
+import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.AiProviderProfile
 import io.legado.app.data.entities.AiTaskPreset
 import io.legado.app.data.entities.Cache
@@ -90,7 +94,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 93,
+    version = 94,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -101,7 +105,8 @@ val appDb by lazy {
         SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
         HighlightRule::class, AiProviderProfile::class, AiModelProfile::class,
         AiTaskPreset::class, AiArtifact::class, AiChatConversation::class,
-        AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class],
+        AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class,
+        BookContentProcess::class, AiPromptPreset::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -153,7 +158,8 @@ val appDb by lazy {
         AutoMigration(from = 89, to = 90),
         AutoMigration(from = 90, to = 91),
         AutoMigration(from = 91, to = 92),
-        AutoMigration(from = 92, to = 93)
+        AutoMigration(from = 92, to = 93),
+        AutoMigration(from = 93, to = 94)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -162,6 +168,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val bookGroupDao: BookGroupDao
     abstract val bookSourceDao: BookSourceDao
     abstract val bookChapterDao: BookChapterDao
+    abstract val bookContentProcessDao: BookContentProcessDao
     abstract val replaceRuleDao: ReplaceRuleDao
     abstract val searchBookDao: SearchBookDao
     abstract val searchKeywordDao: SearchKeywordDao
@@ -189,6 +196,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val aiArtifactDao: AiArtifactDao
     abstract val aiChatDao: AiChatDao
     abstract val aiMemoryDao: AiMemoryDao
+    abstract val aiPromptPresetDao: AiPromptPresetDao
 
     companion object {
 

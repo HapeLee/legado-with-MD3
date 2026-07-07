@@ -20,9 +20,11 @@ val appDatabaseModule = module {
     factory<AiArtifactDao> { get<AppDatabase>().aiArtifactDao }
     factory<AiChatDao> { get<AppDatabase>().aiChatDao }
     factory<AiMemoryDao> { get<AppDatabase>().aiMemoryDao }
+    factory<AiPromptPresetDao> { get<AppDatabase>().aiPromptPresetDao }
     factory<BookGroupDao> { get<AppDatabase>().bookGroupDao }
     factory<BookSourceDao> { get<AppDatabase>().bookSourceDao }
     factory<BookChapterDao> { get<AppDatabase>().bookChapterDao }
+    factory<BookContentProcessDao> { get<AppDatabase>().bookContentProcessDao }
     factory<ReplaceRuleDao> { get<AppDatabase>().replaceRuleDao }
     factory<SearchBookDao> { get<AppDatabase>().searchBookDao }
     factory<SearchKeywordDao> { get<AppDatabase>().searchKeywordDao }

@@ -477,12 +477,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             ReadConfig.tocCountWords = value
         }
 
-    var enableReadRecord: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.enableReadRecord, true)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.enableReadRecord, value)
-        }
-
     val autoChangeSource: Boolean
         get() = ReadConfig.autoChangeSource
 

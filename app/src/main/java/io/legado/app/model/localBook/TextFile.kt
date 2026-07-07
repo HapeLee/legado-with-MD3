@@ -72,11 +72,16 @@ class TextFile(private var book: Book) {
     private var bufferStart = -1L
     private var bufferEnd = -1L
 
+    private fun refreshCharset() {
+        charset = book.fileCharset()
+    }
+
     /**
      * 获取目录
      */
     @Throws(FileNotFoundException::class, SecurityException::class, EmptyFileException::class)
     fun getChapterList(): ArrayList<BookChapter> {
+        refreshCharset()
         val modified = book.isLocalModified()
         if (book.charset == null || book.tocUrl.isBlank() || modified) {
             LocalBook.getBookInputStream(book).use { bis ->
@@ -105,6 +110,7 @@ class TextFile(private var book: Book) {
     }
 
     fun getContent(chapter: BookChapter): String {
+        refreshCharset()
         val start = chapter.start!!
         val end = chapter.end!!
         if (txtBuffer == null || start > bufferEnd || end < bufferStart) {

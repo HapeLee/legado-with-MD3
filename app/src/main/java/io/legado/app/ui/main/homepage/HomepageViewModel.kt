@@ -28,6 +28,9 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -238,15 +241,11 @@ class HomepageViewModel(
     ) { modules, bookshelf ->
         if (bookshelf.isEmpty()) {
             modules.map { module ->
-                val state = module.state
-                if (state is ModuleLoadState.Loaded) {
-                    module.copy(state = state.copy(
-                        books = state.books.map { item ->
-                            if (item.shelfState == BookShelfState.NOT_IN_SHELF) item
-                            else item.copy(shelfState = BookShelfState.NOT_IN_SHELF)
-                        }.toImmutableList()
-                    ))
-                } else module
+                val state = module.state.mapBooks { item ->
+                    if (item.shelfState == BookShelfState.NOT_IN_SHELF) item
+                    else item.copy(shelfState = BookShelfState.NOT_IN_SHELF)
+                }
+                if (state === module.state) module else module.copy(state = state)
             }.toImmutableList()
         } else {
             val exactKeys = HashSet<Triple<String, String, String?>>(bookshelf.size)
@@ -256,22 +255,19 @@ class HomepageViewModel(
                 nameAuthorKeys.add(key.name to key.author)
             }
             modules.map { module ->
-                val state = module.state
-                if (state is ModuleLoadState.Loaded) {
-                    module.copy(state = state.copy(
-                        books = state.books.map { item ->
-                            val bookTriple = Triple(item.book.name, item.book.author, item.book.bookUrl)
-                            val newShelfState = when {
-                                bookTriple in exactKeys -> BookShelfState.IN_SHELF
-                                (item.book.name to item.book.author) in nameAuthorKeys ->
-                                    BookShelfState.SAME_NAME_AUTHOR
-                                else -> BookShelfState.NOT_IN_SHELF
-                            }
-                            if (item.shelfState == newShelfState) item
-                            else item.copy(shelfState = newShelfState)
-                        }.toImmutableList()
-                    ))
-                } else module
+                val state = module.state.mapBooks { item ->
+                    val bookTriple = Triple(item.book.name, item.book.author, item.book.bookUrl)
+                    val newShelfState = when {
+                        bookTriple in exactKeys -> BookShelfState.IN_SHELF
+                        (item.book.name to item.book.author) in nameAuthorKeys ->
+                            BookShelfState.SAME_NAME_AUTHOR
+
+                        else -> BookShelfState.NOT_IN_SHELF
+                    }
+                    if (item.shelfState == newShelfState) item
+                    else item.copy(shelfState = newShelfState)
+                }
+                if (state === module.state) module else module.copy(state = state)
             }.toImmutableList()
         }
     }
@@ -426,6 +422,66 @@ class HomepageViewModel(
 
     private fun loadModule(module: ModuleItem) {
         loadJobs[module.id]?.cancel()
+        val rankingKindTitles = module.rankingKindTitles()
+        if (rankingKindTitles != null) {
+            loadJobs[module.id] = viewModelScope.launch {
+                kotlin.runCatching {
+                    val source = bookSourceRepository.getBookSource(module.sourceUrl)
+                        ?: throw Exception("Source not found")
+                    val allKinds = withContext(Dispatchers.IO) { source.exploreKinds() }
+                    val selectedKinds = rankingKindTitles.mapNotNull { title ->
+                        allKinds.find { it.title == title }
+                    }
+                    if (selectedKinds.isEmpty()) throw Exception("Ranking kinds not found")
+
+                    val shelf = _bookshelf.value
+                    coroutineScope {
+                        selectedKinds.map { kind ->
+                            async {
+                                val state = kotlin.runCatching {
+                                    exploreBooksUseCase.executeForRanking(
+                                        module.sourceUrl,
+                                        kind.url,
+                                        null
+                                    )
+                                }.fold(
+                                    onSuccess = { books ->
+                                        ModuleLoadState.Loaded(
+                                            books = books.map { book ->
+                                                HomepageBookItemUi(
+                                                    book = book,
+                                                    shelfState = resolveBookShelfStateUseCase.execute(
+                                                        name = book.name,
+                                                        author = book.author,
+                                                        url = book.bookUrl,
+                                                        shelf = shelf
+                                                    )
+                                                )
+                                            }.toImmutableList()
+                                        )
+                                    },
+                                    onFailure = { ModuleLoadState.Error(it.stackTraceStr) }
+                                )
+                                HomepageRankingSourceUi(
+                                    title = kind.title,
+                                    url = kind.url,
+                                    state = state,
+                                )
+                            }
+                        }.awaitAll().toImmutableList()
+                    }
+                }.onSuccess { sources ->
+                    _moduleContentStates.update {
+                        it + (module.id to ModuleLoadState.Rankings(sources))
+                    }
+                }.onFailure { e ->
+                    _moduleContentStates.update {
+                        it + (module.id to ModuleLoadState.Error(e.stackTraceStr))
+                    }
+                }
+            }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
+            return
+        }
         if (module.type == HomepageModuleType.ButtonGroup.key) {
             loadJobs[module.id] = viewModelScope.launch {
                 kotlin.runCatching {
@@ -835,6 +891,66 @@ class HomepageViewModel(
         }
     }
 
+    fun addRankingFromKinds(
+        sourceUrl: String,
+        targetSetId: String?,
+        title: String,
+        type: String,
+        kindTitles: List<String>
+    ) {
+        if (
+            kindTitles.isEmpty() ||
+            (type != HomepageModuleType.Ranking.key &&
+                    type != HomepageModuleType.GridRanking.key)
+        ) {
+            return
+        }
+        viewModelScope.launch {
+            val source = bookSourceRepository.getBookSource(sourceUrl) ?: return@launch
+            val allKinds = withContext(Dispatchers.IO) { source.exploreKinds() }
+            val selectedKinds = kindTitles.mapNotNull { selectedTitle ->
+                allKinds.find { it.title == selectedTitle }
+            }
+            if (selectedKinds.isEmpty()) return@launch
+
+            val setId = targetSetId ?: ensureSetForSource(sourceUrl, source.bookSourceName)
+            val isGroup = selectedKinds.size > 1
+            val key = if (isGroup) {
+                "${type}_${jsonHash(GSON.toJson(kindTitles)).take(12)}"
+            } else {
+                selectedKinds.first().title
+            }
+            val id = ModuleDef.globalIdOf(sourceUrl, key, setId)
+            val module = ModuleItem(
+                id = id,
+                sourceUrl = sourceUrl,
+                moduleKey = key,
+                type = type,
+                title = title,
+                args = if (isGroup) {
+                    GSON.toJson(
+                        RankingKindsArgs(
+                            isHomepageRankingGroup = true,
+                            kindTitles = selectedKinds.map { it.title }
+                        )
+                    )
+                } else {
+                    null
+                },
+                url = if (isGroup) null else selectedKinds.first().url,
+                isEnabled = true,
+                isUserCreated = true,
+                customSetId = setId,
+                syncedAt = System.currentTimeMillis(),
+            )
+            gateway.upsertAll(listOf(module))
+            _pendingUserModules.update { pending ->
+                if (pending.any { it.id == id }) pending else pending + module
+            }
+            notifyConfigChanged()
+        }
+    }
+
     fun joinModule(sourceUrl: String, targetSetId: String?, def: ModuleDef) =
         addCustomModule(sourceUrl, targetSetId, def)
 
@@ -960,3 +1076,40 @@ private data class HomepageUiFlags(
     val isRefreshing: Boolean,
     val isManageMode: Boolean
 )
+
+private data class RankingKindsArgs(
+    val isHomepageRankingGroup: Boolean = false,
+    val kindTitles: List<String> = emptyList()
+)
+
+private fun ModuleItem.rankingKindTitles(): List<String>? {
+    if (
+        type != HomepageModuleType.Ranking.key &&
+        type != HomepageModuleType.GridRanking.key
+    ) {
+        return null
+    }
+    val rankingArgs = args ?: return null
+    return runCatching {
+        GSON.fromJson(rankingArgs, RankingKindsArgs::class.java)
+            ?.takeIf { it.isHomepageRankingGroup }
+            ?.kindTitles
+            ?.takeIf { it.size > 1 }
+    }.getOrNull()
+}
+
+private fun ModuleLoadState.mapBooks(
+    transform: (HomepageBookItemUi) -> HomepageBookItemUi
+): ModuleLoadState = when (this) {
+    is ModuleLoadState.Loaded -> copy(
+        books = books.map(transform).toImmutableList()
+    )
+
+    is ModuleLoadState.Rankings -> copy(
+        sources = sources.map { source ->
+            source.copy(state = source.state.mapBooks(transform))
+        }.toImmutableList()
+    )
+
+    else -> this
+}

@@ -69,7 +69,7 @@ class OpenAiResponsesHandler : AiProtocolHandler {
         }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            val response = okHttpClient.newCallStrResponse {
+            val response = aiOkHttpClient.newCallStrResponse {
                 url(provider.baseUrl + provider.responsesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
@@ -121,7 +121,7 @@ class OpenAiResponsesHandler : AiProtocolHandler {
         }
 
         val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            okHttpClient.newCallResponse {
+            aiOkHttpClient.newCallResponse {
                 url(provider.baseUrl + provider.responsesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(

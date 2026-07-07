@@ -28,10 +28,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -42,7 +42,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
-import io.legado.app.help.config.ThemeImportExport
 import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -69,6 +68,7 @@ fun ThemeManageScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var newThemeName by remember { mutableStateOf("") }
@@ -77,8 +77,7 @@ fun ThemeManageScreen(
     var exportTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var editTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var showRestartDialog by remember { mutableStateOf(false) }
-    var savedThemesVersion by remember { mutableIntStateOf(0) }
-    val savedThemes = remember(savedThemesVersion) { ThemeImportExport.savedThemes.toList() }
+    val savedThemes = state.savedThemes
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
@@ -91,6 +90,7 @@ fun ThemeManageScreen(
                     uri = it.toString(),
                     themeName = target?.name,
                     themeData = target?.data,
+                    savedTheme = target,
                 )
             )
         }
@@ -115,10 +115,6 @@ fun ThemeManageScreen(
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
-                ThemeManageEffect.SavedThemesChanged -> {
-                    savedThemesVersion++
-                }
-
                 ThemeManageEffect.RestartRequired -> {
                     showRestartDialog = true
                 }
@@ -132,9 +128,6 @@ fun ThemeManageScreen(
                         }
                     }
                     context.toastOnUi(message)
-                    if (effect.savedThemesChanged) {
-                        savedThemesVersion++
-                    }
                     if (effect.restartRequired) {
                         showRestartDialog = true
                     }
@@ -302,8 +295,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.delete),
         onConfirm = {
             deleteTarget?.let { theme ->
-                ThemeImportExport.deleteSavedTheme(theme)
-                savedThemesVersion++
+                viewModel.onIntent(ThemeManageIntent.DeleteSavedTheme(theme))
             }
             deleteTarget = null
         },

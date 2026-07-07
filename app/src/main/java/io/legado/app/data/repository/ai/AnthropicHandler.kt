@@ -84,7 +84,7 @@ class AnthropicHandler : AiProtocolHandler {
         request.params.topP?.let { body["top_p"] = it }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            val response = okHttpClient.newCallStrResponse {
+            val response = aiOkHttpClient.newCallStrResponse {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
@@ -153,7 +153,7 @@ class AnthropicHandler : AiProtocolHandler {
 
         val keyRotator = KeyRotator(provider.apiKey)
         val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            okHttpClient.newCallResponse {
+            aiOkHttpClient.newCallResponse {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(

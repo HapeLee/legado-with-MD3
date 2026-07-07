@@ -203,6 +203,15 @@ fun HomeRouteScreen(
             onAddButtonGroupFromKinds = { sourceUrl, targetSetId, title, kinds ->
                 homepageViewModel.addButtonGroupFromKinds(sourceUrl, targetSetId, title, kinds)
             },
+            onAddRankingFromKinds = { sourceUrl, targetSetId, title, type, kinds ->
+                homepageViewModel.addRankingFromKinds(
+                    sourceUrl,
+                    targetSetId,
+                    title,
+                    type,
+                    kinds
+                )
+            },
             onGetExploreKinds = { homepageViewModel.getSourceExploreKinds(it) },
             onUpdateModule = { globalId, def ->
                 homepageViewModel.updateModule(globalId, def)
@@ -519,7 +528,6 @@ fun HomeScreen(
                             animatedVisibilityScope = animatedVisibilityScope,
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     Column(

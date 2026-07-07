@@ -1,9 +1,12 @@
 package io.legado.app.ui.book.readRecord
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Merge
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
@@ -98,6 +102,8 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.ui.widget.components.text.AppText
@@ -131,19 +137,25 @@ fun ReadRecordScreen(
 
     val state by viewModel.uiState.collectAsState()
     val displayMode by viewModel.displayMode.collectAsState()
+    val readRecordEnabled by viewModel.readRecordEnabled.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
+    var showActionsSheet by remember { mutableStateOf(false) }
     var heatmapMode by remember { mutableStateOf(HeatmapMode.COUNT) }
+    var selectedItemKeys by remember { mutableStateOf(emptySet<String>()) }
     val listState = rememberLazyListState()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val inSelectionMode = selectedItemKeys.isNotEmpty()
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingDeleteCount by remember { mutableStateOf(1) }
     var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
-    val onConfirmDelete: (() -> Unit) -> Unit = { action ->
+    val onConfirmDelete: (Int, () -> Unit) -> Unit = { count, action ->
         if (skipDeleteConfirm) {
             action()
         } else {
+            pendingDeleteCount = count
             pendingDeleteAction = action
         }
     }
@@ -184,14 +196,23 @@ fun ReadRecordScreen(
         }
     }
 
+    BackHandler(enabled = inSelectionMode) {
+        selectedItemKeys = emptySet()
+    }
+
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = stringResource(R.string.read_record),
+                    title = if (inSelectionMode) {
+                        stringResource(R.string.selected_count, selectedItemKeys.size)
+                    } else {
+                        stringResource(R.string.read_record)
+                    },
                     subtitle = run {
+                        if (inSelectionMode) return@run stringResource(R.string.long_press_select_mode)
                         val subTitle = when (displayMode) {
                             DisplayMode.AGGREGATE -> stringResource(R.string.read_record_view_aggregate)
                             DisplayMode.TIMELINE -> stringResource(R.string.read_record_view_timeline)
@@ -200,37 +221,67 @@ fun ReadRecordScreen(
                         subTitle
                     },
                     navigationIcon = {
-                        TopBarNavigationButton(onClick = onBackClick)
+                        TopBarNavigationButton(
+                            onClick = {
+                                if (inSelectionMode) {
+                                    selectedItemKeys = emptySet()
+                                } else {
+                                    onBackClick()
+                                }
+                            }
+                        )
                     },
                     actions = {
-                        AppIconButton(onClick = {
-                            val newMode = when (displayMode) {
-                                DisplayMode.AGGREGATE -> DisplayMode.TIMELINE
-                                DisplayMode.TIMELINE -> DisplayMode.LATEST
-                                DisplayMode.LATEST -> DisplayMode.AGGREGATE
+                        if (inSelectionMode) {
+                            AppIconButton(
+                                onClick = {
+                                    val action = {
+                                        deleteSelectedReadRecords(
+                                            state = state,
+                                            selectedItemKeys = selectedItemKeys,
+                                            viewModel = viewModel
+                                        )
+                                        selectedItemKeys = emptySet()
+                                    }
+                                    onConfirmDelete(selectedItemKeys.size, action)
+                                }
+                            ) {
+                                AppIcon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete_selected)
+                                )
                             }
-                            viewModel.setDisplayMode(newMode)
-                        }) {
-                            val icon = when (displayMode) {
-                                DisplayMode.AGGREGATE -> Icons.Default.Timeline
-                                DisplayMode.TIMELINE -> Icons.Default.Schedule
-                                DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
+                        } else {
+                            AppIconButton(onClick = {
+                                val newMode = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> DisplayMode.TIMELINE
+                                    DisplayMode.TIMELINE -> DisplayMode.LATEST
+                                    DisplayMode.LATEST -> DisplayMode.AGGREGATE
+                                }
+                                viewModel.setDisplayMode(newMode)
+                                selectedItemKeys = emptySet()
+                            }) {
+                                val icon = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> Icons.Default.Timeline
+                                    DisplayMode.TIMELINE -> Icons.Default.Schedule
+                                    DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
+                                }
+                                val description = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> stringResource(R.string.a11y_switch_to_timeline_view)
+                                    DisplayMode.TIMELINE -> stringResource(R.string.a11y_switch_to_latest_view)
+                                    DisplayMode.LATEST -> stringResource(R.string.a11y_switch_to_aggregate_view)
+                                }
+                                AppIcon(icon, description)
                             }
-                            val description = when (displayMode) {
-                                DisplayMode.AGGREGATE -> stringResource(R.string.a11y_switch_to_timeline_view)
-                                DisplayMode.TIMELINE -> stringResource(R.string.a11y_switch_to_latest_view)
-                                DisplayMode.LATEST -> stringResource(R.string.a11y_switch_to_aggregate_view)
+                            AppIconButton(onClick = { showSearch = !showSearch }) {
+                                AppIcon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                             }
-                            AppIcon(icon, description)
-                        }
-                        AppIconButton(onClick = { showCalendar = !showCalendar }) {
-                            AppIcon(
-                                Icons.Default.CalendarMonth,
-                                contentDescription = stringResource(R.string.a11y_toggle_read_calendar)
-                            )
-                        }
-                        AppIconButton(onClick = { showSearch = !showSearch }) {
-                            AppIcon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                            AppIconButton(onClick = { showActionsSheet = true }) {
+                                AppIcon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.more_actions)
+                                )
+                            }
                         }
                     },
                     scrollBehavior = scrollBehavior
@@ -304,6 +355,18 @@ fun ReadRecordScreen(
                                 viewModel = viewModel,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
+                                selectedItemKeys = selectedItemKeys,
+                                inSelectionMode = inSelectionMode,
+                                onToggleSelection = { key ->
+                                    selectedItemKeys = if (selectedItemKeys.contains(key)) {
+                                        selectedItemKeys - key
+                                    } else {
+                                        selectedItemKeys + key
+                                    }
+                                },
+                                onEnterSelection = { key ->
+                                    selectedItemKeys = selectedItemKeys + key
+                                },
                                 onMergeClick = { record ->
                                     scope.launch {
                                         val candidates = viewModel.getMergeCandidates(record)
@@ -350,6 +413,27 @@ fun ReadRecordScreen(
         }
     }
 
+    ReadRecordActionsSheet(
+        show = showActionsSheet,
+        showCalendar = showCalendar,
+        readRecordEnabled = readRecordEnabled,
+        onDismissRequest = { showActionsSheet = false },
+        onToggleCalendar = {
+            showCalendar = !showCalendar
+            showActionsSheet = false
+        },
+        onReadRecordEnabledChange = { checked ->
+            viewModel.setReadRecordEnabled(checked)
+        },
+        onClearReadRecords = {
+            showActionsSheet = false
+            onConfirmDelete(-1) {
+                viewModel.clearReadRecords()
+                selectedItemKeys = emptySet()
+            }
+        }
+    )
+
     var skipDeleteConfirmTemp by remember(pendingDeleteAction != null) { mutableStateOf(false) }
 
     AppAlertDialog(
@@ -358,20 +442,32 @@ fun ReadRecordScreen(
         title = stringResource(R.string.confirm_delete_read_record),
         content = { _ ->
             Column {
-                AppText(stringResource(R.string.delete_read_record_message))
-                Spacer(modifier = Modifier.height(8.dp))
-                CheckboxItem(
-                    title = stringResource(R.string.do_not_remind_again),
-                    checked = skipDeleteConfirmTemp,
-                    onCheckedChange = { skipDeleteConfirmTemp = it }
+                AppText(
+                    if (pendingDeleteCount == -1) {
+                        stringResource(R.string.clear_read_records_message)
+                    } else if (pendingDeleteCount > 1) {
+                        stringResource(R.string.delete_selected_read_records_message, pendingDeleteCount)
+                    } else {
+                        stringResource(R.string.delete_read_record_message)
+                    }
                 )
+                if (pendingDeleteCount != -1) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CheckboxItem(
+                        title = stringResource(R.string.do_not_remind_again),
+                        checked = skipDeleteConfirmTemp,
+                        onCheckedChange = { skipDeleteConfirmTemp = it }
+                    )
+                }
             }
         },
         confirmText = stringResource(R.string.delete),
         onConfirm = { action ->
             action.invoke()
             pendingDeleteAction = null
-            skipDeleteConfirm = skipDeleteConfirmTemp
+            if (pendingDeleteCount != -1) {
+                skipDeleteConfirm = skipDeleteConfirmTemp
+            }
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = {
@@ -410,10 +506,13 @@ fun ReadRecordScreen(
         )
     }
 
-    var selectedAuthors by remember(mergeDialogData != null) {
+    var selectedMergeKeys by remember(mergeDialogData != null) {
         mutableStateOf(
-            mergeDialogData?.let { (_, candidates) ->
-                candidates.map { it.bookAuthor }.toSet()
+            mergeDialogData?.let { (targetRecord, candidates) ->
+                candidates
+                    .filter { it.bookName == targetRecord.bookName }
+                    .map { it.mergeKey() }
+                    .toSet()
             } ?: emptySet()
         )
     }
@@ -434,21 +533,29 @@ fun ReadRecordScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                candidates.forEach { candidate ->
-                    val author = candidate.bookAuthor.ifBlank { unknownAuthor }
-                    val isChecked = selectedAuthors.contains(candidate.bookAuthor)
+                LazyColumn(modifier = Modifier.height(320.dp)) {
+                    items(candidates, key = { it.mergeKey() }) { candidate ->
+                        val author = candidate.bookAuthor.ifBlank { unknownAuthor }
+                        val candidateKey = candidate.mergeKey()
+                        val isChecked = selectedMergeKeys.contains(candidateKey)
 
-                    CheckboxItem(
-                        title = "$author（${formatDuring(candidate.readTime)}）",
-                        checked = isChecked,
-                        onCheckedChange = { checked ->
-                            selectedAuthors = if (checked) {
-                                selectedAuthors + candidate.bookAuthor
-                            } else {
-                                selectedAuthors - candidate.bookAuthor
+                        CheckboxItem(
+                            title = stringResource(
+                                R.string.merge_read_record_candidate,
+                                candidate.bookName,
+                                author,
+                                formatDuring(candidate.readTime)
+                            ),
+                            checked = isChecked,
+                            onCheckedChange = { checked ->
+                                selectedMergeKeys = if (checked) {
+                                    selectedMergeKeys + candidateKey
+                                } else {
+                                    selectedMergeKeys - candidateKey
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         },
@@ -456,13 +563,116 @@ fun ReadRecordScreen(
         onConfirm = { (targetRecord, candidates) ->
             viewModel.mergeReadRecords(
                 targetRecord,
-                candidates.filter { selectedAuthors.contains(it.bookAuthor) }
+                candidates.filter { selectedMergeKeys.contains(it.mergeKey()) }
             )
             mergeDialogData = null
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { mergeDialogData = null }
     )
+}
+
+@Composable
+private fun ReadRecordActionsSheet(
+    show: Boolean,
+    showCalendar: Boolean,
+    readRecordEnabled: Boolean,
+    onDismissRequest: () -> Unit,
+    onToggleCalendar: () -> Unit,
+    onReadRecordEnabledChange: (Boolean) -> Unit,
+    onClearReadRecords: () -> Unit
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.read_record_options)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CompactClickableSettingItem(
+                title = stringResource(
+                    if (showCalendar) R.string.hide_read_calendar else R.string.show_read_calendar
+                ),
+                imageVector = Icons.Default.CalendarMonth,
+                onClick = onToggleCalendar
+            )
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.enable_read_record),
+                checked = readRecordEnabled,
+                description = stringResource(R.string.enable_read_record_summary),
+                imageVector = Icons.Default.Schedule,
+                onCheckedChange = onReadRecordEnabledChange
+            )
+            CompactClickableSettingItem(
+                title = stringResource(R.string.clear_read_records),
+                description = stringResource(R.string.clear_read_records_summary),
+                imageVector = Icons.Default.Delete,
+                color = LegadoTheme.colorScheme.error,
+                onClick = onClearReadRecords
+            )
+        }
+    }
+}
+
+private fun ReadRecord.mergeKey(): String {
+    return "$deviceId|$bookName|$bookAuthor"
+}
+
+private fun ReadRecordDetail.selectionKey(): String {
+    return "detail|$deviceId|$bookName|$bookAuthor|$date"
+}
+
+private fun ReadRecordSession.selectionKey(): String {
+    return "session|$id"
+}
+
+private fun ReadRecord.selectionKey(): String {
+    return "record|$deviceId|$bookName|$bookAuthor"
+}
+
+private fun deleteSelectedReadRecords(
+    state: ReadRecordUiState,
+    selectedItemKeys: Set<String>,
+    viewModel: ReadRecordViewModel
+) {
+    state.groupedRecords.values.flatten()
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach(viewModel::deleteDetail)
+    state.timelineRecords.values.flatten()
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach(viewModel::deleteSession)
+    state.latestRecords
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach(viewModel::deleteReadRecord)
+}
+
+@Composable
+private fun Modifier.selectionBackground(isSelected: Boolean): Modifier {
+    return if (isSelected) {
+        background(LegadoTheme.colorScheme.primary.copy(alpha = 0.12f))
+    } else {
+        this
+    }
+}
+
+@Composable
+private fun SelectionCheckmark(
+    inSelectionMode: Boolean,
+    isSelected: Boolean
+) {
+    AnimatedVisibility(visible = inSelectionMode) {
+        AppText(
+            text = if (isSelected) "✓" else "",
+            modifier = Modifier.width(24.dp),
+            color = LegadoTheme.colorScheme.primary,
+            style = LegadoTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @Composable
@@ -592,7 +802,11 @@ fun LazyListScope.renderListByMode(
     state: ReadRecordUiState,
     viewModel: ReadRecordViewModel,
     onBookClick: (String, String) -> Unit,
-    onConfirmDelete: (() -> Unit) -> Unit,
+    onConfirmDelete: (Int, () -> Unit) -> Unit,
+    selectedItemKeys: Set<String>,
+    inSelectionMode: Boolean,
+    onToggleSelection: (String) -> Unit,
+    onEnterSelection: (String) -> Unit,
     onMergeClick: (ReadRecord) -> Unit
 ) {
 
@@ -604,24 +818,44 @@ fun LazyListScope.renderListByMode(
                 }
                 items(
                     items = details,
-                    key = { "agg_item_${date}|${it.bookName}_${it.bookAuthor}_${it.date}" }
+                    key = { "agg_item_${date}|${it.deviceId}_${it.bookName}_${it.bookAuthor}_${it.date}" }
                 ) { detail ->
-                    val deleteActionDescription = stringResource(R.string.del_read_record)
-                    SwipeActionContainer(
-                        modifier = Modifier.animateItem(),
-                        startAction = SwipeAction(
-                            icon = Icons.Default.Delete,
-                            background = LegadoTheme.colorScheme.error,
-                            onSwipe = {
-                                onConfirmDelete { viewModel.deleteDetail(detail) }
-                            },
-                            contentDescription = deleteActionDescription
-                        )
-                    ) {
+                    val itemKey = detail.selectionKey()
+                    val isSelected = selectedItemKeys.contains(itemKey)
+                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                         ReadRecordItem(
                             detail,
                             viewModel,
-                            onClick = { onBookClick(detail.bookName, detail.bookAuthor) })
+                            onClick = {
+                                if (inSelectionMode) {
+                                    onToggleSelection(itemKey)
+                                } else {
+                                    onBookClick(detail.bookName, detail.bookAuthor)
+                                }
+                            },
+                            onLongClick = { onEnterSelection(itemKey) },
+                            inSelectionMode = inSelectionMode,
+                            isSelected = isSelected,
+                            modifier = modifier
+                        )
+                    }
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
+                    if (inSelectionMode) {
+                        itemContent(Modifier.animateItem())
+                    } else {
+                        SwipeActionContainer(
+                            modifier = Modifier.animateItem(),
+                            startAction = SwipeAction(
+                                icon = Icons.Default.Delete,
+                                background = LegadoTheme.colorScheme.error,
+                                onSwipe = {
+                                    onConfirmDelete(1) { viewModel.deleteDetail(detail) }
+                                },
+                                contentDescription = deleteActionDescription
+                            )
+                        ) {
+                            itemContent(Modifier)
+                        }
                     }
                 }
             }
@@ -631,59 +865,97 @@ fun LazyListScope.renderListByMode(
             state.timelineRecords.forEach { (date, sessions) ->
                 item(key = "timeline_header_$date") { DateHeader(date) }
                 items(items = sessions, key = { "timeline_item_${date}|${it.id}" }) { session ->
-                    val deleteActionDescription = stringResource(R.string.del_read_record)
-                    SwipeActionContainer(
-                        modifier = Modifier.animateItem(),
-                        startAction = SwipeAction(
-                            icon = Icons.Default.Delete,
-                            background = LegadoTheme.colorScheme.error,
-                            onSwipe = {
-                                onConfirmDelete { viewModel.deleteSession(session) }
-                            },
-                            contentDescription = deleteActionDescription
-                        )
-                    ) {
+                    val itemKey = session.selectionKey()
+                    val isSelected = selectedItemKeys.contains(itemKey)
+                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                         TimelineSessionItem(
                             item = TimelineItem(session, true),
-                            onBookClick = onBookClick,
-                            viewModel = viewModel
+                            onBookClick = { bookName, bookAuthor ->
+                                if (inSelectionMode) {
+                                    onToggleSelection(itemKey)
+                                } else {
+                                    onBookClick(bookName, bookAuthor)
+                                }
+                            },
+                            onLongClick = { onEnterSelection(itemKey) },
+                            inSelectionMode = inSelectionMode,
+                            isSelected = isSelected,
+                            viewModel = viewModel,
+                            modifier = modifier
                         )
+                    }
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
+                    if (inSelectionMode) {
+                        itemContent(Modifier.animateItem())
+                    } else {
+                        SwipeActionContainer(
+                            modifier = Modifier.animateItem(),
+                            startAction = SwipeAction(
+                                icon = Icons.Default.Delete,
+                                background = LegadoTheme.colorScheme.error,
+                                onSwipe = {
+                                    onConfirmDelete(1) { viewModel.deleteSession(session) }
+                                },
+                                contentDescription = deleteActionDescription
+                            )
+                        ) {
+                            itemContent(Modifier)
+                        }
                     }
                 }
             }
         }
 
         DisplayMode.LATEST -> {
-            items(items = state.latestRecords, key = { "${it.bookName}_${it.bookAuthor}" }) { record ->
+            items(items = state.latestRecords, key = { "${it.deviceId}_${it.bookName}_${it.bookAuthor}" }) { record ->
+                val itemKey = record.selectionKey()
+                val isSelected = selectedItemKeys.contains(itemKey)
+                val itemContent: @Composable (Modifier) -> Unit = { modifier ->
+                    LatestReadItem(
+                        record = record,
+                        viewModel = viewModel,
+                        onClick = {
+                            if (inSelectionMode) {
+                                onToggleSelection(itemKey)
+                            } else {
+                                onBookClick(record.bookName, record.bookAuthor)
+                            }
+                        },
+                        onLongClick = { onEnterSelection(itemKey) },
+                        inSelectionMode = inSelectionMode,
+                        isSelected = isSelected,
+                        modifier = modifier
+                    )
+                }
                 val deleteActionDescription = stringResource(R.string.del_read_record)
                 val mergeActionDescription = stringResource(R.string.a11y_merge_same_name_read_records)
-                SwipeActionContainer(
-                    modifier = Modifier.animateItem(),
-                    startAction = SwipeAction(
-                        icon = Icons.Default.Delete,
-                        background = LegadoTheme.colorScheme.error,
-                        onSwipe = {
-                            onConfirmDelete { viewModel.deleteReadRecord(record) }
-                        },
-                        contentDescription = deleteActionDescription
-                    ),
-                    endAction = SwipeAction(
-                        icon = Icons.Default.Merge,
-                        background = LegadoTheme.colorScheme.primary,
-                        onSwipe = {
-                            onMergeClick(record)
-                        },
-                        contentDescription = mergeActionDescription
-                    )
-                ) {
-                        LatestReadItem(
-                            record = record,
-                            viewModel = viewModel,
-                            onClick = { onBookClick(record.bookName, record.bookAuthor) }
+                if (inSelectionMode) {
+                    itemContent(Modifier.animateItem())
+                } else {
+                    SwipeActionContainer(
+                        modifier = Modifier.animateItem(),
+                        startAction = SwipeAction(
+                            icon = Icons.Default.Delete,
+                            background = LegadoTheme.colorScheme.error,
+                            onSwipe = {
+                                onConfirmDelete(1) { viewModel.deleteReadRecord(record) }
+                            },
+                            contentDescription = deleteActionDescription
+                        ),
+                        endAction = SwipeAction(
+                            icon = Icons.Default.Merge,
+                            background = LegadoTheme.colorScheme.primary,
+                            onSwipe = {
+                                onMergeClick(record)
+                            },
+                            contentDescription = mergeActionDescription
                         )
+                    ) {
+                        itemContent(Modifier)
                     }
                 }
             }
+        }
     }
 }
 
@@ -692,6 +964,9 @@ fun LatestReadItem(
     record: ReadRecord,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
@@ -713,7 +988,11 @@ fun LatestReadItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .semantics(mergeDescendants = true) {
                 contentDescription = itemDescription
                 role = Role.Button
@@ -728,7 +1007,9 @@ fun LatestReadItem(
             modifier = Modifier.width(44.dp)
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        SelectionCheckmark(inSelectionMode, isSelected)
+
+        Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(
@@ -773,7 +1054,11 @@ fun LatestReadItem(
 fun TimelineSessionItem(
     item: TimelineItem,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String, String) -> Unit
+    onBookClick: (String, String) -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
@@ -809,9 +1094,13 @@ fun TimelineSessionItem(
     val nodeColor = MaterialTheme.colorScheme.primary
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { onBookClick(session.bookName, session.bookAuthor) }
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = { onBookClick(session.bookName, session.bookAuthor) },
+                onLongClick = onLongClick
+            )
             .semantics(mergeDescendants = true) {
                 contentDescription = itemDescription
                 role = Role.Button
@@ -860,6 +1149,7 @@ fun TimelineSessionItem(
                     path = coverPath,
                     modifier = Modifier.width(44.dp)
                 )
+                SelectionCheckmark(inSelectionMode, isSelected)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     AppText(
@@ -894,6 +1184,9 @@ fun ReadRecordItem(
     detail: ReadRecordDetail,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
@@ -913,7 +1206,11 @@ fun ReadRecordItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .semantics(mergeDescendants = true) {
                 contentDescription = itemDescription
                 role = Role.Button
@@ -928,7 +1225,9 @@ fun ReadRecordItem(
             modifier = Modifier.width(44.dp)
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        SelectionCheckmark(inSelectionMode, isSelected)
+
+        Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(

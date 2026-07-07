@@ -94,10 +94,10 @@ object ThemeImportExport {
      */
     fun deleteSavedTheme(theme: SavedTheme) {
         val file = File(baseDir, "${theme.name}.json")
-        if (file.exists()) {
-            file.delete()
+        if (file.exists() && !file.delete()) {
+            error("Failed to delete saved theme: ${theme.name}")
         }
-        _savedThemes.remove(theme)
+        _savedThemes.removeAll { it.name == theme.name }
     }
 
     /**
@@ -813,7 +813,9 @@ data class ThemeExportData(
 @Keep
 data class SavedTheme(
     val name: String,
-    val data: ThemeExportData
+    val data: ThemeExportData,
+    val packageRootPath: String? = null,
+    val packageManifest: ThemePackageManifest? = null,
 )
 
 internal data class AppliedThemeAssets(

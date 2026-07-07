@@ -4,6 +4,7 @@ package io.legado.app.ui.book.read.page.entities
 import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
@@ -28,7 +29,8 @@ data class TextChapter(
     val isVip: Boolean,
     val isPay: Boolean,
     //起效的替换规则
-    val effectiveReplaceRules: List<ReplaceRule>?
+    val effectiveReplaceRules: List<ReplaceRule>?,
+    val effectiveContentProcesses: List<BookContentProcess> = emptyList(),
 ) : LayoutProgressListener {
 
     @Volatile

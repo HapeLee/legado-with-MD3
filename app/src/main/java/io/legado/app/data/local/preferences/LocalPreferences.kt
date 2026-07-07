@@ -25,6 +25,9 @@ object LocalPreferencesKeys {
     val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
     val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
     val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
+
+    // ENABLE_READ_RECORD也许需要换个地方存，但先放这
+    val ENABLE_READ_RECORD = booleanPreferencesKey("enableReadRecord")
     val HOME_SOURCE_SET_URL = stringPreferencesKey("home_source_set_url")
     val HOME_DASHBOARD_SECTIONS = stringPreferencesKey("home_dashboard_sections")
     val COVER_ALBUM_MIGRATED = booleanPreferencesKey("cover_album_migrated")

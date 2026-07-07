@@ -23,6 +23,7 @@ interface ReadRecordDao {
 
     @get:Query("select * from readRecordSession")
     val allSession: List<ReadRecordSession>
+
     @Query("SELECT sum(readTime) FROM readRecord")
     fun getTotalReadTime(): Flow<Long?>
 
@@ -163,6 +164,21 @@ interface ReadRecordDao {
         excludeAuthor: String
     ): List<ReadRecord>
 
+    @Query(
+        """
+        SELECT * FROM readRecord
+        WHERE NOT (deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor)
+        ORDER BY
+            CASE WHEN bookName = :bookName THEN 0 ELSE 1 END,
+            lastRead DESC
+        """
+    )
+    suspend fun getMergeCandidates(
+        deviceId: String,
+        bookName: String,
+        bookAuthor: String
+    ): List<ReadRecord>
+
     /**
      * 获取某一天某一本书的所有会话记录
      */
@@ -211,6 +227,25 @@ interface ReadRecordDao {
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getSessionsByBook(deviceId: String, bookName: String, bookAuthor: String): List<ReadRecordSession>
 
+    @Query(
+        """
+        SELECT * FROM readRecordSession
+        WHERE deviceId = :deviceId
+        AND bookName = :bookName
+        AND bookAuthor = :bookAuthor
+        AND startTime = :startTime
+        AND endTime = :endTime
+        LIMIT 1
+        """
+    )
+    suspend fun getSession(
+        deviceId: String,
+        bookName: String,
+        bookAuthor: String,
+        startTime: Long,
+        endTime: Long
+    ): ReadRecordSession?
+
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor ORDER BY startTime DESC")
     fun getSessionsByBookFlow(deviceId: String, bookName: String, bookAuthor: String): Flow<List<ReadRecordSession>>
 
@@ -242,6 +277,15 @@ interface ReadRecordDao {
     @Delete
     suspend fun deleteReadRecord(record: ReadRecord)
 
+    @Query("DELETE FROM readRecord")
+    suspend fun clearReadRecords()
+
+    @Query("DELETE FROM readRecordDetail")
+    suspend fun clearReadRecordDetails()
+
+    @Query("DELETE FROM readRecordSession")
+    suspend fun clearReadRecordSessions()
+
     @Query("DELETE FROM readRecordDetail WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun deleteDetailsByBook(deviceId: String, bookName: String, bookAuthor: String)
 
@@ -250,4 +294,5 @@ interface ReadRecordDao {
 
     @Query("SELECT * FROM readRecordDetail WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getDetailsByBook(deviceId: String, bookName: String, bookAuthor: String): List<ReadRecordDetail>
+
 }
