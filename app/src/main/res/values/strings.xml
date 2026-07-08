@@ -2460,4 +2460,6 @@
     <string name="delete_chapter_cache_message">Delete chapter cache: %1$s?</string>
     <string name="about_open_project_homepage">Open project homepage</string>
     <string name="about_open_github">Open GitHub</string>
+    <string name="edit_menu_items">Edit Menu Items</string>
+    <string name="edit_select_menu">Edit Selection Menu</string>
 </resources>

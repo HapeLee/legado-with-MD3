@@ -2455,4 +2455,6 @@
     <string name="delete_chapter_cache_message">删除章节缓存：%1$s？</string>
     <string name="about_open_project_homepage">打开项目主页</string>
     <string name="about_open_github">打开 GitHub</string>
+    <string name="edit_menu_items">编辑菜单项</string>
+    <string name="edit_select_menu">编辑选择菜单</string>
 </resources>

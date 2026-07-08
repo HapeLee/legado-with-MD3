@@ -49,6 +49,7 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -113,6 +114,7 @@ fun ReadBookRouteScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
+    val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
@@ -453,6 +455,8 @@ fun ReadBookRouteScreen(
 
     // ── View layer + Compose UI ───────────────────────────────────────
 
+    var showSelectMenuConfigSheet by remember { mutableStateOf(false) }
+
     Box(Modifier.fillMaxSize()) {
         key(controller) {
             ReadBookViewLayer(
@@ -481,6 +485,31 @@ fun ReadBookRouteScreen(
                 state = state,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
+            )
+            textMenuState?.let { menuState ->
+                TextActionSelectionMenu(
+                    menuState = menuState,
+                    onDismiss = { controller.dismissTextActionMenu() },
+                    onItemClick = { item -> controller.onTextMenuItemClick(item) },
+                    onOpenManage = {
+                        controller.dismissTextActionMenu()
+                        controller.refs?.readView?.cancelSelect()
+                        showSelectMenuConfigSheet = true
+                    }
+                )
+            }
+            val configItems = remember(showSelectMenuConfigSheet) {
+                if (showSelectMenuConfigSheet) {
+                    controller.getActionMenuItems()
+                } else {
+                    emptyList()
+                }
+            }
+            TextSelectMenuConfigSheet(
+                show = showSelectMenuConfigSheet,
+                items = configItems,
+                onDismissRequest = { showSelectMenuConfigSheet = false },
+                onSaved = { items -> controller.saveMenuConfig(items) }
             )
         }
     }

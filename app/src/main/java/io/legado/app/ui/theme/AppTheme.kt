@@ -2,17 +2,62 @@ package io.legado.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import com.materialkolor.PaletteStyle
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    if (LocalInspectionMode.current) {
+        AppThemePreview(darkTheme, content)
+    } else {
+        AppThemeActual(darkTheme, content)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppThemePreview(
+    darkTheme: Boolean,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()
+    val themeColors = LegadoThemeMode(
+        colorScheme = colorScheme,
+        isDark = darkTheme,
+        seedColor = Color.Unspecified,
+        paletteStyle = PaletteStyle.TonalSpot,
+        themeMode = if (darkTheme) ColorSchemeMode.Dark else ColorSchemeMode.Light,
+        useDynamicColor = false,
+        composeEngine = "material"
+    )
+    CompositionLocalProvider(
+        LocalLegadoThemeColors provides themeColors
+    ) {
+        MaterialThemeWrapper(
+            themeColors = themeColors,
+            customFontFamily = null,
+            content = content
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppThemeActual(
+    darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
