@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AssistChip
@@ -43,7 +44,6 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -190,9 +190,6 @@ fun <T> BatchImportDialog(
                 )
             }
         } else {
-            null
-        },
-        endAction = if (!isEditing) {
             {
                 Row {
                     topBarActions()
@@ -202,6 +199,18 @@ fun <T> BatchImportDialog(
                         contentDescription = stringResource(if (allSelected) R.string.deselect_all else R.string.select_all)
                     )
                 }
+            }
+        },
+        endAction = if (!isEditing && selectedCount > 0) {
+            {
+                SmallPlainButton(
+                    onClick = {
+                        val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
+                        onConfirm(selectedData)
+                    },
+                    icon = Icons.Default.FileDownload,
+                    text = stringResource(R.string.import_action)
+                )
             }
         } else {
             null
@@ -244,19 +253,11 @@ fun <T> BatchImportDialog(
             }
         }
 
-        ConfirmDismissButtonsRow(
+        Spacer(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(top = 8.dp, bottom = 8.dp),
-            onDismiss = onDismissRequest,
-            onConfirm = {
-                val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
-                onConfirm(selectedData)
-            },
-            dismissText = stringResource(R.string.dialog_cancel),
-            confirmText = stringResource(R.string.import_action),
-            confirmEnabled = selectedCount > 0
+                .height(8.dp)
         )
     }
 }
