@@ -48,6 +48,7 @@ fun AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    animateContentSize: Boolean = true,
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -92,7 +93,9 @@ fun AppModalBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 24.dp)
-                            .animateContentSize(),
+                            .let { contentModifier ->
+                                if (animateContentSize) contentModifier.animateContentSize() else contentModifier
+                            },
                         content = content
                     )
                 }
@@ -125,7 +128,9 @@ fun AppModalBottomSheet(
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                             .heightIn(max = maxHeight)
-                            .animateContentSize()
+                            .let { contentModifier ->
+                                if (animateContentSize) contentModifier.animateContentSize() else contentModifier
+                            }
                             .then(modifier)
                     ) {
                         val hasHeader =
@@ -185,6 +190,7 @@ fun <T> AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    animateContentSize: Boolean = true,
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     content: @Composable ColumnScope.(T) -> Unit
 ) {
@@ -202,6 +208,7 @@ fun <T> AppModalBottomSheet(
         title = title,
         startAction = startAction,
         endAction = endAction,
+        animateContentSize = animateContentSize,
         contentWindowInsets = contentWindowInsets,
         content = {
             if (currentData != null) {
