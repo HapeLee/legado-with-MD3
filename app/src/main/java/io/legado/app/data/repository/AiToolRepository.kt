@@ -43,6 +43,8 @@ class AiToolRepository(
             TOOL_GET_BOOK_DETAIL -> getBookDetail(args)
             TOOL_LIST_BOOK_CHAPTERS -> listBookChapters(args)
             TOOL_GET_CHAPTER_CONTENT -> getChapterContent(args)
+            TOOL_GET_CHAPTER_WINDOW -> getChapterWindow(args)
+            TOOL_SEARCH_CHAPTER_CONTENT -> searchChapterContent(args)
             TOOL_SEARCH_BOOKMARKS -> searchBookmarks(args)
             TOOL_GET_READING_STATS -> getReadingStats(args)
             TOOL_GET_AI_ARTIFACTS -> getAiArtifacts(args)
@@ -136,6 +138,86 @@ class AiToolRepository(
                 "chapter" to mapOf("index" to chapter.index, "title" to chapter.title),
                 "truncated" to (content.length < rawContent.length),
                 "content" to content
+            )
+        )
+    }
+
+    private fun getChapterWindow(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val centerChapterIndex = args.int("chapterIndex", book.durChapterIndex).coerceAtLeast(0)
+        val before = args.int("before", 1).coerceIn(0, 5)
+        val after = args.int("after", 1).coerceIn(0, 5)
+        val maxCharsPerChapter = args.int("maxCharsPerChapter", 2500).coerceIn(300, 6000)
+        val start = (centerChapterIndex - before).coerceAtLeast(0)
+        val end = centerChapterIndex + after
+        val chapters = bookChapterDao.getChapterList(book.bookUrl, start, end)
+            .map { chapter ->
+                val rawContent = BookHelp.getContent(book, chapter)
+                val processedContent = rawContent?.let {
+                    ContentProcessor.get(book.name, book.origin)
+                        .getContent(book, chapter, it, includeTitle = false)
+                        .toString()
+                }
+                mapOf(
+                    "index" to chapter.index,
+                    "title" to chapter.title,
+                    "isCenter" to (chapter.index == centerChapterIndex),
+                    "isCached" to (processedContent != null),
+                    "truncated" to ((processedContent?.length ?: 0) > maxCharsPerChapter),
+                    "content" to processedContent.orEmpty().take(maxCharsPerChapter)
+                )
+            }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "centerChapterIndex" to centerChapterIndex,
+                "chapters" to chapters
+            )
+        )
+    }
+
+    private fun searchChapterContent(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val query = args.string("query").orEmpty().trim()
+        if (query.isBlank()) return """{"error":"query is required"}"""
+        val aroundChapterIndex = args.int("aroundChapterIndex", book.durChapterIndex)
+        val limit = args.int("limit", 6).coerceIn(1, 20)
+        val maxChars = args.int("maxChars", 800).coerceIn(200, 2000)
+        val chapters = bookChapterDao.getChapterList(book.bookUrl)
+            .sortedWith(
+                compareBy<io.legado.app.data.entities.BookChapter> {
+                    kotlin.math.abs(it.index - aroundChapterIndex)
+                }.thenBy { it.index }
+            )
+        val matches = mutableListOf<Map<String, Any?>>()
+        for (chapter in chapters) {
+            if (matches.size >= limit) break
+            val rawContent = BookHelp.getContent(book, chapter) ?: continue
+            val content = ContentProcessor.get(book.name, book.origin)
+                .getContent(book, chapter, rawContent, includeTitle = false)
+                .toString()
+            val titleMatch = chapter.title.contains(query, ignoreCase = true)
+            val contentIndex = content.indexOf(query, ignoreCase = true)
+            if (!titleMatch && contentIndex < 0) continue
+            val excerpt = if (contentIndex >= 0) {
+                content.excerptAround(contentIndex, maxChars)
+            } else {
+                content.take(maxChars)
+            }
+            matches += mapOf(
+                "index" to chapter.index,
+                "title" to chapter.title,
+                "matchedTitle" to titleMatch,
+                "excerpt" to excerpt,
+                "truncated" to (excerpt.length < content.length)
+            )
+        }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "query" to query,
+                "aroundChapterIndex" to aroundChapterIndex,
+                "matches" to matches
             )
         )
     }
@@ -381,6 +463,8 @@ class AiToolRepository(
         const val TOOL_GET_BOOK_DETAIL = "get_book_detail"
         const val TOOL_LIST_BOOK_CHAPTERS = "list_book_chapters"
         const val TOOL_GET_CHAPTER_CONTENT = "get_chapter_content"
+        const val TOOL_GET_CHAPTER_WINDOW = "get_chapter_window"
+        const val TOOL_SEARCH_CHAPTER_CONTENT = "search_chapter_content"
         const val TOOL_SEARCH_BOOKMARKS = "search_bookmarks"
         const val TOOL_GET_READING_STATS = "get_reading_stats"
         const val TOOL_GET_AI_ARTIFACTS = "get_ai_artifacts"
@@ -430,6 +514,32 @@ class AiToolRepository(
                     "bookAuthor" to stringSchema("Book author."),
                     "chapterIndex" to intSchema("Zero-based chapter index. Defaults to current reading chapter."),
                     "maxChars" to intSchema("Maximum characters to return, capped by the app.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_GET_CHAPTER_WINDOW,
+                description = "Read cached text for a chapter and its neighboring chapters in one call. Useful for continuity checks before rewriting or summarizing. This never downloads network content.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "chapterIndex" to intSchema("Zero-based center chapter index. Defaults to current reading chapter."),
+                    "before" to intSchema("How many previous chapters to include, capped by the app."),
+                    "after" to intSchema("How many following chapters to include, capped by the app."),
+                    "maxCharsPerChapter" to intSchema("Maximum characters to return per chapter, capped by the app.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SEARCH_CHAPTER_CONTENT,
+                description = "Search cached chapter text in a local bookshelf book by character name, plot keyword, place, or phrase. This never downloads network content.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "query" to stringSchema("Character name, plot keyword, place, or phrase to search in cached chapter text."),
+                    "aroundChapterIndex" to intSchema("Prefer matches closest to this zero-based chapter index. Defaults to current reading chapter."),
+                    "limit" to intSchema("Maximum number of matching chapters to return."),
+                    "maxChars" to intSchema("Maximum excerpt characters per match, capped by the app.")
                 )
             ),
             AiToolDefinition(
@@ -517,4 +627,11 @@ class AiToolRepository(
             return mapOf("type" to "integer", "description" to description)
         }
     }
+}
+
+private fun String.excerptAround(index: Int, maxChars: Int): String {
+    if (length <= maxChars) return trim()
+    val start = (index - maxChars / 2).coerceAtLeast(0)
+    val end = (start + maxChars).coerceAtMost(length)
+    return substring(start, end).trim()
 }

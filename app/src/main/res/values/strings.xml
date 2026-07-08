@@ -1898,6 +1898,9 @@
     <string name="ai_rewrite_temporary_instruction">Temporary instruction (this time only)</string>
     <string name="ai_rewrite_temporary_instruction_hint">Example: make this version more conversational while keeping the original length</string>
     <string name="ai_rewrite_reference_used">Referenced %1$d related excerpt(s) from cached or local chapters.</string>
+    <string name="ai_rewrite_history">History</string>
+    <string name="ai_rewrite_history_empty">No rewritten results for this text.</string>
+    <string name="ai_rewrite_use_history">Use</string>
     <string name="ai_rewrite_empty_result">AI returned empty text.</string>
     <string name="ai_rewrite_preset_empty">Name and requirement cannot be empty.</string>
     <string name="ai_rewrite_preset_name">Name</string>
@@ -2460,4 +2463,5 @@
     <string name="delete_chapter_cache_message">Delete chapter cache: %1$s?</string>
     <string name="about_open_project_homepage">Open project homepage</string>
     <string name="about_open_github">Open GitHub</string>
+    <string name="apply">Apply</string>
 </resources>

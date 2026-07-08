@@ -37,7 +37,7 @@ fun SmallOutlinedButton(
                 iconSize = smallIconSize,
                 textStyle = LegadoTheme.typography.labelMedium,
                 contentColor = contentColor,
-                padding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                 spacing = 4.dp
             )
         }

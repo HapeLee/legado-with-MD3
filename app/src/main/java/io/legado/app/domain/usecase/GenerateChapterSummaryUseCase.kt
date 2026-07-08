@@ -6,12 +6,12 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
-import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.AiToolContext
 import io.legado.app.domain.model.ContentChunker
 import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.MD5Utils
@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 class GenerateChapterSummaryUseCase(
     private val aiProfileGateway: AiProfileGateway,
-    private val aiTextGateway: AiTextGateway,
+    private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
     private val aiArtifactGateway: AiArtifactGateway
 ) {
 
@@ -45,7 +45,9 @@ class GenerateChapterSummaryUseCase(
                 ?: error("Failed to read chapter content")
             val preset = resolvePreset() ?: error("No AI model configured for chapter summary")
             val contentHash = MD5Utils.md5Encode(content)
-            val promptHash = MD5Utils.md5Encode(preset.promptTemplate)
+            val promptHash = MD5Utils.md5Encode(
+                preset.promptTemplate + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+            )
             aiArtifactGateway.getCachedArtifact(
                 bookUrl = book.bookUrl,
                 chapterIndex = bookChapter.index,
@@ -58,10 +60,12 @@ class GenerateChapterSummaryUseCase(
             val chunks = ContentChunker.chunk(content, maxCharsPerChunk)
             if (chunks.isEmpty()) error("Failed to chunk chapter content")
 
+            val toolContext = book.toToolContext(bookChapter)
             val partialSummaries = chunks.map { chunk ->
                 generate(
                     preset = preset,
-                    userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}"
+                    userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}",
+                    toolContext = toolContext,
                 )
             }
             val summary = if (partialSummaries.size == 1) {
@@ -69,7 +73,8 @@ class GenerateChapterSummaryUseCase(
             } else {
                 generate(
                     preset = preset,
-                    userContent = "Merge these partial summaries into one chapter summary:\n\n${partialSummaries.joinToString("\n\n")}"
+                    userContent = "Merge these partial summaries into one chapter summary:\n\n${partialSummaries.joinToString("\n\n")}",
+                    toolContext = toolContext,
                 )
             }
             val now = System.currentTimeMillis()
@@ -104,7 +109,9 @@ class GenerateChapterSummaryUseCase(
             ?: error("Failed to read chapter content")
         val preset = resolvePreset() ?: error("No AI model configured for chapter summary")
         val contentHash = MD5Utils.md5Encode(content)
-        val promptHash = MD5Utils.md5Encode(preset.promptTemplate)
+        val promptHash = MD5Utils.md5Encode(
+            preset.promptTemplate + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+        )
         aiArtifactGateway.getCachedArtifact(
             bookUrl = book.bookUrl,
             chapterIndex = bookChapter.index,
@@ -123,10 +130,12 @@ class GenerateChapterSummaryUseCase(
 
         val summaryBuilder = StringBuilder()
         val reasoningBuilder = StringBuilder()
+        val toolContext = book.toToolContext(bookChapter)
         if (chunks.size == 1) {
             collectGenerateStream(
                 preset = preset,
                 userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${content}",
+                toolContext = toolContext,
                 outputBuilder = summaryBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
@@ -135,12 +144,14 @@ class GenerateChapterSummaryUseCase(
             val partialSummaries = chunks.map { chunk ->
                 generate(
                     preset = preset,
-                    userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}"
+                    userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}",
+                    toolContext = toolContext,
                 )
             }
             collectGenerateStream(
                 preset = preset,
                 userContent = "Merge these partial summaries into one chapter summary:\n\n${partialSummaries.joinToString("\n\n")}",
+                toolContext = toolContext,
                 outputBuilder = summaryBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
@@ -175,37 +186,39 @@ class GenerateChapterSummaryUseCase(
 
     private suspend fun generate(
         preset: AiTaskPresetConfig,
-        userContent: String
+        userContent: String,
+        toolContext: AiToolContext,
     ): String {
-        val response = aiTextGateway.generate(
+        return aiToolAwareGenerationUseCase.generate(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
                     AiMessage(AiMessageRole.SYSTEM, preset.promptTemplate),
                     AiMessage(AiMessageRole.USER, userContent)
                 ),
-                params = preset.params
+                params = preset.params,
+                toolContext = toolContext,
             )
         )
-        return response.getOrThrow().text.trim()
-            .ifEmpty { error("AI returned an empty chapter summary") }
     }
 
     private suspend fun collectGenerateStream(
         preset: AiTaskPresetConfig,
         userContent: String,
+        toolContext: AiToolContext,
         outputBuilder: StringBuilder,
         reasoningBuilder: StringBuilder,
         emitEvent: suspend (StreamEvent) -> Unit,
     ) {
-        aiTextGateway.generateStream(
+        aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
                     AiMessage(AiMessageRole.SYSTEM, preset.promptTemplate),
                     AiMessage(AiMessageRole.USER, userContent)
                 ),
-                params = preset.params
+                params = preset.params,
+                toolContext = toolContext,
             )
         ).collect { event ->
             when (event) {
@@ -222,6 +235,15 @@ class GenerateChapterSummaryUseCase(
                 is AiStreamEvent.ToolCallDelta -> Unit
             }
         }
+    }
+
+    private fun Book.toToolContext(bookChapter: BookChapter): AiToolContext {
+        return AiToolContext(
+            bookUrl = bookUrl,
+            bookName = name,
+            chapterIndex = bookChapter.index,
+            chapterTitle = bookChapter.title,
+        )
     }
 
     private companion object {

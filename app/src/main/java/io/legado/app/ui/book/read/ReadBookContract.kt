@@ -129,6 +129,13 @@ data class AiRewritePresetUi(
 )
 
 @Stable
+data class AiRewriteHistoryUi(
+    val artifactId: String,
+    val text: String,
+    val timeText: String,
+)
+
+@Stable
 data class AiTextRewriteUiState(
     val bookUrl: String = "",
     val chapterIndex: Int = -1,
@@ -142,6 +149,7 @@ data class AiTextRewriteUiState(
     val selectedPresetId: String = "",
     val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
     val temporaryInstruction: String = "",
+    val history: ImmutableList<AiRewriteHistoryUi> = persistentListOf(),
     val referenceCount: Int = 0,
     val errorMessage: String? = null,
 )
@@ -589,6 +597,7 @@ sealed interface ReadBookIntent {
 
     data class SelectAiRewritePreset(val presetId: String) : ReadBookIntent
     data class SetAiRewriteTemporaryInstruction(val instruction: String) : ReadBookIntent
+    data class SelectAiRewriteHistory(val artifactId: String) : ReadBookIntent
     data object GenerateAiTextRewrite : ReadBookIntent
     data object RetryAiTextRewrite : ReadBookIntent
     data object ConfirmAiTextRewrite : ReadBookIntent

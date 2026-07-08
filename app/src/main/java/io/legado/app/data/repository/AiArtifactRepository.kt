@@ -31,6 +31,22 @@ class AiArtifactRepository(
         )
     }
 
+    override suspend fun getArtifactsByContentHash(
+        bookUrl: String,
+        chapterIndex: Int,
+        taskType: String,
+        contentHash: String,
+        limit: Int
+    ): List<AiArtifact> {
+        return aiArtifactDao.queryArtifactsByContentHash(
+            bookUrl = bookUrl,
+            chapterIndex = chapterIndex,
+            taskType = taskType,
+            contentHash = contentHash,
+            limit = limit
+        )
+    }
+
     override suspend fun upsertArtifact(artifact: AiArtifact) {
         aiArtifactDao.upsert(artifact)
     }

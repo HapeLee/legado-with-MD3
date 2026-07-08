@@ -4,13 +4,13 @@ import io.legado.app.data.entities.AiArtifact
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
-import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiPromptTemplate
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.AiToolContext
 import io.legado.app.domain.model.ContentChunker
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.CancellationException
@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 
 class AiTextFactoryUseCase(
     private val aiProfileGateway: AiProfileGateway,
-    private val aiTextGateway: AiTextGateway,
+    private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
     private val aiArtifactGateway: AiArtifactGateway,
 ) {
 
@@ -35,6 +35,8 @@ class AiTextFactoryUseCase(
         val userInstruction: String,
         val referenceText: String = "",
         val maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
+        val skipCache: Boolean = false,
+        val artifactContentHash: String? = null,
     )
 
     sealed interface StreamEvent {
@@ -56,17 +58,21 @@ class AiTextFactoryUseCase(
                 text = request.inputText,
                 referenceText = request.referenceText,
             )
-            val contentHash = MD5Utils.md5Encode(userInput)
-            val promptHash = MD5Utils.md5Encode(systemPrompt)
+            val contentHash = request.artifactContentHash ?: MD5Utils.md5Encode(userInput)
+            val promptHash = MD5Utils.md5Encode(
+                systemPrompt + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+            )
 
-            aiArtifactGateway.getCachedArtifact(
-                bookUrl = request.bookUrl,
-                chapterIndex = request.chapterIndex,
-                taskType = request.taskType,
-                contentHash = contentHash,
-                promptHash = promptHash,
-                modelProfileId = preset.model.id,
-            )?.output?.let { return@runCatching it }
+            if (!request.skipCache) {
+                aiArtifactGateway.getCachedArtifact(
+                    bookUrl = request.bookUrl,
+                    chapterIndex = request.chapterIndex,
+                    taskType = request.taskType,
+                    contentHash = contentHash,
+                    promptHash = promptHash,
+                    modelProfileId = preset.model.id,
+                )?.output?.let { return@runCatching it }
+            }
 
             val chunks = ContentChunker.chunk(
                 request.inputText,
@@ -74,6 +80,7 @@ class AiTextFactoryUseCase(
             )
             if (chunks.isEmpty()) error("Failed to chunk input text")
 
+            val toolContext = request.toToolContext()
             val partialOutputs = chunks.map { chunk ->
                 generate(
                     preset = preset,
@@ -83,6 +90,7 @@ class AiTextFactoryUseCase(
                         text = chunk.content,
                         referenceText = request.referenceText,
                     ),
+                    toolContext = toolContext,
                 )
             }
             val output = if (partialOutputs.size == 1) {
@@ -92,12 +100,13 @@ class AiTextFactoryUseCase(
                     preset = preset,
                     systemPrompt = systemPrompt,
                     userContent = buildMergeUserInput(partialOutputs),
+                    toolContext = toolContext,
                 )
             }
             val now = System.currentTimeMillis()
             aiArtifactGateway.upsertArtifact(
                 AiArtifact(
-                    id = "${request.bookUrl}_${request.chapterIndex}_${request.taskType}_${contentHash}_${preset.model.id}",
+                    id = request.buildArtifactId(contentHash, preset.model.id, now),
                     taskType = request.taskType,
                     bookUrl = request.bookUrl,
                     chapterIndex = request.chapterIndex,
@@ -128,20 +137,24 @@ class AiTextFactoryUseCase(
             text = request.inputText,
             referenceText = request.referenceText,
         )
-        val contentHash = MD5Utils.md5Encode(userInput)
-        val promptHash = MD5Utils.md5Encode(systemPrompt)
+        val contentHash = request.artifactContentHash ?: MD5Utils.md5Encode(userInput)
+        val promptHash = MD5Utils.md5Encode(
+            systemPrompt + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+        )
 
-        aiArtifactGateway.getCachedArtifact(
-            bookUrl = request.bookUrl,
-            chapterIndex = request.chapterIndex,
-            taskType = request.taskType,
-            contentHash = contentHash,
-            promptHash = promptHash,
-            modelProfileId = preset.model.id,
-        )?.output?.let { cached ->
-            emit(StreamEvent.Content(cached))
-            emit(StreamEvent.Done(cached, ""))
-            return@flow
+        if (!request.skipCache) {
+            aiArtifactGateway.getCachedArtifact(
+                bookUrl = request.bookUrl,
+                chapterIndex = request.chapterIndex,
+                taskType = request.taskType,
+                contentHash = contentHash,
+                promptHash = promptHash,
+                modelProfileId = preset.model.id,
+            )?.output?.let { cached ->
+                emit(StreamEvent.Content(cached))
+                emit(StreamEvent.Done(cached, ""))
+                return@flow
+            }
         }
 
         val chunks = ContentChunker.chunk(
@@ -152,12 +165,14 @@ class AiTextFactoryUseCase(
 
         val outputBuilder = StringBuilder()
         val reasoningBuilder = StringBuilder()
+        val toolContext = request.toToolContext()
 
         if (chunks.size == 1) {
             collectGenerateStream(
                 preset = preset,
                 systemPrompt = systemPrompt,
                 userContent = userInput,
+                toolContext = toolContext,
                 outputBuilder = outputBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
@@ -172,12 +187,14 @@ class AiTextFactoryUseCase(
                         text = chunk.content,
                         referenceText = request.referenceText,
                     ),
+                    toolContext = toolContext,
                 )
             }
             val merged = generate(
                 preset = preset,
                 systemPrompt = systemPrompt,
                 userContent = buildMergeUserInput(partialOutputs),
+                toolContext = toolContext,
             )
             outputBuilder.append(merged)
             emit(StreamEvent.Content(merged))
@@ -189,7 +206,7 @@ class AiTextFactoryUseCase(
         val now = System.currentTimeMillis()
         aiArtifactGateway.upsertArtifact(
             AiArtifact(
-                id = "${request.bookUrl}_${request.chapterIndex}_${request.taskType}_${contentHash}_${preset.model.id}",
+                id = request.buildArtifactId(contentHash, preset.model.id, now),
                 taskType = request.taskType,
                 bookUrl = request.bookUrl,
                 chapterIndex = request.chapterIndex,
@@ -264,8 +281,9 @@ class AiTextFactoryUseCase(
         preset: AiTaskPresetConfig,
         systemPrompt: String,
         userContent: String,
+        toolContext: AiToolContext?,
     ): String {
-        val response = aiTextGateway.generate(
+        return aiToolAwareGenerationUseCase.generate(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
@@ -273,21 +291,21 @@ class AiTextFactoryUseCase(
                     AiMessage(AiMessageRole.USER, userContent),
                 ),
                 params = preset.params,
+                toolContext = toolContext,
             )
         )
-        return response.getOrThrow().text.trim()
-            .ifEmpty { error("AI returned empty text") }
     }
 
     private suspend fun collectGenerateStream(
         preset: AiTaskPresetConfig,
         systemPrompt: String,
         userContent: String,
+        toolContext: AiToolContext?,
         outputBuilder: StringBuilder,
         reasoningBuilder: StringBuilder,
         emitEvent: suspend (StreamEvent) -> Unit,
     ) {
-        aiTextGateway.generateStream(
+        aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
@@ -295,6 +313,7 @@ class AiTextFactoryUseCase(
                     AiMessage(AiMessageRole.USER, userContent),
                 ),
                 params = preset.params,
+                toolContext = toolContext,
             )
         ).collect { event ->
             when (event) {
@@ -311,6 +330,23 @@ class AiTextFactoryUseCase(
                 is AiStreamEvent.ToolCallDelta -> Unit
             }
         }
+    }
+
+    private fun Request.toToolContext(): AiToolContext {
+        return AiToolContext(
+            bookUrl = bookUrl,
+            chapterIndex = chapterIndex,
+            chapterTitle = chapterTitle.takeIf { it.isNotBlank() },
+        )
+    }
+
+    private fun Request.buildArtifactId(
+        contentHash: String,
+        modelProfileId: String,
+        createdAt: Long,
+    ): String {
+        val baseId = "${bookUrl}_${chapterIndex}_${taskType}_${contentHash}_${modelProfileId}"
+        return if (skipCache) "${baseId}_$createdAt" else baseId
     }
 
     private companion object {

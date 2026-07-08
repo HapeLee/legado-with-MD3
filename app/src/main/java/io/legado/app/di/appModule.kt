@@ -82,6 +82,7 @@ import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.AiChatGenerationUseCase
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
+import io.legado.app.domain.usecase.AiToolAwareGenerationUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
@@ -269,6 +270,7 @@ val appModule = module {
     singleOf(::SearchBooksUseCase)
     singleOf(::ChangeSourceSearchUseCase)
     singleOf(::GetChapterContentUseCase)
+    singleOf(::AiToolAwareGenerationUseCase)
     singleOf(::GenerateChapterSummaryUseCase)
     singleOf(::AiTextFactoryUseCase)
     singleOf(::CleanSelectedTextUseCase)
@@ -369,6 +371,7 @@ val appModule = module {
             aiTextFactoryUseCase = get(),
             saveBookContentProcessUseCase = get(),
             bookContentProcessGateway = get(),
+            aiArtifactGateway = get(),
             aiPromptPresetGateway = get(),
         )
     }
