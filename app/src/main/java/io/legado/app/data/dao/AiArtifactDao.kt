@@ -53,6 +53,26 @@ interface AiArtifactDao {
         limit: Int
     ): List<AiArtifact>
 
+    @Query(
+        """
+        select * from ai_artifacts
+        where bookUrl = :bookUrl
+          and taskType = :taskType
+          and chapterIndex = :chapterIndex
+          and contentHash = :contentHash
+          and status = ${AiArtifact.STATUS_SUCCESS}
+        order by updatedAt desc
+        limit :limit
+        """
+    )
+    suspend fun queryArtifactsByContentHash(
+        bookUrl: String,
+        taskType: String,
+        chapterIndex: Int,
+        contentHash: String,
+        limit: Int
+    ): List<AiArtifact>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(artifact: AiArtifact)
 

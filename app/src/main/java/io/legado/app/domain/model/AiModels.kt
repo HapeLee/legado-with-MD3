@@ -323,7 +323,16 @@ data class AiGenerateRequest(
     val model: AiModelConfig,
     val messages: List<AiMessage>,
     val params: AiGenerationParams = AiGenerationParams(),
-    val tools: List<AiToolDefinition> = emptyList()
+    val tools: List<AiToolDefinition> = emptyList(),
+    val toolContext: AiToolContext? = null,
+)
+
+@Keep
+data class AiToolContext(
+    val bookUrl: String? = null,
+    val bookName: String? = null,
+    val chapterIndex: Int? = null,
+    val chapterTitle: String? = null,
 )
 
 @Keep

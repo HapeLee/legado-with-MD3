@@ -13,6 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +33,7 @@ import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.ui.ai.chat.AiChatMessageUi
 import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
+import io.legado.app.ui.book.read.AiRewriteHistoryUi
 import io.legado.app.ui.book.read.AiRewritePresetUi
 import io.legado.app.ui.book.read.AiTextRewriteUiState
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -56,12 +60,35 @@ fun AiTextRewriteSheet(
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val hasRewriteForCurrentText = state.rewrittenText.isNotBlank() || state.history.isNotEmpty()
     AppModalBottomSheet(
         show = show,
         onDismissRequest = {
             if (!state.isApplying) onDismissRequest()
         },
         title = stringResource(R.string.ai_text_rewrite),
+        startAction = {
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.GenerateAiTextRewrite) },
+                icon = if (hasRewriteForCurrentText)
+                    Icons.Default.AutoAwesome
+                else
+                    Icons.Default.Autorenew,
+                enabled = state.presets.isNotEmpty() &&
+                        !state.isLoading &&
+                        !state.isApplying
+            )
+        },
+        endAction = {
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.ConfirmAiTextRewrite) },
+                icon = Icons.Default.Save,
+                enabled = !state.isLoading &&
+                        !state.isApplying &&
+                        state.errorMessage == null &&
+                        state.rewrittenText.isNotBlank(),
+            )
+        }
     ) {
         Column(
             modifier = Modifier
@@ -80,6 +107,7 @@ fun AiTextRewriteSheet(
                     tabTitles = listOf(
                         stringResource(R.string.ai_text_clean_before),
                         stringResource(R.string.ai_text_clean_after),
+                        stringResource(R.string.ai_rewrite_history),
                     ),
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { selectedTabIndex = it },
@@ -93,21 +121,6 @@ fun AiTextRewriteSheet(
                             expanded = originalTextExpanded,
                             onToggleExpand = { originalTextExpanded = !originalTextExpanded },
                         )
-                        Spacer(Modifier.height(16.dp))
-
-                        PrimaryButton(
-                            onClick = { onIntent(ReadBookIntent.GenerateAiTextRewrite) },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = state.presets.isNotEmpty() &&
-                                    !state.isLoading &&
-                                    !state.isApplying,
-                            text = if (state.rewrittenText.isBlank()) {
-                                stringResource(R.string.ai_generate)
-                            } else {
-                                stringResource(R.string.ai_regenerate)
-                            },
-                        )
-
                         Spacer(Modifier.height(16.dp))
 
                         Row(
@@ -240,6 +253,38 @@ fun AiTextRewriteSheet(
                             }
                         }
                     }
+
+                    2 -> {
+                        if (state.history.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(160.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                EmptyMessage(
+                                    messageResId = R.string.ai_rewrite_history_empty,
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                state.history.forEach { item ->
+                                    RewriteHistoryItem(
+                                        item = item,
+                                        enabled = !state.isLoading && !state.isApplying,
+                                        onSelect = {
+                                            onIntent(
+                                                ReadBookIntent.SelectAiRewriteHistory(
+                                                    item.artifactId
+                                                )
+                                            )
+                                            selectedTabIndex = 1
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -250,18 +295,53 @@ fun AiTextRewriteSheet(
                 )
                 Spacer(Modifier.height(20.dp))
             }
+        }
+    }
+}
 
-            ConfirmDismissButtonsRow(
-                onDismiss = onDismissRequest,
-                onConfirm = { onIntent(ReadBookIntent.ConfirmAiTextRewrite) },
-                dismissText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.ok),
-                dismissEnabled = !state.isApplying,
-                confirmEnabled = !state.isLoading &&
-                        !state.isApplying &&
-                        state.errorMessage == null &&
-                        state.rewrittenText.isNotBlank(),
-            )
+@Composable
+private fun RewriteHistoryItem(
+    item: AiRewriteHistoryUi,
+    enabled: Boolean,
+    onSelect: () -> Unit,
+) {
+    NormalCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = if (enabled) onSelect else null,
+        containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppText(
+                    text = item.timeText,
+                    modifier = Modifier.weight(1f),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                SmallTonalButton(
+                    onClick = onSelect,
+                    enabled = enabled,
+                    text = stringResource(R.string.ai_rewrite_use_history),
+                )
+            }
+            SelectionContainer {
+                AppText(
+                    text = item.text,
+                    maxLines = 5,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -339,32 +419,6 @@ private fun RewritePresetOption(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun TextPreview(
-    text: String,
-    title: String? = null,
-    showTitle: Boolean = true,
-) {
-    if (showTitle && title != null) {
-        AppText(
-            text = title,
-            style = LegadoTheme.typography.titleSmall,
-        )
-        Spacer(Modifier.height(8.dp))
-    }
-    NormalCard(
-        modifier = Modifier.fillMaxWidth(),
-        containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        SelectionContainer {
-            AppText(
-                text = text,
-                modifier = Modifier.padding(16.dp),
-            )
         }
     }
 }

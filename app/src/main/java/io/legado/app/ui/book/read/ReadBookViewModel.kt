@@ -37,6 +37,7 @@ import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.AiTaskType
@@ -94,6 +95,7 @@ import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
+import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.fromJsonArray
@@ -137,6 +139,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
+import java.util.Date
 import java.util.UUID
 import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.milliseconds
@@ -165,6 +168,7 @@ class ReadBookViewModel(
     private val aiTextFactoryUseCase: AiTextFactoryUseCase,
     private val saveBookContentProcessUseCase: SaveBookContentProcessUseCase,
     private val bookContentProcessGateway: BookContentProcessGateway,
+    private val aiArtifactGateway: AiArtifactGateway,
     private val aiPromptPresetGateway: AiPromptPresetGateway,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
@@ -383,6 +387,7 @@ class ReadBookViewModel(
             is ReadBookIntent.SetAiRewriteTemporaryInstruction -> setAiRewriteTemporaryInstruction(
                 intent.instruction
             )
+            is ReadBookIntent.SelectAiRewriteHistory -> selectAiRewriteHistory(intent.artifactId)
             is ReadBookIntent.GenerateAiTextRewrite -> generateSelectedAiTextRewrite()
             is ReadBookIntent.RetryAiTextRewrite -> retryAiTextRewrite()
             is ReadBookIntent.ConfirmAiTextRewrite -> confirmAiTextRewrite()
@@ -494,11 +499,6 @@ class ReadBookViewModel(
                         aiTextCleanJob?.cancel()
                         pendingAiTextCleanRequest = null
                     }
-                    is ReadBookSheet.AiTextRewrite -> {
-                        aiTextRewriteJob?.cancel()
-                        pendingAiTextRewriteRequest = null
-                    }
-
                     else -> Unit
                 }
                 _uiState.update {
@@ -513,10 +513,7 @@ class ReadBookViewModel(
                             aiTextClean = AiTextCleanUiState(),
                         )
                     } else if (it.activeSheet is ReadBookSheet.AiTextRewrite) {
-                        it.copy(
-                            activeSheet = null,
-                            aiTextRewrite = AiTextRewriteUiState(),
-                        )
+                        it.copy(activeSheet = null)
                     } else if (it.activeSheet is ReadBookSheet.AiRewritePresetConfig) {
                         it.copy(
                             activeSheet = null,
@@ -3125,24 +3122,41 @@ class ReadBookViewModel(
             chapterTitle = chapterTitle,
             chapterPosition = chapterPosition,
             originalText = text,
+            sourceContentHash = buildAiRewriteSourceContentHash(text),
             contextBefore = contextBefore,
             contextAfter = contextAfter,
         )
         pendingAiTextRewriteRequest = request
         closeReadMenu()
+        val currentRewriteState = _uiState.value.aiTextRewrite
+        val isSameRewriteTarget = currentRewriteState.bookUrl == request.bookUrl &&
+                currentRewriteState.chapterIndex == request.chapterIndex &&
+                currentRewriteState.originalText == request.originalText
+        if (!isSameRewriteTarget) {
+            aiTextRewriteJob?.cancel()
+        }
         _uiState.update {
             it.copy(
                 activeSheet = ReadBookSheet.AiTextRewrite,
-                aiTextRewrite = AiTextRewriteUiState(
-                    bookUrl = request.bookUrl,
-                    chapterIndex = request.chapterIndex,
-                    chapterTitle = request.chapterTitle,
-                    originalText = request.originalText,
-                    selectedPresetId = selectedPresetId,
-                    presets = presets.toImmutableList(),
-                ),
+                aiTextRewrite = if (isSameRewriteTarget) {
+                    it.aiTextRewrite.copy(
+                        chapterTitle = request.chapterTitle,
+                        selectedPresetId = selectedPresetId,
+                        presets = presets.toImmutableList(),
+                    )
+                } else {
+                    AiTextRewriteUiState(
+                        bookUrl = request.bookUrl,
+                        chapterIndex = request.chapterIndex,
+                        chapterTitle = request.chapterTitle,
+                        originalText = request.originalText,
+                        selectedPresetId = selectedPresetId,
+                        presets = presets.toImmutableList(),
+                    )
+                },
             )
         }
+        loadAiRewriteHistory(request, selectLatest = !isSameRewriteTarget)
     }
 
     private fun selectAiRewritePreset(presetId: String) {
@@ -3150,10 +3164,6 @@ class ReadBookViewModel(
             it.copy(
                 aiTextRewrite = it.aiTextRewrite.copy(
                     selectedPresetId = presetId,
-                    rewrittenText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    referenceCount = 0,
                     errorMessage = null,
                 )
             )
@@ -3165,14 +3175,87 @@ class ReadBookViewModel(
             it.copy(
                 aiTextRewrite = it.aiTextRewrite.copy(
                     temporaryInstruction = instruction,
-                    rewrittenText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    referenceCount = 0,
                     errorMessage = null,
                 )
             )
         }
+    }
+
+    private fun selectAiRewriteHistory(artifactId: String) {
+        val historyItem = _uiState.value.aiTextRewrite.history
+            .firstOrNull { it.artifactId == artifactId }
+            ?: return
+        _uiState.update {
+            it.copy(
+                aiTextRewrite = it.aiTextRewrite.copy(
+                    rewrittenText = historyItem.text,
+                    reasoningText = "",
+                    thinkingDuration = 0,
+                    errorMessage = null,
+                )
+            )
+        }
+    }
+
+    private fun loadAiRewriteHistory(
+        request: PendingAiTextRewriteRequest,
+        selectLatest: Boolean,
+    ) {
+        viewModelScope.launch {
+            val history = withContext(IO) {
+                aiArtifactGateway.getArtifactsByContentHash(
+                    bookUrl = request.bookUrl,
+                    chapterIndex = request.chapterIndex,
+                    taskType = AiTaskType.REWRITE_TEXT,
+                    contentHash = request.sourceContentHash,
+                ).mapNotNull { artifact ->
+                    val text = artifact.output?.takeIf { it.isNotBlank() }
+                        ?: return@mapNotNull null
+                    AiRewriteHistoryUi(
+                        artifactId = artifact.id,
+                        text = text,
+                        timeText = formatAiRewriteHistoryTime(artifact.updatedAt),
+                    )
+                }
+            }
+            val latest = history.firstOrNull()
+            _uiState.update { state ->
+                if (
+                    state.aiTextRewrite.bookUrl != request.bookUrl ||
+                    state.aiTextRewrite.chapterIndex != request.chapterIndex ||
+                    state.aiTextRewrite.originalText != request.originalText
+                ) {
+                    state
+                } else {
+                    state.copy(
+                        aiTextRewrite = state.aiTextRewrite.copy(
+                            history = history.toImmutableList(),
+                            rewrittenText = if (
+                                selectLatest &&
+                                !state.aiTextRewrite.isLoading &&
+                                state.aiTextRewrite.rewrittenText.isBlank() &&
+                                latest != null
+                            ) {
+                                latest.text
+                            } else {
+                                state.aiTextRewrite.rewrittenText
+                            },
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun formatAiRewriteHistoryTime(timestamp: Long): String {
+        val date = Date(timestamp)
+        val dateText = android.text.format.DateFormat.getDateFormat(context).format(date)
+        val timeText = android.text.format.DateFormat.getTimeFormat(context).format(date)
+        return "$dateText $timeText"
+    }
+
+    private fun buildAiRewriteSourceContentHash(text: String): String {
+        return MD5Utils.md5Encode(normalizeAiReplacementText(text))
     }
 
     private fun generateSelectedAiTextRewrite() {
@@ -3248,6 +3331,8 @@ class ReadBookViewModel(
                             temporaryInstruction,
                         ),
                         referenceText = referenceContext.text,
+                        skipCache = true,
+                        artifactContentHash = request.sourceContentHash,
                     )
                 ).collect { event ->
                     if (!isCurrentAiTextRewrite(request)) return@collect
@@ -3305,6 +3390,7 @@ class ReadBookViewModel(
                                     )
                                 )
                             }
+                            loadAiRewriteHistory(request, selectLatest = false)
                         }
                     }
                 }
@@ -3749,8 +3835,7 @@ class ReadBookViewModel(
 
     private fun isCurrentAiTextRewrite(request: PendingAiTextRewriteRequest): Boolean {
         val state = _uiState.value
-        return state.activeSheet is ReadBookSheet.AiTextRewrite &&
-                state.aiTextRewrite.bookUrl == request.bookUrl &&
+        return state.aiTextRewrite.bookUrl == request.bookUrl &&
                 state.aiTextRewrite.chapterIndex == request.chapterIndex &&
                 state.aiTextRewrite.originalText == request.originalText
     }
@@ -5919,6 +6004,7 @@ private data class PendingAiTextRewriteRequest(
     val chapterTitle: String,
     val chapterPosition: Int,
     val originalText: String,
+    val sourceContentHash: String,
     val contextBefore: String,
     val contextAfter: String,
 )

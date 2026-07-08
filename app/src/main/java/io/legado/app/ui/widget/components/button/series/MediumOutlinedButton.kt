@@ -34,7 +34,7 @@ fun MediumOutlinedButton(
             iconSize = MediumSeriesIconSize,
             textStyle = LegadoTheme.typography.labelMedium,
             contentColor = contentColor,
-            padding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             spacing = 8.dp
         )
     }

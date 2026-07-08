@@ -13,5 +13,12 @@ interface AiArtifactGateway {
         promptHash: String,
         modelProfileId: String
     ): AiArtifact?
+    suspend fun getArtifactsByContentHash(
+        bookUrl: String,
+        chapterIndex: Int,
+        taskType: String,
+        contentHash: String,
+        limit: Int = 20
+    ): List<AiArtifact>
     suspend fun upsertArtifact(artifact: AiArtifact)
 }

@@ -6,13 +6,13 @@ import io.legado.app.data.entities.AiArtifact
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
-import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiPromptTemplate
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.AiToolContext
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
 
 class CleanSelectedTextUseCase(
     private val aiProfileGateway: AiProfileGateway,
-    private val aiTextGateway: AiTextGateway,
+    private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
     private val aiArtifactGateway: AiArtifactGateway,
 ) {
 
@@ -60,7 +60,9 @@ class CleanSelectedTextUseCase(
                 contextAfter = contextAfter.take(MAX_CONTEXT_CHARS),
             )
             val contentHash = MD5Utils.md5Encode(input)
-            val promptHash = MD5Utils.md5Encode(prompt)
+            val promptHash = MD5Utils.md5Encode(
+                prompt + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+            )
 
             aiArtifactGateway.getCachedArtifact(
                 bookUrl = bookUrl,
@@ -71,7 +73,7 @@ class CleanSelectedTextUseCase(
                 modelProfileId = preset.model.id,
             )?.output?.let { return@runCatching it }
 
-            val response = aiTextGateway.generate(
+            val responseText = aiToolAwareGenerationUseCase.generate(
                 AiGenerateRequest(
                     model = preset.model,
                     messages = listOf(
@@ -83,9 +85,14 @@ class CleanSelectedTextUseCase(
                             ?.coerceAtMost(MAX_OUTPUT_TOKENS)
                             ?: MAX_OUTPUT_TOKENS,
                     ),
+                    toolContext = AiToolContext(
+                        bookUrl = bookUrl,
+                        chapterIndex = chapterIndex,
+                        chapterTitle = chapterTitle,
+                    ),
                 )
-            ).getOrThrow()
-            val replacement = parseCleanReplacement(response.text)
+            )
+            val replacement = parseCleanReplacement(responseText)
             val now = System.currentTimeMillis()
             aiArtifactGateway.upsertArtifact(
                 AiArtifact(
@@ -130,7 +137,9 @@ class CleanSelectedTextUseCase(
             contextAfter = contextAfter.take(MAX_CONTEXT_CHARS),
         )
         val contentHash = MD5Utils.md5Encode(input)
-        val promptHash = MD5Utils.md5Encode(prompt)
+        val promptHash = MD5Utils.md5Encode(
+            prompt + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION
+        )
 
         aiArtifactGateway.getCachedArtifact(
             bookUrl = bookUrl,
@@ -147,7 +156,7 @@ class CleanSelectedTextUseCase(
 
         val rawBuilder = StringBuilder()
         val reasoningBuilder = StringBuilder()
-        aiTextGateway.generateStream(
+        aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
@@ -158,6 +167,11 @@ class CleanSelectedTextUseCase(
                     maxOutputTokens = preset.params.maxOutputTokens
                         ?.coerceAtMost(MAX_OUTPUT_TOKENS)
                         ?: MAX_OUTPUT_TOKENS,
+                ),
+                toolContext = AiToolContext(
+                    bookUrl = bookUrl,
+                    chapterIndex = chapterIndex,
+                    chapterTitle = chapterTitle,
                 ),
             )
         ).collect { event ->

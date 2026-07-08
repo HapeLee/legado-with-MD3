@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
@@ -161,8 +162,8 @@ internal fun SeriesIconButton(
         selectedContainerColor = selectedContainerColor,
         selectedContentColor = selectedContentColor
     ) { resolvedContentColor ->
-        SeriesIcon(
-            icon = icon,
+        AppIcon(
+            imageVector = icon,
             contentDescription = contentDescription,
             tint = resolvedContentColor,
             modifier = Modifier.size(iconSize)
@@ -191,27 +192,19 @@ internal fun SeriesButtonContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            SeriesIcon(
-                icon = icon,
+            AppIcon(
+                imageVector = icon,
                 contentDescription = contentDescription,
                 tint = contentColor,
                 modifier = Modifier.size(iconSize)
             )
         }
         if (text != null) {
-            if (ThemeResolver.isMiuixEngine(composeEngine)) {
-                MiuixText(
-                    text = text,
-                    style = textStyle,
-                    color = contentColor
-                )
-            } else {
-                AppText(
-                    text = text,
-                    style = textStyle,
-                    color = contentColor
-                )
-            }
+            AppText(
+                text = text,
+                style = textStyle,
+                color = contentColor
+            )
         }
     }
 }
@@ -237,57 +230,23 @@ internal fun SeriesAnimatedButtonContent(
         ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SeriesIcon(
-            icon = icon,
+        AppIcon(
+            imageVector = icon,
             contentDescription = contentDescription,
             tint = contentColor,
             modifier = Modifier.size(iconSize)
         )
         AnimatedVisibility(visible = showText && text != null) {
             if (text != null) {
-                if (ThemeResolver.isMiuixEngine(composeEngine)) {
-                    MiuixText(
-                        text = text,
-                        style = textStyle,
-                        color = contentColor,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                } else {
-                    AppText(
-                        text = text,
-                        style = textStyle,
-                        color = contentColor,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                }
+                AppText(
+                    text = text,
+                    style = textStyle,
+                    color = contentColor,
+                    maxLines = 1,
+                    softWrap = false
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun SeriesIcon(
-    icon: ImageVector,
-    contentDescription: String?,
-    tint: Color,
-    modifier: Modifier
-) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixIcon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = modifier
-        )
-    } else {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = modifier
-        )
     }
 }
 

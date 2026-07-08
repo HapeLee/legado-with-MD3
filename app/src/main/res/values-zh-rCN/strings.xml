@@ -1974,6 +1974,9 @@
     <string name="ai_rewrite_temporary_instruction">临时要求（仅本次）</string>
     <string name="ai_rewrite_temporary_instruction_hint">例如：这一版更口语化，保留原段落长度</string>
     <string name="ai_rewrite_reference_used">已参考 %1$d 段已缓存或本地章节摘录。</string>
+    <string name="ai_rewrite_history">历史</string>
+    <string name="ai_rewrite_history_empty">这段原文暂无改写结果。</string>
+    <string name="ai_rewrite_use_history">使用</string>
     <string name="ai_rewrite_empty_result">AI 返回了空文本。</string>
     <string name="ai_rewrite_preset_empty">名称和要求不能为空。</string>
     <string name="ai_rewrite_preset_name">名称</string>
@@ -2467,4 +2470,5 @@
     <string name="collapsed_menu">折叠菜单</string>
     <string name="hidden_items">已隐藏项目</string>
     <string name="merged_in_multiline">多行模式下将合并展示</string>
+    <string name="apply">应用</string>
 </resources>
