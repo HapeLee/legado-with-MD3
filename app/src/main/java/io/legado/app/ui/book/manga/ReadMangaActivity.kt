@@ -142,6 +142,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     private var justInitData: Boolean = false
     private var isExitActionRunning = false
+    private var isRestoredFromSavedState = false
     private var syncDialog: AlertDialog? = null
     private val handler by lazy { buildMainHandler() }
     private val eyeProtectionScheduler by lazy {
@@ -201,6 +202,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        isRestoredFromSavedState = savedInstanceState != null
         setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         val transform = MaterialContainerTransform().apply {
@@ -285,7 +287,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private fun finishReader() {
-        if (ReadManga.inBookshelf && savedInstanceState == null) {
+        if (ReadManga.inBookshelf && !isRestoredFromSavedState) {
             supportFinishAfterTransition()
         } else {
             finish()
