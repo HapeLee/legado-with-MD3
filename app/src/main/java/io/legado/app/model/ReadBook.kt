@@ -94,6 +94,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
+    var isUiActive = false
+    val isAutoSaveSessionRunning: Boolean
+        get() = autoSaveJob != null
+
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
@@ -316,69 +320,88 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    fun initReadTime() {
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        if (currentActiveSession != null &&
-            (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
-        ) {
-            commitReadSession()
+    fun startReadSession() {
+        synchronized(this) {
+            readStartTime = System.currentTimeMillis()
+            initReadTime()
+            startAutoSaveSession()
         }
+    }
 
-        if (currentActiveSession == null) {
-            lastReadLength = currentReadLength
-            currentActiveSession = ReadRecordSession(
-                deviceId = "",
-                bookName = currentBookName,
-                bookAuthor = currentBookAuthor,
-                startTime = readStartTime,
-                endTime = readStartTime,
-                words = durChapterIndex.toLong()
-            )
+    fun initReadTime() {
+        synchronized(this) {
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            if (currentActiveSession != null &&
+                (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
+            ) {
+                commitReadSession()
+            }
+
+            if (currentActiveSession == null) {
+                lastReadLength = currentReadLength
+                currentActiveSession = ReadRecordSession(
+                    deviceId = "",
+                    bookName = currentBookName,
+                    bookAuthor = currentBookAuthor,
+                    startTime = readStartTime,
+                    endTime = readStartTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
         }
     }
 
     fun upReadTime() {
-        val currentLength = currentReadLength
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        val endTime = System.currentTimeMillis()
+        synchronized(this) {
+            val currentLength = currentReadLength
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            val endTime = System.currentTimeMillis()
 
-        if (currentActiveSession == null ||
-            currentActiveSession!!.bookName != currentBookName ||
-            currentActiveSession!!.bookAuthor != currentBookAuthor
-        ) {
-            initReadTime()
-            return
+            if (currentActiveSession == null ||
+                currentActiveSession!!.bookName != currentBookName ||
+                currentActiveSession!!.bookAuthor != currentBookAuthor
+            ) {
+                initReadTime()
+                return
+            }
+
+            currentActiveSession = currentActiveSession!!.copy(
+                endTime = endTime,
+                words = durChapterIndex.toLong()
+            )
+
+            readStartTime = endTime
+            lastReadLength = currentLength
         }
-
-        currentActiveSession = currentActiveSession!!.copy(
-            endTime = endTime,
-            words = durChapterIndex.toLong()
-        )
-
-        readStartTime = endTime
-        lastReadLength = currentLength
     }
 
     fun startAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = ioScope.launch {
-            while (isActive) {
-                delay(AUTO_SAVE_INTERVAL)
-                commitSessionInternal()
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = ioScope.launch {
+                while (isActive) {
+                    delay(AUTO_SAVE_INTERVAL)
+                    commitSessionInternal()
+                }
             }
         }
     }
 
     fun stopAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = null
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = null
+        }
     }
 
     fun commitReadSession() {
-        val sessionToCommit = currentActiveSession ?: return
-        currentActiveSession = null
+        val sessionToCommit = synchronized(this) {
+            val session = currentActiveSession
+            currentActiveSession = null
+            session
+        } ?: return
         ioScope.launch {
             saveSessionToDb(sessionToCommit)
         }
@@ -388,7 +411,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 内部提交逻辑（auto-save 专用）：保存后立即创建新 session 保证连续记录
      */
     private suspend fun commitSessionInternal() {
-        val sessionToSave = currentActiveSession ?: return
+        val sessionToSave = synchronized(this) { currentActiveSession } ?: return
         val sessionDuration = sessionToSave.endTime - sessionToSave.startTime
         if (sessionDuration < MIN_READ_DURATION) {
             return
@@ -400,11 +423,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             return
         }
         // 保存成功后立即创建新 session，避免 auto-save 空窗期
-        currentActiveSession = sessionToSave.copy(
-            startTime = sessionToSave.endTime,
-            endTime = sessionToSave.endTime,
-            words = durChapterIndex.toLong()
-        )
+        synchronized(this) {
+            val current = currentActiveSession
+            if (current != null &&
+                current.bookName == sessionToSave.bookName &&
+                current.bookAuthor == sessionToSave.bookAuthor
+            ) {
+                currentActiveSession = current.copy(
+                    startTime = sessionToSave.endTime,
+                    endTime = sessionToSave.endTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
+        }
     }
 
     /**
