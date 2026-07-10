@@ -76,6 +76,7 @@ import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
@@ -140,6 +141,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private var justInitData: Boolean = false
+    private var isExitActionRunning = false
+    private var isRestoredFromSavedState = false
     private var syncDialog: AlertDialog? = null
     private val handler by lazy { buildMainHandler() }
     private val eyeProtectionScheduler by lazy {
@@ -199,6 +202,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        isRestoredFromSavedState = savedInstanceState != null
         setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         val transform = MaterialContainerTransform().apply {
@@ -235,12 +239,58 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             GSON.fromJsonObject<MangaFooterConfig>(ReadMangaConfig.mangaFooterConfig).getOrNull()
                 ?: MangaFooterConfig()
 
-        onBackPressedDispatcher.addCallback(this){
-            if (savedInstanceState != null || !ReadManga.inBookshelf) {
-                finish()
-            } else {
-                supportFinishAfterTransition()
+        onBackPressedDispatcher.addCallback(this) {
+            requestReaderExit()
+        }
+    }
+
+    private fun requestReaderExit() {
+        if (isExitActionRunning) return
+        val book = ReadManga.book
+        if (book == null || ReadManga.inBookshelf) {
+            finishReader()
+            return
+        }
+        if (!OtherConfig.showAddToShelfAlert) {
+            discardCurrentNotShelfBook()
+            return
+        }
+        alert(title = getString(R.string.add_to_bookshelf)) {
+            setCancelable(false)
+            setMessage(getString(R.string.check_add_bookshelf, book.name))
+            okButton {
+                addCurrentBookToBookshelf()
             }
+            noButton {
+                discardCurrentNotShelfBook()
+            }
+        }
+    }
+
+    private fun addCurrentBookToBookshelf() {
+        isExitActionRunning = true
+        viewModel.addCurrentBookToBookshelf(
+            success = {
+                setResult(RESULT_OK)
+                finishReader()
+            },
+            onFailure = { isExitActionRunning = false }
+        )
+    }
+
+    private fun discardCurrentNotShelfBook() {
+        isExitActionRunning = true
+        viewModel.removeCurrentNotShelfBook(
+            success = ::finishReader,
+            onFailure = { isExitActionRunning = false }
+        )
+    }
+
+    private fun finishReader() {
+        if (ReadManga.inBookshelf && !isRestoredFromSavedState) {
+            supportFinishAfterTransition()
+        } else {
+            finish()
         }
     }
 

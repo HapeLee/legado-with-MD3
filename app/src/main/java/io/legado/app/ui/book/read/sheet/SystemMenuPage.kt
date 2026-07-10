@@ -65,6 +65,8 @@ import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.pager.pagerHeight
+import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem

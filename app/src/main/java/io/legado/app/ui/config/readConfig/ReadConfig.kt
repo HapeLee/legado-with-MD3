@@ -90,6 +90,9 @@ object ReadConfig {
     var textSelectMenuFilter
         get() = ReadMenuConfig.textSelectMenuFilter
         set(value) { ReadMenuConfig.textSelectMenuFilter = value }
+    var textSelectMenuConfig
+        get() = ReadMenuConfig.textSelectMenuConfig
+        set(value) { ReadMenuConfig.textSelectMenuConfig = value }
     var showReadTitleAddition
         get() = ReadMenuConfig.showReadTitleAddition
         set(value) { ReadMenuConfig.showReadTitleAddition = value }

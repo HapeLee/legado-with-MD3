@@ -295,7 +295,7 @@ private fun BookshelfManageScreen(
         }
         val bookUrl = pendingExportBookUrl ?: return@rememberLauncherForActivityResult
         val book = booksByUrl[bookUrl] ?: return@rememberLauncherForActivityResult
-        if (state.exportConfig.enableCustomExport) {
+        if (state.exportConfig.isCustomEpubExportEnabled) {
             customExportPath = dirPath
             customExportBook = book
             customExportAllChapter = false
@@ -336,7 +336,7 @@ private fun BookshelfManageScreen(
         val path = ACache.get().getAsString(exportBookPathKey)
         if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
             selectExportFolder(book.bookUrl)
-        } else if (state.exportConfig.enableCustomExport) {
+        } else if (state.exportConfig.isCustomEpubExportEnabled) {
             customExportPath = path
             customExportBook = book
             customExportAllChapter = false

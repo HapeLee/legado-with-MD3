@@ -50,6 +50,11 @@ object ReadMenuConfig {
         ""
     )
 
+    var textSelectMenuConfig by prefDelegate(
+        PreferKey.textSelectMenuConfig,
+        ""
+    )
+
     var showReadTitleAddition by prefDelegate(
         PreferKey.showReadTitleAddition,
         true

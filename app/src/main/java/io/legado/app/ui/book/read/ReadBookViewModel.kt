@@ -1345,9 +1345,8 @@ class ReadBookViewModel(
 
     private fun handleOnResume() {
         // Read time tracking
-        ReadBook.readStartTime = System.currentTimeMillis()
-        ReadBook.initReadTime()
-        ReadBook.startAutoSaveSession()
+        ReadBook.isUiActive = true
+        ReadBook.startReadSession()
 
         // Web book progress sync
         ReadBook.webBookProgress?.let {
@@ -1372,9 +1371,12 @@ class ReadBookViewModel(
         _effects.tryEmit(ReadBookEffect.StopAutoPage)
 
         // Read time tracking
+        ReadBook.isUiActive = false
         ReadBook.saveRead()
-        ReadBook.stopAutoSaveSession()
-        ReadBook.commitReadSession()
+        if (!BaseReadAloudService.isPlay()) {
+            ReadBook.stopAutoSaveSession()
+            ReadBook.commitReadSession()
+        }
         ReadBook.cancelPreDownloadTask()
 
         // View-layer

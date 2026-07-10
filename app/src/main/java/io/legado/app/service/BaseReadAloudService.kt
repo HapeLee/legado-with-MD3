@@ -188,6 +188,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     override fun onDestroy() {
+        ReadBook.upReadTime()
         super.onDestroy()
         if (useWakeLock) {
             wakeLock.release()
@@ -203,6 +204,10 @@ abstract class BaseReadAloudService : BaseService(),
         mediaSessionCompat.release()
         ReadBook.uploadProgress()
         unregisterPhoneStateListener(phoneStateListener)
+        if (!ReadBook.isUiActive) {
+            ReadBook.stopAutoSaveSession()
+            ReadBook.commitReadSession()
+        }
         upNotificationJob?.invokeOnCompletion {
             notificationManager.cancel(NotificationId.ReadAloudService)
         }
@@ -288,12 +293,16 @@ abstract class BaseReadAloudService : BaseService(),
         needResumeOnCallStateIdle = false
         upReadAloudNotification()
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
+        if (!ReadBook.isAutoSaveSessionRunning) {
+            ReadBook.startReadSession()
+        }
     }
 
     abstract fun playStop()
 
     @CallSuper
     open fun pauseReadAloud(abandonFocus: Boolean = true) {
+        ReadBook.upReadTime()
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
@@ -307,6 +316,10 @@ abstract class BaseReadAloudService : BaseService(),
         postEvent(EventBus.ALOUD_STATE, Status.PAUSE)
         ReadBook.uploadProgress()
         doDs()
+        if (!ReadBook.isUiActive) {
+            ReadBook.stopAutoSaveSession()
+            ReadBook.commitReadSession()
+        }
     }
 
     @SuppressLint("WakelockTimeout")
@@ -322,15 +335,20 @@ abstract class BaseReadAloudService : BaseService(),
         upReadAloudNotification()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
+        if (!ReadBook.isAutoSaveSessionRunning) {
+            ReadBook.startReadSession()
+        }
     }
 
     abstract fun upSpeechRate(reset: Boolean = false)
 
     fun upTtsProgress(progress: Int) {
+        ReadBook.upReadTime()
         postEvent(EventBus.TTS_PROGRESS, progress)
     }
 
     private fun prevP() {
+        ReadBook.upReadTime()
         if (nowSpeak > 0) {
             playStop()
             do {
@@ -706,6 +724,7 @@ abstract class BaseReadAloudService : BaseService(),
     abstract fun aloudServicePendingIntent(actionStr: String): PendingIntent?
 
     open fun prevChapter() {
+        ReadBook.upReadTime()
         toLast = false
         resumeReadAloudInternal()
         ReadBook.moveToPrevChapter(true, toLast = false)

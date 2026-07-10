@@ -60,9 +60,20 @@ import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.share
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.printOnDebug
+import android.app.SearchManager
+import android.content.Context
+import android.content.Intent
+import androidx.core.net.toUri
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
+
 
 /**
  * Encapsulates all the reader logic that used to be in ReadBookActivity.
@@ -74,8 +85,7 @@ class ReadBookController(
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadView.CallBack,
-    ContentTextView.CallBack,
-    TextActionMenu.CallBack {
+    ContentTextView.CallBack {
 
     var refs: ReadBookViewRefs? = null
 
@@ -106,12 +116,11 @@ class ReadBookController(
     private val networkChangedListener by lazy { NetworkChangedListener(activity) }
     private val handler by lazy { buildMainHandler() }
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
-    private val textActionMenu by lazy {
-        TextActionMenu(
-            context = activity,
-            callBack = this,
-            expandTextMenu = { viewModel.readPreferences.value.expandTextMenu }
-        )
+    private val _textMenuState = MutableStateFlow<TextMenuState?>(null)
+    val textMenuState = _textMenuState.asStateFlow()
+
+    fun dismissTextActionMenu() {
+        _textMenuState.value = null
     }
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
@@ -134,7 +143,7 @@ class ReadBookController(
     fun clearTts() {
         tts?.clearTts()
         tts = null
-        textActionMenu.dismiss()
+        dismissTextActionMenu()
         popupAction.dismiss()
         refs?.readView?.onDestroy()
         networkChangedListener.unRegister()
@@ -285,21 +294,14 @@ class ReadBookController(
 
     override fun showTextActionMenu() {
         val r = refs ?: return
-        val navigationBarHeight =
-            if (!ReadBookConfig.hideNavigationBar && activity.navigationBarGravity == Gravity.BOTTOM) {
-                r.navigationBar.height
-            } else {
-                0
-            }
-        textActionMenu.upMenu()
-        textActionMenu.show(
-            r.textMenuPosition,
-            r.root.height + navigationBarHeight,
-            r.textMenuPosition.x.toInt(),
-            r.textMenuPosition.y.toInt(),
-            r.cursorLeft.y.toInt() + r.cursorLeft.height,
-            r.cursorRight.x.toInt(),
-            r.cursorRight.y.toInt() + r.cursorRight.height
+        _textMenuState.value = TextMenuState(
+            selectedText = selectedText,
+            startX = r.textMenuPosition.x.toInt(),
+            startTopY = r.textMenuPosition.y.toInt(),
+            startBottomY = r.cursorLeft.y.toInt() + r.cursorLeft.height,
+            endX = r.cursorRight.x.toInt(),
+            endBottomY = r.cursorRight.y.toInt() + r.cursorRight.height,
+            items = getActionMenuItems()
         )
     }
 
@@ -415,7 +417,7 @@ class ReadBookController(
     override fun onCancelSelect() {
         refs?.cursorLeft?.invisible()
         refs?.cursorRight?.invisible()
-        textActionMenu.dismiss()
+        dismissTextActionMenu()
     }
 
     override fun onLongScreenshotTouchEvent(event: MotionEvent): Boolean =
@@ -505,7 +507,7 @@ class ReadBookController(
             return false
         }
         when (event.action) {
-            MotionEvent.ACTION_DOWN -> textActionMenu.dismiss()
+            MotionEvent.ACTION_DOWN -> dismissTextActionMenu()
             MotionEvent.ACTION_MOVE -> {
                 when (v.id) {
                     R.id.cursor_left -> if (!r.readView.curPage.getReverseStartCursor()) {
@@ -542,9 +544,9 @@ class ReadBookController(
         return true
     }
 
-    override val selectedText: String get() = refs?.readView?.getSelectText().orEmpty()
+    val selectedText: String get() = refs?.readView?.getSelectText().orEmpty()
 
-    override fun onMenuItemSelected(itemId: Int): Boolean {
+    fun onMenuItemSelected(itemId: Int): Boolean {
         when (itemId) {
             R.id.menu_aloud -> {
                 viewModel.onIntent(
@@ -612,9 +614,125 @@ class ReadBookController(
         return false
     }
 
-    override fun onMenuActionFinally() {
-        textActionMenu.dismiss()
+    fun onMenuActionFinally() {
+        dismissTextActionMenu()
         refs?.readView?.cancelSelect()
+    }
+
+    fun getActionMenuItems(): List<ActionMenuItem> {
+        val items = mutableListOf<ActionMenuItem>()
+        items.add(ActionMenuItem(R.id.menu_copy, activity.getString(android.R.string.copy)))
+        items.add(ActionMenuItem(R.id.menu_share_str, activity.getString(R.string.share)))
+        items.add(ActionMenuItem(R.id.menu_browser, activity.getString(R.string.browser)))
+        items.add(ActionMenuItem(R.id.menu_aloud, activity.getString(R.string.read_aloud)))
+        items.add(ActionMenuItem(R.id.menu_bookmark, activity.getString(R.string.bookmark)))
+        items.add(ActionMenuItem(R.id.menu_dict, activity.getString(R.string.dict)))
+        items.add(ActionMenuItem(R.id.menu_replace, activity.getString(R.string.replace)))
+        items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
+        items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
+        items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
+        items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
+
+        val thirdPartyItems = mutableListOf<ActionMenuItem>()
+        kotlin.runCatching {
+            val pm = activity.packageManager
+            val filterSet = ReadConfig.textSelectMenuFilter.split(",").filter { it.isNotEmpty() }.toSet()
+            val intent = Intent().setAction(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
+            val resolveInfos = pm.queryIntentActivities(intent, 0)
+            for (resolveInfo in resolveInfos) {
+                val componentName = "${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}"
+                if (filterSet.contains(componentName)) {
+                    continue
+                }
+                val processIntent = Intent()
+                    .setAction(Intent.ACTION_PROCESS_TEXT)
+                    .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)
+                    .setClassName(resolveInfo.activityInfo.packageName, resolveInfo.activityInfo.name)
+                
+                val title = resolveInfo.loadLabel(pm).toString()
+                val icon = if (ReadConfig.showSelectMenuIcon) {
+                    kotlin.runCatching { resolveInfo.loadIcon(pm) }.getOrNull()
+                } else null
+
+                thirdPartyItems.add(ActionMenuItem(id = -1, title = title, iconDrawable = icon, intent = processIntent))
+            }
+        }
+
+        val allItems = items + thirdPartyItems
+        val configStr = ReadConfig.textSelectMenuConfig
+        if (configStr.isEmpty()) {
+            return allItems
+        }
+
+        return kotlin.runCatching {
+            val savedConfigs = GSON.fromJsonObject<List<SelectionMenuConfigItem>>(configStr).getOrNull() ?: emptyList()
+            val savedMap = savedConfigs.associateBy { it.id }
+
+            val sortedItems = mutableListOf<ActionMenuItem>()
+            for (saved in savedConfigs) {
+                val found = allItems.find { it.uniqueId == saved.id }
+                if (found != null) {
+                    sortedItems.add(found.copy(enabled = saved.enabled))
+                }
+            }
+            for (item in allItems) {
+                val uniqueId = item.uniqueId
+                if (!savedMap.containsKey(uniqueId)) {
+                    sortedItems.add(item)
+                }
+            }
+            sortedItems
+        }.getOrDefault(allItems)
+    }
+
+    fun saveMenuConfig(items: List<ActionMenuItem>) {
+        val configs = items.map { item ->
+            SelectionMenuConfigItem(
+                id = item.uniqueId,
+                enabled = item.enabled
+            )
+        }
+        ReadConfig.textSelectMenuConfig = GSON.toJson(configs)
+        _textMenuState.value?.let { currentState ->
+            _textMenuState.value = currentState.copy(items = getActionMenuItems())
+        }
+    }
+
+    fun onTextMenuItemClick(item: ActionMenuItem) {
+        if (item.intent != null) {
+            kotlin.runCatching {
+                item.intent.putExtra(Intent.EXTRA_PROCESS_TEXT, selectedText)
+                activity.startActivity(item.intent)
+            }.onFailure { e ->
+                AppLog.put("执行文本菜单操作出错\n$e", e, true)
+            }
+        } else {
+            when (item.id) {
+                R.id.menu_copy -> activity.sendToClip(selectedText)
+                R.id.menu_share_str -> activity.share(selectedText)
+                R.id.menu_browser -> {
+                    kotlin.runCatching {
+                        val intent = if (selectedText.isAbsUrl()) {
+                            Intent(Intent.ACTION_VIEW).apply {
+                                data = selectedText.toUri()
+                            }
+                        } else {
+                            Intent(Intent.ACTION_WEB_SEARCH).apply {
+                                putExtra(SearchManager.QUERY, selectedText)
+                            }
+                        }
+                        activity.startActivity(intent)
+                    }.onFailure { e ->
+                        e.printOnDebug()
+                        activity.toastOnUi(e.localizedMessage ?: "ERROR")
+                    }
+                }
+                else -> {
+                    onMenuItemSelected(item.id)
+                }
+            }
+        }
+        onMenuActionFinally()
     }
 
     // ── Effect handling ───────────────────────────────────────────────
@@ -1246,3 +1364,47 @@ class ReadBookController(
         }
     }
 }
+
+data class TextMenuState(
+    val selectedText: String,
+    val startX: Int,
+    val startTopY: Int,
+    val startBottomY: Int,
+    val endX: Int,
+    val endBottomY: Int,
+    val items: List<ActionMenuItem>
+)
+
+data class ActionMenuItem(
+    val id: Int,
+    val title: String,
+    val iconDrawable: android.graphics.drawable.Drawable? = null,
+    val intent: Intent? = null,
+    val enabled: Boolean = true
+) {
+    val uniqueId: String
+        get() = if (intent != null) {
+            val comp = intent.component
+            if (comp != null) "${comp.packageName}/${comp.className}" else title
+        } else {
+            when (id) {
+                R.id.menu_copy -> "menu_copy"
+                R.id.menu_share_str -> "menu_share_str"
+                R.id.menu_browser -> "menu_browser"
+                R.id.menu_aloud -> "menu_aloud"
+                R.id.menu_bookmark -> "menu_bookmark"
+                R.id.menu_dict -> "menu_dict"
+                R.id.menu_replace -> "menu_replace"
+                R.id.menu_edit -> "menu_edit"
+                R.id.menu_ai_clean -> "menu_ai_clean"
+                R.id.menu_ai_rewrite -> "menu_ai_rewrite"
+                R.id.menu_search_content -> "menu_search_content"
+                else -> id.toString()
+            }
+        }
+}
+
+data class SelectionMenuConfigItem(
+    val id: String,
+    val enabled: Boolean
+)
