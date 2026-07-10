@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.repository.DictRuleRepository
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,7 +41,6 @@ class DictViewModel(
         val query = word.trim()
         _uiState.value = DictUiState(
             word = query,
-            isLoading = query.isNotBlank(),
             emptyReason = if (query.isBlank()) DictEmptyReason.BlankWord else null,
         )
         if (query.isBlank()) return
@@ -52,7 +52,7 @@ class DictViewModel(
             _uiState.update { state ->
                 state.copy(
                     rules = dictRules.map { DictRuleUi(it.name) }.toImmutableList(),
-                    isLoading = dictRules.isNotEmpty(),
+                    pages = dictRules.map { DictPageUiState() }.toImmutableList(),
                     emptyReason = if (dictRules.isEmpty()) DictEmptyReason.NoRules else null,
                 )
             }
@@ -64,7 +64,16 @@ class DictViewModel(
 
     private fun selectRule(index: Int) {
         val state = _uiState.value
-        if (index !in dictRules.indices || state.selectedIndex == index && state.isLoading) return
+        if (index !in dictRules.indices || index !in state.pages.indices) return
+        val page = state.pages[index]
+        if (page.isLoading) {
+            _uiState.update { it.copy(selectedIndex = index) }
+            return
+        }
+        if (page.htmlContent.isNotBlank() || page.emptyReason == DictEmptyReason.NoResult) {
+            _uiState.update { it.copy(selectedIndex = index) }
+            return
+        }
         searchRule(index = index, word = state.word)
     }
 
@@ -74,32 +83,58 @@ class DictViewModel(
         _uiState.update {
             it.copy(
                 selectedIndex = index,
-                isLoading = true,
-                htmlContent = "",
                 emptyReason = null,
-            )
+            ).updatePage(index) { page ->
+                page.copy(
+                    isLoading = true,
+                    htmlContent = "",
+                    emptyReason = null,
+                )
+            }
         }
         dictJob = viewModelScope.launch {
-            val result = runCatching {
+            val result = try {
                 withContext(Dispatchers.IO) {
                     rule.search(word)
                 }
-            }.getOrElse { error ->
+            } catch (error: CancellationException) {
+                _uiState.update { state ->
+                    if (state.word == word && dictRules.getOrNull(index) === rule) {
+                        state.updatePage(index) { page ->
+                            if (page.isLoading) {
+                                page.copy(isLoading = false)
+                            } else {
+                                page
+                            }
+                        }
+                    } else {
+                        state
+                    }
+                }
+                throw error
+            } catch (error: Throwable) {
                 error.localizedMessage ?: "ERROR"
             }
             _uiState.update {
+                if (it.word != word || dictRules.getOrNull(index) !== rule) {
+                    return@update it
+                }
                 if (result.isBlank()) {
-                    it.copy(
-                        isLoading = false,
-                        htmlContent = "",
-                        emptyReason = DictEmptyReason.NoResult,
-                    )
+                    it.updatePage(index) { page ->
+                        page.copy(
+                            isLoading = false,
+                            htmlContent = "",
+                            emptyReason = DictEmptyReason.NoResult,
+                        )
+                    }
                 } else {
-                    it.copy(
-                        isLoading = false,
-                        htmlContent = result,
-                        emptyReason = null,
-                    )
+                    it.updatePage(index) { page ->
+                        page.copy(
+                            isLoading = false,
+                            htmlContent = result,
+                            emptyReason = null,
+                        )
+                    }
                 }
             }
         }
@@ -109,4 +144,16 @@ class DictViewModel(
         dictJob?.cancel()
         super.onCleared()
     }
+}
+
+private fun DictUiState.updatePage(
+    index: Int,
+    transform: (DictPageUiState) -> DictPageUiState,
+): DictUiState {
+    if (index !in pages.indices) return this
+    return copy(
+        pages = pages.mapIndexed { pageIndex, page ->
+            if (pageIndex == index) transform(page) else page
+        }.toImmutableList()
+    )
 }
