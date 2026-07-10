@@ -19,4 +19,15 @@
     <item name="cursor_right" type="id" />
     <item name="navigation_bar" type="id" />
 
+    <item name="menu_replace" type="id" />
+    <item name="menu_ai_clean" type="id" />
+    <item name="menu_ai_rewrite" type="id" />
+    <item name="menu_copy" type="id" />
+    <item name="menu_bookmark" type="id" />
+    <item name="menu_aloud" type="id" />
+    <item name="menu_dict" type="id" />
+    <item name="menu_edit" type="id" />
+    <item name="menu_search_content" type="id" />
+    <item name="menu_browser" type="id" />
+    <item name="menu_share_str" type="id" />
 </resources>
