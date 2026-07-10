@@ -60,7 +60,10 @@ data class BookshelfManageScreenExportConfig(
     val exportCharset: String = "UTF-8",
     val bookExportFileName: String? = null,
     val episodeExportFileName: String = ""
-)
+) {
+    val isCustomEpubExportEnabled: Boolean
+        get() = enableCustomExport && exportType == 1
+}
 
 data class BookshelfManageScreenUiState(
     val groupId: Long = -1,
