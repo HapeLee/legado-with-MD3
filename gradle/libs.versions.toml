@@ -61,6 +61,7 @@ preference = "1.2.1"
 protobufJavalite = "4.26.1"
 quickChineseTransfer = "0.2.17"
 room = "2.8.4"
+robolectric = "4.16.1"
 splitties = "3.0.0"
 rhino = "1.8.1"
 desugar = "2.1.5"
@@ -187,6 +188,7 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 glide-okhttp= { module = "com.github.bumptech.glide:okhttp3-integration", version.ref ="glide" }
