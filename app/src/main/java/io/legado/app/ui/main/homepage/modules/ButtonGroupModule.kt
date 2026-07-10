@@ -40,6 +40,7 @@ fun ButtonGroupModule(
     onRefreshKinds: (globalId: String) -> Unit,
     modifier: Modifier = Modifier,
     icon: String? = null,
+    columns: Int = 5,
     layoutConfig: String? = null,
 ) {
     if (kinds.isEmpty()) return
@@ -65,12 +66,11 @@ fun ButtonGroupModule(
         } ?: (emptyMap<String, String>() to icon)
     }
 
-    // --- 动态布局计算逻辑 ---
-    val maxColumns = 5
+    // Keep rows balanced without exceeding the configured column count.
+    val maxColumns = columns.coerceAtLeast(1)
     val total = kinds.size
     val numRows = (total + maxColumns - 1) / maxColumns
     val actualColumns = (total + numRows - 1) / numRows
-    // -----------------------
 
     Column(
         modifier = modifier
