@@ -505,7 +505,8 @@ private fun ReadBookMenuSurface(
         menuConfig = state.menuConfig,
     )
     val useLens = useLiquidGlass && isFloating && mainCorner > 0.dp
-    val bottomBarProgressiveBlur = route == ReadBookMenuRoute.Main &&
+    val bottomBarProgressiveBlur = useHaze &&
+            route == ReadBookMenuRoute.Main &&
             !isFloating &&
             state.menuConfig.readMenuBottomBarBlurStyle == ReadMenuBlurStyle.Progressive
     val bottomBarTextColor = if (bottomBarProgressiveBlur) {
