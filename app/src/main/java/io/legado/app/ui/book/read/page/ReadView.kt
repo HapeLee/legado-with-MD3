@@ -4,12 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
-import android.os.Build
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ViewConfiguration
-import android.view.WindowInsets
 import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.BookProgress
@@ -98,6 +98,7 @@ class ReadView(
         longPressed = true
         onLongPress()
     }
+    private var ignoringBottomSystemGesture = false
     var isTextSelected = false
     private var pressOnTextSelected = false
     private val initialTextPos = TextPos(0, 0, 0)
@@ -177,19 +178,20 @@ class ReadView(
      */
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val insets = this.rootWindowInsets.getInsetsIgnoringVisibility(
-                WindowInsets.Type.mandatorySystemGestures()
-            )
-            val height = activity?.windowManager?.currentWindowMetrics?.bounds?.height()
-            if (height != null) {
-                if (event.y > height.minus(insets.bottom)
-                    && event.action != MotionEvent.ACTION_UP
-                    && event.action != MotionEvent.ACTION_CANCEL
-                ) {
-                    return true
-                }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            val bottomSystemGestureInset = ViewCompat.getRootWindowInsets(this)
+                ?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.systemGestures())
+                ?.bottom ?: 0
+            ignoringBottomSystemGesture = bottomSystemGestureInset > 0 &&
+                    event.y >= height - bottomSystemGestureInset
+        }
+        if (ignoringBottomSystemGesture) {
+            if (event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+            ) {
+                ignoringBottomSystemGesture = false
             }
+            return true
         }
 
         //在多点触控时，事件不走ACTION_DOWN分支而产生的特殊事件处理
