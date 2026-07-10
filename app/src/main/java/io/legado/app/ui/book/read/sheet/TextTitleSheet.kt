@@ -228,6 +228,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.text_letter_spacing),
             value = (letterSpacing * 100) + 50,
             valueRange = 0f..100f,
+            valueFormat = { ((it - 50) / 100f).toString() },
             onValueChange = { value ->
                 letterSpacing = (value - 50) / 100f
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.LetterSpacing(letterSpacing)))
@@ -237,7 +238,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.line_size),
             value = lineSpacing,
             valueRange = 0f..20f,
-            showDecimal = true,
+            valueFormat = { ((it - 10) / 10f).toString() },
             onValueChange = { value ->
                 lineSpacing = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.LineSpacing(value.toInt())))
@@ -247,7 +248,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.paragraph_size),
             value = paragraphSpacing,
             valueRange = 0f..20f,
-            showDecimal = true,
+            valueFormat = { (it / 10f).toString() },
             onValueChange = { value ->
                 paragraphSpacing = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ParagraphSpacing(value.toInt())))

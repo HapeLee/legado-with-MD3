@@ -5562,8 +5562,10 @@ class ReadBookViewModel(
 
     private fun toggleTranslation() {
         val book = ReadBook.book ?: return
-        book.setTranslationMode(!book.getTranslationMode())
+        val enabled = !book.getTranslationMode()
+        book.setTranslationMode(enabled)
         book.save()
+        _uiState.update { it.copy(translationMode = enabled) }
         ReadBook.loadContent(false)
     }
 

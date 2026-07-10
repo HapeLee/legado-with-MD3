@@ -22,6 +22,7 @@ fun ValueStepper(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     showDecimal: Boolean = false,
+    valueFormat: ((Float) -> String)? = null,
 ) {
     Row(
         modifier = modifier,
@@ -36,7 +37,7 @@ fun ValueStepper(
             enabled = enabled,
             icon = Icons.Default.Remove,
         )
-        val displayText = if (showDecimal) {
+        val displayText = valueFormat?.invoke(displayValue) ?: if (showDecimal) {
             displayValue.toString()
         } else {
             displayValue.toInt().toString()
