@@ -35,6 +35,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
@@ -297,8 +298,7 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
                                     Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("type", "bookSource")
-                                        putExtra("key", effect.sourceUrl)
+                                        putExtra("bookType", BookType.text)
                                     }
                                 )
                             }
