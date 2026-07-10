@@ -313,12 +313,23 @@ class ReadMangaViewModel(
         }
     }
 
-    fun removeFromBookshelf(success: (() -> Unit)?) {
+    fun removeCurrentNotShelfBook(
+        success: () -> Unit,
+        onFailure: () -> Unit = {},
+    ) {
         val book = ReadManga.book
+        val bookUrl = book?.bookUrl
         Coroutine.async {
             book?.delete()
         }.onSuccess {
-            success?.invoke()
+            if (ReadManga.book?.bookUrl == bookUrl) {
+                ReadManga.book = null
+            }
+            success()
+        }.onError {
+            AppLog.put("移除临时漫画书籍失败", it)
+            context.toastOnUi("移除临时漫画书籍失败")
+            onFailure()
         }
     }
 
@@ -393,20 +404,41 @@ class ReadMangaViewModel(
         }
     }
 
+    fun addCurrentBookToBookshelf(
+        success: () -> Unit,
+        onFailure: () -> Unit = {},
+    ) {
+        val book = ReadManga.book ?: return onFailure()
+        execute {
+            val toc = appDb.bookChapterDao.getChapterList(book.bookUrl)
+            persistOnBookshelf(book, toc)
+            ReadManga.inBookshelf = true
+        }.onSuccess {
+            success()
+        }.onError {
+            AppLog.put("添加书籍到书架失败", it)
+            context.toastOnUi("添加书籍失败")
+            onFailure()
+        }
+    }
+
     fun addToBookshelf(book: Book, toc: List<BookChapter>, success: (() -> Unit)? = null) {
         execute {
-            book.removeType(BookType.notShelf)
-            if (book.order == 0) {
-                book.order = appDb.bookDao.minOrder - 1
-            }
-
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            persistOnBookshelf(book, toc)
         }.onSuccess {
             success?.invoke()
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
             context.toastOnUi("添加书籍失败")
         }
+    }
+
+    private suspend fun persistOnBookshelf(book: Book, toc: List<BookChapter>) {
+        book.removeType(BookType.notShelf)
+        if (book.order == 0) {
+            book.order = appDb.bookDao.minOrder - 1
+        }
+        appDb.bookDao.insert(book)
+        appDb.bookChapterDao.insert(*toc.toTypedArray())
     }
 }
