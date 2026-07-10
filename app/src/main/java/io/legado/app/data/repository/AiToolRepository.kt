@@ -9,8 +9,14 @@ import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.AiArtifact
 import io.legado.app.data.entities.AiMemory
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookCharacterEvent
+import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.data.entities.BookCharacterRelation
+import io.legado.app.data.entities.BookKnowledgeEntry
+import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.domain.gateway.AiMemoryGateway
 import io.legado.app.domain.gateway.AiToolGateway
+import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.model.AiToolCall
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.domain.model.AiToolResult
@@ -20,6 +26,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class AiToolRepository(
     private val bookDao: BookDao,
@@ -27,7 +34,8 @@ class AiToolRepository(
     private val bookmarkDao: BookmarkDao,
     private val readRecordDao: ReadRecordDao,
     private val aiArtifactDao: AiArtifactDao,
-    private val aiMemoryGateway: AiMemoryGateway
+    private val aiMemoryGateway: AiMemoryGateway,
+    private val bookKnowledgeGateway: BookKnowledgeGateway,
 ) : AiToolGateway {
 
     override fun availableTools(): List<AiToolDefinition> = tools
@@ -48,7 +56,16 @@ class AiToolRepository(
             TOOL_SEARCH_BOOKMARKS -> searchBookmarks(args)
             TOOL_GET_READING_STATS -> getReadingStats(args)
             TOOL_GET_AI_ARTIFACTS -> getAiArtifacts(args)
+            TOOL_SEARCH_BOOK_CHARACTERS -> searchBookCharacters(args)
+            TOOL_GET_CHARACTER_PROFILE -> getCharacterProfile(args)
+            TOOL_SEARCH_BOOK_KNOWLEDGE -> searchBookKnowledge(args)
+            TOOL_GET_BOOK_OUTLINE -> getBookOutline(args)
             TOOL_SAVE_AI_ARTIFACT -> saveAiArtifact(args)
+            TOOL_SAVE_BOOK_CHARACTER_PROFILE -> saveBookCharacterProfile(args)
+            TOOL_SAVE_BOOK_CHARACTER_EVENT -> saveBookCharacterEvent(args)
+            TOOL_SAVE_BOOK_CHARACTER_RELATION -> saveBookCharacterRelation(args)
+            TOOL_SAVE_BOOK_KNOWLEDGE_ENTRY -> saveBookKnowledgeEntry(args)
+            TOOL_SAVE_BOOK_OUTLINE_NODE -> saveBookOutlineNode(args)
             TOOL_SAVE_MEMORY -> saveMemory(args)
             TOOL_RECALL_MEMORY -> recallMemory(args)
             TOOL_DELETE_MEMORY -> deleteMemory(args)
@@ -343,6 +360,101 @@ class AiToolRepository(
         )
     }
 
+    private suspend fun searchBookCharacters(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val query = args.string("query").orEmpty().trim()
+        val limit = args.int("limit", 8).coerceIn(1, 30)
+        val profiles = bookKnowledgeGateway.searchCharacterProfiles(
+            bookUrl = book.bookUrl,
+            query = query,
+            limit = limit,
+        ).map { it.toToolMap() }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "query" to query,
+                "characters" to profiles,
+            )
+        )
+    }
+
+    private suspend fun getCharacterProfile(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val idOrName = args.string("characterId")
+            ?: args.string("characterName")
+            ?: return """{"error":"characterId or characterName is required"}"""
+        val profile = bookKnowledgeGateway.getCharacterProfile(book.bookUrl, idOrName.trim())
+            ?: return """{"error":"Character not found"}"""
+        val maxChapterIndex = args.string("maxChapterIndex")?.toIntOrNull()
+            ?: args.string("chapterIndex")?.toIntOrNull()
+        val limit = args.int("limit", 20).coerceIn(1, 60)
+        val events = bookKnowledgeGateway.getCharacterEvents(
+            bookUrl = book.bookUrl,
+            characterId = profile.id,
+            maxChapterIndex = maxChapterIndex,
+            limit = limit,
+        ).map { it.toToolMap() }
+        val relations = bookKnowledgeGateway.getCharacterRelations(
+            bookUrl = book.bookUrl,
+            characterId = profile.id,
+            limit = limit,
+        ).map { it.toToolMap() }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "character" to profile.toToolMap(),
+                "maxChapterIndex" to maxChapterIndex,
+                "events" to events,
+                "relations" to relations,
+            )
+        )
+    }
+
+    private suspend fun searchBookKnowledge(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val query = args.string("query").orEmpty().trim()
+        val type = args.string("type")?.trim()?.takeIf { it.isNotBlank() }
+        val chapterIndex = args.string("chapterIndex")?.toIntOrNull()
+        val limit = args.int("limit", 12).coerceIn(1, 50)
+        val entries = bookKnowledgeGateway.searchKnowledgeEntries(
+            bookUrl = book.bookUrl,
+            query = query,
+            type = type,
+            chapterIndex = chapterIndex,
+            limit = limit,
+        ).map { it.toToolMap() }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "query" to query,
+                "type" to type,
+                "chapterIndex" to chapterIndex,
+                "entries" to entries,
+            )
+        )
+    }
+
+    private suspend fun getBookOutline(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val chapterIndex = args.string("chapterIndex")?.toIntOrNull()
+        val nodeType = args.string("nodeType")?.trim()?.takeIf { it.isNotBlank() }
+        val limit = args.int("limit", 20).coerceIn(1, 80)
+        val nodes = bookKnowledgeGateway.getOutlineNodes(
+            bookUrl = book.bookUrl,
+            chapterIndex = chapterIndex,
+            nodeType = nodeType,
+            limit = limit,
+        ).map { it.toToolMap() }
+        return GSON.toJson(
+            mapOf(
+                "book" to book.toIdentityMap(),
+                "chapterIndex" to chapterIndex,
+                "nodeType" to nodeType,
+                "outline" to nodes,
+            )
+        )
+    }
+
     private suspend fun saveAiArtifact(args: JsonObject): String {
         val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
         val output = args.string("output")?.trim().orEmpty()
@@ -374,6 +486,187 @@ class AiToolRepository(
                 "taskType" to taskType,
                 "chapterIndex" to chapterIndex,
                 "updatedAt" to now
+            )
+        )
+    }
+
+    private suspend fun saveBookCharacterProfile(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val name = args.string("name")?.trim().orEmpty()
+        if (name.isBlank()) return """{"error":"name is required"}"""
+        val now = System.currentTimeMillis()
+        val existing = bookKnowledgeGateway.getCharacterProfile(book.bookUrl, name)
+        val profile = BookCharacterProfile(
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() }
+                ?: existing?.id
+                ?: "character_${MD5Utils.md5Encode("${book.bookUrl}:$name")}",
+            bookUrl = book.bookUrl,
+            name = name,
+            aliasesJson = args.string("aliasesJson") ?: existing?.aliasesJson ?: "[]",
+            avatarUri = args.string("avatarUri") ?: existing?.avatarUri,
+            tagsJson = args.string("tagsJson") ?: existing?.tagsJson ?: "[]",
+            role = args.string("role") ?: existing?.role.orEmpty(),
+            personality = args.string("personality") ?: existing?.personality.orEmpty(),
+            summary = args.string("summary") ?: existing?.summary.orEmpty(),
+            status = args.int("status", existing?.status ?: BookCharacterProfile.STATUS_ACTIVE),
+            source = args.string("source") ?: BookCharacterProfile.SOURCE_AI,
+            confidence = args.float("confidence", existing?.confidence ?: 0.8f),
+            createdAt = existing?.createdAt ?: now,
+            updatedAt = now,
+        )
+        bookKnowledgeGateway.upsertCharacterProfile(profile)
+        return GSON.toJson(
+            mapOf(
+                "saved" to true,
+                "book" to book.toIdentityMap(),
+                "character" to profile.toToolMap()
+            )
+        )
+    }
+
+    private suspend fun saveBookCharacterEvent(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val character = resolveCharacterForKnowledgeTool(book, args)
+            ?: return """{"error":"Character not found"}"""
+        val content = args.string("content")?.trim().orEmpty()
+        if (content.isBlank()) return """{"error":"content is required"}"""
+        val now = System.currentTimeMillis()
+        val event = BookCharacterEvent(
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+                .toString(),
+            bookUrl = book.bookUrl,
+            characterId = character.id,
+            chapterIndex = args.string("chapterIndex")?.toIntOrNull(),
+            chapterTitle = args.string("chapterTitle").orEmpty(),
+            eventTimeText = args.string("eventTimeText").orEmpty(),
+            content = content,
+            importance = args.int("importance", 0),
+            sourceTextHash = args.string("sourceTextHash"),
+            evidenceJson = args.string("evidenceJson") ?: "[]",
+            source = args.string("source") ?: BookCharacterProfile.SOURCE_AI,
+            confidence = args.float("confidence", 0.8f),
+            createdAt = now,
+            updatedAt = now,
+        )
+        bookKnowledgeGateway.upsertCharacterEvent(event)
+        return GSON.toJson(
+            mapOf(
+                "saved" to true,
+                "book" to book.toIdentityMap(),
+                "event" to event.toToolMap()
+            )
+        )
+    }
+
+    private suspend fun saveBookCharacterRelation(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val from = args.string("fromCharacterId")?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+        } ?: args.string("fromCharacterName")?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+        } ?: return """{"error":"fromCharacterId or fromCharacterName is required"}"""
+        val to = args.string("toCharacterId")?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+        } ?: args.string("toCharacterName")?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+        } ?: return """{"error":"toCharacterId or toCharacterName is required"}"""
+        val relationType = args.string("relationType")?.trim().orEmpty()
+        if (relationType.isBlank()) return """{"error":"relationType is required"}"""
+        val now = System.currentTimeMillis()
+        val relation = BookCharacterRelation(
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() }
+                ?: "relation_${MD5Utils.md5Encode("${book.bookUrl}:${from.id}:${to.id}")}",
+            bookUrl = book.bookUrl,
+            fromCharacterId = from.id,
+            toCharacterId = to.id,
+            relationType = relationType,
+            summary = args.string("summary").orEmpty(),
+            attitude = args.string("attitude").orEmpty(),
+            evidenceJson = args.string("evidenceJson") ?: "[]",
+            chapterIndex = args.string("chapterIndex")?.toIntOrNull(),
+            status = args.int("status", BookCharacterProfile.STATUS_ACTIVE),
+            source = args.string("source") ?: BookCharacterProfile.SOURCE_AI,
+            confidence = args.float("confidence", 0.8f),
+            createdAt = now,
+            updatedAt = now,
+        )
+        bookKnowledgeGateway.upsertCharacterRelation(relation)
+        return GSON.toJson(
+            mapOf(
+                "saved" to true,
+                "book" to book.toIdentityMap(),
+                "relation" to relation.toToolMap()
+            )
+        )
+    }
+
+    private suspend fun saveBookKnowledgeEntry(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val type = args.string("type")?.trim().orEmpty()
+        val title = args.string("title")?.trim().orEmpty()
+        val content = args.string("content")?.trim().orEmpty()
+        if (type.isBlank()) return """{"error":"type is required"}"""
+        if (title.isBlank()) return """{"error":"title is required"}"""
+        if (content.isBlank()) return """{"error":"content is required"}"""
+        val now = System.currentTimeMillis()
+        val entry = BookKnowledgeEntry(
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+                .toString(),
+            bookUrl = book.bookUrl,
+            type = type,
+            title = title,
+            keywordsJson = args.string("keywordsJson") ?: "[]",
+            content = content,
+            scopeStartChapter = args.string("scopeStartChapter")?.toIntOrNull(),
+            scopeEndChapter = args.string("scopeEndChapter")?.toIntOrNull(),
+            priority = args.int("priority", 0),
+            source = args.string("source") ?: BookCharacterProfile.SOURCE_AI,
+            confidence = args.float("confidence", 0.8f),
+            evidenceJson = args.string("evidenceJson") ?: "[]",
+            createdAt = now,
+            updatedAt = now,
+        )
+        bookKnowledgeGateway.upsertKnowledgeEntry(entry)
+        return GSON.toJson(
+            mapOf(
+                "saved" to true,
+                "book" to book.toIdentityMap(),
+                "entry" to entry.toToolMap()
+            )
+        )
+    }
+
+    private suspend fun saveBookOutlineNode(args: JsonObject): String {
+        val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
+        val nodeType = args.string("nodeType")?.trim().orEmpty()
+        val title = args.string("title")?.trim().orEmpty()
+        val summary = args.string("summary")?.trim().orEmpty()
+        if (nodeType.isBlank()) return """{"error":"nodeType is required"}"""
+        if (title.isBlank()) return """{"error":"title is required"}"""
+        if (summary.isBlank()) return """{"error":"summary is required"}"""
+        val now = System.currentTimeMillis()
+        val node = BookOutlineNode(
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+                .toString(),
+            bookUrl = book.bookUrl,
+            parentId = args.string("parentId")?.trim()?.takeIf { it.isNotBlank() },
+            nodeType = nodeType,
+            title = title,
+            summary = summary,
+            startChapterIndex = args.string("startChapterIndex")?.toIntOrNull(),
+            endChapterIndex = args.string("endChapterIndex")?.toIntOrNull(),
+            order = args.int("order", 0),
+            source = args.string("source") ?: BookCharacterProfile.SOURCE_AI,
+            confidence = args.float("confidence", 0.8f),
+            createdAt = now,
+            updatedAt = now,
+        )
+        bookKnowledgeGateway.upsertOutlineNode(node)
+        return GSON.toJson(
+            mapOf(
+                "saved" to true,
+                "book" to book.toIdentityMap(),
+                "outlineNode" to node.toToolMap()
             )
         )
     }
@@ -446,12 +739,122 @@ class AiToolRepository(
         )
     }
 
+    private suspend fun resolveCharacterForKnowledgeTool(
+        book: Book,
+        args: JsonObject,
+    ): BookCharacterProfile? {
+        args.string("characterId")?.trim()?.takeIf { it.isNotBlank() }?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+                ?.let { profile -> return profile }
+        }
+        args.string("characterName")?.trim()?.takeIf { it.isNotBlank() }?.let {
+            bookKnowledgeGateway.getCharacterProfile(book.bookUrl, it)
+                ?.let { profile -> return profile }
+        }
+        return null
+    }
+
+    private fun BookCharacterProfile.toToolMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "bookUrl" to bookUrl,
+            "name" to name,
+            "aliasesJson" to aliasesJson,
+            "avatarUri" to avatarUri,
+            "tagsJson" to tagsJson,
+            "role" to role,
+            "personality" to personality,
+            "summary" to summary,
+            "status" to status,
+            "source" to source,
+            "confidence" to confidence,
+            "updatedAt" to updatedAt,
+        )
+    }
+
+    private fun BookCharacterEvent.toToolMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "characterId" to characterId,
+            "chapterIndex" to chapterIndex,
+            "chapterTitle" to chapterTitle,
+            "eventTimeText" to eventTimeText,
+            "content" to content,
+            "importance" to importance,
+            "sourceTextHash" to sourceTextHash,
+            "evidenceJson" to evidenceJson,
+            "source" to source,
+            "confidence" to confidence,
+            "updatedAt" to updatedAt,
+        )
+    }
+
+    private fun BookCharacterRelation.toToolMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "fromCharacterId" to fromCharacterId,
+            "toCharacterId" to toCharacterId,
+            "relationType" to relationType,
+            "summary" to summary,
+            "attitude" to attitude,
+            "evidenceJson" to evidenceJson,
+            "chapterIndex" to chapterIndex,
+            "status" to status,
+            "source" to source,
+            "confidence" to confidence,
+            "updatedAt" to updatedAt,
+        )
+    }
+
+    private fun BookKnowledgeEntry.toToolMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "type" to type,
+            "title" to title,
+            "keywordsJson" to keywordsJson,
+            "content" to content,
+            "scopeStartChapter" to scopeStartChapter,
+            "scopeEndChapter" to scopeEndChapter,
+            "priority" to priority,
+            "source" to source,
+            "confidence" to confidence,
+            "evidenceJson" to evidenceJson,
+            "updatedAt" to updatedAt,
+        )
+    }
+
+    private fun BookOutlineNode.toToolMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "parentId" to parentId,
+            "nodeType" to nodeType,
+            "title" to title,
+            "summary" to summary,
+            "startChapterIndex" to startChapterIndex,
+            "endChapterIndex" to endChapterIndex,
+            "order" to order,
+            "source" to source,
+            "confidence" to confidence,
+            "updatedAt" to updatedAt,
+        )
+    }
+
     private fun JsonObject.string(name: String): String? {
         return get(name)?.takeIf { !it.isJsonNull }?.asString
     }
 
     private fun JsonObject.int(name: String, defaultValue: Int): Int {
         return runCatching { get(name)?.takeIf { !it.isJsonNull }?.asInt }.getOrNull() ?: defaultValue
+    }
+
+    private fun JsonObject.float(name: String, defaultValue: Float): Float {
+        return runCatching { get(name)?.takeIf { !it.isJsonNull }?.asFloat }.getOrNull()
+            ?: defaultValue
+    }
+
+    private fun JsonObject.bool(name: String, defaultValue: Boolean): Boolean {
+        return runCatching { get(name)?.takeIf { !it.isJsonNull }?.asBoolean }.getOrNull()
+            ?: defaultValue
     }
 
     private fun String.toJsonObject(): JsonObject {
@@ -468,12 +871,30 @@ class AiToolRepository(
         const val TOOL_SEARCH_BOOKMARKS = "search_bookmarks"
         const val TOOL_GET_READING_STATS = "get_reading_stats"
         const val TOOL_GET_AI_ARTIFACTS = "get_ai_artifacts"
+        const val TOOL_SEARCH_BOOK_CHARACTERS = "search_book_characters"
+        const val TOOL_GET_CHARACTER_PROFILE = "get_character_profile"
+        const val TOOL_SEARCH_BOOK_KNOWLEDGE = "search_book_knowledge"
+        const val TOOL_GET_BOOK_OUTLINE = "get_book_outline"
         const val TOOL_SAVE_AI_ARTIFACT = "save_ai_artifact"
+        const val TOOL_SAVE_BOOK_CHARACTER_PROFILE = "save_book_character_profile"
+        const val TOOL_SAVE_BOOK_CHARACTER_EVENT = "save_book_character_event"
+        const val TOOL_SAVE_BOOK_CHARACTER_RELATION = "save_book_character_relation"
+        const val TOOL_SAVE_BOOK_KNOWLEDGE_ENTRY = "save_book_knowledge_entry"
+        const val TOOL_SAVE_BOOK_OUTLINE_NODE = "save_book_outline_node"
         const val TOOL_SAVE_MEMORY = "save_memory"
         const val TOOL_RECALL_MEMORY = "recall_memory"
         const val TOOL_DELETE_MEMORY = "delete_memory"
 
-        private val confirmationRequiredTools = setOf(TOOL_SAVE_AI_ARTIFACT, TOOL_SAVE_MEMORY, TOOL_DELETE_MEMORY)
+        private val confirmationRequiredTools = setOf(
+            TOOL_SAVE_AI_ARTIFACT,
+            TOOL_SAVE_BOOK_CHARACTER_PROFILE,
+            TOOL_SAVE_BOOK_CHARACTER_EVENT,
+            TOOL_SAVE_BOOK_CHARACTER_RELATION,
+            TOOL_SAVE_BOOK_KNOWLEDGE_ENTRY,
+            TOOL_SAVE_BOOK_OUTLINE_NODE,
+            TOOL_SAVE_MEMORY,
+            TOOL_DELETE_MEMORY,
+        )
 
         private val tools = listOf(
             AiToolDefinition(
@@ -574,6 +995,56 @@ class AiToolRepository(
                 )
             ),
             AiToolDefinition(
+                name = TOOL_SEARCH_BOOK_CHARACTERS,
+                description = "Search saved character profiles for a local book. Use this to find character names, aliases, personality, and profile ids.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "query" to stringSchema("Character name, alias, or profile keyword. Leave empty to list recently updated profiles."),
+                    "limit" to intSchema("Maximum number of character profiles to return.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_GET_CHARACTER_PROFILE,
+                description = "Get one saved character profile with events and relationship notes. Events can be limited to chapters up to a specified index to avoid future spoilers.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "characterId" to stringSchema("Character profile id."),
+                    "characterName" to stringSchema("Character name or alias when id is unavailable."),
+                    "maxChapterIndex" to intSchema("Only include events at or before this zero-based chapter index."),
+                    "chapterIndex" to intSchema("Alias for maxChapterIndex."),
+                    "limit" to intSchema("Maximum number of events and relations to return.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SEARCH_BOOK_KNOWLEDGE,
+                description = "Search saved world-book knowledge entries such as world rules, locations, factions, objects, terminology, timeline, style, or theme.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "query" to stringSchema("Keyword for title, keywords, or content. Leave empty to list high-priority entries."),
+                    "type" to stringSchema("Optional entry type, e.g. world_rule, location, faction, object, terminology, timeline, style, theme."),
+                    "chapterIndex" to intSchema("Only include entries whose chapter scope contains this zero-based chapter index."),
+                    "limit" to intSchema("Maximum number of entries to return.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_GET_BOOK_OUTLINE,
+                description = "Read saved outline nodes for a book, volume, arc, chapter, or scene. Can be scoped to the current chapter.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "chapterIndex" to intSchema("Optional zero-based chapter index; returns outline nodes covering this chapter."),
+                    "nodeType" to stringSchema("Optional node type, e.g. book, volume, arc, chapter, scene."),
+                    "limit" to intSchema("Maximum number of outline nodes to return.")
+                )
+            ),
+            AiToolDefinition(
                 name = TOOL_SAVE_AI_ARTIFACT,
                 description = "Save a user-approved AI note or summary into local AI artifacts. Use only when the user explicitly asks to save content.",
                 inputSchema = objectSchema(
@@ -583,6 +1054,98 @@ class AiToolRepository(
                     "chapterIndex" to intSchema("Optional zero-based chapter index."),
                     "taskType" to stringSchema("Artifact task type, such as ai_note or summarize_chapter."),
                     "output" to stringSchema("The note or summary content to save.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SAVE_BOOK_CHARACTER_PROFILE,
+                description = "Save or update a user-approved character profile for a local book. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "id" to stringSchema("Optional existing character id."),
+                    "name" to stringSchema("Character name."),
+                    "aliasesJson" to stringSchema("JSON string representing an array of aliases, e.g. \"[\\\"别名1\\\",\\\"别名2\\\"]\". Must be a string, not an array."),
+                    "avatarUri" to stringSchema("Optional avatar uri or local path."),
+                    "tagsJson" to stringSchema("JSON string representing an array of simple tags, e.g. \"[\\\"修仙者\\\",\\\"白衣\\\",\\\"年轻\\\"]\". Must be a string, not an array."),
+                    "role" to stringSchema("Character role: one of \"male_lead\", \"female_lead\", \"male_supporting\", \"female_supporting\", or empty."),
+                    "personality" to stringSchema("Personality description."),
+                    "summary" to stringSchema("Concise character summary."),
+                    "confidence" to floatSchema("Confidence from 0 to 1.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SAVE_BOOK_CHARACTER_EVENT,
+                description = "Save a user-approved character event or timeline item for a local book. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "characterId" to stringSchema("Character profile id."),
+                    "characterName" to stringSchema("Character name when id is unavailable."),
+                    "chapterIndex" to intSchema("Zero-based chapter index where the event appears."),
+                    "chapterTitle" to stringSchema("Chapter title."),
+                    "eventTimeText" to stringSchema("In-story time label if known."),
+                    "content" to stringSchema("Event content."),
+                    "importance" to intSchema("Importance score."),
+                    "sourceTextHash" to stringSchema("Optional hash of source excerpt."),
+                    "evidenceJson" to stringSchema("JSON array of evidence excerpts or references."),
+                    "confidence" to floatSchema("Confidence from 0 to 1.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SAVE_BOOK_CHARACTER_RELATION,
+                description = "Save a user-approved directed relation between two character profiles. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "fromCharacterId" to stringSchema("Source character id."),
+                    "fromCharacterName" to stringSchema("Source character name when id is unavailable."),
+                    "toCharacterId" to stringSchema("Target character id."),
+                    "toCharacterName" to stringSchema("Target character name when id is unavailable."),
+                    "relationType" to stringSchema("Relation type. Use a concise Chinese label describing the relationship, e.g. 恋人, 夫妻, 师徒, 同门, 兄弟, 姐妹, 主仆, 盟友, 敌对, 上下级, 知己, 情敌, 仇人, 亲属, 朋友."),
+                    "summary" to stringSchema("Relation summary."),
+                    "attitude" to stringSchema("Source character's attitude toward target, e.g. 信任, 敌视, 尊敬, 嫉妒, 爱慕, 怀戒备, 利用."),
+                    "chapterIndex" to intSchema("Chapter index where the relation is established or updated."),
+                    "evidenceJson" to stringSchema("JSON array of evidence excerpts or references."),
+                    "confidence" to floatSchema("Confidence from 0 to 1.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SAVE_BOOK_KNOWLEDGE_ENTRY,
+                description = "Save a user-approved world-book knowledge entry for a local book. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "type" to stringSchema("Entry type, e.g. world_rule, location, faction, object, terminology, timeline, style, theme."),
+                    "title" to stringSchema("Entry title."),
+                    "keywordsJson" to stringSchema("JSON array of trigger keywords."),
+                    "content" to stringSchema("Entry content."),
+                    "scopeStartChapter" to intSchema("Optional first chapter index where this entry applies."),
+                    "scopeEndChapter" to intSchema("Optional last chapter index where this entry applies."),
+                    "priority" to intSchema("Higher priority entries are returned first."),
+                    "evidenceJson" to stringSchema("JSON array of evidence excerpts or references."),
+                    "confidence" to floatSchema("Confidence from 0 to 1.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SAVE_BOOK_OUTLINE_NODE,
+                description = "Save a user-approved outline node for a book, volume, arc, chapter, or scene. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "bookUrl" to stringSchema("Exact book URL/id from search_books."),
+                    "bookName" to stringSchema("Book title, used when bookUrl is unavailable."),
+                    "bookAuthor" to stringSchema("Book author."),
+                    "id" to stringSchema("Optional existing outline node id."),
+                    "parentId" to stringSchema("Optional parent outline node id."),
+                    "nodeType" to stringSchema("Node type, e.g. book, volume, arc, chapter, scene."),
+                    "title" to stringSchema("Outline node title."),
+                    "summary" to stringSchema("Outline node summary."),
+                    "startChapterIndex" to intSchema("Optional first chapter index covered by this node."),
+                    "endChapterIndex" to intSchema("Optional last chapter index covered by this node."),
+                    "order" to intSchema("Sort order among siblings."),
+                    "confidence" to floatSchema("Confidence from 0 to 1.")
                 )
             ),
             AiToolDefinition(
@@ -625,6 +1188,10 @@ class AiToolRepository(
 
         private fun intSchema(description: String): Map<String, Any?> {
             return mapOf("type" to "integer", "description" to description)
+        }
+
+        private fun floatSchema(description: String): Map<String, Any?> {
+            return mapOf("type" to "number", "description" to description)
         }
     }
 }

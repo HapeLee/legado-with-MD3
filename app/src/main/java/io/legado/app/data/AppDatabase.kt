@@ -11,6 +11,7 @@ import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
+import io.legado.app.data.dao.BookKnowledgeDao
 import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.AiArtifactDao
@@ -44,6 +45,11 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.BookCharacterEvent
+import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.data.entities.BookCharacterRelation
+import io.legado.app.data.entities.BookKnowledgeEntry
+import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.Bookmark
@@ -94,7 +100,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 94,
+    version = 95,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -106,7 +112,9 @@ val appDb by lazy {
         HighlightRule::class, AiProviderProfile::class, AiModelProfile::class,
         AiTaskPreset::class, AiArtifact::class, AiChatConversation::class,
         AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class,
-        BookContentProcess::class, AiPromptPreset::class],
+        BookContentProcess::class, AiPromptPreset::class, BookCharacterProfile::class,
+        BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
+        BookOutlineNode::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -159,7 +167,8 @@ val appDb by lazy {
         AutoMigration(from = 90, to = 91),
         AutoMigration(from = 91, to = 92),
         AutoMigration(from = 92, to = 93),
-        AutoMigration(from = 93, to = 94)
+        AutoMigration(from = 93, to = 94),
+        AutoMigration(from = 94, to = 95)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -169,6 +178,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val bookSourceDao: BookSourceDao
     abstract val bookChapterDao: BookChapterDao
     abstract val bookContentProcessDao: BookContentProcessDao
+    abstract val bookKnowledgeDao: BookKnowledgeDao
     abstract val replaceRuleDao: ReplaceRuleDao
     abstract val searchBookDao: SearchBookDao
     abstract val searchKeywordDao: SearchKeywordDao

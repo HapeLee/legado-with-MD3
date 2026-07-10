@@ -23,19 +23,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.outlined.Book
@@ -55,6 +61,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -72,6 +79,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
+import coil.compose.AsyncImage
 import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
@@ -268,6 +276,30 @@ private fun BookInfoScreenContent(
                                     onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
                                     onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
                                     onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
+                                )
+                                BookInfoCharacters(
+                                    characters = state.characters,
+                                    onCharacterClick = {
+                                        onIntent(BookInfoIntent.CharacterClick(it))
+                                    },
+                                    onNetworkClick = {
+                                        onIntent(BookInfoIntent.CharacterNetworkClick)
+                                    },
+                                    onViewAllClick = {
+                                        onIntent(BookInfoIntent.CharacterListClick)
+                                    },
+                                )
+                                BookInfoKnowledge(
+                                    entries = state.knowledgeEntries,
+                                    onViewAllClick = {
+                                        onIntent(BookInfoIntent.KnowledgeListClick)
+                                    },
+                                )
+                                BookInfoEvents(
+                                    events = state.recentEvents,
+                                    onViewAllClick = {
+                                        onIntent(BookInfoIntent.EventListClick)
+                                    },
                                 )
                                 state.relatedBooks.forEach { module ->
                                     RelatedBooksBanner(
@@ -1250,5 +1282,302 @@ private fun RelatedBooksBanner(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
         )
+    }
+}
+
+@Composable
+private fun BookInfoCharacters(
+    characters: ImmutableList<BookInfoCharacterUi>,
+    onCharacterClick: (String) -> Unit,
+    onNetworkClick: () -> Unit,
+    onViewAllClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(LegadoTheme.colorScheme.surface)
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppText(
+                text = stringResource(R.string.book_characters),
+                style = LegadoTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            SmallTonalButton(
+                onClick = onViewAllClick,
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.view_all),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            SmallTonalButton(
+                onClick = onNetworkClick,
+                icon = Icons.Default.Group,
+                contentDescription = stringResource(R.string.character_network),
+            )
+        }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(
+                items = characters,
+                key = { it.id },
+            ) { character ->
+                CharacterEntryCard(
+                    character = character,
+                    onClick = { onCharacterClick(character.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CharacterEntryCard(
+    character: BookInfoCharacterUi,
+    onClick: () -> Unit,
+) {
+    val avatarLoadFailed = remember(character.avatarUri) { mutableStateOf(false) }
+    val roleDisplayName = when (character.role) {
+        io.legado.app.data.entities.BookCharacterProfile.ROLE_MALE_LEAD -> stringResource(R.string.role_male_lead)
+        io.legado.app.data.entities.BookCharacterProfile.ROLE_FEMALE_LEAD -> stringResource(R.string.role_female_lead)
+        io.legado.app.data.entities.BookCharacterProfile.ROLE_MALE_SUPPORTING -> stringResource(R.string.role_male_supporting)
+        io.legado.app.data.entities.BookCharacterProfile.ROLE_FEMALE_SUPPORTING -> stringResource(R.string.role_female_supporting)
+        else -> ""
+    }
+
+    GlassCard(
+        modifier = Modifier.width(160.dp),
+        onClick = onClick,
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(LegadoTheme.colorScheme.surfaceContainerHighest),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (!character.avatarUri.isNullOrBlank() && !avatarLoadFailed.value) {
+                        AsyncImage(
+                            model = character.avatarUri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                            onError = { avatarLoadFailed.value = true },
+                        )
+                    } else {
+                        AppIcon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
+                ) {
+                    AnimatedTextLine(
+                        text = character.name,
+                        style = LegadoTheme.typography.labelLarge,
+                        maxLines = 1,
+                    )
+                    if (roleDisplayName.isNotBlank()) {
+                        AnimatedTextLine(
+                            text = roleDisplayName,
+                            style = LegadoTheme.typography.labelSmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            if (character.tags.isNotBlank()) {
+                AnimatedTextLine(
+                    text = character.tags,
+                    style = LegadoTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BookInfoKnowledge(
+    entries: ImmutableList<BookInfoKnowledgeUi>,
+    onViewAllClick: () -> Unit,
+) {
+    if (entries.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(LegadoTheme.colorScheme.surface)
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppText(
+                text = stringResource(R.string.book_knowledge),
+                style = LegadoTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            SmallTonalButton(
+                onClick = onViewAllClick,
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.view_all),
+            )
+        }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(
+                items = entries,
+                key = { it.id },
+            ) { entry ->
+                KnowledgeInfoCard(
+                    title = entry.title,
+                    summary = entry.summary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KnowledgeInfoCard(
+    title: String,
+    summary: String,
+) {
+    GlassCard(
+        modifier = Modifier.width(140.dp),
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            AnimatedTextLine(
+                text = title,
+                style = LegadoTheme.typography.titleSmall,
+                maxLines = 1,
+            )
+            AnimatedTextLine(
+                text = summary.ifBlank { stringResource(R.string.knowledge_content) },
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BookInfoEvents(
+    events: ImmutableList<BookInfoEventUi>,
+    onViewAllClick: () -> Unit,
+) {
+    if (events.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(LegadoTheme.colorScheme.surface)
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppText(
+                text = stringResource(R.string.plot_events),
+                style = LegadoTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            SmallTonalButton(
+                onClick = onViewAllClick,
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.view_all),
+            )
+        }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(
+                items = events,
+                key = { it.id },
+            ) { event ->
+                EventInfoCard(
+                    title = listOfNotNull(
+                        event.characterName.takeIf { it.isNotBlank() },
+                        event.chapterTitle.takeIf { it.isNotBlank() },
+                    ).joinToString(" · ").ifBlank { stringResource(R.string.event_detail) },
+                    content = event.content,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventInfoCard(
+    title: String,
+    content: String,
+) {
+    GlassCard(
+        modifier = Modifier.width(160.dp),
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            AnimatedTextLine(
+                text = title,
+                style = LegadoTheme.typography.titleSmall,
+                maxLines = 1,
+            )
+            AnimatedTextLine(
+                text = content.ifBlank { stringResource(R.string.event_content) },
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+            )
+        }
     }
 }

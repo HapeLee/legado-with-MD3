@@ -20,6 +20,7 @@ import io.legado.app.data.repository.BookCacheCleanupRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.data.repository.BookKnowledgeRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceRepository
@@ -65,6 +66,7 @@ import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
@@ -133,6 +135,13 @@ import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.import.remote.ServerConfigViewModel
 import io.legado.app.ui.book.import.remote.ServersViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterNetworkViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterListViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
+import io.legado.app.ui.book.knowledge.BookEventListViewModel
+import io.legado.app.ui.book.knowledge.BookEventDetailViewModel
 import io.legado.app.ui.book.manage.BookshelfManageScreenViewModel
 import io.legado.app.ui.book.manga.ReadMangaViewModel
 import io.legado.app.ui.book.read.ReadBookViewModel
@@ -147,6 +156,7 @@ import io.legado.app.ui.config.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditViewModel
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigViewModel
+import io.legado.app.ui.config.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
@@ -244,7 +254,7 @@ val appModule = module {
     single<AiMemoryGateway> { AiMemoryRepository(get()) }
     single<AiPromptPresetGateway> { AiPromptPresetRepository(get()) }
     single<AiTextGateway> { AiTextRepositoryImpl() }
-    single<AiToolGateway> { AiToolRepository(get(), get(), get(), get(), get(), get()) }
+    single<AiToolGateway> { AiToolRepository(get(), get(), get(), get(), get(), get(), get()) }
     single<AppStartupGateway> { AppStartupRepository(get()) }
     single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
@@ -258,6 +268,7 @@ val appModule = module {
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
+    single<BookKnowledgeGateway> { BookKnowledgeRepository(get()) }
     single { ExploreRepositoryImpl(get()) }
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
@@ -330,6 +341,7 @@ val appModule = module {
     viewModelOf(::BackupConfigViewModel)
     viewModelOf(::AiConfigViewModel)
     viewModelOf(::AiSummaryConfigViewModel)
+    viewModelOf(::AiPromptConfigViewModel)
     viewModelOf(::AiChatViewModel)
     viewModel { (providerId: String?) ->
         AiProviderEditViewModel(
@@ -352,6 +364,51 @@ val appModule = module {
     viewModelOf(::ServerConfigViewModel)
     viewModelOf(::ServersViewModel)
     viewModelOf(::BookInfoViewModel)
+    viewModel { (bookUrl: String, characterId: String?) ->
+        BookCharacterDetailViewModel(
+            bookUrl = bookUrl,
+            characterId = characterId,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String) ->
+        BookCharacterNetworkViewModel(
+            bookUrl = bookUrl,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String) ->
+        BookKnowledgeListViewModel(
+            bookUrl = bookUrl,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String) ->
+        BookCharacterListViewModel(
+            bookUrl = bookUrl,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String, entryId: String?) ->
+        BookKnowledgeDetailViewModel(
+            bookUrl = bookUrl,
+            entryId = entryId,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String) ->
+        BookEventListViewModel(
+            bookUrl = bookUrl,
+            bookKnowledgeGateway = get(),
+        )
+    }
+    viewModel { (bookUrl: String, eventId: String?) ->
+        BookEventDetailViewModel(
+            bookUrl = bookUrl,
+            eventId = eventId,
+            bookKnowledgeGateway = get(),
+        )
+    }
     viewModelOf(::ReadMangaViewModel)
     viewModel {
         ReadBookViewModel(

@@ -36,6 +36,7 @@ fun AiConfigRouteScreen(
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
     onNavigateToTranslation: () -> Unit,
     onNavigateToAiSummary: () -> Unit,
+    onNavigateToAiPrompt: () -> Unit,
     viewModel: AiConfigViewModel = koinViewModel()
 ) {
     AiConfigScreen(
@@ -46,7 +47,8 @@ fun AiConfigRouteScreen(
         onNavigateToProviderEdit = onNavigateToProviderEdit,
         onNavigateToModelEdit = onNavigateToModelEdit,
         onNavigateToTranslation = onNavigateToTranslation,
-        onNavigateToAiSummary = onNavigateToAiSummary
+        onNavigateToAiSummary = onNavigateToAiSummary,
+        onNavigateToAiPrompt = onNavigateToAiPrompt
     )
 }
 
@@ -60,7 +62,8 @@ fun AiConfigScreen(
     onNavigateToProviderEdit: (providerId: String?) -> Unit,
     onNavigateToModelEdit: (providerId: String?, modelProfileId: String?) -> Unit,
     onNavigateToTranslation: () -> Unit,
-    onNavigateToAiSummary: () -> Unit
+    onNavigateToAiSummary: () -> Unit,
+    onNavigateToAiPrompt: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -135,6 +138,11 @@ fun AiConfigScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_chapter_summary),
                         onClick = onNavigateToAiSummary
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_prompt_config),
+                        description = stringResource(R.string.ai_prompt_config_desc),
+                        onClick = onNavigateToAiPrompt
                     )
                 }
             }

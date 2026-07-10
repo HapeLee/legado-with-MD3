@@ -53,6 +53,18 @@ class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
                     MainActivity.createExploreShowIntent(this, title, sourceUrl, exploreUrl)
                 )
             },
+            onOpenCharacterDetail = { bookUrl, characterId ->
+                startActivity(
+                    MainActivity.createBookCharacterDetailIntent(
+                        this,
+                        bookUrl,
+                        characterId
+                    )
+                )
+            },
+            onOpenCharacterNetwork = { bookUrl ->
+                startActivity(MainActivity.createBookCharacterNetworkIntent(this, bookUrl))
+            },
         )
     }
 

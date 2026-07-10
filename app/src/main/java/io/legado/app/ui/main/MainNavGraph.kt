@@ -1,5 +1,8 @@
 package io.legado.app.ui.main
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
@@ -8,7 +11,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -19,6 +27,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.Download
 import io.legado.app.ui.about.AboutEffect
@@ -33,6 +42,24 @@ import io.legado.app.ui.book.import.local.ImportBookScreen
 import io.legado.app.ui.book.import.remote.RemoteBookScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterDetailScreen
+import io.legado.app.ui.book.knowledge.CharacterDetailIntent
+import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
+import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterNetworkScreen
+import io.legado.app.ui.book.knowledge.BookCharacterNetworkViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterListScreen
+import io.legado.app.ui.book.knowledge.BookCharacterListViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeDetailScreen
+import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeListScreen
+import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
+import io.legado.app.ui.book.knowledge.BookEventDetailScreen
+import io.legado.app.ui.book.knowledge.BookEventDetailViewModel
+import io.legado.app.ui.book.knowledge.BookEventListScreen
+import io.legado.app.ui.book.knowledge.BookEventListViewModel
+import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
+import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.read.ReadBookController
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -51,6 +78,7 @@ import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
+import io.legado.app.ui.config.ai.prompt.AiPromptConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
@@ -249,12 +277,17 @@ fun MainActivity.mainEntryProvider(
                 )
             },
             onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
-            onNavigateToAiSummary = { backStack.add(MainRouteSettingsAiSummary) }
+            onNavigateToAiSummary = { backStack.add(MainRouteSettingsAiSummary) },
+            onNavigateToAiPrompt = { backStack.add(MainRouteSettingsAiPrompt) }
         )
     }
 
     entry<MainRouteSettingsAiSummary> {
         AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsAiPrompt> {
+        AiPromptConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsAiProviderEdit> { route ->
@@ -675,12 +708,167 @@ fun MainActivity.mainEntryProvider(
             onNavigateToExploreShow = { title, sourceUrl, exploreUrl ->
                 onNavigateToRoute(MainRouteExploreShow(title, sourceUrl, exploreUrl))
             },
+            onOpenCharacterDetail = { bookUrl, characterId ->
+                onNavigateToRoute(MainRouteBookCharacterDetail(bookUrl, characterId))
+            },
+            onOpenCharacterNetwork = { bookUrl ->
+                onNavigateToRoute(MainRouteBookCharacterNetwork(bookUrl))
+            },
+            onOpenCharacterList = { bookUrl ->
+                onNavigateToRoute(MainRouteBookCharacterList(bookUrl))
+            },
+            onOpenKnowledgeList = { bookUrl ->
+                onNavigateToRoute(MainRouteBookKnowledgeList(bookUrl))
+            },
+            onOpenEventList = { bookUrl ->
+                onNavigateToRoute(MainRouteBookEventList(bookUrl))
+            },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
             onRegisterVariableSetter = { setter ->
                 onRegisterVariableSetter(setter)
             }
+        )
+    }
+
+    entry<MainRouteBookCharacterDetail> { route ->
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var pendingAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
+        val viewModel = koinViewModel<BookCharacterDetailViewModel>(
+            key = "BookCharacterDetail:${route.bookUrl}:${route.characterId.orEmpty()}",
+            parameters = { parametersOf(route.bookUrl, route.characterId) }
+        )
+        val state = viewModel.uiState.collectAsStateWithLifecycle().value
+        val imagePicker = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            pendingAvatarUri = uri?.toString()
+        }
+        BookCharacterDetailScreen(
+            state = state,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onPickAvatar = { imagePicker.launch(arrayOf("image/*")) },
+        )
+        CharacterAvatarCropDialog(
+            sourceUri = pendingAvatarUri?.let(Uri::parse),
+            onDismissRequest = { pendingAvatarUri = null },
+            onConfirm = { crop ->
+                val sourceUri =
+                    pendingAvatarUri?.let(Uri::parse) ?: return@CharacterAvatarCropDialog
+                pendingAvatarUri = null
+                scope.launch {
+                    runCatching {
+                        withContext(IO) {
+                            saveCharacterAvatar(context, sourceUri, crop)
+                        }
+                    }.onSuccess { avatarUri ->
+                        deleteCharacterAvatar(context, state.avatarUri)
+                        viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(avatarUri))
+                    }.onFailure {
+                        context.toastOnUi(
+                            it.localizedMessage ?: context.getString(R.string.save_failed)
+                        )
+                    }
+                }
+            },
+        )
+    }
+
+    entry<MainRouteBookCharacterNetwork> { route ->
+        val viewModel = koinViewModel<BookCharacterNetworkViewModel>(
+            key = "BookCharacterNetwork:${route.bookUrl}",
+            parameters = { parametersOf(route.bookUrl) }
+        )
+        BookCharacterNetworkScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onOpenCharacterDetail = { characterId ->
+                onNavigateToRoute(MainRouteBookCharacterDetail(route.bookUrl, characterId))
+            },
+            onRefresh = viewModel::refresh,
+        )
+    }
+
+    entry<MainRouteBookCharacterList> { route ->
+        val viewModel = koinViewModel<BookCharacterListViewModel>(
+            key = "CharacterList:${route.bookUrl}",
+            parameters = { parametersOf(route.bookUrl) }
+        )
+        BookCharacterListScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onOpenDetail = { characterId ->
+                onNavigateToRoute(MainRouteBookCharacterDetail(route.bookUrl, characterId))
+            },
+            onRefresh = viewModel::refresh,
+        )
+    }
+
+    entry<MainRouteBookKnowledgeList> { route ->
+        val viewModel = koinViewModel<BookKnowledgeListViewModel>(
+            key = "KnowledgeList:${route.bookUrl}",
+            parameters = { parametersOf(route.bookUrl) }
+        )
+        BookKnowledgeListScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onOpenDetail = { entryId ->
+                onNavigateToRoute(MainRouteBookKnowledgeDetail(route.bookUrl, entryId))
+            },
+            onRefresh = viewModel::refresh,
+        )
+    }
+
+    entry<MainRouteBookKnowledgeDetail> { route ->
+        val viewModel = koinViewModel<BookKnowledgeDetailViewModel>(
+            key = "KnowledgeDetail:${route.bookUrl}:${route.entryId.orEmpty()}",
+            parameters = { parametersOf(route.bookUrl, route.entryId) }
+        )
+        BookKnowledgeDetailScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteBookEventList> { route ->
+        val viewModel = koinViewModel<BookEventListViewModel>(
+            key = "EventList:${route.bookUrl}",
+            parameters = { parametersOf(route.bookUrl) }
+        )
+        BookEventListScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onOpenDetail = { eventId ->
+                onNavigateToRoute(MainRouteBookEventDetail(route.bookUrl, eventId))
+            },
+            onRefresh = viewModel::refresh,
+        )
+    }
+
+    entry<MainRouteBookEventDetail> { route ->
+        val viewModel = koinViewModel<BookEventDetailViewModel>(
+            key = "EventDetail:${route.bookUrl}:${route.eventId.orEmpty()}",
+            parameters = { parametersOf(route.bookUrl, route.eventId) }
+        )
+        BookEventDetailScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
         )
     }
 
