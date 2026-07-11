@@ -1744,6 +1744,9 @@
     <string name="input_url_or_json_hint">輸入 URL 或 JSON</string>
     <string name="invalid_directory">無效的目錄路徑</string>
     <string name="invalid_format">格式無效</string>
+    <string name="regex_is_empty">正則表達式為空</string>
+    <string name="example_is_empty">範例為空</string>
+    <string name="invalid_regex">正則表達式無效</string>
     <string name="invert_selection">反選</string>
     <string name="is_blur_enable">啟用元素模糊</string>
     <string name="is_blur_progressive_enable">啟用漸進式模糊</string>

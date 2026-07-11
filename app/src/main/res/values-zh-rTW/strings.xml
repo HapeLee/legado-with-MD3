@@ -1539,6 +1539,9 @@
     <string name="clipboard_empty">剪貼簿為空</string>
     <string name="clipboard_empty_or_invalid">剪貼簿為空或格式無效</string>
     <string name="invalid_format">無效格式</string>
+    <string name="regex_is_empty">正則表達式為空</string>
+    <string name="example_is_empty">範例為空</string>
+    <string name="invalid_regex">正則表達式無效</string>
     <string name="complete_required_information">請填寫所有必填資訊</string>
     <string name="cannot_open_url">無法直接開啟此 URL</string>
     <string name="open_by_browser">已切換到瀏覽器開啟</string>

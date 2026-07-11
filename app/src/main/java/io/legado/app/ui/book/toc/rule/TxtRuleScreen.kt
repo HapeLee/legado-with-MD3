@@ -284,7 +284,8 @@ fun TxtRuleScreen(
                 rule = fields.rule1,
                 example = fields.rule2
             )
-        }
+        },
+        showTestButton = true,
     )
 
     RuleListScaffold(

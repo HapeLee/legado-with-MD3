@@ -1056,6 +1056,9 @@
     <string name="clipboard_empty">剪贴板没有内容</string>
     <string name="clipboard_empty_or_invalid">剪贴板为空或格式不正确</string>
     <string name="invalid_format">格式不正确</string>
+    <string name="regex_is_empty">正则表达式为空</string>
+    <string name="example_is_empty">示例为空</string>
+    <string name="invalid_regex">正则表达式无效</string>
     <string name="complete_required_information">请填写完整信息</string>
     <string name="sort_by_respondTime">响应时间排序</string>
     <string name="respondTime">响应时间：%1$d ms</string>

@@ -1088,6 +1088,9 @@
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="clipboard_empty_or_invalid">Clipboard is empty or has an invalid format</string>
     <string name="invalid_format">Invalid format</string>
+    <string name="regex_is_empty">Regex is empty</string>
+    <string name="example_is_empty">Example is empty</string>
+    <string name="invalid_regex">Invalid regex</string>
     <string name="complete_required_information">Fill in all required information</string>
     <string name="export_success">export success</string>
     <string name="path">path</string>
