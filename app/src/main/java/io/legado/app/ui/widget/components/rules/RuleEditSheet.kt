@@ -39,7 +39,9 @@ import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
@@ -90,6 +92,7 @@ fun <T> RuleEditSheet(
     // Test results state
     var testResults by remember(show, rule) { mutableStateOf<List<TestLineResult>?>(null) }
     var testError by remember(show, rule) { mutableStateOf<String?>(null) }
+    var testRunning by remember(show, rule) { mutableStateOf(false) }
 
     // Pre-resolve string resources at composable level
     val regexIsEmptyStr = stringResource(R.string.regex_is_empty)
@@ -99,6 +102,7 @@ fun <T> RuleEditSheet(
     fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
 
     fun runTest() {
+        if (testRunning) return
         if (rule1.isBlank()) {
             testError = regexIsEmptyStr
             testResults = null
@@ -119,25 +123,47 @@ fun <T> RuleEditSheet(
             return
         }
 
+        // Capture inputs for background processing
+        val capturedRule2 = rule2
+        testRunning = true
         testError = null
-        val lines = rule2.lines()
-        val fullText = "\n${rule2}"
-        val matcher = pattern.matcher(fullText)
+        testResults = null
 
-        // Collect all match ranges (character offsets in fullText)
-        val matchRanges = mutableListOf<IntRange>()
-        while (matcher.find()) {
-            matchRanges.add(matcher.start()..matcher.end())
-        }
+        scope.launch(Dispatchers.Default) {
+            val results = withContext(Dispatchers.Default) {
+                // Normalize line endings: \r\n and \r → \n to avoid offset misalignment
+                val normalized = capturedRule2.replace("\r\n", "\n").replace("\r", "\n")
+                val lines = normalized.lines()
+                val fullText = "\n$normalized"
+                val matcher = pattern.matcher(fullText)
 
-        // Map each line: check if any match overlaps with this line's range in fullText
-        var offset = 1 // first \n
-        testResults = lines.map { line ->
-            val lineStart = offset
-            val lineEnd = offset + line.length
-            val matched = matchRanges.any { it.first < lineEnd && it.last > lineStart }
-            offset = lineEnd + 1 // +1 for the \n that was between lines
-            TestLineResult(line = line, matched = matched, matchResult = if (matched) line else null)
+                // Collect all match ranges (character offsets in fullText)
+                val matchRanges = mutableListOf<IntRange>()
+                while (matcher.find()) {
+                    matchRanges.add(matcher.start()..matcher.end())
+                }
+
+                // Map each line: check if any match overlaps with this line's range
+                var offset = 1 // skip the leading \n
+                lines.map { line ->
+                    val lineStart = offset
+                    val lineEnd = offset + line.length
+                    val matched = matchRanges.any { range ->
+                        if (range.first == range.last) {
+                            // Zero-width match: check if it falls within [lineStart, lineEnd]
+                            range.first in lineStart..lineEnd
+                        } else {
+                            // Normal match: check overlap
+                            range.first < lineEnd && range.last > lineStart
+                        }
+                    }
+                    offset = lineEnd + 1 // +1 for \n
+                    TestLineResult(line = line, matched = matched, matchResult = if (matched) line else null)
+                }
+            }
+
+            testResults = results
+            testRunning = false
         }
     }
 
