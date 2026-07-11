@@ -400,11 +400,13 @@ object Restore : KoinComponent {
         val restoreNetworkCoverBackground =
             legacyBookInfoBackground != null &&
                     PreferKey.bookInfoNetworkCoverBackground !in map &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur)
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoNetworkCoverBackground)
         val restoreDefaultCoverBackground =
             legacyBookInfoBackground != null &&
                     PreferKey.bookInfoDefaultCoverBackground !in map &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur)
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoDefaultCoverBackground)
         appCtx.defaultSharedPreferences.edit {
             map.forEach { (key, value) ->
                 if (BackupConfig.keyIsNotIgnore(key)) {

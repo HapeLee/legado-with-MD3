@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.info
 
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -9,15 +10,15 @@ class BookInfoBackdropStyleTest {
     fun backgroundModesKeepTheirExpectedCoverTreatment() {
         assertEquals(
             BookInfoBackdropStyle(showCover = true, blurCover = false),
-            resolveBookInfoBackdropStyle("off")
+            resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_OFF)
         )
         assertEquals(
             BookInfoBackdropStyle(showCover = true, blurCover = true),
-            resolveBookInfoBackdropStyle("on")
+            resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_ON)
         )
         assertEquals(
             BookInfoBackdropStyle(showCover = false, blurCover = false),
-            resolveBookInfoBackdropStyle("off_for_default")
+            resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_COVER_HIDDEN)
         )
     }
 }

@@ -620,6 +620,15 @@ private fun BookInfoBackdrop(
     usesDefaultCover: Boolean,
     onNetworkCoverLoadError: (String?) -> Unit,
 ) {
+    if (!style.showCover) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clearAndSetSemantics { }
+                .background(LegadoTheme.colorScheme.surface)
+        )
+        return
+    }
     val backdropState = remember(
         book.name,
         book.author,
@@ -644,36 +653,34 @@ private fun BookInfoBackdrop(
             .fillMaxSize()
             .clearAndSetSemantics { }
     ) {
-        if (style.showCover) {
-            Crossfade(
-                targetState = backdropState,
-                animationSpec = tween(800),
-                label = "BackdropCrossfade"
-            ) { currentBook ->
-                BookCoverImage(
-                    name = currentBook.name,
-                    author = currentBook.author,
-                    path = currentBook.coverPath,
-                    sourceOrigin = currentBook.sourceOrigin,
-                    memoryCacheKey = currentBook.coverPath?.let { "$it#book-info-backdrop" },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(480.dp)
-                        .then(
-                            if (style.blurCover) {
-                                Modifier.blur(24.dp)
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    contentScale = ContentScale.Crop,
-                    showLoadingPlaceholder = false,
-                    onError = { onNetworkCoverLoadError(currentBook.coverPath) },
-                    requestBuilder = {
-                        size(Size(384, 384))
-                    }
-                )
-            }
+        Crossfade(
+            targetState = backdropState,
+            animationSpec = tween(800),
+            label = "BackdropCrossfade"
+        ) { currentBook ->
+            BookCoverImage(
+                name = currentBook.name,
+                author = currentBook.author,
+                path = currentBook.coverPath,
+                sourceOrigin = currentBook.sourceOrigin,
+                memoryCacheKey = currentBook.coverPath?.let { "$it#book-info-backdrop" },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(480.dp)
+                    .then(
+                        if (style.blurCover) {
+                            Modifier.blur(24.dp)
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentScale = ContentScale.Crop,
+                showLoadingPlaceholder = false,
+                onError = { onNetworkCoverLoadError(currentBook.coverPath) },
+                requestBuilder = {
+                    size(Size(384, 384))
+                }
+            )
         }
         if (style.blurCover) {
             Box(
