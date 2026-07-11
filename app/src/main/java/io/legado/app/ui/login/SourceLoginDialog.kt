@@ -590,7 +590,7 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             when (item.itemId) {
                 R.id.menu_ok -> {
                     oKToClose = true
-                    val loginData = getLoginData(rowUis, true)
+                    val loginData = getLoginData(this@SourceLoginDialog.rowUis, true)
                     login(source, loginData)
                 }
 
@@ -677,6 +677,7 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             when (rowUi.type) {
                 Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
+                    rowView ?: return@forEachIndexed
                     ItemSourceEditBinding.bind(rowView).editText.text.let {
                         loginData[rowUi.name] =
                             it?.toString() ?: rowUi.default ?: "" //没文本的时候存空字符串,而不是删除loginInfo
