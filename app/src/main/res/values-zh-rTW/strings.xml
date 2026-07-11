@@ -2373,4 +2373,8 @@
     <string name="about_open_github">開啟 GitHub</string>
     <string name="edit_menu_items">編輯選單項</string>
     <string name="edit_select_menu">編輯選擇選單</string>
+    <string name="primary_menu">一級選單</string>
+    <string name="collapsed_menu">折疊選單</string>
+    <string name="hidden_items">已隱藏項目</string>
+    <string name="merged_in_multiline">多行模式下將合併顯示</string>
 </resources>

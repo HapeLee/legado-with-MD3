@@ -489,6 +489,7 @@ fun ReadBookRouteScreen(
             textMenuState?.let { menuState ->
                 TextActionSelectionMenu(
                     menuState = menuState,
+                    expandTextMenu = readPreferences.expandTextMenu,
                     onDismiss = { controller.dismissTextActionMenu() },
                     onItemClick = { item -> controller.onTextMenuItemClick(item) },
                     onOpenManage = {
@@ -498,11 +499,12 @@ fun ReadBookRouteScreen(
                     }
                 )
             }
-            val configItems = remember(showSelectMenuConfigSheet) {
+            var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
+            LaunchedEffect(showSelectMenuConfigSheet) {
                 if (showSelectMenuConfigSheet) {
-                    controller.getActionMenuItems()
+                    configItems = controller.getActionMenuItems()
                 } else {
-                    emptyList()
+                    configItems = emptyList()
                 }
             }
             TextSelectMenuConfigSheet(
@@ -515,6 +517,7 @@ fun ReadBookRouteScreen(
                 },
                 onShowSelectMenuIconChange = {
                     viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
+                    controller.refreshActionMenuItems()
                 },
                 onDismissRequest = { showSelectMenuConfigSheet = false },
                 onSaved = { items -> controller.saveMenuConfig(items) }

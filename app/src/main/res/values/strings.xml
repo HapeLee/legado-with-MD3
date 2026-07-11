@@ -2461,4 +2461,8 @@
     <string name="about_open_github">Open GitHub</string>
     <string name="edit_menu_items">Edit Menu Items</string>
     <string name="edit_select_menu">Edit Selection Menu</string>
+    <string name="primary_menu">Primary Menu</string>
+    <string name="collapsed_menu">Collapsed Menu</string>
+    <string name="hidden_items">Hidden Items</string>
+    <string name="merged_in_multiline">Merged in multiline mode</string>
 </resources>
