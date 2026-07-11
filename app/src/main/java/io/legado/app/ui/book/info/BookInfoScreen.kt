@@ -1140,13 +1140,17 @@ private fun BookInfoSummary(
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.secondary,
             )
-        }
-        if (!hasChapters) {
-            AnimatedTextLine(
-                text = stringResource(R.string.error_load_toc),
-                style = LegadoTheme.typography.bodySmall,
-                color = LegadoTheme.colorScheme.error
-            )
+            if (!hasChapters) {
+                AppText(
+                    text = " · ",
+                    color = LegadoTheme.colorScheme.secondary
+                )
+                AnimatedTextLine(
+                    text = stringResource(R.string.error_load_toc),
+                    style = LegadoTheme.typography.labelMedium,
+                    color = LegadoTheme.colorScheme.error
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         book.remark?.takeIf { it.isNotBlank() }?.let { remark ->
