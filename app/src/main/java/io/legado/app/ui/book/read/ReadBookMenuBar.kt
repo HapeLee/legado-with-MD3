@@ -1774,6 +1774,7 @@ private fun FloatingIconRow(
         state.menuConfig.titleBarButtons,
         state.isReadAloudRunning,
         state.isAutoPage,
+        state.translationMode,
     ) {
         loadFloatingIcons(context, state, onIntent)
     }
@@ -2351,7 +2352,8 @@ private fun MenuBottomBar(
             state.menuConfig.bottomBarButtons,
             state.menuConfig.readMenuCustomIcons,
             state.isReadAloudRunning,
-            state.isAutoPage
+            state.isAutoPage,
+            state.translationMode
         ) {
             loadToolButtons(context, state, onIntent)
         }
@@ -3243,6 +3245,7 @@ private fun loadFloatingIcons(
     val activeIds = buildSet {
         if (state.isReadAloudRunning) add("read_aloud")
         if (state.isAutoPage) add("auto_page")
+        if (state.translationMode) add("translate")
     }
 
     return state.menuConfig.titleBarButtons
