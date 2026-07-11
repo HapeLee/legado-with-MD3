@@ -234,11 +234,15 @@ class SearchBooksUseCase(
         private val tagsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val containsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val otherBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val bookUrlIndex = HashMap<String, SearchBookKey>()
         var resultLimitReached = false
             private set
 
         val count: Int
             get() = equalBooks.size + tagsBooks.size + containsBooks.size + otherBooks.size
+
+        private fun allBuckets(): Sequence<Map.Entry<SearchBookKey, SearchBook>> =
+            sequenceOf(equalBooks, tagsBooks, containsBooks, otherBooks).flatMap { it.entries }
 
         suspend fun merge(newBooks: List<SearchBook>): SearchBookChange {
             if (newBooks.isEmpty()) return SearchBookChange()
@@ -248,11 +252,26 @@ class SearchBooksUseCase(
             val touchedBuckets = linkedSetOf<LinkedHashMap<SearchBookKey, SearchBook>>()
             newBooks.forEach { newBook ->
                 coroutineContext.ensureActive()
+                val existingKey = bookUrlIndex[newBook.bookUrl]
+                if (existingKey != null) {
+                    val existingEntry = allBuckets().firstOrNull { it.key == existingKey }
+                    val existingBook = existingEntry?.value
+                    if (existingBook != null) {
+                        existingBook.addOrigin(newBook.origin)
+                        upsertBooks.add(existingBook)
+                        val existingBucket = findBucket(existingKey)
+                        if (existingBucket != null) {
+                            touchedBuckets.add(existingBucket)
+                        }
+                        return@forEach
+                    }
+                }
                 val bucket = classifyBucket(newBook) ?: return@forEach
                 val key = SearchBookKey(newBook.name, newBook.author)
                 val currentBook = bucket[key]
                 if (currentBook == null) {
                     bucket[key] = newBook
+                    bookUrlIndex[newBook.bookUrl] = key
                     upsertBooks.add(newBook)
                 } else {
                     currentBook.addOrigin(newBook.origin)
@@ -261,6 +280,7 @@ class SearchBooksUseCase(
                 touchedBuckets.add(bucket)
                 trimSearchBooks()?.let { removed ->
                     removedBookUrls.add(removed.bookUrl)
+                    bookUrlIndex.remove(removed.bookUrl)
                     upsertBooks.removeAll { it.bookUrl == removed.bookUrl }
                 }
             }
@@ -291,6 +311,16 @@ class SearchBooksUseCase(
                 }
                 matchMode != MatchMode.DEFAULT -> null
                 else -> otherBooks
+            }
+        }
+
+        private fun findBucket(key: SearchBookKey): LinkedHashMap<SearchBookKey, SearchBook>? {
+            return when {
+                key in equalBooks -> equalBooks
+                key in tagsBooks -> tagsBooks
+                key in containsBooks -> containsBooks
+                key in otherBooks -> otherBooks
+                else -> null
             }
         }
 
