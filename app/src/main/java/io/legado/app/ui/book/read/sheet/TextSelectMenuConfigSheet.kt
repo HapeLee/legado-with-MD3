@@ -1,7 +1,14 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -12,16 +19,22 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.book.read.ActionMenuItem
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -34,6 +47,10 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun TextSelectMenuConfigSheet(
     show: Boolean,
     items: List<ActionMenuItem>,
+    expandTextMenu: Boolean,
+    showSelectMenuIcon: Boolean,
+    onExpandTextMenuChange: (Boolean) -> Unit,
+    onShowSelectMenuIconChange: (Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     onSaved: (List<ActionMenuItem>) -> Unit
 ) {
@@ -86,6 +103,66 @@ fun TextSelectMenuConfigSheet(
                                 dragHandleModifier = Modifier.draggableHandle()
                             )
                         }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NormalCard(
+                    cornerRadius = 12.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onExpandTextMenuChange(!expandTextMenu) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppText(
+                            text = stringResource(R.string.expand_text_menu),
+                            style = LegadoTheme.typography.titleSmallEmphasized,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        TinySwitch(
+                            checked = expandTextMenu,
+                            onCheckedChange = onExpandTextMenuChange
+                        )
+                    }
+                }
+
+                NormalCard(
+                    cornerRadius = 12.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onShowSelectMenuIconChange(!showSelectMenuIcon) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppText(
+                            text = stringResource(R.string.show_select_menu_icon),
+                            style = LegadoTheme.typography.titleSmallEmphasized,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        TinySwitch(
+                            checked = showSelectMenuIcon,
+                            onCheckedChange = onShowSelectMenuIconChange
+                        )
                     }
                 }
             }

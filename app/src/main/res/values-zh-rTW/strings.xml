@@ -967,7 +967,7 @@
     <string name="tts_speech_add">語速加</string>
     <string name="open_sys_dir_picker_error">打開系統資料夾選擇器出錯，自動打開應用程式資料夾選擇器</string>
     <string name="open_sys_doc_picker_error">打開系統檔案選擇器出錯，自動打開應用文件選擇器</string>
-    <string name="expand_text_menu">展開文字選擇選單</string>
+    <string name="expand_text_menu">多行展示</string>
     <string name="search_content_size">搜尋結果</string>
     <string name="search_content_empty">搜索内容为空，检查净化/简繁设置</string>
     <string name="book_tree_uri_t">書籍儲存位置</string>
@@ -1543,7 +1543,7 @@
     <string name="cannot_open_url">無法直接開啟此 URL</string>
     <string name="open_by_browser">已切換到瀏覽器開啟</string>
     <string name="open_by_webview">已切換到 WebView 開啟</string>
-    <string name="show_select_menu_icon">顯示文字選擇選單圖示</string>
+    <string name="show_select_menu_icon">展示圖示</string>
 
     <string name="show_all">全部顯示</string>
     <string name="hide_all">全部隱藏</string>

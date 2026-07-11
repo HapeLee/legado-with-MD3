@@ -77,8 +77,6 @@ sealed interface ReadConfigIntent {
     data class ClickImgWayChanged(val value: String) : ReadConfigIntent
     data class OptimizeRenderChanged(val value: Boolean) : ReadConfigIntent
     data class DisableReturnKeyChanged(val value: Boolean) : ReadConfigIntent
-    data class ExpandTextMenuChanged(val value: Boolean) : ReadConfigIntent
-    data class ShowSelectMenuIconChanged(val value: Boolean) : ReadConfigIntent
     data class ShowReadTitleAdditionChanged(val value: Boolean) : ReadConfigIntent
     data class ShowMenuIconChanged(val value: Boolean) : ReadConfigIntent
     data class AutoSuggestDayNightChanged(val value: Boolean) : ReadConfigIntent

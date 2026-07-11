@@ -147,12 +147,6 @@ fun MoreConfigSheet(
                 onDisableReturnKeyChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DisableReturnKey(it)))
                 },
-                onExpandTextMenuChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
-                },
-                onShowSelectMenuIconChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
-                },
                 onShowReadTitleAdditionChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowReadTitleAddition(it)))
                 },
@@ -311,8 +305,6 @@ private fun OtherSettings(
     onOpenClickRegionalConfig: () -> Unit,
     onDisableReturnKeyChange: (Boolean) -> Unit,
     onOpenPageKeyConfig: () -> Unit,
-    onExpandTextMenuChange: (Boolean) -> Unit,
-    onShowSelectMenuIconChange: (Boolean) -> Unit,
     onShowReadTitleAdditionChange: (Boolean) -> Unit,
     onShowMenuIconChange: (Boolean) -> Unit,
 ) {
@@ -380,16 +372,6 @@ private fun OtherSettings(
     TinyClickableSettingItem(
         title = stringResource(R.string.custom_page_key),
         onClick = onOpenPageKeyConfig,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.expand_text_menu),
-        checked = preferences.expandTextMenu,
-        onCheckedChange = onExpandTextMenuChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.show_select_menu_icon),
-        checked = preferences.showSelectMenuIcon,
-        onCheckedChange = onShowSelectMenuIconChange,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.show_read_title_addition),

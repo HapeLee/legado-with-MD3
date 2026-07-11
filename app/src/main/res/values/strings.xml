@@ -1136,8 +1136,8 @@
     <string name="tts_speech_add">Increase speech speed</string>
     <string name="open_sys_dir_picker_error">Error opening system folder selector, automatically open application folder selector</string>
     <string name="open_sys_doc_picker_error">Error opening system file selector, automatically open application file selector</string>
-    <string name="expand_text_menu">Expand Text Selection Menu</string>
-    <string name="show_select_menu_icon">Show Text Selection Menu Icons</string>
+    <string name="expand_text_menu">Multiline Show</string>
+    <string name="show_select_menu_icon">Show Icons</string>
 
     <string name="show_all">Show All</string>
     <string name="hide_all">Hide All</string>

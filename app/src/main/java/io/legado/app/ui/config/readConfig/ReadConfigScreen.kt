@@ -371,24 +371,6 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.expand_text_menu),
-                    checked = state.expandTextMenu,
-                    onCheckedChange = {
-                        viewModel.onIntent(ReadConfigIntent.ExpandTextMenuChanged(it))
-                    }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.show_select_menu_icon),
-                    checked = state.showSelectMenuIcon,
-                    onCheckedChange = {
-                        viewModel.onIntent(ReadConfigIntent.ShowSelectMenuIconChanged(it))
-                    }
-                )
-
-
-
-                SwitchSettingItem(
                     title = stringResource(R.string.show_read_title_addition),
                     checked = state.showReadTitleAddition,
                     onCheckedChange = {
