@@ -1138,11 +1138,10 @@
     <string name="open_sys_doc_picker_error">Error opening system file selector, automatically open application file selector</string>
     <string name="expand_text_menu">Expand Text Selection Menu</string>
     <string name="show_select_menu_icon">Show Text Selection Menu Icons</string>
-    <string name="text_select_menu_filter">Text Selection Menu Filter</string>
-    <string name="text_select_menu_filter_desc">Filter the third-party apps displayed in the selection menu</string>
+
     <string name="show_all">Show All</string>
     <string name="hide_all">Hide All</string>
-    <string name="no_apps_found">No third-party apps supporting text actions found</string>
+
     <string name="book_tree_uri_t">Book Save Location</string>
     <string name="book_tree_uri_s">Save location for books opened from other apps</string>
     <string name="select_book_folder">Select the folder where the books are saved</string>

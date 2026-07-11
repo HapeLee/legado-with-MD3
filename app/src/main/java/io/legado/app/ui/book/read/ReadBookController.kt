@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.read
 
 import android.annotation.SuppressLint
+import android.app.SearchManager
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Gravity
@@ -12,6 +14,7 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -51,27 +54,23 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
+import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
+import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import io.legado.app.utils.share
 import io.legado.app.utils.sysBattery
 import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
-import io.legado.app.utils.sendToClip
-import io.legado.app.utils.share
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.printOnDebug
-import android.app.SearchManager
-import android.content.Context
-import android.content.Intent
-import androidx.core.net.toUri
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 
@@ -648,14 +647,9 @@ class ReadBookController(
         val thirdPartyItems = mutableListOf<ActionMenuItem>()
         kotlin.runCatching {
             val pm = activity.packageManager
-            val filterSet = ReadConfig.textSelectMenuFilter.split(",").filter { it.isNotEmpty() }.toSet()
             val intent = Intent().setAction(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
             val resolveInfos = pm.queryIntentActivities(intent, 0)
             for (resolveInfo in resolveInfos) {
-                val componentName = "${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}"
-                if (filterSet.contains(componentName)) {
-                    continue
-                }
                 val processIntent = Intent()
                     .setAction(Intent.ACTION_PROCESS_TEXT)
                     .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)

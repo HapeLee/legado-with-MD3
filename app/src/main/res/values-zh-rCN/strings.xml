@@ -1106,11 +1106,10 @@
     <string name="open_sys_doc_picker_error">打开系统文件选择器出错，将自动打开应用文件选择器</string>
     <string name="expand_text_menu">展开文本选择菜单</string>
     <string name="show_select_menu_icon">展示选择菜单图标</string>
-    <string name="text_select_menu_filter">选择菜单应用过滤</string>
-    <string name="text_select_menu_filter_desc">过滤文字选择操作菜单中显示的第三方应用</string>
+
     <string name="show_all">全部显示</string>
     <string name="hide_all">全不显示</string>
-    <string name="no_apps_found">未找到支持文字处理的第三方应用</string>
+
     <string name="book_tree_uri_t">书籍保存位置</string>
     <string name="book_tree_uri_s">从其它应用打开的书籍保存位置</string>
     <string name="select_book_folder">选择保存书籍的文件夹</string>

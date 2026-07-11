@@ -37,12 +37,12 @@ import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
-import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.CleanSelectedTextUseCase
@@ -4968,12 +4968,6 @@ class ReadBookViewModel(
                 ReadConfig.showSelectMenuIcon = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setShowSelectMenuIcon(update.value)
-                }
-            }
-            is ConfigUpdate.TextSelectMenuFilter -> {
-                ReadConfig.textSelectMenuFilter = update.value
-                viewModelScope.launch {
-                    readSettingsRepository.setTextSelectMenuFilter(update.value)
                 }
             }
             is ConfigUpdate.ShowReadTitleAddition -> {

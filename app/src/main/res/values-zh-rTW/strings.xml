@@ -1544,11 +1544,10 @@
     <string name="open_by_browser">已切換到瀏覽器開啟</string>
     <string name="open_by_webview">已切換到 WebView 開啟</string>
     <string name="show_select_menu_icon">顯示文字選擇選單圖示</string>
-    <string name="text_select_menu_filter">文字選擇選單篩選</string>
-    <string name="text_select_menu_filter_desc">篩選選擇選單中顯示的第三方應用</string>
+
     <string name="show_all">全部顯示</string>
     <string name="hide_all">全部隱藏</string>
-    <string name="no_apps_found">找不到支援文字操作的第三方應用</string>
+
     <string name="is_event_listener">事件監聽器</string>
     <string name="custom_button">自訂按鈕</string>
     <string name="rule_call_back">回呼 JS（callBackJs）</string>

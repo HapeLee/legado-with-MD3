@@ -857,7 +857,6 @@ sealed interface ReadBookSheet {
     data object ParagraphIntervalConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet
     data object PageKeyConfig : ReadBookSheet
-    data object TextSelectMenuFilterConfig : ReadBookSheet
     data object InfoConfig : ReadBookSheet
     data class Dict(val word: String) : ReadBookSheet
     data class Bookmark(
@@ -1378,9 +1377,6 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ShowSelectMenuIcon(val value: Boolean) : ConfigUpdate {
-        override val actions = emptySet<ConfigUpdateAction>()
-    }
-    data class TextSelectMenuFilter(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate {
