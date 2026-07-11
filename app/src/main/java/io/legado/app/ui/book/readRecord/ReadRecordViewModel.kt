@@ -3,6 +3,7 @@ package io.legado.app.ui.book.readRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cn.hutool.core.date.DateUtil
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -20,6 +21,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import splitties.init.appCtx
+import io.legado.app.utils.getPrefString
+import io.legado.app.utils.putPrefString
 
 data class ReadRecordUiState(
     val isLoading: Boolean = true,
@@ -45,7 +49,10 @@ class ReadRecordViewModel(
     private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)
+    private val _displayMode = MutableStateFlow(
+        runCatching { DisplayMode.valueOf(appCtx.getPrefString(PreferKey.readRecordDisplayMode) ?: DisplayMode.AGGREGATE.name) }
+            .getOrDefault(DisplayMode.AGGREGATE)
+    )
     val displayMode = _displayMode.asStateFlow()
     private val _searchKey = MutableStateFlow("")
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
@@ -130,6 +137,7 @@ class ReadRecordViewModel(
 
     fun setDisplayMode(mode: DisplayMode) {
         _displayMode.value = mode
+        appCtx.putPrefString(PreferKey.readRecordDisplayMode, mode.name)
     }
 
     fun setSelectedDate(date: LocalDate?) {

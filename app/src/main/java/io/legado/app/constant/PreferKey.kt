@@ -294,6 +294,7 @@ object PreferKey {
     const val bookshelfRefreshingLimit = "bookshelfRefreshingLimit"
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
+    const val readRecordDisplayMode = "readRecordDisplayMode"
     const val replaceSortMode = "desc"
     const val readBarStyle = "readBarStyle"
     const val readMenuBgColor = "readMenuBgColor"

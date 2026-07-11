@@ -6,6 +6,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,6 +21,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.replace.edit.ReplaceEditRouteScreen
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import io.legado.app.ui.theme.AppTheme
@@ -108,24 +111,28 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     ))
                 },
                 predictivePopTransitionSpec = { _ ->
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(
-                            easing = FastOutSlowInEasing
-                        ),
-                        initialOffset = { fullWidth -> -fullWidth / 4 }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            easing = LinearOutSlowInEasing
-                        )
-                    )) togetherWith (scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeOut(
-                        animationSpec = tween()
-                    ))
+                    if (!AppConfig.isPredictiveBackEnabled) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        (slideIntoContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(
+                                easing = FastOutSlowInEasing
+                            ),
+                            initialOffset = { fullWidth -> -fullWidth / 4 }
+                        ) + fadeIn(
+                            animationSpec = tween(
+                                easing = LinearOutSlowInEasing
+                            )
+                        )) togetherWith (scaleOut(
+                            targetScale = 0.8f,
+                            animationSpec = tween(
+                                easing = FastOutSlowInEasing
+                            )
+                        ) + fadeOut(
+                            animationSpec = tween()
+                        ))
+                    }
                 },
                 onBack = {
                     if (backStack.size > 1) {
