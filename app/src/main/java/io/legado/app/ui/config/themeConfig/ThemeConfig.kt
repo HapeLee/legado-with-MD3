@@ -68,6 +68,16 @@ object ThemeConfig {
         BOOK_INFO_BACKGROUND_BLUR_ON
     )
 
+    var bookInfoNetworkCoverBackground by prefDelegate(
+        PreferKey.bookInfoNetworkCoverBackground,
+        bookInfoBackgroundBlur
+    )
+
+    var bookInfoDefaultCoverBackground by prefDelegate(
+        PreferKey.bookInfoDefaultCoverBackground,
+        bookInfoBackgroundBlur
+    )
+
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
     //m3 or miuix

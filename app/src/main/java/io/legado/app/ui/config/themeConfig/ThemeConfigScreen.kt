@@ -458,11 +458,18 @@ fun ThemeConfigScreen(
                         onCheckedChange = { ThemeConfig.bookInfoFollowCoverColor = it }
                     )
                     DropdownListSettingItem(
-                        title = stringResource(R.string.book_info_background_blur),
-                        selectedValue = ThemeConfig.bookInfoBackgroundBlur,
+                        title = stringResource(R.string.book_info_network_cover_background),
+                        selectedValue = ThemeConfig.bookInfoNetworkCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = { ThemeConfig.bookInfoBackgroundBlur = it }
+                        onValueChange = { ThemeConfig.bookInfoNetworkCoverBackground = it }
+                    )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.book_info_default_cover_background),
+                        selectedValue = ThemeConfig.bookInfoDefaultCoverBackground,
+                        displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
+                        entryValues = stringArrayResource(R.array.book_info_background_blur_values),
+                        onValueChange = { ThemeConfig.bookInfoDefaultCoverBackground = it }
                     )
                 }
 

@@ -206,6 +206,8 @@ object PreferKey {
     const val useFlexibleTopAppBar = "useFlexibleTopAppBar"
     const val bookInfoFollowCoverColor = "bookInfoFollowCoverColor"
     const val bookInfoBackgroundBlur = "bookInfoBackgroundBlur"
+    const val bookInfoNetworkCoverBackground = "bookInfoNetworkCoverBackground"
+    const val bookInfoDefaultCoverBackground = "bookInfoDefaultCoverBackground"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val enableDeepPersonalization = "enableDeepPersonalization"

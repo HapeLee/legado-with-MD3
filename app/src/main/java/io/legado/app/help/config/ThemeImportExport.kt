@@ -153,6 +153,8 @@ object ThemeImportExport {
             bookInfoInputColor = ThemeConfig.bookInfoInputColor,
             bookInfoFollowCoverColor = ThemeConfig.bookInfoFollowCoverColor,
             bookInfoBackgroundBlur = ThemeConfig.bookInfoBackgroundBlur,
+            bookInfoNetworkCoverBackground = ThemeConfig.bookInfoNetworkCoverBackground,
+            bookInfoDefaultCoverBackground = ThemeConfig.bookInfoDefaultCoverBackground,
 
             // 容器设置
             containerOpacity = ThemeConfig.containerOpacity,
@@ -335,6 +337,10 @@ object ThemeImportExport {
         ThemeConfig.bookInfoInputColor = data.bookInfoInputColor
         ThemeConfig.bookInfoFollowCoverColor = data.bookInfoFollowCoverColor
         ThemeConfig.bookInfoBackgroundBlur = data.bookInfoBackgroundBlur
+        ThemeConfig.bookInfoNetworkCoverBackground =
+            data.bookInfoNetworkCoverBackground ?: data.bookInfoBackgroundBlur
+        ThemeConfig.bookInfoDefaultCoverBackground =
+            data.bookInfoDefaultCoverBackground ?: data.bookInfoBackgroundBlur
 
         // 容器设置
         ThemeConfig.containerOpacity = data.containerOpacity
@@ -725,6 +731,8 @@ data class ThemeExportData(
     val bookInfoInputColor: Int = 0,
     val bookInfoFollowCoverColor: Boolean = true,
     val bookInfoBackgroundBlur: String = ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_ON,
+    val bookInfoNetworkCoverBackground: String? = null,
+    val bookInfoDefaultCoverBackground: String? = null,
 
     // 容器设置
     val containerOpacity: Int = 100,
