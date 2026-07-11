@@ -503,10 +503,17 @@ class ReadBookController(
 
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         val r = refs ?: return false
-        if (v == null || event == null || !r.readView.isTextSelected) {
+        if (v == null || event == null) {
             return false
         }
-        when (event.action) {
+        val action = event.action
+        if (!r.readView.isTextSelected
+            && action != MotionEvent.ACTION_UP
+            && action != MotionEvent.ACTION_CANCEL
+        ) {
+            return false
+        }
+        when (action) {
             MotionEvent.ACTION_DOWN -> dismissTextActionMenu()
             MotionEvent.ACTION_MOVE -> {
                 when (v.id) {
@@ -536,9 +543,14 @@ class ReadBookController(
                 }
             }
 
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
                 r.readView.curPage.resetReverseCursor()
-                showTextActionMenu()
+                if (r.readView.isTextSelected) {
+                    showTextActionMenu()
+                } else {
+                    dismissTextActionMenu()
+                }
             }
         }
         return true
