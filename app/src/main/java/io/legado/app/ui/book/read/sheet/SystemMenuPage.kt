@@ -89,6 +89,7 @@ private const val COLOR_MENU_CONTAINER_NIGHT = 10
 private const val COLOR_BORDER = 11
 private const val COLOR_BORDER_NIGHT = 12
 private const val COLOR_BLUR_TINT = 13
+private const val COLOR_BLUR_TINT_NIGHT = 14
 
 @Composable
 internal fun SystemMenuPage(
@@ -214,6 +215,7 @@ internal fun SystemMenuPage(
                 COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
                 COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
                 COLOR_BLUR_TINT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(color)))
+                COLOR_BLUR_TINT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColorNight(color)))
             }
             showColorPicker = false
         },
@@ -483,16 +485,16 @@ private fun GlobalMenuTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurAlpha(it.toInt())))
             },
         )
-        TinyClickableSettingItem(
+        TinyColorModeSettingItem(
             title = stringResource(R.string.read_menu_blur_color),
-            onClick = {
-                onShowColorPicker(COLOR_BLUR_TINT, preferences.readMenuBlurColor)
-            },
-            onLongClick = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(0)))
-            },
-            trailingContent = {
-                TinyColorSwatch(color = preferences.readMenuBlurColor)
+            dayColor = preferences.readMenuBlurColor,
+            nightColor = preferences.readMenuBlurColorNight,
+            onClickColor = { isNight ->
+                if (isNight) {
+                    onShowColorPicker(COLOR_BLUR_TINT_NIGHT, preferences.readMenuBlurColorNight)
+                } else {
+                    onShowColorPicker(COLOR_BLUR_TINT, preferences.readMenuBlurColor)
+                }
             },
         )
     }

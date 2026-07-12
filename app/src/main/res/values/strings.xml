@@ -1049,6 +1049,7 @@
     <string name="list_src">List source code</string>
     <string name="title_font_size">Font Size</string>
     <string name="title_color">Title Color</string>
+    <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>
     <string name="title_margin_bottom">Margin Bottom</string>
     <string name="show">Show</string>

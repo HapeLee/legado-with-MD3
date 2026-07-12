@@ -563,6 +563,7 @@ private fun ReadBookMenuSurface(
                         shape = surfaceShape,
                         menuConfig = state.menuConfig,
                         progressive = bottomBarProgressiveBlur,
+                        blurRadiusDp = if (expanded) 32 else null,
                     )
                 } else {
                     Modifier
@@ -588,9 +589,18 @@ private fun ReadBookMenuSurface(
                 }
             },
         shape = surfaceShape,
-        color = if (useLiquidGlass || useHaze) Color.Transparent else colors.background.copy(
-            alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-        ),
+        color = if (useLiquidGlass || useHaze) {
+            if (bottomBarProgressiveBlur) {
+                // Stable opaque background prevents flash during Haze recomposition
+                colors.background.copy(alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f)
+            } else {
+                Color.Transparent
+            }
+        } else {
+            val baseAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+            val effectiveAlpha = if (expanded) baseAlpha.coerceAtLeast(0.85f) else baseAlpha
+            colors.background.copy(alpha = effectiveAlpha)
+        },
         contentColor = colors.content
     ) {
         AnimatedContent(
@@ -3082,6 +3092,7 @@ private fun Modifier.readMenuBottomBarHazeEffect(
     shape: Shape,
     menuConfig: ReadMenuConfig,
     progressive: Boolean,
+    blurRadiusDp: Int? = null,
 ): Modifier {
     val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
     val backgroundModifier = if (progressive) {
@@ -3102,6 +3113,7 @@ private fun Modifier.readMenuBottomBarHazeEffect(
             menuConfig = menuConfig,
             progressive = progressive,
             progressiveBottomToTop = progressive,
+            blurRadiusDp = blurRadiusDp,
         )
 }
 
@@ -3113,9 +3125,18 @@ private fun Modifier.readMenuHazeEffect(
     menuConfig: ReadMenuConfig,
     progressive: Boolean = false,
     progressiveBottomToTop: Boolean = false,
+    blurRadiusDp: Int? = null,
 ): Modifier {
     val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-    val blurTintColor = menuConfig.readMenuBlurColor.takeIf { it != 0 }?.let { Color(it) }
+    val blurTintColor = menuConfig.readMenuBlurColorNight
+        .takeIf { it != 0 && ReadStyleResolver.isNightTheme() }
+        ?.let { Color(it) }
+        ?: menuConfig.readMenuBlurColor
+            .takeIf { it != 0 && !ReadStyleResolver.isNightTheme() }
+            ?.let { Color(it) }
+            ?: menuConfig.readMenuBlurColor
+                .takeIf { it != 0 }
+                ?.let { Color(it) }
     val hazeContainerColor = if (progressive) {
         (blurTintColor ?: Color.Black).copy(alpha = surfaceAlpha)
     } else {
@@ -3123,7 +3144,7 @@ private fun Modifier.readMenuHazeEffect(
     }
     val style = HazeLegado.custom(
         containerColor = hazeContainerColor,
-        blurRadius = menuConfig.readMenuBlurRadius,
+        blurRadius = blurRadiusDp ?: menuConfig.readMenuBlurRadius,
         blurAlpha = menuConfig.readMenuBlurAlpha,
     )
 

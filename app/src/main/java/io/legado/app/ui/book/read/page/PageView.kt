@@ -120,10 +120,10 @@ class PageView(
         ReadBookConfig.let {
             val textColor = it.textColor
             val headerColor = with(ReadBookConfig) {
-                if (tipHeaderColor == 0) textColor else tipHeaderColor
+                if (resolvedTipHeaderColor == 0) textColor else resolvedTipHeaderColor
             }
             val footerColor = with(ReadBookConfig) {
-                if (tipFooterColor == 0) textColor else tipFooterColor
+                if (resolvedTipFooterColor == 0) textColor else resolvedTipFooterColor
             }
             val tipDividerColor = with(ReadBookConfig) {
                 when (tipDividerColor) {

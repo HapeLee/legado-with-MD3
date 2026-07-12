@@ -58,6 +58,7 @@ import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -71,6 +72,8 @@ import org.koin.compose.koinInject
 private const val COLOR_HEADER = 7
 private const val COLOR_FOOTER = 8
 private const val COLOR_DIVIDER = 9
+private const val COLOR_HEADER_NIGHT = 10
+private const val COLOR_FOOTER_NIGHT = 11
 
 @Composable
 internal fun HeaderFooterPage(
@@ -295,21 +298,42 @@ internal fun HeaderFooterPage(
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(it)))
                             },
                         )
-                        TinyColorSettingItem(
+                        TinyColorModeSettingItem(
                             title = stringResource(R.string.header_color),
-                            colorValue = if (ReadBookConfig.tipHeaderColor != 0) {
+                            dayColor = if (ReadBookConfig.tipHeaderColor != 0) {
                                 ReadBookConfig.tipHeaderColor
                             } else {
                                 ReadBookConfig.textColor
                             },
-                            onClick = {
-                                colorPickerId = COLOR_HEADER
-                                colorPickerInitial = if (ReadBookConfig.tipHeaderColor != 0) {
-                                    ReadBookConfig.tipHeaderColor
+                            nightColor = if (ReadBookConfig.tipHeaderColorNight != 0) {
+                                ReadBookConfig.tipHeaderColorNight
+                            } else {
+                                ReadBookConfig.textColorNight
+                            },
+                            onClickColor = { isNight ->
+                                if (isNight) {
+                                    colorPickerId = COLOR_HEADER_NIGHT
+                                    colorPickerInitial = if (ReadBookConfig.tipHeaderColorNight != 0) {
+                                        ReadBookConfig.tipHeaderColorNight
+                                    } else {
+                                        ReadBookConfig.textColorNight
+                                    }
                                 } else {
-                                    ReadBookConfig.textColor
+                                    colorPickerId = COLOR_HEADER
+                                    colorPickerInitial = if (ReadBookConfig.tipHeaderColor != 0) {
+                                        ReadBookConfig.tipHeaderColor
+                                    } else {
+                                        ReadBookConfig.textColor
+                                    }
                                 }
                                 showColorPicker = true
+                            },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.reset_to_body_color),
+                            onClick = {
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(0)))
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColorNight(0)))
                             },
                         )
 
@@ -425,21 +449,42 @@ internal fun HeaderFooterPage(
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(it)))
                             },
                         )
-                        TinyColorSettingItem(
+                        TinyColorModeSettingItem(
                             title = stringResource(R.string.footer_color),
-                            colorValue = if (ReadBookConfig.tipFooterColor != 0) {
+                            dayColor = if (ReadBookConfig.tipFooterColor != 0) {
                                 ReadBookConfig.tipFooterColor
                             } else {
                                 ReadBookConfig.textColor
                             },
-                            onClick = {
-                                colorPickerId = COLOR_FOOTER
-                                colorPickerInitial = if (ReadBookConfig.tipFooterColor != 0) {
-                                    ReadBookConfig.tipFooterColor
+                            nightColor = if (ReadBookConfig.tipFooterColorNight != 0) {
+                                ReadBookConfig.tipFooterColorNight
+                            } else {
+                                ReadBookConfig.textColorNight
+                            },
+                            onClickColor = { isNight ->
+                                if (isNight) {
+                                    colorPickerId = COLOR_FOOTER_NIGHT
+                                    colorPickerInitial = if (ReadBookConfig.tipFooterColorNight != 0) {
+                                        ReadBookConfig.tipFooterColorNight
+                                    } else {
+                                        ReadBookConfig.textColorNight
+                                    }
                                 } else {
-                                    ReadBookConfig.textColor
+                                    colorPickerId = COLOR_FOOTER
+                                    colorPickerInitial = if (ReadBookConfig.tipFooterColor != 0) {
+                                        ReadBookConfig.tipFooterColor
+                                    } else {
+                                        ReadBookConfig.textColor
+                                    }
                                 }
                                 showColorPicker = true
+                            },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.reset_to_body_color),
+                            onClick = {
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(0)))
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColorNight(0)))
                             },
                         )
 
@@ -557,8 +602,16 @@ internal fun HeaderFooterPage(
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(color)))
                 }
 
+                COLOR_HEADER_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColorNight(color)))
+                }
+
                 COLOR_FOOTER -> {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(color)))
+                }
+
+                COLOR_FOOTER_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColorNight(color)))
                 }
 
                 COLOR_DIVIDER -> {

@@ -60,6 +60,7 @@ import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -71,6 +72,7 @@ import kotlinx.coroutines.launch
 private const val COLOR_TEXT = 1
 private const val COLOR_ACCENT = 2
 private const val COLOR_TITLE = 4
+private const val COLOR_TITLE_NIGHT = 5
 
 @Composable
 fun ReadStyleTextTitleContent(
@@ -436,21 +438,42 @@ internal fun TitleSettingsPage(
             },
         )
 
-        TinyColorSettingItem(
+        TinyColorModeSettingItem(
             title = stringResource(R.string.title_color),
-            colorValue = if (ReadBookConfig.titleColor != 0) {
-                ReadBookConfig.titleColor or 0xFF000000.toInt()
+            dayColor = if (ReadBookConfig.titleColor != 0) {
+                ReadBookConfig.titleColor
             } else {
-                ReadBookConfig.textColor or 0xFF000000.toInt()
+                ReadBookConfig.textColor
             },
-            onClick = {
-                colorPickerId = COLOR_TITLE
-                colorPickerInitial = if (ReadBookConfig.titleColor != 0) {
-                    ReadBookConfig.titleColor or 0xFF000000.toInt()
+            nightColor = if (ReadBookConfig.titleColorNight != 0) {
+                ReadBookConfig.titleColorNight
+            } else {
+                ReadBookConfig.textColorNight
+            },
+            onClickColor = { isNight ->
+                if (isNight) {
+                    colorPickerId = COLOR_TITLE_NIGHT
+                    colorPickerInitial = if (ReadBookConfig.titleColorNight != 0) {
+                        ReadBookConfig.titleColorNight
+                    } else {
+                        ReadBookConfig.textColorNight
+                    }
                 } else {
-                    ReadBookConfig.textColor or 0xFF000000.toInt()
+                    colorPickerId = COLOR_TITLE
+                    colorPickerInitial = if (ReadBookConfig.titleColor != 0) {
+                        ReadBookConfig.titleColor
+                    } else {
+                        ReadBookConfig.textColor
+                    }
                 }
                 showColorPicker = true
+            },
+        )
+        TinyClickableSettingItem(
+            title = stringResource(R.string.reset_to_body_color),
+            onClick = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(0)))
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(0)))
             },
         )
 
@@ -589,6 +612,9 @@ internal fun TitleSettingsPage(
             when (colorPickerId) {
                 COLOR_TITLE -> {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(color)))
+                }
+                COLOR_TITLE_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(color)))
                 }
             }
             showColorPicker = false

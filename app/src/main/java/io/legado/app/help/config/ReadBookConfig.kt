@@ -115,6 +115,12 @@ object ReadBookConfig {
     var bg: Drawable? = null
     var bgMeanColor: Int = 0
     val textColor: Int get() = durConfig.curTextColor()
+    val textColorNight: Int
+        get() = try {
+            durConfig.getTextColorNight().toColorInt()
+        } catch (_: Exception) {
+            0xFFADADAD.toInt()
+        }
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
     val menuColor: Int get() = readMenuAccentColor
@@ -240,6 +246,7 @@ object ReadBookConfig {
     var readMenuBlurRadius by clampedPrefDelegate(PreferKey.readMenuBlurRadius, 24, 0..32)
     var readMenuBlurAlpha by clampedPrefDelegate(PreferKey.readMenuBlurAlpha, 60, 0..100)
     var readMenuBlurColor by prefDelegate(PreferKey.readMenuBlurColor, 0)
+    var readMenuBlurColorNight by prefDelegate(PreferKey.readMenuBlurColorNight, 0)
     var readMenuPaletteStyle: String = ""
     var readMenuLensRadius by clampedPrefDelegate(PreferKey.readMenuLensRadius, 24f, 0f..48f)
     var readMenuBorderWidth by clampedPrefDelegate(PreferKey.readMenuBorderWidth, 0, 0..4)
@@ -342,6 +349,9 @@ object ReadBookConfig {
 
     val resolvedMenuBorderColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuBorderColorNight else readMenuBorderColor
+
+    val resolvedMenuBlurColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuBlurColorNight else readMenuBlurColor
 
 
     val config get() = if (shareLayout) shareConfig else durConfig
@@ -532,6 +542,15 @@ object ReadBookConfig {
         set(value) {
             config.titleColor = value
         }
+
+    var titleColorNight: Int
+        get() = config.titleColorNight
+        set(value) {
+            config.titleColorNight = value
+        }
+
+    val resolvedTitleColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) titleColorNight else titleColor
 
     var paragraphIndent: String
         get() = config.paragraphIndent
@@ -745,11 +764,29 @@ object ReadBookConfig {
             config.tipHeaderColor = value
         }
 
+    var tipHeaderColorNight: Int
+        get() = config.tipHeaderColorNight
+        set(value) {
+            config.tipHeaderColorNight = value
+        }
+
+    val resolvedTipHeaderColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) tipHeaderColorNight else tipHeaderColor
+
     var tipFooterColor: Int
         get() = config.tipFooterColor
         set(value) {
             config.tipFooterColor = value
         }
+
+    var tipFooterColorNight: Int
+        get() = config.tipFooterColorNight
+        set(value) {
+            config.tipFooterColorNight = value
+        }
+
+    val resolvedTipFooterColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) tipFooterColorNight else tipFooterColor
 
     var tipDividerColor: Int
         get() = config.tipDividerColor
@@ -803,6 +840,7 @@ object ReadBookConfig {
             exportConfig.titleTopSpacing = shareConfig.titleTopSpacing
             exportConfig.titleBottomSpacing = shareConfig.titleBottomSpacing
             exportConfig.titleColor = shareConfig.titleColor
+            exportConfig.titleColorNight = shareConfig.titleColorNight
             exportConfig.paddingBottom = shareConfig.paddingBottom
             exportConfig.paddingLeft = shareConfig.paddingLeft
             exportConfig.paddingRight = shareConfig.paddingRight
@@ -824,7 +862,9 @@ object ReadBookConfig {
             exportConfig.tipFooterMiddle = shareConfig.tipFooterMiddle
             exportConfig.tipFooterRight = shareConfig.tipFooterRight
             exportConfig.tipHeaderColor = shareConfig.tipHeaderColor
+            exportConfig.tipHeaderColorNight = shareConfig.tipHeaderColorNight
             exportConfig.tipFooterColor = shareConfig.tipFooterColor
+            exportConfig.tipFooterColorNight = shareConfig.tipFooterColorNight
             exportConfig.headerMode = shareConfig.headerMode
             // MD3专有属性
             exportConfig.footerMode = shareConfig.footerMode
@@ -916,6 +956,7 @@ object ReadBookConfig {
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
         var titleColor: Int = 0,
+        var titleColorNight: Int = 0,
         var titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
         var titleLineSpacingExtra: Int = 12,
         var titleLineSpacingSub: Int = 12,
@@ -954,7 +995,9 @@ object ReadBookConfig {
         var tipFooterMiddle: Int = tipNone,
         var tipFooterRight: Int = tipPageAndTotal,
         var tipHeaderColor: Int = 0,
+        var tipHeaderColorNight: Int = 0,
         var tipFooterColor: Int = 0,
+        var tipFooterColorNight: Int = 0,
         var tipDividerColor: Int = -1,
         var headerMode: Int = 0,
         var footerMode: Int = 0,
@@ -1065,6 +1108,7 @@ object ReadBookConfig {
             "titleTopSpacing" to titleTopSpacing,
             "titleBottomSpacing" to titleBottomSpacing,
             "titleColor" to titleColor,
+            "titleColorNight" to titleColorNight,
             "paragraphIndent" to paragraphIndent,
             "paddingBottom" to paddingBottom,
             "paddingLeft" to paddingLeft,
@@ -1087,7 +1131,9 @@ object ReadBookConfig {
             "tipFooterMiddle" to tipFooterMiddle,
             "tipFooterRight" to tipFooterRight,
             "tipHeaderColor" to tipHeaderColor,
+            "tipHeaderColorNight" to tipHeaderColorNight,
             "tipFooterColor" to tipFooterColor,
+            "tipFooterColorNight" to tipFooterColorNight,
             "tipDividerColor" to tipDividerColor,
             "headerMode" to headerMode,
             "footerMode" to footerMode,
