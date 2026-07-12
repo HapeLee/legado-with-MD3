@@ -589,14 +589,7 @@ private fun ReadBookMenuSurface(
                 }
             },
         shape = surfaceShape,
-        color = if (useLiquidGlass || useHaze) {
-            if (bottomBarProgressiveBlur) {
-                // Stable opaque background prevents flash during Haze recomposition
-                colors.background.copy(alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f)
-            } else {
-                Color.Transparent
-            }
-        } else {
+        color = if (useLiquidGlass || useHaze) Color.Transparent else {
             val baseAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
             val effectiveAlpha = if (expanded) baseAlpha.coerceAtLeast(0.85f) else baseAlpha
             colors.background.copy(alpha = effectiveAlpha)
@@ -3095,11 +3088,21 @@ private fun Modifier.readMenuBottomBarHazeEffect(
     blurRadiusDp: Int? = null,
 ): Modifier {
     val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val resolvedBlurTintColor = menuConfig.readMenuBlurColorNight
+        .takeIf { it != 0 && ReadStyleResolver.isNightTheme() }
+        ?.let { Color(it) }
+        ?: menuConfig.readMenuBlurColor
+            .takeIf { it != 0 && !ReadStyleResolver.isNightTheme() }
+            ?.let { Color(it) }
+            ?: menuConfig.readMenuBlurColor
+                .takeIf { it != 0 }
+                ?.let { Color(it) }
     val backgroundModifier = if (progressive) {
         Modifier.background(
             readMenuBottomBarSurfaceBrush(
                 colors = colors,
                 alpha = surfaceAlpha,
+                blurTintColor = resolvedBlurTintColor,
             )
         )
     } else {
@@ -3183,11 +3186,13 @@ private fun readMenuTopBarSurfaceBrush(
 private fun readMenuBottomBarSurfaceBrush(
     colors: ReadMenuColors,
     alpha: Float,
+    blurTintColor: Color? = null,
 ): Brush {
-    val strongColor = colors.background.copy(
+    val baseColor = blurTintColor ?: colors.background
+    val strongColor = baseColor.copy(
         alpha = alpha.coerceIn(0f, 1f),
     )
-    val weakColor = colors.background.copy(
+    val weakColor = baseColor.copy(
         alpha = (alpha * 0.72f).coerceIn(0f, 1f),
     )
     return Brush.verticalGradient(
