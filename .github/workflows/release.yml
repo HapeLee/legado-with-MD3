@@ -18,7 +18,7 @@ jobs:
     if: github.actor == 'HapeLee'
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts from the selected build
+      - name: Validate the selected build
         id: build
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,10 +30,24 @@ jobs:
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "${api}/actions/runs/${RUN_ID}")
+          test "$(jq -r '.name' <<<"${run}")" = "Auto Build"
           test "$(jq -r '.conclusion' <<<"${run}")" = success
           test "$(jq -r '.head_branch' <<<"${run}")" = main
           echo "sha=$(jq -r '.head_sha' <<<"${run}")" >> "$GITHUB_OUTPUT"
 
+      - name: Check out the built commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.build.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Download artifacts from the selected build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
           mkdir artifacts
           curl --fail-with-body -sS \
             -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -53,14 +67,6 @@ jobs:
             unzip -o artifact.zip -d artifacts
           done
           test -f artifacts/release-metadata.env
-
-      - name: Check out the built commit
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ steps.build.outputs.sha }}
-          fetch-depth: 0
-          # artifacts 已在前一步下载；不要让 checkout 的默认 clean 删除它们。
-          clean: false
 
       - name: Prepare release files and notes
         id: release
@@ -140,7 +146,6 @@ jobs:
             echo "$CUSTOM_BODY"
             echo EOF
           } >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
