@@ -19,7 +19,6 @@ import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefLong
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.isMainThread
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
@@ -118,7 +117,7 @@ fun <T> prefDelegate(
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            return if (isMainThread) _value.value else currentValue
+            return _value.value
         }
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
