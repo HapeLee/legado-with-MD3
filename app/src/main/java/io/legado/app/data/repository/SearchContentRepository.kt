@@ -31,8 +31,18 @@ class SearchContentRepository {
         val results: List<SearchResult>,
     )
 
+    @Synchronized
     fun getLastSession(bookUrl: String): SearchSession? {
         return lastSearchSession?.takeIf { it.bookUrl == bookUrl }
+    }
+
+    @Synchronized
+    fun clearSession(bookUrl: String) {
+        if (lastSearchSession?.bookUrl == bookUrl) {
+            lastSearchSession = null
+            lastSearchResults = null
+            lastQueryKey = null
+        }
     }
 
     fun beginSearch(
@@ -44,6 +54,7 @@ class SearchContentRepository {
         cacheResults(bookUrl, query, replaceEnabled, regexReplace, emptyList())
     }
 
+    @Synchronized
     fun getCache(
         bookUrl: String,
         query: String,
@@ -93,6 +104,7 @@ class SearchContentRepository {
         emit(ArrayList(allResults))
     }.flowOn(Dispatchers.Default)
 
+    @Synchronized
     private fun cacheResults(
         bookUrl: String,
         query: String,
