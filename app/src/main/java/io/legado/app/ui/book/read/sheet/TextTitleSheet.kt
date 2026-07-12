@@ -232,6 +232,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.text_letter_spacing),
             value = (letterSpacing * 100) + 50,
             valueRange = 0f..100f,
+            steps = 99,
             valueFormat = { ((it - 50) / 100f).toString() },
             onValueChange = { value ->
                 letterSpacing = (value - 50) / 100f
@@ -242,6 +243,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.line_size),
             value = lineSpacing,
             valueRange = 0f..20f,
+            steps = 19,
             valueFormat = { ((it - 10) / 10f).toString() },
             onValueChange = { value ->
                 lineSpacing = value
@@ -252,6 +254,7 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.paragraph_size),
             value = paragraphSpacing,
             valueRange = 0f..20f,
+            steps = 19,
             valueFormat = { (it / 10f).toString() },
             onValueChange = { value ->
                 paragraphSpacing = value
