@@ -3,19 +3,14 @@ package io.legado.app.ui.book.knowledge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -34,10 +29,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
@@ -48,7 +40,6 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -125,7 +116,6 @@ fun BookKnowledgeDetailScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun KnowledgeDetailContent(
     state: KnowledgeDetailUiState,
@@ -140,96 +130,37 @@ private fun KnowledgeDetailContent(
             selectedType = state.type,
             onTypeSelected = { onIntent(KnowledgeDetailIntent.SetType(it)) },
         )
-        EditFieldCard(
+        KnowledgeEditFieldCard(
             label = stringResource(R.string.knowledge_title),
             value = state.title,
             onValueChange = { onIntent(KnowledgeDetailIntent.SetTitle(it)) },
         )
-        KeywordTagEditor(
-            keywords = state.keywords,
-            onAddKeyword = { onIntent(KnowledgeDetailIntent.AddKeyword(it)) },
-            onRemoveKeyword = { onIntent(KnowledgeDetailIntent.RemoveKeyword(it)) },
+        KnowledgeFlowTagEditor(
+            title = stringResource(R.string.knowledge_keywords),
+            tags = state.keywords,
+            onAddTag = { onIntent(KnowledgeDetailIntent.AddKeyword(it)) },
+            onRemoveTag = { onIntent(KnowledgeDetailIntent.RemoveKeyword(it)) },
         )
-        EditFieldCard(
+        KnowledgeEditFieldCard(
             label = stringResource(R.string.knowledge_content),
             value = state.content,
             onValueChange = { onIntent(KnowledgeDetailIntent.SetContent(it)) },
             multiline = true,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            EditFieldCard(
+            KnowledgeEditFieldCard(
                 label = stringResource(R.string.knowledge_scope_start),
                 value = state.scopeStartChapter,
                 onValueChange = { onIntent(KnowledgeDetailIntent.SetScopeStart(it)) },
                 modifier = Modifier.weight(1f),
             )
-            EditFieldCard(
+            KnowledgeEditFieldCard(
                 label = stringResource(R.string.knowledge_scope_end),
                 value = state.scopeEndChapter,
                 onValueChange = { onIntent(KnowledgeDetailIntent.SetScopeEnd(it)) },
                 modifier = Modifier.weight(1f),
             )
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun EditFieldCard(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    multiline: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var dialogValue by remember(value) { mutableStateOf(value) }
-
-    GlassCard(
-        onClick = {
-            dialogValue = value
-            showDialog = true
-        },
-        modifier = modifier,
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            AppText(
-                text = label,
-                style = LegadoTheme.typography.labelMedium,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
-            )
-            AnimatedTextLine(
-                text = value.ifBlank { "—" },
-                style = LegadoTheme.typography.bodyMedium,
-                color = if (value.isBlank()) LegadoTheme.colorScheme.onSurfaceVariant else LegadoTheme.colorScheme.onSurface,
-            )
-        }
-    }
-
-    if (showDialog) {
-        AppAlertDialog(
-            show = showDialog,
-            onDismissRequest = { showDialog = false },
-            title = label,
-            confirmText = stringResource(R.string.apply),
-            onConfirm = {
-                onValueChange(dialogValue)
-                showDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showDialog = false },
-            content = {
-                AppTextField(
-                    value = dialogValue,
-                    onValueChange = { dialogValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = !multiline,
-                    minLines = if (multiline) 4 else 1,
-                    maxLines = if (multiline) 12 else 1,
-                )
-            },
-        )
     }
 }
 
@@ -273,82 +204,5 @@ private fun KnowledgeTypeSelector(
                 }
             }
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun KeywordTagEditor(
-    keywords: ImmutableList<String>,
-    onAddKeyword: (String) -> Unit,
-    onRemoveKeyword: (Int) -> Unit,
-) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    var newKeywordValue by remember { mutableStateOf("") }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AppText(
-            text = stringResource(R.string.knowledge_keywords),
-            style = LegadoTheme.typography.titleMedium,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            keywords.forEachIndexed { index, keyword ->
-                GlassCard(
-                    onClick = { onRemoveKeyword(index) },
-                    containerColor = LegadoTheme.colorScheme.secondaryContainer,
-                ) {
-                    AnimatedTextLine(
-                        text = keyword,
-                        style = LegadoTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        color = LegadoTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
-            }
-            GlassCard(
-                onClick = {
-                    newKeywordValue = ""
-                    showAddDialog = true
-                },
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-            ) {
-                AppIcon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add),
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .size(18.dp),
-                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AppAlertDialog(
-            show = showAddDialog,
-            onDismissRequest = { showAddDialog = false },
-            title = stringResource(R.string.knowledge_keywords),
-            confirmText = stringResource(R.string.apply),
-            onConfirm = {
-                if (newKeywordValue.isNotBlank()) {
-                    onAddKeyword(newKeywordValue)
-                }
-                showAddDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showAddDialog = false },
-            content = {
-                AppTextField(
-                    value = newKeywordValue,
-                    onValueChange = { newKeywordValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-            },
-        )
     }
 }

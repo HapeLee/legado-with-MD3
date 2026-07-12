@@ -2484,6 +2484,7 @@
     <string name="about_open_github">打开 GitHub</string>
     <string name="apply">应用</string>
     <string name="book_characters">人物</string>
+    <string name="book_info_knowledge">知识</string>
     <string name="character_network">关系网</string>
     <string name="add_character">新增人物</string>
     <string name="add_character_hint">创建人物档案</string>
@@ -2493,6 +2494,7 @@
     <string name="character_detail">人物详情</string>
     <string name="character_name">人物名称</string>
     <string name="character_aliases">别名</string>
+    <string name="character_no_aliases">无别名</string>
     <string name="character_role">角色</string>
     <string name="character_avatar_uri">头像地址</string>
     <string name="character_avatar_crop">裁剪头像</string>

@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Code
@@ -61,8 +60,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -84,7 +83,6 @@ import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.model.BookCover as BookCoverModel
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -129,6 +127,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import io.legado.app.model.BookCover as BookCoverModel
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -288,16 +287,10 @@ private fun BookInfoScreenContent(
                                     onViewAllClick = {
                                         onIntent(BookInfoIntent.CharacterListClick)
                                     },
-                                )
-                                BookInfoKnowledge(
-                                    entries = state.knowledgeEntries,
-                                    onViewAllClick = {
+                                    onKnowledgeClick = {
                                         onIntent(BookInfoIntent.KnowledgeListClick)
                                     },
-                                )
-                                BookInfoEvents(
-                                    events = state.recentEvents,
-                                    onViewAllClick = {
+                                    onEventsClick = {
                                         onIntent(BookInfoIntent.EventListClick)
                                     },
                                 )
@@ -1291,6 +1284,8 @@ private fun BookInfoCharacters(
     onCharacterClick: (String) -> Unit,
     onNetworkClick: () -> Unit,
     onViewAllClick: () -> Unit,
+    onKnowledgeClick: () -> Unit,
+    onEventsClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -1306,21 +1301,33 @@ private fun BookInfoCharacters(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppText(
-                text = stringResource(R.string.book_characters),
+                text = stringResource(R.string.book_info_knowledge),
                 style = LegadoTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
             SmallTonalButton(
                 onClick = onViewAllClick,
-                icon = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = stringResource(R.string.view_all),
+                icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                contentDescription = stringResource(R.string.book_characters),
             )
             Spacer(modifier = Modifier.width(4.dp))
             SmallTonalButton(
                 onClick = onNetworkClick,
                 icon = Icons.Default.Group,
                 contentDescription = stringResource(R.string.character_network),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            SmallTonalButton(
+                onClick = onKnowledgeClick,
+                icon = Icons.Default.Book,
+                contentDescription = stringResource(R.string.book_knowledge),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            SmallTonalButton(
+                onClick = onEventsClick,
+                icon = Icons.Default.Timeline,
+                contentDescription = stringResource(R.string.plot_events),
             )
         }
         LazyRow(

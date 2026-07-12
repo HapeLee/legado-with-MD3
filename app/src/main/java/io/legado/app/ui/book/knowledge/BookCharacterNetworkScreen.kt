@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -40,6 +39,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -118,9 +118,8 @@ fun BookCharacterNetworkScreen(
                 onIntent = onIntent,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .consumeWindowInsets(paddingValues)
                     .imePadding(),
+                paddingValues = paddingValues,
             )
         }
     }
@@ -131,10 +130,14 @@ private fun CharacterNetworkContent(
     state: CharacterNetworkUiState,
     onIntent: (CharacterNetworkIntent) -> Unit,
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues,
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = adaptiveContentPadding(
+            top = paddingValues.calculateTopPadding(),
+            bottom = 120.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {

@@ -5,17 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,17 +39,17 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +68,19 @@ fun BookCharacterListScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val roleFilterLabels = remember {
+        listOf(
+            "" to R.string.knowledge_type_all,
+            BookCharacterProfile.ROLE_MALE_LEAD to R.string.role_male_lead,
+            BookCharacterProfile.ROLE_FEMALE_LEAD to R.string.role_female_lead,
+            BookCharacterProfile.ROLE_MALE_SUPPORTING to R.string.role_male_supporting,
+            BookCharacterProfile.ROLE_FEMALE_SUPPORTING to R.string.role_female_supporting,
+        )
+    }
+    val tabTitles = roleFilterLabels.map { stringResource(it.second) }
+    val selectedTabIndex =
+        roleFilterLabels.indexOfFirst { it.first == state.roleFilter }.coerceAtLeast(0)
 
     LaunchedEffect(effects) {
         effects.collectLatest { effect ->
@@ -102,6 +110,15 @@ fun BookCharacterListScreen(
                     TopBarNavigationButton(onClick = onBack)
                 },
                 scrollBehavior = scrollBehavior,
+                bottomContent = {
+                    AppTabRow(
+                        tabTitles = tabTitles,
+                        selectedTabIndex = selectedTabIndex,
+                        onTabSelected = { index ->
+                            onIntent(CharacterListIntent.SetRoleFilter(roleFilterLabels[index].first))
+                        }
+                    )
+                }
             )
         },
         floatingActionButton = {
@@ -127,9 +144,8 @@ fun BookCharacterListScreen(
                 onIntent = onIntent,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .consumeWindowInsets(paddingValues)
                     .imePadding(),
+                paddingValues = paddingValues
             )
         }
     }
@@ -141,48 +157,16 @@ private fun CharacterListContent(
     state: CharacterListUiState,
     onIntent: (CharacterListIntent) -> Unit,
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues
 ) {
-    val roleFilterLabels = mapOf(
-        "" to stringResource(R.string.knowledge_type_all),
-        BookCharacterProfile.ROLE_MALE_LEAD to stringResource(R.string.role_male_lead),
-        BookCharacterProfile.ROLE_FEMALE_LEAD to stringResource(R.string.role_female_lead),
-        BookCharacterProfile.ROLE_MALE_SUPPORTING to stringResource(R.string.role_male_supporting),
-        BookCharacterProfile.ROLE_FEMALE_SUPPORTING to stringResource(R.string.role_female_supporting),
-    )
-
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = adaptiveContentPadding(
+            top = paddingValues.calculateTopPadding(),
+            bottom = 120.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                roleFilterLabels.forEach { (role, label) ->
-                    GlassCard(
-                        onClick = { onIntent(CharacterListIntent.SetRoleFilter(role)) },
-                        containerColor = if (state.roleFilter == role) {
-                            LegadoTheme.colorScheme.primaryContainer
-                        } else {
-                            LegadoTheme.colorScheme.surfaceContainerLow
-                        },
-                    ) {
-                        AnimatedTextLine(
-                            text = label,
-                            style = LegadoTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = if (state.roleFilter == role) {
-                                LegadoTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                LegadoTheme.colorScheme.onSurface
-                            },
-                        )
-                    }
-                }
-            }
-        }
         if (state.characters.isEmpty()) {
             item {
                 Box(

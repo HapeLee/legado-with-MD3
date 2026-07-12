@@ -1,28 +1,21 @@
 package io.legado.app.ui.book.knowledge
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +33,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
@@ -47,6 +41,7 @@ import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -65,7 +60,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookCharacterDetailScreen(
     state: CharacterDetailUiState,
@@ -129,7 +124,7 @@ fun BookCharacterDetailScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CharacterDetailContent(
     state: CharacterDetailUiState,
@@ -160,18 +155,20 @@ private fun CharacterDetailContent(
                 showProfileDialog = true
             },
         )
-        CharacterTagEditor(
+        KnowledgeFlowTagEditor(
+            title = stringResource(R.string.character_tags),
             tags = state.tags,
             onAddTag = { onIntent(CharacterDetailIntent.AddTag(it)) },
             onRemoveTag = { onIntent(CharacterDetailIntent.RemoveTag(it)) },
+            showCloseIcon = true,
         )
-        EditFieldCard(
+        KnowledgeEditFieldCard(
             label = stringResource(R.string.character_personality),
             value = state.personality,
             onValueChange = { onIntent(CharacterDetailIntent.SetPersonality(it)) },
             multiline = true,
         )
-        EditFieldCard(
+        KnowledgeEditFieldCard(
             label = stringResource(R.string.character_summary),
             value = state.summary,
             onValueChange = { onIntent(CharacterDetailIntent.SetSummary(it)) },
@@ -205,44 +202,42 @@ private fun CharacterDetailContent(
         }
     }
 
-    if (showProfileDialog) {
-        AppAlertDialog(
-            show = showProfileDialog,
-            onDismissRequest = { showProfileDialog = false },
-            title = stringResource(R.string.character_detail),
-            confirmText = stringResource(R.string.apply),
-            onConfirm = {
-                onIntent(CharacterDetailIntent.SetName(dialogName))
-                onIntent(CharacterDetailIntent.SetAliasesText(dialogAliases))
-                onIntent(CharacterDetailIntent.SetRole(dialogRole))
-                showProfileDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showProfileDialog = false },
-            content = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AppTextField(
-                        value = dialogName,
-                        onValueChange = { dialogName = it },
-                        label = stringResource(R.string.character_name),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    AppTextField(
-                        value = dialogAliases,
-                        onValueChange = { dialogAliases = it },
-                        label = stringResource(R.string.character_aliases),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    ProfileRoleDropdown(
-                        selectedRole = dialogRole,
-                        onRoleSelected = { dialogRole = it },
-                    )
-                }
-            },
-        )
-    }
+    AppAlertDialog(
+        show = showProfileDialog,
+        onDismissRequest = { showProfileDialog = false },
+        title = stringResource(R.string.character_detail),
+        confirmText = stringResource(R.string.apply),
+        onConfirm = {
+            onIntent(CharacterDetailIntent.SetName(dialogName))
+            onIntent(CharacterDetailIntent.SetAliasesText(dialogAliases))
+            onIntent(CharacterDetailIntent.SetRole(dialogRole))
+            showProfileDialog = false
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showProfileDialog = false },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppTextField(
+                    value = dialogName,
+                    onValueChange = { dialogName = it },
+                    label = stringResource(R.string.character_name),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                AppTextField(
+                    value = dialogAliases,
+                    onValueChange = { dialogAliases = it },
+                    label = stringResource(R.string.character_aliases),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                ProfileRoleDropdown(
+                    selectedRole = dialogRole,
+                    onRoleSelected = { dialogRole = it },
+                )
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -314,18 +309,17 @@ private fun CharacterHeader(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         GlassCard(
             onClick = onPickAvatar,
+            cornerRadius = 64.dp,
             containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(LegadoTheme.colorScheme.surfaceContainerHighest),
+                    .size(72.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 if (avatarUri.isNotBlank() && !avatarLoadFailed.value) {
@@ -333,8 +327,7 @@ private fun CharacterHeader(
                         model = avatarUri,
                         contentDescription = null,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
+                            .fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onError = { avatarLoadFailed.value = true },
                     )
@@ -348,98 +341,44 @@ private fun CharacterHeader(
                 }
             }
         }
-        GlassCard(
-            onClick = onInfoClick,
-            modifier = Modifier.weight(1f),
-            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onInfoClick)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    AnimatedTextLine(
-                        text = name.ifBlank { "—" },
-                        style = LegadoTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (resolvedRole.isNotBlank()) {
-                        TextCard(text = resolvedRole)
-                    }
-                }
-                if (aliasesText.isNotBlank()) {
-                    AnimatedTextLine(
-                        text = aliasesText,
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                    )
+                AnimatedTextLine(
+                    text = name.ifBlank { "—" },
+                    style = LegadoTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (resolvedRole.isNotBlank()) {
+                    TextCard(text = resolvedRole)
                 }
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun EditFieldCard(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    multiline: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var dialogValue by remember(value) { mutableStateOf(value) }
-
-    GlassCard(
-        onClick = {
-            dialogValue = value
-            showDialog = true
-        },
-        modifier = modifier,
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            AppText(
-                text = label,
-                style = LegadoTheme.typography.labelMedium,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
-            )
-            AnimatedTextLine(
-                text = value.ifBlank { "—" },
-                style = LegadoTheme.typography.bodyMedium,
-                color = if (value.isBlank()) LegadoTheme.colorScheme.onSurfaceVariant else LegadoTheme.colorScheme.onSurface,
-            )
-        }
-    }
-
-    if (showDialog) {
-        AppAlertDialog(
-            show = showDialog,
-            onDismissRequest = { showDialog = false },
-            title = label,
-            confirmText = stringResource(R.string.apply),
-            onConfirm = {
-                onValueChange(dialogValue)
-                showDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showDialog = false },
-            content = {
-                AppTextField(
-                    value = dialogValue,
-                    onValueChange = { dialogValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = !multiline,
-                    minLines = if (multiline) 4 else 1,
-                    maxLines = if (multiline) 12 else 1,
+            if (aliasesText.isNotBlank()) {
+                AnimatedTextLine(
+                    text = aliasesText,
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
                 )
-            },
-        )
+            } else {
+                AnimatedTextLine(
+                    text = stringResource(R.string.character_no_aliases),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+        }
     }
 }
 
@@ -456,11 +395,18 @@ private fun CharacterReadonlySection(
             style = LegadoTheme.typography.titleMedium,
         )
         if (isEmpty) {
-            AnimatedTextLine(
-                text = emptyText,
-                style = LegadoTheme.typography.bodyMedium,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
-            )
+            GlassCard {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 16.dp)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyMessage(
+                        message = emptyText
+                    )
+                }
+            }
         } else {
             content()
         }
@@ -483,129 +429,15 @@ private fun InfoCard(
             AnimatedTextLine(
                 text = title.ifBlank { stringResource(R.string.character_unknown) },
                 style = LegadoTheme.typography.bodyMedium,
+                overflow = TextOverflow.Ellipsis,
             )
             AnimatedTextLine(
                 text = body.ifBlank { stringResource(R.string.character_no_summary) },
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
+                overflow = TextOverflow.Ellipsis,
                 maxLines = 4,
             )
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun CharacterTagEditor(
-    tags: ImmutableList<String>,
-    onAddTag: (String) -> Unit,
-    onRemoveTag: (Int) -> Unit,
-) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    var newTagValue by remember { mutableStateOf("") }
-    var showRemoveDialog by remember { mutableStateOf(false) }
-    var removeTagIndex by remember { mutableStateOf(-1) }
-    var removeTagName by remember { mutableStateOf("") }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AppText(
-            text = stringResource(R.string.character_tags),
-            style = LegadoTheme.typography.titleMedium,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            tags.forEachIndexed { index, tag ->
-                GlassCard(
-                    onClick = {
-                        removeTagIndex = index
-                        removeTagName = tag
-                        showRemoveDialog = true
-                    },
-                    containerColor = LegadoTheme.colorScheme.secondaryContainer,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            start = 10.dp,
-                            end = 6.dp,
-                            top = 6.dp,
-                            bottom = 6.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AnimatedTextLine(
-                            text = tag,
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        AppIcon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = LegadoTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                }
-            }
-            GlassCard(
-                onClick = {
-                    newTagValue = ""
-                    showAddDialog = true
-                },
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-            ) {
-                AppIcon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add),
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .size(14.dp),
-                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AppAlertDialog(
-            show = showAddDialog,
-            onDismissRequest = { showAddDialog = false },
-            title = stringResource(R.string.character_tags),
-            confirmText = stringResource(R.string.apply),
-            onConfirm = {
-                if (newTagValue.isNotBlank()) {
-                    onAddTag(newTagValue)
-                }
-                showAddDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showAddDialog = false },
-            content = {
-                AppTextField(
-                    value = newTagValue,
-                    onValueChange = { newTagValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-            },
-        )
-    }
-
-    if (showRemoveDialog) {
-        AppAlertDialog(
-            show = showRemoveDialog,
-            onDismissRequest = { showRemoveDialog = false },
-            title = stringResource(R.string.character_tags),
-            text = removeTagName,
-            confirmText = stringResource(R.string.delete),
-            onConfirm = {
-                onRemoveTag(removeTagIndex)
-                showRemoveDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showRemoveDialog = false },
-        )
     }
 }

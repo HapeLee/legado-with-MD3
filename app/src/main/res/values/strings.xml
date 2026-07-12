@@ -2489,6 +2489,7 @@
     <string name="about_open_github">Open GitHub</string>
     <string name="apply">Apply</string>
     <string name="book_characters">Characters</string>
+    <string name="book_info_knowledge">Knowledge</string>
     <string name="character_network">Character network</string>
     <string name="add_character">Add character</string>
     <string name="add_character_hint">Create a profile</string>
@@ -2498,6 +2499,7 @@
     <string name="character_detail">Character detail</string>
     <string name="character_name">Name</string>
     <string name="character_aliases">Aliases</string>
+    <string name="character_no_aliases">No aliases</string>
     <string name="character_role">Role</string>
     <string name="character_avatar_uri">Avatar URI</string>
     <string name="character_avatar_crop">Crop avatar</string>
