@@ -196,6 +196,7 @@ fun CoilBookCover(
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
+    onError: (() -> Unit)? = null,
     ignoreUseDefaultCover: Boolean = false,
     showLoadingPlaceholder: Boolean = true,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -279,6 +280,7 @@ fun CoilBookCover(
             onError = {
                 isOnlineCoverLoaded = false
                 onlineCoverLoadFailed = true
+                onError?.invoke()
                 onLoadFinish?.invoke()
             },
             sharedCoverKey = sharedCoverKey

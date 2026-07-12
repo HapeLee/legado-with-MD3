@@ -1518,8 +1518,9 @@
     <string name="theme_manage_section_blur">Blur Effects</string>
     <string name="book_info_page">Book details</string>
     <string name="book_info_follow_cover_color">Use colors from book cover</string>
-    <string name="book_info_follow_cover_color_summary">Generate the book details color scheme from the cover</string>
-    <string name="book_info_background_blur">Background setting</string>
+    <string name="book_info_follow_cover_color_summary">Applied only while a background cover is visible</string>
+    <string name="book_info_network_cover_background">Network cover background</string>
+    <string name="book_info_default_cover_background">Default cover background</string>
     <string name="book_info_background_blur_off">Show cover without blur</string>
     <string name="book_info_background_blur_on">Show blurred cover</string>
     <string name="book_info_background_blur_off_for_default">Hide background cover</string>

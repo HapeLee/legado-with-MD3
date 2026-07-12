@@ -396,6 +396,17 @@ object Restore : KoinComponent {
 
     private suspend fun applyConfigMap(map: Map<String, Any?>, aes: BackupAES) {
         val finalMap = mutableMapOf<String, Any>()
+        val legacyBookInfoBackground = map[PreferKey.bookInfoBackgroundBlur] as? String
+        val restoreNetworkCoverBackground =
+            legacyBookInfoBackground != null &&
+                    PreferKey.bookInfoNetworkCoverBackground !in map &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoNetworkCoverBackground)
+        val restoreDefaultCoverBackground =
+            legacyBookInfoBackground != null &&
+                    PreferKey.bookInfoDefaultCoverBackground !in map &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
+                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoDefaultCoverBackground)
         appCtx.defaultSharedPreferences.edit {
             map.forEach { (key, value) ->
                 if (BackupConfig.keyIsNotIgnore(key)) {
@@ -431,6 +442,16 @@ object Restore : KoinComponent {
                             }
                         }
                     }
+                }
+            }
+            legacyBookInfoBackground?.let { backgroundMode ->
+                if (restoreNetworkCoverBackground) {
+                    putString(PreferKey.bookInfoNetworkCoverBackground, backgroundMode)
+                    finalMap[PreferKey.bookInfoNetworkCoverBackground] = backgroundMode
+                }
+                if (restoreDefaultCoverBackground) {
+                    putString(PreferKey.bookInfoDefaultCoverBackground, backgroundMode)
+                    finalMap[PreferKey.bookInfoDefaultCoverBackground] = backgroundMode
                 }
             }
         }

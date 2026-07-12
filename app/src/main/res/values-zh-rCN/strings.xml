@@ -1483,8 +1483,9 @@
     <string name="theme_manage_section_blur">模糊效果</string>
     <string name="book_info_page">书籍详情页</string>
     <string name="book_info_follow_cover_color">界面颜色跟随封面取色</string>
-    <string name="book_info_follow_cover_color_summary">从书籍封面提取详情页配色</string>
-    <string name="book_info_background_blur">背景设置</string>
+    <string name="book_info_follow_cover_color_summary">仅在显示背景封面时生效</string>
+    <string name="book_info_network_cover_background">网络封面背景设置</string>
+    <string name="book_info_default_cover_background">默认封面背景设置</string>
     <string name="book_info_background_blur_off">关闭模糊封面</string>
     <string name="book_info_background_blur_on">开启模糊封面</string>
     <string name="book_info_background_blur_off_for_default">不显示背景封面</string>
