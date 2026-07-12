@@ -59,6 +59,8 @@ jobs:
         with:
           ref: ${{ steps.build.outputs.sha }}
           fetch-depth: 0
+          # artifacts 已在前一步下载；不要让 checkout 的默认 clean 删除它们。
+          clean: false
 
       - name: Prepare release files and notes
         id: release
