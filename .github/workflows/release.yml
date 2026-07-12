@@ -117,6 +117,7 @@ jobs:
           else
             git tag "$VERSION" "${{ steps.build.outputs.sha }}"
             git push origin "$VERSION"
+          fi
 
       - name: Generate GitHub release notes
         id: notes
