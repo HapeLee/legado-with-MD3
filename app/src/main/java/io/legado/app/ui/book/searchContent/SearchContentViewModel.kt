@@ -134,6 +134,7 @@ class SearchContentViewModel(
         val regex = _regexReplace.value
 
         if (query.isBlank()) {
+            searchContentRepository.clearSession(bookUrl)
             _uiState.update {
                 it.copy(
                     isSearching = false,
