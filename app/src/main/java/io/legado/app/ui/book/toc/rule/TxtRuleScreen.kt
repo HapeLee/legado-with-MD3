@@ -49,10 +49,14 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.rules.TestLineResult
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.regex.Pattern
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -286,6 +290,33 @@ fun TxtRuleScreen(
             )
         },
         showTestButton = true,
+        onTest = { rule, example ->
+            val pattern = Pattern.compile(rule, Pattern.MULTILINE)
+            withContext(Dispatchers.Default) {
+                val normalized = example.replace("\r\n", "\n").replace("\r", "\n")
+                val lines = normalized.lines()
+                val fullText = "\n$normalized"
+                val matcher = pattern.matcher(fullText)
+                val matchRanges = mutableListOf<IntRange>()
+                while (matcher.find()) {
+                    matchRanges.add(matcher.start()..matcher.end())
+                }
+                var offset = 1
+                lines.map { line ->
+                    val lineStart = offset
+                    val lineEnd = offset + line.length
+                    val matched = matchRanges.any { range ->
+                        if (range.first == range.last) {
+                            range.first in lineStart..lineEnd
+                        } else {
+                            range.first < lineEnd && range.last > lineStart
+                        }
+                    }
+                    offset = lineEnd + 1
+                    TestLineResult(line = line, matched = matched, matchResult = if (matched) line else null)
+                }
+            }
+        },
     )
 
     RuleListScaffold(

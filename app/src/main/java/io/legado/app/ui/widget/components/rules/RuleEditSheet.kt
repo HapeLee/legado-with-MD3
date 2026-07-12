@@ -41,9 +41,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.regex.Pattern
-import java.util.regex.PatternSyntaxException
 
 /**
  * 通用编辑数据包装，用于适配不同的规则
@@ -79,6 +76,7 @@ fun <T> RuleEditSheet(
     toFields: (T?) -> RuleEditFields,
     fromFields: (RuleEditFields, T?) -> T,
     showTestButton: Boolean = false,
+    onTest: (suspend (rule: String, example: String) -> List<TestLineResult>?)? = null,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -114,56 +112,30 @@ fun <T> RuleEditSheet(
             return
         }
 
-        val pattern: Pattern
-        try {
-            pattern = Pattern.compile(rule1, Pattern.MULTILINE)
-        } catch (e: PatternSyntaxException) {
-            testError = e.message ?: invalidRegexStr
+        val testCallback = onTest
+        if (testCallback == null) {
+            testError = invalidRegexStr
             testResults = null
             return
         }
 
         // Capture inputs for background processing
+        val capturedRule1 = rule1
         val capturedRule2 = rule2
         testRunning = true
         testError = null
         testResults = null
 
         scope.launch(Dispatchers.Default) {
-            val results = withContext(Dispatchers.Default) {
-                // Normalize line endings: \r\n and \r → \n to avoid offset misalignment
-                val normalized = capturedRule2.replace("\r\n", "\n").replace("\r", "\n")
-                val lines = normalized.lines()
-                val fullText = "\n$normalized"
-                val matcher = pattern.matcher(fullText)
-
-                // Collect all match ranges (character offsets in fullText)
-                val matchRanges = mutableListOf<IntRange>()
-                while (matcher.find()) {
-                    matchRanges.add(matcher.start()..matcher.end())
-                }
-
-                // Map each line: check if any match overlaps with this line's range
-                var offset = 1 // skip the leading \n
-                lines.map { line ->
-                    val lineStart = offset
-                    val lineEnd = offset + line.length
-                    val matched = matchRanges.any { range ->
-                        if (range.first == range.last) {
-                            // Zero-width match: check if it falls within [lineStart, lineEnd]
-                            range.first in lineStart..lineEnd
-                        } else {
-                            // Normal match: check overlap
-                            range.first < lineEnd && range.last > lineStart
-                        }
-                    }
-                    offset = lineEnd + 1 // +1 for \n
-                    TestLineResult(line = line, matched = matched, matchResult = if (matched) line else null)
-                }
+            try {
+                val results = testCallback(capturedRule1, capturedRule2)
+                testResults = results
+            } catch (_: Exception) {
+                testError = invalidRegexStr
+                testResults = null
+            } finally {
+                testRunning = false
             }
-
-            testResults = results
-            testRunning = false
         }
     }
 
