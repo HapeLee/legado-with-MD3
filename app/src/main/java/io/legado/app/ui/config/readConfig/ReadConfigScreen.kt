@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -36,6 +37,7 @@ fun ReadConfigScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showPageKeySheet by remember { mutableStateOf(false) }
+    var showClickActionSheet by remember { mutableStateOf(false) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     AppScaffold(
@@ -354,7 +356,7 @@ fun ReadConfigScreen(
 
                 ClickableSettingItem(
                     title = stringResource(R.string.click_regional_config),
-                    onClick = { /* 暂时留空 */ }
+                    onClick = { showClickActionSheet = true }
                 )
 
                 SwitchSettingItem(
@@ -400,4 +402,10 @@ fun ReadConfigScreen(
             showPageKeySheet = false
         }
     )
+
+    if (showClickActionSheet) {
+        ClickActionConfigSheet(
+            onDismissRequest = { showClickActionSheet = false },
+        )
+    }
 }
