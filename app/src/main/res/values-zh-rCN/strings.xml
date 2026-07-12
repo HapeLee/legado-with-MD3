@@ -1104,13 +1104,12 @@
     <string name="tts_speech_add">语速加</string>
     <string name="open_sys_dir_picker_error">打开系统文件夹选择器出错，将自动打开应用文件夹选择器</string>
     <string name="open_sys_doc_picker_error">打开系统文件选择器出错，将自动打开应用文件选择器</string>
-    <string name="expand_text_menu">展开文本选择菜单</string>
-    <string name="show_select_menu_icon">展示选择菜单图标</string>
-    <string name="text_select_menu_filter">选择菜单应用过滤</string>
-    <string name="text_select_menu_filter_desc">过滤文字选择操作菜单中显示的第三方应用</string>
+    <string name="expand_text_menu">多行展示</string>
+    <string name="show_select_menu_icon">展示图标</string>
+
     <string name="show_all">全部显示</string>
     <string name="hide_all">全不显示</string>
-    <string name="no_apps_found">未找到支持文字处理的第三方应用</string>
+
     <string name="book_tree_uri_t">书籍保存位置</string>
     <string name="book_tree_uri_s">从其它应用打开的书籍保存位置</string>
     <string name="select_book_folder">选择保存书籍的文件夹</string>
@@ -2457,4 +2456,8 @@
     <string name="about_open_github">打开 GitHub</string>
     <string name="edit_menu_items">编辑菜单项</string>
     <string name="edit_select_menu">编辑选择菜单</string>
+    <string name="primary_menu">一级菜单</string>
+    <string name="collapsed_menu">折叠菜单</string>
+    <string name="hidden_items">已隐藏项目</string>
+    <string name="merged_in_multiline">多行模式下将合并展示</string>
 </resources>

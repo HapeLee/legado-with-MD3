@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.read
 
 import android.annotation.SuppressLint
+import android.app.SearchManager
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Gravity
@@ -12,6 +14,7 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -51,28 +54,27 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
+import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
+import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import io.legado.app.utils.share
 import io.legado.app.utils.sysBattery
 import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
-import io.legado.app.utils.sendToClip
-import io.legado.app.utils.share
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.printOnDebug
-import android.app.SearchManager
-import android.content.Context
-import android.content.Intent
-import androidx.core.net.toUri
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -118,8 +120,13 @@ class ReadBookController(
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
     private val _textMenuState = MutableStateFlow<TextMenuState?>(null)
     val textMenuState = _textMenuState.asStateFlow()
+    private var textMenuRequestVersion = 0L
+    private val menuMutex = Mutex()
+    @Volatile
+    private var cachedActionMenuItems: List<ActionMenuItem>? = null
 
     fun dismissTextActionMenu() {
+        textMenuRequestVersion++
         _textMenuState.value = null
     }
     private val popupAction by lazy { PopupAction(activity) }
@@ -183,6 +190,7 @@ class ReadBookController(
         }
         newRefs.readView.upTime()
         newRefs.readView.upBattery(activity.sysBattery)
+        refreshActionMenuItems()
     }
 
     fun onMenuVisibilityChanged(visible: Boolean) {
@@ -294,15 +302,30 @@ class ReadBookController(
 
     override fun showTextActionMenu() {
         val r = refs ?: return
-        _textMenuState.value = TextMenuState(
-            selectedText = selectedText,
-            startX = r.textMenuPosition.x.toInt(),
-            startTopY = r.textMenuPosition.y.toInt(),
-            startBottomY = r.cursorLeft.y.toInt() + r.cursorLeft.height,
-            endX = r.cursorRight.x.toInt(),
-            endBottomY = r.cursorRight.y.toInt() + r.cursorRight.height,
-            items = getActionMenuItems()
-        )
+        val text = selectedText
+        val startX = r.textMenuPosition.x.toInt()
+        val startTopY = r.textMenuPosition.y.toInt()
+        val startBottomY = r.cursorLeft.y.toInt() + r.cursorLeft.height
+        val endX = r.cursorRight.x.toInt()
+        val endBottomY = r.cursorRight.y.toInt() + r.cursorRight.height
+        val requestVersion = ++textMenuRequestVersion
+
+        activity.lifecycleScope.launch {
+            val items = getActionMenuItems()
+            val readView = refs?.readView
+            if (textMenuRequestVersion != requestVersion || readView?.isTextSelected != true) {
+                return@launch
+            }
+            _textMenuState.value = TextMenuState(
+                selectedText = text,
+                startX = startX,
+                startTopY = startTopY,
+                startBottomY = startBottomY,
+                endX = endX,
+                endBottomY = endBottomY,
+                items = items
+            )
+        }
     }
 
     override fun autoPageStop() {
@@ -503,10 +526,17 @@ class ReadBookController(
 
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         val r = refs ?: return false
-        if (v == null || event == null || !r.readView.isTextSelected) {
+        if (v == null || event == null) {
             return false
         }
-        when (event.action) {
+        val action = event.action
+        if (!r.readView.isTextSelected
+            && action != MotionEvent.ACTION_UP
+            && action != MotionEvent.ACTION_CANCEL
+        ) {
+            return false
+        }
+        when (action) {
             MotionEvent.ACTION_DOWN -> dismissTextActionMenu()
             MotionEvent.ACTION_MOVE -> {
                 when (v.id) {
@@ -536,9 +566,14 @@ class ReadBookController(
                 }
             }
 
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
                 r.readView.curPage.resetReverseCursor()
-                showTextActionMenu()
+                if (r.readView.isTextSelected) {
+                    showTextActionMenu()
+                } else {
+                    dismissTextActionMenu()
+                }
             }
         }
         return true
@@ -619,88 +654,101 @@ class ReadBookController(
         refs?.readView?.cancelSelect()
     }
 
-    fun getActionMenuItems(): List<ActionMenuItem> {
-        val items = mutableListOf<ActionMenuItem>()
-        items.add(ActionMenuItem(R.id.menu_copy, activity.getString(android.R.string.copy)))
-        items.add(ActionMenuItem(R.id.menu_share_str, activity.getString(R.string.share)))
-        items.add(ActionMenuItem(R.id.menu_browser, activity.getString(R.string.browser)))
-        items.add(ActionMenuItem(R.id.menu_aloud, activity.getString(R.string.read_aloud)))
-        items.add(ActionMenuItem(R.id.menu_bookmark, activity.getString(R.string.bookmark)))
-        items.add(ActionMenuItem(R.id.menu_dict, activity.getString(R.string.dict)))
-        items.add(ActionMenuItem(R.id.menu_replace, activity.getString(R.string.replace)))
-        items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
-        items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
-        items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
-        items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
+    suspend fun getActionMenuItems(): List<ActionMenuItem> = withContext(IO) {
+        menuMutex.withLock {
+            cachedActionMenuItems?.let { return@withContext it }
 
-        val thirdPartyItems = mutableListOf<ActionMenuItem>()
-        kotlin.runCatching {
-            val pm = activity.packageManager
-            val filterSet = ReadConfig.textSelectMenuFilter.split(",").filter { it.isNotEmpty() }.toSet()
-            val intent = Intent().setAction(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
-            val resolveInfos = pm.queryIntentActivities(intent, 0)
-            for (resolveInfo in resolveInfos) {
-                val componentName = "${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}"
-                if (filterSet.contains(componentName)) {
-                    continue
+            val items = mutableListOf<ActionMenuItem>()
+            items.add(ActionMenuItem(R.id.menu_copy, activity.getString(android.R.string.copy)))
+            items.add(ActionMenuItem(R.id.menu_share_str, activity.getString(R.string.share)))
+            items.add(ActionMenuItem(R.id.menu_browser, activity.getString(R.string.browser)))
+            items.add(ActionMenuItem(R.id.menu_aloud, activity.getString(R.string.read_aloud)))
+            items.add(ActionMenuItem(R.id.menu_bookmark, activity.getString(R.string.bookmark)))
+            items.add(ActionMenuItem(R.id.menu_dict, activity.getString(R.string.dict)))
+            items.add(ActionMenuItem(R.id.menu_replace, activity.getString(R.string.replace)))
+            items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
+            items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
+            items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
+            items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
+
+            val thirdPartyItems = mutableListOf<ActionMenuItem>()
+            runCatching {
+                val pm = activity.packageManager
+                val intent = Intent().setAction(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
+                val resolveInfos = pm.queryIntentActivities(intent, 0)
+                for (resolveInfo in resolveInfos) {
+                    val processIntent = Intent()
+                        .setAction(Intent.ACTION_PROCESS_TEXT)
+                        .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)
+                        .setClassName(resolveInfo.activityInfo.packageName, resolveInfo.activityInfo.name)
+                    
+                    val title = resolveInfo.loadLabel(pm).toString()
+                    val icon = if (ReadConfig.showSelectMenuIcon) {
+                        runCatching { resolveInfo.loadIcon(pm) }.getOrNull()
+                    } else null
+
+                    thirdPartyItems.add(ActionMenuItem(id = -1, title = title, iconDrawable = icon, intent = processIntent))
                 }
-                val processIntent = Intent()
-                    .setAction(Intent.ACTION_PROCESS_TEXT)
-                    .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)
-                    .setClassName(resolveInfo.activityInfo.packageName, resolveInfo.activityInfo.name)
-                
-                val title = resolveInfo.loadLabel(pm).toString()
-                val icon = if (ReadConfig.showSelectMenuIcon) {
-                    kotlin.runCatching { resolveInfo.loadIcon(pm) }.getOrNull()
-                } else null
+            }
 
-                thirdPartyItems.add(ActionMenuItem(id = -1, title = title, iconDrawable = icon, intent = processIntent))
+            val allItems = items + thirdPartyItems
+            val configStr = ReadConfig.textSelectMenuConfig
+            val result = if (configStr.isEmpty()) {
+                allItems
+            } else {
+                runCatching {
+                    val savedConfigs = GSON.fromJsonObject<List<SelectionMenuConfigItem>>(configStr).getOrNull() ?: emptyList()
+                    val savedMap = savedConfigs.associateBy { it.id }
+
+                    val sortedItems = mutableListOf<ActionMenuItem>()
+                    for (saved in savedConfigs) {
+                        val found = allItems.find { it.uniqueId == saved.id }
+                        if (found != null) {
+                            val resolvedShowState = saved.showState ?: if (saved.enabled == false) 1 else 0
+                            sortedItems.add(found.copy(showState = resolvedShowState))
+                        }
+                    }
+                    for (item in allItems) {
+                        val uniqueId = item.uniqueId
+                        if (!savedMap.containsKey(uniqueId)) {
+                            sortedItems.add(item)
+                        }
+                    }
+                    sortedItems
+                }.getOrDefault(allItems)
+            }
+            cachedActionMenuItems = result
+            result
+        }
+    }
+
+    fun refreshActionMenuItems() {
+        activity.lifecycleScope.launch {
+            menuMutex.withLock {
+                cachedActionMenuItems = null
+            }
+            val menuItems = getActionMenuItems()
+            _textMenuState.value?.let { currentState ->
+                _textMenuState.value = currentState.copy(items = menuItems)
             }
         }
-
-        val allItems = items + thirdPartyItems
-        val configStr = ReadConfig.textSelectMenuConfig
-        if (configStr.isEmpty()) {
-            return allItems
-        }
-
-        return kotlin.runCatching {
-            val savedConfigs = GSON.fromJsonObject<List<SelectionMenuConfigItem>>(configStr).getOrNull() ?: emptyList()
-            val savedMap = savedConfigs.associateBy { it.id }
-
-            val sortedItems = mutableListOf<ActionMenuItem>()
-            for (saved in savedConfigs) {
-                val found = allItems.find { it.uniqueId == saved.id }
-                if (found != null) {
-                    sortedItems.add(found.copy(enabled = saved.enabled))
-                }
-            }
-            for (item in allItems) {
-                val uniqueId = item.uniqueId
-                if (!savedMap.containsKey(uniqueId)) {
-                    sortedItems.add(item)
-                }
-            }
-            sortedItems
-        }.getOrDefault(allItems)
     }
 
     fun saveMenuConfig(items: List<ActionMenuItem>) {
         val configs = items.map { item ->
             SelectionMenuConfigItem(
                 id = item.uniqueId,
-                enabled = item.enabled
+                enabled = item.showState == 0,
+                showState = item.showState
             )
         }
         ReadConfig.textSelectMenuConfig = GSON.toJson(configs)
-        _textMenuState.value?.let { currentState ->
-            _textMenuState.value = currentState.copy(items = getActionMenuItems())
-        }
+        refreshActionMenuItems()
     }
 
     fun onTextMenuItemClick(item: ActionMenuItem) {
         if (item.intent != null) {
-            kotlin.runCatching {
+            runCatching {
                 item.intent.putExtra(Intent.EXTRA_PROCESS_TEXT, selectedText)
                 activity.startActivity(item.intent)
             }.onFailure { e ->
@@ -711,7 +759,7 @@ class ReadBookController(
                 R.id.menu_copy -> activity.sendToClip(selectedText)
                 R.id.menu_share_str -> activity.share(selectedText)
                 R.id.menu_browser -> {
-                    kotlin.runCatching {
+                    runCatching {
                         val intent = if (selectedText.isAbsUrl()) {
                             Intent(Intent.ACTION_VIEW).apply {
                                 data = selectedText.toUri()
@@ -1380,8 +1428,11 @@ data class ActionMenuItem(
     val title: String,
     val iconDrawable: android.graphics.drawable.Drawable? = null,
     val intent: Intent? = null,
-    val enabled: Boolean = true
+    val showState: Int = 0 // 0: 一级, 1: 折叠, 2: 隐藏
 ) {
+    val enabled: Boolean
+        get() = showState == 0
+
     val uniqueId: String
         get() = if (intent != null) {
             val comp = intent.component
@@ -1406,5 +1457,6 @@ data class ActionMenuItem(
 
 data class SelectionMenuConfigItem(
     val id: String,
-    val enabled: Boolean
+    val enabled: Boolean? = null,
+    val showState: Int? = null
 )

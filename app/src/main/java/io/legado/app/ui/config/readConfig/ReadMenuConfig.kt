@@ -45,11 +45,6 @@ object ReadMenuConfig {
         true
     )
 
-    var textSelectMenuFilter by prefDelegate(
-        PreferKey.textSelectMenuFilter,
-        ""
-    )
-
     var textSelectMenuConfig by prefDelegate(
         PreferKey.textSelectMenuConfig,
         ""

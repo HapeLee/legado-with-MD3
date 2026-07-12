@@ -1,39 +1,75 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.book.read.ActionMenuItem
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TextSelectMenuConfigSheet(
     show: Boolean,
     items: List<ActionMenuItem>,
+    expandTextMenu: Boolean,
+    showSelectMenuIcon: Boolean,
+    onExpandTextMenuChange: (Boolean) -> Unit,
+    onShowSelectMenuIconChange: (Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     onSaved: (List<ActionMenuItem>) -> Unit
 ) {
@@ -41,10 +77,37 @@ fun TextSelectMenuConfigSheet(
         mutableStateOf(items)
     }
 
+    var group1Expanded by remember(show) { mutableStateOf(true) }
+    var group2Expanded by remember(show) { mutableStateOf(true) }
+    var group3Expanded by remember(show) { mutableStateOf(false) }
+
+    val group1Items = remember(draftItems) { draftItems.filter { it.showState == 0 } }
+    val group2Items = remember(draftItems) { draftItems.filter { it.showState == 1 } }
+    val group3Items = remember(draftItems) { draftItems.filter { it.showState == 2 } }
+
     val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(show) {
+        if (show) {
+            lazyListState.scrollToItem(0)
+        }
+    }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        draftItems = draftItems.toMutableList().apply {
-            add(to.index, removeAt(from.index))
+        val fromKey = from.key
+        val toKey = to.key
+
+        val fromIndexInDraft = draftItems.indexOfFirst { it.uniqueId == fromKey }
+        val toIndexInDraft = draftItems.indexOfFirst { it.uniqueId == toKey }
+
+        if (fromIndexInDraft != -1 && toIndexInDraft != -1) {
+            val fromItem = draftItems[fromIndexInDraft]
+            val toItem = draftItems[toIndexInDraft]
+            if (fromItem.showState == toItem.showState) {
+                draftItems = draftItems.toMutableList().apply {
+                    add(toIndexInDraft, removeAt(fromIndexInDraft))
+                }
+            }
         }
     }
 
@@ -66,26 +129,187 @@ fun TextSelectMenuConfigSheet(
                     .weight(1f)
                     .padding(horizontal = 16.dp),
             ) {
-                items(draftItems, key = { it.uniqueId }) { item ->
-                    ReorderableItem(reorderableState, key = item.uniqueId) { isDragging ->
-                        val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
-                        NormalCard(
-                            elevation = elevation,
-                            cornerRadius = 12.dp,
-                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow
-                        ) {
-                            TextSelectMenuConfigItemRow(
-                                item = item,
-                                onToggleEnabled = {
-                                    draftItems = draftItems.map {
-                                        if (it.uniqueId == item.uniqueId) {
-                                            it.copy(enabled = !it.enabled)
-                                        } else it
-                                    }
-                                },
-                                dragHandleModifier = Modifier.draggableHandle()
+                item {
+                    NormalCard(
+                        cornerRadius = 12.dp,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                            .padding(top = 12.dp, bottom = 4.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onExpandTextMenuChange(!expandTextMenu) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppText(
+                                    text = stringResource(R.string.expand_text_menu),
+                                    style = LegadoTheme.typography.titleSmallEmphasized,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                TinySwitch(
+                                    checked = expandTextMenu,
+                                    onCheckedChange = onExpandTextMenuChange
+                                )
+                            }
+
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onShowSelectMenuIconChange(!showSelectMenuIcon) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppText(
+                                    text = stringResource(R.string.show_select_menu_icon),
+                                    style = LegadoTheme.typography.titleSmallEmphasized,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                TinySwitch(
+                                    checked = showSelectMenuIcon,
+                                    onCheckedChange = onShowSelectMenuIconChange
+                                )
+                            }
                         }
+                    }
+                }
+
+                stickyHeader(key = "group1") {
+                    SheetHeader(
+                        isCollapsed = !group1Expanded,
+                        onToggle = { group1Expanded = !group1Expanded },
+                        title = stringResource(R.string.primary_menu)
+                    )
+                }
+
+                if (group1Expanded) {
+                    items(group1Items, key = { it.uniqueId }) { item ->
+                        ReorderableItem(reorderableState, key = item.uniqueId) { isDragging ->
+                            val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
+                            NormalCard(
+                                elevation = elevation,
+                                cornerRadius = 12.dp,
+                                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                                modifier = Modifier.animateItem()
+                            ) {
+                                PrimaryMenuItemRow(
+                                    item = item,
+                                    showIcon = showSelectMenuIcon,
+                                    onMoveToFolded = {
+                                        draftItems = draftItems.map {
+                                            if (it.uniqueId == item.uniqueId) it.copy(showState = 1) else it
+                                        }
+                                    },
+                                    onMoveToHidden = {
+                                        draftItems = draftItems.map {
+                                            if (it.uniqueId == item.uniqueId) it.copy(showState = 2) else it
+                                        }
+                                    },
+                                    dragHandleModifier = Modifier.draggableHandle()
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+                stickyHeader(key = "group2") {
+                    val subtitle = if (expandTextMenu) stringResource(R.string.merged_in_multiline) else null
+                    SheetHeader(
+                        isCollapsed = !group2Expanded,
+                        onToggle = { group2Expanded = !group2Expanded },
+                        title = stringResource(R.string.collapsed_menu),
+                        subtitle = subtitle
+                    )
+                }
+
+                if (group2Expanded) {
+                    items(group2Items, key = { it.uniqueId }) { item ->
+                        ReorderableItem(reorderableState, key = item.uniqueId) { isDragging ->
+                            val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
+                            NormalCard(
+                                elevation = elevation,
+                                cornerRadius = 12.dp,
+                                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                                modifier = Modifier.animateItem()
+                            ) {
+                                FoldedMenuItemRow(
+                                    item = item,
+                                    showIcon = showSelectMenuIcon,
+                                    onMoveToPrimary = {
+                                        draftItems = draftItems.map {
+                                            if (it.uniqueId == item.uniqueId) it.copy(showState = 0) else it
+                                        }
+                                    },
+                                    onMoveToHidden = {
+                                        draftItems = draftItems.map {
+                                            if (it.uniqueId == item.uniqueId) it.copy(showState = 2) else it
+                                        }
+                                    },
+                                    dragHandleModifier = Modifier.draggableHandle()
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+                item (key="group_3"){
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                            .background(LegadoTheme.colorScheme.surfaceContainer)
+                            .padding(top = 12.dp)
+                    ) {
+                        TinySettingItem(
+                            title = stringResource(R.string.hidden_items),
+                            color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                            expanded = group3Expanded,
+                            onExpandChange = { expanded ->
+                                group3Expanded = expanded
+                                if (expanded) {
+                                    coroutineScope.launch {
+                                        delay(300.milliseconds)
+                                        val targetIndex = lazyListState.layoutInfo.totalItemsCount - 1
+                                        if (targetIndex >= 0) {
+                                            lazyListState.animateScrollToItem(targetIndex)
+                                        }
+                                    }
+                                }
+                            },
+                            expandContent = {
+                                HiddenItemsFlowView(
+                                    items = group3Items,
+                                    showIcon = showSelectMenuIcon,
+                                    onRestore = { item ->
+                                        draftItems = draftItems.map {
+                                            if (it.uniqueId == item.uniqueId) it.copy(showState = 0) else it
+                                        }
+                                        coroutineScope.launch {
+                                            delay(200.milliseconds)
+                                            val targetIndex = lazyListState.layoutInfo.totalItemsCount - 1
+                                            if (targetIndex >= 0) {
+                                                lazyListState.scrollToItem(targetIndex)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -105,19 +329,20 @@ fun TextSelectMenuConfigSheet(
 }
 
 @Composable
-private fun TextSelectMenuConfigItemRow(
+private fun PrimaryMenuItemRow(
     item: ActionMenuItem,
-    onToggleEnabled: () -> Unit,
+    showIcon: Boolean,
+    onMoveToFolded: () -> Unit,
+    onMoveToHidden: () -> Unit,
     dragHandleModifier: Modifier = Modifier
 ) {
-    val alpha = if (item.enabled) 1f else 0.38f
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .padding(all = 12.dp),
     ) {
-        if (item.iconDrawable != null) {
+        if (showIcon && item.iconDrawable != null) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(36.dp),
@@ -125,7 +350,6 @@ private fun TextSelectMenuConfigItemRow(
                 AsyncImage(
                     model = item.iconDrawable,
                     contentDescription = item.title,
-                    alpha = alpha,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -134,7 +358,7 @@ private fun TextSelectMenuConfigItemRow(
         AppText(
             text = item.title,
             fontSize = 14.sp,
-            color = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
+            color = LegadoTheme.colorScheme.onSurface,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
@@ -142,21 +366,25 @@ private fun TextSelectMenuConfigItemRow(
         )
 
         IconButton(
-            onClick = onToggleEnabled,
+            onClick = onMoveToFolded,
             modifier = Modifier.size(36.dp),
         ) {
             Icon(
-                imageVector = if (item.enabled) {
-                    Icons.Default.Visibility
-                } else {
-                    Icons.Default.VisibilityOff
-                },
+                imageVector = Icons.Default.Remove,
                 contentDescription = null,
-                tint = if (item.enabled) {
-                    LegadoTheme.colorScheme.onSurface
-                } else {
-                    LegadoTheme.colorScheme.onSurfaceVariant
-                },
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        IconButton(
+            onClick = onMoveToHidden,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.VisibilityOff,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -172,5 +400,169 @@ private fun TextSelectMenuConfigItemRow(
                 modifier = Modifier.size(20.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun FoldedMenuItemRow(
+    item: ActionMenuItem,
+    showIcon: Boolean,
+    onMoveToPrimary: () -> Unit,
+    onMoveToHidden: () -> Unit,
+    dragHandleModifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(all = 12.dp),
+    ) {
+        if (showIcon && item.iconDrawable != null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(36.dp),
+            ) {
+                AsyncImage(
+                    model = item.iconDrawable,
+                    contentDescription = item.title,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        AppText(
+            text = item.title,
+            fontSize = 14.sp,
+            color = LegadoTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp),
+            maxLines = 1
+        )
+
+        IconButton(
+            onClick = onMoveToPrimary,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        IconButton(
+            onClick = onMoveToHidden,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.VisibilityOff,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        Box(
+            modifier = dragHandleModifier.size(36.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = null,
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HiddenItemsFlowView(
+    items: List<ActionMenuItem>,
+    showIcon: Boolean,
+    modifier: Modifier = Modifier,
+    onRestore: (ActionMenuItem) -> Unit
+) {
+    FlowRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items.forEach { item ->
+            NormalCard(
+                onClick = { onRestore(item) },
+                cornerRadius = 8.dp,
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+                ) {
+                    if (showIcon && item.iconDrawable != null) {
+                        AsyncImage(
+                            model = item.iconDrawable,
+                            contentDescription = item.title,
+                            modifier = Modifier
+                                .size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    AppText(
+                        text = item.title,
+                        fontSize = 12.sp,
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = LegadoTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LazyItemScope.SheetHeader(
+    title: String,
+    subtitle: String? = null,
+    isCollapsed: Boolean,
+    onToggle: () -> Unit
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (!isCollapsed) 180f else 0f,
+        label = "sheetHeaderArrow"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateItem()
+            .background(LegadoTheme.colorScheme.surfaceContainer)
+            .padding(top = 12.dp)
+    ) {
+        TinyClickableSettingItem(
+            title = title,
+            description = subtitle,
+            color = LegadoTheme.colorScheme.surfaceContainerHigh,
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(rotation),
+                )
+            },
+            onClick = onToggle
+        )
     }
 }

@@ -1,22 +1,40 @@
 package io.legado.app.ui.book.read
 
-import io.legado.app.R
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -28,6 +46,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
@@ -40,14 +59,23 @@ enum class MenuMode {
 @Composable
 fun TextActionSelectionMenu(
     menuState: TextMenuState,
+    expandTextMenu: Boolean,
     onDismiss: () -> Unit,
     onItemClick: (ActionMenuItem) -> Unit,
     onOpenManage: () -> Unit
 ) {
+
+    val localDensity = LocalDensity.current
+    val containerSize = LocalWindowInfo.current.containerSize
+    val maxMenuWidth = with(localDensity){ containerSize.width.toDp() } - 32.dp
     var mode by remember { mutableStateOf(MenuMode.Quick) }
     val draftItems = menuState.items
+    
+    val primaryItems = remember(draftItems) { draftItems.filter { it.showState == 0 } }
+    val collapsedItems = remember(draftItems) { draftItems.filter { it.showState == 1 } }
+    val activeMultiItems = remember(draftItems) { draftItems.filter { it.showState == 0 || it.showState == 1 } }
 
-    val density = LocalDensity.current.density
+    val density = localDensity.density
     val positionProvider = remember(menuState, density) {
         TextMenuPositionProvider(
             density = density,
@@ -68,31 +96,85 @@ fun TextActionSelectionMenu(
             dismissOnClickOutside = true
         )
     ) {
-        val widthModifier = Modifier.widthIn(max = 300.dp)
 
         NormalCard(
-            modifier = widthModifier.wrapContentHeight(),
-            containerColor = LegadoTheme.colorScheme.surface,
+            modifier = Modifier.widthIn(max = maxMenuWidth),
+            containerColor = LegadoTheme.colorScheme.surfaceBright,
             elevation = 6.dp,
-            cornerRadius = 12.dp
+            cornerRadius = 12.dp,
         ) {
-            if (mode == MenuMode.Quick) {
-                QuickMenuView(
-                    items = draftItems,
+            if (expandTextMenu) {
+                MultiLineMenuView(
+                    items = activeMultiItems,
                     onItemClick = onItemClick,
-                    onMoreClick = { mode = MenuMode.More }
-                )
-            } else {
-                MoreMenuView(
-                    items = draftItems,
-                    onItemClick = onItemClick,
-                    onBack = { mode = MenuMode.Quick },
                     onManageClick = {
                         onDismiss()
                         onOpenManage()
                     }
                 )
+            } else {
+                if (mode == MenuMode.Quick) {
+                    QuickMenuView(
+                        items = primaryItems,
+                        hasMore = collapsedItems.isNotEmpty(),
+                        onItemClick = onItemClick,
+                        onMoreClick = { mode = MenuMode.More },
+                        onSettingsClick = {
+                            onDismiss()
+                            onOpenManage()
+                        }
+                    )
+                } else {
+                    MoreMenuView(
+                        items = collapsedItems,
+                        onItemClick = onItemClick,
+                        onBack = { mode = MenuMode.Quick },
+                        onManageClick = {
+                            onDismiss()
+                            onOpenManage()
+                        }
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun MultiLineMenuView(
+    items: List<ActionMenuItem>,
+    onItemClick: (ActionMenuItem) -> Unit,
+    onManageClick: () -> Unit
+) {
+    FlowRow(
+        modifier = Modifier
+            .padding(all = 8.dp)
+            .heightIn(max = 300.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        items.forEach { item ->
+            QuickMenuItem(item = item, onClick = { onItemClick(item) })
+        }
+
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onManageClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = stringResource(R.string.edit_menu_items),
+                tint = LegadoTheme.colorScheme.onSurface,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            AppText(
+                text = stringResource(R.string.edit_menu_items),
+                fontSize = 13.sp,
+            )
         }
     }
 }
@@ -100,11 +182,11 @@ fun TextActionSelectionMenu(
 @Composable
 private fun QuickMenuView(
     items: List<ActionMenuItem>,
+    hasMore: Boolean,
     onItemClick: (ActionMenuItem) -> Unit,
-    onMoreClick: () -> Unit
+    onMoreClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
-    val enabledItems = remember(items) { items.filter { it.enabled } }
-
     Row(
         modifier = Modifier
             .wrapContentWidth()
@@ -115,30 +197,31 @@ private fun QuickMenuView(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            items(enabledItems, key = { it.uniqueId }) { item ->
+            items(items, key = { it.uniqueId }) { item ->
                 QuickMenuItem(item = item, onClick = { onItemClick(item) })
             }
         }
-        VerticalDivider(
-            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            modifier = Modifier
-                .height(20.dp)
-                .width(1.dp)
-        )
+        if (items.isNotEmpty()) {
+            VerticalDivider(
+                color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .height(20.dp)
+                    .width(1.dp)
+            )
+        }
         Box(
             modifier = Modifier
-                .clickable(onClick = onMoreClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .clickable(onClick = if (hasMore) onMoreClick else onSettingsClick)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.MoreHoriz,
-                contentDescription = stringResource(R.string.more_menu),
+                imageVector = if (hasMore) Icons.Default.MoreVert else Icons.Default.Settings,
+                contentDescription = stringResource(if (hasMore) R.string.more_menu else R.string.setting),
                 tint = LegadoTheme.colorScheme.onSurface,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
     }
@@ -152,7 +235,7 @@ private fun QuickMenuItem(
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconDrawable != null) {
@@ -161,13 +244,13 @@ private fun QuickMenuItem(
                 contentDescription = item.title,
                 modifier = Modifier
                     .size(16.dp)
-                    .padding(end = 4.dp)
             )
+
+            Spacer(modifier = Modifier.width(4.dp))
         }
         AppText(
             text = item.title,
             fontSize = 13.sp,
-            color = LegadoTheme.colorScheme.onSurface,
             maxLines = 1
         )
     }
@@ -180,25 +263,24 @@ private fun MoreMenuView(
     onBack: () -> Unit,
     onManageClick: () -> Unit
 ) {
-    val disabledItems = remember(items) { items.filter { !it.enabled } }
     val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .width(IntrinsicSize.Max)
-            .padding(vertical = 4.dp)
+            .padding(vertical = 4.dp, horizontal = 10.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onBack)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.back),
-                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                tint = LegadoTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -209,7 +291,7 @@ private fun MoreMenuView(
                 .verticalScroll(scrollState)
                 .fillMaxWidth()
         ) {
-            disabledItems.forEach { item ->
+            items.forEach { item ->
                 MoreMenuItem(item = item, onClick = { onItemClick(item) })
             }
         }
@@ -218,22 +300,20 @@ private fun MoreMenuView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onManageClick)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.edit_menu_items),
-                tint = LegadoTheme.colorScheme.primary,
+                tint = LegadoTheme.colorScheme.onSurface,
                 modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp)
+                    .size(16.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             AppText(
                 text = stringResource(R.string.edit_menu_items),
                 fontSize = 13.sp,
-                color = LegadoTheme.colorScheme.primary,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
             )
         }
     }
@@ -248,7 +328,7 @@ private fun MoreMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconDrawable != null) {
@@ -256,15 +336,13 @@ private fun MoreMenuItem(
                 model = item.iconDrawable,
                 contentDescription = item.title,
                 modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp)
+                    .size(16.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
         }
         AppText(
             text = item.title,
             fontSize = 13.sp,
-            color = LegadoTheme.colorScheme.onSurface,
-            maxLines = 1
         )
     }
 }

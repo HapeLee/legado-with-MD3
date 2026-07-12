@@ -40,7 +40,6 @@ import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
-import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
 import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
@@ -283,10 +282,6 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.DismissSheet)
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
         },
-        onOpenTextSelectMenuFilterConfig = {
-            onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextSelectMenuFilterConfig))
-        },
     )
     ReadAloudConfigSheet(
         show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
@@ -406,15 +401,7 @@ fun ReadBookScreen(
             )
         }
 
-        is ReadBookSheet.TextSelectMenuFilterConfig -> {
-            TextSelectMenuFilterSheet(
-                show = true,
-                onDismissRequest = dismissSheet,
-                onFilterChanged = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSelectMenuFilter(it)))
-                }
-            )
-        }
+
 
         is ReadBookSheet.PageAnim -> {
             PageAnimConfigSheet(

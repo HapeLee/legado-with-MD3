@@ -966,7 +966,7 @@
     <string name="tts_speech_add">語速加</string>
     <string name="open_sys_dir_picker_error">打开系统文件夹选择器出错,自动打开应用文件夹选择器</string>
     <string name="open_sys_doc_picker_error">打开系统文件选择器出错,自动打开应用文件选择器</string>
-    <string name="expand_text_menu">展开文本选择菜单</string>
+    <string name="expand_text_menu">多行展示</string>
     <string name="book_tree_uri_t">书籍保存位置</string>
     <string name="book_tree_uri_s">从其它应用打开的书籍保存位置</string>
     <string name="select_book_folder">选择保存书籍的文件夹</string>
@@ -1820,7 +1820,7 @@
     <string name="network_book_badge_setting">網路書籍標記</string>
     <string name="new_rule">新建規則</string>
     <string name="night_card_bg_color">夜間卡片背景色</string>
-    <string name="no_apps_found">找不到支援文字操作的第三方應用</string>
+
     <string name="no_bookmark">無書籤</string>
     <string name="no_bookmarks_to_export">沒有可匯出的書籤</string>
     <string name="no_crash_logs">無崩潰日誌</string>
@@ -2021,7 +2021,7 @@
     <string name="show_more_info">顯示更多資訊</string>
     <string name="show_original">顯示原文</string>
     <string name="show_password">顯示密碼</string>
-    <string name="show_select_menu_icon">顯示文字選擇選單圖標</string>
+    <string name="show_select_menu_icon">展示圖標</string>
     <string name="show_status">顯示狀態欄</string>
     <string name="show_swipe_animation">滑動時啟用動畫</string>
     <string name="show_synopsis">顯示簡介</string>
@@ -2086,8 +2086,7 @@
     <string name="text_accent_color">強調色</string>
     <string name="text_and_padding">字體與間距</string>
     <string name="text_dottedline">圓點底線</string>
-    <string name="text_select_menu_filter">文字選擇選單篩選</string>
-    <string name="text_select_menu_filter_desc">篩選選擇選單中顯示的第三方應用</string>
+
     <string name="text_shadow_color">陰影</string>
     <string name="text_shadow_radius">陰影半徑</string>
     <string name="text_shadow_set">陰影設定</string>
@@ -2369,4 +2368,8 @@
     <string name="about_open_github">開啟 GitHub</string>
     <string name="edit_menu_items">編輯選單項</string>
     <string name="edit_select_menu">編輯選擇選單</string>
+    <string name="primary_menu">一級選單</string>
+    <string name="collapsed_menu">折疊選單</string>
+    <string name="hidden_items">已隱藏項目</string>
+    <string name="merged_in_multiline">多行模式下將合併顯示</string>
 </resources>

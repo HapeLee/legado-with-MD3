@@ -43,6 +43,7 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
@@ -50,7 +51,6 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
-import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -489,6 +489,7 @@ fun ReadBookRouteScreen(
             textMenuState?.let { menuState ->
                 TextActionSelectionMenu(
                     menuState = menuState,
+                    expandTextMenu = readPreferences.expandTextMenu,
                     onDismiss = { controller.dismissTextActionMenu() },
                     onItemClick = { item -> controller.onTextMenuItemClick(item) },
                     onOpenManage = {
@@ -498,16 +499,26 @@ fun ReadBookRouteScreen(
                     }
                 )
             }
-            val configItems = remember(showSelectMenuConfigSheet) {
+            var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
+            LaunchedEffect(showSelectMenuConfigSheet) {
                 if (showSelectMenuConfigSheet) {
-                    controller.getActionMenuItems()
+                    configItems = controller.getActionMenuItems()
                 } else {
-                    emptyList()
+                    configItems = emptyList()
                 }
             }
             TextSelectMenuConfigSheet(
                 show = showSelectMenuConfigSheet,
                 items = configItems,
+                expandTextMenu = readPreferences.expandTextMenu,
+                showSelectMenuIcon = readPreferences.showSelectMenuIcon,
+                onExpandTextMenuChange = {
+                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
+                },
+                onShowSelectMenuIconChange = {
+                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
+                    controller.refreshActionMenuItems()
+                },
                 onDismissRequest = { showSelectMenuConfigSheet = false },
                 onSaved = { items -> controller.saveMenuConfig(items) }
             )
