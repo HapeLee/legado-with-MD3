@@ -1,4 +1,4 @@
-name: Auto Release
+name: Auto Build
 
 on:
   push:
@@ -242,15 +242,29 @@ jobs:
           if-no-files-found: ignore
           path: ${{ github.workspace }}/mapping/mapping.txt
 
+      - name: Save release metadata
+        if: matrix.type == 'release'
+        run: |
+          {
+            echo "VERSIONL=${{ needs.prepare.outputs.versionL }}"
+            echo "LATEST_TAG=${{ needs.prepare.outputs.latest_tag }}"
+            echo "IS_RELEASE=${{ needs.prepare.outputs.is_release }}"
+          } > release-metadata.env
+
+      - name: Upload Release Metadata
+        if: matrix.type == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          if-no-files-found: error
+          path: release-metadata.env
+
   create_release:
     needs: [ prepare, build ]
+    # 发布已迁移到 release.yml；保留该实现一个周期以避免意外删除历史配置。
     # 仅在所有者的 push 到 main 分支时执行发布
     if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      github.actor == 'HapeLee' &&
-      (needs.prepare.outputs.build_number > 0 || needs.prepare.outputs.is_release == 'true') &&
-      success()
+      false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

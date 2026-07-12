@@ -7,10 +7,6 @@ on:
         description: '要构建的分支'
         required: true
         default: 'trae/solo-agent-vhkVM3'
-      release_tag:
-        description: 'Release 标签 (留空则不上传到 Release)'
-        required: false
-        default: ''
 
 permissions:
   contents: write
@@ -90,20 +86,3 @@ jobs:
         with:
           name: legado-apks-zip-${{ github.run_number }}
           path: legado-debug-apks-*.zip
-
-      - name: Create Release and Upload
-        if: ${{ github.event.inputs.release_tag != '' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.release_tag }}
-          name: Legado Debug Build ${{ github.event.inputs.release_tag }}
-          body: |
-            自动构建的 Debug 版本
-            - 分支: ${{ github.event.inputs.branch }}
-            - 构建号: ${{ github.run_number }}
-          prerelease: true
-          files: |
-            app/build/outputs/apk/app/debug/*.apk
-            legado-debug-apks-*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
