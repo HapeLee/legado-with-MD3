@@ -182,16 +182,20 @@ private fun MultiLineMenuView(
             .heightIn(max = 300.dp)
             .verticalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         items.forEach { item ->
-            QuickMenuItem(item = item, onClick = { onItemClick(item) })
+            QuickMenuItem(
+                item = item,
+                onClick = { onItemClick(item) },
+                verticalPadding = 8.dp,
+            )
         }
 
         Row(
             modifier = Modifier
                 .clickable(onClick = onManageClick)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -256,12 +260,13 @@ private fun QuickMenuView(
 @Composable
 private fun QuickMenuItem(
     item: ActionMenuItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    verticalPadding: androidx.compose.ui.unit.Dp = 12.dp,
 ) {
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconDrawable != null) {
