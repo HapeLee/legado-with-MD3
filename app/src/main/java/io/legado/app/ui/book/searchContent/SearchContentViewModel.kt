@@ -190,6 +190,19 @@ class SearchContentViewModel(
         _uiState.update { it.copy(isSearching = false) }
     }
 
+    fun leaveSearch() {
+        searchJob?.cancel()
+        searchContentRepository.clearSession(bookUrl)
+        _searchQuery.value = ""
+        _uiState.update {
+            it.copy(
+                isSearching = false,
+                searchResults = emptyList(),
+                error = null
+            )
+        }
+    }
+
     fun shouldAutoScroll(): Boolean = searchResultIndex > 0 && !hasAutoScrolled
 
     fun markScrollDone() {
