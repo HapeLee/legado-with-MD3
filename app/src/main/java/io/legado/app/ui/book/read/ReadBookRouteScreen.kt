@@ -485,6 +485,10 @@ fun ReadBookRouteScreen(
                 state = state,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
+                onOpenTextSelectMenuConfig = {
+                    viewModel.onIntent(ReadBookIntent.DismissSheet)
+                    showSelectMenuConfigSheet = true
+                },
             )
             textMenuState?.let { menuState ->
                 TextActionSelectionMenu(
