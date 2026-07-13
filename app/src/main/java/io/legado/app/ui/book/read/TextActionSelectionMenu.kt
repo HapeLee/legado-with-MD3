@@ -1,5 +1,12 @@
 package io.legado.app.ui.book.read
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +34,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,7 +50,6 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
@@ -58,32 +66,44 @@ enum class MenuMode {
 
 @Composable
 fun TextActionSelectionMenu(
-    menuState: TextMenuState,
+    menuState: TextMenuState?,
     expandTextMenu: Boolean,
     onDismiss: () -> Unit,
     onItemClick: (ActionMenuItem) -> Unit,
     onOpenManage: () -> Unit
 ) {
 
+    var retainedMenuState by remember { mutableStateOf(menuState) }
+    SideEffect {
+        if (menuState != null) retainedMenuState = menuState
+    }
+    val visibilityState = remember { MutableTransitionState(false) }
+    visibilityState.targetState = menuState != null
+    val displayedMenuState = menuState ?: retainedMenuState ?: return
+    if (!visibilityState.currentState && !visibilityState.targetState) return
+
     val localDensity = LocalDensity.current
     val containerSize = LocalWindowInfo.current.containerSize
     val maxMenuWidth = with(localDensity){ containerSize.width.toDp() } - 32.dp
     var mode by remember { mutableStateOf(MenuMode.Quick) }
-    val draftItems = menuState.items
+    LaunchedEffect(menuState) {
+        if (menuState == null) mode = MenuMode.Quick
+    }
+    val draftItems = displayedMenuState.items
     
     val primaryItems = remember(draftItems) { draftItems.filter { it.showState == 0 } }
     val collapsedItems = remember(draftItems) { draftItems.filter { it.showState == 1 } }
     val activeMultiItems = remember(draftItems) { draftItems.filter { it.showState == 0 || it.showState == 1 } }
 
     val density = localDensity.density
-    val positionProvider = remember(menuState, density) {
+    val positionProvider = remember(displayedMenuState, density) {
         TextMenuPositionProvider(
             density = density,
-            startX = menuState.startX,
-            startTopY = menuState.startTopY,
-            startBottomY = menuState.startBottomY,
-            endX = menuState.endX,
-            endBottomY = menuState.endBottomY
+            startX = displayedMenuState.startX,
+            startTopY = displayedMenuState.startTopY,
+            startBottomY = displayedMenuState.startBottomY,
+            endX = displayedMenuState.endX,
+            endBottomY = displayedMenuState.endBottomY
         )
     }
 
@@ -97,43 +117,54 @@ fun TextActionSelectionMenu(
         )
     ) {
 
-        NormalCard(
-            modifier = Modifier.widthIn(max = maxMenuWidth),
-            containerColor = LegadoTheme.colorScheme.surfaceBright,
-            elevation = 6.dp,
-            cornerRadius = 12.dp,
+        AnimatedVisibility(
+            visibleState = visibilityState,
+            enter = fadeIn() + scaleIn(initialScale = 0.9f),
+            exit = fadeOut() + scaleOut(targetScale = 0.9f),
         ) {
-            if (expandTextMenu) {
-                MultiLineMenuView(
-                    items = activeMultiItems,
-                    onItemClick = onItemClick,
-                    onManageClick = {
-                        onDismiss()
-                        onOpenManage()
-                    }
-                )
-            } else {
-                if (mode == MenuMode.Quick) {
-                    QuickMenuView(
-                        items = primaryItems,
-                        hasMore = collapsedItems.isNotEmpty(),
+            NormalCard(
+                modifier = Modifier.widthIn(max = maxMenuWidth),
+                containerColor = LegadoTheme.colorScheme.surfaceBright,
+                elevation = 6.dp,
+                cornerRadius = 12.dp,
+            ) {
+                if (expandTextMenu) {
+                    MultiLineMenuView(
+                        items = activeMultiItems,
                         onItemClick = onItemClick,
-                        onMoreClick = { mode = MenuMode.More },
-                        onSettingsClick = {
-                            onDismiss()
-                            onOpenManage()
-                        }
-                    )
-                } else {
-                    MoreMenuView(
-                        items = collapsedItems,
-                        onItemClick = onItemClick,
-                        onBack = { mode = MenuMode.Quick },
                         onManageClick = {
                             onDismiss()
                             onOpenManage()
                         }
                     )
+                } else {
+                    AnimatedContent(
+                        targetState = mode,
+                        label = "TextActionMenuLevel",
+                    ) { targetMode ->
+                        if (targetMode == MenuMode.Quick) {
+                            QuickMenuView(
+                                items = primaryItems,
+                                hasMore = collapsedItems.isNotEmpty(),
+                                onItemClick = onItemClick,
+                                onMoreClick = { mode = MenuMode.More },
+                                onSettingsClick = {
+                                    onDismiss()
+                                    onOpenManage()
+                                }
+                            )
+                        } else {
+                            MoreMenuView(
+                                items = collapsedItems,
+                                onItemClick = onItemClick,
+                                onBack = { mode = MenuMode.Quick },
+                                onManageClick = {
+                                    onDismiss()
+                                    onOpenManage()
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -148,11 +179,10 @@ private fun MultiLineMenuView(
 ) {
     FlowRow(
         modifier = Modifier
-            .padding(all = 8.dp)
             .heightIn(max = 300.dp)
             .verticalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items.forEach { item ->
             QuickMenuItem(item = item, onClick = { onItemClick(item) })
@@ -161,7 +191,7 @@ private fun MultiLineMenuView(
         Row(
             modifier = Modifier
                 .clickable(onClick = onManageClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -170,10 +200,10 @@ private fun MultiLineMenuView(
                 tint = LegadoTheme.colorScheme.onSurface,
                 modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             AppText(
                 text = stringResource(R.string.edit_menu_items),
-                fontSize = 13.sp,
+                style = LegadoTheme.typography.labelSmallEmphasized
             )
         }
     }
@@ -188,15 +218,11 @@ private fun QuickMenuView(
     onSettingsClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .wrapContentWidth()
-            .padding(horizontal = 4.dp),
+        modifier = Modifier.wrapContentWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         LazyRow(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .padding(vertical = 6.dp),
+            modifier = Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items(items, key = { it.uniqueId }) { item ->
@@ -214,7 +240,7 @@ private fun QuickMenuView(
         Box(
             modifier = Modifier
                 .clickable(onClick = if (hasMore) onMoreClick else onSettingsClick)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -235,7 +261,7 @@ private fun QuickMenuItem(
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconDrawable != null) {
@@ -246,11 +272,11 @@ private fun QuickMenuItem(
                     .size(16.dp)
             )
 
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(12.dp))
         }
         AppText(
             text = item.title,
-            fontSize = 13.sp,
+            style = LegadoTheme.typography.labelMedium,
             maxLines = 1
         )
     }
@@ -268,13 +294,12 @@ private fun MoreMenuView(
     Column(
         modifier = Modifier
             .width(IntrinsicSize.Max)
-            .padding(vertical = 4.dp, horizontal = 10.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onBack)
-                .padding(vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Icon(
@@ -300,7 +325,7 @@ private fun MoreMenuView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onManageClick)
-                .padding(vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -313,7 +338,7 @@ private fun MoreMenuView(
             Spacer(modifier = Modifier.width(8.dp))
             AppText(
                 text = stringResource(R.string.edit_menu_items),
-                fontSize = 13.sp,
+                style = LegadoTheme.typography.labelMedium
             )
         }
     }
@@ -328,7 +353,7 @@ private fun MoreMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconDrawable != null) {
@@ -338,11 +363,11 @@ private fun MoreMenuItem(
                 modifier = Modifier
                     .size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
         }
         AppText(
             text = item.title,
-            fontSize = 13.sp,
+            style = LegadoTheme.typography.labelMedium
         )
     }
 }

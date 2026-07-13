@@ -486,19 +486,17 @@ fun ReadBookRouteScreen(
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
             )
-            textMenuState?.let { menuState ->
-                TextActionSelectionMenu(
-                    menuState = menuState,
-                    expandTextMenu = readPreferences.expandTextMenu,
-                    onDismiss = { controller.dismissTextActionMenu() },
-                    onItemClick = { item -> controller.onTextMenuItemClick(item) },
-                    onOpenManage = {
-                        controller.dismissTextActionMenu()
-                        controller.refs?.readView?.cancelSelect()
-                        showSelectMenuConfigSheet = true
-                    }
-                )
-            }
+            TextActionSelectionMenu(
+                menuState = textMenuState,
+                expandTextMenu = readPreferences.expandTextMenu,
+                onDismiss = { controller.dismissTextActionMenu() },
+                onItemClick = { item -> controller.onTextMenuItemClick(item) },
+                onOpenManage = {
+                    controller.dismissTextActionMenu()
+                    controller.refs?.readView?.cancelSelect()
+                    showSelectMenuConfigSheet = true
+                }
+            )
             var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
             LaunchedEffect(showSelectMenuConfigSheet) {
                 if (showSelectMenuConfigSheet) {

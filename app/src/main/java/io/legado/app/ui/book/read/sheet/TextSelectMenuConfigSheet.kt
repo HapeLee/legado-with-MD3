@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,9 +24,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -41,19 +40,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.book.read.ActionMenuItem
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.TinySwitch
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -115,6 +113,15 @@ fun TextSelectMenuConfigSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.edit_select_menu),
+        endAction = {
+            SmallTonalButton(
+                onClick = {
+                    onSaved(draftItems)
+                    onDismissRequest()
+                },
+                icon = Icons.Default.Save
+            )
+        }
     ) {
         Column(
             modifier = Modifier
@@ -126,64 +133,25 @@ fun TextSelectMenuConfigSheet(
                 state = lazyListState,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
+                    .weight(1f),
             ) {
                 item {
-                    NormalCard(
-                        cornerRadius = 12.dp,
-                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
                             .animateItem()
-                            .padding(top = 12.dp, bottom = 4.dp)
+                            .padding(top = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onExpandTextMenuChange(!expandTextMenu) }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AppText(
-                                    text = stringResource(R.string.expand_text_menu),
-                                    style = LegadoTheme.typography.titleSmallEmphasized,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                TinySwitch(
-                                    checked = expandTextMenu,
-                                    onCheckedChange = onExpandTextMenuChange
-                                )
-                            }
-
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onShowSelectMenuIconChange(!showSelectMenuIcon) }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AppText(
-                                    text = stringResource(R.string.show_select_menu_icon),
-                                    style = LegadoTheme.typography.titleSmallEmphasized,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                TinySwitch(
-                                    checked = showSelectMenuIcon,
-                                    onCheckedChange = onShowSelectMenuIconChange
-                                )
-                            }
-                        }
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.expand_text_menu),
+                            checked = expandTextMenu,
+                            onCheckedChange = onExpandTextMenuChange
+                        )
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.show_select_menu_icon),
+                            checked = showSelectMenuIcon,
+                            onCheckedChange = onShowSelectMenuIconChange
+                        )
                     }
                 }
 
@@ -313,17 +281,6 @@ fun TextSelectMenuConfigSheet(
                     }
                 }
             }
-
-            ConfirmDismissButtonsRow(
-                onDismiss = onDismissRequest,
-                onConfirm = {
-                    onSaved(draftItems)
-                    onDismissRequest()
-                },
-                dismissText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.action_save),
-                modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp),
-            )
         }
     }
 }

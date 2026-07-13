@@ -19,6 +19,13 @@ on:
     types:
       - completed
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      publish:
+        description: '构建完成后创建 GitHub Release 并发布到 Telegram'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -82,7 +89,7 @@ jobs:
                 LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 2 | tail -n 1)
             fi
           
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+          elif [[ ("${{ github.event_name }}" == "push" || "${{ inputs.publish }}" == "true") && "${{ github.ref }}" == "refs/heads/main" ]]; then
             # 标记为测试版 (VERSION_SUFFIX=1 或其他/空)，且在 main 分支推送
           
             # 查找匹配当前 CURRENT_VERSION 的上一个 BETA TAG (e.g., 3.26.4-beta.X)
@@ -261,10 +268,8 @@ jobs:
 
   create_release:
     needs: [ prepare, build ]
-    # 发布已迁移到 release.yml；保留该实现一个周期以避免意外删除历史配置。
-    # 仅在所有者的 push 到 main 分支时执行发布
-    if: |
-      false
+    # 只有 Release APK workflow 调用时才发布；普通 Auto Build 仍然只构建产物。
+    if: inputs.publish && github.actor == 'HapeLee' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -276,10 +281,9 @@ jobs:
       - name: 下载所有 APK Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-apk-*'
+          pattern: '*-apk-release'
           path: artifacts
           merge-multiple: true
-          if-no-artifact-found: error
 
       # 2. 下载 mapping 文件
       - name: 下载 Mapping Artifacts
@@ -325,7 +329,11 @@ jobs:
           LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
           IS_RELEASE="${{ needs.prepare.outputs.is_release }}"
           
-          COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
+          if [ -n "$LAST_TAG" ] && git rev-parse -q --verify "refs/tags/$LAST_TAG" >/dev/null; then
+            COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
+          else
+            COMMIT_LOG=$(git log -1 --pretty=format:"* %s")
+          fi
           
           if [ -z "$COMMIT_LOG" ]; then
               CONTENT="- 没有新的 Commit 记录."
