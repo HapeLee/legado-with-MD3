@@ -3,8 +3,10 @@ package io.legado.app.ui.theme
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -188,15 +190,98 @@ fun MiuixThemeWrapper(
                 onCardContainer = miuixColorScheme.onSurface,
                 onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f),
                 cardPrimaryContainer = miuixColorScheme.primary.copy(alpha = 0.1f)
-                    .compositeOver(miuixColorScheme.surface)
+                    .compositeOver(miuixColorScheme.surface),
+                surfaceInput = miuixColorScheme.surface.copy(alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f))
             )
+        }
+
+        val materialTypography = remember(miuixStyles, customFontFamily) {
+            val base = miuixStylesToM3Typography(miuixStyles)
+            if (customFontFamily != null) {
+                base.copy(
+                    headlineLarge = base.headlineLarge.copy(fontFamily = customFontFamily),
+                    headlineMedium = base.headlineMedium.copy(fontFamily = customFontFamily),
+                    headlineSmall = base.headlineSmall.copy(fontFamily = customFontFamily),
+                    titleLarge = base.titleLarge.copy(fontFamily = customFontFamily),
+                    titleMedium = base.titleMedium.copy(fontFamily = customFontFamily),
+                    titleSmall = base.titleSmall.copy(fontFamily = customFontFamily),
+                    bodyLarge = base.bodyLarge.copy(fontFamily = customFontFamily),
+                    bodyMedium = base.bodyMedium.copy(fontFamily = customFontFamily),
+                    bodySmall = base.bodySmall.copy(fontFamily = customFontFamily),
+                    labelLarge = base.labelLarge.copy(fontFamily = customFontFamily),
+                    labelMedium = base.labelMedium.copy(fontFamily = customFontFamily),
+                    labelSmall = base.labelSmall.copy(fontFamily = customFontFamily)
+                )
+            } else {
+                base
+            }
         }
 
         CompositionLocalProvider(
             LocalLegadoTypography provides legadoTypography,
             LocalLegadoColorScheme provides mappedColorScheme
         ) {
-            AppBackground(darkTheme = darkTheme) { content() }
+            // 将 Miuix 色板（含深度个性化）映射为 M3 ColorScheme，
+            // 使 M3 组件（如 WideNavigationRail）在 Miuix 引擎下获取正确颜色
+            val materialColorScheme = remember(mappedColorScheme) {
+                ColorScheme(
+                    primary = mappedColorScheme.primary,
+                    onPrimary = mappedColorScheme.onPrimary,
+                    primaryContainer = mappedColorScheme.primaryContainer,
+                    onPrimaryContainer = mappedColorScheme.onPrimaryContainer,
+                    inversePrimary = mappedColorScheme.inversePrimary,
+                    secondary = mappedColorScheme.secondary,
+                    onSecondary = mappedColorScheme.onSecondary,
+                    secondaryContainer = mappedColorScheme.secondaryContainer,
+                    onSecondaryContainer = mappedColorScheme.onSecondaryContainer,
+                    tertiary = mappedColorScheme.tertiary,
+                    onTertiary = mappedColorScheme.onTertiary,
+                    tertiaryContainer = mappedColorScheme.tertiaryContainer,
+                    onTertiaryContainer = mappedColorScheme.onTertiaryContainer,
+                    background = mappedColorScheme.background,
+                    onBackground = mappedColorScheme.onBackground,
+                    surface = mappedColorScheme.surface,
+                    onSurface = mappedColorScheme.onSurface,
+                    surfaceVariant = mappedColorScheme.surfaceVariant,
+                    onSurfaceVariant = mappedColorScheme.onSurfaceVariant,
+                    surfaceTint = mappedColorScheme.surfaceTint,
+                    inverseSurface = mappedColorScheme.inverseSurface,
+                    inverseOnSurface = mappedColorScheme.inverseOnSurface,
+                    error = mappedColorScheme.error,
+                    onError = mappedColorScheme.onError,
+                    errorContainer = mappedColorScheme.errorContainer,
+                    onErrorContainer = mappedColorScheme.onErrorContainer,
+                    outline = mappedColorScheme.outline,
+                    outlineVariant = mappedColorScheme.outlineVariant,
+                    scrim = mappedColorScheme.scrim,
+                    surfaceBright = mappedColorScheme.surfaceBright,
+                    surfaceDim = mappedColorScheme.surfaceDim,
+                    surfaceContainer = mappedColorScheme.surfaceContainer,
+                    surfaceContainerHigh = mappedColorScheme.surfaceContainerHigh,
+                    surfaceContainerHighest = mappedColorScheme.surfaceContainerHighest,
+                    surfaceContainerLow = mappedColorScheme.surfaceContainerLow,
+                    surfaceContainerLowest = mappedColorScheme.surfaceContainerLowest,
+                    primaryFixed = mappedColorScheme.primaryFixed,
+                    primaryFixedDim = mappedColorScheme.primaryFixedDim,
+                    onPrimaryFixed = mappedColorScheme.onPrimaryFixed,
+                    onPrimaryFixedVariant = mappedColorScheme.onPrimaryFixedVariant,
+                    secondaryFixed = mappedColorScheme.secondaryFixed,
+                    secondaryFixedDim = mappedColorScheme.secondaryFixedDim,
+                    onSecondaryFixed = mappedColorScheme.onSecondaryFixed,
+                    onSecondaryFixedVariant = mappedColorScheme.onSecondaryFixedVariant,
+                    tertiaryFixed = mappedColorScheme.tertiaryFixed,
+                    tertiaryFixedDim = mappedColorScheme.tertiaryFixedDim,
+                    onTertiaryFixed = mappedColorScheme.onTertiaryFixed,
+                    onTertiaryFixedVariant = mappedColorScheme.onTertiaryFixedVariant,
+                )
+            }
+            MaterialTheme(
+                colorScheme = materialColorScheme,
+                typography = materialTypography,
+                shapes = Shapes()
+            ) {
+                AppBackground(darkTheme = darkTheme) { content() }
+            }
         }
     }
 }
