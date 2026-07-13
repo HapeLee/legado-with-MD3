@@ -34,7 +34,7 @@ hutool = "5.8.22"
 
 libarchive = "1.1.6"
 lifecycle = "2.11.0"
-glide = "5.0.7"
+glide = "5.0.9"
 gson = "2.14.0"
 jsonPath = "3.0.0"
 ktor = "3.5.1"
