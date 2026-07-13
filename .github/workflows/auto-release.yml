@@ -383,6 +383,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 发布静态更新清单
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.versionL }}
+          IS_RELEASE: ${{ needs.prepare.outputs.is_release }}
+        run: |
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            CHANNEL="official"
+          else
+            CHANNEL="beta"
+          fi
+          bash .github/scripts/publish-update-manifest.sh "$CHANNEL" "$VERSION"
+
       - name: 发布到 Telegram 频道
         env:
           TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
