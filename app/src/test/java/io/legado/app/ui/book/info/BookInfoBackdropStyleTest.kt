@@ -9,15 +9,27 @@ class BookInfoBackdropStyleTest {
     @Test
     fun backgroundModesKeepTheirExpectedCoverTreatment() {
         assertEquals(
-            BookInfoBackdropStyle(showCover = true, blurCover = false),
+            BookInfoBackdropStyle(
+                showCover = true,
+                blurCover = false,
+                applySeedOverlay = true,
+            ),
             resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_OFF)
         )
         assertEquals(
-            BookInfoBackdropStyle(showCover = true, blurCover = true),
+            BookInfoBackdropStyle(
+                showCover = true,
+                blurCover = true,
+                applySeedOverlay = true,
+            ),
             resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_ON)
         )
         assertEquals(
-            BookInfoBackdropStyle(showCover = false, blurCover = false),
+            BookInfoBackdropStyle(
+                showCover = false,
+                blurCover = false,
+                applySeedOverlay = false,
+            ),
             resolveBookInfoBackdropStyle(ThemeConfig.BOOK_INFO_BACKGROUND_COVER_HIDDEN)
         )
     }
