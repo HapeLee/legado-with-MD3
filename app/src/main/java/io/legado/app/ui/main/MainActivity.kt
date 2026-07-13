@@ -77,6 +77,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         private const val KEY_RESTORE_READ_ALOUD = "restoreReadAloud"
         private const val KEY_RESTORE_READ_IN_BOOKSHELF = "restoreReadInBookshelf"
         private const val KEY_RESTORE_READ_CHAPTER_CHANGED = "restoreReadChapterChanged"
+        private val startupUpdateCheckGate = ProcessStartupUpdateCheckGate()
 
         @Volatile
         var hasActiveReadBookRoute: Boolean = false
@@ -165,6 +166,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
         super.onCreate(savedInstanceState)
 
+        val shouldAutoCheckUpdate = startupUpdateCheckGate.consume(
+            OtherConfig.autoCheckUpdateOnStart
+        )
         if (checkStartupRoute()) return
 
         // 智能自启：如果上次是手动开启状态（web_service_auto 为 true），则自启
@@ -185,6 +189,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 viewModel.upAllBookToc()
             }
             viewModel.postLoad()
+            if (shouldAutoCheckUpdate) {
+                checkUpdateOnStart()
+            }
         }
     }
 
@@ -331,6 +338,13 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             }
             else -> false
         }
+    }
+
+    private fun checkUpdateOnStart() {
+        AppUpdateGitHub.check(lifecycleScope)
+            .onSuccess { updateInfo ->
+                showDialogFragment(UpdateDialog(updateInfo))
+            }
     }
 
     /**

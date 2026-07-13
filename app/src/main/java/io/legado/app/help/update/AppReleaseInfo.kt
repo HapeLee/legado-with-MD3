@@ -36,23 +36,41 @@ data class GithubRelease(
     @SerializedName("created_at")
     val createdAt: String?
 ) {
-    fun gitReleaseToAppReleaseInfo(): List<AppReleaseInfo> {
+    fun gitReleaseToAppReleaseInfo(
+        supportedAbis: List<String> = Build.SUPPORTED_ABIS.asList()
+    ): List<AppReleaseInfo> {
         assets ?: throw NoStackTraceException("获取新版本出错")
 
         val version = tagName
-        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: ""
-        val abiSuffix = when {
-            abi.contains("arm64") -> "arm64-v8a"
-            abi.contains("armeabi") -> "armeabi-v7a"
-            else -> ""
-        }
-
-        return assets
-            .filter { it.isValid }
-            .filter { asset ->
-                abiSuffix.isEmpty() || asset.name.contains(abiSuffix, ignoreCase = true)
-            }
+        return selectCompatibleAssets(assets, supportedAbis)
             .map { it.assetToAppReleaseInfo(isPreRelease, body, version) }
+    }
+}
+
+private val releaseAbiSuffixes = listOf(
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86_64",
+    "x86"
+)
+
+internal fun selectCompatibleAssets(
+    assets: List<Asset>,
+    supportedAbis: List<String>
+): List<Asset> {
+    val validAssets = assets.filter { it.isValid }
+
+    supportedAbis.forEach { supportedAbi ->
+        val matchingAssets = validAssets.filter { asset ->
+            asset.name.contains(supportedAbi, ignoreCase = true)
+        }
+        if (matchingAssets.isNotEmpty()) return matchingAssets
+    }
+
+    return validAssets.filter { asset ->
+        releaseAbiSuffixes.none { abiSuffix ->
+            asset.name.contains(abiSuffix, ignoreCase = true)
+        }
     }
 }
 
