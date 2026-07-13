@@ -112,13 +112,38 @@ private data class TocPreferences(
     val showWordCount: Boolean
 )
 
-private data class TitleCacheKey(
+internal data class TitleCacheKey(
     val bookUrl: String,
     val useReplace: Boolean,
     val rulesFingerprint: Int,
     val chineseConverterType: Int,
-    val chapterCount: Int
+    val chapterCount: Int,
+    val chaptersFingerprint: Long
 )
+
+internal object TocTitleCache {
+    private const val MAX_ENTRIES = 8
+    private val entries = object : LinkedHashMap<TitleCacheKey, Map<Int, String>>(
+        MAX_ENTRIES,
+        0.75f,
+        true
+    ) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<TitleCacheKey, Map<Int, String>>?
+        ): Boolean = size > MAX_ENTRIES
+    }
+
+    @Synchronized
+    fun get(key: TitleCacheKey): Map<Int, String>? = entries[key]
+
+    @Synchronized
+    fun put(key: TitleCacheKey, titles: Map<Int, String>) {
+        entries[key] = titles.toMap()
+    }
+
+    @Synchronized
+    fun clear() = entries.clear()
+}
 
 private data class TitleReplaceState(
     val cacheKey: TitleCacheKey? = null,
@@ -658,7 +683,10 @@ class TocViewModel(
             useReplace = true,
             rulesFingerprint = rulesFingerprint,
             chineseConverterType = AppConfig.chineseConverterType,
-            chapterCount = chapters.size
+            chapterCount = chapters.size,
+            chaptersFingerprint = chapters.fold(0L) { fingerprint, chapter ->
+                fingerprint + 31L * chapter.index + chapter.title.hashCode()
+            }
         )
 
         val currentTitleState = titleReplaceState.value
@@ -669,6 +697,20 @@ class TocViewModel(
         if (key == lastTitleCacheKey &&
             (isJobActive || currentTitleState.isRunning || isCurrentCacheReady)
         ) {
+            return
+        }
+
+        TocTitleCache.get(key)?.let { cachedTitles ->
+            lastTitleCacheKey = key
+            titleCacheJob?.cancel()
+            titleCacheJob = null
+            titleReplaceState.value = TitleReplaceState(
+                cacheKey = key,
+                titles = cachedTitles,
+                completed = chapters.size,
+                total = chapters.size,
+                isRunning = false
+            )
             return
         }
 
@@ -738,6 +780,7 @@ class TocViewModel(
                     )
                 }
             }
+            TocTitleCache.put(key, newCache)
         }
     }
 
