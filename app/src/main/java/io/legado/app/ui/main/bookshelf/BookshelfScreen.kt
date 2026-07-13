@@ -75,6 +75,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -249,12 +250,12 @@ fun BookshelfScreen(
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
 
-    LaunchedEffect(uiState.selectedGroupIndex, uiState.groups.size) {
+    SideEffect {
         if (uiState.groups.isNotEmpty()
             && uiState.selectedGroupIndex in uiState.groups.indices
             && pagerState.currentPage != uiState.selectedGroupIndex
         ) {
-            pagerState.scrollToPage(uiState.selectedGroupIndex)
+            pagerState.requestScrollToPage(uiState.selectedGroupIndex)
         }
     }
 
