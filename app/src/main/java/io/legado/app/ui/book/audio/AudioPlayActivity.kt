@@ -43,6 +43,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityAudioPlayBinding
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -396,10 +397,10 @@ class AudioPlayActivity :
                 AudioPlay.setTimer(0)
             }
             binding.settingSlider.apply {
-                valueFrom = 0f
-                valueTo = 180f
+                valueFrom = PlaybackTimer.MIN_MINUTES.toFloat()
+                valueTo = PlaybackTimer.MAX_MINUTES.toFloat()
                 stepSize = 1f
-                value = AudioPlayService.timeMinute.toFloat()
+                value = PlaybackTimer.normalize(AudioPlayService.timeMinute).toFloat()
 
                 addOnChangeListener { _, newValue, fromUser ->
                     if (fromUser) AudioPlay.setTimer(newValue.toInt())
@@ -798,4 +799,3 @@ private fun Int.copy(alpha: Float): Int {
     val alpha = (alpha * 255).toInt()
     return (this and 0x00FFFFFF) or (alpha shl 24)
 }
-
