@@ -29,6 +29,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.Status
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -74,6 +75,9 @@ class AudioPlayService : BaseService(),
 
         @JvmStatic
         var timeMinute: Int = 0
+            set(value) {
+                field = PlaybackTimer.normalize(value)
+            }
 
         var url: String = ""
             private set
@@ -388,12 +392,7 @@ class AudioPlayService : BaseService(),
     }
 
     private fun addTimer() {
-        if (timeMinute == 180) {
-            timeMinute = 0
-        } else {
-            timeMinute += 10
-            if (timeMinute > 180) timeMinute = 180
-        }
+        timeMinute = PlaybackTimer.addIncrement(timeMinute)
         doDs()
     }
 
@@ -404,14 +403,15 @@ class AudioPlayService : BaseService(),
         postEvent(EventBus.AUDIO_DS, timeMinute)
         upAudioPlayNotification()
         dsJob?.cancel()
+        dsJob = null
+        if (timeMinute == PlaybackTimer.MIN_MINUTES) return
         dsJob = lifecycleScope.launch {
             while (isActive) {
                 delay(60000)
+                if (timeMinute == PlaybackTimer.MIN_MINUTES) break
                 if (!pause) {
-                    if (timeMinute >= 0) {
-                        timeMinute--
-                    }
-                    if (timeMinute == 0) {
+                    timeMinute--
+                    if (timeMinute == PlaybackTimer.MIN_MINUTES) {
                         AudioPlay.stop()
                         postEvent(EventBus.AUDIO_DS, timeMinute)
                         break
@@ -572,7 +572,8 @@ class AudioPlayService : BaseService(),
     private fun createNotification(): NotificationCompat.Builder {
         val nTitle: String = when {
             pause -> getString(R.string.audio_pause)
-            timeMinute in 1..60 -> getString(R.string.playing_timer, timeMinute)
+            timeMinute > PlaybackTimer.MIN_MINUTES ->
+                getString(R.string.playing_timer, timeMinute)
             else -> getString(R.string.audio_play_t)
         } + ": ${AudioPlay.book?.name}"
 

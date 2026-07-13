@@ -34,6 +34,7 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -83,7 +84,9 @@ abstract class BaseReadAloudService : BaseService(),
 
         @JvmStatic
         var timeMinute: Int = 0
-            private set
+            private set(value) {
+                field = PlaybackTimer.normalize(value)
+            }
 
         fun isPlay(): Boolean {
             return isRun && !pause
@@ -153,8 +156,8 @@ abstract class BaseReadAloudService : BaseService(),
         initPhoneStateListener()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         setTimer(ReadConfig.ttsTimer)
-        if (ReadConfig.ttsTimer > 0) {
-            toastOnUi("朗读定时 ${ReadConfig.ttsTimer} 分钟")
+        if (timeMinute > 0) {
+            toastOnUi("朗读定时 $timeMinute 分钟")
         }
         execute {
             ImageLoader
@@ -407,12 +410,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun addTimer() {
-        if (timeMinute == 180) {
-            timeMinute = 0
-        } else {
-            timeMinute += 10
-            if (timeMinute > 180) timeMinute = 180
-        }
+        timeMinute = PlaybackTimer.addIncrement(timeMinute)
         doDs()
     }
 
@@ -424,14 +422,15 @@ abstract class BaseReadAloudService : BaseService(),
         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
         upReadAloudNotification()
         dsJob?.cancel()
+        dsJob = null
+        if (timeMinute == PlaybackTimer.MIN_MINUTES) return
         dsJob = lifecycleScope.launch {
             while (isActive) {
                 delay(60000)
+                if (timeMinute == PlaybackTimer.MIN_MINUTES) break
                 if (!pause) {
-                    if (timeMinute >= 0) {
-                        timeMinute--
-                    }
-                    if (timeMinute == 0) {
+                    timeMinute--
+                    if (timeMinute == PlaybackTimer.MIN_MINUTES) {
                         ReadAloud.stop(this@BaseReadAloudService)
                         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
                         break

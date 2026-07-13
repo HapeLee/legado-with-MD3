@@ -12,6 +12,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.readSimulating
@@ -335,14 +336,15 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun setTimer(minute: Int) {
+        val timer = PlaybackTimer.normalize(minute)
         if (AudioPlayService.isRun) {
             val intent = Intent(context, AudioPlayService::class.java)
             intent.action = IntentAction.setTimer
-            intent.putExtra("minute", minute)
+            intent.putExtra("minute", timer)
             context.startService(intent)
         } else {
-            AudioPlayService.timeMinute = minute
-            postEvent(EventBus.AUDIO_DS, minute)
+            AudioPlayService.timeMinute = timer
+            postEvent(EventBus.AUDIO_DS, timer)
         }
     }
 

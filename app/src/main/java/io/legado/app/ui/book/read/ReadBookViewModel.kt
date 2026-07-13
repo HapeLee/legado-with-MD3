@@ -40,6 +40,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
@@ -1944,7 +1945,7 @@ class ReadBookViewModel(
     }
 
     private fun setReadAloudTtsTimer(value: Int) {
-        val timer = value.coerceIn(0, 180)
+        val timer = PlaybackTimer.normalize(value)
         ReadAloud.setTimer(context, timer)
         _uiState.update { it.copy(readAloudTtsTimer = timer) }
     }
