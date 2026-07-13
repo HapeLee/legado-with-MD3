@@ -424,11 +424,12 @@ abstract class BaseReadAloudService : BaseService(),
         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
         upReadAloudNotification()
         dsJob?.cancel()
+        if (timeMinute <= 0) return
         dsJob = lifecycleScope.launch {
             while (isActive) {
                 delay(60000)
                 if (!pause) {
-                    if (timeMinute >= 0) {
+                    if (timeMinute > 0) {
                         timeMinute--
                     }
                     if (timeMinute == 0) {

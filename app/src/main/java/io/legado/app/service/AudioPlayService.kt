@@ -404,11 +404,12 @@ class AudioPlayService : BaseService(),
         postEvent(EventBus.AUDIO_DS, timeMinute)
         upAudioPlayNotification()
         dsJob?.cancel()
+        if (timeMinute <= 0) return
         dsJob = lifecycleScope.launch {
             while (isActive) {
                 delay(60000)
                 if (!pause) {
-                    if (timeMinute >= 0) {
+                    if (timeMinute > 0) {
                         timeMinute--
                     }
                     if (timeMinute == 0) {

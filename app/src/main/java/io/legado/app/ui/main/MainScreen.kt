@@ -86,9 +86,14 @@ import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
+import top.yukonga.miuix.kmp.basic.NavigationRail as MiuixNavigationRail
+import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
+import top.yukonga.miuix.kmp.basic.NavigationRailValue
+import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -250,7 +255,72 @@ fun MainScreen(
 
     Row(modifier = Modifier.fillMaxSize()) {
         if (useRail && mainUiState.showBottomView) {
-            WideNavigationRail(
+            if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+                val miuixNavState = rememberNavigationRailState(
+                    initialValue = if (mainUiState.navExtended) {
+                        NavigationRailValue.Expanded
+                    } else {
+                        NavigationRailValue.Collapsed
+                    }
+                )
+                LaunchedEffect(miuixNavState.currentValue) {
+                    viewModel.setNavExtended(miuixNavState.isExpanded)
+                }
+                MiuixNavigationRail(
+                    state = miuixNavState,
+                    header = {
+                        ExtendedFloatingActionButton(
+                            onClick = { onNavigateToSearch(null) },
+                            expanded = miuixNavState.isExpanded,
+                            icon = { AppIcon(Icons.Default.Search, contentDescription = null) },
+                            text = { AppText(stringResource(R.string.search)) }
+                        )
+                    }
+                ) {
+                    destinations.forEachIndexed { index, destination ->
+                        val selected = pagerState.targetPage == index
+                        var showGroupMenu by remember { mutableStateOf(false) }
+                        val haptic = LocalHapticFeedback.current
+                        val destinationLabel = stringResource(destination.labelId)
+                        Box {
+                            MiuixNavigationRailItem(
+                                modifier = Modifier
+                                    .semantics(mergeDescendants = true) {
+                                        contentDescription = destinationLabel
+                                    }
+                                    .then(
+                                        if (destination == MainDestination.Bookshelf) {
+                                            Modifier.combinedClickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = { handleMainDestinationClick(index, destination) },
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    showGroupMenu = true
+                                                }
+                                            )
+                                        } else Modifier
+                                    ),
+                                selected = selected,
+                                onClick = { handleMainDestinationClick(index, destination) },
+                                icon = AppIcons.mainDestination(destination, selected),
+                                label = destinationLabel,
+                            )
+                            if (destination == MainDestination.Bookshelf && showGroupMenu) {
+                                BookshelfRailGroupMenu(
+                                    expanded = showGroupMenu,
+                                    onDismissRequest = { showGroupMenu = false },
+                                    onBeforeSelectGroup = {
+                                        if (pagerState.currentPage != index) {
+                                            pagerState.scrollToPage(index)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else WideNavigationRail(
                 state = navState,
                 header = {
                     val expanded = navState.targetValue == WideNavigationRailValue.Expanded

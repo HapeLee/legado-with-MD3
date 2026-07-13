@@ -138,6 +138,7 @@ class BookInfoViewModel(
             observeReadRecordIfNeeded(value)
         }
     private var currentChapterList: List<BookChapter> = emptyList()
+    private var tocLoadFailed = false
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
     private var currentRelatedBooks: List<RelatedBooksUi> = emptyList()
     private var currentHighlightedTags: List<HighlightedTag> = emptyList()
@@ -830,6 +831,7 @@ class BookInfoViewModel(
     private fun upBook(book: Book, source: BookSource?) {
         currentBook = book
         currentChapterList = emptyList()
+        tocLoadFailed = false
         currentWebFiles = emptyList()
         currentRelatedBooks = emptyList()
         currentKindLabels = emptyList()
@@ -913,6 +915,7 @@ class BookInfoViewModel(
         scope: CoroutineScope = viewModelScope,
         showLoading: Boolean = true,
     ) {
+        tocLoadFailed = false
         syncUiState(isTocLoading = showLoading)
         if (book.isLocal) {
             execute(scope) {
@@ -928,6 +931,7 @@ class BookInfoViewModel(
                 syncUiState(isTocLoading = false)
             }.onError {
                 currentChapterList = emptyList()
+                tocLoadFailed = true
                 syncUiState(isTocLoading = false)
             }
         } else {
@@ -954,6 +958,7 @@ class BookInfoViewModel(
                     syncUiState(isTocLoading = false)
                 }.onError {
                     currentChapterList = emptyList()
+                    tocLoadFailed = true
                     syncUiState(isTocLoading = false)
                     AppLog.put("获取目录失败\n${it.localizedMessage}", it)
                 }
@@ -1359,6 +1364,7 @@ class BookInfoViewModel(
             it.copy(
                 book = currentBook?.toBookInfoBookUi(),
                 hasChapters = currentChapterList.isNotEmpty(),
+                tocLoadFailed = tocLoadFailed,
                 webFiles = currentWebFiles,
                 relatedBooks = currentRelatedBooks.toImmutableList(),
                 highlightedTags = currentHighlightedTags,

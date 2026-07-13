@@ -317,7 +317,7 @@ private fun BookInfoScreenContent(
                                 }
                                 BookInfoSummary(
                                     book = book,
-                                    hasChapters = state.hasChapters,
+                                    tocLoadFailed = state.tocLoadFailed,
                                     onRemarkClick = { onIntent(BookInfoIntent.RemarkClick) },
                                 )
                             }
@@ -1100,7 +1100,7 @@ private fun BookInfoActionCard(
 @Composable
 private fun BookInfoSummary(
     book: BookInfoBookUi,
-    hasChapters: Boolean,
+    tocLoadFailed: Boolean,
     onRemarkClick: () -> Unit,
 ) {
     Column(
@@ -1140,7 +1140,7 @@ private fun BookInfoSummary(
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.secondary,
             )
-            if (!hasChapters) {
+            if (tocLoadFailed) {
                 AppText(
                     text = " · ",
                     color = LegadoTheme.colorScheme.secondary

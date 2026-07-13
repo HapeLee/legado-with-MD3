@@ -146,6 +146,7 @@ class TextChapterLayout(
     private val textFullJustify = ReadBookConfig.textFullJustify
     private val adaptSpecialStyle = ReadConfig.adaptSpecialStyle
     private val pageAnim = book.getPageAnim()
+    private val isSingleImageStyle = book.getImageStyle().equals(Book.imgStyleSingle, true)
     private val titleSegType = ReadBookConfig.titleSegType
     private val titleSegDistance = ReadBookConfig.titleSegDistance
     private val titleSegFlag = ReadBookConfig.titleSegFlag
@@ -271,7 +272,6 @@ class TextChapterLayout(
     ) {
         val contents = bookContent.textList
         val imageStyle = book.getImageStyle()
-        val isSingleImageStyle = imageStyle.equals(Book.imgStyleSingle, true)
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         val allTitleSegments = if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
@@ -1037,8 +1037,9 @@ class TextChapterLayout(
             val textPage = pendingTextPage
             textPage.addLine(textLine)
             durY += textHeight * if (isTitle) titleLineSpacingExtra else lineSpacingExtra
-            if (textPage.height < durY) {
-                textPage.height = durY
+            val pageHeight = if (isSingleImageStyle) visibleHeight.toFloat() else durY
+            if (textPage.height < pageHeight) {
+                textPage.height = pageHeight
             }
         }
         durY += textHeight * paragraphSpacing / 10f

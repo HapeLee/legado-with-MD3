@@ -399,7 +399,7 @@ class AudioPlayActivity :
                 valueFrom = 0f
                 valueTo = 180f
                 stepSize = 1f
-                value = AudioPlayService.timeMinute.toFloat()
+                value = AudioPlayService.timeMinute.coerceIn(0, 180).toFloat()
 
                 addOnChangeListener { _, newValue, fromUser ->
                     if (fromUser) AudioPlay.setTimer(newValue.toInt())

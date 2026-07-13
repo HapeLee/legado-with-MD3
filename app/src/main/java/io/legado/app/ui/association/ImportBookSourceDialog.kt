@@ -14,7 +14,6 @@ import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.DialogCustomGroupBinding
@@ -173,12 +172,12 @@ class ImportBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_r
 
             R.id.menu_keep_original_name -> {
                 item.isChecked = !item.isChecked
-                putPrefBoolean(PreferKey.importKeepName, item.isChecked)
+                AppConfig.importKeepName = item.isChecked
             }
 
             R.id.menu_keep_group -> {
                 item.isChecked = !item.isChecked
-                putPrefBoolean(PreferKey.importKeepGroup, item.isChecked)
+                AppConfig.importKeepGroup = item.isChecked
             }
 
             R.id.menu_keep_enable -> {
