@@ -42,6 +42,26 @@ class AppReleaseInfoTest {
     }
 
     @Test
+    fun `x86 does not match x86_64 apk`() {
+        val selected = selectCompatibleAssets(
+            assets = listOf(asset("legado-1.0.0-x86_64.apk")),
+            supportedAbis = listOf("x86")
+        )
+
+        assertEquals(emptyList<Asset>(), selected)
+    }
+
+    @Test
+    fun `armeabi does not match armeabi-v7a apk`() {
+        val selected = selectCompatibleAssets(
+            assets = listOf(asset("legado-1.0.0-armeabi-v7a.apk")),
+            supportedAbis = listOf("armeabi")
+        )
+
+        assertEquals(emptyList<Asset>(), selected)
+    }
+
+    @Test
     fun `prefers the highest priority supported abi`() {
         val selected = selectCompatibleAssets(
             assets = listOf(

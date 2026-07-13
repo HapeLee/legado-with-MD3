@@ -27,7 +27,7 @@ enum class AppVariant {
 @Keep
 data class GithubRelease(
     val assets: List<Asset>?,
-    val body: String,
+    val body: String?,
     @SerializedName("prerelease")
     val isPreRelease: Boolean,
     @SerializedName("tag_name")
@@ -43,14 +43,15 @@ data class GithubRelease(
 
         val version = tagName
         return selectCompatibleAssets(assets, supportedAbis)
-            .map { it.assetToAppReleaseInfo(isPreRelease, body, version) }
+            .map { it.assetToAppReleaseInfo(isPreRelease, body.orEmpty(), version) }
     }
 }
 
-private val releaseAbiSuffixes = listOf(
+private val releaseAbis = listOf(
     "arm64-v8a",
     "armeabi-v7a",
     "x86_64",
+    "armeabi",
     "x86"
 )
 
@@ -62,17 +63,16 @@ internal fun selectCompatibleAssets(
 
     supportedAbis.forEach { supportedAbi ->
         val matchingAssets = validAssets.filter { asset ->
-            asset.name.contains(supportedAbi, ignoreCase = true)
+            asset.releaseAbi.equals(supportedAbi, ignoreCase = true)
         }
         if (matchingAssets.isNotEmpty()) return matchingAssets
     }
 
-    return validAssets.filter { asset ->
-        releaseAbiSuffixes.none { abiSuffix ->
-            asset.name.contains(abiSuffix, ignoreCase = true)
-        }
-    }
+    return validAssets.filter { it.releaseAbi == null }
 }
+
+private val Asset.releaseAbi: String?
+    get() = releaseAbis.firstOrNull { name.contains(it, ignoreCase = true) }
 
 @Keep
 data class Asset(
