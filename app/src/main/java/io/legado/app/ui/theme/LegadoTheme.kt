@@ -75,7 +75,10 @@ data class LegadoColorScheme(
     val cardContainer: Color,
     val onCardContainer: Color,
     val onSheetContent: Color,
-    val cardPrimaryContainer: Color
+    val cardPrimaryContainer: Color,
+
+    /** 输入框背景色，已应用容器背景不透明度 */
+    val surfaceInput: Color,
 )
 
 data class LegadoTypography(

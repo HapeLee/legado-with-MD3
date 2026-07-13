@@ -75,7 +75,8 @@ fun ColorScheme.toLegadoColorScheme(
         cardContainer = primaryContainer.copy(alpha = 0.5f),
         onCardContainer = primary,
         onSheetContent = surface,
-        cardPrimaryContainer = primaryContainer
+        cardPrimaryContainer = primaryContainer,
+        surfaceInput = surface.copy(alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f))
     )
 }
 

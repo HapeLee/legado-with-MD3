@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -52,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -213,6 +215,7 @@ fun ReplaceEditScreen(
                     value = state.name,
                     onValueChange = { onIntent(ReplaceEditIntent.OnNameChange(it)) },
                     label = stringResource(R.string.rule_name),
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -225,7 +228,8 @@ fun ReplaceEditScreen(
                     currentGroup = state.group,
                     allGroups = state.allGroups,
                     onGroupChange = { onIntent(ReplaceEditIntent.OnGroupChange(it)) },
-                    onManageClick = { onIntent(ReplaceEditIntent.ToggleGroupDialog(true)) }
+                    onManageClick = { onIntent(ReplaceEditIntent.ToggleGroupDialog(true)) },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                 )
 
                 AppTextField(
@@ -233,6 +237,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnPatternChange(it)) },
                     label = stringResource(R.string.match_pattern),
                     placeholder = { AppText(stringResource(R.string.input_regex_or_keyword)) },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -245,6 +250,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnReplacementChange(it)) },
                     label = stringResource(R.string.replace_with),
                     placeholder = { AppText(stringResource(R.string.input_replacement_or_group)) },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -289,6 +295,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnScopeChange(it)) },
                     label = stringResource(R.string.specific_scope),
                     placeholder = { AppText(stringResource(R.string.scope_hint)) },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -301,6 +308,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnExcludeScopeChange(it)) },
                     label = stringResource(R.string.exclude_scope),
                     placeholder = { AppText(stringResource(R.string.exclude_scope_hint)) },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -313,6 +321,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnTimeoutChange(it)) },
                     label = stringResource(R.string.timeout_ms),
                     placeholder = { AppText("3000") },
+                    backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -337,7 +346,8 @@ fun GroupSelector(
     currentGroup: String,
     allGroups: List<String>,
     onGroupChange: (String) -> Unit,
-    onManageClick: () -> Unit
+    onManageClick: () -> Unit,
+    backgroundColor: Color = Color.Unspecified,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -351,6 +361,7 @@ fun GroupSelector(
                 value = currentGroup,
                 onValueChange = onGroupChange,
                 label = stringResource(R.string.group),
+                backgroundColor = backgroundColor,
                 placeholder = { AppText("默认") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
