@@ -1847,6 +1847,16 @@ class ReadBookViewModel(
                 if (state == Status.STOP || state == Status.PAUSE) {
                     _effects.tryEmit(ReadBookEffect.UpAloudState)
                 }
+                if (state == Status.PAUSE) {
+                    _effects.tryEmit(
+                        ReadBookEffect.ShowToast(context.getString(R.string.read_aloud_pause))
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            eventFlow<Int>(EventBus.READ_ALOUD_DS).collect { minute ->
+                _uiState.update { it.copy(readAloudTtsTimer = minute.coerceAtLeast(0)) }
             }
         }
         viewModelScope.launch {
@@ -4316,6 +4326,13 @@ class ReadBookViewModel(
                         route,
                     ),
                 ),
+                readAloudTtsTimer = if (
+                    route == ReadBookMenuRoute.ReadAloud && BaseReadAloudService.isRun
+                ) {
+                    BaseReadAloudService.timeMinute.coerceAtLeast(0)
+                } else {
+                    it.readAloudTtsTimer
+                },
             )
         }
     }

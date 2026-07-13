@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -37,6 +40,7 @@ fun ReadAloudContent(
     onDismissRequest: () -> Unit,
     onOpenChapterList: () -> Unit,
     onGoToBackground: () -> Unit,
+    onOpenMainMenu: () -> Unit,
     onShowReadAloudConfig: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -97,6 +101,21 @@ fun ReadAloudContent(
 
         Spacer(Modifier.height(8.dp))
 
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            listOf(0, 5, 10, 15, 30, 60, 90).forEach { minute ->
+                MediumTonalButton(
+                    onClick = { onIntent(ReadBookIntent.SetReadAloudTtsTimer(minute)) },
+                    text = stringResource(R.string.timer_m, minute),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -108,7 +127,8 @@ fun ReadAloudContent(
             )
             MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.SaveReadAloudTtsTimer(timerMinute)) },
-                text = stringResource(R.string.save_tts_timer),
+                icon = Icons.Default.Alarm,
+                contentDescription = stringResource(R.string.save_tts_timer),
                 modifier = Modifier.weight(1f),
             )
             MediumTonalButton(
@@ -145,6 +165,11 @@ fun ReadAloudContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
+            ActionButton(
+                icon = Icons.Default.Menu,
+                label = stringResource(R.string.main_menu),
+                onClick = onOpenMainMenu,
+            )
             ActionButton(
                 icon = Icons.AutoMirrored.Filled.List,
                 label = stringResource(R.string.chapter_list),

@@ -749,6 +749,9 @@ private fun ReadBookMenuSurface(
                                 onGoToBackground = {
                                     onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
                                 },
+                                onOpenMainMenu = {
+                                    onIntent(ReadBookIntent.ReadMenuBack)
+                                },
                                 onShowReadAloudConfig = {
                                     onIntent(ReadBookIntent.ShowReadAloudConfig)
                                 },
