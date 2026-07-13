@@ -31,6 +31,7 @@ fun MoreConfigSheet(
     onIntent: (ReadBookIntent) -> Unit,
     onOpenClickRegionalConfig: () -> Unit,
     onOpenPageKeyConfig: () -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
 ) {
     val readSettingsRepository: ReadSettingsRepository = koinInject()
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
@@ -144,6 +145,7 @@ fun MoreConfigSheet(
                 },
                 onOpenClickRegionalConfig = onOpenClickRegionalConfig,
                 onOpenPageKeyConfig = onOpenPageKeyConfig,
+                onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
                 onDisableReturnKeyChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DisableReturnKey(it)))
                 },
@@ -305,6 +307,7 @@ private fun OtherSettings(
     onOpenClickRegionalConfig: () -> Unit,
     onDisableReturnKeyChange: (Boolean) -> Unit,
     onOpenPageKeyConfig: () -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
     onShowReadTitleAdditionChange: (Boolean) -> Unit,
     onShowMenuIconChange: (Boolean) -> Unit,
 ) {
@@ -372,6 +375,10 @@ private fun OtherSettings(
     TinyClickableSettingItem(
         title = stringResource(R.string.custom_page_key),
         onClick = onOpenPageKeyConfig,
+    )
+    TinyClickableSettingItem(
+        title = stringResource(R.string.edit_select_menu),
+        onClick = onOpenTextSelectMenuConfig,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.show_read_title_addition),
