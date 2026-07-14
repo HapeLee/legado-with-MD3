@@ -21,6 +21,7 @@ fun ValueStepper(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    stepSize: Float = 1f,
     showDecimal: Boolean = false,
     valueFormat: ((Float) -> String)? = null,
 ) {
@@ -31,7 +32,7 @@ fun ValueStepper(
     ) {
         SmallOutlinedButton(
             onClick = {
-                val newValue = (value.toInt() - 1).toFloat().coerceIn(valueRange)
+                val newValue = (value - stepSize).coerceIn(valueRange)
                 onValueChange(newValue)
             },
             enabled = enabled,
@@ -52,7 +53,7 @@ fun ValueStepper(
         )
         SmallOutlinedButton(
             onClick = {
-                val newValue = (value.toInt() + 1).toFloat().coerceIn(valueRange)
+                val newValue = (value + stepSize).coerceIn(valueRange)
                 onValueChange(newValue)
             },
             enabled = enabled,

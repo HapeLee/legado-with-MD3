@@ -67,6 +67,7 @@ import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // Color picker IDs
 private const val COLOR_TEXT = 1
@@ -545,9 +546,12 @@ internal fun TitleSettingsPage(
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
             value = titleSegScaling,
-            valueRange = -20f..20f,
+            valueRange = -2f..2f,
+            steps = 39,
+            stepSize = 0.1f,
+            valueFormat = { "%.1f".format(it) },
             onValueChange = { value ->
-                titleSegScaling = value
+                titleSegScaling = (value * 10).roundToInt() / 10f
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegScaling(titleSegScaling)))
             },
         )

@@ -256,6 +256,7 @@ fun TinySliderSettingItem(
     modifier: Modifier = Modifier,
     color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     enabled: Boolean = true,
+    stepSize: Float = 1f,
     showDecimal: Boolean = false,
     valueFormat: ((Float) -> String)? = null,
     onValueChange: (Float) -> Unit,
@@ -280,6 +281,7 @@ fun TinySliderSettingItem(
                 valueRange = valueRange,
                 onValueChange = onValueChange,
                 enabled = enabled,
+                stepSize = stepSize,
                 showDecimal = showDecimal,
                 valueFormat = valueFormat,
             )
