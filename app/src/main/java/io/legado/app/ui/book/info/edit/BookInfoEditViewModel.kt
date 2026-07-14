@@ -60,7 +60,10 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     else -> BookInfoEditType.TEXT
                 }
                 val kinds =
-                    it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty()
+                    it.kind?.split(",", "\n")
+                        ?.filter { kind -> kind.isNotBlank() }
+                        ?.distinct()
+                        .orEmpty()
                 _uiState.value = BookInfoEditUiState(
                     name = it.name,
                     author = it.author,
@@ -102,7 +105,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     fun onKindListChange(kindList: List<String>) {
-        _uiState.value = _uiState.value.copy(kindList = kindList)
+        _uiState.value = _uiState.value.copy(kindList = kindList.distinct())
     }
 
     fun onBookTypeChange(bookType: BookInfoEditType) {
