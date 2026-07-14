@@ -79,7 +79,7 @@ fun ColorScheme.toLegadoColorScheme(
         surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
             Color(ThemeConfig.bookInfoInputColor)
         } else {
-            surface.copy(alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f))
+            Color.Unspecified
         }
     )
 }

@@ -192,9 +192,7 @@ fun MiuixThemeWrapper(
                 surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
                     Color(ThemeConfig.bookInfoInputColor)
                 } else {
-                    miuixColorScheme.surface.copy(
-                        alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f)
-                    )
+                    Color.Unspecified
                 }
             )
         }
