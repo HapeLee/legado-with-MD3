@@ -47,6 +47,19 @@ class WebViewDataCleanerTest {
         assertFalse(huaweiWebViewDirectory.exists())
     }
 
+    @Test
+    fun clearDataDirectories_reportsFailureWhenHuaweiDirectoryCannotBeDeleted() {
+        val webViewDirectory = File(testDirectory, "app_webview").apply { mkdirs() }
+        val huaweiWebViewDirectory = object : File(testDirectory, "app_hws_webview") {
+            override fun exists() = true
+            override fun isDirectory() = true
+            override fun listFiles(): Array<File> = emptyArray()
+            override fun delete() = false
+        }
+
+        assertFalse(clearDataDirectories(webViewDirectory, huaweiWebViewDirectory))
+    }
+
     private fun File.createFileWithParents() {
         parentFile?.mkdirs()
         createNewFile()

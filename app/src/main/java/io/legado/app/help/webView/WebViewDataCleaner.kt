@@ -4,7 +4,6 @@ import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebViewDatabase
-import io.legado.app.utils.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -21,8 +20,8 @@ object WebViewDataCleaner {
 
         val directoriesCleared = withContext(Dispatchers.IO) {
             clearDataDirectories(
-                webViewDirectory = context.getDir("webview", Context.MODE_PRIVATE),
-                huaweiWebViewDirectory = context.getDir("hws_webview", Context.MODE_PRIVATE),
+                webViewDirectory = File(context.applicationInfo.dataDir, "app_webview"),
+                huaweiWebViewDirectory = File(context.applicationInfo.dataDir, "app_hws_webview"),
             )
         }
         if (!directoriesCleared) {
@@ -52,11 +51,24 @@ internal fun clearDataDirectories(
     webViewDirectory: File,
     huaweiWebViewDirectory: File,
 ): Boolean {
-    FileUtils.delete(webViewDirectory)
-    FileUtils.delete(huaweiWebViewDirectory, deleteRootDir = true)
-    return webViewDirectory.isMissingOrEmpty() && huaweiWebViewDirectory.isMissingOrEmpty()
+    val webViewCleared = webViewDirectory.clearContents()
+    val huaweiWebViewCleared = huaweiWebViewDirectory.deleteDirectory()
+    return webViewCleared && huaweiWebViewCleared
 }
 
-private fun File.isMissingOrEmpty(): Boolean {
-    return !exists() || isDirectory && listFiles()?.isEmpty() == true
+private fun File.clearContents(): Boolean {
+    if (!exists()) return true
+    if (!isDirectory) return false
+
+    val children = listFiles() ?: return false
+    val childrenDeleted = children.fold(true) { success, child ->
+        child.deleteRecursively() && success
+    }
+    return childrenDeleted && listFiles()?.isEmpty() == true
+}
+
+private fun File.deleteDirectory(): Boolean {
+    if (!exists()) return true
+    if (!isDirectory) return false
+    return deleteRecursively() && !exists()
 }
