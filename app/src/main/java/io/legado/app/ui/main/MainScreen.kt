@@ -194,7 +194,7 @@ fun MainScreen(
     val floatingBarSurfaceColor = if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
         Color(customSecondaryColor)
     } else {
-        MaterialTheme.colorScheme.surface
+        LegadoTheme.colorScheme.surface
     }
     val floatingBarBackdrop = rememberLayerBackdrop {
         drawRect(floatingBarSurfaceColor)
@@ -446,7 +446,7 @@ fun MainScreen(
                                     )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
-                                    noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
                                     blurAlpha = GlassDefaults.ThickBlurAlpha
                                 ),
                                 m3ShowLabel = showLabel && !customIconPath.isNotEmpty(),
