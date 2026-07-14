@@ -63,5 +63,5 @@ data class BookshelfUiState(
     val currentGroupName: String? = null,
     val draggingBooks: ImmutableList<BookUiItem>? = null,
     val pendingSavedBooks: ImmutableList<BookUiItem>? = null,
-    val allGroupBooks: ImmutableMap<Long, ImmutableList<BookUiItem>> = persistentMapOf()
+    val visibleGroupBooks: ImmutableMap<Long, ImmutableList<BookUiItem>> = persistentMapOf()
 ) : ListUiState<BookUiItem>
