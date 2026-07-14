@@ -251,7 +251,7 @@ internal fun squareSize(size: Dp) = DpSize(size, size)
 private fun containerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
-        SeriesIconButtonStyle.Tonal -> LegadoTheme.colorScheme.surface
+        SeriesIconButtonStyle.Tonal -> LegadoTheme.colorScheme.surfaceContainerLow
         SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface.copy(alpha = 0f)
     }
 }

@@ -280,7 +280,8 @@ fun <T> HomepageModuleManageSheet(
                                     .find {
                                         it.customSetId == HomepageViewModel.customSetIdFromUrl(
                                             selectingSetUrl!!
-                                        ) && it.moduleKey == module.moduleKey
+                                        ) && it.sourceUrl == module.sourceUrl &&
+                                                it.moduleKey == module.moduleKey
                                     }?.id
                                 if (instanceId != null) {
                                     actions.onDeleteModule(instanceId)

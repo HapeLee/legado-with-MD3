@@ -148,7 +148,7 @@ fun TextActionSelectionMenu(
                     NormalCard(
                         modifier = Modifier.widthIn(max = menuCardMaxWidth),
                         containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 6.dp,
+                        elevation = 12.dp,
                         cornerRadius = 12.dp,
                     ) {
                         MultiLineMenuView(
@@ -186,7 +186,7 @@ fun TextActionSelectionMenu(
                     NormalCard(
                         modifier = Modifier.widthIn(max = menuCardMaxWidth),
                         containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 6.dp,
+                        elevation = 12.dp,
                         cornerRadius = 12.dp,
                     ) {
                         QuickMenuView(
@@ -250,7 +250,7 @@ fun TextActionSelectionMenu(
                     NormalCard(
                         modifier = Modifier.widthIn(max = menuCardMaxWidth),
                         containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 8.dp,
+                        elevation = 12.dp,
                         cornerRadius = 12.dp,
                     ) {
                         MoreMenuView(
@@ -335,8 +335,8 @@ private fun QuickMenuView(
                 QuickMenuItem(
                     item = item,
                     onClick = { onItemClick(item) },
-                    startPadding = if (index == 0) 16.dp else 12.dp,
-                    endPadding = 12.dp,
+                    startPadding = if (index == 0) 16.dp else 10.dp,
+                    endPadding = 8.dp,
                 )
             }
         }

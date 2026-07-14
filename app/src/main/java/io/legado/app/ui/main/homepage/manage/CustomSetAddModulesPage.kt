@@ -31,7 +31,7 @@ fun CustomSetAddModulesPage(
     val setId = HomepageViewModel.customSetIdFromUrl(setUrl)
     val initialJoined = allJoinedModules
         .filter { it.customSetId == setId }
-        .associateBy({ it.moduleKey }, { it.id })
+        .associateBy({ it.sourceUrl to it.moduleKey }, { it.id })
     var joinedInCurrent by remember(initialJoined) { mutableStateOf(initialJoined) }
 
     val hasInfiniteInCurrentSet = remember(allJoinedModules) {
@@ -62,7 +62,8 @@ fun CustomSetAddModulesPage(
                 )
             }
             items(modules, key = { it.id }) { module ->
-                val instanceIdInCurrentSet = joinedInCurrent[module.moduleKey]
+                val moduleKey = module.sourceUrl to module.moduleKey
+                val instanceIdInCurrentSet = joinedInCurrent[moduleKey]
                 val inCurrentSet = instanceIdInCurrentSet != null
                 val isInfinite = HomepageViewModel.isInfinite(module.type, module.layoutConfig)
                 val isBlocked = !inCurrentSet && isInfinite && hasInfiniteInCurrentSet
@@ -77,10 +78,10 @@ fun CustomSetAddModulesPage(
                     onToggleSelection = {
                         onToggleModuleToSet(module, inCurrentSet, isBlocked)
                         if (inCurrentSet) {
-                            joinedInCurrent = joinedInCurrent - module.moduleKey
+                            joinedInCurrent = joinedInCurrent - moduleKey
                         } else if (!isBlocked) {
                             joinedInCurrent =
-                                joinedInCurrent + (module.moduleKey to "temp_${module.id}")
+                                joinedInCurrent + (moduleKey to "temp_${module.id}")
                         }
                     }
                 )
