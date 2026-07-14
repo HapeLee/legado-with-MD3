@@ -59,6 +59,7 @@ fun ReadBookScreen(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
 ) {
     BackHandler {
         when {
@@ -282,6 +283,7 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.DismissSheet)
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
         },
+        onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
     )
     ReadAloudConfigSheet(
         show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
