@@ -349,7 +349,7 @@ fun OtherConfigScreen(
             title = stringResource(R.string.clear_webview_data),
             text = stringResource(R.string.sure_del),
             onConfirm = {
-                viewModel.clearWebViewData(context)
+                viewModel.clearWebViewData()
                 showClearWebViewDialog = false
             },
             onDismiss = { showClearWebViewDialog = false }
