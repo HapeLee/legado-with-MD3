@@ -280,7 +280,7 @@ private fun BookInfoScreenContent(
                                     onNetworkCoverLoadError(book.coverPath)
                                 },
                                 usesDefaultCover = usesDefaultCover,
-                                blurCover = resolvedBackdropStyle.blurCover,
+                                applySeedOverlay = resolvedBackdropStyle.applySeedOverlay,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 sharedCoverKey = sharedCoverKey,
@@ -675,7 +675,7 @@ private fun BookInfoBackdrop(
                 )
             }
         }
-        if (style.blurCover) {
+        if (style.applySeedOverlay) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -689,12 +689,12 @@ private fun BookInfoBackdrop(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0f to Color.Transparent,
-                            0.20f to if (style.blurCover) {
+                            0.20f to if (style.applySeedOverlay) {
                                 seedOverlay.copy(alpha = 0.10f)
                             } else {
                                 Color.Transparent
                             },
-                            0.40f to if (style.blurCover) {
+                            0.40f to if (style.applySeedOverlay) {
                                 seedOverlay.copy(alpha = 0.18f)
                             } else {
                                 LegadoTheme.colorScheme.surface.copy(alpha = 0.35f)
@@ -820,7 +820,7 @@ private fun BookInfoHeader(
     onOriginClick: () -> Unit,
     onNetworkCoverLoadError: () -> Unit,
     usesDefaultCover: Boolean,
-    blurCover: Boolean,
+    applySeedOverlay: Boolean,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
@@ -833,7 +833,7 @@ private fun BookInfoHeader(
                 Brush.verticalGradient(
                     colors = listOf(
                         Color.Transparent,
-                        if (blurCover) {
+                        if (applySeedOverlay) {
                             lerp(LegadoTheme.colorScheme.surface, LegadoTheme.seedColor, 0.08f)
                                 .copy(alpha = 0.5f)
                         } else {
