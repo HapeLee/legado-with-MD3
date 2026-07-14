@@ -196,17 +196,11 @@ fun BookInfoEditContent(
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        val bookInfoInputColor = ThemeConfig.bookInfoInputColor
-        val inputBackgroundColor = if (bookInfoInputColor != 0) {
-            Color(bookInfoInputColor)
-        } else {
-            Color.Unspecified
-        }
         AppTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
             label = stringResource(R.string.book_name),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -214,7 +208,7 @@ fun BookInfoEditContent(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
             label = stringResource(R.string.author),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -222,7 +216,7 @@ fun BookInfoEditContent(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
             label = stringResource(R.string.cover_url),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -230,14 +224,14 @@ fun BookInfoEditContent(
             kindList = uiState.kindList,
             onKindListChange = { viewModel.onKindListChange(it) },
             onReset = { viewModel.resetKinds() },
-            backgroundColor = inputBackgroundColor
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
             label = stringResource(R.string.book_intro),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -245,7 +239,7 @@ fun BookInfoEditContent(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
             label = stringResource(R.string.book_remark),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -269,13 +263,6 @@ fun BookTypeDropdown(
         textFieldState.setTextAndPlaceCursorAtEnd(selectedTypeLabel)
     }
 
-    val bookInfoInputColor = ThemeConfig.bookInfoInputColor
-    val inputBackgroundColor = if (bookInfoInputColor != 0) {
-        Color(bookInfoInputColor)
-    } else {
-        Color.Unspecified
-    }
-
     ExposedDropdownMenuBox(
         modifier = Modifier.padding(horizontal = 8.dp),
         expanded = expanded,
@@ -286,7 +273,7 @@ fun BookTypeDropdown(
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
             label = stringResource(R.string.book_type_label),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
