@@ -1225,6 +1225,8 @@
     <string name="start_chapter">開始篇章</string>
     <string name="update_to_variant_title">检查更新查找版本</string>
     <string name="update_to_variant_summary">检查更新时查找其他签名版本</string>
+    <string name="auto_check_update_on_start_title">啟動時自動檢查更新</string>
+    <string name="auto_check_update_on_start_summary">僅在應用程式程序完全重新啟動時檢查，從背景返回不會觸發</string>
     <string name="default_version">当前</string>
     <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>
