@@ -192,7 +192,9 @@ class SearchContentViewModel(
 
     fun leaveSearch() {
         searchJob?.cancel()
-        searchContentRepository.clearSession(bookUrl)
+        if (_searchQuery.value.isBlank()) {
+            SearchContentResult.clearResults(bookUrl)
+        }
         _searchQuery.value = ""
         _uiState.update {
             it.copy(

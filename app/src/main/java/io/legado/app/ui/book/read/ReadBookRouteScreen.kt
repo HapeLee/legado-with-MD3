@@ -441,13 +441,26 @@ fun ReadBookRouteScreen(
                     SearchContentResult.resetReplayCache()
                     return@collect
                 }
-                viewModel.onIntent(
-                    ReadBookIntent.SetSearchResults(result.searchResults, result.index, result.query)
-                )
-                result.searchResults.getOrNull(result.index)?.let { searchResult ->
-                    viewModel.onIntent(
-                        ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
-                    )
+                when (result) {
+                    is SearchContentResult.Clear -> {
+                        viewModel.onIntent(ReadBookIntent.SetSearchResults(emptyList(), 0, ""))
+                        viewModel.onIntent(ReadBookIntent.ExitSearch)
+                    }
+
+                    is SearchContentResult.Result -> {
+                        viewModel.onIntent(
+                            ReadBookIntent.SetSearchResults(
+                                result.searchResults,
+                                result.index,
+                                result.query
+                            )
+                        )
+                        result.searchResults.getOrNull(result.index)?.let { searchResult ->
+                            viewModel.onIntent(
+                                ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
+                            )
+                        }
+                    }
                 }
                 SearchContentResult.resetReplayCache()
             }

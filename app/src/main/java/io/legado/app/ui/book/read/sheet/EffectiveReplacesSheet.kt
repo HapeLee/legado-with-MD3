@@ -149,14 +149,18 @@ fun EffectiveReplacesSheet(
                                     }
                                 }
                             }
-                            if (rule.id != RE_SEGMENT_ID) MediumTonalButton(
+                            MediumTonalButton(
                                 onClick = {
                                     disabledIds = disabledIds + rule.id
                                     isEdited = true
-                                    if (rule.id == CHINESE_CONVERT_ID) {
-                                        ReadConfig.chineseConverterType = 0
-                                    } else {
-                                        scope.launch {
+                                    when (rule.id) {
+                                        RE_SEGMENT_ID -> {
+                                            ReadBook.book?.setReSegment(false)
+                                            ReadBook.loadContent(false)
+                                        }
+
+                                        CHINESE_CONVERT_ID -> ReadConfig.chineseConverterType = 0
+                                        else -> scope.launch {
                                             rule.isEnabled = false
                                             appDb.replaceRuleDao.insert(rule)
                                         }

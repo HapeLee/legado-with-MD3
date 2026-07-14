@@ -2891,10 +2891,10 @@ private fun loadToolButtons(
             onIntent(ReadBookIntent.NextChapter)
         },
         infoMap.getValue("replace").toButton {
-            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+            onIntent(ReadBookIntent.MenuSettingReplace)
         },
         infoMap.getValue("replace_badge").toButton {
-            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+            onIntent(ReadBookIntent.MenuSettingReplace)
         },
         infoMap.getValue("auto_page").toButton(isActive = state.isAutoPage) {
             if (state.isAutoPage) {
@@ -3256,8 +3256,8 @@ private fun loadFloatingIcons(
         "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
         "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
         "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
-        "replace" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
-        "replace_badge" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
+        "replace" to { onIntent(ReadBookIntent.MenuSettingReplace) },
+        "replace_badge" to { onIntent(ReadBookIntent.MenuSettingReplace) },
         "auto_page" to {
             if (state.isAutoPage) {
                 onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))

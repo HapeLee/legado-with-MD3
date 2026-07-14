@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +33,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
@@ -54,7 +56,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -110,7 +111,6 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
-import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -121,11 +121,11 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -391,7 +391,7 @@ fun HomeScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val selectedSets = remember(homepageState.manageState.sets) {
         homepageState.manageState.sets.filter { it.isSelected }
@@ -401,7 +401,7 @@ fun HomeScreen(
     })
 
     var showPageMenu by remember { mutableStateOf(false) }
-    var showSourceMenu by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val currentPageSourceName by remember(selectedSets, pagerState) {
         derivedStateOf { selectedSets.getOrNull(pagerState.currentPage)?.sourceName }
@@ -430,6 +430,7 @@ fun HomeScreen(
         topBar = {
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.home),
+                subtitle = currentPageSourceName,
                 scrollBehavior = scrollBehavior,
                 actions = {
                     TopBarActionButton(
@@ -501,12 +502,6 @@ fun HomeScreen(
                 }
                 val viewportHeight = maxHeight
                 val hasDashboard = state.visibleSections.isNotEmpty()
-                val isSourceSwitcherVisible by remember(hasDashboard, selectedSets) {
-                    derivedStateOf {
-                        selectedSets.size > 1 &&
-                                (!hasDashboard || dashboardScrollState.value > 0 || showSourceMenu)
-                    }
-                }
 
                 Column(
                     modifier = Modifier
@@ -572,62 +567,13 @@ fun HomeScreen(
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     onBookLongClick = onHomepageBookLongClick,
-                                    onErrorClick = {},
+                                    onErrorClick = { errorMessage = it },
                                 )
                             }
                         }
                     }
                 }
 
-                TopFloatingStickyItem(
-                    item = if (isSourceSwitcherVisible) currentPageSourceName else null,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = paddingValues.calculateTopPadding() + 8.dp),
-                ) { name ->
-                    Box {
-                        GlassCard(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .clickable(
-                                    role = Role.Button,
-                                    onClick = { showSourceMenu = true },
-                                ),
-                            cornerRadius = 32.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(
-                                    horizontal = 16.dp,
-                                    vertical = 12.dp,
-                                ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                AppText(
-                                    text = name,
-                                    style = LegadoTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-                        RoundDropdownMenu(
-                            expanded = showSourceMenu,
-                            onDismissRequest = { showSourceMenu = false },
-                        ) { dismiss ->
-                            selectedSets.forEachIndexed { index, source ->
-                                RoundDropdownMenuItem(
-                                    text = source.sourceName,
-                                    isSelected = index == pagerState.currentPage,
-                                    onClick = {
-                                        dismiss()
-                                        scope.launch {
-                                            pagerState.animateScrollToPage(index)
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
 
@@ -646,6 +592,29 @@ fun HomeScreen(
             sheet = state.activeSheet,
             visibleSections = state.visibleSections,
             onIntent = onIntent,
+        )
+        AppAlertDialog(
+            data = errorMessage,
+            onDismissRequest = { errorMessage = null },
+            title = stringResource(R.string.error_details),
+            confirmText = stringResource(R.string.copy_text),
+            onConfirm = { message ->
+                context.sendToClip(message)
+                errorMessage = null
+            },
+            dismissText = stringResource(R.string.close),
+            onDismiss = { errorMessage = null },
+            content = { message ->
+                SelectionContainer {
+                    AppText(
+                        text = message,
+                        style = LegadoTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .heightIn(max = 400.dp)
+                            .verticalScroll(rememberScrollState()),
+                    )
+                }
+            },
         )
     }
 }

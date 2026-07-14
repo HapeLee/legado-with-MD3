@@ -13,18 +13,28 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 object SearchContentResult {
 
+    sealed interface Event {
+        val bookUrl: String
+    }
+
     data class Result(
-        val bookUrl: String,
+        override val bookUrl: String,
         val searchResults: List<SearchResult>,
         val index: Int,
         val query: String,
-    )
+    ) : Event
 
-    private val _results = MutableSharedFlow<Result>(replay = 1)
+    data class Clear(override val bookUrl: String) : Event
+
+    private val _results = MutableSharedFlow<Event>(replay = 1)
     val results = _results.asSharedFlow()
 
     fun emitResult(result: Result) {
         _results.tryEmit(result)
+    }
+
+    fun clearResults(bookUrl: String) {
+        _results.tryEmit(Clear(bookUrl))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
