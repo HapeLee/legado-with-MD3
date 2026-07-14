@@ -2178,6 +2178,7 @@
     <string name="title_bar_layout">標題欄佈局</string>
     <string name="title_bar_mode">選單中的標題模式</string>
     <string name="title_color">標題顏色</string>
+    <string name="reset_to_body_color">重置為正文顏色</string>
     <string name="toc_disabled_format">%1$s 目錄已禁用</string>
     <string name="toc_rule_update_failed">章節規則更新失敗：%1$s</string>
     <string name="toc_rule_updated">章節規則已更新</string>

@@ -329,13 +329,6 @@ internal fun HeaderFooterPage(
                                 showColorPicker = true
                             },
                         )
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.reset_to_body_color),
-                            onClick = {
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(0)))
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColorNight(0)))
-                            },
-                        )
 
                         TinyClickableSettingItem(
                             title = stringResource(R.string.padding),
@@ -480,13 +473,6 @@ internal fun HeaderFooterPage(
                                 showColorPicker = true
                             },
                         )
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.reset_to_body_color),
-                            onClick = {
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(0)))
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColorNight(0)))
-                            },
-                        )
 
                         TinyClickableSettingItem(
                             title = stringResource(R.string.padding),
@@ -619,6 +605,21 @@ internal fun HeaderFooterPage(
                 }
             }
             showColorPicker = false
+        },
+        onResetToDefault = {
+            when (colorPickerId) {
+                COLOR_HEADER, COLOR_HEADER_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(0)))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColorNight(0)))
+                }
+
+                COLOR_FOOTER, COLOR_FOOTER_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(0)))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColorNight(0)))
+                }
+
+                else -> { /* divider has no reset-to-body logic */ }
+            }
         },
     )
 

@@ -472,13 +472,6 @@ internal fun TitleSettingsPage(
                 showColorPicker = true
             },
         )
-        TinyClickableSettingItem(
-            title = stringResource(R.string.reset_to_body_color),
-            onClick = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(0)))
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(0)))
-            },
-        )
 
         // Title font
         TinyClickableSettingItem(
@@ -621,6 +614,10 @@ internal fun TitleSettingsPage(
                 }
             }
             showColorPicker = false
+        },
+        onResetToDefault = {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(0)))
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(0)))
         },
     )
 }

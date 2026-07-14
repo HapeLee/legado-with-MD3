@@ -38,6 +38,7 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.button.SecondaryButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.isHex
@@ -51,7 +52,8 @@ fun ColorPickerSheet(
     show: Boolean,
     initialColor: Int,
     onDismissRequest: () -> Unit,
-    onColorSelected: (Int) -> Unit
+    onColorSelected: (Int) -> Unit,
+    onResetToDefault: (() -> Unit)? = null,
 ) {
     var currentColor by remember { mutableStateOf(Color(initialColor)) }
     var hexInput by remember { mutableStateOf(initialColor.asHexColorString()) }
@@ -136,6 +138,18 @@ fun ColorPickerSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (onResetToDefault != null) {
+                SecondaryButton(
+                    onClick = {
+                        onResetToDefault()
+                        onDismissRequest()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.reset_to_body_color)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             ConfirmDismissButtonsRow(
                 modifier = Modifier.fillMaxWidth(),
