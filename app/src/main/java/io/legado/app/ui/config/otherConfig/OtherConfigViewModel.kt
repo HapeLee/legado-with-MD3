@@ -1,41 +1,53 @@
 package io.legado.app.ui.config.otherConfig
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadAloudPreferences
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.webView.WebViewDataCleaner
 import io.legado.app.model.CheckSource
 import io.legado.app.receiver.SharedReceiverActivity
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
-import io.legado.app.utils.FileUtils
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 
 class OtherConfigViewModel(
     private val readAloudSettingsRepository: ReadAloudSettingsRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val RESTART_DELAY_MILLIS = 3_000L
+    }
+
     private val packageManager = appCtx.packageManager
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val componentName = ComponentName(
         appCtx,
         SharedReceiverActivity::class.java.name
     )
+    private var clearWebViewDataJob: Job? = null
+    private var restartScheduled = false
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -91,12 +103,25 @@ class OtherConfigViewModel(
         }
     }
 
-    fun clearWebViewData(context: Context) {
-        viewModelScope.launch(Dispatchers.IO) {
-            FileUtils.delete(context.getDir("webview", Context.MODE_PRIVATE))
-            FileUtils.delete(context.getDir("hws_webview", Context.MODE_PRIVATE), true)
-            delay(3000)
-            appCtx.restart()
+    fun clearWebViewData() {
+        if (clearWebViewDataJob?.isActive == true || restartScheduled) return
+
+        clearWebViewDataJob = viewModelScope.launch {
+            withContext(NonCancellable) {
+                runCatching {
+                    WebViewDataCleaner.clear(appCtx)
+                }.onSuccess {
+                    restartScheduled = true
+                    appCtx.toastOnUi(R.string.clear_webview_data_success)
+                    mainHandler.postDelayed(
+                        { appCtx.restart() },
+                        RESTART_DELAY_MILLIS
+                    )
+                }.onFailure {
+                    AppLog.put("清除 WebView 数据失败", it)
+                    appCtx.toastOnUi(R.string.clear_webview_data_failed)
+                }
+            }
         }
     }
 
