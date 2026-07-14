@@ -1528,6 +1528,7 @@
     <string name="image_style_text">文字吸附</string>
     <string name="image_style_single">單頁</string>
     <string name="title_color">標題顏色</string>
+    <string name="reset_to_body_color">重置為正文顏色</string>
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">可用變數：{name} 書名、{author} 作者、{group} 分組、{source} 來源、{remark} 備註。
 
