@@ -3,11 +3,10 @@
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -111,28 +110,24 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     ))
                 },
                 predictivePopTransitionSpec = { _ ->
-                    if (!AppConfig.isPredictiveBackEnabled) {
-                        EnterTransition.None togetherWith ExitTransition.None
-                    } else {
-                        (slideIntoContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(
-                                easing = FastOutSlowInEasing
-                            ),
-                            initialOffset = { fullWidth -> -fullWidth / 4 }
-                        ) + fadeIn(
-                            animationSpec = tween(
-                                easing = LinearOutSlowInEasing
-                            )
-                        )) togetherWith (scaleOut(
-                            targetScale = 0.8f,
-                            animationSpec = tween(
-                                easing = FastOutSlowInEasing
-                            )
-                        ) + fadeOut(
-                            animationSpec = tween()
-                        ))
-                    }
+                    (slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { fullWidth -> -fullWidth / 4 }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            easing = LinearOutSlowInEasing
+                        )
+                    )) togetherWith (scaleOut(
+                        targetScale = 0.8f,
+                        animationSpec = tween(
+                            easing = FastOutSlowInEasing
+                        )
+                    ) + fadeOut(
+                        animationSpec = tween()
+                    ))
                 },
                 onBack = {
                     if (backStack.size > 1) {
@@ -174,6 +169,13 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     }
                 }
             )
+            BackHandler(enabled = !AppConfig.isPredictiveBackEnabled) {
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                } else {
+                    finish()
+                }
+            }
         }
     }
 
