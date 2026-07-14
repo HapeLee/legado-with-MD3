@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -92,8 +93,8 @@ fun ReadAloudContent(
             title = stringResource(R.string.set_timer),
             description = stringResource(R.string.timer_m, timerMinute),
             value = timerMinute.toFloat(),
-            valueRange = 0f..180f,
-            steps = 179,
+            valueRange = PlaybackTimer.MIN_MINUTES.toFloat()..PlaybackTimer.MAX_MINUTES.toFloat(),
+            steps = PlaybackTimer.MAX_MINUTES - PlaybackTimer.MIN_MINUTES - 1,
             onValueChange = {
                 onIntent(ReadBookIntent.SetReadAloudTtsTimer(it.toInt()))
             },

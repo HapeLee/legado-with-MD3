@@ -8,6 +8,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.HttpReadAloudService
 import io.legado.app.service.TTSReadAloudService
@@ -129,7 +130,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.setTimer
-            intent.putExtra("minute", minute)
+            intent.putExtra("minute", PlaybackTimer.normalize(minute))
             context.startForegroundServiceCompat(intent)
         }
     }
