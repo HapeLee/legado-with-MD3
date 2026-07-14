@@ -1781,6 +1781,7 @@ private fun FloatingIconRow(
         state.isReadAloudRunning,
         state.isAutoPage,
         state.translationMode,
+        state.useReplaceRule,
     ) {
         loadFloatingIcons(context, state, onIntent)
     }
@@ -2359,7 +2360,8 @@ private fun MenuBottomBar(
             state.menuConfig.readMenuCustomIcons,
             state.isReadAloudRunning,
             state.isAutoPage,
-            state.translationMode
+            state.translationMode,
+            state.useReplaceRule,
         ) {
             loadToolButtons(context, state, onIntent)
         }
@@ -2890,8 +2892,11 @@ private fun loadToolButtons(
         infoMap.getValue("next_chapter").toButton {
             onIntent(ReadBookIntent.NextChapter)
         },
-        infoMap.getValue("replace").toButton {
-            onIntent(ReadBookIntent.MenuSettingReplace)
+        infoMap.getValue("replace").toButton(
+            isActive = state.useReplaceRule,
+            onLongClick = { onIntent(ReadBookIntent.MenuSettingReplace) },
+        ) {
+            onIntent(ReadBookIntent.MenuEnableReplace)
         },
         infoMap.getValue("replace_badge").toButton {
             onIntent(ReadBookIntent.MenuSettingReplace)
@@ -3256,7 +3261,7 @@ private fun loadFloatingIcons(
         "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
         "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
         "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
-        "replace" to { onIntent(ReadBookIntent.MenuSettingReplace) },
+        "replace" to { onIntent(ReadBookIntent.MenuEnableReplace) },
         "replace_badge" to { onIntent(ReadBookIntent.MenuSettingReplace) },
         "auto_page" to {
             if (state.isAutoPage) {
@@ -3275,6 +3280,7 @@ private fun loadFloatingIcons(
         if (state.isReadAloudRunning) add("read_aloud")
         if (state.isAutoPage) add("auto_page")
         if (state.translationMode) add("translate")
+        if (state.useReplaceRule) add("replace")
     }
 
     return state.menuConfig.titleBarButtons
@@ -3289,10 +3295,16 @@ private fun loadFloatingIcons(
                 label = info.label,
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},
-                onLongClick = if (id == "read_aloud") {
-                    { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
-                } else {
-                    null
+                onLongClick = when (id) {
+                    "read_aloud" -> {
+                        { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
+                    }
+
+                    "replace" -> {
+                        { onIntent(ReadBookIntent.MenuSettingReplace) }
+                    }
+
+                    else -> null
                 },
             )
         }

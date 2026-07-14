@@ -707,8 +707,12 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuEnableReplace -> {
                 ReadBook.book?.let {
-                    it.setUseReplaceRule(!it.getUseReplaceRule())
+                    val enabled = !it.getUseReplaceRule()
+                    it.setUseReplaceRule(enabled)
                     ReadBook.saveRead()
+                    _uiState.update { state ->
+                        state.copy(useReplaceRule = enabled, replaceRuleEnabled = enabled)
+                    }
                     replaceRuleChanged()
                 }
             }
@@ -4374,6 +4378,9 @@ class ReadBookViewModel(
         ReadBook.book?.let {
             it.setUseReplaceRule(enabled)
             ReadBook.saveRead()
+            _uiState.update { state ->
+                state.copy(useReplaceRule = enabled, replaceRuleEnabled = enabled)
+            }
             replaceRuleChanged()
         }
     }

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -39,12 +38,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
-import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal val SeriesIconSize: Dp
@@ -256,7 +251,7 @@ internal fun squareSize(size: Dp) = DpSize(size, size)
 private fun containerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
-        SeriesIconButtonStyle.Tonal,
+        SeriesIconButtonStyle.Tonal -> LegadoTheme.colorScheme.surface
         SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface.copy(alpha = 0f)
     }
 }
