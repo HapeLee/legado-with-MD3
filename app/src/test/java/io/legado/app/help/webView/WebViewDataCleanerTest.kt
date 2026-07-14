@@ -31,7 +31,7 @@ class WebViewDataCleanerTest {
             File(this, "Default/Cookies").createFileWithParents()
         }
 
-        assertTrue(clearDataDirectories(webViewDirectory, huaweiWebViewDirectory))
+        clearDataDirectories(webViewDirectory, huaweiWebViewDirectory)
         assertTrue(webViewDirectory.isDirectory)
         assertTrue(webViewDirectory.listFiles().isNullOrEmpty())
         assertFalse(huaweiWebViewDirectory.exists())
@@ -42,7 +42,7 @@ class WebViewDataCleanerTest {
         val webViewDirectory = File(testDirectory, "app_webview").apply { mkdirs() }
         val huaweiWebViewDirectory = File(testDirectory, "app_hws_webview").apply { mkdirs() }
 
-        assertTrue(clearDataDirectories(webViewDirectory, huaweiWebViewDirectory))
+        clearDataDirectories(webViewDirectory, huaweiWebViewDirectory)
         assertTrue(webViewDirectory.isDirectory)
         assertFalse(huaweiWebViewDirectory.exists())
     }

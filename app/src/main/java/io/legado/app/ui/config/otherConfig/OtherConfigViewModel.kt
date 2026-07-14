@@ -2,8 +2,6 @@ package io.legado.app.ui.config.otherConfig
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
-import android.os.Handler
-import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,6 +24,7 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,13 +40,11 @@ class OtherConfigViewModel(
     }
 
     private val packageManager = appCtx.packageManager
-    private val mainHandler = Handler(Looper.getMainLooper())
     private val componentName = ComponentName(
         appCtx,
         SharedReceiverActivity::class.java.name
     )
     private var clearWebViewDataJob: Job? = null
-    private var restartScheduled = false
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -104,19 +101,16 @@ class OtherConfigViewModel(
     }
 
     fun clearWebViewData() {
-        if (clearWebViewDataJob?.isActive == true || restartScheduled) return
+        if (clearWebViewDataJob?.isActive == true) return
 
         clearWebViewDataJob = viewModelScope.launch {
             withContext(NonCancellable) {
                 runCatching {
                     WebViewDataCleaner.clear(appCtx)
                 }.onSuccess {
-                    restartScheduled = true
                     appCtx.toastOnUi(R.string.clear_webview_data_success)
-                    mainHandler.postDelayed(
-                        { appCtx.restart() },
-                        RESTART_DELAY_MILLIS
-                    )
+                    delay(RESTART_DELAY_MILLIS)
+                    appCtx.restart()
                 }.onFailure {
                     AppLog.put("清除 WebView 数据失败", it)
                     appCtx.toastOnUi(R.string.clear_webview_data_failed)

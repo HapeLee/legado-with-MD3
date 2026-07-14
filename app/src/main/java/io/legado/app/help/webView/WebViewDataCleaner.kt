@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.IOException
 import kotlin.coroutines.resume
 
 object WebViewDataCleaner {
@@ -18,14 +17,17 @@ object WebViewDataCleaner {
             clearPlatformData(context.applicationContext)
         }
 
-        val directoriesCleared = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            val dataDirectory = File(context.applicationInfo.dataDir)
             clearDataDirectories(
+<<<<<<< Updated upstream
                 webViewDirectory = File(context.applicationInfo.dataDir, "app_webview"),
                 huaweiWebViewDirectory = File(context.applicationInfo.dataDir, "app_hws_webview"),
+=======
+                webViewDirectory = File(dataDirectory, "app_webview"),
+                huaweiWebViewDirectory = File(dataDirectory, "app_hws_webview"),
+>>>>>>> Stashed changes
             )
-        }
-        if (!directoriesCleared) {
-            throw IOException("Unable to delete WebView data directories")
         }
     }
 
@@ -50,6 +52,7 @@ object WebViewDataCleaner {
 internal fun clearDataDirectories(
     webViewDirectory: File,
     huaweiWebViewDirectory: File,
+<<<<<<< Updated upstream
 ): Boolean {
     val webViewCleared = webViewDirectory.clearContents()
     val huaweiWebViewCleared = huaweiWebViewDirectory.deleteDirectory()
@@ -71,4 +74,9 @@ private fun File.deleteDirectory(): Boolean {
     if (!exists()) return true
     if (!isDirectory) return false
     return deleteRecursively() && !exists()
+=======
+) {
+    FileUtils.delete(webViewDirectory)
+    FileUtils.delete(huaweiWebViewDirectory, deleteRootDir = true)
+>>>>>>> Stashed changes
 }
