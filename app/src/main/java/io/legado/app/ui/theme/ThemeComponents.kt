@@ -191,7 +191,13 @@ fun MiuixThemeWrapper(
                 onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f),
                 cardPrimaryContainer = miuixColorScheme.primary.copy(alpha = 0.1f)
                     .compositeOver(miuixColorScheme.surface),
-                surfaceInput = miuixColorScheme.surface.copy(alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f))
+                surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
+                    Color(ThemeConfig.bookInfoInputColor)
+                } else {
+                    miuixColorScheme.surface.copy(
+                        alpha = (ThemeConfig.containerOpacity / 100f).coerceIn(0f, 1f)
+                    )
+                }
             )
         }
 
