@@ -1,0 +1,49 @@
+{
+  "tag_name": "3.26.13-beta.48",
+  "name": "Pre-release 3.26.13-beta.48",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* fix: 次行缩放问题\n* fix: accurately detect WebView data deletion failures\n* fix navigation back animation toggle\n* feat: 优化界面\n* 修复 清除WebView数据不彻底的问题\n* feat: 优化AI覆写功能\n* fix: preserve theme input color and startup update check\n* feat: 优化阅读弹出菜单样式\n* refactor(header,footer,title): 重置为正文颜色功能(Button->ColorPicker)\n* refactor(main, theme): 统一使用LegadoTheme获取主题色\n* fix: prevent bookshelf content flicker\n* fix(toc): reuse replaced chapter titles\n* fix: 修复主页阅读及设置迁移问题\n* feat: 恢复朗读定时和主菜单操作\n* feat: 在起效替换中显示重新分段\n* fix: 修复平板书签摘要键盘遮挡\n* fix: 收紧文本选择菜单行距\n* fix: 清理全文搜索退出状态\n* 优化关闭模糊封面 书籍详情的显示效果\n* refactor(theme): 统一输入框背景色实现方式\n* 修复检测更新时遇到403报错的问题\n* 新增启动时自动检查更新功能\n* 修复定时听书相关问题\n* 更新内容\n* 关闭详情页背景封面时，上半部显示自定义背景图并渐变，下半部保持纯色保障文字可读\n* 在“阅读页 → 设置 → 更多 → 其他”中增加“编辑选择菜单”入口",
+  "prerelease": true,
+  "created_at": "2026-07-14T12:38:45Z",
+  "assets": [
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.48/legado-3.26.13-beta.48-arm64-v8a.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-07-14T12:53:10Z",
+      "download_count": 0,
+      "id": 476699337,
+      "name": "legado-3.26.13-beta.48-arm64-v8a.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476699337"
+    },
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.48/legado-3.26.13-beta.48-armeabi-v7a.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-07-14T12:53:10Z",
+      "download_count": 0,
+      "id": 476699333,
+      "name": "legado-3.26.13-beta.48-armeabi-v7a.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476699333"
+    },
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.48/legado-3.26.13-beta.48.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-07-14T12:53:10Z",
+      "download_count": 0,
+      "id": 476699332,
+      "name": "legado-3.26.13-beta.48.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476699332"
+    },
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.48/mapping.txt",
+      "content_type": "text/plain",
+      "created_at": "2026-07-14T12:53:10Z",
+      "download_count": 0,
+      "id": 476699334,
+      "name": "mapping.txt",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476699334"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "tag_name": "3.26.12",
+  "name": "Release 3.26.12",
+  "body": "### 这是一个简单优化后的版本\r\n\r\n * 分离紧凑模式，现在可分别调整封面大小和精简详情\r\n * 一些优化\r\n\r\n**提示** 分组请长按已在书架按钮\r\n\r\n### [新增]\r\n\r\n * 独属于 MD3 的主题管理与分享系统\r\n * Compose 下的亮暗色种子色设置，为 MIUIX 主题增加自定义取色功能及专属的关于界面\r\n * 悬浮底栏与液态玻璃底栏效果\r\n * 列表模式背景颜色设置，发现页支持更多样式\r\n * 阅读记录展览界面与成就卡片总览，书籍详情界面的阅读历史\r\n * 文件夹列表横排封面布局，文件夹样式可与书架样式分开独立设置\r\n * 书架界面的书籍管理功能，界面增加书籍信息及文件夹数目显示\r\n * 更多自定义设置 (#994)\r\n * 下载线程调整选项及缓存管理界面，支持管理下载书籍和章节\r\n * 备份支持可选网络、本地，或网络与本地同时备份\r\n * 崩溃包报告页面\r\n * 自由筛选搜索书籍类型功能\r\n * 换源界面新增多选分组和书源功能，以及源编辑功能\r\n * Baseline Profile 以增强应用冷启动性能\r\n * 适用于 Codex 的有关迁移和审查的相关 skill\r\n### [优化]\r\n * 重写搜索核心、下载核心、缓存界面、订阅阅读页面、书籍详情页及本地书籍页面\r\n * 准备切换至 DataStore 偏好设置管理\r\n * 下载代码及多线程调度调整，优化应用后台长时间运行时的下载机制\r\n * 优化书架搜索筛选逻辑，支持书架内筛选书源，搜索框可自动唤出键盘及回车触发搜索\r\n * 选择书源时支持直接搜索，换源时不再因打开浏览器而导致重走流程\r\n * 优化文件夹与书架切换时的跟随手势及动画，改进部分界面的高斯模糊效果\r\n * 合并下载和原本的书架管理界面\r\n * 横排封面模式下支持直接打开书籍\r\n * 为网络导入添加错误状态显示\r\n * 优化封面获取规则，取消边框设置，移除冗余的共享元素动画配置\r\n * 优化系统语言为英语时 App UI 的中英文混搭问题，改进繁体中文 i18n 本地化 (#1010)\r\n * 更新 MediaSession metadata 以适配车载蓝牙显示 (#1008)\r\n### [修复]\r\n * 修复搜索页正则表达式无效导致的 class init 闪退 (#991)\r\n * 修复主线程锁等待导致的特定设备 ANR、部分界面的 OOM 以及其他常规闪退问题\r\n * 修复上传文件 JSON 解析的 NPE、文件夹崩溃及备份恢复重复插入崩溃\r\n * 修复封面缓存未命中导致每次启动都向网络请求、封面不透明、下载失败及列数错误等异常\r\n * 修复阅读书籍未下载时的白屏问题\r\n * 修复列表模式下封面阴影不生效的问题，在未开启模糊时正确裁切边距\r\n * 修复主页面、听书界面、设置项的文字重叠及底部边距显示错误\r\n * 修复规则项多选时的错位问题，以及某些界面错误应用淡入淡出动画的问题\r\n * 修复 WebDav 及书签添加异常、RSS 加载状态缺失、订阅源视频播放问题\r\n * 修复分组下拉加载设置不同时，互相滑动卡住的问题\r\n * 修复书籍刷新限制不生效、书架数据双重过滤、加载更多提示无限循环的问题\r\n * 修复编辑本地书籍时错误删除换行符的问题\r\n * 修复漫画定位错误、换源界面问题、搜不到非小说书籍的问题，以及发现页某些点击项错误响应的情况\r\n",
+  "prerelease": false,
+  "created_at": "2026-05-17T14:21:45Z",
+  "assets": [
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.12/legado-3.26.12-arm64-v8a.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-05-17T14:34:11Z",
+      "download_count": 0,
+      "id": 422543236,
+      "name": "legado-3.26.12-arm64-v8a.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/422543236"
+    },
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.12/legado-3.26.12-armeabi-v7a.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-05-17T14:34:11Z",
+      "download_count": 0,
+      "id": 422543235,
+      "name": "legado-3.26.12-armeabi-v7a.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/422543235"
+    },
+    {
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.12/legado-3.26.12.apk",
+      "content_type": "application/vnd.android.package-archive",
+      "created_at": "2026-05-17T14:34:11Z",
+      "download_count": 0,
+      "id": 422543234,
+      "name": "legado-3.26.12.apk",
+      "state": "uploaded",
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/422543234"
+    }
+  ]
+}
