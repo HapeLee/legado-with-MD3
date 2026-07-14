@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
@@ -56,6 +57,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -107,6 +109,7 @@ import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -126,6 +129,7 @@ import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -133,6 +137,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun HomeRouteScreen(
+    showSourceSetMenuRequest: Long = 0L,
     onOpenBook: (Book) -> Unit,
     onNavigateToBookInfo: (
         name: String?,
@@ -331,6 +336,7 @@ fun HomeRouteScreen(
     }
 
     HomeScreen(
+        showSourceSetMenuRequest = showSourceSetMenuRequest,
         state = state,
         homepageState = homepageState,
         homepageFeedActions = feedActions,
@@ -377,6 +383,7 @@ fun HomeRouteScreen(
 )
 @Composable
 fun HomeScreen(
+    showSourceSetMenuRequest: Long = 0L,
     state: HomeUiState,
     homepageState: HomepageUiState,
     homepageFeedActions: HomepageFeedActions,
@@ -391,6 +398,7 @@ fun HomeScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     val selectedSets = remember(homepageState.manageState.sets) {
@@ -401,10 +409,17 @@ fun HomeScreen(
     })
 
     var showPageMenu by remember { mutableStateOf(false) }
+    var showSourceSetSheet by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val currentPageSourceName by remember(selectedSets, pagerState) {
         derivedStateOf { selectedSets.getOrNull(pagerState.currentPage)?.sourceName }
+    }
+
+    LaunchedEffect(showSourceSetMenuRequest) {
+        if (showSourceSetMenuRequest > 0L && selectedSets.isNotEmpty()) {
+            showSourceSetSheet = true
+        }
     }
 
     LaunchedEffect(pagerState) {
@@ -593,6 +608,36 @@ fun HomeScreen(
             visibleSections = state.visibleSections,
             onIntent = onIntent,
         )
+        AppModalBottomSheet(
+            show = showSourceSetSheet,
+            onDismissRequest = { showSourceSetSheet = false },
+            title = stringResource(R.string.homepage_select_items),
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                itemsIndexed(
+                    items = selectedSets,
+                    key = { _, source -> source.sourceUrl },
+                ) { index, source ->
+                    SelectionItemCard(
+                        title = source.sourceName,
+                        isSelected = index == pagerState.currentPage,
+                        inSelectionMode = true,
+                        containerColor = LegadoTheme.colorScheme.onSheetContent,
+                        onToggleSelection = {
+                            showSourceSetSheet = false
+                            scope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                    )
+                }
+            }
+        }
         AppAlertDialog(
             data = errorMessage,
             onDismissRequest = { errorMessage = null },
@@ -1381,11 +1426,13 @@ private fun HomeSheets(
 private fun AppModalBottomSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
+    title: String? = null,
     content: @Composable () -> Unit,
 ) {
     io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
+        title = title,
     ) {
         content()
     }

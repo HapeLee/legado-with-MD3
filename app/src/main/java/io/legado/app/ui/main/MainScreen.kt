@@ -90,10 +90,6 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
-import top.yukonga.miuix.kmp.basic.NavigationRail as MiuixNavigationRail
-import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
-import top.yukonga.miuix.kmp.basic.NavigationRailValue
-import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -112,6 +108,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.NavigationRailValue
+import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
+import top.yukonga.miuix.kmp.basic.NavigationRail as MiuixNavigationRail
+import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
@@ -214,11 +214,20 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
+    var homeSourceSetMenuRequest by remember { mutableLongStateOf(0L) }
     fun requestBookshelfScrollToTop() {
         bookshelfScrollToTopRequest++
     }
 
     fun handleMainDestinationClick(index: Int, destination: MainDestination) {
+        if (
+            destination == MainDestination.Home &&
+            pagerState.currentPage == index &&
+            pagerState.targetPage == index
+        ) {
+            homeSourceSetMenuRequest++
+            return
+        }
         if (
             destination == MainDestination.Bookshelf &&
             pagerState.currentPage == index &&
@@ -293,7 +302,12 @@ fun MainScreen(
                                             Modifier.combinedClickable(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = null,
-                                                onClick = { handleMainDestinationClick(index, destination) },
+                                                onClick = {
+                                                    handleMainDestinationClick(
+                                                        index,
+                                                        destination
+                                                    )
+                                                },
                                                 onLongClick = {
                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     showGroupMenu = true
@@ -493,6 +507,7 @@ fun MainScreen(
                         CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
                             when (destination) {
                             MainDestination.Home -> HomeRouteScreen(
+                                showSourceSetMenuRequest = homeSourceSetMenuRequest,
                                 onOpenBook = { book ->
                                     context.startActivityForBook(book)
                                 },
