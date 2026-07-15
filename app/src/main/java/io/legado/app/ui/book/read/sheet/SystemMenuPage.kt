@@ -90,6 +90,8 @@ private const val COLOR_BORDER = 11
 private const val COLOR_BORDER_NIGHT = 12
 private const val COLOR_BLUR_TINT = 13
 private const val COLOR_BLUR_TINT_NIGHT = 14
+private const val COLOR_MENU_TEXT = 15
+private const val COLOR_MENU_TEXT_NIGHT = 16
 
 @Composable
 internal fun SystemMenuPage(
@@ -216,6 +218,8 @@ internal fun SystemMenuPage(
                 COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
                 COLOR_BLUR_TINT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(color)))
                 COLOR_BLUR_TINT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColorNight(color)))
+                COLOR_MENU_TEXT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColor(color)))
+                COLOR_MENU_TEXT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColorNight(color)))
             }
             showColorPicker = false
         },
@@ -483,6 +487,27 @@ private fun GlobalMenuTab(
             steps = 99,
             onValueChange = {
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurAlpha(it.toInt())))
+            },
+        )
+        TinyClearColorModeSettingItem(
+            title = stringResource(R.string.read_menu_text_color),
+            description = stringResource(R.string.read_menu_text_color_summary),
+            dayColor = preferences.readMenuTextColor,
+            nightColor = preferences.readMenuTextColorNight,
+            onClearColor = { isNight ->
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        if (isNight) ConfigUpdate.MenuTextColorNight(0)
+                        else ConfigUpdate.MenuTextColor(0)
+                    )
+                )
+            },
+            onClickColor = { isNight ->
+                if (isNight) {
+                    onShowColorPicker(COLOR_MENU_TEXT_NIGHT, preferences.readMenuTextColorNight)
+                } else {
+                    onShowColorPicker(COLOR_MENU_TEXT, preferences.readMenuTextColor)
+                }
             },
         )
         TinyColorModeSettingItem(

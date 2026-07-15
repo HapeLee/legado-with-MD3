@@ -2034,6 +2034,8 @@
     <string name="homepage_select_one_kind">選擇一個分類</string>
     <string name="or">或</string>
     <string name="read_menu_bg_color_summary">閱讀器頂部和底部工具列的背景色</string>
+    <string name="read_menu_text_color">選單文字顏色</string>
+    <string name="read_menu_text_color_summary">預設時使用主題色</string>
     <string name="read_menu_color_source">調色板來源</string>
     <string name="container_background_color">容器背景色</string>
     <string name="read_menu_container_color_summary">閱讀器選單調色板的基礎表面色</string>

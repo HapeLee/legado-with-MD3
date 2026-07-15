@@ -2099,6 +2099,8 @@
     <string name="homepage_status_blocked"> · Blocked</string>
     <string name="homepage_status_joined"> · Already joined</string>
     <string name="read_menu_bg_color_summary">Background for the top and bottom reader bars</string>
+    <string name="read_menu_text_color">Menu Text Color</string>
+    <string name="read_menu_text_color_summary">Uses the theme color by default</string>
     <string name="read_menu_color_source">Palette Source</string>
     <string name="container_background_color">Container Background Color</string>
     <string name="read_menu_container_color_summary">Base surface color for the generated reader menu palette</string>

@@ -534,11 +534,14 @@ private fun ReadBookMenuSurface(
     } else {
         bottomBarSurfaceAlpha
     }
-    val bottomBarTextColor = if (bottomBarVisualState.useContrastContent) {
-        Color.White.copy(alpha = 0.87f).compositeOver(colors.background)
-    } else {
-        LegadoTheme.colorScheme.onSurface
-    }
+    val bottomBarTextColor = Color(
+        if (ReadStyleResolver.isNightTheme()) {
+            state.menuConfig.readMenuTextColorNight
+        } else {
+            state.menuConfig.readMenuTextColor
+        }
+    ).takeUnless { it == Color.Unspecified || it.alpha == 0f }
+        ?: LegadoTheme.colorScheme.onSurface
     val surfaceWindowInsetSides = when {
         isFloating || extendSurfaceToNavigationBar -> WindowInsetsSides.Horizontal
         else -> WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
@@ -925,22 +928,21 @@ private fun MenuTitleBar(
     val topBarTintColor = readMenuTintColor(state.menuConfig)
         .takeIf { topBarVisualState.useTint }
         ?: colors.background
-    val titleTextColor = if (topBarVisualState.useContrastContent) {
-        Color.White.copy(alpha = 0.72f).compositeOver(colors.background)
-    } else {
-        LegadoTheme.colorScheme.onSurface
-    }
-    val labelStyle = if (topBarVisualState.useContrastContent) {
-        LegadoTheme.typography.labelSmallEmphasized.copy(
-            shadow = androidx.compose.ui.graphics.Shadow(
-                color = Color.Black.copy(alpha = 0.12f),
-                offset = Offset.Zero,
-                blurRadius = 12f,
-            )
+    val titleTextColor = Color(
+        if (ReadStyleResolver.isNightTheme()) {
+            state.menuConfig.readMenuTextColorNight
+        } else {
+            state.menuConfig.readMenuTextColor
+        }
+    ).takeUnless { it == Color.Unspecified || it.alpha == 0f }
+        ?: LegadoTheme.colorScheme.onSurface
+    val labelStyle = LegadoTheme.typography.labelSmallEmphasized.copy(
+        shadow = androidx.compose.ui.graphics.Shadow(
+            color = Color.Black.copy(alpha = 0.12f),
+            offset = Offset.Zero,
+            blurRadius = 12f,
         )
-    } else {
-        LegadoTheme.typography.labelSmallEmphasized
-    }
+    )
 
     Column(
         modifier = Modifier

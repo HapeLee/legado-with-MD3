@@ -217,6 +217,8 @@ object ReadBookConfig {
     var readMenuBottomBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuBottomBarLiquidGlassButtons, false)
     var readMenuBorderColor by prefDelegate(PreferKey.readMenuBorderColor, 0)
     var readMenuBorderColorNight by prefDelegate(PreferKey.readMenuBorderColorNight, 0)
+    var readMenuTextColor by prefDelegate(PreferKey.readMenuTextColor, 0)
+    var readMenuTextColorNight by prefDelegate(PreferKey.readMenuTextColorNight, 0)
     var showTitleBarIcons by prefDelegate(PreferKey.showTitleBarIcons, true)
     var readSliderMode by prefDelegate(PreferKey.readSliderMode, "0")
     var showBrightnessView by prefDelegate(PreferKey.showBrightnessView, "1")
@@ -349,6 +351,9 @@ object ReadBookConfig {
 
     val resolvedMenuBorderColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuBorderColorNight else readMenuBorderColor
+
+    val resolvedMenuTextColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuTextColorNight else readMenuTextColor
 
     val resolvedMenuBlurColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuBlurColorNight else readMenuBlurColor

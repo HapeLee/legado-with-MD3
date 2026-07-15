@@ -2090,6 +2090,8 @@
     <string name="ai_test_failed">AI 连接测试失败</string>
     <string name="ai_profile_counts">供应商：%1$d，模型：%2$d，预设：%3$d</string>
     <string name="read_menu_bg_color_summary">阅读顶栏和底栏背景色</string>
+    <string name="read_menu_text_color">菜单文字颜色</string>
+    <string name="read_menu_text_color_summary">默认时使用主题色</string>
     <string name="read_menu_color_source">色板来源</string>
     <string name="container_background_color">容器背景色</string>
     <string name="read_menu_container_color_summary">用于生成阅读菜单色板的基础表面色</string>

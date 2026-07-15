@@ -305,6 +305,8 @@ object PreferKey {
     const val readMenuBgColorNight = "readMenuBgColorNight"
     const val readMenuAccentColorNight = "readMenuAccentColorNight"
     const val readMenuContainerColorNight = "readMenuContainerColorNight"
+    const val readMenuTextColor = "readMenuTextColor"
+    const val readMenuTextColorNight = "readMenuTextColorNight"
     const val readMenuColorMode = "readMenuColorMode"
     const val readMenuIconShowText = "readMenuIconShowText"
     const val readMenuIconStyle = "readMenuIconStyle"

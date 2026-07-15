@@ -2051,6 +2051,8 @@ class ReadBookViewModel(
                 readMenuBorderWidth = ReadBookConfig.readMenuBorderWidth,
                 readMenuBorderColor = ReadBookConfig.readMenuBorderColor,
                 readMenuBorderColorNight = ReadBookConfig.readMenuBorderColorNight,
+                readMenuTextColor = ReadBookConfig.readMenuTextColor,
+                readMenuTextColorNight = ReadBookConfig.readMenuTextColorNight,
                 readMenuBlurAlpha = ReadBookConfig.readMenuBlurAlpha,
                 readMenuBlurColor = ReadBookConfig.readMenuBlurColor,
                 readMenuBlurColorNight = ReadBookConfig.readMenuBlurColorNight,
@@ -4533,6 +4535,24 @@ class ReadBookViewModel(
                     readSettingsRepository.setReadMenuContainerColorNight(update.color)
                 }
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuTextColor -> {
+                ReadBookConfig.readMenuTextColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTextColor(update.color)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuTextColor = update.color))
+                }
+            }
+            is ConfigUpdate.MenuTextColorNight -> {
+                ReadBookConfig.readMenuTextColorNight = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTextColorNight(update.color)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuTextColorNight = update.color))
+                }
             }
             is ConfigUpdate.MenuColorMode -> {
                 val value = update.value.coerceIn(0, 1)

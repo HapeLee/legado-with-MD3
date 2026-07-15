@@ -300,6 +300,8 @@ data class ReadMenuConfig(
     val readMenuBorderWidth: Int = 0,
     val readMenuBorderColor: Int = 0,
     val readMenuBorderColorNight: Int = 0,
+    val readMenuTextColor: Int = 0,
+    val readMenuTextColorNight: Int = 0,
     val readMenuBlurAlpha: Int = 60,
     val readMenuBlurColor: Int = 0,
     val readMenuBlurColorNight: Int = 0,
@@ -1083,6 +1085,12 @@ sealed interface ConfigUpdate {
     }
     data class MenuContainerColorNight(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuTextColor(val color: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuTextColorNight(val color: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuColorMode(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)

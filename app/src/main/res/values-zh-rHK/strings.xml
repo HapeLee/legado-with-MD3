@@ -1902,6 +1902,8 @@
     <string name="read_menu_bar_liquid_glass_buttons">液態玻璃底部按鈕</string>
     <string name="read_menu_bar_liquid_glass_summary">為懸浮底部導航欄使用液態玻璃。需要 Android 13+</string>
     <string name="read_menu_bg_color_summary">頂部和底部閱讀列的背景</string>
+    <string name="read_menu_text_color">選單文字顏色</string>
+    <string name="read_menu_text_color_summary">預設時使用主題色</string>
     <string name="read_menu_blur_alpha">選單不透明度</string>
     <string name="read_menu_blur_color">選單著色</string>
     <string name="read_menu_blur_mode">選單模糊模式</string>

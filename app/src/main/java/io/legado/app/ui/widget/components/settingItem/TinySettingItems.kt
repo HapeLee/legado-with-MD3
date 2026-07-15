@@ -521,9 +521,10 @@ private fun ColorModePill(
                 .offset { IntOffset(x = knobOffset.roundToPx(), y = 0) }
                 .size(knobSize)
                 .clip(CircleShape)
-                .background(
-                    if (currentColor != 0) Color(currentColor)
-                    else LegadoTheme.colorScheme.surfaceContainerLow
+                .background(LegadoTheme.colorScheme.surfaceContainerLow)
+                .then(
+                    if (currentColor != 0) Modifier.background(Color(currentColor))
+                    else Modifier
                 )
                 .clickable(
                     enabled = enabled,
