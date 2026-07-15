@@ -186,7 +186,7 @@ fun TextActionSelectionMenu(
                     NormalCard(
                         modifier = Modifier.widthIn(max = menuCardMaxWidth),
                         containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 12.dp,
+                        elevation = 6.dp,
                         cornerRadius = 12.dp,
                     ) {
                         QuickMenuView(
@@ -250,7 +250,7 @@ fun TextActionSelectionMenu(
                     NormalCard(
                         modifier = Modifier.widthIn(max = menuCardMaxWidth),
                         containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 12.dp,
+                        elevation = 6.dp,
                         cornerRadius = 12.dp,
                     ) {
                         MoreMenuView(
