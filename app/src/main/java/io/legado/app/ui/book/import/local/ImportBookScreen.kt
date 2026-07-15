@@ -86,6 +86,7 @@ private fun ImportBookContent(
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSelectFolder: () -> Unit,
+    onSelectBookFiles: () -> Unit,
     onScanFolder: () -> Unit,
     onImportFileName: () -> Unit,
     onSortChange: (Int) -> Unit,
@@ -192,7 +193,7 @@ private fun ImportBookContent(
                 )
             )
         ),
-        onAddClick = null
+        onAddClick = onSelectBookFiles
     ) { paddingValues ->
         AppPullToRefresh(
             modifier = Modifier
@@ -251,6 +252,11 @@ fun ImportBookScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         viewModel.dispatch(ImportBookIntent.FolderPicked(uri, pickerTarget))
+    }
+    val selectBookFiles = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        viewModel.dispatch(ImportBookIntent.BookFilesPicked(uris))
     }
     val handleBack = {
         when {
@@ -359,6 +365,21 @@ fun ImportBookScreen(
         onSearchToggle = { viewModel.dispatch(ImportBookIntent.SearchToggle(it)) },
         onSearchQueryChange = { viewModel.dispatch(ImportBookIntent.SearchQueryChange(it)) },
         onSelectFolder = { showFolderPicker = true },
+        onSelectBookFiles = {
+            selectBookFiles.launch(
+                arrayOf(
+                    "text/plain",
+                    "application/epub+zip",
+                    "application/pdf",
+                    "application/x-mobipocket-ebook",
+                    "application/vnd.amazon.ebook",
+                    "application/zip",
+                    "application/x-rar-compressed",
+                    "application/x-7z-compressed",
+                    "application/octet-stream"
+                )
+            )
+        },
         onScanFolder = { viewModel.dispatch(ImportBookIntent.ScanFolder) },
         onImportFileName = {
             fileNameJs = ImportBookConfig.bookImportFileName.orEmpty()
