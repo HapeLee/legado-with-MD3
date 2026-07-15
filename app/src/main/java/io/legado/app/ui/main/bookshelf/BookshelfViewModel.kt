@@ -1056,7 +1056,9 @@ class BookshelfViewModel(
     private fun BookShelfItem.matchesSearchKey(searchKey: String): Boolean {
         return name.contains(searchKey, true) ||
                 author.contains(searchKey, true) ||
-                originName.contains(searchKey, true)
+                originName.contains(searchKey, true) ||
+                kind?.contains(searchKey, true) == true ||
+                customTag?.contains(searchKey, true) == true
     }
 
 }

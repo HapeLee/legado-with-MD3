@@ -2477,4 +2477,6 @@
     <string name="hidden_items">Hidden Items</string>
     <string name="merged_in_multiline">Merged in multiline mode</string>
     <string name="apply">Apply</string>
+    <string name="source_categories">Source categories</string>
+    <string name="my_tags">My tags</string>
 </resources>

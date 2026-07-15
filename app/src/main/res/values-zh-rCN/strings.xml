@@ -2472,4 +2472,6 @@
     <string name="hidden_items">已隐藏项目</string>
     <string name="merged_in_multiline">多行模式下将合并展示</string>
     <string name="apply">应用</string>
+    <string name="source_categories">书源分类</string>
+    <string name="my_tags">我的标签</string>
 </resources>

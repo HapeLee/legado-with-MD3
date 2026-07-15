@@ -2380,4 +2380,6 @@
     <string name="collapsed_menu">折疊選單</string>
     <string name="hidden_items">已隱藏項目</string>
     <string name="merged_in_multiline">多行模式下將合併顯示</string>
+    <string name="source_categories">書源分類</string>
+    <string name="my_tags">我的標籤</string>
 </resources>

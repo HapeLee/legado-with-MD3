@@ -15,11 +15,11 @@ import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightTagRule
-import io.legado.app.ui.book.info.HighlightedTag
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.book.info.HighlightedTag
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
@@ -122,8 +122,18 @@ fun Book.contains(word: String?): Boolean {
             || originName.contains(word)
             || origin.contains(word)
             || kind?.contains(word) == true
+            || customTag?.contains(word) == true
             || intro?.contains(word) == true
 }
+
+fun Book.getSourceTagList(): List<String> =
+    kind?.splitNotBlank(",", "\n").orEmpty().distinct()
+
+fun Book.getCustomTagList(): List<String> =
+    customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
+
+fun Book.getDisplayTagList(): List<String> =
+    (getCustomTagList() + getSourceTagList()).distinct()
 
 /**
  * 仅在目标bookUrl未被其他书占用，或判定为同一本书时，允许迁移主键。
@@ -439,7 +449,7 @@ fun applyTagGroupRules(
 
     val updatedBooks = mutableListOf<Book>()
     for (book in books) {
-        val kinds = book.kind?.splitNotBlank(",", "\n").orEmpty()
+        val kinds = book.getDisplayTagList()
         var newGroupMask = 0L
         for ((rule, regex) in compiledRules) {
             if (kinds.any { regex.containsMatchIn(it) }) {
@@ -496,7 +506,7 @@ fun applyTagGroupRulesForBook(book: Book) {
     }
 
     val allRuleGroupMask = groupCache.values.fold(0L) { acc, id -> acc or id }
-    val kinds = book.kind?.splitNotBlank(",", "\n").orEmpty()
+    val kinds = book.getDisplayTagList()
     var newGroupMask = 0L
     for ((rule, regex) in compiledRules) {
         if (kinds.any { regex.containsMatchIn(it) }) {

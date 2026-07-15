@@ -31,6 +31,7 @@ data class BookShelfItem(
     val canUpdate: Boolean = true,
     val intro: String? = null,
     val kind: String? = null,
+    val customTag: String? = null,
     val wordCount: String? = null
 ) {
     fun getDisplayCover() = if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
@@ -52,8 +53,11 @@ data class BookShelfItem(
      */
     fun toUiItem(): BookUiItem {
         val tagList = mutableListOf<String>()
-        kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
+        customTag?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
             tagList.addAll(it)
+        }
+        kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
+            tagList.addAll(it.filterNot(tagList::contains))
         }
         if (!wordCount.isNullOrBlank() && !tagList.contains(wordCount)) {
             tagList.add(wordCount)
@@ -103,5 +107,6 @@ fun BookShelfItem.toLightBook() = Book(
     order = order,
     canUpdate = canUpdate,
     wordCount = wordCount,
-    kind = kind
+    kind = kind,
+    customTag = customTag
 )

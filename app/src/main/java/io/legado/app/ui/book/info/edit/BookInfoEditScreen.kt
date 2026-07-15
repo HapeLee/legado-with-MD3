@@ -53,7 +53,6 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
@@ -65,6 +64,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -220,6 +220,15 @@ fun BookInfoEditContent(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
+        AppTextField(
+            value = uiState.sourceKindList.joinToString(", "),
+            onValueChange = {},
+            readOnly = true,
+            label = stringResource(R.string.source_categories),
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         KindEditor(
             kindList = uiState.kindList,
             onKindListChange = { viewModel.onKindListChange(it) },
@@ -325,6 +334,10 @@ fun KindEditor(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        AppText(
+            text = stringResource(R.string.my_tags),
+            modifier = Modifier.padding(end = 8.dp),
+        )
         LazyRow(
             state = listState,
             modifier = Modifier

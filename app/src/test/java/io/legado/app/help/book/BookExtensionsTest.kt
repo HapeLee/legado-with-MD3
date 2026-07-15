@@ -1,10 +1,25 @@
 package io.legado.app.help.book
 
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.HighlightTagRule
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BookExtensionsTest {
+
+    @Test
+    fun displayTags_keepsCustomAndSourceTagsSeparateAndDeduplicated() {
+        val book = Book(
+            kind = "奇幻,连载",
+            customTag = "收藏,奇幻",
+        )
+
+        assertEquals(listOf("奇幻", "连载"), book.getSourceTagList())
+        assertEquals(listOf("收藏", "奇幻"), book.getCustomTagList())
+        assertEquals(listOf("收藏", "奇幻", "连载"), book.getDisplayTagList())
+        assertEquals("奇幻,连载", book.kind)
+        assertEquals("收藏,奇幻", book.customTag)
+    }
 
     @Test
     fun parseHighlightedTags_ordersMatchesByRuleOrder() {
