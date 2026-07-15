@@ -85,10 +85,6 @@ class ReadAloudSettingsRepository(
         ReadConfig.ttsTimer = timer
     }
 
-    suspend fun saveTtsTimer(value: Int) {
-        settingsRepository.putInt(PreferKey.ttsTimer, PlaybackTimer.normalize(value))
-    }
-
     suspend fun setTtsFollowSys(value: Boolean) {
         ReadConfig.ttsFollowSys = value
     }
