@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -32,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,6 +58,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -330,62 +330,71 @@ fun KindEditor(
         onKindListChange(mutable)
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AppText(
-            text = stringResource(R.string.my_tags),
-            modifier = Modifier.padding(end = 8.dp),
+            text = stringResource(R.string.my_tags)
         )
-        LazyRow(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fadingEdge(listState),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items(kindList.size, key = { kindList[it] }) { index ->
-                val kind = kindList[index]
-                ReorderableItem(reorderableState, key = kind) { isDragging ->
-                    KindChip(
-                        text = kind,
-                        isDragging = isDragging,
-                        onClick = {
-                            editingIndex = index
-                            editText = kind
-                        },
-                        modifier = Modifier
-                            .longPressDraggableHandle(
-                                onDragStarted = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                },
-                                onDragStopped = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                }
-                            )
-                            .animateItem()
-                    )
+            LazyRow(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fadingEdge(listState),
+                contentPadding = PaddingValues(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(kindList.size, key = { kindList[it] }) { index ->
+                    val kind = kindList[index]
+                    ReorderableItem(
+                        state = reorderableState,
+                        key = kind
+                    ) { isDragging ->
+                        KindChip(
+                            text = kind,
+                            isDragging = isDragging,
+                            onClick = {
+                                editingIndex = index
+                                editText = kind
+                            },
+                            modifier = Modifier
+                                .longPressDraggableHandle(
+                                    onDragStarted = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                    },
+                                    onDragStopped = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                    }
+                                )
+                                .animateItem()
+                        )
+                    }
                 }
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            MediumOutlinedButton(
+                onClick = {
+                    onReset()
+                },
+                icon = Icons.Default.Replay
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            MediumOutlinedButton(
+                onClick = {
+                    editingIndex = -1
+                    editText = ""
+                },
+                icon = Icons.Default.Add
+            )
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedButton(
-            onClick = {
-                onReset()
-            },
-            icon = Icons.Default.Replay
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedButton(
-            onClick = {
-                editingIndex = -1
-                editText = ""
-            },
-            icon = Icons.Default.Add
-        )
     }
+
 
     if (editingIndex != null) {
         val isAdding = editingIndex == -1
@@ -443,12 +452,13 @@ private fun KindChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = LegadoTheme.colorScheme.surfaceContainer,
+    NormalCard(
+        cornerRadius = 8.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         contentColor = LegadoTheme.colorScheme.onSurface,
-        shadowElevation = if (isDragging) 8.dp else 0.dp,
+        elevation = if (isDragging) 2.dp else 0.dp,
         modifier = modifier
+            .padding(2.dp)
             .zIndex(if (isDragging) 1f else 0f)
             .clickable(onClick = onClick)
     ) {
