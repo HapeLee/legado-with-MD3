@@ -724,7 +724,8 @@ private fun ReadBookMenuSurface(
                         ReadBookMenuRoutePage(
                             title = stringResource(R.string.padding),
                             maxHeight = maxHeight,
-                            scrollContent = true,
+                            scrollContent = false,
+                            animateSize = false,
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
