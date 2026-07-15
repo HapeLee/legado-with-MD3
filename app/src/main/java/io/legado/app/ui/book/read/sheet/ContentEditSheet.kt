@@ -17,9 +17,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextLayoutResult
@@ -29,12 +31,11 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.sendToClip
 
 @Composable
 fun ContentEditSheet(
@@ -43,7 +44,6 @@ fun ContentEditSheet(
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    val context = LocalContext.current
     val editorState = remember { TextFieldState() }
     val editorScrollState = rememberScrollState()
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -98,40 +98,34 @@ fun ContentEditSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = state.contentEditTitle,
+        startAction = {
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.ResetContentEdit) },
+                icon = Icons.Default.Restore,
+                contentDescription = stringResource(R.string.reset),
+            )
+        },
+        endAction = {
+            MediumTonalButton(
+                onClick = {
+                    onIntent(
+                        ReadBookIntent.SaveContentEdit(
+                            editorState.text.toString(),
+                            state.contentEditSaveToSource,
+                        )
+                    )
+                    onDismissRequest()
+                },
+                icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.action_save),
+            )
+        },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                SmallTonalButton(
-                    onClick = {
-                        onIntent(
-                            ReadBookIntent.SaveContentEdit(
-                                editorState.text.toString(),
-                                state.contentEditSaveToSource
-                            )
-                        )
-                        onDismissRequest()
-                    },
-                    text = stringResource(R.string.action_save)
-                )
-                SmallTonalButton(
-                    onClick = {
-                    onIntent(ReadBookIntent.ResetContentEdit)
-                    },
-                    text = stringResource(R.string.reset)
-                )
-                SmallTonalButton(
-                    onClick = {
-                    context.sendToClip("${state.contentEditTitle}\n${editorState.text}")
-                    }, text = stringResource(R.string.copy_all)
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
             if (state.contentEditLoading) {
                 Box(
                     modifier = Modifier
