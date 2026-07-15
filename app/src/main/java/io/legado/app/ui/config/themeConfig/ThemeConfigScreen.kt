@@ -882,7 +882,7 @@ fun ThemeConfigScreen(
         selectedFontPath = ThemeConfig.appFontPath,
         onDismissRequest = { showFontSheet = false },
         onSelectFont = { doc ->
-            ThemeConfig.appFontPath = doc.uri.toString()
+            viewModel.setAppFont(doc)
         },
         onOpenFolderPicker = { fontFolderLauncher.launch(null) },
         startAction = {

@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class ThemeManageViewModel(
     private val themePackageManager: ThemePackageManager,
 ) : ViewModel() {
+
+    private val operationMutex = Mutex()
 
     private val _uiState = MutableStateFlow(ThemeManageUiState())
     val uiState = _uiState.asStateFlow()
@@ -34,6 +37,7 @@ class ThemeManageViewModel(
     }
 
     fun onIntent(intent: ThemeManageIntent) {
+        if (operationMutex.isLocked) return
         when (intent) {
             ThemeManageIntent.LoadSavedThemes -> loadSavedThemes()
             is ThemeManageIntent.ExportPackage -> exportPackage(intent)
@@ -46,7 +50,7 @@ class ThemeManageViewModel(
     }
 
     private fun loadSavedThemes() {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val themes = themePackageManager.loadSavedThemes()
             _uiState.update {
@@ -69,7 +73,7 @@ class ThemeManageViewModel(
     }
 
     private fun saveTheme(intent: ThemeManageIntent.SaveTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = runCatching {
                 themePackageManager.saveTheme(
@@ -95,7 +99,7 @@ class ThemeManageViewModel(
     }
 
     private fun applySavedTheme(theme: SavedTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.applySavedTheme(theme)
             if (result.isSuccess) {
@@ -114,7 +118,7 @@ class ThemeManageViewModel(
     }
 
     private fun deleteSavedTheme(theme: SavedTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.deleteSavedTheme(theme)
             if (result.isSuccess) {
@@ -132,7 +136,7 @@ class ThemeManageViewModel(
     }
 
     private fun exportPackage(intent: ThemeManageIntent.ExportPackage) {
-        viewModelScope.launch {
+        launchExclusive {
             val result = themePackageManager.exportPackage(
                 uri = Uri.parse(intent.uri),
                 themeName = intent.themeName,
@@ -153,13 +157,13 @@ class ThemeManageViewModel(
     }
 
     private fun importPackage(uri: String) {
-        viewModelScope.launch {
+        launchExclusive {
             emitImportResult(themePackageManager.importPackage(Uri.parse(uri)))
         }
     }
 
     private fun importLegacyJson(uri: String) {
-        viewModelScope.launch {
+        launchExclusive {
             emitImportResult(themePackageManager.importLegacyJson(Uri.parse(uri)))
         }
     }
@@ -181,6 +185,17 @@ class ThemeManageViewModel(
                 )
             }
         )
+    }
+
+    private fun launchExclusive(block: suspend () -> Unit) {
+        if (!operationMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                operationMutex.unlock()
+            }
+        }
     }
 }
 

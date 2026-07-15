@@ -177,14 +177,12 @@ class ThemePackageManager(
 
     suspend fun loadSavedThemes(): List<SavedTheme> = withContext(Dispatchers.IO) {
         savedThemesRoot.mkdirs()
-        val folderThemes = savedThemesRoot
+        savedThemesRoot
             .listFiles()
             .orEmpty()
             .filter(File::isDirectory)
+            .filterNot { it.name.endsWith(".tmp") }
             .mapNotNull(::readSavedThemeFolder)
-        ThemeImportExport.reload()
-        val folderThemeNames = folderThemes.mapTo(mutableSetOf()) { it.name }
-        folderThemes + ThemeImportExport.savedThemes.filter { it.name !in folderThemeNames }
     }
 
     suspend fun saveTheme(
@@ -210,43 +208,22 @@ class ThemePackageManager(
                 error("Failed to delete saved theme: ${theme.name}")
             }
 
-            ThemeImportExport.deleteSavedTheme(theme)
         }
     }
 
     suspend fun applySavedTheme(theme: SavedTheme): Result<Unit> =
         withContext(Dispatchers.IO) {
             runSuspendCatching {
-                val packageRoot = theme.packageRootPath?.let(::File)
-                val packageManifest = theme.packageManifest
-                if (packageRoot?.isDirectory == true && packageManifest != null) {
-                    applySavedThemeFolder(theme, packageRoot, packageManifest)
-                    return@runSuspendCatching
+                val packageRoot = requireNotNull(theme.packageRootPath?.let(::File)) {
+                    "Saved theme folder is missing: ${theme.name}"
                 }
-
-                val savedAlbumId = theme.data.selectedCoverAlbumId
-                    ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
-                val appliedAssets = ThemeImportExport.applyToThemeConfig(
-                    data = theme.data,
-                    applyEmbeddedCoverAssets = savedAlbumId == null,
-                )
-                val selectedCoverAlbumId = if (savedAlbumId != null) {
-                    coverAlbumUseCase.selectAlbum(savedAlbumId)
-                    savedAlbumId
-                } else {
-                    importLegacyCoverAlbums(
-                        albumName = theme.name,
-                        appliedAssets = appliedAssets,
-                    )
+                val packageManifest = requireNotNull(theme.packageManifest) {
+                    "Saved theme manifest is missing: ${theme.name}"
                 }
-                if (selectedCoverAlbumId != theme.data.selectedCoverAlbumId) {
-                    ThemeImportExport.saveCurrentAsTheme(
-                        name = theme.name,
-                        data = theme.data.copy(
-                            selectedCoverAlbumId = selectedCoverAlbumId,
-                        ),
-                    )
+                require(packageRoot.isDirectory) {
+                    "Saved theme folder does not exist: ${theme.name}"
                 }
+                applySavedThemeFolder(theme, packageRoot, packageManifest)
             }
         }
 
@@ -698,11 +675,18 @@ class ThemePackageManager(
         selectedCoverAlbumId: String?,
     ) {
         saveTheme(
-            name = ThemeImportExport.uniqueSavedThemeName(name),
+            name = uniqueSavedThemeName(name),
             data = ThemeImportExport.exportFromCurrent().copy(
                 selectedCoverAlbumId = selectedCoverAlbumId,
             ),
         )
+    }
+
+    private fun uniqueSavedThemeName(name: String): String {
+        if (!savedThemeDir(name).exists()) return name
+        var index = 2
+        while (savedThemeDir("$name $index").exists()) index++
+        return "$name $index"
     }
 
     private fun importedThemeName(
