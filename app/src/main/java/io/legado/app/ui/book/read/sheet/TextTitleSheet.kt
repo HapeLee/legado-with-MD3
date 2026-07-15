@@ -620,10 +620,6 @@ internal fun TitleSettingsPage(
             }
             showColorPicker = false
         },
-        onResetToDefault = {
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(0)))
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(0)))
-        },
     )
 }
 
