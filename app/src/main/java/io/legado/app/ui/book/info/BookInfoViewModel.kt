@@ -176,7 +176,8 @@ class BookInfoViewModel(
         origin: String? = null,
         coverPath: String? = null
     ) {
-        if (currentBook?.bookUrl == bookUrl) return
+        val current = currentBook
+        if (current != null) return
         _uiState.value = BookInfoUiState() // 立即重置 UI 状态
         currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
             Book(
@@ -1517,6 +1518,7 @@ class BookInfoViewModel(
             latestChapterTitle = latestChapterTitle,
             totalChapterNum = totalChapterNum,
             durChapterIndex = durChapterIndex,
+            durChapterPos = durChapterPos,
             remark = remark,
             displayIntro = getDisplayIntro(),
         )

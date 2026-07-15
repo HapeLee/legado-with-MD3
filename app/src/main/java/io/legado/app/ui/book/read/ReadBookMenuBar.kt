@@ -1612,7 +1612,7 @@ private fun MenuTitleBarMergedGlassButton(
             ) { dismiss ->
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.change_origin),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuBookChangeSource) },
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.chapter_change_source),
@@ -1670,7 +1670,7 @@ private fun SourceActionButton(
         ) { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.change_origin),
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuBookChangeSource) },
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.chapter_change_source),

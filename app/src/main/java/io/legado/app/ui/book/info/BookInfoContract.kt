@@ -60,6 +60,7 @@ data class BookInfoBookUi(
     val latestChapterTitle: String?,
     val totalChapterNum: Int,
     val durChapterIndex: Int,
+    val durChapterPos: Int,
     val remark: String?,
     val displayIntro: String?,
 )
