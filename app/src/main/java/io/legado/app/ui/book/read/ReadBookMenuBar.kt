@@ -84,6 +84,7 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -164,11 +165,11 @@ import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
 import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppVerticalSlider
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -181,6 +182,7 @@ import io.legado.app.ui.widget.components.reader.readerMenuHazeEffect
 import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlass
 import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
 import io.legado.app.ui.widget.components.reader.readerMenuSurfaceBrush
+import io.legado.app.ui.widget.components.text.AnimatedText
 import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -2139,37 +2141,36 @@ private fun SearchBottomMenuContent(
             .padding(top = 12.dp, bottom = bottomPadding)
             .animateContentSize(),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SearchInfoPill(
-                modifier = Modifier.weight(0.7f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
+                AnimatedText(
                     text = if (totalResults > 0) "${currentIndex + 1} / $totalResults" else "0 / 0",
-                    style = LegadoTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "$percent%",
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                TextCard(
+                    text = "$percent%"
                 )
-            }
-
-            SearchInfoPill(
-                modifier = Modifier.weight(1.3f),
-            ) {
-                Text(
+                Spacer(Modifier.width(16.dp))
+                VerticalDivider(
+                    color = LegadoTheme.colorScheme.outlineVariant,
+                    modifier = Modifier
+                        .height(8.dp)
+                        .width(1.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                AnimatedText(
                     text = state.chapterName.ifBlank { "-" },
-                    style = LegadoTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -2182,14 +2183,14 @@ private fun SearchBottomMenuContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SearchMenuActionButton(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(2f),
                 icon = Icons.Default.Search,
-                text = stringResource(R.string.search),
+                text = stringResource(R.string.all_results),
                 onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
             )
             SearchMenuActionButton(
@@ -2204,7 +2205,8 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(0.55f),
                 icon = Icons.Default.Close,
-                text = stringResource(R.string.exit),
+                text = null,
+                iconContentDescription = stringResource(R.string.exit),
                 onClick = { onIntent(ReadBookIntent.ExitSearch) },
             )
         }
@@ -2232,33 +2234,36 @@ private fun SearchInfoPill(
 private fun SearchMenuActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
-    text: String,
+    text: String?,
+    iconContentDescription: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = modifier
-            .height(44.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(LegadoTheme.colorScheme.surfaceContainerLow)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = iconContentDescription,
             tint = LegadoTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(16.dp),
         )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = text,
-            style = LegadoTheme.typography.labelMediumEmphasized,
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (text != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = LegadoTheme.typography.labelMediumEmphasized,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

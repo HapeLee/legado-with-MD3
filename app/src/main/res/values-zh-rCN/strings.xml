@@ -105,6 +105,7 @@
     <string name="version">版本</string>
     <string name="local">本地</string>
     <string name="search">搜索</string>
+    <string name="all_results">全部结果</string>
     <string name="search_placeholder">搜索…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">来源：%s</string>
