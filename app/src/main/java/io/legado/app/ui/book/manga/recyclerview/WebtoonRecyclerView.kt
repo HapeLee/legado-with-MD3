@@ -65,6 +65,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         lastVisibleItemPosition =
             (layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
         firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+        notifyCenterPositionChanged(dx, dy)
     }
 
     override fun onScrollStateChanged(state: Int) {
@@ -84,12 +85,16 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         type: Int
     ): Boolean {
         val position = findCenterViewPosition()
+        mNestedPreScrollListener?.onPreScrollListener(this, dx, dy, position)
+        return super.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow, type)
+    }
+
+    private fun notifyCenterPositionChanged(dx: Int, dy: Int) {
+        val position = findCenterViewPosition()
         if (position != NO_POSITION && position != mLastCenterViewPosition) {
             mLastCenterViewPosition = position
             mPreScrollListener?.onPreScrollListener(this, dx, dy, position)
         }
-        mNestedPreScrollListener?.onPreScrollListener(this, dx, dy, position)
-        return super.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow, type)
     }
 
     private fun getPositionX(positionX: Float): Float {

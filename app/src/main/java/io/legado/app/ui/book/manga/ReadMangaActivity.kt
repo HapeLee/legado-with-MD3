@@ -75,8 +75,8 @@ import io.legado.app.ui.book.read.observeEyeProtectionEvents
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
@@ -365,11 +365,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             }
 
             override fun nextChapter() {
-                ReadManga.moveToNextChapter()
+                ReadManga.moveToNextChapter(toFirst = true)
             }
 
             override fun prevChapter() {
-                ReadManga.moveToPrevChapter()
+                ReadManga.moveToPrevChapter(toFirst = true)
             }
         }
 
