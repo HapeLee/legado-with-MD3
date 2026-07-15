@@ -2004,6 +2004,8 @@ class ReadBookViewModel(
             textColor = dur.getTextColor(),
             textColorNight = dur.getTextColorNight(),
             textColorEInk = dur.getTextColorEInk(),
+            textFont = config.textFont,
+            titleFont = config.titleFont,
             pageAnim = actualConfig.getPageAnim(),
             pageAnimEInk = actualConfig.getPageAnimEInk(),
             shareLayout = config.shareLayout,

@@ -84,6 +84,8 @@ interface ReadBookRouteHost :
 
     fun closeReadBook()
 
+    fun previewBrightness(value: Int)
+
     fun upSystemUiVisibility(
         isInMultiWindow: Boolean,
         toolBarHide: Boolean,
@@ -491,12 +493,14 @@ fun ReadBookRouteScreen(
                 state = state,
                 preferences = readPreferences,
                 onIntent = viewModel::onIntent,
+                onBrightnessPreview = host::previewBrightness,
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
             )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
             ReadBookScreen(
                 state = state,
+                preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
                 onOpenTextSelectMenuConfig = {

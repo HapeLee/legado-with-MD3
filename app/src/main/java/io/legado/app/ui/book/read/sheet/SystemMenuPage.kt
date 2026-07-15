@@ -632,7 +632,7 @@ private fun BottomBarTab(
                 )
             },
         )
-        AnimatedVisibility(visible = !floatingBottomBar && bottomBarBlurMode == ReadMenuBlurMode.Haze) {
+        AnimatedVisibility(visible = !floatingBottomBar) {
             TinyDropdownSettingItem(
                 title = stringResource(R.string.read_menu_bar_blur_style),
                 selectedValue = preferences.readMenuBottomBarBlurStyle.toString(),
@@ -742,30 +742,28 @@ private fun TopBarTab(
                 )
             },
         )
-        AnimatedVisibility(visible = topBarBlurEnabled) {
-            TinyDropdownSettingItem(
-                title = stringResource(R.string.read_menu_bar_blur_style),
-                selectedValue = preferences.readMenuTopBarBlurStyle.toString(),
-                displayEntries = arrayOf(
-                    stringResource(R.string.read_menu_blur_style_solid),
-                    stringResource(R.string.read_menu_blur_style_progressive),
-                ),
-                entryValues = arrayOf(
-                    ReadMenuBlurStyle.Solid.toString(),
-                    ReadMenuBlurStyle.Progressive.toString(),
-                ),
-                onValueChange = {
-                    onIntent(
-                        ReadBookIntent.UpdateConfig(
-                            ConfigUpdate.MenuTopBarBlurSelection(
-                                mode = ReadMenuBlurMode.Haze,
-                                style = it.toInt(),
-                            )
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.read_menu_bar_blur_style),
+            selectedValue = preferences.readMenuTopBarBlurStyle.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.read_menu_blur_style_solid),
+                stringResource(R.string.read_menu_blur_style_progressive),
+            ),
+            entryValues = arrayOf(
+                ReadMenuBlurStyle.Solid.toString(),
+                ReadMenuBlurStyle.Progressive.toString(),
+            ),
+            onValueChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarBlurSelection(
+                            mode = preferences.readMenuTopBarBlurMode,
+                            style = it.toInt(),
                         )
                     )
-                },
-            )
-        }
+                )
+            },
+        )
         AnimatedVisibility(visible = topBarBlurEnabled) {
             TinySwitchSettingItem(
                 title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),

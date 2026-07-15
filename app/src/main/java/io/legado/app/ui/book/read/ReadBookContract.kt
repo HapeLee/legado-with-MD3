@@ -81,6 +81,8 @@ data class ReadBookStyleConfig(
     val textColor: String = "#3E3D3B",
     val textColorNight: String = "#CCCCCC",
     val textColorEInk: String = "#000000",
+    val textFont: String = "",
+    val titleFont: String = "",
     // Page anim
     val pageAnim: Int = 0,
     val pageAnimEInk: Int = 4,

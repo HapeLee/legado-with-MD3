@@ -103,6 +103,15 @@ class ReadBookController(
         pageChanged = false
     }
 
+    override fun previewBrightness(value: Int) {
+        val targetBrightness = value.coerceIn(0, 100) / 100f
+        val attributes = activity.window.attributes
+        if (attributes.screenBrightness != targetBrightness) {
+            attributes.screenBrightness = targetBrightness
+            activity.window.attributes = attributes
+        }
+    }
+
     // Callbacks to Activity for operations that require Activity-level state
     var onScreenOffTimerStart: (() -> Unit)? = null
     var onStartContentLoadFinish: (() -> Unit)? = null
