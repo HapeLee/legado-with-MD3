@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
@@ -109,16 +108,15 @@ import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
-import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -137,7 +135,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun HomeRouteScreen(
-    showSourceSetMenuRequest: Long = 0L,
+    showOverflowMenuRequest: Long = 0L,
     onOpenBook: (Book) -> Unit,
     onNavigateToBookInfo: (
         name: String?,
@@ -336,7 +334,7 @@ fun HomeRouteScreen(
     }
 
     HomeScreen(
-        showSourceSetMenuRequest = showSourceSetMenuRequest,
+        showOverflowMenuRequest = showOverflowMenuRequest,
         state = state,
         homepageState = homepageState,
         homepageFeedActions = feedActions,
@@ -383,7 +381,7 @@ fun HomeRouteScreen(
 )
 @Composable
 fun HomeScreen(
-    showSourceSetMenuRequest: Long = 0L,
+    showOverflowMenuRequest: Long = 0L,
     state: HomeUiState,
     homepageState: HomepageUiState,
     homepageFeedActions: HomepageFeedActions,
@@ -409,16 +407,15 @@ fun HomeScreen(
     })
 
     var showPageMenu by remember { mutableStateOf(false) }
-    var showSourceSetSheet by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val currentPageSourceName by remember(selectedSets, pagerState) {
         derivedStateOf { selectedSets.getOrNull(pagerState.currentPage)?.sourceName }
     }
 
-    LaunchedEffect(showSourceSetMenuRequest) {
-        if (showSourceSetMenuRequest > 0L && selectedSets.isNotEmpty()) {
-            showSourceSetSheet = true
+    LaunchedEffect(showOverflowMenuRequest) {
+        if (showOverflowMenuRequest > 0L) {
+            showPageMenu = true
         }
     }
 
@@ -464,15 +461,25 @@ fun HomeScreen(
                             onDismissRequest = { showPageMenu = false },
                         ) {
                             RoundDropdownMenuItem(
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Settings)
-                                },
                                 text = stringResource(R.string.home_dashboard_settings),
                                 onClick = {
                                     showPageMenu = false
                                     onIntent(HomeIntent.DashboardSettingsClick)
                                 },
                             )
+                            PillDivider()
+                            selectedSets.forEachIndexed { index, source ->
+                                RoundDropdownMenuItem(
+                                    text = source.sourceName,
+                                    isSelected = index == pagerState.currentPage,
+                                    onClick = {
+                                        showPageMenu = false
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 },
@@ -608,36 +615,6 @@ fun HomeScreen(
             visibleSections = state.visibleSections,
             onIntent = onIntent,
         )
-        AppModalBottomSheet(
-            show = showSourceSetSheet,
-            onDismissRequest = { showSourceSetSheet = false },
-            title = stringResource(R.string.homepage_select_items),
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 480.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                itemsIndexed(
-                    items = selectedSets,
-                    key = { _, source -> source.sourceUrl },
-                ) { index, source ->
-                    SelectionItemCard(
-                        title = source.sourceName,
-                        isSelected = index == pagerState.currentPage,
-                        inSelectionMode = true,
-                        containerColor = LegadoTheme.colorScheme.onSheetContent,
-                        onToggleSelection = {
-                            showSourceSetSheet = false
-                            scope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                    )
-                }
-            }
-        }
         AppAlertDialog(
             data = errorMessage,
             onDismissRequest = { errorMessage = null },
@@ -1307,11 +1284,11 @@ private fun HomeDashboardSettingsSheet(
         onDismissRequest = onDismissRequest,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             for (section in HomeDashboardSection.entries) {
-                CompactSwitchSettingItem(
+                TinySwitchSettingItem(
                     title = stringResource(section.labelRes()),
                     checked = section in visibleSections,
                     onCheckedChange = { visible ->

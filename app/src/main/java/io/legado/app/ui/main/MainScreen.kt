@@ -216,7 +216,7 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
-    var homeSourceSetMenuRequest by remember { mutableLongStateOf(0L) }
+    var homeOverflowMenuRequest by remember { mutableLongStateOf(0L) }
     fun requestBookshelfScrollToTop() {
         bookshelfScrollToTopRequest++
     }
@@ -227,7 +227,7 @@ fun MainScreen(
             pagerState.currentPage == index &&
             pagerState.targetPage == index
         ) {
-            homeSourceSetMenuRequest++
+            homeOverflowMenuRequest++
             return
         }
         if (
@@ -515,7 +515,7 @@ fun MainScreen(
                         CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
                             when (destination) {
                             MainDestination.Home -> HomeRouteScreen(
-                                showSourceSetMenuRequest = homeSourceSetMenuRequest,
+                                showOverflowMenuRequest = homeOverflowMenuRequest,
                                 onOpenBook = { book ->
                                     context.startActivityForBook(book)
                                 },
