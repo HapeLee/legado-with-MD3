@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.model.BookChapterCacheInfo
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
@@ -25,12 +27,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
@@ -40,6 +42,7 @@ data class BookCacheManageUiState(
     val isLoading: Boolean = true,
     val shelfBooks: List<BookCacheBookItem> = emptyList(),
     val notShelfBooks: List<BookCacheBookItem> = emptyList(),
+    val groups: List<BookGroup> = emptyList(),
     val expandedBookUrls: Set<String> = emptySet(),
     val chaptersByBookUrl: Map<String, List<BookCacheChapterItem>> = emptyMap(),
     val downloadSummary: String = "",
@@ -59,6 +62,7 @@ data class BookCacheBookItem(
     val pausedCount: Int,
     val errorCount: Int,
     val isNotShelf: Boolean,
+    val group: Long,
 ) {
     val progress: Float get() = if (totalCount == 0) 0f else cachedCount.toFloat() / totalCount
     val hasActiveDownload: Boolean get() = waitingCount > 0 || downloadingCount > 0
@@ -107,6 +111,7 @@ class BookCacheManageViewModel(
     application: Application,
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao,
+    private val bookGroupDao: BookGroupDao,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
 ) : BaseViewModel(application) {
@@ -161,6 +166,15 @@ class BookCacheManageViewModel(
         observeJob = viewModelScope.launch {
             bookDao.flowAll().collect { books ->
                 reloadAll(books = books, forceDatabase = false)
+            }
+        }
+        viewModelScope.launch {
+            bookGroupDao.flowSelect().collect { groups ->
+                _uiState.update { state ->
+                    state.copy(
+                        groups = groups.filter { it.groupId > 0L }
+                    )
+                }
             }
         }
         viewModelScope.launch {
@@ -381,6 +395,7 @@ class BookCacheManageViewModel(
             pausedCount = pausedCount,
             errorCount = errorIndices.size,
             isNotShelf = book.isNotShelf,
+            group = book.group,
         )
     }
 

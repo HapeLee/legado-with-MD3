@@ -2,6 +2,7 @@ package io.legado.app.ui.book.cache.manage
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
@@ -51,15 +53,26 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+
+private data class BookCacheManageListState(
+    override val items: List<BookCacheBookItem> = emptyList(),
+    override val selectedIds: Set<Any> = emptySet(),
+    override val searchKey: String = "",
+    override val isSearch: Boolean = false,
+    override val isLoading: Boolean = false,
+) : ListUiState<BookCacheBookItem>
 
 @Composable
 fun BookCacheManageRouteScreen(
@@ -95,24 +108,86 @@ private fun BookCacheManageScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
+    var isSearchMode by remember { mutableStateOf(false) }
+    var searchKey by remember { mutableStateOf("") }
+    var selectedGroupId by remember { mutableStateOf(BookGroup.IdAll) }
+    var showGroupMenu by remember { mutableStateOf(false) }
     val allBooks = state.shelfBooks + state.notShelfBooks
-    val hasRunningDownload = allBooks.any { it.hasActiveDownload }
-    val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
+    val filteredBooks = remember(allBooks, searchKey, isSearchMode, selectedGroupId) {
+        allBooks.filter { book ->
+            val matchesGroup = when (selectedGroupId) {
+                BookGroup.IdAll -> true
+                BookGroup.IdNetNone -> !book.isNotShelf && book.group == 0L
+                else -> !book.isNotShelf && (book.group and selectedGroupId) > 0L
+            }
+            val matchesSearch = !isSearchMode || searchKey.isBlank() ||
+                    book.name.contains(searchKey.trim(), ignoreCase = true) ||
+                    book.author.contains(searchKey.trim(), ignoreCase = true)
+            matchesGroup && matchesSearch
+        }
+    }
+    val filteredShelfBooks = remember(filteredBooks) { filteredBooks.filterNot { it.isNotShelf } }
+    val filteredNotShelfBooks = remember(filteredBooks) { filteredBooks.filter { it.isNotShelf } }
+    val hasRunningDownload = filteredBooks.any { it.hasActiveDownload }
+    val hasDownloadTarget = filteredBooks.any { it.cachedCount < it.totalCount }
+    val listUiState = remember(filteredBooks, searchKey, isSearchMode) {
+        BookCacheManageListState(
+            items = filteredBooks,
+            searchKey = searchKey,
+            isSearch = isSearchMode,
+        )
+    }
     val bookshelfSectionTitle = stringResource(R.string.cache_section_bookshelf)
     val bookshelfSectionEmptyText = stringResource(R.string.cache_empty_bookshelf)
     val notBookshelfSectionTitle = stringResource(R.string.cache_section_not_in_bookshelf)
     val notBookshelfSectionEmptyText = stringResource(R.string.cache_empty_not_in_bookshelf)
+    val allGroupText = stringResource(R.string.all)
+    val noGroupText = stringResource(R.string.net_no_group)
+    val groupOptions = remember(state.groups, allGroupText, noGroupText) {
+        listOf(
+            BookGroup.IdAll to allGroupText,
+            BookGroup.IdNetNone to noGroupText,
+        ) + state.groups.map { it.groupId to it.groupName }
+    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            GlassMediumFlexibleTopAppBar(
+            DynamicTopAppBar(
                 title = stringResource(R.string.cache_management),
                 subtitle = state.downloadSummary.takeIf { it.isNotBlank() },
-                navigationIcon = {
-                    TopBarNavigationButton(onClick = onBackClick)
+                state = listUiState,
+                onBackClick = onBackClick,
+                onSearchToggle = { active ->
+                    isSearchMode = active
+                    if (!active) searchKey = ""
                 },
-                actions = {
+                onSearchQueryChange = { searchKey = it },
+                searchPlaceholder = "筛选书名/作者",
+                onClearSelection = {},
+                topBarActions = {
+                    Box {
+                        TopBarActionButton(
+                            onClick = { showGroupMenu = true },
+                            imageVector = AppIcons.Filter,
+                            contentDescription = "分组筛选"
+                        )
+                        RoundDropdownMenu(
+                            expanded = showGroupMenu,
+                            onDismissRequest = { showGroupMenu = false }
+                        ) { dismiss ->
+                            groupOptions.forEach { (groupId, groupName) ->
+                                RoundDropdownMenuItem(
+                                    text = groupName,
+                                    isSelected = groupId == selectedGroupId,
+                                    onClick = {
+                                        selectedGroupId = groupId
+                                        dismiss()
+                                    }
+                                )
+                            }
+                        }
+                    }
                     TopBarActionButton(
                         onClick = { onIntent(BookCacheManageIntent.Refresh) },
                         imageVector = Icons.Default.Refresh,
@@ -166,7 +241,7 @@ private fun BookCacheManageScreen(
                 cacheSection(
                     title = bookshelfSectionTitle,
                     emptyText = bookshelfSectionEmptyText,
-                    books = state.shelfBooks,
+                    books = filteredShelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
                     onToggleExpanded = { bookUrl ->
@@ -176,19 +251,23 @@ private fun BookCacheManageScreen(
                     onDeleteBook = { pendingDeleteBook = it },
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
-                cacheSection(
-                    title = notBookshelfSectionTitle,
-                    emptyText = notBookshelfSectionEmptyText,
-                    books = state.notShelfBooks,
-                    expandedBookUrls = state.expandedBookUrls,
-                    chaptersByBookUrl = state.chaptersByBookUrl,
-                    onToggleExpanded = { bookUrl ->
-                        onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
-                    },
-                    onIntent = onIntent,
-                    onDeleteBook = { pendingDeleteBook = it },
-                    onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
-                )
+                if (selectedGroupId == BookGroup.IdAll) {
+                    cacheSection(
+                        title = notBookshelfSectionTitle,
+                        emptyText = notBookshelfSectionEmptyText,
+                        books = filteredNotShelfBooks,
+                        expandedBookUrls = state.expandedBookUrls,
+                        chaptersByBookUrl = state.chaptersByBookUrl,
+                        onToggleExpanded = { bookUrl ->
+                            onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
+                        },
+                        onIntent = onIntent,
+                        onDeleteBook = { pendingDeleteBook = it },
+                        onDeleteChapter = { book, chapter ->
+                            pendingDeleteChapter = book to chapter
+                        }
+                    )
+                }
             }
         }
     }
