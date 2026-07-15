@@ -53,6 +53,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
+import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -643,14 +644,6 @@ private fun FontWeightSetting(
         )
     }
     val weightEntries = stringArrayResource(R.array.text_font_weight)
-    val presetValue = when (value) {
-        2 -> 2
-        1 -> 1
-        0 -> 0
-        in 100..350 -> 2
-        in 650..900 -> 1
-        else -> 0
-    }
 
     Column {
         Row(
@@ -660,7 +653,7 @@ private fun FontWeightSetting(
             Box(modifier = Modifier.weight(1f)) {
                 TinyDropdownSettingItem(
                     title = stringResource(R.string.font_weight_text),
-                    selectedValue = presetValue.toString(),
+                    selectedValue = value.toString(),
                     displayEntries = arrayOf(
                         weightEntries[2],
                         weightEntries[0],
@@ -709,22 +702,29 @@ private fun FontWeightSetting(
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 cornerRadius = 12.dp,
             ) {
-                Box(
+                ValueStepper(
+                    value = sliderValue,
+                    displayValue = sliderValue,
+                    valueRange = 100f..900f,
+                    onValueChange = {
+                        sliderValue = it
+                        onValueChange(it.toInt())
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppSlider(
-                        value = sliderValue,
-                        onValueChange = { sliderValue = it },
-                        onValueChangeFinished = {
-                            onValueChange(sliderValue.toInt())
-                        },
-                        valueRange = 100f..900f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                    content = {
+                        AppSlider(
+                            value = sliderValue,
+                            onValueChange = { sliderValue = it },
+                            onValueChangeFinished = {
+                                onValueChange(sliderValue.toInt())
+                            },
+                            valueRange = 100f..900f,
+                            modifier = Modifier.weight(1f),
+                        )
+                    },
+                )
             }
         }
     }
