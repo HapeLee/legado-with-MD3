@@ -1125,6 +1125,14 @@ class BookInfoViewModel(
     private fun handleMenuAction(action: BookInfoMenuAction) {
         val book = currentBook ?: return
         when (action) {
+            BookInfoMenuAction.CustomButton -> emitEffect(
+                BookInfoEffect.RunSourceCallback(
+                    event = SourceCallBack.CLICK_CUSTOM_BUTTON,
+                    source = bookSource,
+                    book = book.uiCopy(),
+                    action = BookInfoCallbackAction.None,
+                )
+            )
             BookInfoMenuAction.Edit -> openEdit()
             BookInfoMenuAction.Share -> {
                 val bookJson = GSON.toJson(book)
@@ -1528,6 +1536,7 @@ class BookInfoViewModel(
         return BookInfoSourceUi(
             sourceUrl = bookSourceUrl,
             hasLogin = !loginUrl.isNullOrBlank(),
+            hasCustomButton = customButton,
         )
     }
 

@@ -76,7 +76,6 @@ import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.model.BookCover as BookCoverModel
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -121,6 +120,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import io.legado.app.model.BookCover as BookCoverModel
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -725,6 +725,12 @@ private fun BookInfoOverflowMenu(
 ) {
     val book = state.book
     RoundDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
+        if (state.bookSource?.hasCustomButton == true) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.custom_button),
+                onClick = { onMenuAction(BookInfoMenuAction.CustomButton) }
+            )
+        }
         if (state.inBookshelf) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.edit),

@@ -15,8 +15,8 @@ import io.legado.app.constant.AppConst.UA_NAME
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
-import io.legado.app.exception.NoStackTraceException
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.JsExtensions
@@ -239,7 +239,11 @@ class AnalyzeUrl(
             }
             urlOption?.let { option ->
                 option.getMethod()?.let {
-                    if (it.equals("POST", true)) method = RequestMethod.POST
+                    method = when (it.uppercase()) {
+                        "POST" -> RequestMethod.POST
+                        "HEAD" -> RequestMethod.HEAD
+                        else -> RequestMethod.GET
+                    }
                 }
                 option.getHeaderMap()?.forEach { entry ->
                     headerMap[entry.key.toString()] = entry.value.toString()
@@ -278,6 +282,8 @@ class AnalyzeUrl(
                     analyzeFields(it)
                 }
             }
+
+            RequestMethod.HEAD -> Unit
         }
     }
 
@@ -485,6 +491,11 @@ class AnalyzeUrl(
                             }
                         }
 
+                        RequestMethod.HEAD -> {
+                            get(urlNoQuery, encodedQuery)
+                            head()
+                        }
+
                         else -> get(urlNoQuery, encodedQuery)
                     }
                 }.let {
@@ -557,6 +568,11 @@ class AnalyzeUrl(
                         } else {
                             postJson(body)
                         }
+                    }
+
+                    RequestMethod.HEAD -> {
+                        get(urlNoQuery, encodedQuery)
+                        head()
                     }
 
                     else -> get(urlNoQuery, encodedQuery)

@@ -582,6 +582,7 @@ class ReadBookViewModel(
                 }
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
+            is ReadBookIntent.SourceCustomButton -> runSourceCustomButton(intent.longClick)
             is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
             is ReadBookIntent.OpenContentEdit -> openContentEdit()
             is ReadBookIntent.LoadContentEdit -> loadContentEdit()
@@ -5754,6 +5755,24 @@ class ReadBookViewModel(
                 )
             }
         }
+    }
+
+    private fun runSourceCustomButton(longClick: Boolean) {
+        val source = ReadBook.bookSource?.takeIf { it.customButton } ?: return
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+        _effects.tryEmit(
+            ReadBookEffect.RunSourceCustomButton(
+                event = if (longClick) {
+                    SourceCallBack.LONG_CLICK_CUSTOM_BUTTON
+                } else {
+                    SourceCallBack.CLICK_CUSTOM_BUTTON
+                },
+                source = source,
+                book = book,
+                chapter = chapter,
+            )
+        )
     }
 
     private fun toggleReadUrlInBrowser() {

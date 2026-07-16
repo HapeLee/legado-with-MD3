@@ -13,9 +13,18 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import io.legado.app.constant.AppConst
+import io.legado.app.data.appDb
+import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.CacheManager
+import io.legado.app.help.WebCacheManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.webView.WebJsExtensions
+import io.legado.app.help.webView.WebJsExtensions.Companion.getInjectionString
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.utils.runOnUI
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Runnable
@@ -43,13 +52,17 @@ class BackstageWebView(
     private val overrideUrlRegex: String? = null,
     private val javaScript: String? = null,
     private val delayTime: Long = 0,
+    private val cacheFirst: Boolean = false,
+    private val timeout: Long? = null,
+    private val result: String? = null,
+    private val isRule: Boolean = false,
 ) {
 
     private val mHandler = Handler(Looper.getMainLooper())
     private var callback: Callback? = null
     private var mWebView: WebView? = null
 
-    suspend fun getStrResponse(): StrResponse = withTimeout(60000L) {
+    suspend fun getStrResponse(): StrResponse = withTimeout(timeout ?: 60000L) {
         suspendCancellableCoroutine { block ->
             block.invokeOnCancellation {
                 runOnUI {
@@ -88,9 +101,22 @@ class BackstageWebView(
         mWebView = webView
         try {
             when {
-                !html.isNullOrEmpty() -> if (url.isNullOrEmpty()) {
+                !html.isNullOrEmpty() -> if (url.isNullOrEmpty() && !isRule) {
                     webView.loadData(html, "text/html", getEncoding())
                 } else {
+                    if (isRule) {
+                        webView.addJavascriptInterface(WebCacheManager, nameCache)
+                        tag?.let { key ->
+                            appDb.bookSourceDao.getBookSource(key)?.let { source ->
+                                webView.addJavascriptInterface(source as BaseSource, nameSource)
+                                webView.addJavascriptInterface(
+                                    WebJsExtensions(source, null, webView),
+                                    nameJava,
+                                )
+                            }
+                        }
+                    }
+                    result?.let { CacheManager.put("webview_result", it) }
                     webView.loadDataWithBaseURL(url, html, "text/html", getEncoding(), url)
                 }
 
@@ -114,6 +140,11 @@ class BackstageWebView(
         settings.blockNetworkImage = true
         settings.userAgentString = headerMap?.get(AppConst.UA_NAME) ?: AppConfig.userAgent
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        settings.cacheMode = if (cacheFirst) {
+            WebSettings.LOAD_CACHE_ELSE_NETWORK
+        } else {
+            WebSettings.LOAD_DEFAULT
+        }
         if (sourceRegex.isNullOrBlank() && overrideUrlRegex.isNullOrBlank()) {
             webView.webViewClient = HtmlWebViewClient()
         } else {
@@ -164,6 +195,12 @@ class BackstageWebView(
 
         override fun onPageFinished(view: WebView, url: String) {
             setCookie(url)
+            result?.let {
+                view.evaluateJavascript(
+                    "window.result = $nameCache.getFromMemory('webview_result')",
+                    null,
+                )
+            }
             if (runnable == null) {
                 runnable = EvalJsRunnable(view, url, getJs())
             }
@@ -183,10 +220,15 @@ class BackstageWebView(
         private inner class EvalJsRunnable(
             webView: WebView,
             private val url: String,
-            private val mJavaScript: String
+            mJavaScript: String
         ) : Runnable {
             var retry = 0
             private val mWebView: WeakReference<WebView> = WeakReference(webView)
+            private val mJavaScript = if (isRule) {
+                "$getInjectionString\n$mJavaScript"
+            } else {
+                mJavaScript
+            }
             override fun run() {
                 mWebView.get()?.evaluateJavascript(mJavaScript) {
                     handleResult(it)
