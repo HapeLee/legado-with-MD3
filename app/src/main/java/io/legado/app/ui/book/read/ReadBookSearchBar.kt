@@ -14,7 +14,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 
@@ -46,13 +48,13 @@ fun ReadBookSearchBar(
                 onClick = {
                     onIntent(ReadBookIntent.NavigateSearchResultByOffset(-1))
                 },
-                tooltipText = "上一个结果",
+                tooltipText = stringResource(R.string.a11y_previous_result),
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "上一个结果",
+                    contentDescription = stringResource(R.string.a11y_previous_result),
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -71,13 +73,13 @@ fun ReadBookSearchBar(
                 onClick = {
                     onIntent(ReadBookIntent.NavigateSearchResultByOffset(1))
                 },
-                tooltipText = "下一个结果",
+                tooltipText = stringResource(R.string.a11y_next_result),
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "下一个结果",
+                    contentDescription = stringResource(R.string.a11y_next_result),
                     modifier = Modifier.size(20.dp),
                 )
             }

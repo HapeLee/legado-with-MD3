@@ -390,18 +390,10 @@ fun TxtRuleScreen(
                     val enabledState = stringResource(
                         if (item.isEnabled) R.string.enabled else R.string.disabled
                     )
-                    val selectedState = stringResource(
-                        if (isItemHighLighted) {
-                            R.string.a11y_selected
-                        } else {
-                            R.string.a11y_not_selected
-                        }
-                    )
                     val itemDescription = listOfNotNull(
                         item.name,
                         item.example.takeIf { it.isNotBlank() },
                         enabledState,
-                        selectedState,
                         if (!isPickMode && !inSelectionMode) {
                             stringResource(R.string.a11y_long_press_reorder)
                         } else {
@@ -412,6 +404,9 @@ fun TxtRuleScreen(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
+                        reorderIndex = rules.indexOf(item),
+                        reorderItemCount = rules.size,
+                        onMoveItem = { from, to -> onIntent(TxtTocRuleIntent.MoveItem(from, to)) },
                         title = item.name,
                         subtitle = item.example,
                         isEnabled = item.isEnabled,
@@ -429,7 +424,6 @@ fun TxtRuleScreen(
                             onIntent(TxtTocRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
                         contentDescription = itemDescription,
-                        stateDescription = selectedState,
                         enableSwitchContentDescription = stringResource(
                             R.string.a11y_rule_enabled_switch,
                             item.name

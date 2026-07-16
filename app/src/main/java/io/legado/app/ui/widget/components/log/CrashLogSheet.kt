@@ -36,7 +36,7 @@ fun CrashLogSheet(
         onDismissRequest = onDismissRequest,
         endAction = {
             IconButton(onClick = onClear) {
-                Icon(Icons.Default.DeleteSweep, contentDescription = "Clear")
+                Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.clear))
             }
         },
         title = stringResource(R.string.crash_log),

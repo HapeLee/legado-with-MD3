@@ -42,12 +42,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.R
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.main.bookCoverSharedElementKey
@@ -264,20 +266,20 @@ fun ExploreShowScreen(
                                 )
                             },
                             imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                            contentDescription = "列数设置"
+                            contentDescription = stringResource(R.string.a11y_grid_columns)
                         )
                     }
 
                     TopBarActionButton(
                         onClick = { viewModel.onIntent(ExploreShowIntent.ShowSheet(ExploreShowSheet.KindSelect)) },
                         imageVector = Icons.Outlined.FilterAlt,
-                        contentDescription = "分类"
+                        contentDescription = stringResource(R.string.select_or_search_category)
                     )
 
                     TopBarActionButton(
                         onClick = { viewModel.onIntent(ExploreShowIntent.ToggleLayout) },
                         imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                        contentDescription = "切换布局"
+                        contentDescription = stringResource(R.string.a11y_switch_layout)
                     )
                 },
                 scrollBehavior = scrollBehavior

@@ -456,13 +456,6 @@ class PageView(
     }
 
     /**
-     * 设置无障碍文本
-     */
-    fun setContentDescription(content: String) {
-        binding.contentTextView.contentDescription = content
-    }
-
-    /**
      * 重置滚动位置
      */
     fun resetPageOffset() {

@@ -66,7 +66,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -220,7 +219,7 @@ fun ThemeConfigScreen(
                             )
                             SmallPlainButton(
                                 icon = AppIcons.Close,
-                                contentDescription = "关闭",
+                                contentDescription = stringResource(R.string.close),
                                 onClick = {
                                     viewModel.setShowThemeRefactorTip(false)
                                 }
@@ -928,17 +927,12 @@ fun ThemeModeSelector(
 
         modes.forEachIndexed { index, (value, label, icon) ->
             val checked = selectedIndex == index
-            val modeStateDescription = stringResource(
-                if (checked) R.string.a11y_selected else R.string.a11y_not_selected
-            )
-
             ToggleButton(
                 checked = checked,
                 onCheckedChange = { onModeSelected(value) },
                 modifier = modifiers[index]
                     .semantics {
                         role = Role.RadioButton
-                        stateDescription = modeStateDescription
                     },
 
                 shapes = when (index) {

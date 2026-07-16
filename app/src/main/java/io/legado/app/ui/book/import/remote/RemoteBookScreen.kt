@@ -170,7 +170,8 @@ fun RemoteBookScreen(
             {
                 MediumPlainButton(
                     onClick = { showSheet = RemoteBookSheet.ServerConfig(null) },
-                    icon = Icons.Default.Add
+                    icon = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.add)
                 )
             }
         } else {
@@ -264,7 +265,7 @@ fun RemoteBookScreen(
             TopBarActionButton(
                 onClick = { showSheet = RemoteBookSheet.Servers },
                 imageVector = Icons.Default.Storage,
-                contentDescription = "服务器"
+                contentDescription = stringResource(R.string.a11y_server_list)
             )
         },
         dropDownMenuContent = { dismiss ->
@@ -438,14 +439,14 @@ private fun ServerItem(
                         SmallPlainButton(
                             onClick = it,
                             icon = Icons.Default.Edit,
-                            contentDescription = "Edit"
+                            contentDescription = stringResource(R.string.edit)
                         )
                     }
                     onDelete?.let {
                         SmallPlainButton(
                             onClick = it,
                             icon = Icons.Default.Delete,
-                            contentDescription = "Delete"
+                            contentDescription = stringResource(R.string.delete)
                         )
                     }
                 }
@@ -519,7 +520,9 @@ private fun ServerConfigSheetContent(
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = null
+                        contentDescription = stringResource(
+                            if (passwordVisible) R.string.hide_password else R.string.show_password
+                        )
                     )
                 }
             }
@@ -610,7 +613,7 @@ private fun PathNavigationBar(
             SmallTonalButton(
                 onClick = onNavigateBack,
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回上级"
+                contentDescription = stringResource(R.string.a11y_parent_folder)
             )
         }
     }

@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -49,6 +49,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -82,6 +83,16 @@ fun TextSelectMenuConfigSheet(
     val group1Items = remember(draftItems) { draftItems.filter { it.showState == 0 } }
     val group2Items = remember(draftItems) { draftItems.filter { it.showState == 1 } }
     val group3Items = remember(draftItems) { draftItems.filter { it.showState == 2 } }
+
+    fun moveWithinGroup(groupItems: List<ActionMenuItem>, from: Int, to: Int) {
+        val fromIndex = draftItems.indexOfFirst { it.uniqueId == groupItems[from].uniqueId }
+        val toIndex = draftItems.indexOfFirst { it.uniqueId == groupItems[to].uniqueId }
+        if (fromIndex >= 0 && toIndex >= 0) {
+            draftItems = draftItems.toMutableList().apply {
+                add(toIndex, removeAt(fromIndex))
+            }
+        }
+    }
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -119,7 +130,8 @@ fun TextSelectMenuConfigSheet(
                     onSaved(draftItems)
                     onDismissRequest()
                 },
-                icon = Icons.Default.Save
+                icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.save)
             )
         }
     ) {
@@ -164,7 +176,7 @@ fun TextSelectMenuConfigSheet(
                 }
 
                 if (group1Expanded) {
-                    items(group1Items, key = { it.uniqueId }) { item ->
+                    itemsIndexed(group1Items, key = { _, item -> item.uniqueId }) { index, item ->
                         ReorderableItem(reorderableState, key = item.uniqueId) { isDragging ->
                             val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                             NormalCard(
@@ -186,7 +198,18 @@ fun TextSelectMenuConfigSheet(
                                             if (it.uniqueId == item.uniqueId) it.copy(showState = 2) else it
                                         }
                                     },
-                                    dragHandleModifier = Modifier.draggableHandle()
+                                    dragHandleModifier = Modifier
+                                        .reorderAccessibility(
+                                            index = index,
+                                            itemCount = group1Items.size,
+                                            description = stringResource(
+                                                R.string.a11y_reorder_named,
+                                                item.title,
+                                            ),
+                                        ) { from, to ->
+                                            moveWithinGroup(group1Items, from, to)
+                                        }
+                                        .draggableHandle()
                                 )
                             }
                         }
@@ -205,7 +228,7 @@ fun TextSelectMenuConfigSheet(
                 }
 
                 if (group2Expanded) {
-                    items(group2Items, key = { it.uniqueId }) { item ->
+                    itemsIndexed(group2Items, key = { _, item -> item.uniqueId }) { index, item ->
                         ReorderableItem(reorderableState, key = item.uniqueId) { isDragging ->
                             val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                             NormalCard(
@@ -227,7 +250,18 @@ fun TextSelectMenuConfigSheet(
                                             if (it.uniqueId == item.uniqueId) it.copy(showState = 2) else it
                                         }
                                     },
-                                    dragHandleModifier = Modifier.draggableHandle()
+                                    dragHandleModifier = Modifier
+                                        .reorderAccessibility(
+                                            index = index,
+                                            itemCount = group2Items.size,
+                                            description = stringResource(
+                                                R.string.a11y_reorder_named,
+                                                item.title,
+                                            ),
+                                        ) { from, to ->
+                                            moveWithinGroup(group2Items, from, to)
+                                        }
+                                        .draggableHandle()
                                 )
                             }
                         }
@@ -328,7 +362,7 @@ private fun PrimaryMenuItemRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Remove,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.collapsed_menu),
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -340,14 +374,14 @@ private fun PrimaryMenuItemRow(
         ) {
             Icon(
                 imageVector = Icons.Default.VisibilityOff,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.hidden_items),
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
 
         Box(
-            modifier = dragHandleModifier.size(36.dp),
+            modifier = dragHandleModifier.size(48.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -403,7 +437,7 @@ private fun FoldedMenuItemRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.primary_menu),
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -415,14 +449,14 @@ private fun FoldedMenuItemRow(
         ) {
             Icon(
                 imageVector = Icons.Default.VisibilityOff,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.hidden_items),
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
 
         Box(
-            modifier = dragHandleModifier.size(36.dp),
+            modifier = dragHandleModifier.size(48.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(

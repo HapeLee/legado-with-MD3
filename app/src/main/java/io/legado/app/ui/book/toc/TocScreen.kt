@@ -77,7 +77,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -762,7 +762,6 @@ fun ChapterItem(
             else -> LegadoTheme.colorScheme.onSurfaceVariant
         }, label = "BgColor"
     )
-    val selectedDescription = stringResource(R.string.a11y_selected)
     val currentReadingDescription = stringResource(R.string.a11y_current_reading)
     val lockedDescription = stringResource(R.string.a11y_vip_locked)
     val downloadedDescription = stringResource(R.string.a11y_downloaded)
@@ -783,7 +782,6 @@ fun ChapterItem(
         add(item.title)
         item.tag?.takeIf { it.isNotBlank() }?.let(::add)
         if (item.isDur) add(currentReadingDescription)
-        if (item.isSelected) add(selectedDescription)
         if (item.isVip && !item.isPay) add(lockedDescription)
         if (showWordCount) wordCountDescription?.let(::add)
         downloadStateDescription?.let(::add)
@@ -805,9 +803,7 @@ fun ChapterItem(
             .semantics {
                 role = Role.Button
                 contentDescription = chapterContentDescription
-                if (item.isSelected) {
-                    stateDescription = selectedDescription
-                }
+                selected = item.isSelected
             }
             .combinedClickable(
                 onClick = onClick,

@@ -67,7 +67,7 @@ fun EditThemeSheet(
                     }
                 },
                 icon = Icons.Default.Done,
-                contentDescription = "Save"
+                contentDescription = stringResource(R.string.save)
             )
         }
     ) {

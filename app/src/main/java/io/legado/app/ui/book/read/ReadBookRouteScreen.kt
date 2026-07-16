@@ -137,6 +137,14 @@ fun ReadBookRouteScreen(
         controller.onMenuVisibilityChanged(state.menuVisible)
     }
 
+    LaunchedEffect(viewModel, controller, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.readAloudProgress.collect { chapterStart ->
+                chapterStart?.let(controller::updateReadAloudProgress)
+            }
+        }
+    }
+
     // ── ActivityResult Launchers ──────────────────────────────────────
 
     val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->

@@ -136,6 +136,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
@@ -1382,7 +1383,7 @@ fun BookshelfPage(
             horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
             showFastScroll = showFastScroll
         ) {
-            items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
+            itemsIndexed(displayBooks, key = { _, item -> item.book.bookUrl }) { index, bookUi ->
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
                 val sharedCoverKey = bookCoverSharedElementKey(
                     bookUi.book.bookUrl,
@@ -1396,6 +1397,15 @@ fun BookshelfPage(
                     BookItem(
                         bookUi = bookUi,
                         modifier = Modifier
+                            .reorderAccessibility(
+                                index = index,
+                                itemCount = displayBooks.size,
+                                enabled = canReorderBooks,
+                            ) { from, to ->
+                                onDragStarted(displayBooks)
+                                onMoveBook(from, to, displayBooks)
+                                onDragFinished()
+                            }
                             .then(
                                 if (canReorderBooks) {
                                     Modifier.longPressDraggableHandle(
