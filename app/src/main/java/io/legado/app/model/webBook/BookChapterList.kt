@@ -13,7 +13,6 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.exception.TocEmptyException
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
@@ -164,7 +163,7 @@ object BookChapterList {
             list.getOrElse(book.simulatedTotalChapterNum() - 1) { list.last() }
                 .getDisplayTitle(replaceRules, book.getUseReplaceRule())
         coroutineContext.ensureActive()
-        getWordCount(list, book)
+        preserveChapterMetadata(list, book)
         return list
     }
 
@@ -270,17 +269,18 @@ object BookChapterList {
         return Pair(chapterList, nextUrlList)
     }
 
-    private fun getWordCount(list: ArrayList<BookChapter>, book: Book) {
-        if (!AppConfig.tocCountWords) {
-            return
-        }
+    private fun preserveChapterMetadata(list: ArrayList<BookChapter>, book: Book) {
         val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl)
         if (chapterList.isNotEmpty()) {
-            val map = chapterList.associateBy({ it.getFileName() }, { it.wordCount })
+            val map = chapterList.associateBy(
+                keySelector = { it.getFileName() },
+                valueTransform = { Triple(it.wordCount, it.variable, it.reviewImg) },
+            )
             for (bookChapter in list) {
-                val wordCount = map[bookChapter.getFileName()]
-                if (wordCount != null) {
-                    bookChapter.wordCount = wordCount
+                map[bookChapter.getFileName()]?.let { (wordCount, variable, reviewImg) ->
+                    wordCount?.let { bookChapter.wordCount = it }
+                    variable?.let { bookChapter.variable = it }
+                    reviewImg?.let { bookChapter.reviewImg = it }
                 }
             }
         }

@@ -1030,6 +1030,7 @@ class ReadBookController(
             is ReadBookEffect.OpenSearchActivity,
             is ReadBookEffect.ShowLogin,
             is ReadBookEffect.OpenWebView,
+            is ReadBookEffect.RunSourceCustomButton,
             is ReadBookEffect.MenuSettingReplace,
             is ReadBookEffect.TextActionReplace,
             is ReadBookEffect.OpenReplaceEditor,

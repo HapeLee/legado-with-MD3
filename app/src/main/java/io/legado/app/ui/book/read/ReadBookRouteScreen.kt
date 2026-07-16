@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
@@ -324,6 +326,18 @@ fun ReadBookRouteScreen(
                                         effect.html?.let { putExtra("html", it) }
                                     }
                                 )
+                            }
+                            is ReadBookEffect.RunSourceCustomButton -> {
+                                (context as? AppCompatActivity)?.let { activity ->
+                                    SourceCallBack.callBackBtn(
+                                        activity,
+                                        effect.event,
+                                        effect.source,
+                                        effect.book,
+                                        effect.chapter,
+                                        BookType.text,
+                                    )
+                                }
                             }
                             is ReadBookEffect.OpenSearchActivity -> {
                                 onOpenSearch(effect.word, effect.bookUrl)

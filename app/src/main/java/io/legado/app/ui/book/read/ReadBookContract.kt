@@ -468,6 +468,7 @@ sealed interface ReadBookIntent {
     data object OpenBookInfo : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
     data object OpenChapterUrl : ReadBookIntent
+    data class SourceCustomButton(val longClick: Boolean) : ReadBookIntent
     data object ToggleReadUrlInBrowser : ReadBookIntent
 
     // Content edit
@@ -770,6 +771,13 @@ sealed interface ReadBookEffect {
         val sourceName: String?,
         val sourceType: Int?,
         val html: String? = null,
+    ) : ReadBookEffect
+
+    data class RunSourceCustomButton(
+        val event: String,
+        val source: BookSource,
+        val book: Book,
+        val chapter: BookChapter?,
     ) : ReadBookEffect
 
     // Menu actions that need Activity

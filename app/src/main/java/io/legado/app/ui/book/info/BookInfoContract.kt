@@ -69,6 +69,7 @@ data class BookInfoBookUi(
 data class BookInfoSourceUi(
     val sourceUrl: String,
     val hasLogin: Boolean,
+    val hasCustomButton: Boolean,
 )
 
 sealed interface BookInfoSheet {
@@ -217,9 +218,11 @@ sealed interface BookInfoCallbackAction {
     data class ShareText(val chooserTitle: String, val text: String) : BookInfoCallbackAction
     data class CopyText(val text: String) : BookInfoCallbackAction
     data object ClearCache : BookInfoCallbackAction
+    data object None : BookInfoCallbackAction
 }
 
 enum class BookInfoMenuAction {
+    CustomButton,
     Edit,
     Share,
     Upload,
