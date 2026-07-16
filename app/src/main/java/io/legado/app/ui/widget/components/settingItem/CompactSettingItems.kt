@@ -247,21 +247,13 @@ fun CompactSwitchSettingItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val switchStateDescription = stringResource(
-        if (checked) R.string.a11y_on else R.string.a11y_off
-    )
-
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         SwitchPreference(
             title = title,
             summary = description,
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.semantics(mergeDescendants = true) {
-                role = Role.Switch
-                stateDescription = switchStateDescription
-                if (!enabled) disabled()
-            },
+            modifier = Modifier,
             enabled = enabled,
         )
     } else {
@@ -273,7 +265,7 @@ fun CompactSwitchSettingItem(
             shape = shape,
             enabled = enabled,
             semanticRole = Role.Switch,
-            semanticStateDescription = switchStateDescription,
+            semanticToggleState = checked,
             onClick = { if (enabled) onCheckedChange(!checked) },
             trailingContent = {
                 Switch(

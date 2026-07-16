@@ -60,7 +60,8 @@ fun CoverRuleConfigSheet(
         title = stringResource(R.string.cover_rule),
         startAction = {
             MediumPlainButton(
-                icon = Icons.Default.SettingsBackupRestore,
+            icon = Icons.Default.SettingsBackupRestore,
+            contentDescription = stringResource(R.string.restore_default),
                 onClick = {
                     DefaultData.coverRule.let {
                         enable = it.enable
@@ -73,7 +74,8 @@ fun CoverRuleConfigSheet(
         },
         endAction = {
             MediumPlainButton(
-                icon = Icons.Default.Save,
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(R.string.save),
                 onClick = {
                     if (searchUrl.isBlank() || coverRule.isBlank()) {
                         appCtx.toastOnUi(R.string.cover_rule_fields_required)

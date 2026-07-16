@@ -459,15 +459,18 @@ private fun SavedThemeItem(
                 ) {
                     SmallPlainButton(
                         onClick = onEdit,
-                        icon = Icons.Default.Edit
+            icon = Icons.Default.Edit,
+            contentDescription = stringResource(R.string.edit)
                     )
                     SmallPlainButton(
                         onClick = onExport,
-                        icon = Icons.Default.Share
+            icon = Icons.Default.Share,
+            contentDescription = stringResource(R.string.share)
                     )
                     SmallPlainButton(
                         onClick = onDelete,
-                        icon = Icons.Default.Delete
+            icon = Icons.Default.Delete,
+            contentDescription = stringResource(R.string.delete)
                     )
                 }
             }

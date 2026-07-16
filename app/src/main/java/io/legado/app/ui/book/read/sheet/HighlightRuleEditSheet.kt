@@ -231,7 +231,7 @@ fun HighlightRuleEditSheet(
             }) {
                 androidx.compose.material3.Icon(
                     Icons.Default.Done,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.save),
                 )
             }
         },

@@ -577,6 +577,9 @@ class ReadBookController(
 
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> {
+                if (action == MotionEvent.ACTION_UP) {
+                    v.performClick()
+                }
                 r.readView.curPage.resetReverseCursor()
                 if (r.readView.isTextSelected) {
                     showTextActionMenu()

@@ -44,34 +44,32 @@ fun SmallAnimatedButton(
         }
     }
 
-    SmallNoMinTouchTarget {
-        SeriesButton(
-            onClick = {
-                onCheckedChange(!checked)
-                showText = true
-            },
-            modifier = if (text == null) modifier else modifier.height(36.dp),
-            enabled = enabled,
-            selected = checked,
-            onLongClick = onLongClick,
-            size = if (text == null) smallContainerSize() else null,
-            style = SeriesIconButtonStyle.Tonal,
+    SeriesButton(
+        onClick = {
+            onCheckedChange(!checked)
+            showText = true
+        },
+        modifier = if (text == null) modifier else modifier.height(36.dp),
+        enabled = enabled,
+        selected = checked,
+        onLongClick = onLongClick,
+        size = if (text == null) smallContainerSize() else null,
+        style = SeriesIconButtonStyle.Tonal,
+        contentColor = contentColor,
+        containerColor = containerColor,
+        selectedContainerColor = selectedContainerColor,
+        selectedContentColor = selectedContentColor
+    ) { contentColor ->
+        SeriesAnimatedButtonContent(
+            icon = currentIcon,
+            text = text,
+            contentDescription = if (text == null) contentDescription else null,
+            showText = showText,
+            iconSize = smallIconSize,
+            textStyle = LegadoTheme.typography.labelSmall,
             contentColor = contentColor,
-            containerColor = containerColor,
-            selectedContainerColor = selectedContainerColor,
-            selectedContentColor = selectedContentColor
-        ) { contentColor ->
-            SeriesAnimatedButtonContent(
-                icon = currentIcon,
-                text = text,
-                contentDescription = if (text == null) contentDescription else null,
-                showText = showText,
-                iconSize = smallIconSize,
-                textStyle = LegadoTheme.typography.labelSmall,
-                contentColor = contentColor,
-                padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                spacing = 6.dp
-            )
-        }
+            padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            spacing = 6.dp
+        )
     }
 }

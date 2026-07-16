@@ -101,50 +101,48 @@ fun SmallToggleButton(
             )
         }
     } else {
-        SmallNoMinTouchTarget {
-            if (text != null) {
-                TonalToggleButton(
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    modifier = modifier,
-                    enabled = enabled,
-                    contentPadding = PaddingValues(horizontal = 8.dp)
+        if (text != null) {
+            TonalToggleButton(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = modifier,
+                enabled = enabled,
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = text,
-                            style = LegadoTheme.typography.labelSmall,
-                            modifier = Modifier.padding(start = 6.dp),
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
+                    Icon(
+                        imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = text,
+                        style = LegadoTheme.typography.labelSmall,
+                        modifier = Modifier.padding(start = 6.dp),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
-            } else {
-                SeriesIconButton(
-                    icon = if (checked) (iconChecked ?: icon)!! else icon!!,
-                    contentDescription = contentDescription,
-                    onClick = { onCheckedChange(!checked) },
-                    modifier = modifier,
-                    enabled = enabled,
-                    selected = checked,
-                    onLongClick = onLongClick,
-                    size = smallContainerSize(),
-                    iconSize = smallIconSize,
-                    style = when (style) {
-                        ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
-                        ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
-                    }
-                )
             }
+        } else {
+            SeriesIconButton(
+                icon = if (checked) (iconChecked ?: icon)!! else icon!!,
+                contentDescription = contentDescription,
+                onClick = { onCheckedChange(!checked) },
+                modifier = modifier,
+                enabled = enabled,
+                selected = checked,
+                onLongClick = onLongClick,
+                size = smallContainerSize(),
+                iconSize = smallIconSize,
+                style = when (style) {
+                    ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
+                    ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
+                }
+            )
         }
     }
 }

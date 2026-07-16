@@ -455,7 +455,7 @@ private fun ImportPathNavigationBar(
             SmallTonalButton(
                 onClick = onNavigateBack,
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "back"
+                contentDescription = stringResource(R.string.back)
             )
         }
     }
@@ -538,7 +538,8 @@ private fun ImportBookItem(
                 Spacer(modifier = Modifier.width(8.dp))
                 SmallPlainButton(
                     onClick = onAddToBookshelf,
-                    icon = if (isSelected) Icons.Default.Check else Icons.Default.AddCircleOutline
+                    icon = if (isSelected) Icons.Default.Check else Icons.Default.AddCircleOutline,
+                    contentDescription = stringResource(R.string.add_to_bookshelf)
                 )
             }
         }

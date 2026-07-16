@@ -83,6 +83,7 @@
                 android:layout_width="12dp"
                 android:layout_height="12dp"
                 android:layout_marginEnd="4dp"
+                android:importantForAccessibility="no"
                 android:src="@drawable/ic_timer_black_24dp" />
 
             <TextView

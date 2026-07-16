@@ -129,7 +129,8 @@ fun NavIconManageSheet(
                                             .align(Alignment.TopEnd)
                                             .padding(4.dp)
                                             .size(24.dp),
-                                        icon = Icons.Default.Close
+                                        icon = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.close)
                                     )
                                 }
                             } else {

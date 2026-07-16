@@ -1,14 +1,16 @@
 package io.legado.app.ui.book.read.page
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import android.os.Build
+import android.os.Bundle
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowInsets
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
@@ -123,6 +125,10 @@ class ReadView(
         addView(nextPage)
         addView(curPage)
         addView(prevPage)
+        descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        isClickable = true
+        isFocusable = true
         prevPage.invisible()
         nextPage.invisible()
         curPage.markAsMainView()
@@ -175,7 +181,6 @@ class ReadView(
     /**
      * 触摸事件
      */
-    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val insets = this.rootWindowInsets.getInsetsIgnoringVisibility(
@@ -240,6 +245,7 @@ class ReadView(
                 pressDown = false
                 if (pageDelegate?.isMoved == false && !isMove) {
                     if (!longPressed && !pressOnTextSelected) {
+                        performClick()
                         val handled = curPage.onClick(startX, startY)
                         if (!handled) {
                             onSingleTapUp()
@@ -269,6 +275,58 @@ class ReadView(
             }
         }
         return true
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = ReadView::class.java.name
+        info.isScrollable = true
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                context.getString(R.string.prev_page)
+            )
+        )
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                context.getString(R.string.next_page)
+            )
+        )
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_CLICK,
+                context.getString(R.string.menu)
+            )
+        )
+    }
+
+    override fun performAccessibilityAction(action: Int, arguments: Bundle?): Boolean {
+        return when (action) {
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> {
+                pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
+                true
+            }
+
+            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> {
+                pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
+                true
+            }
+
+            AccessibilityNodeInfo.ACTION_CLICK -> {
+                performClick()
+                pageDelegate?.dismissSnackBar()
+                callBack.showActionMenu()
+                true
+            }
+
+            else -> super.performAccessibilityAction(action, arguments)
+        }
     }
 
     fun cancelSelect(clearSearchResult: Boolean = false) {
@@ -573,7 +631,7 @@ class ReadView(
      */
     override fun upContent(relativePosition: Int, resetPageOffset: Boolean) {
         post {
-            curPage.setContentDescription(pageFactory.curPage.text)
+            contentDescription = pageFactory.curPage.text
         }
         if (isScroll && !isAutoPage) {
             if (relativePosition == 0) {
