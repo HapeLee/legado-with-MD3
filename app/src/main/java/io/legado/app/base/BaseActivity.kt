@@ -183,6 +183,7 @@ abstract class BaseActivity<VB : ViewBinding>(
             "11" -> setTheme(R.style.Theme_Base_Mujika)
             "12" -> {
                 val colorImagePath = getPrefString(PreferKey.colorImage)
+                var colorImageApplied = false
                 if (!colorImagePath.isNullOrBlank()) {
                     val file = File(colorImagePath)
                     if (file.exists()) {
@@ -199,9 +200,13 @@ abstract class BaseActivity<VB : ViewBinding>(
 
                             DynamicColors.applyToActivityIfAvailable(this, options)
                             bitmap.recycle()
+                            colorImageApplied = true
                         }
                     }
-                }else{
+                }
+                if (!colorImageApplied) {
+                    // 取色图片缺失或解码失败时回退到种子色，
+                    // 否则该 Activity 完全拿不到动态配色，与 Compose 界面不一致
                     DynamicColors.applyToActivityIfAvailable(
                         this,
                         DynamicColorsOptions.Builder()
