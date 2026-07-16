@@ -813,6 +813,7 @@ class ReadBookController(
                         ConfigUpdateAction.UpdateBackgroundAlpha -> r.readView.upBgAlpha()
                         ConfigUpdateAction.UpdatePageSlopSquare -> r.readView.upPageSlopSquare()
                         ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
+                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) ReadBook.relayoutContent()
                         ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
                         ConfigUpdateAction.UpdateChapterStyle -> ChapterProvider.upStyle()
                         ConfigUpdateAction.InvalidateTextPage -> r.readView.invalidateTextPage()
@@ -879,20 +880,6 @@ class ReadBookController(
                 }
             }
 
-            is ReadBookEffect.UpTtsAloudSpan -> {
-                activity.lifecycleScope.launch(IO) {
-                    if (BaseReadAloudService.isPlay()) {
-                        ReadBook.curTextChapter?.let { textChapter ->
-                            val pageIndex = ReadBook.durPageIndex
-                            val aloudSpanStart =
-                                effect.chapterStart - textChapter.getReadLength(pageIndex)
-                            textChapter.getPage(pageIndex)?.upPageAloudSpan(aloudSpanStart)
-                            refs?.readView?.upContent()
-                        }
-                    }
-                }
-            }
-
             is ReadBookEffect.RefreshBookContent -> {
                 ReadBook.curTextChapter = null
                 refs?.readView?.upContent()
@@ -911,6 +898,7 @@ class ReadBookController(
             }
 
             is ReadBookEffect.ContentLoadFinish -> {
+                viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
                 onStartContentLoadFinish?.invoke()
             }
 
@@ -1058,6 +1046,17 @@ class ReadBookController(
                 // Handled by route/ViewModel — no-op here
             }
         }
+    }
+
+    fun updateReadAloudProgress(chapterStart: Int) {
+        if (!BaseReadAloudService.isPlay()) return
+        val textChapter = ReadBook.curTextChapter ?: return
+        if (textChapter.chapter.index != BaseReadAloudService.currentChapterIndex) return
+        val pageIndex = textChapter.getPageIndexByCharIndex(chapterStart)
+        if (pageIndex < 0 || pageIndex != ReadBook.durPageIndex) return
+        val aloudSpanStart = chapterStart - textChapter.getReadLength(pageIndex)
+        textChapter.getPage(pageIndex)?.upPageAloudSpan(aloudSpanStart)
+        refs?.readView?.upContent(resetPageOffset = false)
     }
 
     // ── Key handling ──

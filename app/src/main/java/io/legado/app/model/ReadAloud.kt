@@ -126,6 +126,14 @@ object ReadAloud {
         }
     }
 
+    fun syncLayout(context: Context = appCtx) {
+        if (BaseReadAloudService.isRun) {
+            val intent = Intent(context, aloudClass)
+            intent.action = IntentAction.syncReadAloudLayout
+            context.startForegroundServiceCompat(intent)
+        }
+    }
+
     fun setTimer(context: Context, minute: Int) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)

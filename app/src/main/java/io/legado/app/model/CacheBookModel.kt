@@ -62,7 +62,7 @@ class CacheBookModel(
     private val onDownloadSet = linkedSetOf<Int>()
     private val canceledDownloadSet = hashSetOf<Int>()
     private val pausedChapterSet = linkedSetOf<Int>()
-    private val pendingReadRequestMap = hashMapOf<Int, Boolean>()
+    private val pendingReadRequestMap = hashMapOf<Int, PendingReadRequest>()
     private val chapterTasks = hashMapOf<Int, Coroutine<*>>()
     private val tasks = CompositeCoroutine()
     private val repository = CacheDownloadRepository()
@@ -671,7 +671,8 @@ class CacheBookModel(
         scope: CoroutineScope,
         chapter: BookChapter,
         semaphore: Semaphore?,
-        resetPageOffset: Boolean = false
+        resetPageOffset: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
     ): Boolean {
         if (!markChapterDownloadStarted(chapter.index)) {
             // Chapter is already in onDownloadSet. Check if the task is actually alive.
@@ -686,11 +687,19 @@ class CacheBookModel(
                 }
                 notifyDownloadSetChanged()
                 if (!markChapterDownloadStarted(chapter.index)) {
-                    markPendingReadRequest(chapter.index, resetPageOffset)
+                    markPendingReadRequest(
+                        chapter.index,
+                        resetPageOffset,
+                        preserveReadAloudPosition,
+                    )
                     return false
                 }
             } else {
-                markPendingReadRequest(chapter.index, resetPageOffset)
+                markPendingReadRequest(
+                    chapter.index,
+                    resetPageOffset,
+                    preserveReadAloudPosition,
+                )
                 return true
             }
         }
@@ -712,17 +721,33 @@ class CacheBookModel(
             onSuccess(chapter)
             ReadBook.downloadedChapters.add(chapter.index)
             ReadBook.downloadFailChapters.remove(chapter.index)
-            downloadFinish(chapter, content, resetPageOffset)
+            downloadFinish(
+                chapter,
+                content,
+                resetPageOffset,
+                preserveReadAloudPosition = preserveReadAloudPosition,
+            )
             emitPendingReadContent(chapter, content)
         }.onError {
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
-            downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}", resetPageOffset)
+            downloadFinish(
+                chapter,
+                "获取正文失败\n${it.localizedMessage}",
+                resetPageOffset,
+                preserveReadAloudPosition = preserveReadAloudPosition,
+            )
             emitPendingReadError(chapter, it)
         }.onCancel {
             onCancel(chapter.index, requeue = false)
-            downloadFinish(chapter, "download canceled", resetPageOffset, true)
+            downloadFinish(
+                chapter,
+                "download canceled",
+                resetPageOffset,
+                canceled = true,
+                preserveReadAloudPosition = preserveReadAloudPosition,
+            )
         }.onFinally {
             chapterTasks.remove(chapter.index)
             host.onTaskQueuesChanged(book.bookUrl)
@@ -744,35 +769,59 @@ class CacheBookModel(
     }
 
     @Synchronized
-    private fun markPendingReadRequest(index: Int, resetPageOffset: Boolean) {
-        pendingReadRequestMap[index] = pendingReadRequestMap[index] == true || resetPageOffset
+    private fun markPendingReadRequest(
+        index: Int,
+        resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean,
+    ) {
+        pendingReadRequestMap[index] = mergePendingReadRequest(
+            previous = pendingReadRequestMap[index],
+            resetPageOffset = resetPageOffset,
+            preserveReadAloudPosition = preserveReadAloudPosition,
+        )
     }
 
     @Synchronized
-    private fun consumePendingReadRequest(index: Int): Boolean? {
+    private fun consumePendingReadRequest(index: Int): PendingReadRequest? {
         return pendingReadRequestMap.remove(index)
     }
 
     private fun emitPendingReadContent(chapter: BookChapter, content: String) {
-        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
-        downloadFinish(chapter, content, resetPageOffset)
+        val request = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(
+            chapter,
+            content,
+            request.resetPageOffset,
+            preserveReadAloudPosition = request.preserveReadAloudPosition,
+        )
     }
 
     private fun emitPendingReadError(chapter: BookChapter, error: Throwable) {
-        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
-        downloadFinish(chapter, "获取正文失败\n${error.localizedMessage}", resetPageOffset)
+        val request = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(
+            chapter,
+            "获取正文失败\n${error.localizedMessage}",
+            request.resetPageOffset,
+            preserveReadAloudPosition = request.preserveReadAloudPosition,
+        )
     }
 
     private fun emitPendingReadCanceled(chapter: BookChapter) {
-        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
-        downloadFinish(chapter, "download canceled", resetPageOffset)
+        val request = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(
+            chapter,
+            "download canceled",
+            request.resetPageOffset,
+            preserveReadAloudPosition = request.preserveReadAloudPosition,
+        )
     }
 
     private fun downloadFinish(
         chapter: BookChapter,
         content: String,
         resetPageOffset: Boolean = false,
-        canceled: Boolean = false
+        canceled: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
     ) {
         if (ReadBook.book?.bookUrl == book.bookUrl) {
             ReadBook.contentLoadFinish(
@@ -781,7 +830,23 @@ class CacheBookModel(
                 content = content,
                 resetPageOffset = resetPageOffset,
                 canceled = canceled,
+                preserveReadAloudPosition = preserveReadAloudPosition,
             )
         }
     }
 }
+
+internal data class PendingReadRequest(
+    val resetPageOffset: Boolean,
+    val preserveReadAloudPosition: Boolean,
+)
+
+internal fun mergePendingReadRequest(
+    previous: PendingReadRequest?,
+    resetPageOffset: Boolean,
+    preserveReadAloudPosition: Boolean,
+): PendingReadRequest = PendingReadRequest(
+    resetPageOffset = previous?.resetPageOffset == true || resetPageOffset,
+    preserveReadAloudPosition =
+        (previous?.preserveReadAloudPosition ?: true) && preserveReadAloudPosition,
+)

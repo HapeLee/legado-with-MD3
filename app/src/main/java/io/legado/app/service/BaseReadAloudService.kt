@@ -88,6 +88,16 @@ abstract class BaseReadAloudService : BaseService(),
                 field = PlaybackTimer.normalize(value)
             }
 
+        @JvmStatic
+        @Volatile
+        var currentChapterIndex: Int = -1
+            private set
+
+        @JvmStatic
+        @Volatile
+        var currentProgress: Int = 0
+            private set
+
         fun isPlay(): Boolean {
             return isRun && !pause
         }
@@ -199,6 +209,8 @@ abstract class BaseReadAloudService : BaseService(),
         }
         isRun = false
         pause = true
+        currentChapterIndex = -1
+        currentProgress = 0
         abandonFocus()
         unregisterReceiver(broadcastReceiver)
         postEvent(EventBus.ALOUD_STATE, Status.STOP)
@@ -227,6 +239,7 @@ abstract class BaseReadAloudService : BaseService(),
             IntentAction.pause -> pauseReadAloud()
             IntentAction.resume -> resumeReadAloud()
             IntentAction.upTtsSpeechRate -> upSpeechRate(true)
+            IntentAction.syncReadAloudLayout -> syncTextChapterLayout()
             IntentAction.prevParagraph -> prevP()
             IntentAction.nextParagraph -> nextP()
             IntentAction.prev -> prevChapter()
@@ -274,6 +287,7 @@ abstract class BaseReadAloudService : BaseService(),
                             textChapter.paragraphs[nowSpeak].chapterPosition
                 }
             }
+            updateReadAloudProgressSnapshot(readAloudNumber + 1)
             paragraphStartPos = pos
             launch(Main) {
                 upMediaMetadata()
@@ -347,7 +361,48 @@ abstract class BaseReadAloudService : BaseService(),
 
     fun upTtsProgress(progress: Int) {
         ReadBook.upReadTime()
+        updateReadAloudProgressSnapshot(progress)
         postEvent(EventBus.TTS_PROGRESS, progress)
+    }
+
+    protected fun updateReadAloudProgressSnapshot(progress: Int) {
+        currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
+        currentProgress = progress.coerceAtLeast(0)
+    }
+
+    protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
+        val chapter = textChapter ?: return false
+        val targetPageIndex = findReadAloudPageIndex(
+            currentPageIndex = pageIndex,
+            chapterPosition = chapterPosition,
+            pageCount = chapter.pageSize,
+            pageStart = chapter::getReadLength,
+        )
+        if (targetPageIndex == pageIndex) return false
+        repeat(targetPageIndex - pageIndex) {
+            pageIndex++
+            ReadBook.moveToNextPage()
+        }
+        return true
+    }
+
+    private fun syncTextChapterLayout() {
+        val latestChapter = ReadBook.curTextChapter ?: return
+        val serviceChapter = textChapter ?: return
+        if (!latestChapter.isCompleted || latestChapter.chapter.index != serviceChapter.chapter.index) {
+            return
+        }
+        val latestPageIndex = latestChapter.getPageIndexByCharIndex(
+            (currentProgress - 1).coerceAtLeast(0)
+        )
+        if (latestPageIndex < 0) return
+        textChapter = latestChapter
+        pageIndex = latestPageIndex
+        ReadBook.syncReadAloudPage(
+            chapterIndex = latestChapter.chapter.index,
+            chapterPos = latestChapter.getReadLength(latestPageIndex),
+        )
+        upTtsProgress(currentProgress)
     }
 
     private fun prevP() {
@@ -815,4 +870,20 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+}
+
+internal inline fun findReadAloudPageIndex(
+    currentPageIndex: Int,
+    chapterPosition: Int,
+    pageCount: Int,
+    pageStart: (Int) -> Int,
+): Int {
+    var targetPageIndex = currentPageIndex
+    while (
+        targetPageIndex + 1 < pageCount &&
+        chapterPosition > pageStart(targetPageIndex + 1)
+    ) {
+        targetPageIndex++
+    }
+    return targetPageIndex
 }

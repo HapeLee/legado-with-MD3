@@ -592,10 +592,10 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun upPlayPos() {
         playIndexJob?.cancel()
-        val textChapter = textChapter ?: return
+        if (textChapter == null) return
         playIndexJob = lifecycleScope.launch {
-            upTtsProgress(readAloudNumber + 1)
             if (exoPlayer.duration <= 0) {
+                upTtsProgress(readAloudNumber + 1)
                 return@launch
             }
             val speakTextLength = contentList[nowSpeak].length
@@ -604,13 +604,12 @@ class HttpReadAloudService : BaseReadAloudService(),
             }
             val sleep = exoPlayer.duration / speakTextLength
             val start = speakTextLength * exoPlayer.currentPosition / exoPlayer.duration
+            upTtsProgress(readAloudNumber + start.toInt() + 1)
             for (i in start..contentList[nowSpeak].length) {
-                if (pageIndex + 1 < textChapter.pageSize
-                    && readAloudNumber + i > textChapter.getReadLength(pageIndex + 1)
-                ) {
-                    pageIndex++
-                    ReadBook.moveToNextPage()
-                    upTtsProgress(readAloudNumber + i.toInt())
+                val chapterPosition = readAloudNumber + i.toInt()
+                updateReadAloudProgressSnapshot(chapterPosition + 1)
+                if (moveToReadAloudPage(chapterPosition)) {
+                    upTtsProgress(chapterPosition + 1)
                 }
                 delay(sleep)
             }
