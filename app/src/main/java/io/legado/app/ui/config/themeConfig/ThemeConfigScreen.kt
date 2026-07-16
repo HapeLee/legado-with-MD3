@@ -234,7 +234,7 @@ fun ThemeConfigScreen(
                             onValueChange = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                ThemeConfigStore.applyDayNightLive()
                             }
                         )
 
@@ -274,7 +274,7 @@ fun ThemeConfigScreen(
                             onModeSelected = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                ThemeConfigStore.applyDayNightLive()
                             }
                         )
                     }
@@ -975,15 +975,20 @@ fun ThemeColorButton(
     customNightSeedColor: Int,
     onClick: () -> Unit
 ) {
-    val colors = getThemeColorPalette(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    // 配色方案由种子色实时生成，开销不小，缓存避免无关重组时重复计算
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColorPalette(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 0.dp,
         label = "borderWidth"
@@ -1076,15 +1081,19 @@ fun ThemeCard(
     customLightSeedColor: Int,
     customNightSeedColor: Int
 ) {
-    val colors = getThemeColors(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColors(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
