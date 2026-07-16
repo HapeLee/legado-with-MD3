@@ -627,15 +627,27 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     /**
      * 当前页面变化
      */
-    private fun curPageChanged(pageChanged: Boolean = false) {
+    private fun curPageChanged(
+        pageChanged: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
+    ) {
         callBack?.pageChanged()
         curTextChapter?.let {
             if (BaseReadAloudService.isRun && it.isCompleted) {
-                val scrollPageAnim = pageAnim() == 3
-                if (scrollPageAnim && pageChanged) {
-                    ReadAloud.pause(appCtx)
+                if (shouldRestartReadAloudAfterContentLoad(
+                        preserveReadAloudPosition = preserveReadAloudPosition,
+                        serviceChapterIndex = BaseReadAloudService.currentChapterIndex,
+                        loadedChapterIndex = it.chapter.index,
+                    )
+                ) {
+                    val scrollPageAnim = pageAnim() == 3
+                    if (scrollPageAnim && pageChanged) {
+                        ReadAloud.pause(appCtx)
+                    } else {
+                        readAloud(!BaseReadAloudService.pause)
+                    }
                 } else {
-                    readAloud(!BaseReadAloudService.pause)
+                    ReadAloud.syncLayout()
                 }
             }
         }
@@ -652,6 +664,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (textChapter.isCompleted) {
             ReadAloud.play(appCtx, play, startPos = startPos)
         }
+    }
+
+    fun syncReadAloudPage(chapterIndex: Int, chapterPos: Int) {
+        if (durChapterIndex != chapterIndex || durChapterPos == chapterPos) return
+        durChapterPos = chapterPos
+        callBack?.upContent(resetPageOffset = false)
+        saveRead(pageChanged = true)
     }
 
     /**
@@ -694,22 +713,39 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      */
     fun loadContent(
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null
     ) {
-        loadContent(durChapterIndex, resetPageOffset = resetPageOffset) {
+        loadContent(
+            durChapterIndex,
+            resetPageOffset = resetPageOffset,
+            preserveReadAloudPosition = preserveReadAloudPosition,
+        ) {
             success?.invoke()
         }
         loadContent(durChapterIndex + 1, resetPageOffset = resetPageOffset)
         loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
     }
 
+    fun relayoutContent() {
+        loadContent(
+            resetPageOffset = false,
+            preserveReadAloudPosition = true,
+        )
+    }
+
     fun loadOrUpContent(success: (() -> Unit)? = null) {
         val curChapter = curTextChapter
         if (curChapter == null || !curChapter.isLayoutSizeMatch()) {
+            val preserveReadAloudPosition = BaseReadAloudService.isRun &&
+                    BaseReadAloudService.currentChapterIndex == durChapterIndex
             curTextChapter = null
             nextTextChapter = null
             prevTextChapter = null
-            loadContent(durChapterIndex) {
+            loadContent(
+                durChapterIndex,
+                preserveReadAloudPosition = preserveReadAloudPosition,
+            ) {
                 success?.invoke()
             }
         } else {
@@ -738,6 +774,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         index: Int,
         upContent: Boolean = true,
         resetPageOffset: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null
     ) {
         Coroutine.async {
@@ -767,12 +804,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         it,
                         upContent,
                         resetPageOffset,
+                        preserveReadAloudPosition,
                         success = success
                     )
                 } ?: download(
                     downloadScope,
                     chapter,
-                    resetPageOffset
+                    resetPageOffset,
+                    preserveReadAloudPosition = preserveReadAloudPosition,
                 )
             }
         }.onError {
@@ -831,7 +870,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         } else {
             delay(1000)
             if (addLoading(index)) {
-                download(downloadScope, chapter, false, preDownloadSemaphore)
+                download(
+                    scope = downloadScope,
+                    chapter = chapter,
+                    resetPageOffset = false,
+                    semaphore = preDownloadSemaphore,
+                )
             }
         }
     }
@@ -843,6 +887,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         scope: CoroutineScope,
         chapter: BookChapter,
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         semaphore: Semaphore? = null,
         success: (() -> Unit)? = null
     ) {
@@ -850,7 +895,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val bookSource = bookSource
         if (bookSource != null) {
             val started =
-                CacheBook.getOrCreate(bookSource, book).download(scope, chapter, semaphore)
+                CacheBook.getOrCreate(bookSource, book).download(
+                    scope = scope,
+                    chapter = chapter,
+                    semaphore = semaphore,
+                    resetPageOffset = resetPageOffset,
+                    preserveReadAloudPosition = preserveReadAloudPosition,
+                )
             if (!started) {
                 removeLoading(chapter.index)
             }
@@ -861,6 +912,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chapter,
                 "加载正文失败\n$msg",
                 resetPageOffset = resetPageOffset,
+                preserveReadAloudPosition = preserveReadAloudPosition,
                 success = success
             )
         }
@@ -927,6 +979,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         content: String,
         upContent: Boolean = true,
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         canceled: Boolean = false,
         success: (() -> Unit)? = null
     ) {
@@ -971,7 +1024,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         callBack?.onLayoutPageCompleted(index, page)
                     }
                     if (upContent) callBack?.upContent(offset, !available && resetPageOffset)
-                    curPageChanged()
+                    curPageChanged(
+                        preserveReadAloudPosition = preserveReadAloudPosition,
+                    )
                     callBack?.contentLoadFinish()
                 }
 

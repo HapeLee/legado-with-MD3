@@ -791,7 +791,6 @@ sealed interface ReadBookEffect {
     data class UpTextSelectAble(val enabled: Boolean) : ReadBookEffect
 
     // TTS
-    data class UpTtsAloudSpan(val chapterStart: Int) : ReadBookEffect
 
     // Dialogs (Activity-driven)
     data object ShowConfirmSkipToChapter : ReadBookEffect
@@ -905,6 +904,7 @@ sealed interface ConfigUpdateAction {
     data object UpdateBackgroundAlpha : ConfigUpdateAction
     data object UpdatePageSlopSquare : ConfigUpdateAction
     data object ReloadContent : ConfigUpdateAction
+    data object RelayoutContent : ConfigUpdateAction
     data object UpdateContent : ConfigUpdateAction
     data object UpdateChapterStyle : ConfigUpdateAction
     data object InvalidateTextPage : ConfigUpdateAction

@@ -180,6 +180,11 @@ class ReadBookViewModel(
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
+    private val _readAloudProgress = MutableStateFlow(
+        BaseReadAloudService.currentProgress.takeIf { BaseReadAloudService.isPlay() && it > 0 }
+    )
+    val readAloudProgress = _readAloudProgress.asStateFlow()
+
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
         _effects.emit(effect)
@@ -868,7 +873,7 @@ class ReadBookViewModel(
                 }
             }
 
-            is ReadBookIntent.TtsProgress -> _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(intent.chapterStart))
+            is ReadBookIntent.TtsProgress -> updateReadAloudProgress(intent.chapterStart)
             is ReadBookIntent.ReadAloudAction -> {
                 openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
             }
@@ -1826,6 +1831,7 @@ class ReadBookViewModel(
                         9 -> ConfigUpdateAction.InvalidateTextPage
                         10 -> ConfigUpdateAction.UpdateLayout
                         11 -> ConfigUpdateAction.SubmitRenderTask
+                        12 -> ConfigUpdateAction.RelayoutContent
                         else -> null
                     }
                 }.toSet()
@@ -1843,6 +1849,7 @@ class ReadBookViewModel(
                     )
                 }
                 if (state == Status.STOP || state == Status.PAUSE) {
+                    _readAloudProgress.value = null
                     _effects.tryEmit(ReadBookEffect.UpAloudState)
                 }
                 if (state == Status.PAUSE) {
@@ -1885,8 +1892,14 @@ class ReadBookViewModel(
         }
         viewModelScope.launch {
             eventFlowSticky<Int>(EventBus.TTS_PROGRESS).collect { chapterStart ->
-                _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(chapterStart))
+                updateReadAloudProgress(chapterStart)
             }
+        }
+    }
+
+    private fun updateReadAloudProgress(chapterStart: Int) {
+        if (BaseReadAloudService.isPlay() && chapterStart > 0) {
+            _readAloudProgress.value = chapterStart
         }
     }
 

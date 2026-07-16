@@ -33,6 +33,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     private val ttsUtteranceListener = TTSUtteranceListener()
     private var speakJob: Coroutine<*>? = null
     private var utteranceStartPos = 0
+    private var utteranceStartReadAloudNumber = 0
     private var needParagraphInterval = false // 是否需要进行段落间隔延迟
     private val TAG = "TTSReadAloudService"
 
@@ -243,6 +244,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         override fun onStart(s: String) {
             LogUtils.d(TAG, "onStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$s")
             utteranceStartPos = paragraphStartPos
+            utteranceStartReadAloudNumber = readAloudNumber
             textChapter?.let {
                 if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
                     nextParagraph()
@@ -270,16 +272,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             super.onRangeStart(utteranceId, start, end, frame)
             paragraphStartPos = utteranceStartPos + start
+            readAloudNumber = utteranceStartReadAloudNumber + start
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
             LogUtils.d(TAG, msg)
             textChapter?.let {
                 if (pageIndex + 1 < it.pageSize
-                    && readAloudNumber + start > it.getReadLength(pageIndex + 1)
+                    && readAloudNumber > it.getReadLength(pageIndex + 1)
                 ) {
                     pageIndex++
                     ReadBook.moveToNextPage()
-                    upTtsProgress(readAloudNumber + start)
+                    upTtsProgress(readAloudNumber)
                 }
             }
         }
@@ -299,7 +302,11 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         private fun nextParagraph() {
             //跳过全标点段落
             do {
-                readAloudNumber += contentList[nowSpeak].length + 1 - paragraphStartPos
+                readAloudNumber = nextParagraphPosition(
+                    currentPosition = readAloudNumber,
+                    paragraphLength = contentList[nowSpeak].length,
+                    paragraphStartPosition = paragraphStartPos,
+                )
                 paragraphStartPos = 0
                 nowSpeak++
                 if (nowSpeak >= contentList.size) {
@@ -326,3 +333,9 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     }
 
 }
+
+internal fun nextParagraphPosition(
+    currentPosition: Int,
+    paragraphLength: Int,
+    paragraphStartPosition: Int,
+): Int = currentPosition + paragraphLength + 1 - paragraphStartPosition
