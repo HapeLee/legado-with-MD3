@@ -272,18 +272,13 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             super.onRangeStart(utteranceId, start, end, frame)
             paragraphStartPos = utteranceStartPos + start
-            readAloudNumber = utteranceStartReadAloudNumber + start
+            readAloudNumber = currentRangePosition(utteranceStartReadAloudNumber, start)
+            updateReadAloudProgressSnapshot(readAloudNumber + 1)
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
             LogUtils.d(TAG, msg)
-            textChapter?.let {
-                if (pageIndex + 1 < it.pageSize
-                    && readAloudNumber > it.getReadLength(pageIndex + 1)
-                ) {
-                    pageIndex++
-                    ReadBook.moveToNextPage()
-                    upTtsProgress(readAloudNumber)
-                }
+            if (moveToReadAloudPage(readAloudNumber)) {
+                upTtsProgress(readAloudNumber + 1)
             }
         }
 
@@ -339,3 +334,8 @@ internal fun nextParagraphPosition(
     paragraphLength: Int,
     paragraphStartPosition: Int,
 ): Int = currentPosition + paragraphLength + 1 - paragraphStartPosition
+
+internal fun currentRangePosition(
+    utteranceStartPosition: Int,
+    rangeStart: Int,
+): Int = utteranceStartPosition + rangeStart

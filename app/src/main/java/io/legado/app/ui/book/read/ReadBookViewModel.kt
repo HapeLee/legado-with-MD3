@@ -75,6 +75,7 @@ import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -181,7 +182,10 @@ class ReadBookViewModel(
     val effects = _effects.asSharedFlow()
 
     private val _readAloudProgress = MutableStateFlow(
-        BaseReadAloudService.currentProgress.takeIf { BaseReadAloudService.isPlay() && it > 0 }
+        activeReadAloudProgress(
+            isPlaying = BaseReadAloudService.isPlay(),
+            currentProgress = BaseReadAloudService.currentProgress,
+        )
     )
     val readAloudProgress = _readAloudProgress.asStateFlow()
 

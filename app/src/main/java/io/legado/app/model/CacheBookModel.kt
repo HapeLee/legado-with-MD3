@@ -62,11 +62,6 @@ class CacheBookModel(
     private val onDownloadSet = linkedSetOf<Int>()
     private val canceledDownloadSet = hashSetOf<Int>()
     private val pausedChapterSet = linkedSetOf<Int>()
-    private data class PendingReadRequest(
-        val resetPageOffset: Boolean,
-        val preserveReadAloudPosition: Boolean,
-    )
-
     private val pendingReadRequestMap = hashMapOf<Int, PendingReadRequest>()
     private val chapterTasks = hashMapOf<Int, Coroutine<*>>()
     private val tasks = CompositeCoroutine()
@@ -779,11 +774,10 @@ class CacheBookModel(
         resetPageOffset: Boolean,
         preserveReadAloudPosition: Boolean,
     ) {
-        val previous = pendingReadRequestMap[index]
-        pendingReadRequestMap[index] = PendingReadRequest(
-            resetPageOffset = previous?.resetPageOffset == true || resetPageOffset,
-            preserveReadAloudPosition =
-                previous?.preserveReadAloudPosition != false && preserveReadAloudPosition,
+        pendingReadRequestMap[index] = mergePendingReadRequest(
+            previous = pendingReadRequestMap[index],
+            resetPageOffset = resetPageOffset,
+            preserveReadAloudPosition = preserveReadAloudPosition,
         )
     }
 
@@ -841,3 +835,18 @@ class CacheBookModel(
         }
     }
 }
+
+internal data class PendingReadRequest(
+    val resetPageOffset: Boolean,
+    val preserveReadAloudPosition: Boolean,
+)
+
+internal fun mergePendingReadRequest(
+    previous: PendingReadRequest?,
+    resetPageOffset: Boolean,
+    preserveReadAloudPosition: Boolean,
+): PendingReadRequest = PendingReadRequest(
+    resetPageOffset = previous?.resetPageOffset == true || resetPageOffset,
+    preserveReadAloudPosition =
+        (previous?.preserveReadAloudPosition ?: true) && preserveReadAloudPosition,
+)

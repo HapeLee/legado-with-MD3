@@ -640,8 +640,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         loadedChapterIndex = it.chapter.index,
                     )
                 ) {
-                    val scrollPageAnim = pageAnim() == 3
-                    if (scrollPageAnim && pageChanged) {
+                    if (isScroll && pageChanged) {
                         ReadAloud.pause(appCtx)
                     } else {
                         readAloud(!BaseReadAloudService.pause)

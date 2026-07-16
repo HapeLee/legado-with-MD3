@@ -287,8 +287,7 @@ abstract class BaseReadAloudService : BaseService(),
                             textChapter.paragraphs[nowSpeak].chapterPosition
                 }
             }
-            currentChapterIndex = textChapter.chapter.index
-            currentProgress = readAloudNumber + 1
+            updateReadAloudProgressSnapshot(readAloudNumber + 1)
             paragraphStartPos = pos
             launch(Main) {
                 upMediaMetadata()
@@ -362,9 +361,29 @@ abstract class BaseReadAloudService : BaseService(),
 
     fun upTtsProgress(progress: Int) {
         ReadBook.upReadTime()
-        currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
-        currentProgress = progress
+        updateReadAloudProgressSnapshot(progress)
         postEvent(EventBus.TTS_PROGRESS, progress)
+    }
+
+    protected fun updateReadAloudProgressSnapshot(progress: Int) {
+        currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
+        currentProgress = progress.coerceAtLeast(0)
+    }
+
+    protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
+        val chapter = textChapter ?: return false
+        val targetPageIndex = findReadAloudPageIndex(
+            currentPageIndex = pageIndex,
+            chapterPosition = chapterPosition,
+            pageCount = chapter.pageSize,
+            pageStart = chapter::getReadLength,
+        )
+        if (targetPageIndex == pageIndex) return false
+        repeat(targetPageIndex - pageIndex) {
+            pageIndex++
+            ReadBook.moveToNextPage()
+        }
+        return true
     }
 
     private fun syncTextChapterLayout() {
@@ -851,4 +870,20 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+}
+
+internal inline fun findReadAloudPageIndex(
+    currentPageIndex: Int,
+    chapterPosition: Int,
+    pageCount: Int,
+    pageStart: (Int) -> Int,
+): Int {
+    var targetPageIndex = currentPageIndex
+    while (
+        targetPageIndex + 1 < pageCount &&
+        chapterPosition > pageStart(targetPageIndex + 1)
+    ) {
+        targetPageIndex++
+    }
+    return targetPageIndex
 }
