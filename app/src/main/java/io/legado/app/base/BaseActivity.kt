@@ -168,7 +168,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun initTheme() {
         when (getPrefString("app_theme", "0")) {
             "0" -> {
-                DynamicColors.applyToActivitiesIfAvailable(application)
+                DynamicColors.applyToActivityIfAvailable(this)
             }
             "1" -> setTheme(R.style.Theme_Base_GR)
             "2" -> setTheme(R.style.Theme_Base_Lemon)
@@ -182,9 +182,6 @@ abstract class BaseActivity<VB : ViewBinding>(
             "10" -> setTheme(R.style.Theme_Base_Phoebe)
             "11" -> setTheme(R.style.Theme_Base_Mujika)
             "12" -> {
-                if (AppConfig.customMode == "accent")
-                    setTheme(R.style.ThemeOverlay_WhiteBackground)
-
                 val colorImagePath = getPrefString(PreferKey.colorImage)
                 if (!colorImagePath.isNullOrBlank()) {
                     val file = File(colorImagePath)
@@ -200,18 +197,22 @@ abstract class BaseActivity<VB : ViewBinding>(
                                 .setContentBasedSource(scaledBitmap)
                                 .build()
 
-                            DynamicColors.applyToActivitiesIfAvailable(application, options)
+                            DynamicColors.applyToActivityIfAvailable(this, options)
                             bitmap.recycle()
                         }
                     }
                 }else{
-                    DynamicColors.applyToActivitiesIfAvailable(
-                        application,
+                    DynamicColors.applyToActivityIfAvailable(
+                        this,
                         DynamicColorsOptions.Builder()
                             .setContentBasedSource(application.primaryColor)
                             .build()
                     )
                 }
+
+                // 必须在动态取色之后应用，否则会被动态配色的 surface/background 覆盖
+                if (AppConfig.customMode == "accent")
+                    setTheme(R.style.ThemeOverlay_WhiteBackground)
             }
 
             "13" -> setTheme(R.style.AppTheme_Transparent)
