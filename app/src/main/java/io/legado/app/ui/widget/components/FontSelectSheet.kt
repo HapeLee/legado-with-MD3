@@ -13,8 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import io.legado.app.R
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
@@ -70,6 +72,7 @@ fun FontSelectSheet(
                 SmallPlainButton(
                     onClick = { showTypefaceMenu = true },
                     icon = Icons.Default.TextFields,
+                    contentDescription = stringResource(R.string.select_font),
                 )
             }
         },

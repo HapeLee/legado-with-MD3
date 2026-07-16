@@ -54,7 +54,8 @@ fun AppLogSheet(
                     clearAllLogs()
                     logs = emptyList()
                 },
-                icon = Icons.Default.DeleteSweep
+                icon = Icons.Default.DeleteSweep,
+                contentDescription = stringResource(R.string.clear)
             )
         }
     ) {

@@ -62,6 +62,7 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
@@ -165,15 +166,18 @@ fun BookInfoEditContent(
                                 )
                             )
                         },
-                        icon = Icons.Default.ImageSearch
+                        icon = Icons.Default.ImageSearch,
+                        contentDescription = stringResource(R.string.refresh_cover)
                     )
                     MediumOutlinedButton(
                         onClick = { selectCover.launch() },
-                        icon = Icons.Default.FolderOpen
+                        icon = Icons.Default.FolderOpen,
+                        contentDescription = stringResource(R.string.select_folder)
                     )
                     MediumOutlinedButton(
                         onClick = { viewModel.resetCover() },
-                        icon = Icons.Default.Replay
+                        icon = Icons.Default.Replay,
+                        contentDescription = stringResource(R.string.cover_reset)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -324,10 +328,13 @@ fun KindEditor(
     val hapticFeedback = LocalHapticFeedback.current
 
     val listState = rememberLazyListState()
-    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+    fun moveKind(from: Int, to: Int) {
         val mutable = kindList.toMutableList()
-        mutable.add(to.index, mutable.removeAt(from.index))
+        mutable.add(to, mutable.removeAt(from))
         onKindListChange(mutable)
+    }
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        moveKind(from.index, to.index)
     }
 
     Column(
@@ -364,6 +371,11 @@ fun KindEditor(
                                 editText = kind
                             },
                             modifier = Modifier
+                                .reorderAccessibility(
+                                    index = index,
+                                    itemCount = kindList.size,
+                                    onMove = ::moveKind,
+                                )
                                 .longPressDraggableHandle(
                                     onDragStarted = {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
@@ -382,7 +394,8 @@ fun KindEditor(
                 onClick = {
                     onReset()
                 },
-                icon = Icons.Default.Replay
+                icon = Icons.Default.Replay,
+                contentDescription = stringResource(R.string.reset)
             )
             Spacer(modifier = Modifier.width(8.dp))
             MediumOutlinedButton(
@@ -390,7 +403,8 @@ fun KindEditor(
                     editingIndex = -1
                     editText = ""
                 },
-                icon = Icons.Default.Add
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
             )
         }
     }

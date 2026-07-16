@@ -120,7 +120,8 @@ fun BackgroundImageManageSheet(
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
                             .size(32.dp),
-                        icon = Icons.Default.Close
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.close)
                     )
                 }
             }

@@ -197,7 +197,7 @@ fun AiGeneratedMessageContent(
                     SmallPlainButton(
                         onClick = { onSwitchBranch(-1) },
                         icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Previous branch",
+                        contentDescription = stringResource(R.string.previous),
                         modifier = Modifier.size(28.dp)
                     )
                     AppText(
@@ -208,7 +208,7 @@ fun AiGeneratedMessageContent(
                     SmallPlainButton(
                         onClick = { onSwitchBranch(1) },
                         icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Next branch",
+                        contentDescription = stringResource(R.string.next),
                         modifier = Modifier.size(28.dp)
                     )
                 }

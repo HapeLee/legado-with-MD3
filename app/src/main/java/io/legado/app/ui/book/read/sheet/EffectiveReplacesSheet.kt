@@ -166,7 +166,8 @@ fun EffectiveReplacesSheet(
                                         }
                                     }
                                 },
-                                icon = Icons.Default.Close
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close)
                             )
                         }
                     }

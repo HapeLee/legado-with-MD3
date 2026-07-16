@@ -89,12 +89,13 @@
                 android:id="@+id/tv_pre"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
                 app:backgroundTint="?attr/colorSurfaceContainer"
                 android:contentDescription="@string/previous_chapter"
                 android:tooltipText="@string/previous_chapter"
-                app:icon="@drawable/ic_previous"
-                tools:ignore="TouchTargetSizeCheck" />
+                app:icon="@drawable/ic_previous" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
@@ -116,12 +117,13 @@
                 android:id="@+id/tv_next"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
                 app:backgroundTint="?attr/colorSurfaceContainer"
                 android:contentDescription="@string/next_chapter"
                 android:tooltipText="@string/next_chapter"
-                app:icon="@drawable/ic_next"
-                tools:ignore="TouchTargetSizeCheck" />
+                app:icon="@drawable/ic_next" />
         </LinearLayout>
 
         <LinearLayout

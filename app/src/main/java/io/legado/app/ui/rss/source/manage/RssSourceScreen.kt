@@ -351,6 +351,9 @@ fun RssSourceScreen(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
+                        reorderIndex = rules.indexOf(item),
+                        reorderItemCount = rules.size,
+                        onMoveItem = viewModel::moveItemInList,
                         title = item.name,
                         subtitle = item.group,
                         isEnabled = item.isEnabled,

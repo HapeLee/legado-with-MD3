@@ -132,8 +132,9 @@ fun <T> HomepageModuleManageSheet(
         startAction = {
             if (showCustomSetAddModules) {
                 SmallPlainButton(
-                    onClick = { showCustomSetAddModules = false },
-                    icon = Icons.AutoMirrored.Filled.ArrowBack
+                        onClick = { showCustomSetAddModules = false },
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
                 )
             } else if (browsingSourceUrl != null || showSourceBrowser) {
                 SmallPlainButton(
@@ -142,12 +143,14 @@ fun <T> HomepageModuleManageSheet(
                         else if (showSourceBrowser) showSourceBrowser = false
                         else browsingSourceUrl = null
                     },
-                    icon = Icons.AutoMirrored.Filled.ArrowBack
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
                 )
             } else if (selectingSetUrl != null) {
                 SmallPlainButton(
-                    onClick = { selectingSetUrl = null },
-                    icon = Icons.AutoMirrored.Filled.ArrowBack
+                        onClick = { selectingSetUrl = null },
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
                 )
             }
         },
@@ -159,15 +162,17 @@ fun <T> HomepageModuleManageSheet(
                 selectedKindTitles.isNotEmpty()
             ) {
                 SmallPlainButton(
-                    onClick = { showAddKindGroupDialog = true },
-                    icon = Icons.Default.Check
+                        onClick = { showAddKindGroupDialog = true },
+                        icon = Icons.Default.Check,
+                        contentDescription = stringResource(R.string.confirm)
                 )
             } else if ((showSourceBrowser || browsingSourceUrl != null) && !browsingDetail) {
                 var expanded by remember { mutableStateOf(false) }
                 Box {
                     SmallPlainButton(
                         onClick = { expanded = true },
-                        icon = Icons.Default.FilterList
+                        icon = Icons.Default.FilterList,
+                        contentDescription = stringResource(R.string.screen)
                     )
                     RoundDropdownMenu(
                         expanded = expanded,

@@ -32,10 +32,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,6 +45,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -73,7 +74,6 @@ fun SelectionItemCard(
     containerColor: Color? = null,
     selectedContainerColor: Color? = null,
     contentDescription: String? = null,
-    stateDescription: String? = null,
     enableSwitchContentDescription: String? = null,
     editContentDescription: String? = null,
     moreContentDescription: String? = null
@@ -95,12 +95,11 @@ fun SelectionItemCard(
         modifier = modifier
             .fillMaxWidth()
             .then(
-                if (contentDescription != null || stateDescription != null || isSelected) {
+                if (contentDescription != null || inSelectionMode) {
                     Modifier.semantics {
                         contentDescription?.let { this.contentDescription = it }
-                        stateDescription?.let { this.stateDescription = it }
-                        if (isSelected) {
-                            this.selected = true
+                        if (inSelectionMode) {
+                            selected = isSelected
                         }
                         role = Role.Button
                     }
@@ -172,7 +171,9 @@ fun SelectionItemCardContent(
                     if (selectionMode) {
                         AppCheckbox(
                             checked = isSelected,
-                            onCheckedChange = null
+                            onCheckedChange = null,
+                            includeStateSemantics = false,
+                            modifier = Modifier.clearAndSetSemantics { }
                         )
                     } else {
                         leadingContent?.invoke()
@@ -307,12 +308,22 @@ fun LazyItemScope.ReorderableSelectionItem(
     containerColor: Color? = null,
     selectedContainerColor: Color? = null,
     contentDescription: String? = null,
-    stateDescription: String? = null,
     enableSwitchContentDescription: String? = null,
     editContentDescription: String? = null,
-    moreContentDescription: String? = null
+    moreContentDescription: String? = null,
+    reorderIndex: Int? = null,
+    reorderItemCount: Int = 0,
+    onMoveItem: ((from: Int, to: Int) -> Unit)? = null,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    val reorderAccessibilityModifier = if (reorderIndex != null && onMoveItem != null) {
+        Modifier.reorderAccessibility(
+            index = reorderIndex,
+            itemCount = reorderItemCount,
+            enabled = canReorder && !inSelectionMode,
+            onMove = onMoveItem,
+        )
+    } else Modifier
 
     ReorderableItem(state, key = key) { isDragging ->
         val elevation by animateDpAsState(
@@ -337,11 +348,11 @@ fun LazyItemScope.ReorderableSelectionItem(
             containerColor = containerColor,
             selectedContainerColor = selectedContainerColor,
             contentDescription = contentDescription,
-            stateDescription = stateDescription,
             enableSwitchContentDescription = enableSwitchContentDescription,
             editContentDescription = editContentDescription,
             moreContentDescription = moreContentDescription,
             modifier = modifier
+                .then(reorderAccessibilityModifier)
                 .zIndex(if (isDragging) 1f else 0f)
                 .then(
                     if (canReorder && !inSelectionMode) {

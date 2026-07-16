@@ -170,7 +170,7 @@ private fun BookCacheManageScreen(
                         TopBarActionButton(
                             onClick = { showGroupMenu = true },
                             imageVector = AppIcons.Filter,
-                            contentDescription = "分组筛选"
+                            contentDescription = stringResource(R.string.a11y_group_filter)
                         )
                         RoundDropdownMenu(
                             expanded = showGroupMenu,

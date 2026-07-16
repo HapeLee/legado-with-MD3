@@ -412,13 +412,6 @@ fun ReplaceRuleScreen(
                     val enabledState = stringResource(
                         if (ui.isEnabled) R.string.enabled else R.string.disabled
                     )
-                    val selectedState = stringResource(
-                        if (selectedIds.contains(ui.id)) {
-                            R.string.a11y_selected
-                        } else {
-                            R.string.a11y_not_selected
-                        }
-                    )
                     val reorderHint = if (canReorder && !inSelectionMode) {
                         stringResource(R.string.a11y_long_press_reorder)
                     } else {
@@ -428,12 +421,14 @@ fun ReplaceRuleScreen(
                         ui.name,
                         ui.pattern.takeIf { it.isNotBlank() },
                         enabledState,
-                        selectedState,
                         reorderHint
                     ).joinToString()
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = ui.id,
+                        reorderIndex = rules.indexOf(ui),
+                        reorderItemCount = rules.size,
+                        onMoveItem = { from, to -> onIntent(ReplaceRuleIntent.MoveItem(from, to)) },
                         title = ui.name,
                         isEnabled = ui.isEnabled,
                         isSelected = selectedIds.contains(ui.id),
@@ -446,7 +441,6 @@ fun ReplaceRuleScreen(
                             onIntent(ReplaceRuleIntent.SetRuleEnabled(ui.id, enabled))
                         },
                         contentDescription = itemDescription,
-                        stateDescription = selectedState,
                         enableSwitchContentDescription = stringResource(
                             R.string.a11y_rule_enabled_switch,
                             ui.name

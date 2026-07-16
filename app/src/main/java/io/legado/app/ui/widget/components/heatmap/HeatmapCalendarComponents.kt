@@ -83,6 +83,7 @@ fun HeatmapCalendarEndAction(
     MediumOutlinedButton(
         onClick = onClearDate,
         icon = Icons.Outlined.Delete,
+        contentDescription = stringResource(R.string.clear),
     )
 }
 
@@ -132,6 +133,7 @@ fun WeekdayLabelsColumn(
 @Composable
 fun NoEarlierDataIndicator(
     cellSize: Dp,
+    touchTargetSize: Dp = cellSize,
     modifier: Modifier = Modifier
 ) {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
@@ -147,23 +149,29 @@ fun NoEarlierDataIndicator(
             repeat(7) {
                 Box(
                     modifier = Modifier
-                        .size(cellSize)
-                        .drawBehind {
-                            val strokeWidth = 1.dp.toPx()
-                            val stroke = Stroke(
-                                width = strokeWidth,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
-                            )
-                            val inset = strokeWidth / 2
-                            drawRoundRect(
-                                color = outlineColor,
-                                style = stroke,
-                                topLeft = Offset(inset, inset),
-                                size = Size(size.width - strokeWidth, size.height - strokeWidth),
-                                cornerRadius = CornerRadius(4.dp.toPx())
-                            )
-                        }
-                )
+                        .size(maxOf(cellSize, touchTargetSize)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(cellSize)
+                            .drawBehind {
+                                val strokeWidth = 1.dp.toPx()
+                                val stroke = Stroke(
+                                    width = strokeWidth,
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                                )
+                                val inset = strokeWidth / 2
+                                drawRoundRect(
+                                    color = outlineColor,
+                                    style = stroke,
+                                    topLeft = Offset(inset, inset),
+                                    size = Size(size.width - strokeWidth, size.height - strokeWidth),
+                                    cornerRadius = CornerRadius(4.dp.toPx())
+                                )
+                            }
+                    )
+                }
             }
         }
 
@@ -196,7 +204,7 @@ fun HeatmapCalendarCell(
     dailyReadTimes: Map<LocalDate, Long>,
     isSelected: Boolean,
     config: HeatmapConfig,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val level = rememberHeatmapLevel(day, mode, dailyReadCounts, dailyReadTimes)
@@ -208,31 +216,34 @@ fun HeatmapCalendarCell(
     } else {
         stringResource(R.string.a11y_heatmap_day_duration, day.toString(), readDuration)
     }
-    val selectedStateDescription = if (isSelected) {
-        stringResource(R.string.a11y_selected)
-    } else {
-        stringResource(R.string.a11y_not_selected)
-    }
-
     Box(
         modifier = modifier
-            .size(config.cellSize)
+            .size(config.interactiveCellSize)
+            .then(
+                onDateSelected?.let { onSelect ->
+                    Modifier.clickable { onSelect(day) }
+                } ?: Modifier
+            )
             .semantics {
                 contentDescription = cellDescription
-                stateDescription = selectedStateDescription
                 if (isSelected) {
                     selected = true
                 }
-            }
-            .clip(RoundedCornerShape(config.cornerRadius))
-            .background(cellColor)
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                shape = RoundedCornerShape(config.cornerRadius)
-            )
-            .clickable { onDateSelected(day) }
-    )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(config.cellSize)
+                .clip(RoundedCornerShape(config.cornerRadius))
+                .background(cellColor)
+                .border(
+                    width = if (isSelected) 2.dp else 0.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                    shape = RoundedCornerShape(config.cornerRadius)
+                )
+        )
+    }
 }
 
 /**
@@ -246,19 +257,19 @@ fun HeatmapWeekColumn(
     dailyReadTimes: Map<LocalDate, Long>,
     selectedDate: LocalDate?,
     config: HeatmapConfig,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val firstDayOfMonth = week.firstOrNull { it?.dayOfMonth == 1 }
 
-    Box(modifier = modifier.width(config.cellSize)) {
+    Box(modifier = modifier.width(config.interactiveCellSize)) {
         Column(
             modifier = Modifier.padding(top = 24.dp),
             verticalArrangement = Arrangement.spacedBy(config.cellSpacing)
         ) {
             week.forEach { day ->
                 if (day == null) {
-                    Spacer(modifier = Modifier.size(config.cellSize))
+                    Spacer(modifier = Modifier.size(config.interactiveCellSize))
                 } else {
                     HeatmapCalendarCell(
                         day = day,

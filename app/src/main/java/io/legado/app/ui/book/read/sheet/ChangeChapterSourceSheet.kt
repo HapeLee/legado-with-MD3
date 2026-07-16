@@ -70,7 +70,8 @@ fun ChangeChapterSourceSheet(
                 Box {
                     MediumPlainButton(
                         onClick = { showOptionsMenu = true },
-                        icon = Icons.Default.MoreVert
+                icon = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_menu)
                     )
                     RoundDropdownMenu(
                         expanded = showOptionsMenu,
@@ -117,11 +118,15 @@ fun ChangeChapterSourceSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     MediumPlainButton(
                         onClick = { onIntent(ChangeChapterSourceIntent.StartStopSearch) },
-                        icon = if (state.isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
+                icon = if (state.isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
+                contentDescription = stringResource(
+                    if (state.isSearching) R.string.pause else R.string.refresh
+                ),
                     )
                     MediumPlainButton(
                         onClick = { showFilterSheet = true },
-                        icon = Icons.Default.FilterList
+                icon = Icons.Default.FilterList,
+                contentDescription = stringResource(R.string.screen)
                     )
                 }
             }
@@ -261,7 +266,7 @@ private fun SearchContent(
                             onClick = { onBookScoreClick(item) },
                             icon = Icons.Default.PushPin,
                             tint = if (bookScore > 0) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.outline,
-                            contentDescription = null
+                            contentDescription = stringResource(R.string.a11y_pin_source)
                         )
                     },
                     supportingContent = {

@@ -74,6 +74,7 @@ fun AiTextRewriteSheet(
                     Icons.Default.AutoAwesome
                 else
                     Icons.Default.Autorenew,
+                contentDescription = stringResource(R.string.ai_generate),
                 enabled = state.presets.isNotEmpty() &&
                         !state.isLoading &&
                         !state.isApplying
@@ -83,6 +84,7 @@ fun AiTextRewriteSheet(
             MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ConfirmAiTextRewrite) },
                 icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.save),
                 enabled = !state.isLoading &&
                         !state.isApplying &&
                         state.errorMessage == null &&
