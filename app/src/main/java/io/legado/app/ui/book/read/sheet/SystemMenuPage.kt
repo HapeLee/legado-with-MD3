@@ -752,6 +752,19 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleBarIconConfig))
             },
         )
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.read_menu_icon_container_style),
+            selectedValue = preferences.titleBarIconStyle.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.read_menu_icon_style_plain),
+                stringResource(R.string.read_menu_icon_style_tonal),
+                stringResource(R.string.read_menu_icon_style_outlined),
+            ),
+            entryValues = arrayOf("0", "1", "2"),
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconStyle(it.toInt())))
+            },
+        )
 
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_bar_blur),

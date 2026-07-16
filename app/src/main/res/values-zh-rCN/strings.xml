@@ -2105,8 +2105,8 @@
     <string name="read_menu_show_icon_text">显示图标文字</string>
     <string name="read_menu_icon_container_style">图标容器样式</string>
     <string name="read_menu_icon_style_plain">无容器</string>
-    <string name="read_menu_icon_style_tonal">Tonal</string>
-    <string name="read_menu_icon_style_outlined">Outlined</string>
+    <string name="read_menu_icon_style_tonal">色调</string>
+    <string name="read_menu_icon_style_outlined">描边</string>
     <string name="read_menu_icons_per_row">每行图标数</string>
     <string name="read_menu_icon_row_count">图标行数</string>
     <string name="read_menu_custom_icons">自定义图标</string>

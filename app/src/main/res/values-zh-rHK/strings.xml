@@ -1929,7 +1929,7 @@
     <string name="read_menu_icon_style">圖標樣式</string>
     <string name="read_menu_icon_style_outlined">描邊</string>
     <string name="read_menu_icon_style_plain">Plain</string>
-    <string name="read_menu_icon_style_tonal">Tonal</string>
+    <string name="read_menu_icon_style_tonal">色調</string>
     <string name="read_menu_icons_per_row">每行圖標數</string>
     <string name="read_menu_live_preview">即時預覽</string>
     <string name="read_menu_show_icon_text">顯示圖標標籤</string>

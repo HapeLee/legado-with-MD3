@@ -1261,6 +1261,7 @@ private fun MenuTitleGlassButton(
         backdrop = backdrop,
         menuConfig = state.menuConfig,
         glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig),
+        iconStyle = state.menuConfig.titleBarIconStyle,
         modifier = modifier,
         onLongClick = onLongClick,
         contentDescription = contentDescription,
@@ -1276,6 +1277,7 @@ private fun ReadMenuGlassIconButton(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
     glassEnabled: Boolean,
+    iconStyle: Int = menuConfig.readMenuIconStyle,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     selected: Boolean = false,
@@ -1287,6 +1289,7 @@ private fun ReadMenuGlassIconButton(
         backdrop = backdrop,
         menuConfig = menuConfig,
         glassEnabled = glassEnabled,
+        iconStyle = iconStyle,
         modifier = modifier,
         onLongClick = onLongClick,
         selected = selected,
@@ -1309,6 +1312,7 @@ private fun ReadMenuGlassButtonSurface(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
     glassEnabled: Boolean,
+    iconStyle: Int = menuConfig.readMenuIconStyle,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     selected: Boolean = false,
@@ -1322,12 +1326,13 @@ private fun ReadMenuGlassButtonSurface(
     }
     val containerColor = when {
         selected -> LegadoTheme.colorScheme.secondaryContainer
-        else -> LegadoTheme.colorScheme.surfaceContainerLow
+        iconStyle == 1 -> LegadoTheme.colorScheme.surfaceContainerLow
+        else -> Color.Transparent
     }
-    val border = if (selected) {
-        BorderStroke(1.5.dp, LegadoTheme.colorScheme.secondary)
-    } else {
-        null
+    val border = when {
+        selected -> BorderStroke(1.5.dp, LegadoTheme.colorScheme.secondary)
+        !glassEnabled && iconStyle == 2 -> BorderStroke(1.dp, tint.copy(alpha = 0.45f))
+        else -> null
     }
     val outerSize = if (glassEnabled) 48.dp else 40.dp
     val innerSize = 40.dp
@@ -1941,6 +1946,7 @@ private fun FloatingIconRow(
                     backdrop,
                     state.menuConfig
                 ),
+                iconStyle = state.menuConfig.titleBarIconStyle,
                 selected = iconDef.isActive,
                 modifier = Modifier.padding(horizontal = 4.dp),
                 onLongClick = iconDef.onLongClick,
@@ -2483,7 +2489,7 @@ private fun MenuBottomBar(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Tool buttons
         val toolButtons = remember(

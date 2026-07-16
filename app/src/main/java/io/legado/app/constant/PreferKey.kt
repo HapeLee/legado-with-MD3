@@ -310,6 +310,7 @@ object PreferKey {
     const val readMenuColorMode = "readMenuColorMode"
     const val readMenuIconShowText = "readMenuIconShowText"
     const val readMenuIconStyle = "readMenuIconStyle"
+    const val titleBarIconStyle = "titleBarIconStyle"
     const val readMenuIconItemsPerRow = "readMenuIconItemsPerRow"
     const val readMenuIconRowCount = "readMenuIconRowCount"
     const val readMenuBottomCornerRadius = "readMenuBottomCornerRadius"

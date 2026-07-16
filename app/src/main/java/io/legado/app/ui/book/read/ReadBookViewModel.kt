@@ -2068,6 +2068,7 @@ class ReadBookViewModel(
                 readMenuTopBarBlurStyle = ReadBookConfig.readMenuTopBarBlurStyle,
                 readMenuBottomBarBlurStyle = ReadBookConfig.readMenuBottomBarBlurStyle,
                 readMenuIconStyle = ReadBookConfig.readMenuIconStyle,
+                titleBarIconStyle = ReadBookConfig.titleBarIconStyle,
                 readMenuIconShowText = ReadBookConfig.readMenuIconShowText,
                 readSliderMode = ReadBookConfig.readSliderMode,
                 titleBarCustomIcons = ReadBookConfig.titleBarCustomIcons.toImmutableMap(),
@@ -4656,6 +4657,14 @@ class ReadBookViewModel(
                     readSettingsRepository.setReadMenuIconStyle(value)
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuIconStyle = value)) }
+            }
+            is ConfigUpdate.TitleBarIconStyle -> {
+                val value = update.value.coerceIn(0, 2)
+                ReadBookConfig.titleBarIconStyle = value
+                viewModelScope.launch {
+                    readSettingsRepository.setTitleBarIconStyle(value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarIconStyle = value)) }
             }
             is ConfigUpdate.MenuIconItemsPerRow -> {
                 val value = update.value.coerceIn(2, 8)
