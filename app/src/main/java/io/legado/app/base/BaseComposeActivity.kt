@@ -85,7 +85,8 @@ abstract class BaseComposeActivity(
         } catch (_: Exception) {}
     }
 
-    private var hasWindowBgImage = false
+    protected var hasWindowBgImage = false
+    private var lastWindowBgColor: Int? = null
 
     /**
      * 窗口背景色与 Compose 主题背景色同步。
@@ -102,7 +103,11 @@ abstract class BaseComposeActivity(
         }
         SideEffect {
             if (!hasWindowBgImage) {
-                window.setBackgroundDrawable(backgroundColor.toArgb().toDrawable())
+                val colorInt = backgroundColor.toArgb()
+                if (lastWindowBgColor != colorInt) {
+                    window.setBackgroundDrawable(colorInt.toDrawable())
+                    lastWindowBgColor = colorInt
+                }
             }
         }
     }
