@@ -65,7 +65,9 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         lastVisibleItemPosition =
             (layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
         firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-        notifyCenterPositionChanged(dx, dy)
+        if (dx != 0 || dy != 0) {
+            notifyCenterPositionChanged(dx, dy)
+        }
     }
 
     override fun onScrollStateChanged(state: Int) {
