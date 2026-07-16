@@ -50,7 +50,6 @@ import kotlinx.coroutines.withContext
 
 private val fontGridHeight = 360.dp
 
-
 sealed interface FontFolderState {
     data object Loading : FontFolderState
     data class Loaded(val uri: Uri?) : FontFolderState
@@ -68,6 +67,8 @@ sealed interface FontFolderState {
 fun FontSelectGrid(
     folderState: FontFolderState,
     selectedFontName: String?,
+    sortType: FontSortType = FontSortType.NAME,
+    sortDescending: Boolean = false,
     onSelectFont: (FileDoc) -> Unit,
     emptyText: String? = null,
 ) {
@@ -92,6 +93,16 @@ fun FontSelectGrid(
     val filteredItems = remember(fontItems, searchQuery) {
         if (searchQuery.isBlank()) fontItems
         else fontItems.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    val sortedItems = remember(filteredItems, sortType, sortDescending) {
+        val base = when (sortType) {
+            FontSortType.NAME -> compareBy<FileDoc> { it.name.lowercase() }
+            FontSortType.SIZE -> compareBy { it.size }
+            FontSortType.MODIFIED_TIME -> compareBy { it.lastModified }
+        }
+        val comparator = if (sortDescending) base.reversed() else base
+        filteredItems.sortedWith(comparator)
     }
 
     val showLoading = folderState is FontFolderState.Loading || filesLoading
@@ -120,7 +131,7 @@ fun FontSelectGrid(
             ) {
                 CircularProgressIndicator()
             }
-        } else if (filteredItems.isEmpty()) {
+        } else if (sortedItems.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -141,7 +152,7 @@ fun FontSelectGrid(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.height(fontGridHeight),
             ) {
-                items(filteredItems, key = { it.name }) { item ->
+                items(sortedItems, key = { it.name }) { item ->
                     FontItem(
                         item = item,
                         isSelected = item.name == selectedFontName,
