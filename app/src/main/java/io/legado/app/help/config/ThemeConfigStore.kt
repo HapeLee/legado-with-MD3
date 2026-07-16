@@ -49,6 +49,16 @@ object ThemeConfigStore {
         postEvent(EventBus.UP_CONFIG, arrayListOf(2))
     }
 
+    /**
+     * 切换深浅色但不发 RECREATE：Compose 界面通过 ThemeConfig.themeMode 快照状态
+     * 自动换色（保留 ToggleButton 等组件的过渡动画），setDefaultNightMode 只会重建
+     * 未在 manifest 声明 uiMode configChanges 的旧 View Activity
+     */
+    fun applyDayNightLive() {
+        initNightMode()
+        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+    }
+
     fun applyDayNightInit(context: Context) {
         initNightMode()
     }

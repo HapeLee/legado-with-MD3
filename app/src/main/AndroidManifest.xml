@@ -39,6 +39,7 @@
         <activity
             android:name=".ui.main.LauncherW"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcherw">
             <intent-filter>
@@ -54,6 +55,7 @@
         <activity
             android:name=".ui.main.Launcher0"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher0">
             <intent-filter>
@@ -70,6 +72,7 @@
         <activity
             android:name=".ui.main.Launcher1"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher1">
             <intent-filter>
@@ -86,6 +89,7 @@
         <activity
             android:name=".ui.main.Launcher2"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher2">
             <intent-filter>
@@ -102,6 +106,7 @@
         <activity
             android:name=".ui.main.Launcher3"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher3">
             <intent-filter>
@@ -118,6 +123,7 @@
         <activity
             android:name=".ui.main.Launcher4"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher4">
             <intent-filter>
@@ -134,6 +140,7 @@
         <activity
             android:name=".ui.main.Launcher5"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher5">
             <intent-filter>
@@ -150,6 +157,7 @@
         <activity
             android:name=".ui.main.Launcher6"
             android:enabled="false"
+            android:configChanges="uiMode"
             android:exported="true"
             android:icon="@mipmap/launcher6">
             <intent-filter>
@@ -166,6 +174,7 @@
         <activity
             android:name=".ui.main.MainActivity"
             android:alwaysRetainTaskState="true"
+            android:configChanges="uiMode"
             android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">

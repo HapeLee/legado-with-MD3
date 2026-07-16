@@ -1,5 +1,6 @@
 package io.legado.app.base
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Build
 import androidx.activity.compose.setContent
@@ -54,6 +55,18 @@ abstract class BaseComposeActivity(
         }
 
         observeLiveBus()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // manifest 声明 uiMode configChanges 后，切换深浅色不再 recreate，
+        // 而 AppCompat 手动回调本方法时不会走 View 树分发，需要自己同步给
+        // Compose（LocalConfiguration）并刷新系统栏与背景图
+        window.decorView.dispatchConfigurationChanged(newConfig)
+        setupSystemBar()
+        if (imageBg) {
+            upBackgroundImage()
+        }
     }
 
     open fun setupSystemBar() {

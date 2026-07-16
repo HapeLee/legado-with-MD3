@@ -23,11 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.android.material.color.DynamicColors
-import com.google.android.material.color.DynamicColorsOptions
 import io.legado.app.R
+import io.legado.app.constant.EventBus
 import io.legado.app.lib.theme.ThemeStore
-import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -39,6 +37,7 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.utils.postEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -245,12 +244,7 @@ fun CustomThemeScreen(
                     ThemeStore.editTheme(context)
                         .primaryColor(color)
                         .apply()
-                    DynamicColors.applyToActivitiesIfAvailable(
-                        context.applicationContext as android.app.Application,
-                        DynamicColorsOptions.Builder()
-                            .setContentBasedSource(context.primaryColor)
-                            .build()
-                    )
+                    postEvent(EventBus.RECREATE, "")
                 }
             }
         )

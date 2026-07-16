@@ -80,7 +80,8 @@ fun FontSelectSheet(
             SmallPlainButton(
                 onClick = onOpenFolderPicker,
                 icon = folderIcon,
-                contentDescription = folderContentDescription,
+                contentDescription = folderContentDescription
+                    ?: stringResource(R.string.select_folder),
             )
         },
     ) {
