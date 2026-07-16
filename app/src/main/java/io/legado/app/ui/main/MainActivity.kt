@@ -12,6 +12,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -261,6 +262,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 ),
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 transitionSpec = {
+                    // 溶解式转场：两个界面在恒定底色上淡出/淡入（窗口背景色已与
+                    // Compose 主题同步，见 BaseComposeActivity.SyncWindowBackground）。
+                    // 淡出必须用加速曲线，减速曲线会让旧内容开头几帧骤然消失
                     (slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
                         animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
@@ -277,7 +281,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     ) + fadeOut(
                         animationSpec = tween(
                             durationMillis = 360,
-                            easing = LinearOutSlowInEasing
+                            easing = FastOutLinearInEasing
                         )
                     ))
                 },
