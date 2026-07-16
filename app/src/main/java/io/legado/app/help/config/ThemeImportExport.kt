@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.EncoderUtils
@@ -92,6 +93,10 @@ object ThemeImportExport {
             // 标签颜色
             enableCustomTagColors = ThemeConfig.enableCustomTagColors,
             customTagColorsJson = ThemeConfig.customTagColorsJson,
+
+            // 书架卡片颜色
+            bookshelfCardColor = BookshelfConfig.bookshelfCardColor,
+            bookshelfCardColorDark = BookshelfConfig.bookshelfCardColorDark,
 
             // 主界面设置
             showHome = ThemeConfig.showHome,
@@ -278,6 +283,10 @@ object ThemeImportExport {
         // 标签颜色
         ThemeConfig.enableCustomTagColors = data.enableCustomTagColors
         ThemeConfig.customTagColorsJson = data.customTagColorsJson
+
+        // 书架卡片颜色
+        BookshelfConfig.bookshelfCardColor = data.bookshelfCardColor
+        BookshelfConfig.bookshelfCardColorDark = data.bookshelfCardColorDark
 
         // 主界面设置
         ThemeConfig.showHome = data.showHome
@@ -468,6 +477,8 @@ object ThemeImportExport {
             else -> null
         }
     }
+
+    internal fun parseLegacyThemeData(json: String): ThemeExportData? = parseThemeData(json)
 
     /**
      * 兼容曾由 R8 混淆字段名导出的主题配置。
@@ -670,6 +681,10 @@ data class ThemeExportData(
     // 标签颜色
     val enableCustomTagColors: Boolean = false,
     val customTagColorsJson: String? = null,
+
+    // 书架卡片颜色
+    val bookshelfCardColor: Int = 0,
+    val bookshelfCardColorDark: Int = 0,
 
     // 主界面设置
     val showHome: Boolean = true,

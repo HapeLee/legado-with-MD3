@@ -1492,6 +1492,10 @@
     <string name="theme_manage_import_package_summary">Import a theme package with its assets and cover albums</string>
     <string name="theme_manage_import_config">Import legacy theme configuration</string>
     <string name="theme_manage_import_config_summary">Import a legacy JSON theme configuration</string>
+    <string name="theme_manage_migrate_legacy">Migrate legacy themes</string>
+    <string name="theme_manage_migrate_legacy_summary">Convert saved JSON themes to the new theme format</string>
+    <string name="theme_manage_migrate_success">Migrated %1$d legacy themes</string>
+    <string name="theme_manage_migrate_partial">Migrated %1$d themes; %2$d could not be migrated</string>
     <string name="theme_manage_saved_themes">Saved Themes</string>
     <string name="theme_manage_save_theme">Save Theme</string>
     <string name="theme_manage_save">Save</string>

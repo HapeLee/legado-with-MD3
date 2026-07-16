@@ -1601,6 +1601,10 @@
     <string name="theme_manage_import_package_summary">匯入包含資源和封面圖集的主題包</string>
     <string name="theme_manage_import_config">匯入舊版主題設定</string>
     <string name="theme_manage_import_config_summary">從舊版 JSON 檔案匯入主題設定</string>
+    <string name="theme_manage_migrate_legacy">遷移舊版主題</string>
+    <string name="theme_manage_migrate_legacy_summary">將已儲存的 JSON 主題轉換為新版主題格式</string>
+    <string name="theme_manage_migrate_success">已遷移 %1$d 個舊版主題</string>
+    <string name="theme_manage_migrate_partial">已遷移 %1$d 個主題，%2$d 個遷移失敗</string>
     <string name="theme_manage_saved_themes">已儲存的主題</string>
     <string name="theme_manage_save_theme">儲存主題</string>
     <string name="theme_manage_save">儲存</string>

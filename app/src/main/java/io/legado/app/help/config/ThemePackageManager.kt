@@ -185,6 +185,34 @@ class ThemePackageManager(
             .mapNotNull(::readSavedThemeFolder)
     }
 
+    suspend fun hasLegacySavedThemes(): Boolean = withContext(Dispatchers.IO) {
+        savedThemesRoot.listFiles().orEmpty().any { it.isFile && it.extension == "json" }
+    }
+
+    suspend fun migrateLegacySavedThemes(): LegacyThemeMigrationResult =
+        withContext(Dispatchers.IO) {
+            var migratedCount = 0
+            var failedCount = 0
+            savedThemesRoot.listFiles().orEmpty()
+                .filter { it.isFile && it.extension == "json" }
+                .forEach { file ->
+                    runCatching {
+                        val data = ThemeImportExport.parseLegacyThemeData(file.readText())
+                            ?: error("Unsupported legacy theme: ${file.name}")
+                        saveTheme(
+                            name = uniqueSavedThemeName(file.nameWithoutExtension),
+                            data = data,
+                        )
+                        check(file.delete()) { "Unable to remove migrated theme: ${file.name}" }
+                    }.onSuccess {
+                        migratedCount++
+                    }.onFailure {
+                        failedCount++
+                    }
+                }
+            LegacyThemeMigrationResult(migratedCount, failedCount)
+        }
+
     suspend fun saveTheme(
         name: String,
         data: ThemeExportData? = null,
@@ -394,10 +422,16 @@ class ThemePackageManager(
             if (path != null) {
                 val extension = sourceExtension(path, source.key)
                 val entryPath = "${source.entryBase}.$extension"
-                openSource(path).use { input ->
-                    input.copyToPackageFile(root, entryPath)
+                val copied = runCatching {
+                    openSource(path).use { input ->
+                        input.copyToPackageFile(root, entryPath)
+                    }
+                }.isSuccess
+                if (copied) {
+                    result[source.key] = entryPath
+                } else if (config.assets?.get(source.legacyAssetKey).isNullOrBlank()) {
+                    error("无法读取主题资源: $path")
                 }
-                result[source.key] = entryPath
             }
         }
         copyEmbeddedAssetsToFolder(root, config, result)
@@ -906,13 +940,31 @@ class ThemePackageManager(
         val key: String,
         val sourcePath: String?,
         val entryBase: String,
-    )
+    ) {
+        val legacyAssetKey: String
+            get() = when (key) {
+                ASSET_BACKGROUND_LIGHT -> "bgImageLight"
+                ASSET_BACKGROUND_DARK -> "bgImageDark"
+                ASSET_NAV_HOME -> "navIconHome"
+                ASSET_NAV_BOOKSHELF -> "navIconBookshelf"
+                ASSET_NAV_EXPLORE -> "navIconExplore"
+                ASSET_NAV_RSS -> "navIconRss"
+                ASSET_NAV_MY -> "navIconMy"
+                ASSET_FONT -> "appFontPath"
+                else -> key
+            }
+    }
 
     private data class ExportedCoverData(
         val albums: List<ThemePackageCoverAlbum>,
         val selection: ThemePackageCoverSelection,
     )
 }
+
+data class LegacyThemeMigrationResult(
+    val migratedCount: Int,
+    val failedCount: Int,
+)
 
 @Keep
 data class ThemePackageManifest(

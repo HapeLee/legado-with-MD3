@@ -1457,6 +1457,10 @@
     <string name="theme_manage_import_package_summary">导入包含资源和封面图集的主题包</string>
     <string name="theme_manage_import_config">导入旧版主题配置</string>
     <string name="theme_manage_import_config_summary">从旧版 JSON 文件导入主题配置</string>
+    <string name="theme_manage_migrate_legacy">迁移旧版主题</string>
+    <string name="theme_manage_migrate_legacy_summary">将已保存的 JSON 主题转换为新版主题格式</string>
+    <string name="theme_manage_migrate_success">已迁移 %1$d 个旧版主题</string>
+    <string name="theme_manage_migrate_partial">已迁移 %1$d 个主题，%2$d 个迁移失败</string>
     <string name="theme_manage_saved_themes">已保存的主题</string>
     <string name="theme_manage_save_theme">保存主题</string>
     <string name="theme_manage_save">保存</string>

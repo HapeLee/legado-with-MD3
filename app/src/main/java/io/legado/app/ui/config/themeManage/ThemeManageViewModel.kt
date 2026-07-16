@@ -46,6 +46,7 @@ class ThemeManageViewModel(
             is ThemeManageIntent.SaveTheme -> saveTheme(intent)
             is ThemeManageIntent.ApplySavedTheme -> applySavedTheme(intent.theme)
             is ThemeManageIntent.DeleteSavedTheme -> deleteSavedTheme(intent.theme)
+            ThemeManageIntent.MigrateLegacyThemes -> migrateLegacyThemes()
         }
     }
 
@@ -53,10 +54,12 @@ class ThemeManageViewModel(
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val themes = themePackageManager.loadSavedThemes()
+            val hasLegacyThemes = themePackageManager.hasLegacySavedThemes()
             _uiState.update {
                 it.copy(
                     loading = false,
                     savedThemes = themes.toImmutableList(),
+                    hasLegacyThemes = hasLegacyThemes,
                 )
             }
         }
@@ -187,6 +190,21 @@ class ThemeManageViewModel(
         )
     }
 
+    private fun migrateLegacyThemes() {
+        launchExclusive {
+            _uiState.update { it.copy(loading = true) }
+            val result = themePackageManager.migrateLegacySavedThemes()
+            refreshSavedThemes()
+            _uiState.update { it.copy(hasLegacyThemes = result.failedCount > 0) }
+            _effects.emit(
+                ThemeManageEffect.LegacyMigrationFinished(
+                    migratedCount = result.migratedCount,
+                    failedCount = result.failedCount,
+                )
+            )
+        }
+    }
+
     private fun launchExclusive(block: suspend () -> Unit) {
         if (!operationMutex.tryLock()) return
         viewModelScope.launch {
@@ -203,6 +221,7 @@ class ThemeManageViewModel(
 data class ThemeManageUiState(
     val loading: Boolean = false,
     val savedThemes: ImmutableList<SavedTheme> = persistentListOf(),
+    val hasLegacyThemes: Boolean = false,
 )
 
 sealed interface ThemeManageIntent {
@@ -225,10 +244,16 @@ sealed interface ThemeManageIntent {
 
     data class ApplySavedTheme(val theme: SavedTheme) : ThemeManageIntent
     data class DeleteSavedTheme(val theme: SavedTheme) : ThemeManageIntent
+    data object MigrateLegacyThemes : ThemeManageIntent
 }
 
 sealed interface ThemeManageEffect {
     data object RestartRequired : ThemeManageEffect
+
+    data class LegacyMigrationFinished(
+        val migratedCount: Int,
+        val failedCount: Int,
+    ) : ThemeManageEffect
 
     data class ShowResult(
         @param:StringRes val messageRes: Int,
