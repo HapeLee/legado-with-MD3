@@ -136,7 +136,6 @@ class App : Application(), ImageLoaderFactory {
         }
         oldConfig = Configuration(resources.configuration)
         registerActivityLifecycleCallbacks(LifecycleHelp)
-        defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         Coroutine.async {
             AppWebDav.upConfig()
         }
