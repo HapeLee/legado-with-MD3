@@ -106,8 +106,9 @@ class ThemeManageViewModel(
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.applySavedTheme(theme)
             if (result.isSuccess) {
+                // 主题键均为 Compose 响应式读取，写入即生效；fontScale/自定义色等
+                // 需要重建的键由各自 prefDelegate 的 RECREATE 回调按需触发
                 refreshSavedThemes()
-                _effects.emit(ThemeManageEffect.RestartRequired)
             } else {
                 _uiState.update { it.copy(loading = false) }
                 _effects.emit(
@@ -179,7 +180,6 @@ class ThemeManageViewModel(
             if (result.isSuccess) {
                 ThemeManageEffect.ShowResult(
                     messageRes = R.string.theme_manage_import_success,
-                    restartRequired = true,
                 )
             } else {
                 ThemeManageEffect.ShowResult(
@@ -248,8 +248,6 @@ sealed interface ThemeManageIntent {
 }
 
 sealed interface ThemeManageEffect {
-    data object RestartRequired : ThemeManageEffect
-
     data class LegacyMigrationFinished(
         val migratedCount: Int,
         val failedCount: Int,
@@ -258,6 +256,5 @@ sealed interface ThemeManageEffect {
     data class ShowResult(
         @param:StringRes val messageRes: Int,
         val detail: String? = null,
-        val restartRequired: Boolean = false,
     ) : ThemeManageEffect
 }

@@ -1,7 +1,5 @@
 package io.legado.app.ui.config.themeManage
 
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -41,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -56,7 +53,6 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -115,12 +111,6 @@ fun ThemeManageScreen(
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
-                ThemeManageEffect.RestartRequired -> {
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        postEvent(EventBus.RECREATE, "")
-                    }, 100)
-                }
-
                 is ThemeManageEffect.LegacyMigrationFinished -> {
                     val message = if (effect.failedCount == 0) {
                         context.getString(
@@ -146,11 +136,6 @@ fun ThemeManageScreen(
                         }
                     }
                     context.toastOnUi(message)
-                    if (effect.restartRequired) {
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            postEvent(EventBus.RECREATE, "")
-                        }, 100)
-                    }
                 }
             }
         }
@@ -256,8 +241,6 @@ fun ThemeManageScreen(
             }
         }
     }
-
-
 
     // Save theme dialog
     AppAlertDialog(

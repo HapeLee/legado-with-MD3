@@ -117,9 +117,10 @@ object ThemeConfig {
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
-    var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    // 无需 RECREATE：Compose 消费点（BackHandler enabled / predictivePopTransitionSpec）
+    // 读的是 prefDelegate 的 Compose state，切换即时生效；View 系 Activity 在下次
+    // onCreate 时按新值注册 OnBackInvokedCallback（与旧版行为一致）
+    var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true)
 
     var customMode by prefDelegate<String?>(PreferKey.customMode, "tonalSpot")
 
