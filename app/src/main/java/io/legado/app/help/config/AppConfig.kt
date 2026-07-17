@@ -3,7 +3,6 @@ package io.legado.app.help.config
 import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
@@ -22,16 +21,10 @@ import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.sysConfiguration
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import org.koin.java.KoinJavaComponent.get
 import splitties.init.appCtx
 
 @Suppress("MemberVisibilityCanBePrivate", "ConstPropertyName")
 object AppConfig {
-    private val settingsRepository: SettingsRepository by lazy {
-        get(SettingsRepository::class.java)
-    }
     val isCronet get() = DownloadCacheConfig.cronetEnable
     val useAntiAlias get() = OtherConfig.antiAlias
     val userAgent: String get() = DownloadCacheConfig.userAgent
@@ -195,20 +188,16 @@ object AppConfig {
         }
 
     var bookExportFileName: String?
-        get() = runBlocking {
-            settingsRepository.getString(PreferKey.bookExportFileName).first().ifEmpty { null }
-        }
+        get() = appCtx.getPrefString(PreferKey.bookExportFileName)
         set(value) {
-            runBlocking { DsSync.putString(PreferKey.bookExportFileName, value) }
+            appCtx.putPrefString(PreferKey.bookExportFileName, value)
         }
 
     // 保存 自定义导出章节模式 文件名js表达式
     var episodeExportFileName: String?
-        get() = runBlocking {
-            settingsRepository.getString(PreferKey.episodeExportFileName).first()
-        }
+        get() = appCtx.getPrefString(PreferKey.episodeExportFileName)
         set(value) {
-            runBlocking { DsSync.putString(PreferKey.episodeExportFileName, value) }
+            appCtx.putPrefString(PreferKey.episodeExportFileName, value)
         }
 
     var bookImportFileName: String?
@@ -414,15 +403,15 @@ object AppConfig {
         }
 
     var importKeepName: Boolean
-        get() = runBlocking { settingsRepository.getBoolean(PreferKey.importKeepName).first() }
-        set(value) { runBlocking { DsSync.putBoolean(PreferKey.importKeepName, value) } }
+        get() = appCtx.getPrefBoolean(PreferKey.importKeepName)
+        set(value) { appCtx.putPrefBoolean(PreferKey.importKeepName, value) }
     var importKeepGroup: Boolean
-        get() = runBlocking { settingsRepository.getBoolean(PreferKey.importKeepGroup).first() }
-        set(value) { runBlocking { DsSync.putBoolean(PreferKey.importKeepGroup, value) } }
+        get() = appCtx.getPrefBoolean(PreferKey.importKeepGroup)
+        set(value) { appCtx.putPrefBoolean(PreferKey.importKeepGroup, value) }
     var importKeepEnable: Boolean
-        get() = runBlocking { settingsRepository.getBoolean(PreferKey.importKeepEnable).first() }
+        get() = appCtx.getPrefBoolean(PreferKey.importKeepEnable)
         set(value) {
-            runBlocking { DsSync.putBoolean(PreferKey.importKeepEnable, value) }
+            appCtx.putPrefBoolean(PreferKey.importKeepEnable, value)
         }
 
     var previewImageByClick: Boolean
