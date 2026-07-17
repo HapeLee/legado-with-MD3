@@ -13,9 +13,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
+import io.legado.app.ui.theme.LocalAppSettings
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -38,7 +38,7 @@ fun ReadConfigScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showPageKeySheet by remember { mutableStateOf(false) }
     var showClickActionSheet by remember { mutableStateOf(false) }
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val settings = LocalAppSettings.current
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -63,7 +63,7 @@ fun ReadConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.screen_settings)) {
                 DropdownListSettingItem(
                     title = stringResource(R.string.screen_direction),
-                    selectedValue = state.screenOrientation,
+                    selectedValue = settings.screenOrientation,
                     displayEntries = stringArrayResource(R.array.screen_direction_title),
                     entryValues = stringArrayResource(R.array.screen_direction_value),
                     onValueChange = {
@@ -73,7 +73,7 @@ fun ReadConfigScreen(
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.keep_light),
-                    selectedValue = state.keepLight,
+                    selectedValue = settings.keepLight,
                     displayEntries = stringArrayResource(R.array.screen_time_out),
                     entryValues = stringArrayResource(R.array.screen_time_out_value),
                     onValueChange = {
@@ -83,7 +83,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.pt_hide_status_bar),
-                    checked = state.hideStatusBar,
+                    checked = settings.hideStatusBar,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.HideStatusBarChanged(it))
                     }
@@ -91,7 +91,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.pt_hide_navigation_bar),
-                    checked = state.hideNavigationBar,
+                    checked = settings.hideNavigationBar,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.HideNavigationBarChanged(it))
                     }
@@ -99,7 +99,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.padding_display_cutouts),
-                    checked = state.paddingDisplayCutouts,
+                    checked = settings.paddingDisplayCutouts,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.PaddingDisplayCutoutsChanged(it))
                     }
@@ -107,7 +107,7 @@ fun ReadConfigScreen(
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.title_bar_mode),
-                    selectedValue = state.titleBarMode,
+                    selectedValue = settings.titleBarMode,
                     displayEntries = stringArrayResource(R.array.title_bar_mode),
                     entryValues = stringArrayResource(R.array.title_bar_mode_value),
                     onValueChange = {
@@ -117,8 +117,8 @@ fun ReadConfigScreen(
 
                 SliderSettingItem(
                     title = stringResource(R.string.menu_alpha),
-                    description = stringResource(R.string.menu_alpha_sum, state.readMenuBlurAlpha),
-                    value = state.readMenuBlurAlpha.toFloat(),
+                    description = stringResource(R.string.menu_alpha_sum, settings.readMenuBlurAlpha),
+                    value = settings.readMenuBlurAlpha.toFloat(),
                     defaultValue = 60f,
                     valueRange = 0f..100f,
                     onValueChange = {
@@ -128,7 +128,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.read_body_to_lh),
-                    checked = state.readBodyToLh,
+                    checked = settings.readBodyToLh,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.ReadBodyToLhChanged(it))
                     }
@@ -137,7 +137,7 @@ fun ReadConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.read_change_all),
                     description = stringResource(R.string.read_change_all_s),
-                    checked = state.defaultSourceChangeAll,
+                    checked = settings.defaultSourceChangeAll,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.DefaultSourceChangeAllChanged(it))
                     }
@@ -145,7 +145,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.text_full_justify),
-                    checked = state.textFullJustify,
+                    checked = settings.textFullJustify,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.TextFullJustifyChanged(it))
                     }
@@ -153,7 +153,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.text_bottom_justify),
-                    checked = state.textBottomJustify,
+                    checked = settings.textBottomJustify,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.TextBottomJustifyChanged(it))
                     }
@@ -161,7 +161,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.adapt_special_style),
-                    checked = state.adaptSpecialStyle,
+                    checked = settings.adaptSpecialStyle,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.AdaptSpecialStyleChanged(it))
                     }
@@ -169,7 +169,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.use_zh_layout),
-                    checked = state.useZhLayout,
+                    checked = settings.useZhLayout,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.UseZhLayoutChanged(it))
                     }
@@ -177,7 +177,7 @@ fun ReadConfigScreen(
 
                     DropdownListSettingItem(
                     title = stringResource(R.string.show_brightness_view),
-                        selectedValue = state.showBrightnessView,
+                        selectedValue = settings.showBrightnessView,
                         displayEntries = stringArrayResource(R.array.brightness_bar_mode_title),
                         entryValues = stringArrayResource(R.array.brightness_bar_mode_value),
                         onValueChange = {
@@ -185,10 +185,10 @@ fun ReadConfigScreen(
                     }
                 )
 
-                    if (state.showBrightnessView == "2") {
+                    if (settings.showBrightnessView == "2") {
                         DropdownListSettingItem(
                             title = stringResource(R.string.brightness_bar_position),
-                            selectedValue = state.brightnessVwPos,
+                            selectedValue = settings.brightnessVwPos,
                             displayEntries = stringArrayResource(R.array.brightness_bar_position_title),
                             entryValues = stringArrayResource(R.array.brightness_bar_position_value),
                             onValueChange = {
@@ -199,7 +199,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.use_underline),
-                    checked = state.useUnderline,
+                    checked = settings.useUnderline,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.UseUnderlineChanged(it))
                     }
@@ -209,7 +209,7 @@ fun ReadConfigScreen(
             SplicedColumnGroup(title = stringResource(R.string.page_control)) {
                 DropdownListSettingItem(
                     title = stringResource(R.string.read_slider_mode),
-                    selectedValue = state.readSliderMode,
+                    selectedValue = settings.readSliderMode,
                     displayEntries = stringArrayResource(R.array.read_slider_mode),
                     entryValues = stringArrayResource(R.array.read_slider_mode_value),
                     onValueChange = {
@@ -219,7 +219,7 @@ fun ReadConfigScreen(
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.double_page_horizontal),
-                    selectedValue = state.doubleHorizontalPage,
+                    selectedValue = settings.doubleHorizontalPage,
                     displayEntries = stringArrayResource(R.array.double_page_title),
                     entryValues = stringArrayResource(R.array.double_page_value),
                     onValueChange = {
@@ -229,7 +229,7 @@ fun ReadConfigScreen(
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.progress_bar_behavior),
-                    selectedValue = state.progressBarBehavior,
+                    selectedValue = settings.progressBarBehavior,
                     displayEntries = stringArrayResource(R.array.progress_bar_behavior_title),
                     entryValues = stringArrayResource(R.array.progress_bar_behavior_value),
                     onValueChange = {
@@ -239,7 +239,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.mouse_wheel_page),
-                    checked = state.mouseWheelPage,
+                    checked = settings.mouseWheelPage,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.MouseWheelPageChanged(it))
                     }
@@ -247,7 +247,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.volume_key_page),
-                    checked = state.volumeKeyPage,
+                    checked = settings.volumeKeyPage,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.VolumeKeyPageChanged(it))
                     }
@@ -255,7 +255,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.volume_key_page_on_play),
-                    checked = state.volumeKeyPageOnPlay,
+                    checked = settings.volumeKeyPageOnPlay,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.VolumeKeyPageOnPlayChanged(it))
                     }
@@ -263,7 +263,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.key_page_on_long_press),
-                    checked = state.keyPageOnLongPress,
+                    checked = settings.keyPageOnLongPress,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.KeyPageOnLongPressChanged(it))
                     }
@@ -273,9 +273,9 @@ fun ReadConfigScreen(
                     title = stringResource(R.string.page_touch_slop_title),
                     description = stringResource(
                         R.string.page_touch_slop_summary,
-                        state.pageTouchSlop
+                        settings.pageTouchSlop
                     ),
-                    value = state.pageTouchSlop.toFloat(),
+                    value = settings.pageTouchSlop.toFloat(),
                     defaultValue = 0f,
                     valueRange = 0f..1000f,
                     onValueChange = {
@@ -287,7 +287,7 @@ fun ReadConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.other)) {
                 SwitchSettingItem(
                     title = stringResource(R.string.enable_slider_vibrator),
-                    checked = state.sliderVibrator,
+                    checked = settings.sliderVibrator,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.SliderVibratorChanged(it))
                     }
@@ -295,7 +295,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.enable_select_vibrator),
-                    checked = state.selectVibrator,
+                    checked = settings.selectVibrator,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.SelectVibratorChanged(it))
                     }
@@ -303,7 +303,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.auto_change_source),
-                    checked = state.autoChangeSource,
+                    checked = settings.autoChangeSource,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.AutoChangeSourceChanged(it))
                     }
@@ -312,7 +312,7 @@ fun ReadConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.auto_switch_theme_reminder_title),
                     description = stringResource(R.string.auto_switch_theme_reminder_desc),
-                    checked = state.autoSuggestDayNight,
+                    checked = settings.autoSuggestDayNight,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.AutoSuggestDayNightChanged(it))
                     }
@@ -320,7 +320,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.selectText),
-                    checked = state.selectText,
+                    checked = settings.selectText,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.SelectTextChanged(it))
                     }
@@ -328,7 +328,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.no_anim_scroll_page),
-                    checked = state.noAnimScrollPage,
+                    checked = settings.noAnimScrollPage,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.NoAnimScrollPageChanged(it))
                     }
@@ -336,7 +336,7 @@ fun ReadConfigScreen(
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.click_image_way),
-                    selectedValue = state.clickImgWay,
+                    selectedValue = settings.clickImgWay,
                     displayEntries = stringArrayResource(R.array.click_image_way_title),
                     entryValues = stringArrayResource(R.array.click_image_way_value),
                     onValueChange = {
@@ -347,7 +347,7 @@ fun ReadConfigScreen(
                 if (CanvasRecorderFactory.isSupport) {
                     SwitchSettingItem(
                         title = stringResource(R.string.enable_optimize_render),
-                        checked = state.optimizeRender,
+                        checked = settings.optimizeRender,
                         onCheckedChange = {
                             viewModel.onIntent(ReadConfigIntent.OptimizeRenderChanged(it))
                         }
@@ -361,7 +361,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.disable_return_key),
-                    checked = state.disableReturnKey,
+                    checked = settings.disableReturnKey,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.DisableReturnKeyChanged(it))
                     }
@@ -374,7 +374,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_read_title_addition),
-                    checked = state.showReadTitleAddition,
+                    checked = settings.showReadTitleAddition,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.ShowReadTitleAdditionChanged(it))
                     }
@@ -382,7 +382,7 @@ fun ReadConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_menu_icon),
-                    checked = state.showMenuIcon,
+                    checked = settings.showMenuIcon,
                     onCheckedChange = {
                         viewModel.onIntent(ReadConfigIntent.ShowMenuIconChanged(it))
                     }
@@ -394,8 +394,8 @@ fun ReadConfigScreen(
 
     PageKeySheet(
         show = showPageKeySheet,
-        prevKeys = state.prevKeys,
-        nextKeys = state.nextKeys,
+        prevKeys = settings.prevKeys,
+        nextKeys = settings.nextKeys,
         onDismissRequest = { showPageKeySheet = false },
         onConfirm = { prevKeys, nextKeys ->
             viewModel.onIntent(ReadConfigIntent.PageKeysChanged(prevKeys, nextKeys))

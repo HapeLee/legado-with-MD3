@@ -1,188 +1,175 @@
 package io.legado.app.ui.config.readConfig
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.EventBus
-import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.postEvent
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 class ReadConfigViewModel(
-    private val readSettingsRepository: ReadSettingsRepository
+    private val localPreferencesRepository: LocalPreferencesRepository
 ) : ViewModel() {
 
-    val uiState = readSettingsRepository.preferences.map { it.toUiState() }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ReadConfigUiState()
-    )
-
     fun onIntent(intent: ReadConfigIntent) {
-        viewModelScope.launch {
-            when (intent) {
-                is ReadConfigIntent.ScreenOrientationChanged -> {
-                    ReadConfig.screenOrientation = intent.value
-                }
+        when (intent) {
+            is ReadConfigIntent.ScreenOrientationChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(screenOrientation = intent.value) }
+            }
 
-                is ReadConfigIntent.KeepLightChanged -> {
-                    ReadConfig.keepLight = intent.value
-                }
+            is ReadConfigIntent.KeepLightChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(keepLight = intent.value) }
+            }
 
-                is ReadConfigIntent.HideStatusBarChanged -> {
-                    ReadBookConfig.hideStatusBar = intent.value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
-                }
+            is ReadConfigIntent.HideStatusBarChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(hideStatusBar = intent.value) }
+                postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
+            }
 
-                is ReadConfigIntent.HideNavigationBarChanged -> {
-                    ReadBookConfig.hideNavigationBar = intent.value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
-                }
+            is ReadConfigIntent.HideNavigationBarChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(hideNavigationBar = intent.value) }
+                postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
+            }
 
-                is ReadConfigIntent.PaddingDisplayCutoutsChanged -> {
-                    ReadConfig.paddingDisplayCutouts = intent.value
-                }
+            is ReadConfigIntent.PaddingDisplayCutoutsChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(paddingDisplayCutouts = intent.value) }
+            }
 
-                is ReadConfigIntent.TitleBarModeChanged -> {
-                    ReadConfig.titleBarMode = intent.value
-                }
+            is ReadConfigIntent.TitleBarModeChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(titleBarMode = intent.value) }
+            }
 
-                is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
-                    ReadBookConfig.readMenuBlurAlpha = intent.value
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
+            is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(readMenuBlurAlpha = intent.value) }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
 
-                is ReadConfigIntent.ReadBodyToLhChanged -> {
-                    ReadBookConfig.readBodyToLh = intent.value
-                }
+            is ReadConfigIntent.ReadBodyToLhChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(readBodyToLh = intent.value) }
+            }
 
-                is ReadConfigIntent.DefaultSourceChangeAllChanged -> {
-                    ReadConfig.defaultSourceChangeAll = intent.value
-                }
+            is ReadConfigIntent.DefaultSourceChangeAllChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(defaultSourceChangeAll = intent.value) }
+            }
 
-                is ReadConfigIntent.TextFullJustifyChanged -> {
-                    ReadBookConfig.textFullJustify = intent.value
-                    upLayout()
-                }
+            is ReadConfigIntent.TextFullJustifyChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(textFullJustify = intent.value) }
+                upLayout()
+            }
 
-                is ReadConfigIntent.TextBottomJustifyChanged -> {
-                    ReadBookConfig.textBottomJustify = intent.value
-                    upLayout()
-                }
+            is ReadConfigIntent.TextBottomJustifyChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(textBottomJustify = intent.value) }
+                upLayout()
+            }
 
-                is ReadConfigIntent.AdaptSpecialStyleChanged -> {
-                    ReadConfig.adaptSpecialStyle = intent.value
-                }
+            is ReadConfigIntent.AdaptSpecialStyleChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(adaptSpecialStyle = intent.value) }
+            }
 
-                is ReadConfigIntent.UseZhLayoutChanged -> {
-                    ReadBookConfig.useZhLayout = intent.value
-                    upLayout()
-                }
+            is ReadConfigIntent.UseZhLayoutChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(useZhLayout = intent.value) }
+                upLayout()
+            }
 
-                is ReadConfigIntent.ShowBrightnessViewChanged -> {
-                    ReadBookConfig.showBrightnessView = intent.value
-                }
+            is ReadConfigIntent.ShowBrightnessViewChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(showBrightnessView = intent.value) }
+            }
 
-                is ReadConfigIntent.BrightnessVwPosChanged -> {
-                    ReadBookConfig.brightnessVwPos = intent.value
-                }
+            is ReadConfigIntent.BrightnessVwPosChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(brightnessVwPos = intent.value) }
+            }
 
-                is ReadConfigIntent.UseUnderlineChanged -> {
-                    ReadConfig.useUnderline = intent.value
-                }
+            is ReadConfigIntent.UseUnderlineChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(useUnderline = intent.value) }
+            }
 
-                is ReadConfigIntent.ReadSliderModeChanged -> {
-                    ReadBookConfig.readSliderMode = intent.value
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
+            is ReadConfigIntent.ReadSliderModeChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(readSliderMode = intent.value) }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
 
-                is ReadConfigIntent.DoubleHorizontalPageChanged -> {
-                    ReadConfig.doubleHorizontalPage = intent.value
-                    upLayout()
-                }
+            is ReadConfigIntent.DoubleHorizontalPageChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(doubleHorizontalPage = intent.value) }
+                upLayout()
+            }
 
-                is ReadConfigIntent.ProgressBarBehaviorChanged -> {
-                    ReadConfig.progressBarBehavior = intent.value
-                    postEvent(EventBus.UP_SEEK_BAR, true)
-                }
+            is ReadConfigIntent.ProgressBarBehaviorChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(progressBarBehavior = intent.value) }
+                postEvent(EventBus.UP_SEEK_BAR, true)
+            }
 
-                is ReadConfigIntent.MouseWheelPageChanged -> {
-                    ReadConfig.mouseWheelPage = intent.value
-                }
+            is ReadConfigIntent.MouseWheelPageChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(mouseWheelPage = intent.value) }
+            }
 
-                is ReadConfigIntent.VolumeKeyPageChanged -> {
-                    ReadConfig.volumeKeyPage = intent.value
-                }
+            is ReadConfigIntent.VolumeKeyPageChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(volumeKeyPage = intent.value) }
+            }
 
-                is ReadConfigIntent.VolumeKeyPageOnPlayChanged -> {
-                    ReadConfig.volumeKeyPageOnPlay = intent.value
-                }
+            is ReadConfigIntent.VolumeKeyPageOnPlayChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(volumeKeyPageOnPlay = intent.value) }
+            }
 
-                is ReadConfigIntent.KeyPageOnLongPressChanged -> {
-                    ReadConfig.keyPageOnLongPress = intent.value
-                }
+            is ReadConfigIntent.KeyPageOnLongPressChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(keyPageOnLongPress = intent.value) }
+            }
 
-                is ReadConfigIntent.PageTouchSlopChanged -> {
-                    ReadConfig.pageTouchSlop = intent.value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(4))
-                }
+            is ReadConfigIntent.PageTouchSlopChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(pageTouchSlop = intent.value) }
+                postEvent(EventBus.UP_CONFIG, arrayListOf(4))
+            }
 
-                is ReadConfigIntent.SliderVibratorChanged -> {
-                    ReadConfig.sliderVibrator = intent.value
-                }
+            is ReadConfigIntent.SliderVibratorChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(sliderVibrator = intent.value) }
+            }
 
-                is ReadConfigIntent.SelectVibratorChanged -> {
-                    ReadConfig.selectVibrator = intent.value
-                }
+            is ReadConfigIntent.SelectVibratorChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(selectVibrator = intent.value) }
+            }
 
-                is ReadConfigIntent.AutoChangeSourceChanged -> {
-                    ReadConfig.autoChangeSource = intent.value
-                }
+            is ReadConfigIntent.AutoChangeSourceChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(autoChangeSource = intent.value) }
+            }
 
-                is ReadConfigIntent.AutoSuggestDayNightChanged -> {
-                    ReadConfig.autoSuggestDayNight = intent.value
-                }
+            is ReadConfigIntent.AutoSuggestDayNightChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(autoSuggestDayNight = intent.value) }
+            }
 
-                is ReadConfigIntent.SelectTextChanged -> {
-                    ReadConfig.selectText = intent.value
-                }
+            is ReadConfigIntent.SelectTextChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(selectText = intent.value) }
+            }
 
-                is ReadConfigIntent.NoAnimScrollPageChanged -> {
-                    ReadConfig.noAnimScrollPage = intent.value
-                    ReadBook.callBack?.upPageAnim()
-                }
+            is ReadConfigIntent.NoAnimScrollPageChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(noAnimScrollPage = intent.value) }
+                ReadBook.callBack?.upPageAnim()
+            }
 
-                is ReadConfigIntent.ClickImgWayChanged -> {
-                    ReadConfig.clickImgWay = intent.value
-                }
+            is ReadConfigIntent.ClickImgWayChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(clickImgWay = intent.value) }
+            }
 
-                is ReadConfigIntent.OptimizeRenderChanged -> {
-                    ReadConfig.optimizeRender = intent.value
-                    upStyle()
-                }
+            is ReadConfigIntent.OptimizeRenderChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(optimizeRender = intent.value) }
+                upStyle()
+            }
 
-                is ReadConfigIntent.DisableReturnKeyChanged -> {
-                    ReadConfig.disableReturnKey = intent.value
-                }
+            is ReadConfigIntent.DisableReturnKeyChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(disableReturnKey = intent.value) }
+            }
 
-                is ReadConfigIntent.ShowReadTitleAdditionChanged -> {
-                    ReadConfig.showReadTitleAddition = intent.value
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
+            is ReadConfigIntent.ShowReadTitleAdditionChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(showReadTitleAddition = intent.value) }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
 
-                is ReadConfigIntent.ShowMenuIconChanged -> {
-                    ReadConfig.showMenuIcon = intent.value
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
+            is ReadConfigIntent.ShowMenuIconChanged -> {
+                localPreferencesRepository.updateSettings { it.copy(showMenuIcon = intent.value) }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
 
-                is ReadConfigIntent.PageKeysChanged -> {
-                    readSettingsRepository.setPageKeys(intent.prevKeys, intent.nextKeys)
+            is ReadConfigIntent.PageKeysChanged -> {
+                localPreferencesRepository.updateSettings {
+                    it.copy(prevKeys = intent.prevKeys, nextKeys = intent.nextKeys)
                 }
             }
         }
@@ -197,51 +184,5 @@ class ReadConfigViewModel(
         ChapterProvider.upStyle()
         ReadBook.callBack?.upPageAnim(true)
         ReadBook.loadContent(false)
-    }
-
-    private fun ReadPreferences.toUiState(): ReadConfigUiState {
-        return ReadConfigUiState(
-            screenOrientation = screenOrientation,
-            keepLight = keepLight,
-            hideStatusBar = hideStatusBar,
-            hideNavigationBar = hideNavigationBar,
-            paddingDisplayCutouts = paddingDisplayCutouts,
-            titleBarMode = titleBarMode,
-            readMenuBlurAlpha = readMenuBlurAlpha,
-            readBodyToLh = readBodyToLh,
-            defaultSourceChangeAll = defaultSourceChangeAll,
-            textFullJustify = textFullJustify,
-            textBottomJustify = textBottomJustify,
-            adaptSpecialStyle = adaptSpecialStyle,
-            useZhLayout = useZhLayout,
-            showBrightnessView = showBrightnessView,
-            brightnessVwPos = brightnessVwPos,
-            brightnessAuto = brightnessAuto,
-            useUnderline = useUnderline,
-            readSliderMode = readSliderMode,
-            doubleHorizontalPage = doubleHorizontalPage,
-            progressBarBehavior = progressBarBehavior,
-            mouseWheelPage = mouseWheelPage,
-            volumeKeyPage = volumeKeyPage,
-            volumeKeyPageOnPlay = volumeKeyPageOnPlay,
-            keyPageOnLongPress = keyPageOnLongPress,
-            pageTouchSlop = pageTouchSlop,
-            sliderVibrator = sliderVibrator,
-            selectVibrator = selectVibrator,
-            autoChangeSource = autoChangeSource,
-            autoSuggestDayNight = autoSuggestDayNight,
-            selectText = selectText,
-            noAnimScrollPage = noAnimScrollPage,
-            clickImgWay = clickImgWay,
-            optimizeRender = optimizeRender,
-            disableReturnKey = disableReturnKey,
-            expandTextMenu = expandTextMenu,
-            showSelectMenuIcon = showSelectMenuIcon,
-            showReadTitleAddition = showReadTitleAddition,
-            autoReadSpeed = autoReadSpeed,
-            prevKeys = prevKeys,
-            nextKeys = nextKeys,
-            showMenuIcon = showMenuIcon
-        )
     }
 }
