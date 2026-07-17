@@ -41,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.constant.EventBus
 import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -55,7 +56,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.restart
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -254,6 +255,7 @@ fun ThemeManageScreen(
     }
 
     // Restart dialog
+    // TODO: 后续降级为纯重组，参考 ThemeConfigStore.applyDayNightLive
     AppAlertDialog(
         show = showRestartDialog,
         onDismissRequest = { showRestartDialog = false },
@@ -261,7 +263,7 @@ fun ThemeManageScreen(
         onConfirm = {
             showRestartDialog = false
             Handler(Looper.getMainLooper()).postDelayed({
-                context.restart()
+                postEvent(EventBus.RECREATE, "")
             }, 100)
         },
         confirmText = stringResource(R.string.ok),

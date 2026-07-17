@@ -344,7 +344,6 @@ fun ThemeConfigScreen(
                         checked = ThemeConfig.isPredictiveBackEnabled,
                         onCheckedChange = {
                             ThemeConfig.isPredictiveBackEnabled = it
-                            context.toastOnUi(R.string.restart_to_apply)
                         }
                     )
                     SliderSettingItem(

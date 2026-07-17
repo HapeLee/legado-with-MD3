@@ -117,7 +117,9 @@ object ThemeConfig {
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
-    var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true)
+    var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
     var customMode by prefDelegate<String?>(PreferKey.customMode, "tonalSpot")
 
