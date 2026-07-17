@@ -147,9 +147,6 @@ fun SliderSettingItem(
                                 value = sliderValue,
                                 onValueChange = {
                                     sliderValue = snap(it)
-                                    textFieldState.edit {
-                                        replace(0, length, format(sliderValue))
-                                    }
                                 },
                                 onValueChangeFinished = {
                                     onValueChange(sliderValue.coerceIn(valueRange))
@@ -232,9 +229,6 @@ fun SliderSettingItem(
                                 value = sliderValue,
                                 onValueChange = {
                                     sliderValue = snap(it)
-                                    textFieldState.edit {
-                                        replace(0, length, format(sliderValue))
-                                    }
                                 },
                                 onValueChangeFinished = {
                                     onValueChange(sliderValue.coerceIn(valueRange))

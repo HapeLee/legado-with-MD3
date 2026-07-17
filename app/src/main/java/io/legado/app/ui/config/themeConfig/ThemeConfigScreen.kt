@@ -346,10 +346,9 @@ fun ThemeConfigScreen(
                             context.toastOnUi(R.string.restart_to_apply)
                         }
                     )
-                    val fontScaleSummary = stringResource(R.string.font_scale_summary)
                     SliderSettingItem(
                         title = stringResource(R.string.font_scale),
-                        valueLabel = { fontScaleSummary.format(it / 10f) },
+                        valueLabel = { context.getString(R.string.font_scale_summary, it / 10f) },
                         value = fontScaleValue.floatValue,
                         defaultValue = 10f,
                         valueRange = 8f..16f,
