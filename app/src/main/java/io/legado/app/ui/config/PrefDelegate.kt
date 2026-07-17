@@ -59,7 +59,7 @@ fun <T> prefDelegate(
         private var dsObserverJob: Job? = null
 
         init {
-            // 初值走门面：AppConfigStore 内存快照，DS 缺值时门面内回退 SP 并补写
+            // 初值走门面：AppConfigStore 内存快照（DataStore 唯一真源）
             val initialValue = readInitial()
             _value = mutableStateOf(initialValue)
             currentValue = initialValue

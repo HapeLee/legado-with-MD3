@@ -38,7 +38,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.LocalConfig
-import io.legado.app.help.config.DsSync
+import io.legado.app.help.config.SettingsWriter
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
@@ -406,7 +406,7 @@ object Restore : KoinComponent {
         // 经快照层批量恢复：立即对读侧生效（onRestoreFinish 的读取不再依赖回灌时机），单次原子 edit 落盘
         AppConfigStore.putAll(finalMap)
         // 恢复完成提示前等待落盘，dataStore.edit 返回即持久化完成
-        DsSync.awaitPendingWrites()
+        SettingsWriter.awaitPendingWrites()
     }
 
     private fun readXmlToMap(file: File): Map<String, Any?> {

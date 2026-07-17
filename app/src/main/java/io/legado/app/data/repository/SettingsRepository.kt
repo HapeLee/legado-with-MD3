@@ -1,7 +1,6 @@
 package io.legado.app.data.repository
 
 import android.content.Context
-import androidx.core.content.edit
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
@@ -63,7 +62,6 @@ internal object ShowBrightnessViewMigration : DataMigration<Preferences> {
 /**
  * 设置仓储
  * 以 DataStore 为唯一写入源，读取以 DataStore 为准。
- * SP 同步由 PrefDelegate 双写保证（阶段 1），此处不再回写 SP。
  */
 class SettingsRepository(private val context: Context) {
 
@@ -138,26 +136,6 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun putStringSet(key: String, value: Set<String>) =
         updatePreference(stringSetPreferencesKey(key), value)
-
-    // 批量从 Map 恢复到 DataStore (用于兼容 Restore 逻辑)
-    suspend fun batchPutFromMap(map: Map<String, *>) {
-        dataStore.edit { preferences ->
-            map.forEach { (key, value) ->
-                when (value) {
-                    is String -> preferences[stringPreferencesKey(key)] = value
-                    is Int -> preferences[intPreferencesKey(key)] = value
-                    is Boolean -> preferences[booleanPreferencesKey(key)] = value
-                    is Long -> preferences[longPreferencesKey(key)] = value
-                    is Float -> preferences[floatPreferencesKey(key)] = value
-                    is Set<*> -> {
-                        @Suppress("UNCHECKED_CAST")
-                        preferences[stringSetPreferencesKey(key)] = value as Set<String>
-                    }
-                }
-            }
-        }
-    }
-
 
     // 移除配置
     suspend fun remove(key: String) {

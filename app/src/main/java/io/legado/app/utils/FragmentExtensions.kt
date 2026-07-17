@@ -17,7 +17,6 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
@@ -37,44 +36,6 @@ inline fun <reified T : DialogFragment> Fragment.showDialogFragment(
 fun Fragment.showDialogFragment(dialogFragment: DialogFragment) {
     dialogFragment.show(childFragmentManager, dialogFragment::class.simpleName)
 }
-
-// 统一委托给 Context 门面（读快照、写双写），避免两套实现漂移
-
-fun Fragment.getPrefBoolean(key: String, defValue: Boolean = false) =
-    requireContext().getPrefBoolean(key, defValue)
-
-fun Fragment.putPrefBoolean(key: String, value: Boolean = false) =
-    requireContext().putPrefBoolean(key, value)
-
-fun Fragment.getPrefInt(key: String, defValue: Int = 0) =
-    requireContext().getPrefInt(key, defValue)
-
-fun Fragment.putPrefInt(key: String, value: Int) =
-    requireContext().putPrefInt(key, value)
-
-fun Fragment.getPrefLong(key: String, defValue: Long = 0L) =
-    requireContext().getPrefLong(key, defValue)
-
-fun Fragment.putPrefLong(key: String, value: Long) =
-    requireContext().putPrefLong(key, value)
-
-fun Fragment.getPrefString(key: String, defValue: String? = null) =
-    requireContext().getPrefString(key, defValue)
-
-fun Fragment.putPrefString(key: String, value: String) =
-    requireContext().putPrefString(key, value)
-
-fun Fragment.getPrefStringSet(
-    key: String,
-    defValue: MutableSet<String>? = null
-): MutableSet<String>? =
-    requireContext().getPrefStringSet(key, defValue)
-
-fun Fragment.putPrefStringSet(key: String, value: MutableSet<String>) =
-    requireContext().putPrefStringSet(key, value)
-
-fun Fragment.removePref(key: String) =
-    requireContext().removePref(key)
 
 fun Fragment.getCompatColor(@ColorRes id: Int): Int = requireContext().getCompatColor(id)
 

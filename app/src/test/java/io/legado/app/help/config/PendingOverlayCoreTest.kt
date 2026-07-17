@@ -36,7 +36,7 @@ class PendingOverlayCoreTest {
             },
         )
 
-        /** 执行队列中下一个落盘任务（模拟 DsSync 串行队列跑完一个 Job） */
+        /** 执行队列中下一个落盘任务（模拟 SettingsWriter 串行队列跑完一个 Job） */
         fun completeNextWrite() = runBlocking { writeQueue.removeFirst().invoke() }
 
         fun read(key: String): Int? = core.preferencesFlow.value.compatDsInt(key)

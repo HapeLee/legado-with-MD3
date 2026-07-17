@@ -16,7 +16,7 @@ import kotlin.time.measureTime
 /**
  * DataStore 写入序列化队列，所有经 [AppConfigStore] 的异步写入按提交顺序串行落盘。
  */
-object DsSync {
+object SettingsWriter {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -39,7 +39,7 @@ object DsSync {
                 val elapsed = measureTime { runCatching { block() } }
                 if (elapsed > 500.milliseconds) {
                     LogUtils.d(
-                        "DsSync",
+                        "SettingsWriter",
                         "单次 edit 耗时 ${elapsed.inWholeMilliseconds}ms, 队列剩余 ${pendingCount.get() - 1}"
                     )
                 }

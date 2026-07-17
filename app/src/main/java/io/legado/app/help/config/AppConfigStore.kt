@@ -42,8 +42,6 @@ object AppConfigStore {
     private var core: PendingOverlayCore? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val isInitialized: Boolean get() = core != null
-
     /**
      * 在 App.onCreate 首行调用，先于一切设置读取（主题初始化等）。
      * runBlocking 首读会触发 DataStore 迁移，与旧版首个 PrefDelegate 构造时的行为一致，
@@ -59,7 +57,7 @@ object AppConfigStore {
         }
         val newCore = PendingOverlayCore(
             initial = initial,
-            launchWrite = { DsSync.launchWrite(it) },
+            launchWrite = { SettingsWriter.launchWrite(it) },
             persist = { key, value -> dataStore.edit { it.setPrefValue(key, value) } },
             persistAll = { values ->
                 dataStore.edit { prefs ->
