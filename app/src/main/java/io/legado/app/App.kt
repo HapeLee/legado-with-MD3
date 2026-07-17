@@ -34,7 +34,6 @@ import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
 import io.legado.app.help.AppFreezeMonitor
@@ -143,10 +142,6 @@ class App : Application(), ImageLoaderFactory {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
             LogUtils.logDeviceInfo()
-            // 确保 DataStore 迁移后 SP 中的主题配置值未丢失
-            kotlin.runCatching {
-                get<SettingsRepository>().postMigrationSync()
-            }
             //预下载Cronet so
             Cronet.preDownload()
             createNotificationChannels()

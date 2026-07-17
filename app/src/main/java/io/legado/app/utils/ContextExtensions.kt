@@ -186,10 +186,8 @@ fun Context.startForegroundServiceCompat(intent: Intent) {
 val Context.defaultSharedPreferences: SharedPreferences
     get() = PreferenceManager.getDefaultSharedPreferences(this)
 
-// getPref*/putPref* 门面：读取走 AppConfigStore 内存快照（DataStore），
-// DS 缺值时回退 SP 并补写 DS（迁移遗漏补偿，过渡期逻辑，后续删除）；
-// 写入仍保持 SP 双写（SP 监听器与直读 SP 的代码尚未迁移完），同时进快照保证写后立即读一致。
-// AppConfigStore 未初始化时（App.onCreate 之前，如 ContentProvider）直接走 SP 旧路径。
+// getPref*/putPref* 门面：读写统一走 AppConfigStore 内存快照（DataStore 唯一真源），
+// 主线程零 IO。AppConfigStore 未初始化时（App.onCreate 之前，如 ContentProvider）走 SP 旧路径。
 
 fun Context.getPrefBoolean(key: String, defValue: Boolean = false): Boolean {
     if (!AppConfigStore.isInitialized) return defaultSharedPreferences.getBoolean(key, defValue)
@@ -201,8 +199,11 @@ fun Context.getPrefBoolean(key: String, defValue: Boolean = false): Boolean {
 }
 
 fun Context.putPrefBoolean(key: String, value: Boolean = false) {
-    defaultSharedPreferences.edit { putBoolean(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putBoolean(key, value)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putBoolean(key, value) }
+        return
+    }
+    AppConfigStore.putBoolean(key, value)
 }
 
 fun Context.getPrefInt(key: String, defValue: Int = 0): Int {
@@ -215,8 +216,11 @@ fun Context.getPrefInt(key: String, defValue: Int = 0): Int {
 }
 
 fun Context.putPrefInt(key: String, value: Int) {
-    defaultSharedPreferences.edit { putInt(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putInt(key, value)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putInt(key, value) }
+        return
+    }
+    AppConfigStore.putInt(key, value)
 }
 
 fun Context.getPrefLong(key: String, defValue: Long = 0L): Long {
@@ -236,8 +240,11 @@ fun Context.getPrefLong(key: String, defValue: Long = 0L): Long {
 }
 
 fun Context.putPrefLong(key: String, value: Long) {
-    defaultSharedPreferences.edit { putLong(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putLong(key, value)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putLong(key, value) }
+        return
+    }
+    AppConfigStore.putLong(key, value)
 }
 
 fun Context.getPrefFloat(key: String, defValue: Float = 0f): Float {
@@ -257,8 +264,11 @@ fun Context.getPrefFloat(key: String, defValue: Float = 0f): Float {
 }
 
 fun Context.putPrefFloat(key: String, value: Float) {
-    defaultSharedPreferences.edit { putFloat(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putFloat(key, value)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putFloat(key, value) }
+        return
+    }
+    AppConfigStore.putFloat(key, value)
 }
 
 fun Context.getPrefString(key: String, defValue: String? = null): String? {
@@ -271,13 +281,15 @@ fun Context.getPrefString(key: String, defValue: String? = null): String? {
 }
 
 fun Context.putPrefString(key: String, value: String?) {
-    defaultSharedPreferences.edit { putString(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putString(key, value)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putString(key, value) }
+        return
+    }
+    AppConfigStore.putString(key, value)
 }
 
 fun Context.putPrefStringSync(key: String, value: String?) {
-    defaultSharedPreferences.edit(commit = true) { putString(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putString(key, value)
+    putPrefString(key, value)
 }
 
 fun Context.getPrefStringSet(
@@ -293,13 +305,19 @@ fun Context.getPrefStringSet(
 }
 
 fun Context.putPrefStringSet(key: String, value: MutableSet<String>) {
-    defaultSharedPreferences.edit { putStringSet(key, value) }
-    if (AppConfigStore.isInitialized) AppConfigStore.putStringSet(key, value.toSet())
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { putStringSet(key, value) }
+        return
+    }
+    AppConfigStore.putStringSet(key, value.toSet())
 }
 
 fun Context.removePref(key: String) {
-    defaultSharedPreferences.edit { remove(key) }
-    if (AppConfigStore.isInitialized) AppConfigStore.remove(key)
+    if (!AppConfigStore.isInitialized) {
+        defaultSharedPreferences.edit { remove(key) }
+        return
+    }
+    AppConfigStore.remove(key)
 }
 
 
@@ -321,6 +339,9 @@ fun Context.restart() {
                     or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     or Intent.FLAG_ACTIVITY_CLEAR_TOP
         )
+        kotlinx.coroutines.runBlocking {
+            io.legado.app.help.config.DsSync.awaitPendingWrites()
+        }
         startActivity(intent)
         //杀掉以前进程
         Process.killProcess(Process.myPid())

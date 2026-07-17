@@ -98,9 +98,8 @@ fun <T> prefDelegate(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (currentValue != value) {
                 updateValue(value)
-                // 门面双写：SP（向后兼容，未迁移代码仍直接读 SP/靠 SP 监听）+ 快照/DataStore
                 when (value) {
-                    is String? -> if (sync) appCtx.putPrefStringSync(key, value) else appCtx.putPrefString(key, value)
+                    is String? -> appCtx.putPrefString(key, value)
                     is Int -> appCtx.putPrefInt(key, value)
                     is Boolean -> appCtx.putPrefBoolean(key, value)
                     is Long -> appCtx.putPrefLong(key, value)

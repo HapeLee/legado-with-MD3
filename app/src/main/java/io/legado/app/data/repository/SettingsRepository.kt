@@ -16,11 +16,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.legado.app.constant.PreferKey
-import io.legado.app.utils.defaultSharedPreferences
-import io.legado.app.utils.removePref
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
@@ -161,44 +158,6 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    /**
-     * DataStore 迁移后同步校验：确保 SP 中的主题配置值未被迁移过程丢失。
-     *
-     * SharedPreferencesMigration 在首次访问 DataStore 时运行，将 SP 值复制到 DataStore。
-     * 在某些场景下（进程被杀、ROM 行为等），迁移可能导致 SP 中的值丢失。
-     * 此方法从 DataStore 读取关键主题配置，如果 SP 中缺失则补写回去。
-     */
-    suspend fun postMigrationSync() {
-        val prefs = dataStore.data.first()
-        val sp = context.defaultSharedPreferences
-        val themeKeys = listOf(
-            PreferKey.composeEngine,
-            PreferKey.appTheme,
-            PreferKey.themeMode,
-            PreferKey.paletteStyle,
-            PreferKey.materialVersion,
-            PreferKey.customContrast,
-            PreferKey.customMode,
-        )
-        var needsWrite = false
-        val editor = mutableMapOf<String, String>()
-        for (key in themeKeys) {
-            if (!sp.contains(key)) {
-                val dsValue = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
-                if (dsValue != null) {
-                    editor[key] = dsValue
-                    needsWrite = true
-                }
-            }
-        }
-        if (needsWrite) {
-            sp.edit {
-                editor.forEach { (key, value) ->
-                    putString(key, value)
-                }
-            }
-        }
-    }
 
     // 移除配置
     suspend fun remove(key: String) {
@@ -209,6 +168,5 @@ class SettingsRepository(private val context: Context) {
             preferences.remove(longPreferencesKey(key))
             preferences.remove(floatPreferencesKey(key))
         }
-        context.removePref(key)
     }
 }
