@@ -194,9 +194,7 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, "")
     }
 
-    var customContrast by prefDelegate(PreferKey.customContrast, "Default") {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var customContrast by prefDelegate(PreferKey.customContrast, "Default")
 
     var launcherIcon by prefDelegate(PreferKey.launcherIcon, "ic_launcher")
 

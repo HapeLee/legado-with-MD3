@@ -22,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.constant.PreferKey
+import io.legado.app.help.config.DsSync
 import io.legado.app.service.WebService
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -40,6 +42,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
+import kotlinx.coroutines.runBlocking
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,6 +107,9 @@ fun OtherConfigScreen(
                     entryValues = stringArrayResource(R.array.language_value),
                     onValueChange = { newValue ->
                         OtherConfig.language = newValue
+                        // prefDelegate 的 DataStore 写入是异步的，restart() 会立刻杀进程，
+                        // 必须先同步落盘，否则下次启动从 DataStore 读回旧值，语言切换失效
+                        runBlocking { DsSync.putString(PreferKey.language, newValue) }
                         context.restart()
                     }
                 )

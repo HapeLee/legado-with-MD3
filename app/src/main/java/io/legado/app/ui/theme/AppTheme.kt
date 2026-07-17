@@ -73,6 +73,7 @@ private fun AppThemeActual(
     val isPureBlack = ThemeConfig.isPureBlack
     val paletteStyleValue = ThemeConfig.paletteStyle
     val materialVersion = ThemeConfig.materialVersion
+    val customContrast = ThemeConfig.customContrast
     val composeEngine = ThemeConfig.composeEngine
     val customPrimary = ThemeConfig.cPrimary
     val customNightPrimary = ThemeConfig.cNPrimary
@@ -89,7 +90,7 @@ private fun AppThemeActual(
     val colorScheme = remember(
         context, appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
         enableDeepPersonalization, customColors,
-        paletteStyleValue, materialVersion
+        paletteStyleValue, materialVersion, customContrast
     ) {
         if (appThemeMode == AppThemeMode.Custom &&
             enableDeepPersonalization &&
