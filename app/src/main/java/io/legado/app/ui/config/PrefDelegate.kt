@@ -24,6 +24,7 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
+import io.legado.app.utils.removePref
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -98,12 +99,16 @@ fun <T> prefDelegate(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (currentValue != value) {
                 updateValue(value)
-                when (value) {
-                    is String? -> appCtx.putPrefString(key, value)
-                    is Int -> appCtx.putPrefInt(key, value)
-                    is Boolean -> appCtx.putPrefBoolean(key, value)
-                    is Long -> appCtx.putPrefLong(key, value)
-                    is Float -> appCtx.putPrefFloat(key, value)
+                if (value == null) {
+                    appCtx.removePref(key)
+                } else {
+                    when (value) {
+                        is String -> appCtx.putPrefString(key, value)
+                        is Int -> appCtx.putPrefInt(key, value)
+                        is Boolean -> appCtx.putPrefBoolean(key, value)
+                        is Long -> appCtx.putPrefLong(key, value)
+                        is Float -> appCtx.putPrefFloat(key, value)
+                    }
                 }
                 onValueChange?.invoke(value)
             }

@@ -132,9 +132,9 @@ internal class PendingOverlayCore(
             rebuild()
             // 在锁内提交写任务，保证落盘顺序与 pending 覆盖顺序一致
             launchWrite {
-                val result = persist(key, value)
+                val result = runCatching { persist(key, value) }
                 synchronized(lock) {
-                    snapshot = result
+                    result.onSuccess { snapshot = it }
                     // 同 key 已有更新的写入时不移除，继续由新条目覆盖
                     if (pending[key] === write) pending.remove(key)
                     rebuild()

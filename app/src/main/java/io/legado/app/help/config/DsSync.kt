@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -62,10 +63,12 @@ object DsSync {
      * 用于 restart 等必须确保"写入已持久化"的场景。
      */
     suspend fun awaitPendingWrites(timeoutMs: Long = 3000) {
-        withContext(writeDispatcher) {
-            withTimeoutOrNull(timeoutMs) {
-                // 在串行 dispatcher 上执行一个空任务：排在前面的写入全部完成后才会轮到它
+        val startTime = System.currentTimeMillis()
+        while (pendingCount.get() > 0) {
+            if (System.currentTimeMillis() - startTime > timeoutMs) {
+                break
             }
+            delay(50)
         }
     }
 

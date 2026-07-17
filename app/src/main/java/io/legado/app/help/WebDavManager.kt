@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,6 +67,7 @@ sealed class WebDavState {
     ) : WebDavState()
 }
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class WebDavManager(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
@@ -85,7 +87,7 @@ class WebDavManager(
                 AppConfigStore.observeString(PreferKey.webDavPassword).drop(1),
                 AppConfigStore.observeString(PreferKey.webDavDir).drop(1),
                 AppConfigStore.observeString(PreferKey.webDavDeviceName).drop(1),
-            ).collect {
+            ).debounce(100).collect {
                 configFlow.value = readConfig()
                 refresh()
             }

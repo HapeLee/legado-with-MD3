@@ -23,7 +23,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
  * 取 key 对应的原始存储值（不做类型断言）。
  * 声明为 Any? 避免泛型擦除后的 checkcast，存储类型不匹配也不会抛 ClassCastException。
  */
-fun Preferences.rawPrefValue(key: String): Any? = this[stringPreferencesKey(key)]
+fun Preferences.rawPrefValue(key: String): Any? = asMap()[stringPreferencesKey(key)]
 
 fun Preferences.compatDsString(key: String): String? = rawPrefValue(key) as? String
 

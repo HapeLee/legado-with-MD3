@@ -1,5 +1,9 @@
 package io.legado.app
 
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import io.legado.app.ui.config.otherConfig.OtherConfig
+import java.util.Locale
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
@@ -90,6 +94,21 @@ class App : Application(), ImageLoaderFactory {
         // 首行初始化设置快照层：同步预加载 DataStore（触发 SP 迁移），
         // 之后所有 getPref* 门面读取均为纯内存查找，须先于一切主题/配置读取
         AppConfigStore.init(this)
+        val storedLanguage = OtherConfig.language
+        if (storedLanguage != "auto") {
+            val appCompatLocales = AppCompatDelegate.getApplicationLocales()
+            if (appCompatLocales.isEmpty) {
+                val localeList = when (storedLanguage) {
+                    "zh" -> LocaleListCompat.create(Locale.SIMPLIFIED_CHINESE)
+                    "tw" -> LocaleListCompat.create(Locale.TRADITIONAL_CHINESE)
+                    "en" -> LocaleListCompat.create(Locale.ENGLISH)
+                    else -> null
+                }
+                if (localeList != null) {
+                    AppCompatDelegate.setApplicationLocales(localeList)
+                }
+            }
+        }
         startKoin {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
