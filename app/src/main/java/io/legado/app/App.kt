@@ -46,6 +46,7 @@ import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
@@ -87,6 +88,9 @@ class App : Application(), ImageLoaderFactory {
     }
 
     override fun onCreate() {
+        // 首行初始化设置快照层：同步预加载 DataStore（触发 SP 迁移），
+        // 之后所有 getPref* 门面读取均为纯内存查找，须先于一切主题/配置读取
+        AppConfigStore.init(this)
         startKoin {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)

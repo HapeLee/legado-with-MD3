@@ -42,6 +42,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.help.IntentHelp
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
@@ -185,63 +186,121 @@ fun Context.startForegroundServiceCompat(intent: Intent) {
 val Context.defaultSharedPreferences: SharedPreferences
     get() = PreferenceManager.getDefaultSharedPreferences(this)
 
-fun Context.getPrefBoolean(key: String, defValue: Boolean = false) =
-    defaultSharedPreferences.getBoolean(key, defValue)
+// getPref*/putPref* 门面：读取走 AppConfigStore 内存快照（DataStore），
+// DS 缺值时回退 SP 并补写 DS（迁移遗漏补偿，过渡期逻辑，后续删除）；
+// 写入仍保持 SP 双写（SP 监听器与直读 SP 的代码尚未迁移完），同时进快照保证写后立即读一致。
+// AppConfigStore 未初始化时（App.onCreate 之前，如 ContentProvider）直接走 SP 旧路径。
 
-fun Context.putPrefBoolean(key: String, value: Boolean = false) =
+fun Context.getPrefBoolean(key: String, defValue: Boolean = false): Boolean {
+    if (!AppConfigStore.isInitialized) return defaultSharedPreferences.getBoolean(key, defValue)
+    AppConfigStore.getBoolean(key)?.let { return it }
+    if (!defaultSharedPreferences.contains(key)) return defValue
+    val value = defaultSharedPreferences.getBoolean(key, defValue)
+    AppConfigStore.putBoolean(key, value)
+    return value
+}
+
+fun Context.putPrefBoolean(key: String, value: Boolean = false) {
     defaultSharedPreferences.edit { putBoolean(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putBoolean(key, value)
+}
 
-fun Context.getPrefInt(key: String, defValue: Int = 0) =
-    defaultSharedPreferences.getInt(key, defValue)
+fun Context.getPrefInt(key: String, defValue: Int = 0): Int {
+    if (!AppConfigStore.isInitialized) return defaultSharedPreferences.getInt(key, defValue)
+    AppConfigStore.getInt(key)?.let { return it }
+    if (!defaultSharedPreferences.contains(key)) return defValue
+    val value = defaultSharedPreferences.getInt(key, defValue)
+    AppConfigStore.putInt(key, value)
+    return value
+}
 
-fun Context.putPrefInt(key: String, value: Int) =
+fun Context.putPrefInt(key: String, value: Int) {
     defaultSharedPreferences.edit { putInt(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putInt(key, value)
+}
 
 fun Context.getPrefLong(key: String, defValue: Long = 0L): Long {
-    return try {
+    if (AppConfigStore.isInitialized) {
+        AppConfigStore.getLong(key)?.let { return it }
+        if (!defaultSharedPreferences.contains(key)) return defValue
+    }
+    val value = try {
         defaultSharedPreferences.getLong(key, defValue)
     } catch (e: ClassCastException) {
-        val value = defaultSharedPreferences.getInt(key, defValue.toInt()).toLong()
-        defaultSharedPreferences.edit { putLong(key, value) }
-        value
+        val fixed = defaultSharedPreferences.getInt(key, defValue.toInt()).toLong()
+        defaultSharedPreferences.edit { putLong(key, fixed) }
+        fixed
     }
+    if (AppConfigStore.isInitialized) AppConfigStore.putLong(key, value)
+    return value
 }
 
-fun Context.putPrefLong(key: String, value: Long) =
+fun Context.putPrefLong(key: String, value: Long) {
     defaultSharedPreferences.edit { putLong(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putLong(key, value)
+}
 
 fun Context.getPrefFloat(key: String, defValue: Float = 0f): Float {
-    return try {
+    if (AppConfigStore.isInitialized) {
+        AppConfigStore.getFloat(key)?.let { return it }
+        if (!defaultSharedPreferences.contains(key)) return defValue
+    }
+    val value = try {
         defaultSharedPreferences.getFloat(key, defValue)
     } catch (e: ClassCastException) {
-        val value = defaultSharedPreferences.getInt(key, defValue.toInt()).toFloat()
-        defaultSharedPreferences.edit { putFloat(key, value) }
-        value
+        val fixed = defaultSharedPreferences.getInt(key, defValue.toInt()).toFloat()
+        defaultSharedPreferences.edit { putFloat(key, fixed) }
+        fixed
     }
+    if (AppConfigStore.isInitialized) AppConfigStore.putFloat(key, value)
+    return value
 }
 
-fun Context.putPrefFloat(key: String, value: Float) =
+fun Context.putPrefFloat(key: String, value: Float) {
     defaultSharedPreferences.edit { putFloat(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putFloat(key, value)
+}
 
-fun Context.getPrefString(key: String, defValue: String? = null) =
-    defaultSharedPreferences.getString(key, defValue)
+fun Context.getPrefString(key: String, defValue: String? = null): String? {
+    if (!AppConfigStore.isInitialized) return defaultSharedPreferences.getString(key, defValue)
+    AppConfigStore.getString(key)?.let { return it }
+    if (!defaultSharedPreferences.contains(key)) return defValue
+    val value = defaultSharedPreferences.getString(key, defValue)
+    if (value != null) AppConfigStore.putString(key, value)
+    return value
+}
 
-fun Context.putPrefString(key: String, value: String?) =
+fun Context.putPrefString(key: String, value: String?) {
     defaultSharedPreferences.edit { putString(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putString(key, value)
+}
 
-fun Context.putPrefStringSync(key: String, value: String?) =
+fun Context.putPrefStringSync(key: String, value: String?) {
     defaultSharedPreferences.edit(commit = true) { putString(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putString(key, value)
+}
 
 fun Context.getPrefStringSet(
     key: String,
     defValue: MutableSet<String>? = null,
-): MutableSet<String>? = defaultSharedPreferences.getStringSet(key, defValue)
+): MutableSet<String>? {
+    if (!AppConfigStore.isInitialized) return defaultSharedPreferences.getStringSet(key, defValue)
+    AppConfigStore.getStringSet(key)?.let { return it.toMutableSet() }
+    if (!defaultSharedPreferences.contains(key)) return defValue
+    val value = defaultSharedPreferences.getStringSet(key, defValue)
+    if (value != null) AppConfigStore.putStringSet(key, value.toSet())
+    return value
+}
 
-fun Context.putPrefStringSet(key: String, value: MutableSet<String>) =
+fun Context.putPrefStringSet(key: String, value: MutableSet<String>) {
     defaultSharedPreferences.edit { putStringSet(key, value) }
+    if (AppConfigStore.isInitialized) AppConfigStore.putStringSet(key, value.toSet())
+}
 
-fun Context.removePref(key: String) =
+fun Context.removePref(key: String) {
     defaultSharedPreferences.edit { remove(key) }
+    if (AppConfigStore.isInitialized) AppConfigStore.remove(key)
+}
 
 
 fun Context.getCompatColor(@ColorRes id: Int): Int = ContextCompat.getColor(this, id)
