@@ -52,6 +52,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
+import io.legado.app.ui.widget.components.dialog.CustomTipDialog
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.pager.pagerHeight
@@ -110,6 +111,9 @@ internal fun HeaderFooterPage(
     var footerLeft by remember { mutableIntStateOf(ReadBookConfig.tipFooterLeft) }
     var footerMiddle by remember { mutableIntStateOf(ReadBookConfig.tipFooterMiddle) }
     var footerRight by remember { mutableIntStateOf(ReadBookConfig.tipFooterRight) }
+
+    // 对哪个位置正在编辑自定义模板（null 表示未打开弹窗）
+    var editingCustomTarget by remember { mutableStateOf<CustomTipTarget?>(null) }
 
     // Line toggles
     var showHeaderLine by remember { mutableStateOf(ReadBookConfig.showHeaderLine) }
@@ -187,6 +191,43 @@ internal fun HeaderFooterPage(
         if (footerRight == repeat) {
             footerRight = ReadBookConfig.tipNone
             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(ReadBookConfig.tipNone)))
+        }
+    }
+
+    /**
+     * 当某个位置的 tip 被切换时统一处理：清空同值重复、更新本地 state、派发 ConfigUpdate，
+     * 必要时自动弹出自定义模板编辑弹窗。
+     */
+    fun handleTipChange(target: CustomTipTarget, value: Int) {
+        clearRepeat(value)
+        when (target) {
+            CustomTipTarget.HEADER_LEFT -> {
+                headerLeft = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(value)))
+            }
+            CustomTipTarget.HEADER_MIDDLE -> {
+                headerMiddle = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(value)))
+            }
+            CustomTipTarget.HEADER_RIGHT -> {
+                headerRight = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(value)))
+            }
+            CustomTipTarget.FOOTER_LEFT -> {
+                footerLeft = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(value)))
+            }
+            CustomTipTarget.FOOTER_MIDDLE -> {
+                footerMiddle = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(value)))
+            }
+            CustomTipTarget.FOOTER_RIGHT -> {
+                footerRight = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(value)))
+            }
+        }
+        if (value == ReadBookConfig.tipCustom) {
+            editingCustomTarget = target
         }
     }
 
@@ -270,33 +311,21 @@ internal fun HeaderFooterPage(
                             value = headerLeft,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                headerLeft = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_LEFT, it) },
                         )
                         TipPositionDropdown(
                             label = stringResource(R.string.middle),
                             value = headerMiddle,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                headerMiddle = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_MIDDLE, it) },
                         )
                         TipPositionDropdown(
                             label = stringResource(R.string.right),
                             value = headerRight,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                headerRight = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_RIGHT, it) },
                         )
                         TinyColorModeSettingItem(
                             title = stringResource(R.string.header_color),
@@ -414,33 +443,21 @@ internal fun HeaderFooterPage(
                             value = footerLeft,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                footerLeft = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_LEFT, it) },
                         )
                         TipPositionDropdown(
                             label = stringResource(R.string.middle),
                             value = footerMiddle,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                footerMiddle = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_MIDDLE, it) },
                         )
                         TipPositionDropdown(
                             label = stringResource(R.string.right),
                             value = footerRight,
                             tipNames = tipNames,
                             tipValues = tipValues,
-                            onValueChange = {
-                                clearRepeat(it)
-                                footerRight = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(it)))
-                            },
+                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_RIGHT, it) },
                         )
                         TinyColorModeSettingItem(
                             title = stringResource(R.string.footer_color),
@@ -622,6 +639,18 @@ internal fun HeaderFooterPage(
         }
     }
     val systemTypefaces = stringArrayResource(R.array.system_typefaces)
+
+    val editingCustomInitial: String = editingCustomTarget?.customTemplate.orEmpty()
+
+    CustomTipDialog(
+        show = editingCustomTarget != null,
+        initialTemplate = editingCustomInitial,
+        onConfirm = { template ->
+            editingCustomTarget?.applyTemplate(template, onIntent)
+            editingCustomTarget = null
+        },
+        onDismissRequest = { editingCustomTarget = null },
+    )
 
     FontSelectSheet(
         show = showFontSelect,

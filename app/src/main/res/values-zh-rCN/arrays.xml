@@ -104,6 +104,7 @@
         <item>时间及电量</item>
         <item>经典电量及时间</item>
         <item>时间及电量%</item>
+        <item>自定义</item>
     </string-array>
 
     <string-array name="text_font_weight">

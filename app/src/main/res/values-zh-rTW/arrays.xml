@@ -110,6 +110,7 @@
         <item>時間及電量</item>
         <item>時間及電量经典</item>
         <item>時間及電量%</item>
+        <item>自訂</item>
     </string-array>
 
     <string-array name="text_font_weight">
