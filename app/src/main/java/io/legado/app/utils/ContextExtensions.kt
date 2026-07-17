@@ -43,6 +43,7 @@ import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.help.IntentHelp
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.DsSync
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
@@ -52,6 +53,7 @@ import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.bookshelf.BookShelfItem
+import kotlinx.coroutines.runBlocking
 import splitties.systemservices.clipboardManager
 import splitties.systemservices.connectivityManager
 import splitties.systemservices.uiModeManager
@@ -288,10 +290,6 @@ fun Context.putPrefString(key: String, value: String?) {
     AppConfigStore.putString(key, value)
 }
 
-fun Context.putPrefStringSync(key: String, value: String?) {
-    putPrefString(key, value)
-}
-
 fun Context.getPrefStringSet(
     key: String,
     defValue: MutableSet<String>? = null,
@@ -339,8 +337,8 @@ fun Context.restart() {
                     or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     or Intent.FLAG_ACTIVITY_CLEAR_TOP
         )
-        kotlinx.coroutines.runBlocking {
-            io.legado.app.help.config.DsSync.awaitPendingWrites()
+        runBlocking {
+            DsSync.awaitPendingWrites()
         }
         startActivity(intent)
         //杀掉以前进程

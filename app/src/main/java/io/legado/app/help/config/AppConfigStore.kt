@@ -28,7 +28,7 @@ import io.legado.app.utils.stackTraceStr
  * 三个职责（不做其他事，防止长成 AppConfig 2.0）：
  * 1. snapshot：App.onCreate 首行同步预加载一次（同时触发 SharedPreferencesMigration），
  *    之后由常驻 collector 跟随 DataStore 变化回灌，保证外部写入（Restore 批量写等）可见；
- * 2. pending overlay：写入先进内存立即对读侧生效，异步串行落盘后移除，
+ * 2. pending overlay：写入先进内存立即对读侧生效，异步串行落盘、回灌确认后移除，
  *    保证"写后立即读"永远读到新值，collector 携带旧状态回灌也不会闪烁；
  * 3. observe：按 key 订阅变化，替代 SP OnSharedPreferenceChangeListener。
  *
@@ -61,6 +61,11 @@ object AppConfigStore {
             initial = initial,
             launchWrite = { DsSync.launchWrite(it) },
             persist = { key, value -> dataStore.edit { it.setPrefValue(key, value) } },
+            persistAll = { values ->
+                dataStore.edit { prefs ->
+                    values.forEach { (key, value) -> prefs.setPrefValue(key, value) }
+                }
+            },
         )
         core = newCore
         scope.launch {
@@ -95,6 +100,9 @@ object AppConfigStore {
     fun putStringSet(key: String, value: Set<String>) = requireCore().put(key, value)
     fun remove(key: String) = requireCore().put(key, null)
 
+    /** 批量写入（Restore 恢复备份等）：整批立即对读侧生效，单次 edit 落盘 */
+    fun putAll(values: Map<String, Any?>) = requireCore().putAll(values)
+
     // 订阅：替代 SP 监听器的统一入口，值不存在时发 null
     fun observeString(key: String): Flow<String?> = observe { it.compatDsString(key) }
     fun observeInt(key: String): Flow<Int?> = observe { it.compatDsInt(key) }
@@ -110,14 +118,17 @@ object AppConfigStore {
  * 快照 + pending overlay 的核心状态机，与 Android/DataStore 解耦以便 JVM 单测。
  *
  * 不变式：[preferencesFlow] = snapshot 叠加所有 pending 写入，pending 中的值永远优先。
- * pending 条目在对应落盘完成后移除；落盘返回的 Preferences 是该次 edit 后的完整状态，
- * 必然新于此前收到的任何回灌，因此落盘完成时直接采纳为 snapshot——即使 collector
- * 随后才处理一条落盘前的旧回灌，下一轮 collect 读到的也是最新状态，旧值不会驻留。
+ * snapshot 只由 collector 回灌（[onEmission]）推进，回灌按落盘提交顺序到达，因此单调不回退；
+ * pending 条目要等到回灌中该 key 的值已等于写入目标值时才移除——落盘完成后若先处理到
+ * 一条落盘前的旧回灌，该 key 仍被 overlay 保护，读值不会短暂回滚（回滚会让 observe
+ * 订阅方收到"新→旧→新"的幻影变更，如触发多余的 Activity recreate / WebDav refresh）。
+ * 落盘失败时移除对应 pending 实现回滚，读取回退到已落盘状态。
  */
 internal class PendingOverlayCore(
     initial: Preferences,
     private val launchWrite: (suspend () -> Unit) -> Unit,
     private val persist: suspend (key: String, value: Any?) -> Preferences,
+    private val persistAll: suspend (values: Map<String, Any?>) -> Preferences,
 ) {
 
     private val lock = Any()
@@ -135,21 +146,44 @@ internal class PendingOverlayCore(
             rebuild()
             // 在锁内提交写任务，保证落盘顺序与 pending 覆盖顺序一致
             launchWrite {
-                val result = runCatching { persist(key, value) }
-                synchronized(lock) {
-                    result.onSuccess { 
-                        snapshot = it 
-                    }.onFailure { e ->
-                        val isOverridden = pending[key] !== write
-                        if (isOverridden) {
-                            LogUtils.e("AppConfigStore", "保存设置失败且已被新写入覆盖: key=$key, value=$value\n${e.stackTraceStr}")
-                        } else {
+                // 成功时不动 snapshot/pending：等 collector 回灌到含新值的状态时（onEmission）
+                // 再移除 overlay，避免"落盘完成后才处理到旧回灌"导致读值短暂回滚
+                runCatching { persist(key, value) }.onFailure { e ->
+                    synchronized(lock) {
+                        if (pending[key] === write) {
+                            // 失败回滚：移除 overlay，读取回退到已落盘状态
+                            pending.remove(key)
+                            rebuild()
                             LogUtils.e("AppConfigStore", "保存设置失败: key=$key, value=$value\n${e.stackTraceStr}")
+                        } else {
+                            // 同 key 已有更新的写入，继续由新条目覆盖
+                            LogUtils.e("AppConfigStore", "保存设置失败且已被新写入覆盖: key=$key, value=$value\n${e.stackTraceStr}")
                         }
                     }
-                    // 同 key 已有更新的写入时不移除，继续由新条目覆盖
-                    if (pending[key] === write) pending.remove(key)
-                    rebuild()
+                }
+            }
+        }
+    }
+
+    fun putAll(values: Map<String, Any?>) {
+        if (values.isEmpty()) return
+        synchronized(lock) {
+            val writes = values.mapValues { PendingWrite(it.value) }
+            pending.putAll(writes)
+            rebuild()
+            launchWrite {
+                runCatching { persistAll(values) }.onFailure { e ->
+                    synchronized(lock) {
+                        var removed = false
+                        writes.forEach { (key, write) ->
+                            if (pending[key] === write) {
+                                pending.remove(key)
+                                removed = true
+                            }
+                        }
+                        if (removed) rebuild()
+                        LogUtils.e("AppConfigStore", "批量保存设置失败: keys=${values.keys}\n${e.stackTraceStr}")
+                    }
                 }
             }
         }
@@ -158,6 +192,9 @@ internal class PendingOverlayCore(
     fun onEmission(prefs: Preferences) {
         synchronized(lock) {
             snapshot = prefs
+            // 回灌已包含某个 pending 写入的目标值时，说明该写入已落盘且对 collector 可见，
+            // 此时移除 overlay 才不会被更早的旧回灌回滚
+            pending.entries.removeAll { (key, write) -> prefs.rawPrefValue(key) == write.value }
             rebuild()
         }
     }

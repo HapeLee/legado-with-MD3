@@ -1,15 +1,24 @@
 package io.legado.app.ui.config.otherConfig
 
+import androidx.core.os.LocaleListCompat
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.ui.config.prefDelegate
+import java.util.Locale
+
+/** 语言偏好值 → per-app locale 列表；"auto" 及未知值返回空列表（跟随系统） */
+fun appLocaleListFor(language: String?): LocaleListCompat = when (language) {
+    "zh" -> LocaleListCompat.create(Locale.SIMPLIFIED_CHINESE)
+    "tw" -> LocaleListCompat.create(Locale.TRADITIONAL_CHINESE)
+    "en" -> LocaleListCompat.create(Locale.ENGLISH)
+    else -> LocaleListCompat.getEmptyLocaleList()
+}
 
 object OtherConfig {
 
     var language by prefDelegate(
         PreferKey.language,
-        "auto",
-        sync = true
+        "auto"
     )
 
     var updateToVariant by prefDelegate(

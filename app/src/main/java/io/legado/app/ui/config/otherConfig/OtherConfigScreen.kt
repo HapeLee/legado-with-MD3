@@ -23,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import androidx.core.os.LocaleListCompat
 import io.legado.app.service.WebService
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -42,7 +41,6 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,13 +104,7 @@ fun OtherConfigScreen(
                     entryValues = stringArrayResource(R.array.language_value),
                     onValueChange = { newValue ->
                         OtherConfig.language = newValue
-                        val localeList = when (newValue) {
-                            "zh" -> LocaleListCompat.create(Locale.SIMPLIFIED_CHINESE)
-                            "tw" -> LocaleListCompat.create(Locale.TRADITIONAL_CHINESE)
-                            "en" -> LocaleListCompat.create(Locale.ENGLISH)
-                            else -> LocaleListCompat.getEmptyLocaleList()
-                        }
-                        AppCompatDelegate.setApplicationLocales(localeList)
+                        AppCompatDelegate.setApplicationLocales(appLocaleListFor(newValue))
                     }
                 )
 

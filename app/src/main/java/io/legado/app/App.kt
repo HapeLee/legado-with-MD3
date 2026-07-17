@@ -1,9 +1,5 @@
 package io.legado.app
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
-import io.legado.app.ui.config.otherConfig.OtherConfig
-import java.util.Locale
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,6 +9,7 @@ import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.graphics.scale
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -50,6 +47,7 @@ import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
@@ -63,10 +61,11 @@ import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.BookCover
 import io.legado.app.ui.book.read.page.entities.TextLine
+import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.config.otherConfig.appLocaleListFor
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
-import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
@@ -94,19 +93,15 @@ class App : Application(), ImageLoaderFactory {
         // 首行初始化设置快照层：同步预加载 DataStore（触发 SP 迁移），
         // 之后所有 getPref* 门面读取均为纯内存查找，须先于一切主题/配置读取
         AppConfigStore.init(this)
-        val storedLanguage = OtherConfig.language
-        if (storedLanguage != "auto") {
-            val appCompatLocales = AppCompatDelegate.getApplicationLocales()
-            if (appCompatLocales.isEmpty) {
-                val localeList = when (storedLanguage) {
-                    "zh" -> LocaleListCompat.create(Locale.SIMPLIFIED_CHINESE)
-                    "tw" -> LocaleListCompat.create(Locale.TRADITIONAL_CHINESE)
-                    "en" -> LocaleListCompat.create(Locale.ENGLISH)
-                    else -> null
-                }
-                if (localeList != null) {
-                    AppCompatDelegate.setApplicationLocales(localeList)
-                }
+        // 一次性迁移：把旧版语言偏好写入 AppCompat per-app locales，之后交由
+        // autoStoreLocales 持久化。不能每次启动都执行——API 33+ 上会覆盖用户在
+        // 系统设置里选择的应用语言，API <33 上此时 AppCompat 存储尚未加载、
+        // getApplicationLocales() 恒为空，isEmpty 守卫会形同虚设
+        if (!LocalConfig.appLocaleMigrated) {
+            LocalConfig.appLocaleMigrated = true
+            val localeList = appLocaleListFor(OtherConfig.language)
+            if (!localeList.isEmpty && AppCompatDelegate.getApplicationLocales().isEmpty) {
+                AppCompatDelegate.setApplicationLocales(localeList)
             }
         }
         startKoin {

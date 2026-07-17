@@ -23,7 +23,6 @@ import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
-import io.legado.app.utils.putPrefStringSync
 import io.legado.app.utils.removePref
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +47,6 @@ fun <T> prefDelegate(
     key: String,
     defaultValue: T,
     lifecycleOwner: LifecycleOwner? = null,
-    sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefDelegate<T> {
     return object : PrefDelegate<T>, DefaultLifecycleObserver {
@@ -148,9 +146,8 @@ fun <T> prefStateDelegate(
     key: String,
     defaultValue: T,
     lifecycleOwner: LifecycleOwner? = null,
-    sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefStateDelegate<T> {
-    val delegate = prefDelegate(key, defaultValue, lifecycleOwner, sync, onValueChange)
+    val delegate = prefDelegate(key, defaultValue, lifecycleOwner, onValueChange)
     return PrefStateDelegate(delegate)
 }

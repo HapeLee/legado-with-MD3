@@ -21,9 +21,11 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 /**
  * 取 key 对应的原始存储值（不做类型断言）。
- * 声明为 Any? 避免泛型擦除后的 checkcast，存储类型不匹配也不会抛 ClassCastException。
+ * Key 按 name 判等，用 string 类型的 key 即可取到该 name 下任意类型的原始值；
+ * 返回位置声明为 Any? 使编译器不插入 checkcast，存储类型不匹配也不会抛 ClassCastException。
+ * 不可用 asMap() 实现：datastore 的 asMap() 每次调用都会防御性复制整个 map，读是热路径。
  */
-fun Preferences.rawPrefValue(key: String): Any? = asMap()[stringPreferencesKey(key)]
+fun Preferences.rawPrefValue(key: String): Any? = this[stringPreferencesKey(key)]
 
 fun Preferences.compatDsString(key: String): String? = when (val raw = rawPrefValue(key)) {
     is String -> raw

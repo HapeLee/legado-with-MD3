@@ -69,6 +69,13 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
             putBoolean("navExtended", value)
         }
 
+    /** 旧版语言偏好是否已迁移到 AppCompat per-app locales（App.onCreate 一次性迁移） */
+    var appLocaleMigrated: Boolean
+        get() = getBoolean("appLocaleMigrated")
+        set(value) {
+            putBoolean("appLocaleMigrated", value)
+        }
+
     val readHelpVersionIsLast: Boolean
         get() = isLastVersion(1, "readHelpVersion", "firstRead")
 

@@ -1,12 +1,5 @@
 package io.legado.app.help.config
 
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import io.legado.app.data.repository.dataStore
 import io.legado.app.utils.LogUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import splitties.init.appCtx
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.measureTime
@@ -68,28 +59,5 @@ object DsSync {
                 delay(50)
             }
         }
-    }
-
-    suspend fun putString(key: String, value: String?) {
-        appCtx.dataStore.edit { prefs ->
-            val dsKey = stringPreferencesKey(key)
-            if (value == null) prefs.remove(dsKey) else prefs[dsKey] = value
-        }
-    }
-
-    suspend fun putInt(key: String, value: Int) {
-        appCtx.dataStore.edit { it[intPreferencesKey(key)] = value }
-    }
-
-    suspend fun putBoolean(key: String, value: Boolean) {
-        appCtx.dataStore.edit { it[booleanPreferencesKey(key)] = value }
-    }
-
-    suspend fun putLong(key: String, value: Long) {
-        appCtx.dataStore.edit { it[longPreferencesKey(key)] = value }
-    }
-
-    suspend fun putFloat(key: String, value: Float) {
-        appCtx.dataStore.edit { it[floatPreferencesKey(key)] = value }
     }
 }

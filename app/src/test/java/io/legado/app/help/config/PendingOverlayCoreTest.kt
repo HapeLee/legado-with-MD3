@@ -28,6 +28,12 @@ class PendingOverlayCoreTest {
                 dsState = mutable.toPreferences()
                 dsState
             },
+            persistAll = { values ->
+                val mutable = dsState.toMutablePreferences()
+                values.forEach { (key, value) -> mutable.setPrefValue(key, value) }
+                dsState = mutable.toPreferences()
+                dsState
+            },
         )
 
         /** 执行队列中下一个落盘任务（模拟 DsSync 串行队列跑完一个 Job） */
@@ -67,14 +73,47 @@ class PendingOverlayCoreTest {
         val h = Harness(mutablePreferencesOf(intPreferencesKey("k") to 1))
         h.core.put("k", 2)
         h.completeNextWrite()
-        // 落盘完成即采纳 edit 结果，读取已是新值
+        // 落盘完成后新值仍由 overlay 保护，读取已是新值
         assertEquals(2, h.read("k"))
-        // collector 随后携带落盘后的新状态回灌
+        // collector 携带落盘后的新状态回灌，确认后 overlay 移除
         h.core.onEmission(h.dsState)
         assertEquals(2, h.read("k"))
         // overlay 已清空：此后外部写入（如 Restore）的回灌可正常覆盖
         h.core.onEmission(mutablePreferencesOf(intPreferencesKey("k") to 5))
         assertEquals(5, h.read("k"))
+    }
+
+    @Test
+    fun `落盘完成后处理到旧回灌-读值不回滚`() {
+        val h = Harness(mutablePreferencesOf(intPreferencesKey("k") to 1))
+        h.core.put("k", 2)
+        h.completeNextWrite()
+        // collector 此时才处理一条落盘前排队的旧回灌，读值不得回滚（否则 observe
+        // 订阅方会收到 2→1→2 的幻影变更）
+        h.core.onEmission(mutablePreferencesOf(intPreferencesKey("k") to 1))
+        assertEquals(2, h.read("k"))
+        // 含新值的回灌到达后 overlay 才移除，外部写入随后可正常覆盖
+        h.core.onEmission(h.dsState)
+        assertEquals(2, h.read("k"))
+        h.core.onEmission(mutablePreferencesOf(intPreferencesKey("k") to 7))
+        assertEquals(7, h.read("k"))
+    }
+
+    @Test
+    fun `批量写入立即生效-单次落盘-回灌确认后清空 overlay`() {
+        val h = Harness(mutablePreferencesOf(intPreferencesKey("a") to 1))
+        h.core.putAll(mapOf("a" to 2, "b" to "x"))
+        // 写入内存立即可读，且只排一个落盘任务
+        assertEquals(2, h.read("a"))
+        assertEquals("x", h.core.preferencesFlow.value.compatDsString("b"))
+        assertEquals(1, h.writeQueue.size)
+        h.completeNextWrite()
+        assertEquals(2, h.dsState.compatDsInt("a"))
+        assertEquals("x", h.dsState.compatDsString("b"))
+        // 回灌确认后 overlay 清空，外部回灌可覆盖
+        h.core.onEmission(h.dsState)
+        h.core.onEmission(mutablePreferencesOf(intPreferencesKey("a") to 9))
+        assertEquals(9, h.read("a"))
     }
 
     @Test
@@ -130,6 +169,7 @@ class PendingOverlayCoreTest {
                 dsState = mutable.toPreferences()
                 dsState
             },
+            persistAll = { error("unused") },
         )
         core.put("k", 2)
         assertEquals(2, core.preferencesFlow.value.compatDsInt("k"))
@@ -163,6 +203,7 @@ class PendingOverlayCoreTest {
                 dsState = mutable.toPreferences()
                 dsState
             },
+            persistAll = { error("unused") },
         )
         // 第一次写入 2 (失败)
         core.put("k", 2)
@@ -185,7 +226,7 @@ class PendingOverlayCoreTest {
         // 执行第二个任务（成功）
         runBlocking { writeQueue.removeFirst().invoke() }
 
-        // 第二个成功，快照更新为 3，并且 overlay 彻底清空，读取为 3
+        // 第二个成功落盘，读取为 3（overlay 待回灌确认后清空）
         assertEquals(3, core.preferencesFlow.value.compatDsInt("k"))
         assertEquals(3, dsState.compatDsInt("k"))
     }

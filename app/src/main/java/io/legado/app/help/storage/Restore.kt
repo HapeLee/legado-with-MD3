@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
-import androidx.core.os.LocaleListCompat
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.BuildConfig
 import io.legado.app.R
@@ -34,15 +33,16 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.config.otherConfig.appLocaleListFor
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.ACache
@@ -61,7 +61,6 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import splitties.init.appCtx
@@ -73,7 +72,6 @@ import java.io.FileInputStream
  */
 object Restore : KoinComponent {
 
-    private val settingsRepository: SettingsRepository by inject()
     private const val TAG = "Restore"
 
     suspend fun restore(context: Context, uri: Uri) {
@@ -338,14 +336,7 @@ object Restore : KoinComponent {
         appCtx.toastOnUi(R.string.restore_success)
         withContext(Main) {
             delay(100)
-            val language = OtherConfig.language
-            val localeList = when (language) {
-                "zh" -> LocaleListCompat.create(java.util.Locale.SIMPLIFIED_CHINESE)
-                "tw" -> LocaleListCompat.create(java.util.Locale.TRADITIONAL_CHINESE)
-                "en" -> LocaleListCompat.create(java.util.Locale.ENGLISH)
-                else -> LocaleListCompat.getEmptyLocaleList()
-            }
-            AppCompatDelegate.setApplicationLocales(localeList)
+            AppCompatDelegate.setApplicationLocales(appLocaleListFor(OtherConfig.language))
             if (!BuildConfig.DEBUG) {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }
@@ -466,8 +457,8 @@ object Restore : KoinComponent {
                 }
             }
         }
-        // 同步恢复到 DataStore
-        settingsRepository.batchPutFromMap(finalMap)
+        // 经快照层批量恢复：立即对读侧生效（onRestoreFinish 的读取不再依赖回灌时机），异步单次 edit 落盘
+        AppConfigStore.putAll(finalMap)
     }
 
     private fun readXmlToMap(file: File): Map<String, Any?> {
