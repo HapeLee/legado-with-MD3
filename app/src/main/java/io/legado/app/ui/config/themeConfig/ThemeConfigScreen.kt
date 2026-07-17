@@ -70,7 +70,6 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.EventBus
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.ThemeConfigStore
@@ -347,12 +346,10 @@ fun ThemeConfigScreen(
                             context.toastOnUi(R.string.restart_to_apply)
                         }
                     )
+                    val fontScaleSummary = stringResource(R.string.font_scale_summary)
                     SliderSettingItem(
                         title = stringResource(R.string.font_scale),
-                        description = stringResource(
-                            R.string.font_scale_summary,
-                            AppContextWrapper.getFontScale(context)
-                        ),
+                        valueLabel = { fontScaleSummary.format(it / 10f) },
                         value = fontScaleValue.floatValue,
                         defaultValue = 10f,
                         valueRange = 8f..16f,
@@ -499,7 +496,6 @@ fun ThemeConfigScreen(
                                 value = colorTemperature.toFloat(),
                                 defaultValue = 50f,
                                 valueRange = 0f..100f,
-                                steps = 99,
                                 onValueChange = {
                                     colorTemperature = it.toInt()
                                     ThemeConfig.colorTemperature = it.toInt()
@@ -647,7 +643,6 @@ fun ThemeConfigScreen(
                                 value = ThemeConfig.topBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                steps = 99,
                                 onValueChange = { ThemeConfig.topBarOpacity = it.toInt() }
                             )
                             SliderSettingItem(
@@ -659,7 +654,6 @@ fun ThemeConfigScreen(
                                 value = ThemeConfig.bottomBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                steps = 99,
                                 onValueChange = { ThemeConfig.bottomBarOpacity = it.toInt() }
                             )
                         }
@@ -674,16 +668,15 @@ fun ThemeConfigScreen(
                             value = ThemeConfig.containerOpacity.toFloat(),
                             defaultValue = 100f,
                             valueRange = 0f..100f,
-                            steps = 99,
                             onValueChange = { ThemeConfig.containerOpacity = it.toInt() }
                         )
                     }
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.day)) {
+                SplicedColumnGroup(title = stringResource(R.string.background_image)) {
                     val hasLightBg = !ThemeConfig.bgImageLight.isNullOrBlank()
                     ClickableSettingItem(
-                        title = stringResource(R.string.background_image),
+                        title = stringResource(R.string.day),
                         description = if (hasLightBg) stringResource(R.string.click_to_delete) else stringResource(
                             R.string.select_image
                         ),
@@ -696,18 +689,15 @@ fun ThemeConfigScreen(
                             value = ThemeConfig.bgImageBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            steps = 99,
                             onValueChange = {
                                 ThemeConfig.bgImageBlurring = it.toInt()
                             }
                         )
                     }
-                }
 
-                SplicedColumnGroup(title = stringResource(R.string.night)) {
                     val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrBlank()
                     ClickableSettingItem(
-                        title = stringResource(R.string.background_image),
+                        title = stringResource(R.string.night),
                         description = if (hasDarkBg) stringResource(R.string.click_to_delete) else stringResource(
                             R.string.select_image
                         ),
@@ -720,7 +710,6 @@ fun ThemeConfigScreen(
                             value = ThemeConfig.bgImageNBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            steps = 99,
                             onValueChange = {
                                 ThemeConfig.bgImageNBlurring = it.toInt()
                             }
@@ -745,6 +734,7 @@ fun ThemeConfigScreen(
                             defaultValue = 1f,
                             valueRange = 0f..5f,
                             steps = 49,
+                            decimal = true,
                             onValueChange = { ThemeConfig.itemDividerWidth = it }
                         )
                         SliderSettingItem(
