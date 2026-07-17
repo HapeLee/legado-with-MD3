@@ -3,7 +3,9 @@ package io.legado.app.help.storage
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import androidx.core.os.LocaleListCompat
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.BuildConfig
 import io.legado.app.R
@@ -40,6 +42,7 @@ import io.legado.app.help.book.upType
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.ACache
@@ -335,6 +338,14 @@ object Restore : KoinComponent {
         appCtx.toastOnUi(R.string.restore_success)
         withContext(Main) {
             delay(100)
+            val language = OtherConfig.language
+            val localeList = when (language) {
+                "zh" -> LocaleListCompat.create(java.util.Locale.SIMPLIFIED_CHINESE)
+                "tw" -> LocaleListCompat.create(java.util.Locale.TRADITIONAL_CHINESE)
+                "en" -> LocaleListCompat.create(java.util.Locale.ENGLISH)
+                else -> LocaleListCompat.getEmptyLocaleList()
+            }
+            AppCompatDelegate.setApplicationLocales(localeList)
             if (!BuildConfig.DEBUG) {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }

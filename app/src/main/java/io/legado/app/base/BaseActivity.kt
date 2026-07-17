@@ -79,7 +79,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     override fun onCreate(savedInstanceState: Bundle?) {
         initTheme()
         window.decorView.disableAutoFill()
-        AppContextWrapper.applyLocaleAndFont(this)
+        AppContextWrapper.applyFont(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val enable = !AppConfig.isPredictiveBackEnabled
             if (enable) {

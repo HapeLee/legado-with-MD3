@@ -39,7 +39,7 @@ abstract class BaseComposeActivity(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.decorView.disableAutoFill()
-        AppContextWrapper.applyLocaleAndFont(this)
+        AppContextWrapper.applyFont(this)
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

@@ -33,6 +33,7 @@
         android:enableOnBackInvokedCallback="true"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
+        android:autoStoreLocales="true"
         android:theme="@style/Base.AppTheme"
         tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
         <!-- 图标0 -->
@@ -514,6 +515,12 @@
         <service
             android:name=".service.DownloadService"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="true"
+            android:exported="false"
+            tools:ignore="ExportedService" />
 
         <receiver
             android:name=".receiver.MediaButtonReceiver"
