@@ -63,12 +63,10 @@ object DsSync {
      * 用于 restart 等必须确保"写入已持久化"的场景。
      */
     suspend fun awaitPendingWrites(timeoutMs: Long = 3000) {
-        val startTime = System.currentTimeMillis()
-        while (pendingCount.get() > 0) {
-            if (System.currentTimeMillis() - startTime > timeoutMs) {
-                break
+        withTimeoutOrNull(timeoutMs) {
+            while (pendingCount.get() > 0) {
+                delay(50)
             }
-            delay(50)
         }
     }
 

@@ -25,30 +25,41 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
  */
 fun Preferences.rawPrefValue(key: String): Any? = asMap()[stringPreferencesKey(key)]
 
-fun Preferences.compatDsString(key: String): String? = rawPrefValue(key) as? String
+fun Preferences.compatDsString(key: String): String? = when (val raw = rawPrefValue(key)) {
+    is String -> raw
+    is Number, is Boolean -> raw.toString()
+    else -> null
+}
 
 fun Preferences.compatDsInt(key: String): Int? = when (val raw = rawPrefValue(key)) {
-    is Int -> raw
+    is Number -> raw.toInt()
     is String -> raw.toIntOrNull()
     else -> null
 }
 
 fun Preferences.compatDsBoolean(key: String): Boolean? = when (val raw = rawPrefValue(key)) {
     is Boolean -> raw
-    is String -> raw.toBooleanStrictOrNull()
+    is String -> raw.toBooleanStrictOrNull() ?: when (raw) {
+        "1" -> true
+        "0" -> false
+        else -> null
+    }
+    is Number -> when (raw.toInt()) {
+        1 -> true
+        0 -> false
+        else -> null
+    }
     else -> null
 }
 
 fun Preferences.compatDsLong(key: String): Long? = when (val raw = rawPrefValue(key)) {
-    is Long -> raw
-    is Int -> raw.toLong()
+    is Number -> raw.toLong()
     is String -> raw.toLongOrNull()
     else -> null
 }
 
 fun Preferences.compatDsFloat(key: String): Float? = when (val raw = rawPrefValue(key)) {
-    is Float -> raw
-    is Int -> raw.toFloat()
+    is Number -> raw.toFloat()
     is String -> raw.toFloatOrNull()
     else -> null
 }

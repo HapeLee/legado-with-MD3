@@ -56,14 +56,41 @@ class PreferencesDsCompatTest {
     fun `缺失或无法解析的值返回 null 而不抛异常`() {
         val prefs = mutablePreferencesOf(
             stringPreferencesKey("garbage") to "not a number",
-            intPreferencesKey("wrongType") to 1,
         )
         assertNull(prefs.compatDsInt("absent"))
         assertNull(prefs.compatDsInt("garbage"))
         assertNull(prefs.compatDsBoolean("garbage"))
-        assertNull(prefs.compatDsBoolean("wrongType"))
-        assertNull(prefs.compatDsString("wrongType"))
         assertNull(prefs.compatDsStringSet("garbage"))
+    }
+
+    @Test
+    fun `增强的类型转换测试`() {
+        val prefs = mutablePreferencesOf(
+            intPreferencesKey("i1") to 1,
+            intPreferencesKey("i0") to 0,
+            intPreferencesKey("i9") to 9,
+            stringPreferencesKey("s1") to "1",
+            stringPreferencesKey("s0") to "0",
+            booleanPreferencesKey("b") to true,
+            floatPreferencesKey("f") to 3.14f
+        )
+        // Number/Boolean to String
+        assertEquals("1", prefs.compatDsString("i1"))
+        assertEquals("true", prefs.compatDsString("b"))
+        assertEquals("3.14", prefs.compatDsString("f"))
+
+        // Float/Double/Long/Int to Boolean
+        assertEquals(true, prefs.compatDsBoolean("i1"))
+        assertEquals(false, prefs.compatDsBoolean("i0"))
+        assertNull(prefs.compatDsBoolean("i9"))
+
+        // String "1"/"0" to Boolean
+        assertEquals(true, prefs.compatDsBoolean("s1"))
+        assertEquals(false, prefs.compatDsBoolean("s0"))
+
+        // Float to Long/Int
+        assertEquals(3, prefs.compatDsInt("f"))
+        assertEquals(3L, prefs.compatDsLong("f"))
     }
 
     @Test
@@ -77,7 +104,7 @@ class PreferencesDsCompatTest {
         val prefs = mutablePreferencesOf(stringPreferencesKey("k") to "1")
         prefs.setPrefValue("k", 2)
         assertEquals(2, prefs.compatDsInt("k"))
-        assertNull(prefs.compatDsString("k"))
+        assertEquals("2", prefs.compatDsString("k"))
     }
 
     @Test

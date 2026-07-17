@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 
+import io.legado.app.utils.LogUtils
+import io.legado.app.utils.stackTraceStr
+
 /**
  * "settings" DataStore 的进程内内存快照层，设置读取的唯一同步入口。
  *
@@ -134,7 +137,16 @@ internal class PendingOverlayCore(
             launchWrite {
                 val result = runCatching { persist(key, value) }
                 synchronized(lock) {
-                    result.onSuccess { snapshot = it }
+                    result.onSuccess { 
+                        snapshot = it 
+                    }.onFailure { e ->
+                        val isOverridden = pending[key] !== write
+                        if (isOverridden) {
+                            LogUtils.e("AppConfigStore", "保存设置失败且已被新写入覆盖: key=$key, value=$value\n${e.stackTraceStr}")
+                        } else {
+                            LogUtils.e("AppConfigStore", "保存设置失败: key=$key, value=$value\n${e.stackTraceStr}")
+                        }
+                    }
                     // 同 key 已有更新的写入时不移除，继续由新条目覆盖
                     if (pending[key] === write) pending.remove(key)
                     rebuild()

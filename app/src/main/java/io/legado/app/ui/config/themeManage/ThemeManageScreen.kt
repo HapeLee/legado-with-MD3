@@ -77,7 +77,6 @@ fun ThemeManageScreen(
     var applyTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var exportTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var editTarget by remember { mutableStateOf<SavedTheme?>(null) }
-    var showRestartDialog by remember { mutableStateOf(false) }
     val savedThemes = state.savedThemes
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -117,7 +116,9 @@ fun ThemeManageScreen(
         viewModel.effects.collectLatest { effect ->
             when (effect) {
                 ThemeManageEffect.RestartRequired -> {
-                    showRestartDialog = true
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        postEvent(EventBus.RECREATE, "")
+                    }, 100)
                 }
 
                 is ThemeManageEffect.LegacyMigrationFinished -> {
@@ -146,7 +147,9 @@ fun ThemeManageScreen(
                     }
                     context.toastOnUi(message)
                     if (effect.restartRequired) {
-                        showRestartDialog = true
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            postEvent(EventBus.RECREATE, "")
+                        }, 100)
                     }
                 }
             }
@@ -254,25 +257,7 @@ fun ThemeManageScreen(
         }
     }
 
-    // Restart dialog
-    // TODO: 后续降级为纯重组，参考 ThemeConfigStore.applyDayNightLive
-    AppAlertDialog(
-        show = showRestartDialog,
-        onDismissRequest = { showRestartDialog = false },
-        title = stringResource(R.string.restart_required_message),
-        onConfirm = {
-            showRestartDialog = false
-            Handler(Looper.getMainLooper()).postDelayed({
-                postEvent(EventBus.RECREATE, "")
-            }, 100)
-        },
-        confirmText = stringResource(R.string.ok),
-        onDismiss = {
-            showRestartDialog = false
-            context.toastOnUi(R.string.restart_later_message)
-        },
-        dismissText = stringResource(R.string.cancel)
-    )
+
 
     // Save theme dialog
     AppAlertDialog(
