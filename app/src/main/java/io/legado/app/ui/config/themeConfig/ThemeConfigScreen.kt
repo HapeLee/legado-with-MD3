@@ -76,6 +76,7 @@ import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppSettings
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -95,6 +96,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -108,6 +110,8 @@ fun ThemeConfigScreen(
     onNavigateToThemeManage: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel()
 ) {
+    val appSettings = LocalAppSettings.current
+    val systemInDark = isSystemInDarkTheme()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var manageKey by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
@@ -167,11 +171,7 @@ fun ThemeConfigScreen(
                 val isMiuixEngine = remember(composeEngine) {
                     ThemeResolver.isMiuixEngine(composeEngine)
                 }
-                val isDarkTheme = when (selectedThemeMode) {
-                    "1" -> false
-                    "2" -> true
-                    else -> isSystemInDarkTheme()
-                }
+                val isDarkTheme = appSettings.darkTheme
 
                 if (!isMiuixEngine) {
                     Column(
@@ -233,8 +233,11 @@ fun ThemeConfigScreen(
                             entryValues = stringArrayResource(R.array.theme_mode_v),
                             onValueChange = { mode ->
                                 selectedThemeMode = mode
+                                val expectedDark = if (mode == "0") systemInDark else mode == "2"
+                                viewModel.updateSettings { it.copy(darkTheme = expectedDark) }
                                 ThemeConfig.themeMode = mode
                                 ThemeConfigStore.applyDayNightLive()
+                                LogUtils.d("ThemeConfigScreen", "Theme sync log: mode=$mode (resolved expectedDark=$expectedDark), ThemeConfig.themeMode=${ThemeConfig.themeMode}")
                             }
                         )
 
@@ -273,8 +276,11 @@ fun ThemeConfigScreen(
                             selectedMode = selectedThemeMode,
                             onModeSelected = { mode ->
                                 selectedThemeMode = mode
+                                val expectedDark = if (mode == "0") systemInDark else mode == "2"
+                                viewModel.updateSettings { it.copy(darkTheme = expectedDark) }
                                 ThemeConfig.themeMode = mode
                                 ThemeConfigStore.applyDayNightLive()
+                                LogUtils.d("ThemeConfigScreen", "Theme sync log: mode=$mode (resolved expectedDark=$expectedDark), ThemeConfig.themeMode=${ThemeConfig.themeMode}")
                             }
                         )
                     }

@@ -13,6 +13,11 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import com.materialkolor.PaletteStyle
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.data.local.preferences.AppSettings
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -44,6 +49,7 @@ private fun AppThemePreview(
         composeEngine = "material"
     )
     CompositionLocalProvider(
+        LocalAppSettings provides AppSettings(),
         LocalLegadoThemeColors provides themeColors
     ) {
         MaterialThemeWrapper(
@@ -60,6 +66,8 @@ private fun AppThemeActual(
     darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
+    val preferencesRepository = koinInject<LocalPreferencesRepository>()
+    val settings by preferencesRepository.appSettings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
     // 1. 获取基础配置
@@ -154,6 +162,7 @@ private fun AppThemeActual(
 
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
+        LocalAppSettings provides settings,
         LocalLegadoThemeColors provides themeColors
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {

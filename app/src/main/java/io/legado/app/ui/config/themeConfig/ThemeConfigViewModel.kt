@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.local.preferences.AppSettings
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.repository.ReadSettingsRepository
@@ -27,6 +28,12 @@ class ThemeConfigViewModel(
     private val localPreferencesRepository: LocalPreferencesRepository,
     private val readSettingsRepository: ReadSettingsRepository
 ) : ViewModel() {
+
+    val appSettings = localPreferencesRepository.appSettings
+
+    fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        localPreferencesRepository.updateSettings(transform)
+    }
 
     val fontFolder = readSettingsRepository.preferences
         .map { preferences ->
