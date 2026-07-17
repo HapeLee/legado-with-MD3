@@ -22,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.service.WebService
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -39,7 +38,7 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.postEvent
+import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
 
@@ -105,9 +104,7 @@ fun OtherConfigScreen(
                     entryValues = stringArrayResource(R.array.language_value),
                     onValueChange = { newValue ->
                         OtherConfig.language = newValue
-                        // 与 fontScale 相同：locale 在各 Activity onCreate 的
-                        // applyLocaleAndFont 里应用，原地重建即可生效，无需杀进程
-                        postEvent(EventBus.RECREATE, "")
+                        context.restart()
                     }
                 )
 
