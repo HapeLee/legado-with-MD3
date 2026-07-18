@@ -1,7 +1,5 @@
 package io.legado.app.ui.config.themeManage
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,20 +22,13 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemePackageManager
@@ -53,93 +44,16 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeManageScreen(
+    state: ThemeManageUiState,
+    onIntent: (ThemeManageIntent) -> Unit,
     onBackClick: () -> Unit,
-    viewModel: ThemeManageViewModel = koinViewModel(),
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    val context = LocalContext.current
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var newThemeName by remember { mutableStateOf("") }
-    var deleteTarget by remember { mutableStateOf<SavedTheme?>(null) }
-    var applyTarget by remember { mutableStateOf<SavedTheme?>(null) }
-    var exportTarget by remember { mutableStateOf<SavedTheme?>(null) }
-    var editTarget by remember { mutableStateOf<SavedTheme?>(null) }
     val savedThemes = state.savedThemes
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri ->
-        uri?.let {
-            val target = exportTarget
-            exportTarget = null
-            viewModel.onIntent(
-                ThemeManageIntent.ExportPackage(
-                    uri = it.toString(),
-                    themeName = target?.name,
-                    themeData = target?.data,
-                    savedTheme = target,
-                )
-            )
-        }
-    }
-
-    val importPackageLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            viewModel.onIntent(ThemeManageIntent.ImportPackage(it.toString()))
-        }
-    }
-
-    val importLegacyLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            viewModel.onIntent(ThemeManageIntent.ImportLegacyJson(it.toString()))
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.effects.collectLatest { effect ->
-            when (effect) {
-                is ThemeManageEffect.LegacyMigrationFinished -> {
-                    val message = if (effect.failedCount == 0) {
-                        context.getString(
-                            R.string.theme_manage_migrate_success,
-                            effect.migratedCount,
-                        )
-                    } else {
-                        context.getString(
-                            R.string.theme_manage_migrate_partial,
-                            effect.migratedCount,
-                            effect.failedCount,
-                        )
-                    }
-                    context.toastOnUi(message)
-                }
-
-                is ThemeManageEffect.ShowResult -> {
-                    val message = buildString {
-                        append(context.getString(effect.messageRes))
-                        effect.detail?.takeIf(String::isNotBlank)?.let {
-                            append('\n')
-                            append(it)
-                        }
-                    }
-                    context.toastOnUi(message)
-                }
-            }
-        }
-    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -168,37 +82,22 @@ fun ThemeManageScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_save_current),
                         description = stringResource(R.string.theme_manage_save_current_summary),
-                        onClick = {
-                            newThemeName = ""
-                            showSaveDialog = true
-                        }
+                        onClick = { onIntent(ThemeManageIntent.OpenSaveDialog) }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_export_current),
                         description = stringResource(R.string.theme_manage_export_current_summary),
-                        onClick = {
-                            exportTarget = null
-                            exportLauncher.launch(
-                                "materado_theme_${System.currentTimeMillis()}." +
-                                    ThemePackageManager.FILE_EXTENSION
-                            )
-                        }
+                        onClick = { onIntent(ThemeManageIntent.RequestExport()) }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_import_package),
                         description = stringResource(R.string.theme_manage_import_package_summary),
-                        onClick = {
-                            importPackageLauncher.launch(
-                                arrayOf("application/zip", "application/octet-stream")
-                            )
-                        }
+                        onClick = { onIntent(ThemeManageIntent.RequestImportPackage) }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_import_config),
                         description = stringResource(R.string.theme_manage_import_config_summary),
-                        onClick = {
-                            importLegacyLauncher.launch(arrayOf("application/json", "text/json"))
-                        }
+                        onClick = { onIntent(ThemeManageIntent.RequestImportLegacyJson) }
                     )
                     if (state.hasLegacyThemes) {
                         ClickableSettingItem(
@@ -207,7 +106,7 @@ fun ThemeManageScreen(
                                 R.string.theme_manage_migrate_legacy_summary
                             ),
                             onClick = {
-                                viewModel.onIntent(ThemeManageIntent.MigrateLegacyThemes)
+                                onIntent(ThemeManageIntent.MigrateLegacyThemes)
                             }
                         )
                     }
@@ -227,15 +126,10 @@ fun ThemeManageScreen(
                 items(savedThemes, key = { it.name }) { theme ->
                     SavedThemeItem(
                         theme = theme,
-                        onApply = { applyTarget = theme },
-                        onEdit = { editTarget = theme },
-                        onExport = {
-                            exportTarget = theme
-                            exportLauncher.launch(
-                                "${theme.name}.${ThemePackageManager.FILE_EXTENSION}"
-                            )
-                        },
-                        onDelete = { deleteTarget = theme }
+                        onApply = { onIntent(ThemeManageIntent.OpenApplyDialog(theme)) },
+                        onEdit = { onIntent(ThemeManageIntent.OpenEditSheet(theme)) },
+                        onExport = { onIntent(ThemeManageIntent.RequestExport(theme)) },
+                        onDelete = { onIntent(ThemeManageIntent.OpenDeleteDialog(theme)) }
                     )
                 }
             }
@@ -244,22 +138,23 @@ fun ThemeManageScreen(
 
     // Save theme dialog
     AppAlertDialog(
-        show = showSaveDialog,
-        onDismissRequest = { showSaveDialog = false },
+        show = state.dialog is ThemeManageDialog.Save,
+        onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
         title = stringResource(R.string.theme_manage_save_theme),
         confirmText = stringResource(R.string.theme_manage_save),
         onConfirm = {
-            if (newThemeName.isNotBlank()) {
-                viewModel.onIntent(ThemeManageIntent.SaveTheme(newThemeName))
-                showSaveDialog = false
+            val name = (state.dialog as? ThemeManageDialog.Save)?.name.orEmpty()
+            if (name.isNotBlank()) {
+                onIntent(ThemeManageIntent.SaveTheme(name))
+                onIntent(ThemeManageIntent.DismissDialog)
             }
         },
         dismissText = stringResource(R.string.cancel),
-        onDismiss = { showSaveDialog = false },
+        onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
         content = {
             AppTextField(
-                value = newThemeName,
-                onValueChange = { newThemeName = it },
+                value = (state.dialog as? ThemeManageDialog.Save)?.name.orEmpty(),
+                onValueChange = { onIntent(ThemeManageIntent.UpdateSaveName(it)) },
                 placeholder = { AppText(text = stringResource(R.string.theme_manage_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -269,53 +164,59 @@ fun ThemeManageScreen(
 
     // Apply theme dialog
     AppAlertDialog(
-        show = applyTarget != null,
-        onDismissRequest = { applyTarget = null },
+        show = state.dialog is ThemeManageDialog.Apply,
+        onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
         title = stringResource(R.string.theme_manage_apply_theme),
         confirmText = stringResource(R.string.theme_manage_apply),
         onConfirm = {
-            applyTarget?.let { theme ->
-                viewModel.onIntent(ThemeManageIntent.ApplySavedTheme(theme))
+            (state.dialog as? ThemeManageDialog.Apply)?.theme?.let { theme ->
+                onIntent(ThemeManageIntent.ApplySavedTheme(theme))
             }
-            applyTarget = null
+            onIntent(ThemeManageIntent.DismissDialog)
         },
         dismissText = stringResource(R.string.cancel),
-        onDismiss = { applyTarget = null },
-        text = stringResource(R.string.theme_manage_apply_message, applyTarget?.name.orEmpty())
+        onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
+        text = stringResource(
+            R.string.theme_manage_apply_message,
+            (state.dialog as? ThemeManageDialog.Apply)?.theme?.name.orEmpty(),
+        )
     )
 
     // Delete theme dialog
     AppAlertDialog(
-        show = deleteTarget != null,
-        onDismissRequest = { deleteTarget = null },
+        show = state.dialog is ThemeManageDialog.Delete,
+        onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
         title = stringResource(R.string.theme_manage_delete_theme),
         confirmText = stringResource(R.string.delete),
         onConfirm = {
-            deleteTarget?.let { theme ->
-                viewModel.onIntent(ThemeManageIntent.DeleteSavedTheme(theme))
+            (state.dialog as? ThemeManageDialog.Delete)?.theme?.let { theme ->
+                onIntent(ThemeManageIntent.DeleteSavedTheme(theme))
             }
-            deleteTarget = null
+            onIntent(ThemeManageIntent.DismissDialog)
         },
         dismissText = stringResource(R.string.cancel),
-        onDismiss = { deleteTarget = null },
-        text = stringResource(R.string.theme_manage_delete_message, deleteTarget?.name.orEmpty())
+        onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
+        text = stringResource(
+            R.string.theme_manage_delete_message,
+            (state.dialog as? ThemeManageDialog.Delete)?.theme?.name.orEmpty(),
+        )
     )
 
     // Edit theme sheet
     EditThemeSheet(
-        show = editTarget != null,
-        themeData = editTarget?.data,
-        themeName = editTarget?.name ?: "",
-        onDismissRequest = { editTarget = null },
+        show = state.dialog is ThemeManageDialog.Edit,
+        themeData = (state.dialog as? ThemeManageDialog.Edit)?.theme?.data,
+        themeName = (state.dialog as? ThemeManageDialog.Edit)?.theme?.name.orEmpty(),
+        onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
         onSave = { newName, newData ->
-            viewModel.onIntent(
+            onIntent(
                 ThemeManageIntent.SaveTheme(
                     name = newName,
                     data = newData,
-                    replacedTheme = editTarget,
+                    replacedTheme = (state.dialog as? ThemeManageDialog.Edit)?.theme,
                 )
             )
-            editTarget = null
+            onIntent(ThemeManageIntent.DismissDialog)
         }
     )
 }

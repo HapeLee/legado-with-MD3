@@ -9,6 +9,8 @@ data class AppShellSettings(
     val showDiscovery: Boolean = true,
     val showRss: Boolean = true,
     val showStatusBar: Boolean = true,
+    val swipeAnimation: Boolean = true,
+    val predictiveBackEnabled: Boolean = true,
     val showBottomView: Boolean = true,
     val useFloatingBottomBar: Boolean = false,
     val useFloatingBottomBarLiquidGlass: Boolean = false,
@@ -22,4 +24,5 @@ data class AppShellSettings(
     val navIconExplore: String = "",
     val navIconRss: String = "",
     val navIconMy: String = "",
+    val launcherIcon: String = "ic_launcher",
 )

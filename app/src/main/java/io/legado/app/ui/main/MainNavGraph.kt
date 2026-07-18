@@ -53,15 +53,15 @@ import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
-import io.legado.app.ui.config.coverConfig.CoverConfigScreen
+import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
 import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
-import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
-import io.legado.app.ui.config.labConfig.LabConfigScreen
+import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigRouteScreen
+import io.legado.app.ui.config.labConfig.LabConfigRouteScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
 import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
-import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
-import io.legado.app.ui.config.themeManage.ThemeManageScreen
-import io.legado.app.ui.config.translation.TranslationConfigScreen
+import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
+import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
+import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
@@ -210,7 +210,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsCover> {
-        CoverConfigScreen(
+        CoverConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToCoverAlbums = {
                 backStack.add(MainRouteSettingsCoverAlbums)
@@ -223,7 +223,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsTheme> {
-        ThemeConfigScreen(
+        ThemeConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToCustomTheme = { backStack.add(MainRouteSettingsCustomTheme) },
             onNavigateToThemeManage = { backStack.add(MainRouteSettingsThemeManage) }
@@ -290,18 +290,18 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsDownloadCache> {
-        DownloadCacheConfigScreen(onBackClick = { onNavigateBack() })
+        DownloadCacheConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsTranslation> {
-        TranslationConfigScreen(
+        TranslationConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToAi = { backStack.add(MainRouteSettingsAi) }
         )
     }
 
     entry<MainRouteSettingsLabConfig> {
-        LabConfigScreen(onBackClick = { onNavigateBack() })
+        LabConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsCustomTheme> {
@@ -311,7 +311,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsThemeManage> {
-        ThemeManageScreen(onBackClick = { onNavigateBack() })
+        ThemeManageRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteImportLocal> {
