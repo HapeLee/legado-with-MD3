@@ -12,10 +12,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -26,7 +22,6 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
-import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 
@@ -39,8 +34,6 @@ fun BackgroundImageManageSheet(
     onSelectImage: (Boolean) -> Unit,
     onRemoveImage: (Boolean) -> Unit,
 ) {
-    var showFilePicker by remember { mutableStateOf(false) }
-
     AppModalBottomSheet(
         data = isDarkTheme,
         onDismissRequest = onDismissRequest,
@@ -54,7 +47,7 @@ fun BackgroundImageManageSheet(
 
             if (currentPath.isNullOrBlank()) {
                 NormalCard(
-                    onClick = { showFilePicker = true },
+                    onClick = { onSelectImage(isDark) },
                     cornerRadius = 12.dp,
                     containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
@@ -106,13 +99,4 @@ fun BackgroundImageManageSheet(
         }
     }
 
-    FilePickerSheet(
-        show = showFilePicker,
-        onDismissRequest = { showFilePicker = false },
-        onSelectSysFile = {
-            onSelectImage(isDarkTheme == true)
-            showFilePicker = false
-        },
-        allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
-    )
 }
