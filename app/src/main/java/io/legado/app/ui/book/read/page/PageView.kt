@@ -18,12 +18,14 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.databinding.ViewBookPageBinding
+import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.sheet.CustomTipTarget
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
 import androidx.core.view.updateLayoutParams
@@ -71,6 +73,8 @@ class PageView(
 
     private var isMainView = false
     var isScroll = false
+
+    private var currentTextPage: TextPage? = null
 
     val headerHeight: Int
         get() {
@@ -360,6 +364,31 @@ class PageView(
             typeface = tipTypeface
             textSize = tipTextSize
         }
+        // 自定义页眉/页脚模板：6 个位置共享同一段配置逻辑
+        val customTypeface = tipTypeface
+        val customTextSize = tipTextSize
+        for (target in CUSTOM_TIP_TARGETS) {
+            if (target.tipValue != ReadBookConfig.tipCustom) continue
+            val view = customTipViewFor(target)
+            view.tag = ReadBookConfig.tipCustom
+            view.typeface = customTypeface
+            view.textSize = customTextSize
+            view.batteryMode = BatteryView.BatteryMode.NO_BATTERY
+        }
+    }
+
+    /**
+     * 根据 [target] 取得对应的页眉/页脚 [BatteryView] 实例。
+     */
+    private fun customTipViewFor(target: CustomTipTarget): BatteryView = binding.run {
+        when (target) {
+            CustomTipTarget.HEADER_LEFT -> tvHeaderLeft
+            CustomTipTarget.HEADER_MIDDLE -> tvHeaderMiddle
+            CustomTipTarget.HEADER_RIGHT -> tvHeaderRight
+            CustomTipTarget.FOOTER_LEFT -> tvFooterLeft
+            CustomTipTarget.FOOTER_MIDDLE -> tvFooterMiddle
+            CustomTipTarget.FOOTER_RIGHT -> tvFooterRight
+        }
     }
 
     /**
@@ -405,6 +434,7 @@ class PageView(
     fun upTime() {
         tvTime?.text = timeFormat.format(Date(System.currentTimeMillis()))
         upTimeBattery()
+        upCustomTip(currentTextPage)
     }
 
     /**
@@ -419,6 +449,7 @@ class PageView(
         tvBatteryIcon?.setBattery(battery)
         tvBatteryP?.text = "$battery%"
         upTimeBattery()
+        upCustomTip(currentTextPage)
     }
 
     /**
@@ -432,6 +463,66 @@ class PageView(
         tvTimeBatteryClassic?.setBattery(battery, time)
         tvTimeBatteryClassic?.text = "$time $battery%"
         tvTimeBatteryP?.text = "$time $battery%"
+    }
+
+    /**
+     * 将所有启用自定义模板的页眉/页脚视图按当前 textPage 与最新时间/电池进行渲染。
+     * 当位置未启用 tipCustom 或模板为空时不做任何处理。
+     */
+    fun upCustomTip(textPage: TextPage?) {
+        val page = textPage ?: return
+        for (target in CUSTOM_TIP_TARGETS) {
+            if (target.tipValue != ReadBookConfig.tipCustom) continue
+            val template = target.customTemplate
+            val view = customTipViewFor(target)
+            if (template.isEmpty()) {
+                view.setTextIfNotEqual("")
+            } else {
+                view.setTextIfNotEqual(resolveCustomTemplate(template, page))
+            }
+        }
+    }
+
+    /**
+     * 将 [template] 中的预定义占位符替换为当前页面、时间、电池等实际值。
+     *
+     * 仅会替换 [CustomTipPlaceholder] 中枚举的合法 token；未识别的 `{Xxx}` 段将被原样保留
+     * （校验由 [CustomTipDialog] / [CustomTipPlaceholder.isValid] 在保存前完成）。
+     */
+    @SuppressLint("SetTextI18n")
+    private fun resolveCustomTemplate(template: String, textPage: TextPage): String {
+        if (template.isEmpty()) return ""
+        val time = timeFormat.format(Date(System.currentTimeMillis()))
+        val bookName = ReadBook.book?.name.orEmpty()
+        val chapterTitle = textPage.title
+        val chapterIndexDisplay = textPage.chapterIndex.plus(1).toString()
+        val chapterSizeDisplay = textPage.chapterSize.toString()
+        val pageIndexDisplay = textPage.index.plus(1).toString()
+        val pageSizeDisplay = if (textPage.textChapter.isCompleted) {
+            textPage.pageSize.toString()
+        } else {
+            val pageSizeInt = textPage.pageSize
+            if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+        }
+        val readProgressDisplay = textPage.readProgress
+        // 使用本 PageView 实例持有的电池字段，值由 [upBattery] 在系统电量变化时持续刷新。
+        val batteryPercentDisplay = "$battery%"
+        var result = template
+        for (placeholder in CUSTOM_TIP_PLACEHOLDERS) {
+            val replacement = when (placeholder) {
+                CustomTipPlaceholder.BOOK_NAME -> bookName
+                CustomTipPlaceholder.CHAPTER_TITLE -> chapterTitle
+                CustomTipPlaceholder.TIME -> time
+                CustomTipPlaceholder.BATTERY_PERCENT -> batteryPercentDisplay
+                CustomTipPlaceholder.CHAPTER_INDEX -> chapterIndexDisplay
+                CustomTipPlaceholder.CHAPTER_SIZE -> chapterSizeDisplay
+                CustomTipPlaceholder.PAGE_INDEX -> pageIndexDisplay
+                CustomTipPlaceholder.PAGE_SIZE -> pageSizeDisplay
+                CustomTipPlaceholder.READ_PROGRESS -> readProgressDisplay
+            }
+            result = result.replace(placeholder.token, replacement)
+        }
+        return result
     }
 
     /**
@@ -467,6 +558,7 @@ class PageView(
      */
     @SuppressLint("SetTextI18n")
     fun setProgress(textPage: TextPage) = textPage.apply {
+        currentTextPage = textPage
         tvBookName?.setTextIfNotEqual(ReadBook.book?.name)
         tvTitle?.setTextIfNotEqual(textPage.title)
         tvTitleArrow?.setTextIfNotEqual(textPage.title)
@@ -483,6 +575,7 @@ class PageView(
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }
+        upCustomTip(textPage)
         this@PageView.layoutSync()
     }
 
@@ -643,4 +736,13 @@ class PageView(
     val selectedText: String get() = binding.contentTextView.getSelectedText()
 
     val selectStartPos get() = binding.contentTextView.selectStart
+
+    companion object {
+        /**
+         * 缓存枚举数组，避免每次调用 `values()` 触发 Kotlin 内部数组克隆。
+         * 模板渲染在 `upCustomTip` / `upTime` / `upBattery` 等热路径上会反复触发。
+         */
+        private val CUSTOM_TIP_TARGETS: Array<CustomTipTarget> = CustomTipTarget.values()
+        private val CUSTOM_TIP_PLACEHOLDERS: Array<CustomTipPlaceholder> = CustomTipPlaceholder.values()
+    }
 }

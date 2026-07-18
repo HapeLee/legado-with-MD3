@@ -1088,6 +1088,24 @@ sealed interface ConfigUpdate {
     data class TipFooterRight(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
     }
+    data class CustomTipHeaderLeft(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class CustomTipHeaderMiddle(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class CustomTipHeaderRight(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class CustomTipFooterLeft(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class CustomTipFooterMiddle(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class CustomTipFooterRight(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
     data class HeaderFont(val path: String) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }

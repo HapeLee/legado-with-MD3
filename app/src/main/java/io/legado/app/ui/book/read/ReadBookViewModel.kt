@@ -4563,6 +4563,12 @@ class ReadBookViewModel(
             is ConfigUpdate.TipFooterLeft -> ReadBookConfig.tipFooterLeft = update.value
             is ConfigUpdate.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = update.value
             is ConfigUpdate.TipFooterRight -> ReadBookConfig.tipFooterRight = update.value
+            is ConfigUpdate.CustomTipHeaderLeft -> ReadBookConfig.customTipHeaderLeft = update.value
+            is ConfigUpdate.CustomTipHeaderMiddle -> ReadBookConfig.customTipHeaderMiddle = update.value
+            is ConfigUpdate.CustomTipHeaderRight -> ReadBookConfig.customTipHeaderRight = update.value
+            is ConfigUpdate.CustomTipFooterLeft -> ReadBookConfig.customTipFooterLeft = update.value
+            is ConfigUpdate.CustomTipFooterMiddle -> ReadBookConfig.customTipFooterMiddle = update.value
+            is ConfigUpdate.CustomTipFooterRight -> ReadBookConfig.customTipFooterRight = update.value
             is ConfigUpdate.HeaderFont -> ReadBookConfig.headerFont = update.path
             is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
             is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color

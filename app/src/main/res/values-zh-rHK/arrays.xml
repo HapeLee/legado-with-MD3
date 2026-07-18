@@ -73,6 +73,7 @@
         <item>時間同埋電量</item>
         <item>時間同埋電量經典</item>
         <item>時間同埋電量%</item>
+        <item>自訂</item>
     </string-array>
 
     <string-array name="text_font_weight">

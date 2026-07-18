@@ -2316,6 +2316,18 @@
     <string name="custom_button">自定义按钮</string>
     <string name="is_event_listener">EventListener</string>
     <string name="rule_call_back">callBackJs</string>
+    <string name="custom_tip">自定义模板</string>
+    <string name="custom_tip_template_hint">使用占位符，如 {BookName}、{ChapterTitle}…</string>
+    <string name="custom_tip_invalid">模板包含未知占位符</string>
+    <string name="placeholder_book_name">书名</string>
+    <string name="placeholder_chapter_title">章节标题</string>
+    <string name="placeholder_time">时间</string>
+    <string name="placeholder_battery_percent">电量百分比</string>
+    <string name="placeholder_chapter_index">当前章节序号</string>
+    <string name="placeholder_chapter_size">章节总数</string>
+    <string name="placeholder_page_index">当前页码</string>
+    <string name="placeholder_page_size">本章页数</string>
+    <string name="placeholder_read_progress">阅读进度</string>
     <!-- Missing zh-rTW/HK translations (683 keys) -->
 
     <!-- 日夜间/深浅色主题切换提醒 -->

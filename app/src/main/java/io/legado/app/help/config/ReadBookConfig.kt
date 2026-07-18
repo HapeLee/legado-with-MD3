@@ -94,6 +94,7 @@ object ReadBookConfig {
     const val tipBatteryClassic = 15
     const val tipTimeBatteryClassic = 16
     const val tipChapterTitleArrowClassic = 17
+    const val tipCustom = 18
     // endregion
 
     const val configFileName = "readConfig.json"
@@ -752,6 +753,42 @@ object ReadBookConfig {
             config.tipFooterRight = value
         }
 
+    var customTipHeaderLeft: String
+        get() = config.customTipHeaderLeft
+        set(value) {
+            config.customTipHeaderLeft = value
+        }
+
+    var customTipHeaderMiddle: String
+        get() = config.customTipHeaderMiddle
+        set(value) {
+            config.customTipHeaderMiddle = value
+        }
+
+    var customTipHeaderRight: String
+        get() = config.customTipHeaderRight
+        set(value) {
+            config.customTipHeaderRight = value
+        }
+
+    var customTipFooterLeft: String
+        get() = config.customTipFooterLeft
+        set(value) {
+            config.customTipFooterLeft = value
+        }
+
+    var customTipFooterMiddle: String
+        get() = config.customTipFooterMiddle
+        set(value) {
+            config.customTipFooterMiddle = value
+        }
+
+    var customTipFooterRight: String
+        get() = config.customTipFooterRight
+        set(value) {
+            config.customTipFooterRight = value
+        }
+
     var headerMode: Int
         get() = config.headerMode
         set(value) {
@@ -804,7 +841,7 @@ object ReadBookConfig {
         tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
         tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon, tipBatteryPercentage,
         tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
-        tipTimeBatteryClassic, tipTimeBatteryPercentage
+        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipCustom
     )
     val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
     val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
@@ -1000,6 +1037,12 @@ object ReadBookConfig {
         var tipFooterLeft: Int = tipChapterTitle,
         var tipFooterMiddle: Int = tipNone,
         var tipFooterRight: Int = tipPageAndTotal,
+        var customTipHeaderLeft: String = "",
+        var customTipHeaderMiddle: String = "",
+        var customTipHeaderRight: String = "",
+        var customTipFooterLeft: String = "",
+        var customTipFooterMiddle: String = "",
+        var customTipFooterRight: String = "",
         var tipHeaderColor: Int = 0,
         var tipHeaderColorNight: Int = 0,
         var tipFooterColor: Int = 0,
