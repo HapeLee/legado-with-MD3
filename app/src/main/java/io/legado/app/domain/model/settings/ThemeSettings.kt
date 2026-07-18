@@ -7,6 +7,7 @@ data class ThemeSettings(
     val paletteStyle: String = "tonalSpot",
     val materialVersion: String = "material3",
     val customContrast: String = "Default",
+    val customMode: String = "tonalSpot",
     val appFontPath: String? = null,
     val customPrimary: Int = 0,
     val customNightPrimary: Int = 0,

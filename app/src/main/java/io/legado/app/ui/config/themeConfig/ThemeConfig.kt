@@ -3,7 +3,6 @@ package io.legado.app.ui.config.themeConfig
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.GSON
@@ -103,19 +102,15 @@ object ThemeConfig {
 
     var isPureBlack by prefDelegate(PreferKey.pureBlack, false)
 
-    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null) {
-        postEvent(EventBus.RECREATE, false)
-    }
+    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null)
 
-    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null) {
-        postEvent(EventBus.RECREATE, false)
-    }
+    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null)
 
     var bgImageBlurring by prefDelegate(PreferKey.bgImageBlurring, 0)
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
-    // 无需 RECREATE：Compose 消费点（BackHandler enabled / predictivePopTransitionSpec）
+    // Compose 消费点（BackHandler enabled / predictivePopTransitionSpec）直接响应状态。
     // 读的是 prefDelegate 的 Compose state，切换即时生效；View 系 Activity 在下次
     // onCreate 时按新值注册 OnBackInvokedCallback（与旧版行为一致）
     var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true)

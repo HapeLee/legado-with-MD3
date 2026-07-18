@@ -775,7 +775,6 @@ sealed interface ReadBookEffect {
 
     // Navigation / lifecycle
     data object Finish : ReadBookEffect
-    data object Recreate : ReadBookEffect
 
     // ReadView operations (require Activity/View reference)
     data class UpdateReadViewConfig(val actions: Set<ConfigUpdateAction>) : ReadBookEffect

@@ -39,7 +39,7 @@
         <activity
             android:name=".ui.main.LauncherW"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcherw">
             <intent-filter>
@@ -55,7 +55,7 @@
         <activity
             android:name=".ui.main.Launcher0"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher0">
             <intent-filter>
@@ -72,7 +72,7 @@
         <activity
             android:name=".ui.main.Launcher1"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher1">
             <intent-filter>
@@ -89,7 +89,7 @@
         <activity
             android:name=".ui.main.Launcher2"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher2">
             <intent-filter>
@@ -106,7 +106,7 @@
         <activity
             android:name=".ui.main.Launcher3"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher3">
             <intent-filter>
@@ -123,7 +123,7 @@
         <activity
             android:name=".ui.main.Launcher4"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher4">
             <intent-filter>
@@ -140,7 +140,7 @@
         <activity
             android:name=".ui.main.Launcher5"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher5">
             <intent-filter>
@@ -157,7 +157,7 @@
         <activity
             android:name=".ui.main.Launcher6"
             android:enabled="false"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:icon="@mipmap/launcher6">
             <intent-filter>
@@ -174,7 +174,7 @@
         <activity
             android:name=".ui.main.MainActivity"
             android:alwaysRetainTaskState="true"
-            android:configChanges="locale|layoutDirection|uiMode"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
@@ -190,12 +190,14 @@
         </activity>
         <activity
             android:name=".ui.welcome.WelcomeActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:exported="false"
             android:windowSoftInputMode="adjustPan|stateHidden" />
         <!-- 阅读漫画界面 -->
         <activity
             android:name=".ui.book.manga.ReadMangaActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="false"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask">
@@ -210,17 +212,20 @@
         <!-- 书籍详情页 -->
         <activity
             android:name=".ui.book.info.BookInfoActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 书籍信息编辑 -->
         <activity
             android:name=".ui.book.info.edit.BookInfoEditActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 音频播放界面 -->
         <activity
             android:name="io.legado.app.ui.book.audio.AudioPlayActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
         <!-- 授权界面 -->
@@ -231,113 +236,125 @@
         <!-- 二维码扫描 -->
         <activity
             android:name=".ui.qrcode.QrCodeActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
         <!-- 书源编辑 -->
         <activity
             android:name=".ui.book.source.edit.BookSourceEditActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 订阅源编辑 -->
         <activity
             android:name=".ui.rss.source.edit.RssSourceEditActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 搜索界面 -->
         <activity
             android:name=".ui.book.search.SearchActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="standard" />
         <activity
             android:name=".ui.about.CrashReportActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
         <!-- 书源管理 -->
         <activity
             android:name=".ui.book.source.manage.BookSourceActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="false"
             android:launchMode="singleTop" />
         <!-- 订阅源管理 -->
         <activity
             android:name=".ui.rss.source.manage.RssSourceActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- txt目录规则管理 -->
         <activity
             android:name=".ui.book.toc.rule.TxtTocRuleActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- txt目录规则预览(阅读界面) -->
         <activity
             android:name=".ui.book.toc.rule.preview.TxtTocRulePreviewActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 替换规则界面 -->
         <activity
             android:name=".ui.replace.ReplaceRuleActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop" />
         <!-- 书源调试 -->
         <activity
             android:name=".ui.book.source.debug.BookSourceDebugActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 目录 -->
         <activity
             android:name=".ui.book.toc.TocActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 订阅源调试 -->
         <activity
             android:name=".ui.rss.source.debug.RssSourceDebugActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 书签 -->
         <activity
             android:name=".ui.book.bookmark.AllBookmarkActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- WebView界面 -->
         <activity
             android:name=".ui.browser.WebViewActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:launchMode="standard" />
         <!-- 书源登录 -->
         <activity
             android:name="io.legado.app.ui.login.SourceLoginActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
             android:hardwareAccelerated="true"
             android:theme="@style/AppTheme.Transparent" />
         <!-- 字典管理 -->
         <activity
             android:name=".ui.dict.rule.DictRuleActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
             android:hardwareAccelerated="true" />
         <activity
             android:name=".ui.dict.DictActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
             android:hardwareAccelerated="true" />
         <!-- 文件管理 -->
         <activity
             android:name=".ui.file.FileManageActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
             android:hardwareAccelerated="true" />
         <!-- 选择文件 -->
         <activity
             android:name=".ui.file.HandleFileActivity"
             android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
             android:hardwareAccelerated="true"
             android:theme="@style/AppTheme.Transparent" />
         <!-- 文字处理 -->
@@ -364,7 +381,7 @@
         <!-- 一键导入 -->
         <activity
             android:name=".ui.association.OnLineImportActivity"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:exported="true"
             android:theme="@style/AppTheme.Transparent">
             <intent-filter>
@@ -380,16 +397,17 @@
         <!-- 验证码输入 -->
         <activity
             android:name=".ui.association.VerificationCodeActivity"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:theme="@style/AppTheme.Transparent" />
         <!-- 跳转确认 -->
         <activity
             android:name=".ui.association.OpenUrlConfirmActivity"
-            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:theme="@style/AppTheme.Transparent" />
         <!-- 打开文件 -->
         <activity
             android:name=".ui.association.FileAssociationActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/AppTheme.Transparent">
@@ -517,7 +535,7 @@
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="false"
             tools:ignore="ExportedService">
             <meta-data

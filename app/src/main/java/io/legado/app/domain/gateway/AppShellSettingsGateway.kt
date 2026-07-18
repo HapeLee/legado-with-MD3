@@ -12,7 +12,6 @@ interface AppShellSettingsGateway {
 
 sealed interface AppShellSettingsUpdate {
     data class ThemeMode(val value: String) : AppShellSettingsUpdate
-    data class Language(val value: String) : AppShellSettingsUpdate
     data class FontScale(val value: Int) : AppShellSettingsUpdate
     data class ComposeEngine(val value: String) : AppShellSettingsUpdate
     data class MainNavigationOrder(val value: String) : AppShellSettingsUpdate

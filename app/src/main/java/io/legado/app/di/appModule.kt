@@ -14,7 +14,9 @@ import io.legado.app.data.repository.AiPromptPresetRepository
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
 import io.legado.app.data.repository.AppStartupRepository
+import io.legado.app.data.repository.AppLocaleRepository
 import io.legado.app.data.repository.AppShellSettingsRepository
+import io.legado.app.data.repository.AppUiConfigurationRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
@@ -71,7 +73,9 @@ import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.AppStartupGateway
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
@@ -235,8 +239,12 @@ val appModule = module {
     }
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
+    single<AppLocaleGateway> { AppLocaleRepository() }
     single<AppShellSettingsGateway> { AppShellSettingsRepository() }
     single<ThemeSettingsGateway> { ThemeSettingsRepository() }
+    single<AppUiConfigurationGateway> {
+        AppUiConfigurationRepository(get(), get(), get())
+    }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
     single<DownloadCacheSettingsGateway> { DownloadCacheSettingsRepository() }
     single<CoverSettingsGateway> { CoverSettingsRepository() }
@@ -366,7 +374,7 @@ val appModule = module {
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
     viewModel { TxtTocRulePreviewViewModel(app = get(), repository = get()) }
-    viewModel { OtherConfigViewModel(get(), get()) }
+    viewModel { OtherConfigViewModel(get(), get(), get()) }
     viewModelOf(::CustomThemeViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)

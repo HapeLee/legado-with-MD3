@@ -6,7 +6,6 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,9 +52,6 @@ fun OtherConfigRouteScreen(
     LaunchedEffect(viewModel, context) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
-                is OtherConfigEffect.ApplyLanguage -> {
-                    AppCompatDelegate.setApplicationLocales(appLocaleListFor(effect.language))
-                }
                 OtherConfigEffect.RequestNotificationPermission -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

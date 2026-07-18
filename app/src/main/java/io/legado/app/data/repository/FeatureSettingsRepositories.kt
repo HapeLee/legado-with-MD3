@@ -57,35 +57,40 @@ class AppShellSettingsRepository : AppShellSettingsGateway {
     override suspend fun updateAll(updates: List<AppShellSettingsUpdate>) {
         val values = updates.associate { update ->
             val (key, value) = when (update) {
-            is AppShellSettingsUpdate.ThemeMode -> PreferKey.themeMode to update.value
-            is AppShellSettingsUpdate.Language -> PreferKey.language to update.value
-            is AppShellSettingsUpdate.FontScale -> PreferKey.fontScale to update.value
-            is AppShellSettingsUpdate.ComposeEngine -> PreferKey.composeEngine to update.value
-            is AppShellSettingsUpdate.MainNavigationOrder -> PreferKey.mainNavigationOrder to update.value
-            is AppShellSettingsUpdate.BooleanValue -> when (update.setting) {
-                AppShellBooleanSetting.ShowHome -> PreferKey.showHome to update.value
-                AppShellBooleanSetting.ShowDiscovery -> PreferKey.showDiscovery to update.value
-                AppShellBooleanSetting.ShowRss -> PreferKey.showRss to update.value
-                AppShellBooleanSetting.ShowStatusBar -> PreferKey.showStatusBar to update.value
-                AppShellBooleanSetting.SwipeAnimation -> PreferKey.swipeAnimation to update.value
-                AppShellBooleanSetting.PredictiveBack -> PreferKey.isPredictiveBackEnabled to update.value
-                AppShellBooleanSetting.ShowBottomView -> PreferKey.showBottomView to update.value
-                AppShellBooleanSetting.UseFloatingBottomBar -> PreferKey.useFloatingBottomBar to update.value
-                AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass ->
-                    PreferKey.useFloatingBottomBarLiquidGlass to update.value
-                AppShellBooleanSetting.NavExtended -> PreferKey.navExtended to update.value
-            }
-            is AppShellSettingsUpdate.StringValue -> when (update.setting) {
-                AppShellStringSetting.TabletInterface -> PreferKey.tabletInterface to update.value
-                AppShellStringSetting.LabelVisibilityMode -> PreferKey.labelVisibilityMode to update.value
-                AppShellStringSetting.DefaultHomePage -> PreferKey.defaultHomePage to update.value
-                AppShellStringSetting.NavIconHome -> PreferKey.navIconHome to update.value
-                AppShellStringSetting.NavIconBookshelf -> PreferKey.navIconBookshelf to update.value
-                AppShellStringSetting.NavIconExplore -> PreferKey.navIconExplore to update.value
-                AppShellStringSetting.NavIconRss -> PreferKey.navIconRss to update.value
-                AppShellStringSetting.NavIconMy -> PreferKey.navIconMy to update.value
-                AppShellStringSetting.LauncherIcon -> PreferKey.launcherIcon to update.value
-            }
+                is AppShellSettingsUpdate.ThemeMode -> PreferKey.themeMode to update.value
+                is AppShellSettingsUpdate.FontScale -> PreferKey.fontScale to update.value
+                is AppShellSettingsUpdate.ComposeEngine -> PreferKey.composeEngine to update.value
+                is AppShellSettingsUpdate.MainNavigationOrder ->
+                    PreferKey.mainNavigationOrder to update.value
+                is AppShellSettingsUpdate.BooleanValue -> when (update.setting) {
+                    AppShellBooleanSetting.ShowHome -> PreferKey.showHome to update.value
+                    AppShellBooleanSetting.ShowDiscovery -> PreferKey.showDiscovery to update.value
+                    AppShellBooleanSetting.ShowRss -> PreferKey.showRss to update.value
+                    AppShellBooleanSetting.ShowStatusBar -> PreferKey.showStatusBar to update.value
+                    AppShellBooleanSetting.SwipeAnimation -> PreferKey.swipeAnimation to update.value
+                    AppShellBooleanSetting.PredictiveBack ->
+                        PreferKey.isPredictiveBackEnabled to update.value
+                    AppShellBooleanSetting.ShowBottomView -> PreferKey.showBottomView to update.value
+                    AppShellBooleanSetting.UseFloatingBottomBar ->
+                        PreferKey.useFloatingBottomBar to update.value
+                    AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass ->
+                        PreferKey.useFloatingBottomBarLiquidGlass to update.value
+                    AppShellBooleanSetting.NavExtended -> PreferKey.navExtended to update.value
+                }
+                is AppShellSettingsUpdate.StringValue -> when (update.setting) {
+                    AppShellStringSetting.TabletInterface ->
+                        PreferKey.tabletInterface to update.value
+                    AppShellStringSetting.LabelVisibilityMode ->
+                        PreferKey.labelVisibilityMode to update.value
+                    AppShellStringSetting.DefaultHomePage ->
+                        PreferKey.defaultHomePage to update.value
+                    AppShellStringSetting.NavIconHome -> PreferKey.navIconHome to update.value
+                    AppShellStringSetting.NavIconBookshelf -> PreferKey.navIconBookshelf to update.value
+                    AppShellStringSetting.NavIconExplore -> PreferKey.navIconExplore to update.value
+                    AppShellStringSetting.NavIconRss -> PreferKey.navIconRss to update.value
+                    AppShellStringSetting.NavIconMy -> PreferKey.navIconMy to update.value
+                    AppShellStringSetting.LauncherIcon -> PreferKey.launcherIcon to update.value
+                }
             }
             key to value
         }
@@ -364,7 +369,6 @@ class BackupSettingsRepository : BackupSettingsGateway {
 
 private fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
     themeMode = compatDsString(PreferKey.themeMode) ?: "0",
-    language = compatDsString(PreferKey.language) ?: "auto",
     fontScale = compatDsInt(PreferKey.fontScale) ?: 10,
     composeEngine = compatDsString(PreferKey.composeEngine) ?: "material",
     showHome = compatDsBoolean(PreferKey.showHome) ?: true,
@@ -398,6 +402,7 @@ private fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     paletteStyle = compatDsString(PreferKey.paletteStyle) ?: "tonalSpot",
     materialVersion = compatDsString(PreferKey.materialVersion) ?: "material3",
     customContrast = compatDsString(PreferKey.customContrast) ?: "Default",
+    customMode = compatDsString(PreferKey.customMode) ?: "tonalSpot",
     appFontPath = compatDsString(PreferKey.appFontPath),
     customPrimary = compatDsInt(PreferKey.cPrimary) ?: 0,
     customNightPrimary = compatDsInt(PreferKey.cNPrimary) ?: 0,
@@ -455,7 +460,6 @@ class OtherSettingsRepository : OtherSettingsGateway {
         .map { preferences ->
             val rawSourceEditMaxLine = preferences.compatDsInt(PreferKey.sourceEditMaxLine) ?: Int.MAX_VALUE
             OtherSettings(
-                language = preferences.compatDsString(PreferKey.language) ?: "auto",
                 updateToVariant = preferences.compatDsString(PreferKey.updateToVariant) ?: "official_version",
                 autoCheckUpdateOnStart =
                     preferences.compatDsBoolean(PreferKey.autoCheckUpdateOnStart) ?: false,
@@ -484,7 +488,6 @@ class OtherSettingsRepository : OtherSettingsGateway {
 
     override suspend fun update(update: OtherSettingsUpdate) {
         val (key, value) = when (update) {
-            is OtherSettingsUpdate.Language -> PreferKey.language to update.value
             is OtherSettingsUpdate.UpdateToVariant -> PreferKey.updateToVariant to update.value
             is OtherSettingsUpdate.AutoCheckUpdateOnStart -> PreferKey.autoCheckUpdateOnStart to update.value
             is OtherSettingsUpdate.WebServiceAutoStart -> PreferKey.webServiceAutoStart to update.value

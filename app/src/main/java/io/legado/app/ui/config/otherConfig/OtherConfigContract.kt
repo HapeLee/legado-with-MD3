@@ -100,7 +100,6 @@ sealed interface OtherConfigIntent {
 }
 
 sealed interface OtherConfigEffect {
-    data class ApplyLanguage(val language: String) : OtherConfigEffect
     data object RequestNotificationPermission : OtherConfigEffect
     data object RequestBatteryPermission : OtherConfigEffect
     data object OpenSystemDirectory : OtherConfigEffect

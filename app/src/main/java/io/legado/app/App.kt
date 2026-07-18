@@ -6,10 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.graphics.scale
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -38,6 +36,7 @@ import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
 import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -63,7 +62,6 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.BookCover
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.config.otherConfig.appLocaleListFor
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
@@ -86,8 +84,6 @@ import java.util.logging.Level
 
 class App : Application(), ImageLoaderFactory {
 
-    private lateinit var oldConfig: Configuration
-
     override fun newImageLoader(): ImageLoader {
         return get()
     }
@@ -100,16 +96,16 @@ class App : Application(), ImageLoaderFactory {
         // autoStoreLocales 持久化。不能每次启动都执行——API 33+ 上会覆盖用户在
         // 系统设置里选择的应用语言，API <33 上此时 AppCompat 存储尚未加载、
         // getApplicationLocales() 恒为空，isEmpty 守卫会形同虚设
-        if (!LocalConfig.appLocaleMigrated) {
+        val legacyLanguage = if (!LocalConfig.appLocaleMigrated) {
             LocalConfig.appLocaleMigrated = true
-            val localeList = appLocaleListFor(OtherConfig.language)
-            if (!localeList.isEmpty && AppCompatDelegate.getApplicationLocales().isEmpty) {
-                AppCompatDelegate.setApplicationLocales(localeList)
-            }
-        }
+            OtherConfig.language
+        } else null
         startKoin {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
+        }
+        if (legacyLanguage != null) {
+            get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
         }
         applyDayNightInit(this)
         if (getPrefString("app_theme", "0") == "12") {
@@ -150,7 +146,6 @@ class App : Application(), ImageLoaderFactory {
         if (isDebuggable) {
             ThreadUtils.setThreadAssertsDisabledForTesting(true)
         }
-        oldConfig = Configuration(resources.configuration)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         Coroutine.async {
             get<BackupSettingsGateway>().settings
@@ -209,15 +204,6 @@ class App : Application(), ImageLoaderFactory {
             }
         }
     }
-
-//    override fun onConfigurationChanged(newConfig: Configuration) {
-//        super.onConfigurationChanged(newConfig)
-//        val diff = newConfig.diff(oldConfig)
-//        if ((diff and ActivityInfo.CONFIG_UI_MODE) != 0) {
-//            applyDayNight(this)
-//        }
-//        oldConfig = Configuration(newConfig)
-//    }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)

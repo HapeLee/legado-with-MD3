@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -35,6 +36,7 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 
 class OtherConfigViewModel(
+    private val appLocaleGateway: AppLocaleGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
     initialState: OtherConfigUiState = defaultOtherConfigUiState(),
@@ -60,6 +62,11 @@ class OtherConfigViewModel(
     val effects = _effects.asSharedFlow()
 
     init {
+        viewModelScope.launch {
+            appLocaleGateway.language.collect { language ->
+                _uiState.update { it.copy(language = language) }
+            }
+        }
         viewModelScope.launch(Dispatchers.IO) {
             updateOtherSetting(OtherSettingsUpdate.ProcessText(isProcessTextEnabled()))
         }
@@ -83,10 +90,7 @@ class OtherConfigViewModel(
 
     fun onIntent(intent: OtherConfigIntent) {
         when (intent) {
-            is OtherConfigIntent.LanguageChanged -> {
-                updateOtherSetting(OtherSettingsUpdate.Language(intent.value))
-                _effects.tryEmit(OtherConfigEffect.ApplyLanguage(intent.value))
-            }
+            is OtherConfigIntent.LanguageChanged -> appLocaleGateway.setLanguage(intent.value)
             is OtherConfigIntent.UpdateToVariantChanged ->
                 updateOtherSetting(OtherSettingsUpdate.UpdateToVariant(intent.value))
             is OtherConfigIntent.AutoCheckUpdateOnStartChanged ->
@@ -389,7 +393,6 @@ internal fun defaultOtherConfigUiState() = OtherConfigUiState(
 
 private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
     current.copy(
-        language = language,
         updateToVariant = updateToVariant,
         autoCheckUpdateOnStart = autoCheckUpdateOnStart,
         webServiceAutoStart = webServiceAutoStart,

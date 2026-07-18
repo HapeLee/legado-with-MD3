@@ -125,8 +125,7 @@ class ThemeManageViewModel(
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.applySavedTheme(theme)
             if (result.isSuccess) {
-                // 主题键均为 Compose 响应式读取，写入即生效；fontScale/自定义色等
-                // 需要重建的键由各自 prefDelegate 的 RECREATE 回调按需触发
+                // Compose 由响应式设置直接更新；旧 View 由 BaseActivity 的配置兼容层处理。
                 refreshSavedThemes()
             } else {
                 _uiState.update { it.copy(loading = false) }

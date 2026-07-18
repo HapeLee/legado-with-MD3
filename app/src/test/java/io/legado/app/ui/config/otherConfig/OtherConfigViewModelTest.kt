@@ -2,20 +2,18 @@ package io.legado.app.ui.config.otherConfig
 
 import android.app.Application
 import android.os.Looper
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,25 +33,38 @@ class OtherConfigViewModelTest {
     }
 
     @Test
-    fun languageChanged_updatesGatewayAndEmitsApplyLanguage() = runBlocking {
+    fun languageChanged_updatesLocaleGatewayAndUiState() = runBlocking {
         val otherSettingsGateway = FakeOtherSettingsGateway()
+        val appLocaleGateway = FakeAppLocaleGateway()
         val viewModel = OtherConfigViewModel(
+            appLocaleGateway = appLocaleGateway,
             readAloudSettingsGateway = FakeReadAloudSettingsGateway(),
             otherSettingsGateway = otherSettingsGateway,
             initialState = OtherConfigUiState(),
         )
-        val effect = async(start = CoroutineStart.UNDISPATCHED) {
-            viewModel.effects.first()
-        }
 
         viewModel.onIntent(OtherConfigIntent.LanguageChanged("en"))
         Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-        assertEquals(OtherConfigEffect.ApplyLanguage("en"), effect.await())
-        assertTrue(
-            otherSettingsGateway.updates.contains(OtherSettingsUpdate.Language("en"))
-        )
+        assertEquals("en", appLocaleGateway.currentLanguage)
         assertEquals("en", viewModel.uiState.value.language)
+    }
+
+    private class FakeAppLocaleGateway : AppLocaleGateway {
+        private val state = MutableStateFlow("auto")
+        override val currentLanguage: String
+            get() = state.value
+        override val language = state.asStateFlow()
+
+        override fun setLanguage(language: String) {
+            state.value = language
+        }
+
+        override fun synchronizeFromPlatform() = Unit
+
+        override fun migrateLegacyLanguage(language: String) {
+            setLanguage(language)
+        }
     }
 
     private class FakeOtherSettingsGateway : OtherSettingsGateway {
@@ -64,9 +75,6 @@ class OtherConfigViewModelTest {
 
         override suspend fun update(update: OtherSettingsUpdate) {
             updates += update
-            if (update is OtherSettingsUpdate.Language) {
-                state.value = state.value.copy(language = update.value)
-            }
         }
     }
 

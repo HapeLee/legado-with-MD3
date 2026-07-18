@@ -9,7 +9,6 @@ interface OtherSettingsGateway {
 }
 
 sealed interface OtherSettingsUpdate {
-    data class Language(val value: String) : OtherSettingsUpdate
     data class UpdateToVariant(val value: String) : OtherSettingsUpdate
     data class AutoCheckUpdateOnStart(val value: Boolean) : OtherSettingsUpdate
     data class WebServiceAutoStart(val value: Boolean) : OtherSettingsUpdate

@@ -2,7 +2,6 @@ package io.legado.app.domain.model.settings
 
 data class AppShellSettings(
     val themeMode: String = "0",
-    val language: String = "auto",
     val fontScale: Int = 10,
     val composeEngine: String = "material",
     val showHome: Boolean = true,
