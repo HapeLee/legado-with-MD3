@@ -77,14 +77,13 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
-import io.legado.app.ui.main.explore.ExploreScreen
+import io.legado.app.ui.main.explore.ExploreRouteScreen
 import io.legado.app.ui.main.home.HomeRouteScreen
-import io.legado.app.ui.main.my.MyScreen
+import io.legado.app.ui.main.my.MyRouteScreen
 import io.legado.app.ui.main.my.PrefClickEvent
-import io.legado.app.ui.main.rss.RssScreen
+import io.legado.app.ui.main.rss.RssRouteScreen
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
@@ -192,8 +191,13 @@ fun MainScreen(
     }
 
     val hazeState = remember { HazeState() }
-    val customSecondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
-    val floatingBarSurfaceColor = if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+    val customSecondaryColor = if (LegadoTheme.isDark) {
+        mainUiState.secondaryThemeColorNight.takeIf { it != 0 }
+            ?: mainUiState.secondaryThemeColor
+    } else {
+        mainUiState.secondaryThemeColor
+    }
+    val floatingBarSurfaceColor = if (mainUiState.deepPersonalizationActive && customSecondaryColor != 0) {
         Color(customSecondaryColor)
     } else {
         LegadoTheme.colorScheme.surface
@@ -275,7 +279,7 @@ fun MainScreen(
                     }
                 )
                 LaunchedEffect(miuixNavState.currentValue) {
-                    viewModel.setNavExtended(miuixNavState.isExpanded)
+                    viewModel.onIntent(MainUiIntent.SetNavigationRailExpanded(miuixNavState.isExpanded))
                 }
                 MiuixNavigationRail(
                     state = miuixNavState,
@@ -355,7 +359,7 @@ fun MainScreen(
                                     val targetExpanded = !expanded
                                     if (targetExpanded) navState.expand()
                                     else navState.collapse()
-                                    viewModel.setNavExtended(targetExpanded)
+                                    viewModel.onIntent(MainUiIntent.SetNavigationRailExpanded(targetExpanded))
                                 }
                             }
                         ) {
@@ -402,6 +406,7 @@ fun MainScreen(
                                 NavigationIcon(
                                     destination = destination,
                                     selected = selected,
+                                    customIconPath = mainUiState.customIconPath(destination),
                                     modifier = if (destination == MainDestination.Bookshelf) {
                                         Modifier.combinedClickable(
                                             interactionSource = remember { MutableInteractionSource() },
@@ -431,7 +436,7 @@ fun MainScreen(
                             }
                         },
                         label = if (labelVisibilityMode != "unlabeled") {
-                            val hasCustomIcon = destination.customIconPath.isNotEmpty()
+                            val hasCustomIcon = mainUiState.customIconPath(destination).isNotEmpty()
                             if (hasCustomIcon) null else {{ AppText(stringResource(destination.labelId)) }}
                         } else null
                     )
@@ -449,7 +454,7 @@ fun MainScreen(
                     ) {
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
-                            val customIconPath = destination.customIconPath
+                            val customIconPath = mainUiState.customIconPath(destination)
                             val destinationLabel = stringResource(destination.labelId)
                             AppNavigationBarItem(
                                 modifier = Modifier.semantics(mergeDescendants = true) {
@@ -464,7 +469,8 @@ fun MainScreen(
                                 m3Icon = {
                                     NavigationIcon(
                                         destination = destination,
-                                        selected = selected
+                                        selected = selected,
+                                        customIconPath = mainUiState.customIconPath(destination),
                                     )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
@@ -565,10 +571,10 @@ fun MainScreen(
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )
 
-                            MainDestination.Explore -> ExploreScreen(
+                            MainDestination.Explore -> ExploreRouteScreen(
                                 onOpenExploreShow = onNavigateToExploreShow,
                             )
-                            MainDestination.Rss -> RssScreen(
+                            MainDestination.Rss -> RssRouteScreen(
                                 onOpenSort = { sourceUrl, sortUrl, key ->
                                     onNavigateToRssSort(sourceUrl, sortUrl, key)
                                 },
@@ -578,14 +584,14 @@ fun MainScreen(
                                 onOpenFavorites = onNavigateToRssFavorites,
                                 onOpenRuleSub = onNavigateToRuleSub
                             )
-                            MainDestination.My -> MyScreen(
+                            MainDestination.My -> MyRouteScreen(
                                 onOpenSettings = onOpenSettings,
                                 onNavigateToChat = onNavigateToChat,
                                 onNavigate = { event ->
                                     when (event) {
                                         PrefClickEvent.OpenBookCacheManage -> onNavigateToBookCacheManage()
                                         PrefClickEvent.OpenReadRecord -> onNavigateToReadRecord()
-                                        else -> viewModel.onPrefClickEvent(event)
+                                        else -> viewModel.onIntent(MainUiIntent.HandlePreferenceClick(event))
                                     }
                                 }
                             )
@@ -629,12 +635,12 @@ fun MainScreen(
                             tabsCount = destinations.size,
                             isBlurEnabled = useLiquidGlass,
                             hasCustomIcons = destinations.any { dest ->
-                                dest.customIconPath.isNotEmpty()
+                                mainUiState.customIconPath(dest).isNotEmpty()
                             }
                         ) {
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index
-                                val hasCustomIcon = destination.customIconPath.isNotEmpty()
+                                val hasCustomIcon = mainUiState.customIconPath(destination).isNotEmpty()
                                 val destinationLabel = stringResource(destination.labelId)
                                 FloatingBottomBarItem(
                                     onClick = {
@@ -648,6 +654,7 @@ fun MainScreen(
                                 ) {
                                     NavigationIcon(
                                         destination = destination,
+                                        customIconPath = mainUiState.customIconPath(destination),
                                         selected = selected
                                     )
                                     if (!hasCustomIcon && showLabel && (alwaysShowLabel || selected)) {
@@ -756,9 +763,9 @@ private fun BookshelfRailGroupMenu(
 private fun NavigationIcon(
     destination: MainDestination,
     selected: Boolean,
+    customIconPath: String,
     modifier: Modifier = Modifier
 ) {
-    val customIconPath = destination.customIconPath
     if (customIconPath.isNotEmpty()) {
         AsyncImage(
             model = customIconPath,

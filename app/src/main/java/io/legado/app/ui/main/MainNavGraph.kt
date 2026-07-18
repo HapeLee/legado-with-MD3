@@ -27,10 +27,10 @@ import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowIntent
-import io.legado.app.ui.book.explore.ExploreShowScreen
+import io.legado.app.ui.book.explore.ExploreShowRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowViewModel
-import io.legado.app.ui.book.import.local.ImportBookScreen
-import io.legado.app.ui.book.import.remote.RemoteBookScreen
+import io.legado.app.ui.book.import.local.ImportBookRouteScreen
+import io.legado.app.ui.book.import.remote.RemoteBookRouteScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
@@ -38,12 +38,12 @@ import io.legado.app.ui.book.read.ReadBookController
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
-import io.legado.app.ui.book.readRecord.ReadRecordOverviewScreen
-import io.legado.app.ui.book.readRecord.ReadRecordScreen
+import io.legado.app.ui.book.readRecord.ReadRecordOverviewRouteScreen
+import io.legado.app.ui.book.readRecord.ReadRecordRouteScreen
 import io.legado.app.ui.book.search.SearchIntent
-import io.legado.app.ui.book.search.SearchScreen
+import io.legado.app.ui.book.search.SearchRouteScreen
 import io.legado.app.ui.book.search.SearchViewModel
-import io.legado.app.ui.book.searchContent.SearchContentScreen
+import io.legado.app.ui.book.searchContent.SearchContentRouteScreen
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.config.ConfigNavScreen
@@ -51,7 +51,7 @@ import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
-import io.legado.app.ui.config.backupConfig.BackupConfigScreen
+import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
 import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
@@ -65,10 +65,10 @@ import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
-import io.legado.app.ui.rss.favorites.RssFavoritesScreen
+import io.legado.app.ui.rss.favorites.RssFavoritesRouteScreen
 import io.legado.app.ui.rss.read.MainRouteRssRead
 import io.legado.app.ui.rss.read.RssReadRouteScreen
-import io.legado.app.ui.rss.subscription.RuleSubScreen
+import io.legado.app.ui.rss.subscription.RuleSubRouteScreen
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
@@ -231,7 +231,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsBackup> {
-        BackupConfigScreen(onBackClick = { onNavigateBack() })
+        BackupConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsAi> {
@@ -315,13 +315,13 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteImportLocal> {
-        ImportBookScreen(
+        ImportBookRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }
 
     entry<MainRouteImportRemote> {
-        RemoteBookScreen(
+        RemoteBookRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }
@@ -454,7 +454,7 @@ fun MainActivity.mainEntryProvider(
             key = "SearchContent:${route.bookUrl}",
             parameters = { parametersOf(route) }
         )
-        SearchContentScreen(
+        SearchContentRouteScreen(
             viewModel = viewModel,
             onBack = { onNavigateBack() },
         )
@@ -472,7 +472,7 @@ fun MainActivity.mainEntryProvider(
             )
         }
 
-        SearchScreen(
+        SearchRouteScreen(
             viewModel = searchViewModel,
             onBack = {
                 onNavigateBack()
@@ -553,7 +553,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteRssFavorites> {
-        RssFavoritesScreen(
+        RssFavoritesRouteScreen(
             onBackClick = { onNavigateBack() },
             onOpenRead = { title, origin, link, openUrl ->
                 onNavigateToRoute(
@@ -569,13 +569,13 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteRuleSub> {
-        RuleSubScreen(
+        RuleSubRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }
 
     entry<MainRouteReadRecord> {
-        ReadRecordScreen(
+        ReadRecordRouteScreen(
             onBackClick = { onNavigateBack() },
             onBookClick = { name, author ->
                 lifecycleScope.launch {
@@ -595,7 +595,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteReadRecordOverview> {
-        ReadRecordOverviewScreen(
+        ReadRecordOverviewRouteScreen(
             onBackClick = { onNavigateBack() },
             onBookClick = { name, author ->
                 lifecycleScope.launch {
@@ -697,7 +697,7 @@ fun MainActivity.mainEntryProvider(
             )
         }
 
-        ExploreShowScreen(
+        ExploreShowRouteScreen(
             viewModel = exploreViewModel,
             title = route.title ?: "探索",
             onBack = { onNavigateBack() },

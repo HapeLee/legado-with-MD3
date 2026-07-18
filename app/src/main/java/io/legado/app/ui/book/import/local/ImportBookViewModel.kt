@@ -62,7 +62,8 @@ data class ImportBookUiState(
     val interaction: InteractionState = InteractionState(),
     val pathNames: List<String> = emptyList(),
     val canGoBack: Boolean = false,
-    val sort: Int = 0
+    val sort: Int = 0,
+    val fileNameRule: String = "",
 ) : ListUiState<ImportBook> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
@@ -86,12 +87,14 @@ sealed interface ImportBookIntent {
     data class NavigateToLevel(val level: Int) : ImportBookIntent
     data object SelectAll : ImportBookIntent
     data object SelectInvert : ImportBookIntent
+    data object ClearSelection : ImportBookIntent
     data object AddToBookshelf : ImportBookIntent
     data class AddSingleToBookshelf(val item: ImportBook) : ImportBookIntent
     data object DeleteSelection : ImportBookIntent
     data class ItemClick(val item: ImportBook) : ImportBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : ImportBookIntent
     data class ImportArchiveConfirmed(val fileDoc: FileDoc, val fileName: String) : ImportBookIntent
+    data class SetFileNameRule(val value: String) : ImportBookIntent
 }
 
 sealed interface ImportBookEffect {
@@ -157,6 +160,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             is ImportBookIntent.NavigateToLevel -> navigateToLevel(intent.level)
             ImportBookIntent.SelectAll -> selectAllCheckable()
             ImportBookIntent.SelectInvert -> invertSelection()
+            ImportBookIntent.ClearSelection -> clearSelection()
             ImportBookIntent.AddToBookshelf -> addSelectedToBookshelf()
             is ImportBookIntent.AddSingleToBookshelf -> addSingleToBookshelf(intent.item)
             ImportBookIntent.DeleteSelection -> deleteSelectedDocs()
@@ -170,6 +174,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 intent.fileDoc,
                 intent.fileName
             )
+            is ImportBookIntent.SetFileNameRule -> {
+                ImportBookConfig.bookImportFileName = intent.value
+            }
         }
     }
 
@@ -220,7 +227,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             interaction = state.interaction,
             pathNames = pathNames,
             canGoBack = state.subDocs.isNotEmpty(),
-            sort = state.sort
+            sort = state.sort,
+            fileNameRule = ImportBookConfig.bookImportFileName.orEmpty(),
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(

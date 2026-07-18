@@ -85,6 +85,7 @@ sealed interface RemoteBookIntent {
     data class SortToggle(val sort: RemoteBookSort) : RemoteBookIntent
     data object SelectAll : RemoteBookIntent
     data object SelectInvert : RemoteBookIntent
+    data object ClearSelection : RemoteBookIntent
     data class ToggleSelection(val id: String) : RemoteBookIntent
     data class OpenItem(val book: RemoteBook) : RemoteBookIntent
     data object NavigateBack : RemoteBookIntent
@@ -95,6 +96,8 @@ sealed interface RemoteBookIntent {
     data class BookFolderPicked(val uri: android.net.Uri?) : RemoteBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
     data class ImportArchiveConfirmed(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
+    data class DeleteServer(val server: Server) : RemoteBookIntent
+    data class SaveServer(val server: Server) : RemoteBookIntent
 }
 
 sealed interface RemoteBookEffect {
@@ -139,6 +142,7 @@ class RemoteBookViewModel(
             is RemoteBookIntent.SortToggle -> toggleSort(intent.sort)
             RemoteBookIntent.SelectAll -> selectAllCheckable()
             RemoteBookIntent.SelectInvert -> invertSelection()
+            RemoteBookIntent.ClearSelection -> clearSelection()
             is RemoteBookIntent.ToggleSelection -> toggleSelection(intent.id)
             is RemoteBookIntent.OpenItem -> onOpenItem(intent.book)
             RemoteBookIntent.NavigateBack -> navigateBack()
@@ -156,6 +160,8 @@ class RemoteBookViewModel(
                 intent.fileDoc,
                 intent.fileName
             )
+            is RemoteBookIntent.DeleteServer -> deleteServer(intent.server)
+            is RemoteBookIntent.SaveServer -> saveServer(intent.server)
         }
     }
 

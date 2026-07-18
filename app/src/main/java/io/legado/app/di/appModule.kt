@@ -49,6 +49,8 @@ import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.RssRepository
+import io.legado.app.data.repository.RssFavoriteRepository
+import io.legado.app.data.repository.RuleSubscriptionRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
@@ -211,6 +213,9 @@ val appModule = module {
     single { get<AppDatabase>().bookChapterDao }
     single { get<AppDatabase>().bookGroupDao }
     single { get<AppDatabase>().bookSourceDao }
+    single { get<AppDatabase>().searchContentHistoryDao }
+    single { get<AppDatabase>().rssStarDao }
+    single { get<AppDatabase>().ruleSubDao }
 
     singleOf(::ReadRecordRepository)
     single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
@@ -220,7 +225,12 @@ val appModule = module {
     singleOf(::BookshelfRepository)
     singleOf(::DictRuleRepository)
     singleOf(::TxtTocRuleRepository)
-    single { SearchContentRepository { io.legado.app.help.config.ReadBookConfig.titleMode } }
+    single {
+        SearchContentRepository(
+            titleModeProvider = { io.legado.app.help.config.ReadBookConfig.titleMode },
+            historyDao = get(),
+        )
+    }
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
     single<AppShellSettingsGateway> { AppShellSettingsRepository() }
@@ -293,6 +303,8 @@ val appModule = module {
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
+    singleOf(::RssFavoriteRepository)
+    singleOf(::RuleSubscriptionRepository)
     single {
         SearchRepositoryImpl(get())
     }

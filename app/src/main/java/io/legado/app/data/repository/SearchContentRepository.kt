@@ -3,6 +3,8 @@ package io.legado.app.data.repository
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.SearchContentHistory
+import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -18,7 +20,32 @@ import kotlinx.coroutines.flow.flowOn
 
 class SearchContentRepository(
     private val titleModeProvider: () -> Int = { 0 },
+    private val historyDao: SearchContentHistoryDao = appDb.searchContentHistoryDao,
 ) {
+
+    fun observeHistory(book: Book?, onlyThisBook: Boolean): Flow<List<SearchContentHistory>> =
+        if (onlyThisBook && book != null) {
+            historyDao.getByBook(book.name, book.author)
+        } else {
+            historyDao.getAll()
+        }
+
+    suspend fun saveHistory(book: Book, query: String) {
+        val history = historyDao.get(book.name, book.author, query)
+            ?: SearchContentHistory(bookName = book.name, bookAuthor = book.author, query = query)
+        history.time = System.currentTimeMillis()
+        historyDao.insert(history)
+    }
+
+    suspend fun deleteHistory(id: Long) = historyDao.delete(id)
+
+    suspend fun clearHistory(book: Book?, onlyThisBook: Boolean) {
+        if (onlyThisBook && book != null) {
+            historyDao.deleteByBook(book.name, book.author)
+        } else {
+            historyDao.deleteAll()
+        }
+    }
 
     private var lastSearchResults: List<SearchResult>? = null
     private var lastQueryKey: String? = null
