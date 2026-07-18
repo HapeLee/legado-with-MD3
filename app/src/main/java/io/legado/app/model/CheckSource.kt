@@ -4,22 +4,27 @@ import android.content.Context
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.help.CacheManager
+import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.help.IntentData
 import io.legado.app.service.CheckSourceService
 import io.legado.app.utils.startService
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
 object CheckSource {
     var keyword = "我的"
 
-    //校验设置
-    var timeout = CacheManager.getLong("checkSourceTimeout") ?: 180000L
-    var checkSearch = CacheManager.get("checkSearch")?.toBoolean() ?: true
-    var checkDiscovery = CacheManager.get("checkDiscovery")?.toBoolean() ?: true
-    var checkInfo = CacheManager.get("checkInfo")?.toBoolean() ?: true
-    var checkCategory = CacheManager.get("checkCategory")?.toBoolean() ?: true
-    var checkContent = CacheManager.get("checkContent")?.toBoolean() ?: true
+    private val settingsGateway: CheckSourceSettingsGateway
+        get() = GlobalContext.get().get()
+    private val settings get() = settingsGateway.currentSettings
+
+    // Legacy services keep synchronous reads; writes are owned by CheckSourceSettingsGateway.
+    val timeout get() = settings.timeoutMillis
+    val checkSearch get() = settings.checkSearch
+    val checkDiscovery get() = settings.checkDiscovery
+    val checkInfo get() = settings.checkInfo
+    val checkCategory get() = settings.checkCategory
+    val checkContent get() = settings.checkContent
     val summary get() = upSummary()
 
     fun start(context: Context, sources: List<BookSourcePart>) {
@@ -42,15 +47,6 @@ object CheckSource {
         context.startService<CheckSourceService> {
             action = IntentAction.resume
         }
-    }
-
-    fun putConfig() {
-        CacheManager.put("checkSourceTimeout", timeout)
-        CacheManager.put("checkSearch", checkSearch)
-        CacheManager.put("checkDiscovery", checkDiscovery)
-        CacheManager.put("checkInfo", checkInfo)
-        CacheManager.put("checkCategory", checkCategory)
-        CacheManager.put("checkContent", checkContent)
     }
 
     private fun upSummary(): String {

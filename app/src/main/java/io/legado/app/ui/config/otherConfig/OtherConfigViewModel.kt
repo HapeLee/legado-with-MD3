@@ -1,64 +1,53 @@
 package io.legado.app.ui.config.otherConfig
 
-import android.content.ComponentName
-import android.content.pm.PackageManager
-import android.os.Handler
-import android.os.Looper
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.CheckSourceSettings
+import io.legado.app.domain.gateway.CheckSourceSettingsGateway
+import io.legado.app.domain.gateway.DirectLinkRule
+import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
-import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
+import io.legado.app.domain.gateway.LocalPasswordGateway
+import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
-import io.legado.app.help.DirectLinkUpload
-import io.legado.app.help.config.LocalConfig
-import io.legado.app.help.webView.WebViewDataCleaner
-import io.legado.app.model.CheckSource
-import io.legado.app.receiver.SharedReceiverActivity
-import io.legado.app.utils.putPrefString
-import io.legado.app.utils.restart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import splitties.init.appCtx
+import kotlinx.collections.immutable.toImmutableList
 
 class OtherConfigViewModel(
     private val appLocaleGateway: AppLocaleGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
-    initialState: OtherConfigUiState = defaultOtherConfigUiState(),
+    private val checkSourceSettingsGateway: CheckSourceSettingsGateway,
+    private val directLinkSettingsGateway: DirectLinkSettingsGateway,
+    private val localPasswordGateway: LocalPasswordGateway,
+    private val systemGateway: OtherConfigSystemGateway,
+    initialState: OtherConfigUiState = OtherConfigUiState(),
 ) : ViewModel() {
 
-    companion object {
-        private const val RESTART_DELAY_MILLIS = 3_000L
-    }
-
-    private val packageManager = appCtx.packageManager
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val componentName = ComponentName(
-        appCtx,
-        SharedReceiverActivity::class.java.name
-    )
     private var clearWebViewDataJob: Job? = null
-    private var restartScheduled = false
+    private var restartRequested = false
+    private var nextMessageId = 0L
 
     private val _uiState = MutableStateFlow(
-        otherSettingsGateway.currentSettings.toUiState(initialState).copy(
+        otherSettingsGateway.currentSettings.toUiState(initialState)
+            .let(checkSourceSettingsGateway.currentSettings::toUiState)
+            .copy(
             mediaButtonOnExit = readAloudSettingsGateway.currentSettings.mediaButtonOnExit,
             readAloudByMediaButton =
                 readAloudSettingsGateway.currentSettings.readAloudByMediaButton,
@@ -76,9 +65,9 @@ class OtherConfigViewModel(
                 _uiState.update { it.copy(language = language) }
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            updateOtherSetting(OtherSettingsUpdate.ProcessText(isProcessTextEnabled()))
-        }
+        updateOtherSetting(
+            OtherSettingsUpdate.ProcessText(systemGateway.isProcessTextEnabled())
+        )
         viewModelScope.launch {
             otherSettingsGateway.settings.collect { settings ->
                 _uiState.update { settings.toUiState(it) }
@@ -95,6 +84,12 @@ class OtherConfigViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            checkSourceSettingsGateway.settings.collect { settings ->
+                _uiState.update(settings::toUiState)
+            }
+        }
+        loadDirectLinkConfiguration()
     }
 
     fun onIntent(intent: OtherConfigIntent) {
@@ -118,9 +113,12 @@ class OtherConfigViewModel(
                 updateOtherSetting(OtherSettingsUpdate.AntiAlias(intent.value))
             is OtherConfigIntent.ReplaceEnableDefaultChanged ->
                 updateOtherSetting(OtherSettingsUpdate.ReplaceEnableDefault(intent.value))
-            is OtherConfigIntent.MediaButtonOnExitChanged -> setMediaButtonOnExit(intent.value)
-            is OtherConfigIntent.ReadAloudByMediaButtonChanged -> setReadAloudByMediaButton(intent.value)
-            is OtherConfigIntent.IgnoreAudioFocusChanged -> setIgnoreAudioFocus(intent.value)
+            is OtherConfigIntent.MediaButtonOnExitChanged ->
+                updateReadAloudSetting(ReadAloudSettingsUpdate.MediaButtonOnExit(intent.value))
+            is OtherConfigIntent.ReadAloudByMediaButtonChanged ->
+                updateReadAloudSetting(ReadAloudSettingsUpdate.ReadAloudByMediaButton(intent.value))
+            is OtherConfigIntent.IgnoreAudioFocusChanged ->
+                updateReadAloudSetting(ReadAloudSettingsUpdate.IgnoreAudioFocus(intent.value))
             is OtherConfigIntent.AutoClearExpiredChanged ->
                 updateOtherSetting(OtherSettingsUpdate.AutoClearExpired(intent.value))
             is OtherConfigIntent.ShowAddToShelfAlertChanged ->
@@ -132,8 +130,9 @@ class OtherConfigViewModel(
             is OtherConfigIntent.SourceEditMaxLineChanged ->
                 updateOtherSetting(OtherSettingsUpdate.SourceEditMaxLine(intent.value))
             is OtherConfigIntent.WebPortChanged -> {
-                updateOtherSetting(OtherSettingsUpdate.WebPort(intent.value))
-                _effects.tryEmit(OtherConfigEffect.RestartWebService)
+                updateOtherSetting(OtherSettingsUpdate.WebPort(intent.value)) {
+                    _effects.tryEmit(OtherConfigEffect.RestartWebService)
+                }
             }
             is OtherConfigIntent.ProcessTextChanged -> setProcessTextEnable(intent.value)
             is OtherConfigIntent.RecordLogChanged ->
@@ -170,11 +169,7 @@ class OtherConfigViewModel(
             is OtherConfigIntent.CheckContentChanged ->
                 _uiState.update { it.copy(checkContent = intent.value) }
             OtherConfigIntent.ConfirmCheckSource -> {
-                if (saveCheckSourceConfig()) {
-                    _uiState.update { it.copy(activeOverlay = null) }
-                } else {
-                    _effects.tryEmit(OtherConfigEffect.ShowMessage(R.string.error))
-                }
+                saveCheckSourceConfig()
             }
             is OtherConfigIntent.DirectUploadUrlChanged ->
                 _uiState.update { it.copy(directUploadUrl = intent.value) }
@@ -193,20 +188,16 @@ class OtherConfigViewModel(
                 )
             }
             OtherConfigIntent.ConfirmDirectLinkRule -> {
-                if (saveDirectLinkRule()) {
-                    _uiState.update { it.copy(activeOverlay = null) }
-                } else {
-                    _effects.tryEmit(
-                        OtherConfigEffect.ShowMessage(R.string.complete_required_information)
-                    )
-                }
+                saveDirectLinkRule()
             }
             OtherConfigIntent.TestDirectLinkRule -> testRule()
             OtherConfigIntent.DismissDirectTestResult ->
                 _uiState.update { it.copy(directTestResult = null) }
             is OtherConfigIntent.ShowOverlay -> {
                 _uiState.update { it.copy(activeOverlay = intent.overlay) }
-                if (intent.overlay == OtherConfigOverlay.DirectLinkUpload) initDirectLinkRule()
+                if (intent.overlay == OtherConfigOverlay.DirectLinkUpload) {
+                    loadDirectLinkConfiguration()
+                }
             }
             OtherConfigIntent.DismissOverlay ->
                 _uiState.update { it.copy(activeOverlay = null) }
@@ -220,99 +211,83 @@ class OtherConfigViewModel(
                 _uiState.update { it.copy(activeOverlay = null) }
                 clearWebViewData()
             }
+            is OtherConfigIntent.SaveLocalPassword -> saveLocalPassword(intent.password)
+            is OtherConfigIntent.MessageShown -> {
+                _uiState.update { state ->
+                    state.copy(
+                        pendingMessages = state.pendingMessages
+                            .filterNot { it.id == intent.id }
+                            .toImmutableList()
+                    )
+                }
+            }
         }
     }
 
-    private fun updateOtherSetting(update: OtherSettingsUpdate) {
+    private fun updateOtherSetting(
+        update: OtherSettingsUpdate,
+        onSuccess: () -> Unit = {},
+    ) {
         viewModelScope.launch {
             runCatching { otherSettingsGateway.update(update) }
+                .onSuccess { onSuccess() }
                 .onFailure { error ->
-                    _effects.tryEmit(
-                        OtherConfigEffect.SettingsUpdateFailed(
-                            error.message ?: error.javaClass.simpleName
-                        )
-                    )
+                    showMessage(error.message ?: error.javaClass.simpleName)
                 }
         }
     }
 
-    fun setMediaButtonOnExit(value: Boolean) {
+    private fun updateReadAloudSetting(update: ReadAloudSettingsUpdate) {
         viewModelScope.launch {
-            readAloudSettingsGateway.update(ReadAloudSettingsUpdate.MediaButtonOnExit(value))
+            runCatching { readAloudSettingsGateway.update(update) }
+                .onFailure { showMessage(it.localizedMessage ?: "设置失败") }
         }
     }
 
-    fun setReadAloudByMediaButton(value: Boolean) {
+    private fun setProcessTextEnable(enable: Boolean) {
         viewModelScope.launch {
-            readAloudSettingsGateway.update(ReadAloudSettingsUpdate.ReadAloudByMediaButton(value))
-        }
-    }
-
-    fun setIgnoreAudioFocus(value: Boolean) {
-        viewModelScope.launch {
-            readAloudSettingsGateway.update(ReadAloudSettingsUpdate.IgnoreAudioFocus(value))
-        }
-    }
-
-    fun isProcessTextEnabled(): Boolean {
-        return packageManager.getComponentEnabledSetting(componentName) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-    }
-
-    fun setProcessTextEnable(enable: Boolean) {
-        val state = if (enable) {
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        } else {
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        }
-        viewModelScope.launch(Dispatchers.IO) {
+            val previous = systemGateway.isProcessTextEnabled()
             runCatching {
-                packageManager.setComponentEnabledSetting(
-                    componentName,
-                    state,
-                    PackageManager.DONT_KILL_APP
-                )
-                updateOtherSetting(OtherSettingsUpdate.ProcessText(enable))
+                systemGateway.setProcessTextEnabled(enable)
+                otherSettingsGateway.update(OtherSettingsUpdate.ProcessText(enable))
             }.onFailure {
-                _effects.tryEmit(
-                    OtherConfigEffect.SettingsUpdateFailed(it.localizedMessage ?: "设置失败")
-                )
+                if (previous != enable) {
+                    runCatching { systemGateway.setProcessTextEnabled(previous) }
+                }
+                showMessage(it.localizedMessage ?: "设置失败")
             }
         }
     }
 
-    fun clearWebViewData() {
-        if (clearWebViewDataJob?.isActive == true || restartScheduled) return
+    private fun clearWebViewData() {
+        if (clearWebViewDataJob?.isActive == true || restartRequested) return
 
         clearWebViewDataJob = viewModelScope.launch {
-            withContext(NonCancellable) {
-                runCatching {
-                    WebViewDataCleaner.clear(appCtx)
-                }.onSuccess {
-                    restartScheduled = true
-                    _effects.tryEmit(
-                        OtherConfigEffect.ShowMessage(R.string.clear_webview_data_success)
-                    )
-                    mainHandler.postDelayed(
-                        { appCtx.restart() },
-                        RESTART_DELAY_MILLIS
-                    )
+            runCatching { systemGateway.clearWebViewData() }
+                .onSuccess {
+                    restartRequested = true
+                    showMessage(R.string.clear_webview_data_success)
+                    _effects.tryEmit(OtherConfigEffect.RestartApp)
                 }.onFailure {
                     AppLog.put("清除 WebView 数据失败", it)
-                    _effects.tryEmit(
-                        OtherConfigEffect.ShowMessage(R.string.clear_webview_data_failed)
-                    )
+                    showMessage(R.string.clear_webview_data_failed)
                 }
-            }
         }
     }
 
-    fun setLocalPassword(password: String) {
-        LocalConfig.password = password
+    private fun saveLocalPassword(password: String) {
+        viewModelScope.launch {
+            runCatching { localPasswordGateway.setPassword(password) }
+                .onSuccess { _uiState.update { it.copy(activeOverlay = null) } }
+                .onFailure { showMessage(it.localizedMessage ?: "设置失败") }
+        }
     }
 
     fun saveUserAgent(input: String) {
         viewModelScope.launch {
-            downloadCacheSettingsGateway.update(DownloadCacheSettingsUpdate.UserAgent(input))
+            runCatching {
+                downloadCacheSettingsGateway.update(DownloadCacheSettingsUpdate.UserAgent(input))
+            }.onFailure { showMessage(it.localizedMessage ?: "设置失败") }
         }
     }
 
@@ -320,29 +295,33 @@ class OtherConfigViewModel(
         updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(path))
     }
 
-    fun saveCheckSourceConfig(): Boolean {
+    private fun saveCheckSourceConfig() {
         val state = _uiState.value
-        val timeoutLong = state.checkSourceTimeoutSeconds
-        if (timeoutLong <= 0) return false // 验证失败
-
-        CheckSource.timeout = timeoutLong * 1000
-        CheckSource.checkSearch = state.checkSearch
-        CheckSource.checkDiscovery = state.checkDiscovery
-        CheckSource.checkInfo = state.checkInfo
-        CheckSource.checkCategory = state.checkCategory
-        CheckSource.checkContent = state.checkContent
-
-        CheckSource.putConfig()
-        appCtx.putPrefString(PreferKey.checkSource, CheckSource.summary)
-        return true
+        if (state.checkSourceTimeoutSeconds <= 0L) {
+            showMessage(R.string.error)
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                checkSourceSettingsGateway.update(
+                    CheckSourceSettings(
+                        timeoutMillis = state.checkSourceTimeoutSeconds * 1_000L,
+                        checkSearch = state.checkSearch,
+                        checkDiscovery = state.checkDiscovery,
+                        checkInfo = state.checkInfo,
+                        checkCategory = state.checkCategory,
+                        checkContent = state.checkContent,
+                    )
+                )
+            }.onSuccess {
+                _uiState.update { it.copy(activeOverlay = null) }
+            }.onFailure {
+                showMessage(it.localizedMessage ?: "设置失败")
+            }
+        }
     }
 
-    fun initDirectLinkRule() {
-        val rule = DirectLinkUpload.getRule()
-        upView(rule)
-    }
-
-    fun upView(rule: DirectLinkUpload.Rule) {
+    private fun updateDirectLinkRule(rule: DirectLinkRule) {
         _uiState.update {
             it.copy(
                 directUploadUrl = rule.uploadUrl,
@@ -353,34 +332,56 @@ class OtherConfigViewModel(
         }
     }
 
-    fun saveDirectLinkRule(): Boolean {
+    private fun loadDirectLinkConfiguration() {
+        viewModelScope.launch {
+            runCatching {
+                directLinkSettingsGateway.loadRule() to
+                    directLinkSettingsGateway.loadDefaultRules()
+            }.onSuccess { (rule, presets) ->
+                updateDirectLinkRule(rule)
+                _uiState.update { state ->
+                    state.copy(
+                        directRulePresets = presets.map(DirectLinkRule::toUi).toImmutableList()
+                    )
+                }
+            }.onFailure {
+                showMessage(it.localizedMessage ?: "设置失败")
+            }
+        }
+    }
+
+    private fun saveDirectLinkRule() {
         val state = _uiState.value
         if (state.directUploadUrl.isBlank() ||
             state.directDownloadUrlRule.isBlank() ||
             state.directSummary.isBlank()
-        ) return false
-        val rule = DirectLinkUpload.Rule(
+        ) {
+            showMessage(R.string.complete_required_information)
+            return
+        }
+        val rule = DirectLinkRule(
             state.directUploadUrl,
             state.directDownloadUrlRule,
             state.directSummary,
             state.directCompress,
         )
-        DirectLinkUpload.putConfig(rule)
-        return true
+        viewModelScope.launch {
+            runCatching { directLinkSettingsGateway.saveRule(rule) }
+                .onSuccess { _uiState.update { it.copy(activeOverlay = null) } }
+                .onFailure { showMessage(it.localizedMessage ?: "设置失败") }
+        }
     }
 
-    fun testRule() {
+    private fun testRule() {
         val state = _uiState.value
-        viewModelScope.launch(Dispatchers.IO) {
-            val rule = DirectLinkUpload.Rule(
+        viewModelScope.launch {
+            val rule = DirectLinkRule(
                 state.directUploadUrl,
                 state.directDownloadUrlRule,
                 state.directSummary,
                 state.directCompress,
             )
-            runCatching {
-                DirectLinkUpload.upLoad("test.json", "{}", "application/json", rule)
-            }.onSuccess {
+            runCatching { directLinkSettingsGateway.testRule(rule) }.onSuccess {
                 _uiState.update { state -> state.copy(directTestResult = it) }
             }.onFailure {
                 _uiState.update { state ->
@@ -390,17 +391,43 @@ class OtherConfigViewModel(
         }
     }
 
+    private fun showMessage(@StringRes resId: Int) {
+        _uiState.update {
+            it.copy(
+                pendingMessages = (
+                    it.pendingMessages + OtherConfigMessage.resource(++nextMessageId, resId)
+                ).toImmutableList()
+            )
+        }
+    }
 
+    private fun showMessage(message: String) {
+        _uiState.update {
+            it.copy(
+                pendingMessages = (
+                    it.pendingMessages + OtherConfigMessage.text(++nextMessageId, message)
+                ).toImmutableList()
+            )
+        }
+    }
 }
 
-internal fun defaultOtherConfigUiState() = OtherConfigUiState(
-    checkSourceTimeoutSeconds = CheckSource.timeout / 1000,
-    checkSearch = CheckSource.checkSearch,
-    checkDiscovery = CheckSource.checkDiscovery,
-    checkInfo = CheckSource.checkInfo,
-    checkCategory = CheckSource.checkCategory,
-    checkContent = CheckSource.checkContent,
+private fun DirectLinkRule.toUi() = DirectLinkRuleUi(
+    uploadUrl = uploadUrl,
+    downloadUrlRule = downloadUrlRule,
+    summary = summary,
+    compress = compress,
 )
+
+private fun CheckSourceSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
+    current.copy(
+        checkSourceTimeoutSeconds = timeoutMillis / 1_000L,
+        checkSearch = checkSearch,
+        checkDiscovery = checkDiscovery,
+        checkInfo = checkInfo,
+        checkCategory = checkCategory,
+        checkContent = checkContent,
+    )
 
 private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
     current.copy(

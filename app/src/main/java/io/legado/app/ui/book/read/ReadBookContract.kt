@@ -1011,7 +1011,7 @@ sealed interface ConfigUpdateAction {
 }
 
 /**
- * Typed config mutations — replaces direct `ReadBookConfig.xxx = value` + `postEvent(UP_CONFIG, ...)`.
+ * Typed config mutations replace direct writes to the legacy ReadBookConfig facade.
  * Each variant carries [actions] that describe which UI updates are needed.
  */
 @Immutable

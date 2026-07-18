@@ -13,7 +13,6 @@ import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.utils.isNightMode
 import io.legado.app.utils.sysConfiguration
-import org.koin.core.context.GlobalContext
 
 /**
  * 已废弃的同步只读配置门面。
@@ -22,18 +21,55 @@ import org.koin.core.context.GlobalContext
  */
 @Deprecated("使用具体 SettingsGateway.currentSettings")
 object AppConfig {
-    private val koin get() = GlobalContext.get()
-    private val shell get() = koin.get<AppShellSettingsGateway>().currentSettings
-    private val theme get() = koin.get<ThemeSettingsGateway>().currentSettings
-    private val bookshelf get() = koin.get<BookshelfSettingsGateway>().currentSettings
-    private val other get() = koin.get<OtherSettingsGateway>().currentSettings
-    private val backup get() = koin.get<BackupSettingsGateway>().currentSettings
-    private val cache get() = koin.get<DownloadCacheSettingsGateway>().currentSettings
-    private val cover get() = koin.get<CoverSettingsGateway>().currentSettings
-    private val read get() = koin.get<ReadSettingsGateway>().currentSettings
-    private val aloud get() = koin.get<ReadAloudSettingsGateway>().currentSettings
-    private val importBook get() = koin.get<ImportBookSettingsGateway>().currentSettings
-    private val export get() = koin.get<BookExportSettingsGateway>().currentSettings
+    private lateinit var shellGateway: AppShellSettingsGateway
+    private lateinit var themeGateway: ThemeSettingsGateway
+    private lateinit var bookshelfGateway: BookshelfSettingsGateway
+    private lateinit var otherGateway: OtherSettingsGateway
+    private lateinit var backupGateway: BackupSettingsGateway
+    private lateinit var cacheGateway: DownloadCacheSettingsGateway
+    private lateinit var coverGateway: CoverSettingsGateway
+    private lateinit var readGateway: ReadSettingsGateway
+    private lateinit var aloudGateway: ReadAloudSettingsGateway
+    private lateinit var importBookGateway: ImportBookSettingsGateway
+    private lateinit var exportGateway: BookExportSettingsGateway
+
+    internal fun initialize(
+        shellGateway: AppShellSettingsGateway,
+        themeGateway: ThemeSettingsGateway,
+        bookshelfGateway: BookshelfSettingsGateway,
+        otherGateway: OtherSettingsGateway,
+        backupGateway: BackupSettingsGateway,
+        cacheGateway: DownloadCacheSettingsGateway,
+        coverGateway: CoverSettingsGateway,
+        readGateway: ReadSettingsGateway,
+        aloudGateway: ReadAloudSettingsGateway,
+        importBookGateway: ImportBookSettingsGateway,
+        exportGateway: BookExportSettingsGateway,
+    ) {
+        this.shellGateway = shellGateway
+        this.themeGateway = themeGateway
+        this.bookshelfGateway = bookshelfGateway
+        this.otherGateway = otherGateway
+        this.backupGateway = backupGateway
+        this.cacheGateway = cacheGateway
+        this.coverGateway = coverGateway
+        this.readGateway = readGateway
+        this.aloudGateway = aloudGateway
+        this.importBookGateway = importBookGateway
+        this.exportGateway = exportGateway
+    }
+
+    private val shell get() = shellGateway.currentSettings
+    private val theme get() = themeGateway.currentSettings
+    private val bookshelf get() = bookshelfGateway.currentSettings
+    private val other get() = otherGateway.currentSettings
+    private val backup get() = backupGateway.currentSettings
+    private val cache get() = cacheGateway.currentSettings
+    private val cover get() = coverGateway.currentSettings
+    private val read get() = readGateway.currentSettings
+    private val aloud get() = aloudGateway.currentSettings
+    private val importBook get() = importBookGateway.currentSettings
+    private val export get() = exportGateway.currentSettings
 
     val isCronet get() = cache.cronetEnabled
     val userAgent get() = cache.userAgent

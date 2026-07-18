@@ -31,6 +31,17 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             RegexOption.MULTILINE,
         )
         val preferenceCall = Regex("""\b(?:getPref|putPref)[A-Za-z0-9_]*\s*\(""")
+        val readBookConfigWrite = Regex(
+            """\bReadBookConfig\.[a-z_][A-Za-z0-9_]*(?:\.[a-z_][A-Za-z0-9_]*)?\s*="""
+        )
+        val readBookConfigMutationCall = Regex(
+            """\bReadBookConfig\.durConfig\.set[A-Za-z0-9_]*\s*\("""
+        )
+        val injectedConfigFiles = setOf(
+            "io/legado/app/help/config/AppConfig.kt",
+            "io/legado/app/help/config/ReadBookConfig.kt",
+            "io/legado/app/help/config/ThemePackageManager.kt",
+        )
 
         kotlinFiles.forEach { file ->
             val text = file.readText()
@@ -59,6 +70,16 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
                     "import androidx.compose.runtime.MutableState" in text)
             ) {
                 violations += "$displayPath: 配置门面禁止持有 Compose State"
+            }
+            if (relativePath !=
+                "io/legado/app/data/repository/ReadBookStyleConfigRepository.kt" &&
+                (readBookConfigWrite.containsMatchIn(text) ||
+                    readBookConfigMutationCall.containsMatchIn(text))
+            ) {
+                violations += "$displayPath: ReadBookConfig 写入必须经过 ReadStyleGateway"
+            }
+            if (relativePath in injectedConfigFiles && "GlobalContext" in text) {
+                violations += "$displayPath: 配置所有者必须显式注入依赖，禁止 GlobalContext"
             }
 
             val preferenceCalls = preferenceCall.findAll(text).count()

@@ -93,9 +93,9 @@ class PageView(
         callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
-        if (ReadBookConfig.lastNavigationBarHeight > 0) {
+        if (ReadSessionState.lastNavigationBarHeight > 0) {
             binding.vwNavigationBar.updateLayoutParams {
-                height = ReadBookConfig.lastNavigationBarHeight
+                height = ReadSessionState.lastNavigationBarHeight
             }
         }
         binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
@@ -106,7 +106,7 @@ class PageView(
             //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
             val navHeight = windowInsets.navigationBarHeight
             if (navHeight > 0) {
-                ReadBookConfig.lastNavigationBarHeight = navHeight
+                ReadSessionState.lastNavigationBarHeight = navHeight
             }
             v.updateLayoutParams {
                 height = navHeight

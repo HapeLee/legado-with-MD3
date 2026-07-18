@@ -104,6 +104,24 @@ class App : Application(), ImageLoaderFactory {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
         }
+        AppConfig.initialize(
+            shellGateway = get(),
+            themeGateway = get(),
+            bookshelfGateway = get(),
+            otherGateway = get(),
+            backupGateway = get(),
+            cacheGateway = get(),
+            coverGateway = get(),
+            readGateway = get(),
+            aloudGateway = get(),
+            importBookGateway = get(),
+            exportGateway = get(),
+        )
+        ReadBookConfig.initialize(
+            readStyleRepository = get(),
+            readSettingsGateway = get(),
+        )
+        ReadBookConfig.attachGateway(get())
         if (legacyLanguage != null) {
             get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
         }

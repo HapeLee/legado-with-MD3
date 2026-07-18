@@ -10,6 +10,8 @@ interface ReadStyleGateway {
 
     fun refresh()
     fun save()
+    fun updateCurrentStyle(mutation: ReadStyleMutation)
+    fun applyPreset(index: Int): Boolean
     fun addStyle(): Int
     fun deleteCurrentStyle(): Boolean
     fun importCurrentStyle(bytes: ByteArray)

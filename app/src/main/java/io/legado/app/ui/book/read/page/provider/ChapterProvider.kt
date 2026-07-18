@@ -928,8 +928,7 @@ object ChapterProvider {
                 }
             }
         }.getOrElse {
-            ReadBookConfig.textFont = ""
-            ReadBookConfig.save()
+            ReadBookConfig.clearMissingTextFont()
             Typeface.SANS_SERIF
         } ?: Typeface.DEFAULT
     }

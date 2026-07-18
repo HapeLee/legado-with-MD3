@@ -30,6 +30,7 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.ChangeSourceSettingsRepository
+import io.legado.app.data.repository.CheckSourceSettingsRepository
 import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.BookshelfSettingsRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
@@ -39,6 +40,7 @@ import io.legado.app.data.repository.DatabaseMaintenanceRepository
 import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.DictionaryRepositoryImpl
 import io.legado.app.data.repository.DirectLinkUploadRepository
+import io.legado.app.data.repository.DirectLinkSettingsRepository
 import io.legado.app.data.repository.DownloadCacheSettingsRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
@@ -50,6 +52,8 @@ import io.legado.app.data.repository.ImportBookSettingsRepository
 import io.legado.app.data.repository.LabSettingsRepository
 import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.LocalBookRepository
+import io.legado.app.data.repository.LocalPasswordRepository
+import io.legado.app.data.repository.OtherConfigSystemRepository
 import io.legado.app.data.repository.OtherSettingsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadAloudVoiceRepository
@@ -99,11 +103,13 @@ import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
+import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
 import io.legado.app.domain.gateway.DictionaryGateway
+import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomeDashboardGateway
@@ -113,6 +119,8 @@ import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
+import io.legado.app.domain.gateway.LocalPasswordGateway
+import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
@@ -292,6 +300,10 @@ val appModule = module {
         AppUiConfigurationRepository(get())
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
+    single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository(get()) }
+    single<DirectLinkSettingsGateway> { DirectLinkSettingsRepository() }
+    single<LocalPasswordGateway> { LocalPasswordRepository() }
+    single<OtherConfigSystemGateway> { OtherConfigSystemRepository(get()) }
     single<DownloadCacheSettingsGateway> { DownloadCacheSettingsRepository() }
     single<CoverSettingsGateway> { CoverSettingsRepository() }
     single<BackupSettingsGateway> { BackupSettingsRepository() }
@@ -439,7 +451,18 @@ val appModule = module {
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
     viewModel { TxtTocRulePreviewViewModel(app = get(), repository = get()) }
-    viewModel { OtherConfigViewModel(get(), get(), get(), get()) }
+    viewModel {
+        OtherConfigViewModel(
+            appLocaleGateway = get(),
+            readAloudSettingsGateway = get(),
+            otherSettingsGateway = get(),
+            downloadCacheSettingsGateway = get(),
+            checkSourceSettingsGateway = get(),
+            directLinkSettingsGateway = get(),
+            localPasswordGateway = get(),
+            systemGateway = get(),
+        )
+    }
     viewModelOf(::CustomThemeViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)

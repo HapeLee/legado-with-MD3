@@ -203,7 +203,7 @@ class DownloadCacheSettingsRepository : DownloadCacheSettingsGateway {
             is DownloadCacheSettingsUpdate.UserAgent -> PreferKey.userAgent to update.value
             is DownloadCacheSettingsUpdate.CronetEnabled -> PreferKey.cronet to update.value
         }
-        AppConfigStore.putAll(mapOf(key to value))
+        AppConfigStore.putAllAndAwait(mapOf(key to value))
     }
 }
 
@@ -538,6 +538,6 @@ class OtherSettingsRepository : OtherSettingsGateway {
             is OtherSettingsUpdate.ImportKeepGroup -> PreferKey.importKeepGroup to update.value
             is OtherSettingsUpdate.ImportKeepEnable -> PreferKey.importKeepEnable to update.value
         }
-        AppConfigStore.putAll(mapOf(key to value))
+        AppConfigStore.putAllAndAwait(mapOf(key to value))
     }
 }

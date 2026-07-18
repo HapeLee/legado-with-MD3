@@ -49,6 +49,12 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.domain.gateway.ReadStyleBooleanKey
+import io.legado.app.domain.gateway.ReadStyleColorKey
+import io.legado.app.domain.gateway.ReadStyleFloatKey
+import io.legado.app.domain.gateway.ReadStyleIntKey
+import io.legado.app.domain.gateway.ReadStyleMutation
+import io.legado.app.domain.gateway.ReadStyleStringKey
 import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
@@ -66,7 +72,6 @@ import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.DefaultData
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -1312,7 +1317,9 @@ class ReadBookViewModel(
             is ReadBookIntent.SelectFont -> selectFont(intent.path)
             is ReadBookIntent.SelectTitleFont -> selectTitleFont(intent.path)
             is ReadBookIntent.SelectTitleSystemTypeface -> {
-                ReadBookConfig.titleFont = ""
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    stringMutation(ReadStyleStringKey.TitleFont, "")
+                )
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
                     readSettingsRepository.setSystemTypefaces(intent.index)
                 }
@@ -1321,7 +1328,9 @@ class ReadBookViewModel(
                 ))
             }
             is ReadBookIntent.SelectSystemTypeface -> {
-                ReadBookConfig.textFont = ""
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    stringMutation(ReadStyleStringKey.TextFont, "")
+                )
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
                     readSettingsRepository.setSystemTypefaces(intent.index)
                 }
@@ -1394,12 +1403,9 @@ class ReadBookViewModel(
                 }
             }
             is ReadBookIntent.ApplyPresetTheme -> {
-                val presets = DefaultData.readConfigs
-                val preset = presets.getOrNull(intent.presetIndex) ?: return@onIntent
-                ReadBookConfig.durConfig =
-                    GSON.fromJsonObject<ReadBookConfig.Config>(GSON.toJson(preset)).getOrNull()
-                        ?: return@onIntent
-                readBookStyleConfigRepository.save()
+                if (!readBookStyleConfigRepository.applyPreset(intent.presetIndex)) {
+                    return@onIntent
+                }
                 _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 _effects.tryEmit(
                     ReadBookEffect.UpdateReadViewConfig(
@@ -4745,56 +4751,57 @@ class ReadBookViewModel(
 
     @Suppress("LongMethod")
     private fun handleConfigUpdate(update: ConfigUpdate) {
+        update.toReadStyleMutation()?.let(readBookStyleConfigRepository::updateCurrentStyle)
         when (update) {
             // --- Text style ---
-            is ConfigUpdate.TextSize -> ReadBookConfig.textSize = update.value
-            is ConfigUpdate.LetterSpacing -> ReadBookConfig.letterSpacing = update.value
-            is ConfigUpdate.LineSpacing -> ReadBookConfig.lineSpacingExtra = update.value
-            is ConfigUpdate.ParagraphSpacing -> ReadBookConfig.paragraphSpacing = update.value
-            is ConfigUpdate.ParagraphIndent -> ReadBookConfig.paragraphIndent = update.value
-            is ConfigUpdate.TextItalic -> ReadBookConfig.textItalic = update.value
-            is ConfigUpdate.TextBold -> ReadBookConfig.textBold = update.value
-            is ConfigUpdate.TextColor -> ReadBookConfig.durConfig.setCurTextColor(update.color)
-            is ConfigUpdate.TextAccentColor -> ReadBookConfig.durConfig.setCurTextAccentColor(update.color)
+            is ConfigUpdate.TextSize,
+            is ConfigUpdate.LetterSpacing,
+            is ConfigUpdate.LineSpacing,
+            is ConfigUpdate.ParagraphSpacing,
+            is ConfigUpdate.ParagraphIndent,
+            is ConfigUpdate.TextItalic,
+            is ConfigUpdate.TextBold,
+            is ConfigUpdate.TextColor,
+            is ConfigUpdate.TextAccentColor -> Unit
 
             // --- Title style ---
-            is ConfigUpdate.TitleMode -> ReadBookConfig.titleMode = update.value
-            is ConfigUpdate.TitleBold -> ReadBookConfig.titleBold = update.value
-            is ConfigUpdate.TitleSegScaling -> ReadBookConfig.titleSegScaling = update.value
-            is ConfigUpdate.TitleLineSpacingExtra -> ReadBookConfig.titleLineSpacingExtra = update.value
-            is ConfigUpdate.TitleLineSpacingSub -> ReadBookConfig.titleLineSpacingSub = update.value
-            is ConfigUpdate.TitleSize -> ReadBookConfig.titleSize = update.value
-            is ConfigUpdate.TitleTopSpacing -> ReadBookConfig.titleTopSpacing = update.value
-            is ConfigUpdate.TitleBottomSpacing -> ReadBookConfig.titleBottomSpacing = update.value
-            is ConfigUpdate.TitleColor -> ReadBookConfig.titleColor = update.color
-            is ConfigUpdate.TitleColorNight -> ReadBookConfig.titleColorNight = update.color
-            is ConfigUpdate.TitleFont -> ReadBookConfig.titleFont = update.path
-            is ConfigUpdate.TitleSegType -> ReadBookConfig.titleSegType = update.value
-            is ConfigUpdate.TitleSegDistance -> ReadBookConfig.titleSegDistance = update.value
-            is ConfigUpdate.TitleSegFlag -> ReadBookConfig.titleSegFlag = update.value
+            is ConfigUpdate.TitleMode,
+            is ConfigUpdate.TitleBold,
+            is ConfigUpdate.TitleSegScaling,
+            is ConfigUpdate.TitleLineSpacingExtra,
+            is ConfigUpdate.TitleLineSpacingSub,
+            is ConfigUpdate.TitleSize,
+            is ConfigUpdate.TitleTopSpacing,
+            is ConfigUpdate.TitleBottomSpacing,
+            is ConfigUpdate.TitleColor,
+            is ConfigUpdate.TitleColorNight,
+            is ConfigUpdate.TitleFont,
+            is ConfigUpdate.TitleSegType,
+            is ConfigUpdate.TitleSegDistance,
+            is ConfigUpdate.TitleSegFlag -> Unit
 
             // --- Header / footer tips ---
-            is ConfigUpdate.HeaderMode -> ReadBookConfig.headerMode = update.value
-            is ConfigUpdate.FooterMode -> ReadBookConfig.footerMode = update.value
-            is ConfigUpdate.TipHeaderLeft -> ReadBookConfig.tipHeaderLeft = update.value
-            is ConfigUpdate.TipHeaderMiddle -> ReadBookConfig.tipHeaderMiddle = update.value
-            is ConfigUpdate.TipHeaderRight -> ReadBookConfig.tipHeaderRight = update.value
-            is ConfigUpdate.TipFooterLeft -> ReadBookConfig.tipFooterLeft = update.value
-            is ConfigUpdate.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = update.value
-            is ConfigUpdate.TipFooterRight -> ReadBookConfig.tipFooterRight = update.value
-            is ConfigUpdate.CustomTipHeaderLeft -> ReadBookConfig.customTipHeaderLeft = update.value
-            is ConfigUpdate.CustomTipHeaderMiddle -> ReadBookConfig.customTipHeaderMiddle = update.value
-            is ConfigUpdate.CustomTipHeaderRight -> ReadBookConfig.customTipHeaderRight = update.value
-            is ConfigUpdate.CustomTipFooterLeft -> ReadBookConfig.customTipFooterLeft = update.value
-            is ConfigUpdate.CustomTipFooterMiddle -> ReadBookConfig.customTipFooterMiddle = update.value
-            is ConfigUpdate.CustomTipFooterRight -> ReadBookConfig.customTipFooterRight = update.value
-            is ConfigUpdate.HeaderFont -> ReadBookConfig.headerFont = update.path
-            is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
-            is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color
-            is ConfigUpdate.TipHeaderColorNight -> ReadBookConfig.tipHeaderColorNight = update.color
-            is ConfigUpdate.TipFooterColor -> ReadBookConfig.tipFooterColor = update.color
-            is ConfigUpdate.TipFooterColorNight -> ReadBookConfig.tipFooterColorNight = update.color
-            is ConfigUpdate.TipDividerColor -> ReadBookConfig.tipDividerColor = update.color
+            is ConfigUpdate.HeaderMode,
+            is ConfigUpdate.FooterMode,
+            is ConfigUpdate.TipHeaderLeft,
+            is ConfigUpdate.TipHeaderMiddle,
+            is ConfigUpdate.TipHeaderRight,
+            is ConfigUpdate.TipFooterLeft,
+            is ConfigUpdate.TipFooterMiddle,
+            is ConfigUpdate.TipFooterRight,
+            is ConfigUpdate.CustomTipHeaderLeft,
+            is ConfigUpdate.CustomTipHeaderMiddle,
+            is ConfigUpdate.CustomTipHeaderRight,
+            is ConfigUpdate.CustomTipFooterLeft,
+            is ConfigUpdate.CustomTipFooterMiddle,
+            is ConfigUpdate.CustomTipFooterRight,
+            is ConfigUpdate.HeaderFont,
+            is ConfigUpdate.HeaderFontSize,
+            is ConfigUpdate.TipHeaderColor,
+            is ConfigUpdate.TipHeaderColorNight,
+            is ConfigUpdate.TipFooterColor,
+            is ConfigUpdate.TipFooterColorNight,
+            is ConfigUpdate.TipDividerColor -> Unit
 
             // --- Layout / style ---
             is ConfigUpdate.StyleSelect -> {
@@ -4807,7 +4814,7 @@ class ReadBookViewModel(
                     readSettingsRepository.setShareLayout(update.value)
                 }
             }
-            is ConfigUpdate.PageAnim -> ReadBookConfig.pageAnim = update.value
+            is ConfigUpdate.PageAnim -> Unit
 
             // --- Menu appearance ---
             is ConfigUpdate.MenuBgColor -> {
@@ -4898,52 +4905,52 @@ class ReadBookViewModel(
             }
 
             // --- Shadow ---
-            is ConfigUpdate.TextShadow -> ReadBookConfig.textShadow = update.value
-            is ConfigUpdate.ShadowRadius -> ReadBookConfig.shadowRadius = update.value
-            is ConfigUpdate.ShadowDx -> ReadBookConfig.shadowDx = update.value
-            is ConfigUpdate.ShadowDy -> ReadBookConfig.shadowDy = update.value
-            is ConfigUpdate.ShadowColor -> ReadBookConfig.durConfig.setCurShadColor(update.color)
+            is ConfigUpdate.TextShadow,
+            is ConfigUpdate.ShadowRadius,
+            is ConfigUpdate.ShadowDx,
+            is ConfigUpdate.ShadowDy,
+            is ConfigUpdate.ShadowColor -> Unit
 
             // --- Underline ---
-            is ConfigUpdate.Underline -> ReadBookConfig.underline = update.value
-            is ConfigUpdate.DottedLine -> ReadBookConfig.dottedLine = update.value
-            is ConfigUpdate.UnderlineExtend -> ReadBookConfig.underlineExtend = update.value
-            is ConfigUpdate.UnderlineHeight -> ReadBookConfig.underlineHeight = update.value
-            is ConfigUpdate.UnderlinePadding -> ReadBookConfig.underlinePadding = update.value
-            is ConfigUpdate.DottedBase -> ReadBookConfig.durConfig.dottedBase = update.value
-            is ConfigUpdate.DottedRatio -> ReadBookConfig.durConfig.dottedRatio = update.value
-            is ConfigUpdate.UnderlineColor -> ReadBookConfig.durConfig.setUnderlineColor(update.color)
+            is ConfigUpdate.Underline,
+            is ConfigUpdate.DottedLine,
+            is ConfigUpdate.UnderlineExtend,
+            is ConfigUpdate.UnderlineHeight,
+            is ConfigUpdate.UnderlinePadding,
+            is ConfigUpdate.DottedBase,
+            is ConfigUpdate.DottedRatio,
+            is ConfigUpdate.UnderlineColor -> Unit
 
             // --- Body padding ---
-            is ConfigUpdate.PaddingTop -> ReadBookConfig.paddingTop = update.value
-            is ConfigUpdate.PaddingBottom -> ReadBookConfig.paddingBottom = update.value
-            is ConfigUpdate.PaddingLeft -> ReadBookConfig.paddingLeft = update.value
-            is ConfigUpdate.PaddingRight -> ReadBookConfig.paddingRight = update.value
+            is ConfigUpdate.PaddingTop,
+            is ConfigUpdate.PaddingBottom,
+            is ConfigUpdate.PaddingLeft,
+            is ConfigUpdate.PaddingRight -> Unit
 
             // --- Header padding ---
-            is ConfigUpdate.HeaderPaddingTop -> ReadBookConfig.headerPaddingTop = update.value
-            is ConfigUpdate.HeaderPaddingBottom -> ReadBookConfig.headerPaddingBottom = update.value
-            is ConfigUpdate.HeaderPaddingLeft -> ReadBookConfig.headerPaddingLeft = update.value
-            is ConfigUpdate.HeaderPaddingRight -> ReadBookConfig.headerPaddingRight = update.value
-            is ConfigUpdate.ShowHeaderLine -> ReadBookConfig.showHeaderLine = update.value
+            is ConfigUpdate.HeaderPaddingTop,
+            is ConfigUpdate.HeaderPaddingBottom,
+            is ConfigUpdate.HeaderPaddingLeft,
+            is ConfigUpdate.HeaderPaddingRight,
+            is ConfigUpdate.ShowHeaderLine -> Unit
 
             // --- Footer padding ---
-            is ConfigUpdate.FooterPaddingTop -> ReadBookConfig.footerPaddingTop = update.value
-            is ConfigUpdate.FooterPaddingBottom -> ReadBookConfig.footerPaddingBottom = update.value
-            is ConfigUpdate.FooterPaddingLeft -> ReadBookConfig.footerPaddingLeft = update.value
-            is ConfigUpdate.FooterPaddingRight -> ReadBookConfig.footerPaddingRight = update.value
-            is ConfigUpdate.ShowFooterLine -> ReadBookConfig.showFooterLine = update.value
+            is ConfigUpdate.FooterPaddingTop,
+            is ConfigUpdate.FooterPaddingBottom,
+            is ConfigUpdate.FooterPaddingLeft,
+            is ConfigUpdate.FooterPaddingRight,
+            is ConfigUpdate.ShowFooterLine -> Unit
 
             // --- Background / display ---
-            is ConfigUpdate.BgStr -> ReadBookConfig.durConfig.bgStr = update.value
-            is ConfigUpdate.BgStrNight -> ReadBookConfig.durConfig.bgStrNight = update.value
-            is ConfigUpdate.BgStrEInk -> ReadBookConfig.durConfig.bgStrEInk = update.value
-            is ConfigUpdate.BgType -> ReadBookConfig.durConfig.bgType = update.value
-            is ConfigUpdate.BgTypeNight -> ReadBookConfig.durConfig.bgTypeNight = update.value
-            is ConfigUpdate.BgTypeEInk -> ReadBookConfig.durConfig.bgTypeEInk = update.value
-            is ConfigUpdate.BgAlpha -> ReadBookConfig.bgAlpha = update.value
-            is ConfigUpdate.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(update.value)
-            is ConfigUpdate.StyleName -> ReadBookConfig.durConfig.name = update.value
+            is ConfigUpdate.BgStr,
+            is ConfigUpdate.BgStrNight,
+            is ConfigUpdate.BgStrEInk,
+            is ConfigUpdate.BgType,
+            is ConfigUpdate.BgTypeNight,
+            is ConfigUpdate.BgTypeEInk,
+            is ConfigUpdate.BgAlpha,
+            is ConfigUpdate.StatusIconDark,
+            is ConfigUpdate.StyleName -> Unit
             is ConfigUpdate.MenuIconShowText -> {
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuIconShowText(update.value)
@@ -5392,6 +5399,125 @@ class ReadBookViewModel(
         }
     }
 
+    private fun ConfigUpdate.toReadStyleMutation(): ReadStyleMutation? = when (this) {
+        is ConfigUpdate.TextSize -> intMutation(ReadStyleIntKey.TextSize, value)
+        is ConfigUpdate.LetterSpacing -> floatMutation(ReadStyleFloatKey.LetterSpacing, value)
+        is ConfigUpdate.LineSpacing -> intMutation(ReadStyleIntKey.LineSpacing, value)
+        is ConfigUpdate.ParagraphSpacing -> intMutation(ReadStyleIntKey.ParagraphSpacing, value)
+        is ConfigUpdate.ParagraphIndent -> stringMutation(ReadStyleStringKey.ParagraphIndent, value)
+        is ConfigUpdate.TextItalic -> booleanMutation(ReadStyleBooleanKey.TextItalic, value)
+        is ConfigUpdate.TextBold -> intMutation(ReadStyleIntKey.TextBold, value)
+        is ConfigUpdate.TextColor -> colorMutation(ReadStyleColorKey.Text, color)
+        is ConfigUpdate.TextAccentColor -> colorMutation(ReadStyleColorKey.TextAccent, color)
+        is ConfigUpdate.TitleMode -> intMutation(ReadStyleIntKey.TitleMode, value)
+        is ConfigUpdate.TitleBold -> intMutation(ReadStyleIntKey.TitleBold, value)
+        is ConfigUpdate.TitleSegScaling -> floatMutation(ReadStyleFloatKey.TitleSegScaling, value)
+        is ConfigUpdate.TitleLineSpacingExtra ->
+            intMutation(ReadStyleIntKey.TitleLineSpacingExtra, value)
+        is ConfigUpdate.TitleLineSpacingSub ->
+            intMutation(ReadStyleIntKey.TitleLineSpacingSub, value)
+        is ConfigUpdate.TitleSize -> intMutation(ReadStyleIntKey.TitleSize, value)
+        is ConfigUpdate.TitleTopSpacing -> intMutation(ReadStyleIntKey.TitleTopSpacing, value)
+        is ConfigUpdate.TitleBottomSpacing ->
+            intMutation(ReadStyleIntKey.TitleBottomSpacing, value)
+        is ConfigUpdate.TitleColor -> colorMutation(ReadStyleColorKey.Title, color)
+        is ConfigUpdate.TitleColorNight -> colorMutation(ReadStyleColorKey.TitleNight, color)
+        is ConfigUpdate.TitleFont -> stringMutation(ReadStyleStringKey.TitleFont, path)
+        is ConfigUpdate.TitleSegType -> intMutation(ReadStyleIntKey.TitleSegType, value)
+        is ConfigUpdate.TitleSegDistance -> intMutation(ReadStyleIntKey.TitleSegDistance, value)
+        is ConfigUpdate.TitleSegFlag -> stringMutation(ReadStyleStringKey.TitleSegFlag, value)
+        is ConfigUpdate.HeaderMode -> intMutation(ReadStyleIntKey.HeaderMode, value)
+        is ConfigUpdate.FooterMode -> intMutation(ReadStyleIntKey.FooterMode, value)
+        is ConfigUpdate.TipHeaderLeft -> intMutation(ReadStyleIntKey.TipHeaderLeft, value)
+        is ConfigUpdate.TipHeaderMiddle -> intMutation(ReadStyleIntKey.TipHeaderMiddle, value)
+        is ConfigUpdate.TipHeaderRight -> intMutation(ReadStyleIntKey.TipHeaderRight, value)
+        is ConfigUpdate.TipFooterLeft -> intMutation(ReadStyleIntKey.TipFooterLeft, value)
+        is ConfigUpdate.TipFooterMiddle -> intMutation(ReadStyleIntKey.TipFooterMiddle, value)
+        is ConfigUpdate.TipFooterRight -> intMutation(ReadStyleIntKey.TipFooterRight, value)
+        is ConfigUpdate.HeaderFont -> stringMutation(ReadStyleStringKey.HeaderFont, path)
+        is ConfigUpdate.CustomTipHeaderLeft ->
+            stringMutation(ReadStyleStringKey.CustomTipHeaderLeft, value)
+        is ConfigUpdate.CustomTipHeaderMiddle ->
+            stringMutation(ReadStyleStringKey.CustomTipHeaderMiddle, value)
+        is ConfigUpdate.CustomTipHeaderRight ->
+            stringMutation(ReadStyleStringKey.CustomTipHeaderRight, value)
+        is ConfigUpdate.CustomTipFooterLeft ->
+            stringMutation(ReadStyleStringKey.CustomTipFooterLeft, value)
+        is ConfigUpdate.CustomTipFooterMiddle ->
+            stringMutation(ReadStyleStringKey.CustomTipFooterMiddle, value)
+        is ConfigUpdate.CustomTipFooterRight ->
+            stringMutation(ReadStyleStringKey.CustomTipFooterRight, value)
+        is ConfigUpdate.HeaderFontSize -> intMutation(ReadStyleIntKey.HeaderFontSize, value)
+        is ConfigUpdate.TipHeaderColor -> colorMutation(ReadStyleColorKey.TipHeader, color)
+        is ConfigUpdate.TipHeaderColorNight ->
+            colorMutation(ReadStyleColorKey.TipHeaderNight, color)
+        is ConfigUpdate.TipFooterColor -> colorMutation(ReadStyleColorKey.TipFooter, color)
+        is ConfigUpdate.TipFooterColorNight ->
+            colorMutation(ReadStyleColorKey.TipFooterNight, color)
+        is ConfigUpdate.TipDividerColor -> colorMutation(ReadStyleColorKey.TipDivider, color)
+        is ConfigUpdate.PageAnim -> intMutation(ReadStyleIntKey.PageAnim, value)
+        is ConfigUpdate.TextShadow -> booleanMutation(ReadStyleBooleanKey.TextShadow, value)
+        is ConfigUpdate.ShadowRadius -> floatMutation(ReadStyleFloatKey.ShadowRadius, value)
+        is ConfigUpdate.ShadowDx -> floatMutation(ReadStyleFloatKey.ShadowDx, value)
+        is ConfigUpdate.ShadowDy -> floatMutation(ReadStyleFloatKey.ShadowDy, value)
+        is ConfigUpdate.ShadowColor -> colorMutation(ReadStyleColorKey.Shadow, color)
+        is ConfigUpdate.Underline -> booleanMutation(ReadStyleBooleanKey.Underline, value)
+        is ConfigUpdate.DottedLine -> booleanMutation(ReadStyleBooleanKey.DottedLine, value)
+        is ConfigUpdate.UnderlineExtend ->
+            booleanMutation(ReadStyleBooleanKey.UnderlineExtend, value)
+        is ConfigUpdate.UnderlineHeight -> intMutation(ReadStyleIntKey.UnderlineHeight, value)
+        is ConfigUpdate.UnderlinePadding -> intMutation(ReadStyleIntKey.UnderlinePadding, value)
+        is ConfigUpdate.DottedBase -> floatMutation(ReadStyleFloatKey.DottedBase, value)
+        is ConfigUpdate.DottedRatio -> floatMutation(ReadStyleFloatKey.DottedRatio, value)
+        is ConfigUpdate.UnderlineColor -> colorMutation(ReadStyleColorKey.Underline, color)
+        is ConfigUpdate.PaddingTop -> intMutation(ReadStyleIntKey.PaddingTop, value)
+        is ConfigUpdate.PaddingBottom -> intMutation(ReadStyleIntKey.PaddingBottom, value)
+        is ConfigUpdate.PaddingLeft -> intMutation(ReadStyleIntKey.PaddingLeft, value)
+        is ConfigUpdate.PaddingRight -> intMutation(ReadStyleIntKey.PaddingRight, value)
+        is ConfigUpdate.HeaderPaddingTop -> intMutation(ReadStyleIntKey.HeaderPaddingTop, value)
+        is ConfigUpdate.HeaderPaddingBottom ->
+            intMutation(ReadStyleIntKey.HeaderPaddingBottom, value)
+        is ConfigUpdate.HeaderPaddingLeft -> intMutation(ReadStyleIntKey.HeaderPaddingLeft, value)
+        is ConfigUpdate.HeaderPaddingRight ->
+            intMutation(ReadStyleIntKey.HeaderPaddingRight, value)
+        is ConfigUpdate.ShowHeaderLine ->
+            booleanMutation(ReadStyleBooleanKey.ShowHeaderLine, value)
+        is ConfigUpdate.FooterPaddingTop -> intMutation(ReadStyleIntKey.FooterPaddingTop, value)
+        is ConfigUpdate.FooterPaddingBottom ->
+            intMutation(ReadStyleIntKey.FooterPaddingBottom, value)
+        is ConfigUpdate.FooterPaddingLeft -> intMutation(ReadStyleIntKey.FooterPaddingLeft, value)
+        is ConfigUpdate.FooterPaddingRight ->
+            intMutation(ReadStyleIntKey.FooterPaddingRight, value)
+        is ConfigUpdate.ShowFooterLine ->
+            booleanMutation(ReadStyleBooleanKey.ShowFooterLine, value)
+        is ConfigUpdate.BgStr -> stringMutation(ReadStyleStringKey.BgStr, value)
+        is ConfigUpdate.BgStrNight -> stringMutation(ReadStyleStringKey.BgStrNight, value)
+        is ConfigUpdate.BgStrEInk -> stringMutation(ReadStyleStringKey.BgStrEInk, value)
+        is ConfigUpdate.BgType -> intMutation(ReadStyleIntKey.BgType, value)
+        is ConfigUpdate.BgTypeNight -> intMutation(ReadStyleIntKey.BgTypeNight, value)
+        is ConfigUpdate.BgTypeEInk -> intMutation(ReadStyleIntKey.BgTypeEInk, value)
+        is ConfigUpdate.BgAlpha -> intMutation(ReadStyleIntKey.BgAlpha, value)
+        is ConfigUpdate.StatusIconDark ->
+            booleanMutation(ReadStyleBooleanKey.StatusIconDark, value)
+        is ConfigUpdate.StyleName -> stringMutation(ReadStyleStringKey.StyleName, value)
+        else -> null
+    }
+
+    private fun intMutation(key: ReadStyleIntKey, value: Int) =
+        ReadStyleMutation.IntValue(key, value)
+
+    private fun floatMutation(key: ReadStyleFloatKey, value: Float) =
+        ReadStyleMutation.FloatValue(key, value)
+
+    private fun booleanMutation(key: ReadStyleBooleanKey, value: Boolean) =
+        ReadStyleMutation.BooleanValue(key, value)
+
+    private fun stringMutation(key: ReadStyleStringKey, value: String) =
+        ReadStyleMutation.StringValue(key, value)
+
+    private fun colorMutation(key: ReadStyleColorKey, value: Int) =
+        ReadStyleMutation.ColorValue(key, value)
+
     private fun moveHighlightRule(from: Int, to: Int) {
         val rules = _uiState.value.highlightRuleConfig.rules
         if (from !in rules.indices || to !in rules.indices) return
@@ -5703,14 +5829,18 @@ class ReadBookViewModel(
     }
 
     private fun selectFont(path: String) {
-        ReadBookConfig.textFont = path
+        readBookStyleConfigRepository.updateCurrentStyle(
+            stringMutation(ReadStyleStringKey.TextFont, path)
+        )
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateStyle)
         ))
     }
 
     private fun selectTitleFont(path: String) {
-        ReadBookConfig.titleFont = path
+        readBookStyleConfigRepository.updateCurrentStyle(
+            stringMutation(ReadStyleStringKey.TitleFont, path)
+        )
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateStyle)
         ))
@@ -5849,96 +5979,112 @@ class ReadBookViewModel(
     }
 
     private fun colorSelected(dialogId: Int, color: Int) {
-        ReadBookConfig.durConfig.apply {
-            when (dialogId) {
-                ReadBookColorPickerIds.SHADOW_COLOR -> {
-                    setCurShadColor(color)
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
-                    ))
-                }
+        when (dialogId) {
+            ReadBookColorPickerIds.SHADOW_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.Shadow, color)
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                ))
+            }
 
-                ReadBookColorPickerIds.TEXT_COLOR -> {
-                    setCurTextColor(color)
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
-                    ))
-                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
-                        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                    }
-                }
-
-                ReadBookColorPickerIds.TEXT_ACCENT_COLOR -> {
-                    setCurTextAccentColor(color)
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
-                    ))
-                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
-                        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                    }
-                }
-
-                ReadBookColorPickerIds.BG_COLOR -> {
-                    setCurBg(0, "#${color.hexString}")
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateBackground)
-                    ))
-                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
-                        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                    }
-                }
-
-                ReadBookColorPickerIds.TIP_HEADER_COLOR -> {
-                    ReadBookConfig.tipHeaderColor = color
-                    postEvent(EventBus.TIP_COLOR, "")
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle)
-                    ))
-                }
-
-                ReadBookColorPickerIds.TIP_FOOTER_COLOR -> {
-                    ReadBookConfig.tipFooterColor = color
-                    postEvent(EventBus.TIP_COLOR, "")
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle)
-                    ))
-                }
-
-                ReadBookColorPickerIds.TIP_DIVIDER_COLOR -> {
-                    ReadBookConfig.tipDividerColor = color
-                    postEvent(EventBus.TIP_COLOR, "")
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle)
-                    ))
-                }
-
-                ReadBookColorPickerIds.TITLE_COLOR -> {
-                    ReadBookConfig.titleColor = color
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
-                    ))
-                }
-
-                ReadBookColorPickerIds.MENU_BG_COLOR -> {
-                    viewModelScope.launch {
-                        readSettingsRepository.setReadMenuBgColor(color)
-                    }
+            ReadBookColorPickerIds.TEXT_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.Text, color)
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                ))
+                if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
+            }
 
-                ReadBookColorPickerIds.MENU_ACCENT_COLOR -> {
-                    viewModelScope.launch {
-                        readSettingsRepository.setReadMenuAccentColor(color)
-                    }
+            ReadBookColorPickerIds.TEXT_ACCENT_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.TextAccent, color)
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                ))
+                if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
+            }
 
-                ReadBookColorPickerIds.UNDERLINE_COLOR -> {
-                    setUnderlineColor(color)
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
-                    ))
+            ReadBookColorPickerIds.BG_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    ReadStyleMutation.Background(0, "#${color.hexString}")
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateBackground)
+                ))
+                if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
+                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
+            }
+
+            ReadBookColorPickerIds.TIP_HEADER_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.TipHeader, color)
+                )
+                postEvent(EventBus.TIP_COLOR, "")
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle)
+                ))
+            }
+
+            ReadBookColorPickerIds.TIP_FOOTER_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.TipFooter, color)
+                )
+                postEvent(EventBus.TIP_COLOR, "")
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle)
+                ))
+            }
+
+            ReadBookColorPickerIds.TIP_DIVIDER_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.TipDivider, color)
+                )
+                postEvent(EventBus.TIP_COLOR, "")
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle)
+                ))
+            }
+
+            ReadBookColorPickerIds.TITLE_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.Title, color)
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+                ))
+            }
+
+            ReadBookColorPickerIds.MENU_BG_COLOR -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBgColor(color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            ReadBookColorPickerIds.MENU_ACCENT_COLOR -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuAccentColor(color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            ReadBookColorPickerIds.UNDERLINE_COLOR -> {
+                readBookStyleConfigRepository.updateCurrentStyle(
+                    colorMutation(ReadStyleColorKey.Underline, color)
+                )
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                ))
             }
         }
     }

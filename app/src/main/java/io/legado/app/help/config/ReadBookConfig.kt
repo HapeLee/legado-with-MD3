@@ -10,6 +10,9 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.domain.gateway.ReadStyleMutation
+import io.legado.app.domain.gateway.ReadStyleStringKey
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ReadSessionState
@@ -17,7 +20,6 @@ import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
-import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.InputStream
 
@@ -27,13 +29,24 @@ import java.io.InputStream
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
-    var lastNavigationBarHeight: Int = 0
-
-    private val readStyleRepository: ReadStyleRepository
-        get() = GlobalContext.get().get()
-    private val readSettingsGateway: ReadSettingsGateway
-        get() = GlobalContext.get().get()
+    private lateinit var readStyleRepository: ReadStyleRepository
+    private lateinit var readStyleGateway: ReadStyleGateway
+    private lateinit var readSettingsGateway: ReadSettingsGateway
     private val readSettings get() = readSettingsGateway.currentSettings
+
+    internal fun initialize(
+        readStyleRepository: ReadStyleRepository,
+        readSettingsGateway: ReadSettingsGateway,
+    ) {
+        this.readStyleRepository = readStyleRepository
+        this.readSettingsGateway = readSettingsGateway
+        initConfigs()
+        initShareConfig()
+    }
+
+    internal fun attachGateway(readStyleGateway: ReadStyleGateway) {
+        this.readStyleGateway = readStyleGateway
+    }
 
     // region Tip position constants
     const val tipNone = 0
@@ -106,11 +119,6 @@ object ReadBookConfig {
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
     val menuColor: Int get() = readMenuAccentColor
-    init {
-        initConfigs()
-        initShareConfig()
-    }
-
     @Synchronized
     fun getConfig(index: Int): Config {
         if (configList.size < 5) {
@@ -136,6 +144,13 @@ object ReadBookConfig {
                 readStyleRepository.save(configList, shareConfig)
             }
         }
+    }
+
+    fun clearMissingTextFont() {
+        readStyleGateway.updateCurrentStyle(
+            ReadStyleMutation.StringValue(ReadStyleStringKey.TextFont, "")
+        )
+        readStyleGateway.save()
     }
 
     fun getAllPicBgStr(): ArrayList<String> {
