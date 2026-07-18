@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.13-beta.50",
-  "name": "Pre-release 3.26.13-beta.50",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* fix: 在首页时点击首页展开切换书源集菜单\n* fix: 漫画重叠问题\n* fix: 编辑书籍偶发崩溃\n* fix: 首页模块相同名称时冲突问题\n* fix(theme): 输入法未指定颜色时回退到引擎默认色\n* fix(theme): 移除 MiuixThemeWrapper 内全局嵌套的 MaterialTheme\n* fix: 阅读搜素和菜单部分问题，长按替换净化按钮打开列表\n* fix: 阅读搜素和菜单部分问题\n* fix: 阅读菜单取色",
+  "tag_name": "3.26.16-beta.1",
+  "name": "Pre-release 3.26.16-beta.1",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* waoo\n* refactor: 优化朗读引擎与知识入口\n* fix: preserve locale mirror before platform sync\n* fix: preserve independent custom header footer tips\n* feat: 增加多角色 TTS 与听书播放器\n* 消除警告\n* 改用本地化名称排序\n* 使用更合适的图标\n* 添加对字体选择的排序支持\n* fix:阅读界面切换深浅后状态栏显示的问题\n* 重构应用配置为 UDF 状态流\n* refactor: 优化 screenState 的初始化方式，使用 lazy 以提高性能\n* fix: 避免配置切换重建并收口 UDF 状态\n* refactor: 完成剩余 Compose 路由的 UDF 收口\n* refactor: 移除阅读 Sheet 与主题页面的配置门面依赖\n* refactor: 收口书籍详情与阅读功能的配置依赖\n* refactor: 拆分主壳、书架与 RSS 的路由注入边界\n* refactor: 以功能 Gateway 收口书架设置与交互\n* refactor: 统一主要 Compose 功能路由的 UDF 架构\n* refactor: 完成剩余配置模块的 UDF 改造\n* feat: Add settings management for ReadAloud, Read, and Theme configurations\n* feat(read): add custom header/footer template feature\n* feat: 扩展 AppSettings 数据类，增加更多应用设置选项并更新相关逻辑\n* refactor: 移除 ReadConfigIntent 处理中的重复设置调用，优化状态管理\n* feat: 引入 AppSettings 数据类，整合应用设置，优化主题和朗读速度管理\n* refactor: 删除设置门面 SP 回退读写与重复门面，DsSync 更名 SettingsWriter\n* feat: Restore 配置恢复删除 SP 写入分支，提取 normalizeConfigMap 纯函数\n* fix: 移除预测性返回与主题包应用的多余全局重建\n* fix: 修复快照回滚竞态与读路径 asMap 放大，Restore 改走 overlay 批量写入\n* feat: 增强数据存储兼容性，优化类型转换和错误处理\n* feat: 优化应用程序的本地化支持，添加语言设置和异常处理\n* revert: revert language settings changes\n* feat: 在 AndroidManifest 中移除 autoStoreLocales 属性并添加 meta-data\n* feat: 在主题配置中添加预测返回启用时的事件发布，优化重启提示\n* feat: 更新语言设置，优化应用程序的本地化支持\n* feat: SP 写路径退役，DataStore 成为唯一持久化真源\n* feat: AppConfig runBlocking DS 直读替换为 getPref* 门面读快照\n* feat: SP 监听器替换为 AppConfigStore observe Flow\n* feat: 建立 AppConfigStore 快照层，读门面切换到 DataStore\n* fix: 采纳 PR 审阅意见\n* fix: 切换语言改为原地重建 Activity，无需杀进程重启\n* fix: 更新主题配置以支持自定义对比度设置\n* fix: 优化外观设置滑条与背景图片交互\n* feat: 优化\n* feat: 增加书籍人物知识库与关系网\n* feat: 优化AI覆写功能\n* feat: 优化界面",
   "prerelease": true,
-  "created_at": "2026-07-14T17:02:19Z",
+  "created_at": "2026-07-18T18:19:12Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.50/legado-3.26.13-beta.50-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.1/legado-3.26.16-beta.1-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-14T17:23:19Z",
+      "created_at": "2026-07-18T18:34:34Z",
       "download_count": 0,
-      "id": 476958821,
-      "name": "legado-3.26.13-beta.50-arm64-v8a.apk",
+      "id": 481703193,
+      "name": "legado-3.26.16-beta.1-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476958821"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/481703193"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.50/legado-3.26.13-beta.50-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.1/legado-3.26.16-beta.1-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-14T17:23:19Z",
+      "created_at": "2026-07-18T18:34:34Z",
       "download_count": 0,
-      "id": 476958820,
-      "name": "legado-3.26.13-beta.50-armeabi-v7a.apk",
+      "id": 481703188,
+      "name": "legado-3.26.16-beta.1-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476958820"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/481703188"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.50/legado-3.26.13-beta.50.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.1/legado-3.26.16-beta.1.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-14T17:23:19Z",
+      "created_at": "2026-07-18T18:34:34Z",
       "download_count": 0,
-      "id": 476958819,
-      "name": "legado-3.26.13-beta.50.apk",
+      "id": 481703190,
+      "name": "legado-3.26.16-beta.1.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476958819"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/481703190"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.13-beta.50/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.1/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-07-14T17:23:19Z",
+      "created_at": "2026-07-18T18:34:34Z",
       "download_count": 0,
-      "id": 476958818,
+      "id": 481703192,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/476958818"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/481703192"
     }
   ]
 }
