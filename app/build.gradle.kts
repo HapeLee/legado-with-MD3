@@ -27,6 +27,9 @@ val versionMinor = versionProps["VERSION_MINOR"]?.toString()?.toInt() ?: 0
 val versionPatch = versionProps["VERSION_PATCH"]?.toString()?.toInt() ?: 0
 val appName = "legado"
 val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
+val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
+    .map(String::toBoolean)
+    .getOrElse(true)
 
 android {
     compileSdk = 37
@@ -118,7 +121,7 @@ android {
 
     splits {
         abi {
-            isEnable = true
+            isEnable = enableAbiSplits
             reset()
             include("armeabi-v7a", "arm64-v8a")
             isUniversalApk = true
