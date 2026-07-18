@@ -4,8 +4,6 @@ data class AppUiConfiguration(
     val language: String = "auto",
     val appShell: AppShellSettings = AppShellSettings(),
     val theme: ThemeSettings = ThemeSettings(),
-    val other: OtherSettings = OtherSettings(),
-    val backup: BackupSettings = BackupSettings(),
     val cover: CoverSettings = CoverSettings(),
 )
 

@@ -24,7 +24,6 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -64,6 +63,7 @@ fun MarkdownSheet(
 fun UpdateSheet(
     show: Boolean,
     updateInfo: AppUpdate.UpdateInfo,
+    updateToVariant: String,
     mode: UpdateMode,
     onDismissRequest: () -> Unit,
     onStartDownload: () -> Unit,
@@ -139,7 +139,7 @@ fun UpdateSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     AppText(
-                        text = LocalAppUiConfiguration.current.other.updateToVariant,
+                        text = updateToVariant,
                         style = LegadoTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline,
                     )

@@ -1,13 +1,10 @@
 package io.legado.app.data.repository
 
+import androidx.datastore.preferences.core.Preferences
 import io.legado.app.domain.gateway.AppLocaleGateway
-import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
-import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.CoverSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.help.config.AppConfigStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,51 +13,35 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-class AppUiConfigurationRepository(
+class AppUiConfigurationRepository internal constructor(
     private val appLocaleGateway: AppLocaleGateway,
-    private val appShellSettingsGateway: AppShellSettingsGateway,
-    private val themeSettingsGateway: ThemeSettingsGateway,
-    private val otherSettingsGateway: OtherSettingsGateway,
-    private val backupSettingsGateway: BackupSettingsGateway,
-    private val coverSettingsGateway: CoverSettingsGateway,
+    preferencesFlow: StateFlow<Preferences> = AppConfigStore.preferencesFlow,
+    processScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : AppUiConfigurationGateway {
 
-    private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val initialConfiguration = AppUiConfiguration(
+    private val initialConfiguration = preferencesFlow.value.toAppUiConfiguration(
         language = appLocaleGateway.currentLanguage,
-        appShell = appShellSettingsGateway.currentSettings,
-        theme = themeSettingsGateway.currentSettings,
-        other = otherSettingsGateway.currentSettings,
-        backup = backupSettingsGateway.currentSettings,
-        cover = coverSettingsGateway.currentSettings,
     )
 
     override val currentConfiguration: AppUiConfiguration
         get() = configuration.value
 
-    private val configurationWithoutCover = combine(
+    override val configuration: StateFlow<AppUiConfiguration> = combine(
         appLocaleGateway.language,
-        appShellSettingsGateway.settings,
-        themeSettingsGateway.settings,
-        otherSettingsGateway.settings,
-        backupSettingsGateway.settings,
-    ) { language, appShell, theme, other, backup ->
-        AppUiConfiguration(
-            language = language,
-            appShell = appShell,
-            theme = theme,
-            other = other,
-            backup = backup,
-            cover = coverSettingsGateway.currentSettings,
-        )
-    }
-
-    override val configuration: StateFlow<AppUiConfiguration> = configurationWithoutCover
-        .combine(coverSettingsGateway.settings) { configuration, cover ->
-            configuration.copy(cover = cover)
-        }.stateIn(
+        preferencesFlow,
+    ) { language, preferences ->
+        preferences.toAppUiConfiguration(language)
+    }.stateIn(
         scope = processScope,
         started = SharingStarted.Eagerly,
         initialValue = initialConfiguration,
     )
 }
+
+internal fun Preferences.toAppUiConfiguration(language: String): AppUiConfiguration =
+    AppUiConfiguration(
+        language = language,
+        appShell = toAppShellSettings(),
+        theme = toThemeSettings(),
+        cover = toCoverSettings(),
+    )

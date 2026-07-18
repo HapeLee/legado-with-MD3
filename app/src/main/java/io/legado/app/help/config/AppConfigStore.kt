@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import io.legado.app.data.repository.dataStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -101,6 +102,10 @@ object AppConfigStore {
     /** 批量写入（Restore 恢复备份等）：整批立即对读侧生效，单次 edit 落盘 */
     fun putAll(values: Map<String, Any?>) = requireCore().putAll(values)
 
+    /** 批量写入并等待 DataStore edit 完成；失败会回滚 overlay 并向调用方抛出。 */
+    suspend fun putAllAndAwait(values: Map<String, Any?>) =
+        requireCore().putAllAndAwait(values)
+
     // 订阅：替代 SP 监听器的统一入口，值不存在时发 null
     fun observeString(key: String): Flow<String?> = observe { it.compatDsString(key) }
     fun observeInt(key: String): Flow<Int?> = observe { it.compatDsInt(key) }
@@ -163,26 +168,44 @@ internal class PendingOverlayCore(
         }
     }
 
-    fun putAll(values: Map<String, Any?>) {
+    fun putAll(values: Map<String, Any?>) = enqueueAll(values, completion = null)
+
+    suspend fun putAllAndAwait(values: Map<String, Any?>) {
         if (values.isEmpty()) return
+        val completion = CompletableDeferred<Result<Unit>>()
+        enqueueAll(values, completion)
+        completion.await().getOrThrow()
+    }
+
+    private fun enqueueAll(
+        values: Map<String, Any?>,
+        completion: CompletableDeferred<Result<Unit>>?,
+    ) {
+        if (values.isEmpty()) {
+            completion?.complete(Result.success(Unit))
+            return
+        }
         synchronized(lock) {
             val writes = values.mapValues { PendingWrite(it.value) }
             pending.putAll(writes)
             rebuild()
             launchWrite {
-                runCatching { persistAll(values) }.onFailure { e ->
-                    synchronized(lock) {
-                        var removed = false
-                        writes.forEach { (key, write) ->
-                            if (pending[key] === write) {
-                                pending.remove(key)
-                                removed = true
+                runCatching { persistAll(values) }
+                    .onSuccess { completion?.complete(Result.success(Unit)) }
+                    .onFailure { e ->
+                        synchronized(lock) {
+                            var removed = false
+                            writes.forEach { (key, write) ->
+                                if (pending[key] === write) {
+                                    pending.remove(key)
+                                    removed = true
+                                }
                             }
+                            if (removed) rebuild()
+                            LogUtils.e("AppConfigStore", "批量保存设置失败: keys=${values.keys}\n${e.stackTraceStr}")
                         }
-                        if (removed) rebuild()
-                        LogUtils.e("AppConfigStore", "批量保存设置失败: keys=${values.keys}\n${e.stackTraceStr}")
+                        completion?.complete(Result.failure(e))
                     }
-                }
             }
         }
     }

@@ -109,8 +109,8 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         coverInfoOrientation = string(PreferKey.coverInfoOrientation, "0"),
     )
 
-    override fun apply(data: ThemeExportData) {
-        AppConfigStore.putAll(data.toPreferenceValues())
+    override suspend fun applyAndAwait(data: ThemeExportData) {
+        AppConfigStore.putAllAndAwait(data.toPreferenceValues())
     }
 
     private fun string(key: String, default: String) = AppConfigStore.getString(key) ?: default

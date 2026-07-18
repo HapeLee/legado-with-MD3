@@ -289,7 +289,7 @@ val appModule = module {
     single<ThemeSettingsGateway> { ThemeSettingsRepository() }
     single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
     single<AppUiConfigurationGateway> {
-        AppUiConfigurationRepository(get(), get(), get(), get(), get(), get())
+        AppUiConfigurationRepository(get())
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
     single<DownloadCacheSettingsGateway> { DownloadCacheSettingsRepository() }

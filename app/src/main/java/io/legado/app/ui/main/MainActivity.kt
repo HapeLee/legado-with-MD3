@@ -22,10 +22,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -60,6 +62,8 @@ import io.legado.app.utils.startActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -250,6 +254,14 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         val smallestWidthDp = resources.configuration.smallestScreenWidthDp
         val configuration = LocalAppUiConfiguration.current
         val tabletInterface = configuration.appShell.tabletInterface
+        val defaultToReadFlow = remember(otherSettingsGateway) {
+            otherSettingsGateway.settings
+                .map { it.defaultToRead }
+                .distinctUntilChanged()
+        }
+        val defaultToRead by defaultToReadFlow.collectAsStateWithLifecycle(
+            otherSettingsGateway.currentSettings.defaultToRead,
+        )
 
         val useRail = when (tabletInterface) {
             "always" -> true
@@ -259,7 +271,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             else -> false
         }
 
-        val startRoutes = remember(configuration.other.defaultToRead) {
+        val startRoutes = remember(defaultToRead) {
             val resolved = MainNavigator.resolveStartRoute(intent)
             val hasExplicitStartRoute = intent?.hasExplicitStartRoute() == true
             when {
@@ -267,7 +279,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     arrayOf(MainRouteHome, restoredReadBookRoute!!)
                 }
                 shouldApplyDefaultToRead &&
-                        configuration.other.defaultToRead &&
+                        defaultToRead &&
                         resolved == MainRouteHome -> {
                     arrayOf(MainRouteHome, MainRouteReadBook())
                 }

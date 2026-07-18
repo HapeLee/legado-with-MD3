@@ -10,6 +10,7 @@ import io.legado.app.utils.GSON
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 
 /**
  * 轻量级主题导入导出系统
@@ -101,6 +102,8 @@ object ThemeImportExport {
             darkCoverPaths = embeddedAssets.darkCoverPaths.ifEmpty {
                 data.coverDefaultImageDark.toCoverPaths()
             },
+            paths = embeddedAssets.paths,
+            createdFiles = embeddedAssets.createdFiles,
         )
         return PreparedTheme(
             data = data.copy(
@@ -127,6 +130,7 @@ object ThemeImportExport {
     ): AppliedThemeAssets {
         val coverPaths = mutableMapOf<String, MutableList<String>>()
         val paths = mutableMapOf<String, String>()
+        val createdFiles = mutableListOf<File>()
 
         assets.forEach { (key, base64) ->
             if (base64.isBlank()) return@forEach
@@ -138,32 +142,36 @@ object ThemeImportExport {
                         val baseDir = appCtx.getExternalFilesDir(null) ?: appCtx.filesDir
                         val folder = File(baseDir, key)
                         folder.mkdirs()
-                        File(folder, "theme_asset_${System.currentTimeMillis()}.jpg")
+                        File(folder, "theme_asset_${UUID.randomUUID()}.jpg")
                     }
 
                     key.startsWith("navIcon") -> {
                         val folder = File(appCtx.filesDir, "nav_icons")
                         folder.mkdirs()
-                        File(folder, "${key.removePrefix("navIcon").lowercase()}.png")
+                        File(
+                            folder,
+                            "theme_${key.removePrefix("navIcon").lowercase()}_${UUID.randomUUID()}.png",
+                        )
                     }
 
                     key == "appFontPath" -> {
                         val folder = File(appCtx.filesDir, "fonts")
                         folder.mkdirs()
-                        File(folder, "theme_font.ttf")
+                        File(folder, "theme_font_${UUID.randomUUID()}.ttf")
                     }
 
                     key.startsWith("coverDefaultImage") -> {
                         val baseDir = appCtx.getExternalFilesDir(null) ?: appCtx.filesDir
                         val folder = File(baseDir, "covers")
                         folder.mkdirs()
-                        File(folder, "${key}_${System.currentTimeMillis()}.jpg")
+                        File(folder, "${key}_${UUID.randomUUID()}.jpg")
                     }
 
                     else -> null
                 }
 
                 destFile?.let { file ->
+                    createdFiles += file
                     FileOutputStream(file).use { it.write(bytes) }
                     val path = file.absolutePath
                     if (key.startsWith("coverDefaultImage")) {
@@ -187,6 +195,7 @@ object ThemeImportExport {
             lightCoverPaths = coverPaths["coverDefaultImage"].orEmpty(),
             darkCoverPaths = coverPaths["coverDefaultImageDark"].orEmpty(),
             paths = paths,
+            createdFiles = createdFiles,
         )
     }
 
@@ -339,6 +348,7 @@ internal data class AppliedThemeAssets(
     val lightCoverPaths: List<String> = emptyList(),
     val darkCoverPaths: List<String> = emptyList(),
     val paths: Map<String, String> = emptyMap(),
+    val createdFiles: List<File> = emptyList(),
 )
 
 internal data class PreparedTheme(

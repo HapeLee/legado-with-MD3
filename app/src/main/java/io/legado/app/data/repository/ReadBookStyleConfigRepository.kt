@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.model.settings.ReadStyleItem
@@ -7,6 +8,7 @@ import io.legado.app.domain.model.settings.ReadStyleState
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.utils.GSON
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,25 +23,19 @@ class ReadBookStyleConfigRepository(
     private val readStyleRepository: ReadStyleRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
 ) : ReadStyleGateway {
-
-    private data class SaveSnapshot(
-        val configs: List<ReadBookConfig.Config>,
-        val shareConfig: ReadBookConfig.Config,
-    )
-
-    private val saveQueue = Channel<SaveSnapshot>(Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val saveQueue = ReadStyleSaveQueue(
+        scope = scope,
+        persist = { snapshot ->
+            readStyleRepository.save(snapshot.configs, snapshot.shareConfig)
+        },
+        onFailure = { error ->
+            AppLog.put("保存排版配置文件出错", error)
+        },
+    )
     private val _state = MutableStateFlow(buildState())
     override val state: StateFlow<ReadStyleState> = _state.asStateFlow()
     override val currentState: ReadStyleState get() = _state.value
-
-    init {
-        scope.launch {
-            for (snapshot in saveQueue) {
-                readStyleRepository.save(snapshot.configs, snapshot.shareConfig)
-            }
-        }
-    }
 
     override fun refresh() {
         ReadBookConfig.initConfigs()
@@ -49,8 +45,8 @@ class ReadBookStyleConfigRepository(
 
     override fun save() {
         publishState()
-        saveQueue.trySend(
-            SaveSnapshot(
+        saveQueue.submit(
+            ReadStyleSaveSnapshot(
                 configs = ReadBookConfig.configsSnapshot(),
                 shareConfig = ReadBookConfig.shareConfigSnapshot(),
             )
@@ -151,4 +147,39 @@ class ReadBookStyleConfigRepository(
 
     private fun String.toColorIntOrDefault(): Int =
         runCatching { android.graphics.Color.parseColor(this) }.getOrDefault(0)
+}
+
+internal data class ReadStyleSaveSnapshot(
+    val configs: List<ReadBookConfig.Config>,
+    val shareConfig: ReadBookConfig.Config,
+)
+
+/**
+ * 排版配置是完整快照，队列中只需保留最新一份待保存值。
+ * 单次文件异常只丢弃该次快照，不得终止后续保存消费。
+ */
+internal class ReadStyleSaveQueue(
+    scope: CoroutineScope,
+    private val persist: (ReadStyleSaveSnapshot) -> Unit,
+    private val onFailure: (Throwable) -> Unit,
+) {
+    private val snapshots = Channel<ReadStyleSaveSnapshot>(Channel.CONFLATED)
+
+    init {
+        scope.launch {
+            for (snapshot in snapshots) {
+                try {
+                    persist(snapshot)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    onFailure(error)
+                }
+            }
+        }
+    }
+
+    fun submit(snapshot: ReadStyleSaveSnapshot) {
+        snapshots.trySend(snapshot).getOrThrow()
+    }
 }

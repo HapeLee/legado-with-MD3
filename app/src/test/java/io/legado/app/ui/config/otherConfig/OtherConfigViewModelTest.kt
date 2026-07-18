@@ -3,12 +3,15 @@ package io.legado.app.ui.config.otherConfig
 import android.app.Application
 import android.os.Looper
 import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
+import io.legado.app.domain.model.settings.DownloadCacheSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +43,7 @@ class OtherConfigViewModelTest {
             appLocaleGateway = appLocaleGateway,
             readAloudSettingsGateway = FakeReadAloudSettingsGateway(),
             otherSettingsGateway = otherSettingsGateway,
+            downloadCacheSettingsGateway = FakeDownloadCacheSettingsGateway(),
             initialState = OtherConfigUiState(),
         )
 
@@ -88,5 +92,15 @@ class OtherConfigViewModelTest {
         override val settings: Flow<ReadAloudSettings> = state
 
         override suspend fun update(update: ReadAloudSettingsUpdate) = Unit
+    }
+
+    private class FakeDownloadCacheSettingsGateway : DownloadCacheSettingsGateway {
+        private val state = MutableStateFlow(DownloadCacheSettings())
+
+        override val currentSettings: DownloadCacheSettings
+            get() = state.value
+        override val settings: Flow<DownloadCacheSettings> = state
+
+        override suspend fun update(update: DownloadCacheSettingsUpdate) = Unit
     }
 }

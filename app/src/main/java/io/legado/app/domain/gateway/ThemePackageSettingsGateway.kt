@@ -4,5 +4,5 @@ import io.legado.app.domain.model.settings.ThemeExportData
 
 interface ThemePackageSettingsGateway {
     fun exportCurrent(): ThemeExportData
-    fun apply(data: ThemeExportData)
+    suspend fun applyAndAwait(data: ThemeExportData)
 }

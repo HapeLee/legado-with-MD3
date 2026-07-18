@@ -14,18 +14,20 @@ import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsValue
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 
 typealias ReadPreferences = ReadSettings
 
 class ReadSettingsRepository(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val preferencesFlow: StateFlow<Preferences> = AppConfigStore.preferencesFlow,
 ) : ReadSettingsGateway {
 
     override val currentSettings: ReadSettings
-        get() = AppConfigStore.preferences.toReadSettings()
+        get() = preferencesFlow.value.toReadSettings()
 
-    override val settings: Flow<ReadSettings> = AppConfigStore.preferencesFlow
+    override val settings: Flow<ReadSettings> = preferencesFlow
         .map { preferences ->
             preferences.toReadSettings()
         }
@@ -361,7 +363,7 @@ class ReadSettingsRepository(
         }
     }
 
-    private fun Preferences.toReadSettings(): ReadSettings {
+    internal fun Preferences.toReadSettings(): ReadSettings {
         val readStyleSelect = compatDsValue(Keys.ReadStyleSelect, 0)
         return ReadSettings(
             screenOrientation = compatDsValue(Keys.ScreenOrientation, "0"),
@@ -461,7 +463,7 @@ class ReadSettingsRepository(
             readMenuCustomIcons = compatDsValue(Keys.ReadMenuCustomIcons, ""),
             titleBarCustomIcons = compatDsValue(Keys.TitleBarCustomIcons, ""),
             titleBarIconPosition = compatDsValue(Keys.TitleBarIconPosition, 0),
-            showTitleBarIcons = compatDsValue(Keys.ShowTitleBarIcons, false),
+            showTitleBarIcons = compatDsValue(Keys.ShowTitleBarIcons, true),
             chineseConverterType = compatDsValue(Keys.ChineseConverterType, 0),
             showMenuIcon = compatDsValue(Keys.ShowMenuIcon, true),
         )
