@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class ReadAloudPlayerViewModel(
     private val coordinator: ReadAloudPlayerCoordinator,
@@ -34,7 +35,9 @@ class ReadAloudPlayerViewModel(
             ReadAloudPlayerIntent.OpenSettings -> effect(ReadAloudPlayerEffect.ReturnToReaderSettings)
             ReadAloudPlayerIntent.SwitchToClassic -> effect(ReadAloudPlayerEffect.ReturnToClassic)
             ReadAloudPlayerIntent.OpenToc -> effect(ReadAloudPlayerEffect.OpenToc)
-            is ReadAloudPlayerIntent.SetSpeed -> coordinator.setSpeed(intent.value)
+            is ReadAloudPlayerIntent.SetSpeed -> viewModelScope.launch {
+                coordinator.setSpeed(intent.value)
+            }
             is ReadAloudPlayerIntent.SetTimer -> coordinator.setTimer(intent.minutes)
             is ReadAloudPlayerIntent.SeekTo -> coordinator.seekTo(
                 chapterPosition = intent.chapterPosition,
