@@ -74,7 +74,7 @@ fun TagGroupRuleEditSheet(
             MediumPlainButton(
                 onClick = onDismissRequest,
                 icon = Icons.Default.Close,
-                contentDescription = "Close",
+                contentDescription = stringResource(R.string.close),
             )
         },
         endAction = {
@@ -82,7 +82,7 @@ fun TagGroupRuleEditSheet(
                 MediumPlainButton(
                     onClick = { showMenu = true },
                     icon = Icons.Default.MoreVert,
-                    contentDescription = "More"
+                    contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     RoundDropdownMenuItem(

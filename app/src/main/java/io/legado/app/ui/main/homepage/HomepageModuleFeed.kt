@@ -284,6 +284,7 @@ fun HomepageModuleFeed(
                                 onOpenKind = actions.onKindUrlClick,
                                 onRefreshKinds = actions.onRefreshButtonGroup,
                                 modifier = Modifier.fillMaxWidth(),
+                                columns = moduleUi.config["layout_columns"]?.toIntOrNull() ?: 5,
                                 layoutConfig = moduleUi.layoutConfig
                             )
                         }

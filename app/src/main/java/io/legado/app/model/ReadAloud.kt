@@ -10,6 +10,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.lib.dialogs.SelectItem
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.HttpReadAloudService
 import io.legado.app.service.TTSReadAloudService
@@ -183,11 +184,19 @@ object ReadAloud {
         }
     }
 
+    fun syncLayout(context: Context = appCtx) {
+        if (BaseReadAloudService.isRun) {
+            val intent = Intent(context, aloudClass)
+            intent.action = IntentAction.syncReadAloudLayout
+            context.startForegroundServiceCompat(intent)
+        }
+    }
+
     fun setTimer(context: Context, minute: Int) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.setTimer
-            intent.putExtra("minute", minute)
+            intent.putExtra("minute", PlaybackTimer.normalize(minute))
             context.startForegroundServiceCompat(intent)
         }
     }

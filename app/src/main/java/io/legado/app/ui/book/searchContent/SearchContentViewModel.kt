@@ -134,6 +134,7 @@ class SearchContentViewModel(
         val regex = _regexReplace.value
 
         if (query.isBlank()) {
+            searchContentRepository.clearSession(bookUrl)
             _uiState.update {
                 it.copy(
                     isSearching = false,
@@ -187,6 +188,21 @@ class SearchContentViewModel(
     fun stopSearch() {
         searchJob?.cancel()
         _uiState.update { it.copy(isSearching = false) }
+    }
+
+    fun leaveSearch() {
+        searchJob?.cancel()
+        if (_searchQuery.value.isBlank()) {
+            SearchContentResult.clearResults(bookUrl)
+        }
+        _searchQuery.value = ""
+        _uiState.update {
+            it.copy(
+                isSearching = false,
+                searchResults = emptyList(),
+                error = null
+            )
+        }
     }
 
     fun shouldAutoScroll(): Boolean = searchResultIndex > 0 && !hasAutoScrolled

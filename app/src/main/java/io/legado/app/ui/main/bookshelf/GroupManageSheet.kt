@@ -193,6 +193,15 @@ fun GroupManageSheet(
                         ReorderableSelectionItem(
                             state = reorderableState,
                             key = group.groupId,
+                            reorderIndex = listData.indexOf(group),
+                            reorderItemCount = listData.size,
+                            onMoveItem = { from, to ->
+                                listData = listData.toMutableList().apply { move(from, to) }
+                                val updatedGroups = listData.mapIndexed { index, item ->
+                                    item.copy(order = index)
+                                }
+                                viewModel.upGroup(*updatedGroups.toTypedArray())
+                            },
                             title = group.groupName.ifBlank { manageNameInfo.suffix.orEmpty() },
                             subtitle = if (group.groupName.isNotBlank()) manageNameInfo.suffix else null,
                             isEnabled = group.show,

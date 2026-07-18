@@ -8,6 +8,7 @@ import android.text.format.DateUtils
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -75,6 +76,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         private const val KEY_RESTORE_READ_ALOUD = "restoreReadAloud"
         private const val KEY_RESTORE_READ_IN_BOOKSHELF = "restoreReadInBookshelf"
         private const val KEY_RESTORE_READ_CHAPTER_CHANGED = "restoreReadChapterChanged"
+        private val startupUpdateCheckGate = ProcessStartupUpdateCheckGate()
 
         @Volatile
         var hasActiveReadBookRoute: Boolean = false
@@ -202,6 +204,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         super.onCreate(savedInstanceState)
 
         if (checkStartupRoute()) return
+        val shouldAutoCheckUpdate = startupUpdateCheckGate.consume(
+            OtherConfig.autoCheckUpdateOnStart
+        )
 
         // 智能自启：如果上次是手动开启状态（web_service_auto 为 true），则自启
         if (AppConfig.webServiceAutoStart) {
@@ -221,6 +226,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 viewModel.upAllBookToc()
             }
             viewModel.postLoad()
+            if (shouldAutoCheckUpdate) {
+                checkUpdateOnStart()
+            }
         }
     }
 
@@ -351,6 +359,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     onRegisterVariableSetter = { setter -> bookInfoVariableSetter = setter }
                 )
             )
+            BackHandler(enabled = !AppConfig.isPredictiveBackEnabled) {
+                MainNavigator.navigateBack(this@MainActivity, backStack)
+            }
         }
     }
 
@@ -363,6 +374,13 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             }
             else -> false
         }
+    }
+
+    private fun checkUpdateOnStart() {
+        AppUpdateGitHub.check(lifecycleScope)
+            .onSuccess { updateInfo ->
+                showDialogFragment(UpdateDialog(updateInfo))
+            }
     }
 
     /**

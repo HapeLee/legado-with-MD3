@@ -11,6 +11,7 @@ import io.legado.app.exception.ContentEmptyException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isAudio
+import io.legado.app.help.book.isOnLineTxt
 import io.legado.app.help.book.isVideo
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.Debug
@@ -137,6 +138,26 @@ object BookContent {
                 appendContent(it)
             }
         }
+        contentRule.subContent?.takeIf { it.isNotBlank() }?.let { rule ->
+            val rawSubContent = analyzeRule.getString(rule, unescape = false).trim()
+            val subContent = if (rawSubContent.startsWith("http", ignoreCase = true)) {
+                AnalyzeUrl(
+                    mUrl = rawSubContent,
+                    source = bookSource,
+                    ruleData = book,
+                    coroutineContext = coroutineContext,
+                ).getStrResponseAwait().body.orEmpty()
+            } else {
+                rawSubContent
+            }
+            if (subContent.isNotBlank()) {
+                if (book.isOnLineTxt) {
+                    appendContent(subContent)
+                } else if (book.isAudio) {
+                    bookChapter.putVariable("lyric", subContent)
+                }
+            }
+        }
         var contentStr = contentBuilder.toString()
         val titleRule = contentRule.title //先正文再章节名称
         if (!titleRule.isNullOrBlank()) {
@@ -223,13 +244,6 @@ object BookContent {
             }
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 content = content.replace(placeholder, originalContent)
-            }
-        }
-        //获取副文（歌词等）
-        contentRule.subContent?.takeIf { it.isNotBlank() }?.let {
-            val subContent = analyzeRule.getString(it, unescape = false)
-            if (subContent.isNotBlank()) {
-                chapter.putVariable("lyric", subContent)
             }
         }
         //获取下一页链接

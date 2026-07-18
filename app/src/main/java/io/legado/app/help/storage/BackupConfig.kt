@@ -112,6 +112,8 @@ object BackupConfig {
         PreferKey.useFlexibleTopAppBar,
         PreferKey.bookInfoFollowCoverColor,
         PreferKey.bookInfoBackgroundBlur,
+        PreferKey.bookInfoNetworkCoverBackground,
+        PreferKey.bookInfoDefaultCoverBackground,
         PreferKey.cBackground,
         PreferKey.cBBackground,
         PreferKey.cNBackground,

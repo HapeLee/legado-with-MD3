@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -20,14 +23,21 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 
@@ -38,11 +48,13 @@ fun ReadAloudContent(
     onDismissRequest: () -> Unit,
     onOpenChapterList: () -> Unit,
     onGoToBackground: () -> Unit,
+    onOpenMainMenu: () -> Unit,
     onShowReadAloudConfig: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val timerMinute = state.readAloudTtsTimer
     val ttsSpeechRate = state.readAloudTtsSpeechRate
+    var timerMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -89,8 +101,8 @@ fun ReadAloudContent(
             title = stringResource(R.string.set_timer),
             description = stringResource(R.string.timer_m, timerMinute),
             value = timerMinute.toFloat(),
-            valueRange = 0f..180f,
-            steps = 179,
+            valueRange = PlaybackTimer.MIN_MINUTES.toFloat()..PlaybackTimer.MAX_MINUTES.toFloat(),
+            steps = PlaybackTimer.MAX_MINUTES - PlaybackTimer.MIN_MINUTES - 1,
             onValueChange = {
                 onIntent(ReadBookIntent.SetReadAloudTtsTimer(it.toInt()))
             },
@@ -107,11 +119,28 @@ fun ReadAloudContent(
                 text = stringResource(R.string.previous_chapter),
                 modifier = Modifier.weight(1f),
             )
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.SaveReadAloudTtsTimer(timerMinute)) },
-                text = stringResource(R.string.save_tts_timer),
-                modifier = Modifier.weight(1f),
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                MediumTonalButton(
+                    onClick = { timerMenuExpanded = true },
+                    icon = Icons.Default.Alarm,
+                    contentDescription = stringResource(R.string.timer_m, timerMinute),
+                )
+                RoundDropdownMenu(
+                    expanded = timerMenuExpanded,
+                    onDismissRequest = { timerMenuExpanded = false },
+                ) {
+                    listOf(0, 5, 10, 15, 30, 60, 90).forEach { minute ->
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.timer_m, minute),
+                            isSelected = minute == timerMinute,
+                            onClick = {
+                                onIntent(ReadBookIntent.SetReadAloudTtsTimer(minute))
+                                timerMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
             MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ReadAloudNextChapter) },
                 text = stringResource(R.string.next_chapter),
@@ -146,6 +175,11 @@ fun ReadAloudContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
+            ActionButton(
+                icon = Icons.Default.Menu,
+                label = stringResource(R.string.main_menu),
+                onClick = onOpenMainMenu,
+            )
             ActionButton(
                 icon = Icons.AutoMirrored.Filled.List,
                 label = stringResource(R.string.chapter_list),

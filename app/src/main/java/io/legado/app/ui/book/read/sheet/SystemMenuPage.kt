@@ -65,6 +65,8 @@ import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.pager.pagerHeight
+import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -87,6 +89,9 @@ private const val COLOR_MENU_CONTAINER_NIGHT = 10
 private const val COLOR_BORDER = 11
 private const val COLOR_BORDER_NIGHT = 12
 private const val COLOR_BLUR_TINT = 13
+private const val COLOR_BLUR_TINT_NIGHT = 14
+private const val COLOR_MENU_TEXT = 15
+private const val COLOR_MENU_TEXT_NIGHT = 16
 
 @Composable
 internal fun SystemMenuPage(
@@ -212,6 +217,9 @@ internal fun SystemMenuPage(
                 COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
                 COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
                 COLOR_BLUR_TINT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(color)))
+                COLOR_BLUR_TINT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColorNight(color)))
+                COLOR_MENU_TEXT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColor(color)))
+                COLOR_MENU_TEXT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColorNight(color)))
             }
             showColorPicker = false
         },
@@ -481,16 +489,37 @@ private fun GlobalMenuTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurAlpha(it.toInt())))
             },
         )
-        TinyClickableSettingItem(
+        TinyClearColorModeSettingItem(
+            title = stringResource(R.string.read_menu_text_color),
+            description = stringResource(R.string.read_menu_text_color_summary),
+            dayColor = preferences.readMenuTextColor,
+            nightColor = preferences.readMenuTextColorNight,
+            onClearColor = { isNight ->
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        if (isNight) ConfigUpdate.MenuTextColorNight(0)
+                        else ConfigUpdate.MenuTextColor(0)
+                    )
+                )
+            },
+            onClickColor = { isNight ->
+                if (isNight) {
+                    onShowColorPicker(COLOR_MENU_TEXT_NIGHT, preferences.readMenuTextColorNight)
+                } else {
+                    onShowColorPicker(COLOR_MENU_TEXT, preferences.readMenuTextColor)
+                }
+            },
+        )
+        TinyColorModeSettingItem(
             title = stringResource(R.string.read_menu_blur_color),
-            onClick = {
-                onShowColorPicker(COLOR_BLUR_TINT, preferences.readMenuBlurColor)
-            },
-            onLongClick = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(0)))
-            },
-            trailingContent = {
-                TinyColorSwatch(color = preferences.readMenuBlurColor)
+            dayColor = preferences.readMenuBlurColor,
+            nightColor = preferences.readMenuBlurColorNight,
+            onClickColor = { isNight ->
+                if (isNight) {
+                    onShowColorPicker(COLOR_BLUR_TINT_NIGHT, preferences.readMenuBlurColorNight)
+                } else {
+                    onShowColorPicker(COLOR_BLUR_TINT, preferences.readMenuBlurColor)
+                }
             },
         )
     }
@@ -628,7 +657,7 @@ private fun BottomBarTab(
                 )
             },
         )
-        AnimatedVisibility(visible = !floatingBottomBar && bottomBarBlurMode == ReadMenuBlurMode.Haze) {
+        AnimatedVisibility(visible = !floatingBottomBar) {
             TinyDropdownSettingItem(
                 title = stringResource(R.string.read_menu_bar_blur_style),
                 selectedValue = preferences.readMenuBottomBarBlurStyle.toString(),
@@ -723,6 +752,19 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleBarIconConfig))
             },
         )
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.read_menu_icon_container_style),
+            selectedValue = preferences.titleBarIconStyle.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.read_menu_icon_style_plain),
+                stringResource(R.string.read_menu_icon_style_tonal),
+                stringResource(R.string.read_menu_icon_style_outlined),
+            ),
+            entryValues = arrayOf("0", "1", "2"),
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconStyle(it.toInt())))
+            },
+        )
 
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_bar_blur),
@@ -738,30 +780,28 @@ private fun TopBarTab(
                 )
             },
         )
-        AnimatedVisibility(visible = topBarBlurEnabled) {
-            TinyDropdownSettingItem(
-                title = stringResource(R.string.read_menu_bar_blur_style),
-                selectedValue = preferences.readMenuTopBarBlurStyle.toString(),
-                displayEntries = arrayOf(
-                    stringResource(R.string.read_menu_blur_style_solid),
-                    stringResource(R.string.read_menu_blur_style_progressive),
-                ),
-                entryValues = arrayOf(
-                    ReadMenuBlurStyle.Solid.toString(),
-                    ReadMenuBlurStyle.Progressive.toString(),
-                ),
-                onValueChange = {
-                    onIntent(
-                        ReadBookIntent.UpdateConfig(
-                            ConfigUpdate.MenuTopBarBlurSelection(
-                                mode = ReadMenuBlurMode.Haze,
-                                style = it.toInt(),
-                            )
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.read_menu_bar_blur_style),
+            selectedValue = preferences.readMenuTopBarBlurStyle.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.read_menu_blur_style_solid),
+                stringResource(R.string.read_menu_blur_style_progressive),
+            ),
+            entryValues = arrayOf(
+                ReadMenuBlurStyle.Solid.toString(),
+                ReadMenuBlurStyle.Progressive.toString(),
+            ),
+            onValueChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarBlurSelection(
+                            mode = preferences.readMenuTopBarBlurMode,
+                            style = it.toInt(),
                         )
                     )
-                },
-            )
-        }
+                )
+            },
+        )
         AnimatedVisibility(visible = topBarBlurEnabled) {
             TinySwitchSettingItem(
                 title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),

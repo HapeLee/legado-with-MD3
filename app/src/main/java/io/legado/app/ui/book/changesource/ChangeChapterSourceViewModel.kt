@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChangeChapterSourceViewModel(
     private val changeSourceSearchUseCase: ChangeSourceSearchUseCase,
@@ -85,7 +87,9 @@ class ChangeChapterSourceViewModel(
         }
         if (searchJob?.isActive != true) {
             viewModelScope.launch {
-                val dbBooks = getDbSearchBooks()
+                val dbBooks = withContext(Dispatchers.IO) {
+                    getDbSearchBooks()
+                }
                 if (dbBooks.isNotEmpty()) {
                     searchResults.clear()
                     searchResults.addAll(dbBooks)
@@ -330,15 +334,19 @@ class ChangeChapterSourceViewModel(
     }
 
     private fun refreshResults() {
-        searchResults.clear()
-        bookMap.clear()
-        val dbBooks = getDbSearchBooks()
-        if (dbBooks.isNotEmpty()) {
-            searchResults.addAll(dbBooks)
-            searchResults.forEach { bookMap[it.primaryStr()] = it }
-            filterResults()
-        } else {
-            startSearch()
+        viewModelScope.launch {
+            val dbBooks = withContext(Dispatchers.IO) {
+                getDbSearchBooks()
+            }
+            searchResults.clear()
+            bookMap.clear()
+            if (dbBooks.isNotEmpty()) {
+                searchResults.addAll(dbBooks)
+                searchResults.forEach { bookMap[it.primaryStr()] = it }
+                filterResults()
+            } else {
+                startSearch()
+            }
         }
     }
 
@@ -387,7 +395,9 @@ class ChangeChapterSourceViewModel(
         }
         viewModelScope.launch {
             try {
-                val (toc, _) = getChapterContentUseCase.getToc(book)
+                val (toc, _) = withContext(Dispatchers.IO) {
+                    getChapterContentUseCase.getToc(book)
+                }
                 val currentTocIndex = getChapterContentUseCase.getDurChapterIndex(
                     chapterIndex = chapterIndex,
                     chapterTitle = chapterTitle,
@@ -401,7 +411,7 @@ class ChangeChapterSourceViewModel(
                         currentTocIndex = currentTocIndex,
                     )
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         showToc = false,
@@ -426,8 +436,9 @@ class ChangeChapterSourceViewModel(
                 val searchBook = selectedSearchBook.toBook()
                 val toc = _uiState.value.tocItems
                 val nextChapterUrl = toc.getOrNull(chapter.index + 1)?.url
-                val content =
+                val content = withContext(Dispatchers.IO) {
                     getChapterContentUseCase.getContent(searchBook, chapter, nextChapterUrl)
+                }
                 _uiState.update { it.copy(isLoadingToc = false) }
                 _effects.tryEmit(ChangeChapterSourceEffect.ReplaceContent(content))
                 _effects.tryEmit(ChangeChapterSourceEffect.Dismiss)

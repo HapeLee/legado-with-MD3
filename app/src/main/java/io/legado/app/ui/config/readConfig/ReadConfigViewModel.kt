@@ -197,21 +197,6 @@ class ReadConfigViewModel(
                     readSettingsRepository.setDisableReturnKey(intent.value)
                 }
 
-                is ReadConfigIntent.ExpandTextMenuChanged -> {
-                    ReadConfig.expandTextMenu = intent.value
-                    readSettingsRepository.setExpandTextMenu(intent.value)
-                }
-
-                is ReadConfigIntent.ShowSelectMenuIconChanged -> {
-                    ReadConfig.showSelectMenuIcon = intent.value
-                    readSettingsRepository.setShowSelectMenuIcon(intent.value)
-                }
-
-                is ReadConfigIntent.TextSelectMenuFilterChanged -> {
-                    ReadConfig.textSelectMenuFilter = intent.value
-                    readSettingsRepository.setTextSelectMenuFilter(intent.value)
-                }
-
                 is ReadConfigIntent.ShowReadTitleAdditionChanged -> {
                     ReadConfig.showReadTitleAddition = intent.value
                     readSettingsRepository.setShowReadTitleAddition(intent.value)
@@ -280,7 +265,6 @@ class ReadConfigViewModel(
             disableReturnKey = disableReturnKey,
             expandTextMenu = expandTextMenu,
             showSelectMenuIcon = showSelectMenuIcon,
-            textSelectMenuFilter = textSelectMenuFilter,
             showReadTitleAddition = showReadTitleAddition,
             autoReadSpeed = autoReadSpeed,
             prevKeys = prevKeys,

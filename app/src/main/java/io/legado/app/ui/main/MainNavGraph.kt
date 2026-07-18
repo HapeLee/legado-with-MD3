@@ -678,16 +678,20 @@ fun MainActivity.mainEntryProvider(
                         fadeOut(animationSpec = tween(300))
             } else null
         } + NavDisplay.predictivePopTransitionSpec { _ ->
-            val to = targetState.key
-            val toStr = to.toString()
-            if (to is MainRouteHome || to is MainRouteExploreShow || to is MainRouteSearch ||
-                toStr.startsWith("MainRouteHome") || toStr.startsWith("MainRouteExploreShow") || toStr.startsWith(
-                    "MainRouteSearch"
-                )
-            ) {
-                fadeIn(animationSpec = tween(300)) togetherWith
-                        fadeOut(animationSpec = tween(300))
-            } else null
+            if (!AppConfig.isPredictiveBackEnabled) {
+                null
+            } else {
+                val to = targetState.key
+                val toStr = to.toString()
+                if (to is MainRouteHome || to is MainRouteExploreShow || to is MainRouteSearch ||
+                    toStr.startsWith("MainRouteHome") || toStr.startsWith("MainRouteExploreShow") || toStr.startsWith(
+                        "MainRouteSearch"
+                    )
+                ) {
+                    fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(300))
+                } else null
+            }
         }
     ) { route ->
         val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = "BookInfo:${route.bookUrl}")

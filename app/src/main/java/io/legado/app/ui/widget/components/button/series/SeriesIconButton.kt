@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -43,8 +43,6 @@ import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
-import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal val SeriesIconSize: Dp
@@ -108,7 +106,9 @@ internal fun SeriesButton(
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .then(modifier)
             .then(if (size != null) Modifier.size(size) else Modifier)
             .clip(shape)
             .background(containerColor, shape)
@@ -149,6 +149,9 @@ internal fun SeriesIconButton(
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
 ) {
+    require(!contentDescription.isNullOrBlank()) {
+        "Icon-only buttons must provide a contentDescription"
+    }
     SeriesButton(
         onClick = onClick,
         modifier = modifier,
@@ -183,6 +186,9 @@ internal fun SeriesButtonContent(
     spacing: Dp
 ) {
     val hasText = text != null
+    require(hasText || !contentDescription.isNullOrBlank()) {
+        "Icon-only buttons must provide a contentDescription"
+    }
     Row(
         modifier = Modifier.padding(if (hasText) padding else PaddingValues(0.dp)),
         horizontalArrangement = Arrangement.spacedBy(
@@ -256,7 +262,7 @@ internal fun squareSize(size: Dp) = DpSize(size, size)
 private fun containerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
-        SeriesIconButtonStyle.Tonal -> LegadoTheme.colorScheme.surfaceContainer
+        SeriesIconButtonStyle.Tonal -> LegadoTheme.colorScheme.surfaceContainerLow
         SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.surface.copy(alpha = 0f)
     }
 }

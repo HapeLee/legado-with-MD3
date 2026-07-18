@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.components.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,7 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.isHex
@@ -51,7 +52,7 @@ fun ColorPickerSheet(
     show: Boolean,
     initialColor: Int,
     onDismissRequest: () -> Unit,
-    onColorSelected: (Int) -> Unit
+    onColorSelected: (Int) -> Unit,
 ) {
     var currentColor by remember { mutableStateOf(Color(initialColor)) }
     var hexInput by remember { mutableStateOf(initialColor.asHexColorString()) }
@@ -71,6 +72,28 @@ fun ColorPickerSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.select_color),
+        startAction = {
+            MediumTonalButton(
+                onClick = {
+                    currentColor = Color.Transparent
+                    hexInput = "#00000000"
+                    isHexInputError = false
+                },
+                icon = Icons.Default.Restore,
+                contentDescription = stringResource(R.string.reset),
+            )
+        },
+        endAction = {
+            MediumTonalButton(
+                onClick = {
+                    onColorSelected(currentColor.toArgb())
+                    onDismissRequest()
+                },
+                enabled = parsedHexColor != null && !isHexInputError,
+                icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.action_save),
+            )
+        },
     ) {
         Column(
             modifier = Modifier
@@ -135,19 +158,6 @@ fun ColorPickerSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ConfirmDismissButtonsRow(
-                modifier = Modifier.fillMaxWidth(),
-                onDismiss = onDismissRequest,
-                onConfirm = {
-                    onColorSelected(currentColor.toArgb())
-                    onDismissRequest()
-                },
-                dismissText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.ok),
-                confirmEnabled = parsedHexColor != null && !isHexInputError
-            )
         }
     }
 }

@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.EncoderUtils
@@ -22,99 +23,10 @@ import java.io.FileOutputStream
  */
 object ThemeImportExport {
 
-    private const val DIR_NAME = "saved_themes"
-    private val baseDir get() = File(appCtx.filesDir, DIR_NAME)
-
     private val EXPORT_GSON = GsonBuilder()
         .setPrettyPrinting()
         .disableHtmlEscaping()
         .create()
-
-    private val _savedThemes = mutableListOf<SavedTheme>()
-    val savedThemes: List<SavedTheme> get() = _savedThemes
-
-    init {
-        loadAll()
-    }
-
-    private fun loadAll() {
-        _savedThemes.clear()
-        baseDir.mkdirs()
-        baseDir.listFiles()?.forEach { file ->
-            if (file.isFile && file.extension == "json") {
-                kotlin.runCatching {
-                    val json = file.readText()
-                    val data = parseThemeData(json)
-                        ?: error("不支持的主题配置格式")
-                    val name = file.nameWithoutExtension
-                    _savedThemes.add(SavedTheme(name = name, data = data))
-                }
-            }
-        }
-    }
-
-    fun reload() {
-        loadAll()
-    }
-
-    /**
-     * 保存当前设置为新主题
-     */
-    fun saveCurrentAsTheme(name: String): SavedTheme {
-        val data = exportFromCurrent()
-        return saveThemeData(name, data)
-    }
-
-    /**
-     * 保存指定数据为新主题
-     */
-    fun saveCurrentAsTheme(name: String, data: ThemeExportData): SavedTheme {
-        return saveThemeData(name, data)
-    }
-
-    fun uniqueSavedThemeName(name: String): String {
-        if (_savedThemes.none { it.name == name }) return name
-        var index = 2
-        while (_savedThemes.any { it.name == "$name $index" }) index++
-        return "$name $index"
-    }
-
-    private fun saveThemeData(name: String, data: ThemeExportData): SavedTheme {
-        val file = File(baseDir, "$name.json")
-        baseDir.mkdirs()
-        file.writeText(EXPORT_GSON.toJson(data))
-        val theme = SavedTheme(name = name, data = data)
-        _savedThemes.removeAll { it.name == name }
-        _savedThemes.add(theme)
-        return theme
-    }
-
-    /**
-     * 删除已保存的主题
-     */
-    fun deleteSavedTheme(theme: SavedTheme) {
-        val file = File(baseDir, "${theme.name}.json")
-        if (file.exists() && !file.delete()) {
-            error("Failed to delete saved theme: ${theme.name}")
-        }
-        _savedThemes.removeAll { it.name == theme.name }
-    }
-
-    /**
-     * 导出已保存的主题到文件
-     */
-    fun exportSavedThemeToFile(context: Context, theme: SavedTheme, uri: Uri): Boolean {
-        return try {
-            val json = EXPORT_GSON.toJson(theme.data)
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(json.toByteArray())
-            }
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
 
     /**
      * 从当前配置创建导出数据
@@ -153,6 +65,8 @@ object ThemeImportExport {
             bookInfoInputColor = ThemeConfig.bookInfoInputColor,
             bookInfoFollowCoverColor = ThemeConfig.bookInfoFollowCoverColor,
             bookInfoBackgroundBlur = ThemeConfig.bookInfoBackgroundBlur,
+            bookInfoNetworkCoverBackground = ThemeConfig.bookInfoNetworkCoverBackground,
+            bookInfoDefaultCoverBackground = ThemeConfig.bookInfoDefaultCoverBackground,
 
             // 容器设置
             containerOpacity = ThemeConfig.containerOpacity,
@@ -179,6 +93,10 @@ object ThemeImportExport {
             // 标签颜色
             enableCustomTagColors = ThemeConfig.enableCustomTagColors,
             customTagColorsJson = ThemeConfig.customTagColorsJson,
+
+            // 书架卡片颜色
+            bookshelfCardColor = BookshelfConfig.bookshelfCardColor,
+            bookshelfCardColorDark = BookshelfConfig.bookshelfCardColorDark,
 
             // 主界面设置
             showHome = ThemeConfig.showHome,
@@ -335,6 +253,10 @@ object ThemeImportExport {
         ThemeConfig.bookInfoInputColor = data.bookInfoInputColor
         ThemeConfig.bookInfoFollowCoverColor = data.bookInfoFollowCoverColor
         ThemeConfig.bookInfoBackgroundBlur = data.bookInfoBackgroundBlur
+        ThemeConfig.bookInfoNetworkCoverBackground =
+            data.bookInfoNetworkCoverBackground ?: data.bookInfoBackgroundBlur
+        ThemeConfig.bookInfoDefaultCoverBackground =
+            data.bookInfoDefaultCoverBackground ?: data.bookInfoBackgroundBlur
 
         // 容器设置
         ThemeConfig.containerOpacity = data.containerOpacity
@@ -361,6 +283,10 @@ object ThemeImportExport {
         // 标签颜色
         ThemeConfig.enableCustomTagColors = data.enableCustomTagColors
         ThemeConfig.customTagColorsJson = data.customTagColorsJson
+
+        // 书架卡片颜色
+        BookshelfConfig.bookshelfCardColor = data.bookshelfCardColor
+        BookshelfConfig.bookshelfCardColorDark = data.bookshelfCardColorDark
 
         // 主界面设置
         ThemeConfig.showHome = data.showHome
@@ -552,6 +478,8 @@ object ThemeImportExport {
         }
     }
 
+    internal fun parseLegacyThemeData(json: String): ThemeExportData? = parseThemeData(json)
+
     /**
      * 兼容曾由 R8 混淆字段名导出的主题配置。
      * 该映射对应加入首页开关、但尚未加入导航顺序和日夜独立配色的旧格式。
@@ -725,6 +653,8 @@ data class ThemeExportData(
     val bookInfoInputColor: Int = 0,
     val bookInfoFollowCoverColor: Boolean = true,
     val bookInfoBackgroundBlur: String = ThemeConfig.BOOK_INFO_BACKGROUND_BLUR_ON,
+    val bookInfoNetworkCoverBackground: String? = null,
+    val bookInfoDefaultCoverBackground: String? = null,
 
     // 容器设置
     val containerOpacity: Int = 100,
@@ -751,6 +681,10 @@ data class ThemeExportData(
     // 标签颜色
     val enableCustomTagColors: Boolean = false,
     val customTagColorsJson: String? = null,
+
+    // 书架卡片颜色
+    val bookshelfCardColor: Int = 0,
+    val bookshelfCardColorDark: Int = 0,
 
     // 主界面设置
     val showHome: Boolean = true,

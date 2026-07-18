@@ -49,10 +49,14 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.rules.TestLineResult
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.regex.Pattern
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -284,7 +288,35 @@ fun TxtRuleScreen(
                 rule = fields.rule1,
                 example = fields.rule2
             )
-        }
+        },
+        showTestButton = true,
+        onTest = { rule, example ->
+            val pattern = Pattern.compile(rule, Pattern.MULTILINE)
+            withContext(Dispatchers.Default) {
+                val normalized = example.replace("\r\n", "\n").replace("\r", "\n")
+                val lines = normalized.lines()
+                val fullText = "\n$normalized"
+                val matcher = pattern.matcher(fullText)
+                val matchRanges = mutableListOf<IntRange>()
+                while (matcher.find()) {
+                    matchRanges.add(matcher.start()..matcher.end())
+                }
+                var offset = 1
+                lines.map { line ->
+                    val lineStart = offset
+                    val lineEnd = offset + line.length
+                    val matched = matchRanges.any { range ->
+                        if (range.first == range.last) {
+                            range.first in lineStart..lineEnd
+                        } else {
+                            range.first < lineEnd && range.last > lineStart
+                        }
+                    }
+                    offset = lineEnd + 1
+                    TestLineResult(line = line, matched = matched, matchResult = if (matched) line else null)
+                }
+            }
+        },
     )
 
     RuleListScaffold(
@@ -358,18 +390,10 @@ fun TxtRuleScreen(
                     val enabledState = stringResource(
                         if (item.isEnabled) R.string.enabled else R.string.disabled
                     )
-                    val selectedState = stringResource(
-                        if (isItemHighLighted) {
-                            R.string.a11y_selected
-                        } else {
-                            R.string.a11y_not_selected
-                        }
-                    )
                     val itemDescription = listOfNotNull(
                         item.name,
                         item.example.takeIf { it.isNotBlank() },
                         enabledState,
-                        selectedState,
                         if (!isPickMode && !inSelectionMode) {
                             stringResource(R.string.a11y_long_press_reorder)
                         } else {
@@ -380,6 +404,9 @@ fun TxtRuleScreen(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
+                        reorderIndex = rules.indexOf(item),
+                        reorderItemCount = rules.size,
+                        onMoveItem = { from, to -> onIntent(TxtTocRuleIntent.MoveItem(from, to)) },
                         title = item.name,
                         subtitle = item.example,
                         isEnabled = item.isEnabled,
@@ -397,7 +424,6 @@ fun TxtRuleScreen(
                             onIntent(TxtTocRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
                         contentDescription = itemDescription,
-                        stateDescription = selectedState,
                         enableSwitchContentDescription = stringResource(
                             R.string.a11y_rule_enabled_switch,
                             item.name

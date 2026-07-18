@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -45,6 +45,7 @@ import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.reorderAccessibility
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -130,7 +131,7 @@ private fun ButtonIconConfigSheet(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                items(draftItems, key = { it.id }) { item ->
+                itemsIndexed(draftItems, key = { _, item -> item.id }) { index, item ->
                     ReorderableItem(reorderableState, key = item.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                         NormalCard(
@@ -146,7 +147,20 @@ private fun ButtonIconConfigSheet(
                                 },
                                 onSelectIcon = { onSelectIcon(item.id) },
                                 onClearIcon = { onClearIcon(item.id) },
-                                dragHandleModifier = Modifier.draggableHandle(),
+                                dragHandleModifier = Modifier
+                                    .reorderAccessibility(
+                                        index = index,
+                                        itemCount = draftItems.size,
+                                        description = stringResource(
+                                            R.string.a11y_reorder_named,
+                                            item.label,
+                                        ),
+                                    ) { from, to ->
+                                        draftItems = draftItems.toMutableList().apply {
+                                            add(to, removeAt(from))
+                                        }
+                                    }
+                                    .draggableHandle(),
                             )
                         }
                     }
@@ -236,6 +250,7 @@ private fun TitleBarIconItem(
                 SmallTonalButton(
                     onClick = onSelectIcon,
                     icon = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.add),
                     modifier = Modifier.size(36.dp),
                 )
             }
@@ -252,7 +267,9 @@ private fun TitleBarIconItem(
                 } else {
                     Icons.Default.VisibilityOff
                 },
-                contentDescription = null,
+                contentDescription = stringResource(
+                    if (item.enabled) R.string.disable_selection else R.string.enable_selection
+                ),
                 tint = if (item.enabled) {
                     LegadoTheme.colorScheme.onSurface
                 } else {
@@ -263,9 +280,9 @@ private fun TitleBarIconItem(
         }
 
         // Drag handle
-        IconButton(
-            modifier = dragHandleModifier.size(36.dp),
-            onClick = {},
+        Box(
+            modifier = dragHandleModifier.size(48.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Default.Menu,

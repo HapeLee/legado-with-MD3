@@ -124,6 +124,7 @@
     <string name="version">Version</string>
     <string name="local">Local</string>
     <string name="search">Search</string>
+    <string name="all_results">All results</string>
     <string name="search_placeholder">Search…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">Origin: %s</string>
@@ -1049,6 +1050,7 @@
     <string name="list_src">List source code</string>
     <string name="title_font_size">Font Size</string>
     <string name="title_color">Title Color</string>
+    <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>
     <string name="title_margin_bottom">Margin Bottom</string>
     <string name="show">Show</string>
@@ -1088,6 +1090,9 @@
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="clipboard_empty_or_invalid">Clipboard is empty or has an invalid format</string>
     <string name="invalid_format">Invalid format</string>
+    <string name="regex_is_empty">Regex is empty</string>
+    <string name="example_is_empty">Example is empty</string>
+    <string name="invalid_regex">Invalid regex</string>
     <string name="complete_required_information">Fill in all required information</string>
     <string name="export_success">export success</string>
     <string name="path">path</string>
@@ -1136,13 +1141,12 @@
     <string name="tts_speech_add">Increase speech speed</string>
     <string name="open_sys_dir_picker_error">Error opening system folder selector, automatically open application folder selector</string>
     <string name="open_sys_doc_picker_error">Error opening system file selector, automatically open application file selector</string>
-    <string name="expand_text_menu">Expand Text Selection Menu</string>
-    <string name="show_select_menu_icon">Show Text Selection Menu Icons</string>
-    <string name="text_select_menu_filter">Text Selection Menu Filter</string>
-    <string name="text_select_menu_filter_desc">Filter the third-party apps displayed in the selection menu</string>
+    <string name="expand_text_menu">Multiline Show</string>
+    <string name="show_select_menu_icon">Show Icons</string>
+
     <string name="show_all">Show All</string>
     <string name="hide_all">Hide All</string>
-    <string name="no_apps_found">No third-party apps supporting text actions found</string>
+
     <string name="book_tree_uri_t">Book Save Location</string>
     <string name="book_tree_uri_s">Save location for books opened from other apps</string>
     <string name="select_book_folder">Select the folder where the books are saved</string>
@@ -1389,6 +1393,7 @@
     <string name="adjust_chapter_page">Adjust of chapter page</string>
     <string name="adjust_chapter_index">Adjust of chapter index</string>
     <string name="clear_webview_data_success">Cleared successfully, automatically restarts the application after 3 seconds</string>
+    <string name="clear_webview_data_failed">Failed to clear WebView data</string>
     <string name="key_page_on_long_press">Press and Hold the Key to Turn Page</string>
     <string name="save_log">Save logs</string>
     <string name="create_heap_dump">Create Heap Dump</string>
@@ -1426,6 +1431,8 @@
     <string name="start_chapter">Start Chapter</string>
     <string name="update_to_variant_title">Check Updates for Variants</string>
     <string name="update_to_variant_summary">Look for other signature variants when checking for updates</string>
+    <string name="auto_check_update_on_start_title">Check for updates on startup</string>
+    <string name="auto_check_update_on_start_summary">Only checks after the app process fully restarts; returning from the background will not trigger a check</string>
     <string name="default_version">Current</string>
     <string name="official_version">Official</string>
     <string name="beta_release_version">Beta</string>
@@ -1485,6 +1492,10 @@
     <string name="theme_manage_import_package_summary">Import a theme package with its assets and cover albums</string>
     <string name="theme_manage_import_config">Import legacy theme configuration</string>
     <string name="theme_manage_import_config_summary">Import a legacy JSON theme configuration</string>
+    <string name="theme_manage_migrate_legacy">Migrate legacy themes</string>
+    <string name="theme_manage_migrate_legacy_summary">Convert saved JSON themes to the new theme format</string>
+    <string name="theme_manage_migrate_success">Migrated %1$d legacy themes</string>
+    <string name="theme_manage_migrate_partial">Migrated %1$d themes; %2$d could not be migrated</string>
     <string name="theme_manage_saved_themes">Saved Themes</string>
     <string name="theme_manage_save_theme">Save Theme</string>
     <string name="theme_manage_save">Save</string>
@@ -1516,8 +1527,9 @@
     <string name="theme_manage_section_blur">Blur Effects</string>
     <string name="book_info_page">Book details</string>
     <string name="book_info_follow_cover_color">Use colors from book cover</string>
-    <string name="book_info_follow_cover_color_summary">Generate the book details color scheme from the cover</string>
-    <string name="book_info_background_blur">Background setting</string>
+    <string name="book_info_follow_cover_color_summary">Applied only while a background cover is visible</string>
+    <string name="book_info_network_cover_background">Network cover background</string>
+    <string name="book_info_default_cover_background">Default cover background</string>
     <string name="book_info_background_blur_off">Show cover without blur</string>
     <string name="book_info_background_blur_on">Show blurred cover</string>
     <string name="book_info_background_blur_off_for_default">Hide background cover</string>
@@ -2118,6 +2130,8 @@
     <string name="homepage_status_blocked"> · Blocked</string>
     <string name="homepage_status_joined"> · Already joined</string>
     <string name="read_menu_bg_color_summary">Background for the top and bottom reader bars</string>
+    <string name="read_menu_text_color">Menu Text Color</string>
+    <string name="read_menu_text_color_summary">Uses the theme color by default</string>
     <string name="read_menu_color_source">Palette Source</string>
     <string name="container_background_color">Container Background Color</string>
     <string name="read_menu_container_color_summary">Base surface color for the generated reader menu palette</string>
@@ -2151,14 +2165,14 @@
     <string name="read_menu_bar_liquid_glass_buttons">Liquid glass bottom buttons</string>
     <string name="read_menu_top_bar_title_capsule">Title capsule layout</string>
     <string name="read_menu_bottom_bar_liquid_glass_buttons_summary">Apply liquid glass to bottom bar buttons and the slider thumb. Requires Android 13+</string>
-    <string name="read_menu_bar_blur_style">Blur style</string>
-    <string name="read_menu_blur_style_solid">Solid blur</string>
-    <string name="read_menu_blur_style_progressive">Progressive blur</string>
+    <string name="read_menu_bar_blur_style">Tint style</string>
+    <string name="read_menu_blur_style_solid">Fill</string>
+    <string name="read_menu_blur_style_progressive">Gradient</string>
     <string name="read_menu_top_bar_liquid_glass_buttons_summary">Apply liquid glass to title bar action buttons. Requires Android 13+</string>
     <string name="read_menu_blur_radius">Blur radius</string>
     <string name="read_menu_blur_radius_summary">Higher radius may reduce performance</string>
     <string name="read_menu_blur_alpha">Menu opacity</string>
-    <string name="read_menu_blur_color">Blur tint color</string>
+    <string name="read_menu_blur_color">Menu tint color</string>
     <string name="read_menu_border">Border</string>
     <string name="read_menu_border_width">Width</string>
     <string name="read_menu_border_color">Color</string>
@@ -2366,6 +2380,22 @@
     <string name="a11y_not_selected">Not selected</string>
     <string name="a11y_on">On</string>
     <string name="a11y_off">Off</string>
+    <string name="a11y_decrease">Decrease</string>
+    <string name="a11y_increase">Increase</string>
+    <string name="a11y_move_up">Move up</string>
+    <string name="a11y_move_down">Move down</string>
+    <string name="a11y_reorder_named">Reorder %1$s</string>
+    <string name="a11y_previous_chapter">Previous chapter</string>
+    <string name="a11y_next_chapter">Next chapter</string>
+    <string name="a11y_grid_columns">Grid columns</string>
+    <string name="a11y_switch_layout">Switch layout</string>
+    <string name="a11y_group_filter">Filter by group</string>
+    <string name="a11y_parent_folder">Parent folder</string>
+    <string name="a11y_previous_result">Previous result</string>
+    <string name="a11y_next_result">Next result</string>
+    <string name="a11y_locate_current_chapter">Locate current chapter</string>
+    <string name="a11y_server_list">Server list</string>
+    <string name="a11y_pin_source">Pin source</string>
     <string name="a11y_expanded">Expanded</string>
     <string name="a11y_collapsed">Collapsed</string>
     <string name="a11y_long_press_reorder">Long press and drag to reorder</string>
@@ -2490,7 +2520,6 @@
     <string name="delete_chapter_cache_message">Delete chapter cache: %1$s?</string>
     <string name="about_open_project_homepage">Open project homepage</string>
     <string name="about_open_github">Open GitHub</string>
-    <string name="apply">Apply</string>
     <string name="book_characters">Characters</string>
     <string name="book_info_knowledge">Knowledge</string>
     <string name="character_network">Character network</string>
@@ -2736,4 +2765,13 @@
     <string name="cloud_tts_http_engine_summary">HTTP TTS · Uses the default voice supplied by the rule</string>
     <string name="cloud_tts_http_catalog_hint">Rule voice · Controlled by the HTTP TTS configuration</string>
     <string name="cloud_tts_request_failed">TTS request failed</string>
+    <string name="edit_menu_items">Edit Menu Items</string>
+    <string name="edit_select_menu">Edit Selection Menu</string>
+    <string name="primary_menu">Primary Menu</string>
+    <string name="collapsed_menu">Collapsed Menu</string>
+    <string name="hidden_items">Hidden Items</string>
+    <string name="merged_in_multiline">Merged in multiline mode</string>
+    <string name="apply">Apply</string>
+    <string name="source_categories">Source categories</string>
+    <string name="my_tags">My tags</string>
 </resources>

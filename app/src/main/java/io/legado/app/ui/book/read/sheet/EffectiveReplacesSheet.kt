@@ -38,6 +38,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
 private const val CHINESE_CONVERT_ID = -1L
+private const val RE_SEGMENT_ID = -2L
 
 @Composable
 fun EffectiveReplacesSheet(
@@ -51,16 +52,18 @@ fun EffectiveReplacesSheet(
     val scope = rememberCoroutineScope()
     val chineseConvertActive = ReadConfig.chineseConverterType > 0
     val chineseConvertItem = remember { ReplaceRule(CHINESE_CONVERT_ID, "繁简转换") }
+    val reSegmentActive = ReadBook.book?.getReSegment() == true
+    val reSegmentItem = remember { ReplaceRule(RE_SEGMENT_ID, "") }
 
     val effectiveRules = remember(show) {
         ReadBook.curTextChapter?.effectiveReplaceRules ?: emptyList()
     }
 
-    val items = remember(show, effectiveRules, chineseConvertActive) {
-        if (chineseConvertActive) {
-            effectiveRules + chineseConvertItem
-        } else {
-            effectiveRules
+    val items = remember(show, effectiveRules, chineseConvertActive, reSegmentActive) {
+        buildList {
+            addAll(effectiveRules)
+            if (chineseConvertActive) add(chineseConvertItem)
+            if (reSegmentActive) add(reSegmentItem)
         }
     }
 
@@ -92,7 +95,7 @@ fun EffectiveReplacesSheet(
                         onClick = {
                             if (rule.id == CHINESE_CONVERT_ID) {
                                 onNavigateToTextEffects()
-                            } else {
+                            } else if (rule.id != RE_SEGMENT_ID) {
                                 onOpenReplaceEditor(rule.id, rule.pattern)
                             }
                         },
@@ -109,12 +112,16 @@ fun EffectiveReplacesSheet(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 AppText(
-                                    text = rule.name,
+                                    text = if (rule.id == RE_SEGMENT_ID) {
+                                        stringResource(R.string.re_segment)
+                                    } else {
+                                        rule.name
+                                    },
                                     style = LegadoTheme.typography.labelLargeEmphasized,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                                if (rule.id != CHINESE_CONVERT_ID) {
+                                if (rule.id >= 0) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         AppText(
                                             text = rule.pattern,
@@ -146,16 +153,21 @@ fun EffectiveReplacesSheet(
                                 onClick = {
                                     disabledIds = disabledIds + rule.id
                                     isEdited = true
-                                    if (rule.id == CHINESE_CONVERT_ID) {
-                                        ReadConfig.chineseConverterType = 0
-                                    } else {
-                                        scope.launch {
+                                    when (rule.id) {
+                                        RE_SEGMENT_ID -> {
+                                            ReadBook.book?.setReSegment(false)
+                                            ReadBook.loadContent(false)
+                                        }
+
+                                        CHINESE_CONVERT_ID -> ReadConfig.chineseConverterType = 0
+                                        else -> scope.launch {
                                             rule.isEnabled = false
                                             appDb.replaceRuleDao.insert(rule)
                                         }
                                     }
                                 },
-                                icon = Icons.Default.Close
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close)
                             )
                         }
                     }

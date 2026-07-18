@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -32,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,18 +52,20 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -165,15 +166,18 @@ fun BookInfoEditContent(
                                 )
                             )
                         },
-                        icon = Icons.Default.ImageSearch
+                        icon = Icons.Default.ImageSearch,
+                        contentDescription = stringResource(R.string.refresh_cover)
                     )
                     MediumOutlinedButton(
                         onClick = { selectCover.launch() },
-                        icon = Icons.Default.FolderOpen
+                        icon = Icons.Default.FolderOpen,
+                        contentDescription = stringResource(R.string.select_folder)
                     )
                     MediumOutlinedButton(
                         onClick = { viewModel.resetCover() },
-                        icon = Icons.Default.Replay
+                        icon = Icons.Default.Replay,
+                        contentDescription = stringResource(R.string.cover_reset)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -196,17 +200,11 @@ fun BookInfoEditContent(
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        val bookInfoInputColor = ThemeConfig.bookInfoInputColor
-        val inputBackgroundColor = if (bookInfoInputColor != 0) {
-            Color(bookInfoInputColor)
-        } else {
-            Color.Unspecified
-        }
         AppTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
             label = stringResource(R.string.book_name),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -214,7 +212,7 @@ fun BookInfoEditContent(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
             label = stringResource(R.string.author),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -222,7 +220,16 @@ fun BookInfoEditContent(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
             label = stringResource(R.string.cover_url),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        AppTextField(
+            value = uiState.sourceKindList.joinToString(", "),
+            onValueChange = {},
+            readOnly = true,
+            label = stringResource(R.string.source_categories),
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -230,14 +237,14 @@ fun BookInfoEditContent(
             kindList = uiState.kindList,
             onKindListChange = { viewModel.onKindListChange(it) },
             onReset = { viewModel.resetKinds() },
-            backgroundColor = inputBackgroundColor
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
             label = stringResource(R.string.book_intro),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -245,7 +252,7 @@ fun BookInfoEditContent(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
             label = stringResource(R.string.book_remark),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -269,13 +276,6 @@ fun BookTypeDropdown(
         textFieldState.setTextAndPlaceCursorAtEnd(selectedTypeLabel)
     }
 
-    val bookInfoInputColor = ThemeConfig.bookInfoInputColor
-    val inputBackgroundColor = if (bookInfoInputColor != 0) {
-        Color(bookInfoInputColor)
-    } else {
-        Color.Unspecified
-    }
-
     ExposedDropdownMenuBox(
         modifier = Modifier.padding(horizontal = 8.dp),
         expanded = expanded,
@@ -286,7 +286,7 @@ fun BookTypeDropdown(
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
             label = stringResource(R.string.book_type_label),
-            backgroundColor = inputBackgroundColor,
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -328,64 +328,87 @@ fun KindEditor(
     val hapticFeedback = LocalHapticFeedback.current
 
     val listState = rememberLazyListState()
-    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+    fun moveKind(from: Int, to: Int) {
         val mutable = kindList.toMutableList()
-        mutable.add(to.index, mutable.removeAt(from.index))
+        mutable.add(to, mutable.removeAt(from))
         onKindListChange(mutable)
     }
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        moveKind(from.index, to.index)
+    }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        LazyRow(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fadingEdge(listState),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        AppText(
+            text = stringResource(R.string.my_tags)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items(kindList.size, key = { kindList[it] }) { index ->
-                val kind = kindList[index]
-                ReorderableItem(reorderableState, key = kind) { isDragging ->
-                    KindChip(
-                        text = kind,
-                        isDragging = isDragging,
-                        onClick = {
-                            editingIndex = index
-                            editText = kind
-                        },
-                        modifier = Modifier
-                            .longPressDraggableHandle(
-                                onDragStarted = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                },
-                                onDragStopped = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                }
-                            )
-                            .animateItem()
-                    )
+            LazyRow(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fadingEdge(listState),
+                contentPadding = PaddingValues(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(kindList.size, key = { kindList[it] }) { index ->
+                    val kind = kindList[index]
+                    ReorderableItem(
+                        state = reorderableState,
+                        key = kind
+                    ) { isDragging ->
+                        KindChip(
+                            text = kind,
+                            isDragging = isDragging,
+                            onClick = {
+                                editingIndex = index
+                                editText = kind
+                            },
+                            modifier = Modifier
+                                .reorderAccessibility(
+                                    index = index,
+                                    itemCount = kindList.size,
+                                    onMove = ::moveKind,
+                                )
+                                .longPressDraggableHandle(
+                                    onDragStarted = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                    },
+                                    onDragStopped = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                    }
+                                )
+                                .animateItem()
+                        )
+                    }
                 }
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            MediumOutlinedButton(
+                onClick = {
+                    onReset()
+                },
+                icon = Icons.Default.Replay,
+                contentDescription = stringResource(R.string.reset)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            MediumOutlinedButton(
+                onClick = {
+                    editingIndex = -1
+                    editText = ""
+                },
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
+            )
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedButton(
-            onClick = {
-                onReset()
-            },
-            icon = Icons.Default.Replay
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedButton(
-            onClick = {
-                editingIndex = -1
-                editText = ""
-            },
-            icon = Icons.Default.Add
-        )
     }
+
 
     if (editingIndex != null) {
         val isAdding = editingIndex == -1
@@ -443,12 +466,13 @@ private fun KindChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = LegadoTheme.colorScheme.surfaceContainer,
+    NormalCard(
+        cornerRadius = 8.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         contentColor = LegadoTheme.colorScheme.onSurface,
-        shadowElevation = if (isDragging) 8.dp else 0.dp,
+        elevation = if (isDragging) 2.dp else 0.dp,
         modifier = modifier
+            .padding(2.dp)
             .zIndex(if (isDragging) 1f else 0f)
             .clickable(onClick = onClick)
     ) {

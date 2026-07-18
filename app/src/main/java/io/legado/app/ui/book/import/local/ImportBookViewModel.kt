@@ -1,13 +1,12 @@
 package io.legado.app.ui.book.import.local
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.app.Application
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.getTreeDocumentId
+import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
@@ -18,6 +17,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.importBookConfig.ImportBookConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.utils.AlphanumComparator
@@ -35,19 +35,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
@@ -79,6 +77,7 @@ sealed interface ImportBookIntent {
     data object Initialize : ImportBookIntent
     data object SelectFolderClick : ImportBookIntent
     data class FolderPicked(val uri: Uri?, val target: ImportFolderPickTarget) : ImportBookIntent
+    data class BookFilesPicked(val uris: List<Uri>) : ImportBookIntent
     data class SearchToggle(val enabled: Boolean) : ImportBookIntent
     data class SearchQueryChange(val query: String) : ImportBookIntent
     data class SortChange(val sort: Int) : ImportBookIntent
@@ -149,6 +148,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             }
 
             is ImportBookIntent.FolderPicked -> onFolderPicked(intent.uri, intent.target)
+            is ImportBookIntent.BookFilesPicked -> importPickedBookFiles(intent.uris)
             is ImportBookIntent.SearchToggle -> setSearchMode(intent.enabled)
             is ImportBookIntent.SearchQueryChange -> setSearchKey(intent.query)
             is ImportBookIntent.SortChange -> setSort(intent.sort)
@@ -545,6 +545,19 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             context.toastOnUi("添加书架成功")
         }.onFinally {
             clearSelection()
+        }
+    }
+
+    private fun importPickedBookFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        uris.forEach { it.takePersistablePermissionSafely(context) }
+        execute {
+            LocalBook.importFiles(uris)
+        }.onError {
+            context.toastOnUi("添加书架失败，请重新选择书籍文件")
+            AppLog.put("添加书架失败\n${it.localizedMessage}", it)
+        }.onSuccess {
+            context.toastOnUi("添加书架成功")
         }
     }
 

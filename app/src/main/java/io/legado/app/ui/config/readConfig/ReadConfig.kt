@@ -87,9 +87,9 @@ object ReadConfig {
     var showSelectMenuIcon
         get() = ReadMenuConfig.showSelectMenuIcon
         set(value) { ReadMenuConfig.showSelectMenuIcon = value }
-    var textSelectMenuFilter
-        get() = ReadMenuConfig.textSelectMenuFilter
-        set(value) { ReadMenuConfig.textSelectMenuFilter = value }
+    var textSelectMenuConfig
+        get() = ReadMenuConfig.textSelectMenuConfig
+        set(value) { ReadMenuConfig.textSelectMenuConfig = value }
     var showReadTitleAddition
         get() = ReadMenuConfig.showReadTitleAddition
         set(value) { ReadMenuConfig.showReadTitleAddition = value }
@@ -286,7 +286,6 @@ object ReadConfig {
             progressBarBehavior = preferences.progressBarBehavior
             expandTextMenu = preferences.expandTextMenu
             showSelectMenuIcon = preferences.showSelectMenuIcon
-            textSelectMenuFilter = preferences.textSelectMenuFilter
             showReadTitleAddition = preferences.showReadTitleAddition
             showMenuIcon = preferences.showMenuIcon
             clickActionTL = preferences.clickActionTL

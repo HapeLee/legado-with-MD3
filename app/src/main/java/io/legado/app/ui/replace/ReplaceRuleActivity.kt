@@ -3,6 +3,7 @@
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -19,6 +20,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.replace.edit.ReplaceEditRouteScreen
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import io.legado.app.ui.theme.AppTheme
@@ -167,6 +169,13 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     }
                 }
             )
+            BackHandler(enabled = !AppConfig.isPredictiveBackEnabled) {
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                } else {
+                    finish()
+                }
+            }
         }
     }
 

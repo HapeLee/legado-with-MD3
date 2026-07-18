@@ -33,6 +33,7 @@ object LocalPreferencesKeys {
     val ENABLE_READ_RECORD = booleanPreferencesKey("enableReadRecord")
     val HOME_SOURCE_SET_URL = stringPreferencesKey("home_source_set_url")
     val HOME_DASHBOARD_SECTIONS = stringPreferencesKey("home_dashboard_sections")
+    val READ_RECORD_DISPLAY_MODE = stringPreferencesKey("readRecordDisplayMode")
     val COVER_ALBUM_MIGRATED = booleanPreferencesKey("cover_album_migrated")
     val SELECTED_COVER_ALBUM_ID = stringPreferencesKey("selected_cover_album_id")
     val SELECTED_LIGHT_COVER_ALBUM_ID = stringPreferencesKey("selected_light_cover_album_id")

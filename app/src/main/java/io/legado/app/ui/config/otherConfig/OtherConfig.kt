@@ -17,6 +17,11 @@ object OtherConfig {
         "official_version"
     )
 
+    var autoCheckUpdateOnStart by prefDelegate(
+        PreferKey.autoCheckUpdateOnStart,
+        false
+    )
+
     var webServiceAutoStart by prefDelegate(
         PreferKey.webServiceAutoStart,
         false

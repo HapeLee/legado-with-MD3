@@ -14,7 +14,6 @@ import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.DialogCustomGroupBinding
@@ -153,12 +152,12 @@ class ImportRssSourceDialog() : BaseDialogFragment(R.layout.dialog_recycler_view
             R.id.menu_new_group -> alertCustomGroup(item)
             R.id.menu_keep_original_name -> {
                 item.isChecked = !item.isChecked
-                putPrefBoolean(PreferKey.importKeepName, item.isChecked)
+                AppConfig.importKeepName = item.isChecked
             }
 
             R.id.menu_keep_group -> {
                 item.isChecked = !item.isChecked
-                putPrefBoolean(PreferKey.importKeepGroup, item.isChecked)
+                AppConfig.importKeepGroup = item.isChecked
             }
 
             R.id.menu_keep_enable -> {

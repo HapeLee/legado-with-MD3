@@ -31,7 +31,7 @@ fun MoreConfigSheet(
     onIntent: (ReadBookIntent) -> Unit,
     onOpenClickRegionalConfig: () -> Unit,
     onOpenPageKeyConfig: () -> Unit,
-    onOpenTextSelectMenuFilterConfig: () -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
 ) {
     val readSettingsRepository: ReadSettingsRepository = koinInject()
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
@@ -145,15 +145,9 @@ fun MoreConfigSheet(
                 },
                 onOpenClickRegionalConfig = onOpenClickRegionalConfig,
                 onOpenPageKeyConfig = onOpenPageKeyConfig,
-                onOpenTextSelectMenuFilterConfig = onOpenTextSelectMenuFilterConfig,
+                onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
                 onDisableReturnKeyChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DisableReturnKey(it)))
-                },
-                onExpandTextMenuChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
-                },
-                onShowSelectMenuIconChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
                 },
                 onShowReadTitleAdditionChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowReadTitleAddition(it)))
@@ -313,9 +307,7 @@ private fun OtherSettings(
     onOpenClickRegionalConfig: () -> Unit,
     onDisableReturnKeyChange: (Boolean) -> Unit,
     onOpenPageKeyConfig: () -> Unit,
-    onOpenTextSelectMenuFilterConfig: () -> Unit,
-    onExpandTextMenuChange: (Boolean) -> Unit,
-    onShowSelectMenuIconChange: (Boolean) -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
     onShowReadTitleAdditionChange: (Boolean) -> Unit,
     onShowMenuIconChange: (Boolean) -> Unit,
 ) {
@@ -385,18 +377,8 @@ private fun OtherSettings(
         onClick = onOpenPageKeyConfig,
     )
     TinyClickableSettingItem(
-        title = stringResource(R.string.text_select_menu_filter),
-        onClick = onOpenTextSelectMenuFilterConfig,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.expand_text_menu),
-        checked = preferences.expandTextMenu,
-        onCheckedChange = onExpandTextMenuChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.show_select_menu_icon),
-        checked = preferences.showSelectMenuIcon,
-        onCheckedChange = onShowSelectMenuIconChange,
+        title = stringResource(R.string.edit_select_menu),
+        onClick = onOpenTextSelectMenuConfig,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.show_read_title_addition),

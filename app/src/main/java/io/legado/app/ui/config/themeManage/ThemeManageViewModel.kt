@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class ThemeManageViewModel(
     private val themePackageManager: ThemePackageManager,
 ) : ViewModel() {
+
+    private val operationMutex = Mutex()
 
     private val _uiState = MutableStateFlow(ThemeManageUiState())
     val uiState = _uiState.asStateFlow()
@@ -34,6 +37,7 @@ class ThemeManageViewModel(
     }
 
     fun onIntent(intent: ThemeManageIntent) {
+        if (operationMutex.isLocked) return
         when (intent) {
             ThemeManageIntent.LoadSavedThemes -> loadSavedThemes()
             is ThemeManageIntent.ExportPackage -> exportPackage(intent)
@@ -42,17 +46,20 @@ class ThemeManageViewModel(
             is ThemeManageIntent.SaveTheme -> saveTheme(intent)
             is ThemeManageIntent.ApplySavedTheme -> applySavedTheme(intent.theme)
             is ThemeManageIntent.DeleteSavedTheme -> deleteSavedTheme(intent.theme)
+            ThemeManageIntent.MigrateLegacyThemes -> migrateLegacyThemes()
         }
     }
 
     private fun loadSavedThemes() {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val themes = themePackageManager.loadSavedThemes()
+            val hasLegacyThemes = themePackageManager.hasLegacySavedThemes()
             _uiState.update {
                 it.copy(
                     loading = false,
                     savedThemes = themes.toImmutableList(),
+                    hasLegacyThemes = hasLegacyThemes,
                 )
             }
         }
@@ -69,7 +76,7 @@ class ThemeManageViewModel(
     }
 
     private fun saveTheme(intent: ThemeManageIntent.SaveTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = runCatching {
                 themePackageManager.saveTheme(
@@ -95,7 +102,7 @@ class ThemeManageViewModel(
     }
 
     private fun applySavedTheme(theme: SavedTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.applySavedTheme(theme)
             if (result.isSuccess) {
@@ -114,7 +121,7 @@ class ThemeManageViewModel(
     }
 
     private fun deleteSavedTheme(theme: SavedTheme) {
-        viewModelScope.launch {
+        launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.deleteSavedTheme(theme)
             if (result.isSuccess) {
@@ -132,7 +139,7 @@ class ThemeManageViewModel(
     }
 
     private fun exportPackage(intent: ThemeManageIntent.ExportPackage) {
-        viewModelScope.launch {
+        launchExclusive {
             val result = themePackageManager.exportPackage(
                 uri = Uri.parse(intent.uri),
                 themeName = intent.themeName,
@@ -153,13 +160,13 @@ class ThemeManageViewModel(
     }
 
     private fun importPackage(uri: String) {
-        viewModelScope.launch {
+        launchExclusive {
             emitImportResult(themePackageManager.importPackage(Uri.parse(uri)))
         }
     }
 
     private fun importLegacyJson(uri: String) {
-        viewModelScope.launch {
+        launchExclusive {
             emitImportResult(themePackageManager.importLegacyJson(Uri.parse(uri)))
         }
     }
@@ -182,12 +189,39 @@ class ThemeManageViewModel(
             }
         )
     }
+
+    private fun migrateLegacyThemes() {
+        launchExclusive {
+            _uiState.update { it.copy(loading = true) }
+            val result = themePackageManager.migrateLegacySavedThemes()
+            refreshSavedThemes()
+            _uiState.update { it.copy(hasLegacyThemes = result.failedCount > 0) }
+            _effects.emit(
+                ThemeManageEffect.LegacyMigrationFinished(
+                    migratedCount = result.migratedCount,
+                    failedCount = result.failedCount,
+                )
+            )
+        }
+    }
+
+    private fun launchExclusive(block: suspend () -> Unit) {
+        if (!operationMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                operationMutex.unlock()
+            }
+        }
+    }
 }
 
 @Stable
 data class ThemeManageUiState(
     val loading: Boolean = false,
     val savedThemes: ImmutableList<SavedTheme> = persistentListOf(),
+    val hasLegacyThemes: Boolean = false,
 )
 
 sealed interface ThemeManageIntent {
@@ -210,10 +244,16 @@ sealed interface ThemeManageIntent {
 
     data class ApplySavedTheme(val theme: SavedTheme) : ThemeManageIntent
     data class DeleteSavedTheme(val theme: SavedTheme) : ThemeManageIntent
+    data object MigrateLegacyThemes : ThemeManageIntent
 }
 
 sealed interface ThemeManageEffect {
     data object RestartRequired : ThemeManageEffect
+
+    data class LegacyMigrationFinished(
+        val migratedCount: Int,
+        val failedCount: Int,
+    ) : ThemeManageEffect
 
     data class ShowResult(
         @param:StringRes val messageRes: Int,

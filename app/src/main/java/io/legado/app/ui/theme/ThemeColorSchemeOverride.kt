@@ -75,7 +75,12 @@ fun ColorScheme.toLegadoColorScheme(
         cardContainer = primaryContainer.copy(alpha = 0.5f),
         onCardContainer = primary,
         onSheetContent = surface,
-        cardPrimaryContainer = primaryContainer
+        cardPrimaryContainer = primaryContainer,
+        surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
+            Color(ThemeConfig.bookInfoInputColor)
+        } else {
+            Color.Unspecified
+        }
     )
 }
 
@@ -105,8 +110,6 @@ fun ProvideColorSchemeOverride(
             isDark = resolvedIsDark,
         )
     }
-    val materialTypography = MaterialTheme.typography
-    val materialShapes = MaterialTheme.shapes
     val isMiuixEngine = ThemeResolver.isMiuixEngine(overrideThemeMode.composeEngine)
     val miuixColorSchemeMode = remember(overrideThemeMode.themeMode) {
         overrideThemeMode.themeMode.toMiuixMonetMode()
@@ -144,19 +147,13 @@ fun ProvideColorSchemeOverride(
     ) {
         if (miuixController != null) {
             MiuixTheme(controller = miuixController) {
-                MaterialTheme(
-                    colorScheme = colorScheme,
-                    typography = materialTypography,
-                    shapes = materialShapes
-                ) {
-                    content()
-                }
+                content()
             }
         } else {
             MaterialTheme(
                 colorScheme = colorScheme,
-                typography = materialTypography,
-                shapes = materialShapes
+                typography = MaterialTheme.typography,
+                shapes = MaterialTheme.shapes
             ) {
                 content()
             }

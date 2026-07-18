@@ -126,7 +126,6 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
@@ -137,6 +136,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
@@ -234,10 +234,12 @@ fun BookshelfScreen(
         }
     }
 
-    val pagerState = rememberPagerState(
-        initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
-        pageCount = { uiState.groups.size }
-    )
+    val pagerState = key(uiState.groups.isEmpty()) {
+        rememberPagerState(
+            initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
+            pageCount = { uiState.groups.size }
+        )
+    }
     val folderGridState = rememberLazyGridState()
     val standaloneSearchGridState = rememberLazyGridState()
     val groupGridStates = mutableMapOf<Long, LazyGridState>()
@@ -861,6 +863,7 @@ fun BookshelfScreen(
                             onBookClick = onBookClick,
                             onBookLongClick = onBookLongClick,
                             isCurrentPage = true,
+                            sharedCoverGroupId = currentGroupId,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                         )
@@ -880,12 +883,8 @@ fun BookshelfScreen(
                             val group = uiState.groups.getOrNull(pageIndex)
                             if (group != null) {
                                 val isSelectedGroup = group.groupId == uiState.selectedGroupId
-                                val books = if (isSelectedGroup && uiState.isSearch) {
-                                    uiState.items
-                                } else {
-                                    uiState.allGroupBooks[group.groupId]
-                                        ?: persistentListOf()
-                                }
+                                val books = uiState.visibleGroupBooks[group.groupId]
+                                    ?: persistentListOf()
                                 val canReorderBooks = isEditMode &&
                                         !uiState.isSearch &&
                                         (group.bookSort.takeIf { it >= 0 }
@@ -924,6 +923,7 @@ fun BookshelfScreen(
                                     onBookClick = onBookClick,
                                     onBookLongClick = onBookLongClick,
                                     isCurrentPage = isSelectedGroup,
+                                    sharedCoverGroupId = group.groupId,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                 )
@@ -1270,6 +1270,7 @@ fun BookshelfPage(
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem, String?) -> Unit,
     isCurrentPage: Boolean = true,
+    sharedCoverGroupId: Long,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -1382,16 +1383,12 @@ fun BookshelfPage(
             horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
             showFastScroll = showFastScroll
         ) {
-            items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
+            itemsIndexed(displayBooks, key = { _, item -> item.book.bookUrl }) { index, bookUi ->
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
-                val sharedCoverKey = if (isCurrentPage) {
-                    bookCoverSharedElementKey(
-                        bookUi.book.bookUrl,
-                        "bookshelf:${uiState.selectedGroupId}"
-                    )
-                } else {
-                    null
-                }
+                val sharedCoverKey = bookCoverSharedElementKey(
+                    bookUi.book.bookUrl,
+                    "bookshelf:$sharedCoverGroupId"
+                )
                 ReorderableItem(
                     state = reorderableState,
                     key = bookUi.book.bookUrl,
@@ -1400,6 +1397,15 @@ fun BookshelfPage(
                     BookItem(
                         bookUi = bookUi,
                         modifier = Modifier
+                            .reorderAccessibility(
+                                index = index,
+                                itemCount = displayBooks.size,
+                                enabled = canReorderBooks,
+                            ) { from, to ->
+                                onDragStarted(displayBooks)
+                                onMoveBook(from, to, displayBooks)
+                                onDragFinished()
+                            }
                             .then(
                                 if (canReorderBooks) {
                                     Modifier.longPressDraggableHandle(

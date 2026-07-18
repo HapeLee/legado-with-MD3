@@ -2,9 +2,18 @@ package io.legado.app.data.repository
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.legado.app.constant.PreferKey
 import io.legado.app.utils.defaultSharedPreferences
@@ -22,10 +31,37 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
             SharedPreferencesMigration(
                 context,
                 "${context.packageName}_preferences"
-            )
+            ),
+            ShowBrightnessViewMigration,
         )
     }
 )
+
+internal object ShowBrightnessViewMigration : DataMigration<Preferences> {
+
+    private val booleanKey = booleanPreferencesKey(PreferKey.showBrightnessView)
+    private val stringKey = stringPreferencesKey(PreferKey.showBrightnessView)
+
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean =
+        currentData.asMap().entries.any { (key, value) ->
+            key.name == PreferKey.showBrightnessView && value is Boolean
+        }
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        val oldValue = currentData.asMap().entries
+            .firstOrNull { (key, value) ->
+                key.name == PreferKey.showBrightnessView && value is Boolean
+            }
+            ?.value as? Boolean
+            ?: return currentData
+        return currentData.toMutablePreferences().apply {
+            remove(booleanKey)
+            this[stringKey] = if (oldValue) "1" else "0"
+        }
+    }
+
+    override suspend fun cleanUp() = Unit
+}
 
 /**
  * 设置仓储

@@ -6,6 +6,8 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,11 +45,23 @@ enum class DisplayMode {
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReadRecordViewModel(
     private val repository: ReadRecordRepository,
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val localPreferencesRepository: LocalPreferencesRepository
 ) : ViewModel() {
 
     private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)
     val displayMode = _displayMode.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val saved = localPreferencesRepository.getPreference(
+                LocalPreferencesKeys.READ_RECORD_DISPLAY_MODE, DisplayMode.AGGREGATE.name
+            ).first()
+            _displayMode.value = runCatching { DisplayMode.valueOf(saved) }
+                .getOrDefault(DisplayMode.AGGREGATE)
+        }
+    }
+
     private val _searchKey = MutableStateFlow("")
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
     val readRecordEnabled: StateFlow<Boolean> = repository.readRecordEnabled
@@ -130,6 +145,11 @@ class ReadRecordViewModel(
 
     fun setDisplayMode(mode: DisplayMode) {
         _displayMode.value = mode
+        viewModelScope.launch {
+            localPreferencesRepository.updatePreference(
+                LocalPreferencesKeys.READ_RECORD_DISPLAY_MODE, mode.name
+            )
+        }
     }
 
     fun setSelectedDate(date: LocalDate?) {

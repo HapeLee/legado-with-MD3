@@ -122,6 +122,17 @@ fun MainNavigationSettingsSheet(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = destination.route,
+                        reorderIndex = visibleItems.indexOf(destination),
+                        reorderItemCount = visibleItems.size,
+                        onMoveItem = { from, to ->
+                            val fromItem = visibleItems[from]
+                            val toItem = visibleItems[to]
+                            navigationItems = navigationItems.toMutableList().apply {
+                                move(indexOf(fromItem), indexOf(toItem))
+                            }
+                            ThemeConfig.mainNavigationOrder =
+                                navigationItems.joinToString(",") { it.route }
+                        },
                         title = stringResource(destination.labelId),
                         isEnabled = true,
                         containerColor = LegadoTheme.colorScheme.onSheetContent,

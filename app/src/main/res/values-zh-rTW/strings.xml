@@ -80,6 +80,7 @@
     <string name="version">版本</string>
     <string name="local">本機</string>
     <string name="search">搜尋</string>
+    <string name="all_results">全部結果</string>
     <string name="search_placeholder">搜尋…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">來源：%s</string>
@@ -967,7 +968,7 @@
     <string name="tts_speech_add">語速加</string>
     <string name="open_sys_dir_picker_error">打開系統資料夾選擇器出錯，自動打開應用程式資料夾選擇器</string>
     <string name="open_sys_doc_picker_error">打開系統檔案選擇器出錯，自動打開應用文件選擇器</string>
-    <string name="expand_text_menu">展開文字選擇選單</string>
+    <string name="expand_text_menu">多行展示</string>
     <string name="search_content_size">搜尋結果</string>
     <string name="search_content_empty">搜索内容为空，检查净化/简繁设置</string>
     <string name="book_tree_uri_t">書籍儲存位置</string>
@@ -1205,6 +1206,7 @@
     <string name="adjust_chapter_page">调整本章页数</string>
     <string name="adjust_chapter_index">调整章节位置</string>
     <string name="clear_webview_data_success">清除成功，3秒后自动重启应用</string>
+    <string name="clear_webview_data_failed">清除 WebView 資料失敗</string>
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
@@ -1225,6 +1227,8 @@
     <string name="start_chapter">開始篇章</string>
     <string name="update_to_variant_title">检查更新查找版本</string>
     <string name="update_to_variant_summary">检查更新时查找其他签名版本</string>
+    <string name="auto_check_update_on_start_title">啟動時自動檢查更新</string>
+    <string name="auto_check_update_on_start_summary">僅在應用程式程序完全重新啟動時檢查，從背景返回不會觸發</string>
     <string name="default_version">当前</string>
     <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>
@@ -1528,6 +1532,7 @@
     <string name="image_style_text">文字吸附</string>
     <string name="image_style_single">單頁</string>
     <string name="title_color">標題顏色</string>
+    <string name="reset_to_body_color">重置為正文顏色</string>
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">可用變數：{name} 書名、{author} 作者、{group} 分組、{source} 來源、{remark} 備註。
 
@@ -1539,16 +1544,18 @@
     <string name="clipboard_empty">剪貼簿為空</string>
     <string name="clipboard_empty_or_invalid">剪貼簿為空或格式無效</string>
     <string name="invalid_format">無效格式</string>
+    <string name="regex_is_empty">正則表達式為空</string>
+    <string name="example_is_empty">範例為空</string>
+    <string name="invalid_regex">正則表達式無效</string>
     <string name="complete_required_information">請填寫所有必填資訊</string>
     <string name="cannot_open_url">無法直接開啟此 URL</string>
     <string name="open_by_browser">已切換到瀏覽器開啟</string>
     <string name="open_by_webview">已切換到 WebView 開啟</string>
-    <string name="show_select_menu_icon">顯示文字選擇選單圖示</string>
-    <string name="text_select_menu_filter">文字選擇選單篩選</string>
-    <string name="text_select_menu_filter_desc">篩選選擇選單中顯示的第三方應用</string>
+    <string name="show_select_menu_icon">展示圖示</string>
+
     <string name="show_all">全部顯示</string>
     <string name="hide_all">全部隱藏</string>
-    <string name="no_apps_found">找不到支援文字操作的第三方應用</string>
+
     <string name="is_event_listener">事件監聽器</string>
     <string name="custom_button">自訂按鈕</string>
     <string name="rule_call_back">回呼 JS（callBackJs）</string>
@@ -1594,6 +1601,10 @@
     <string name="theme_manage_import_package_summary">匯入包含資源和封面圖集的主題包</string>
     <string name="theme_manage_import_config">匯入舊版主題設定</string>
     <string name="theme_manage_import_config_summary">從舊版 JSON 檔案匯入主題設定</string>
+    <string name="theme_manage_migrate_legacy">遷移舊版主題</string>
+    <string name="theme_manage_migrate_legacy_summary">將已儲存的 JSON 主題轉換為新版主題格式</string>
+    <string name="theme_manage_migrate_success">已遷移 %1$d 個舊版主題</string>
+    <string name="theme_manage_migrate_partial">已遷移 %1$d 個主題，%2$d 個遷移失敗</string>
     <string name="theme_manage_saved_themes">已儲存的主題</string>
     <string name="theme_manage_save_theme">儲存主題</string>
     <string name="theme_manage_save">儲存</string>
@@ -1625,8 +1636,9 @@
     <string name="theme_manage_section_blur">模糊效果</string>
     <string name="book_info_page">書籍詳情頁</string>
     <string name="book_info_follow_cover_color">介面顏色跟隨封面取色</string>
-    <string name="book_info_follow_cover_color_summary">從書籍封面擷取詳情頁配色</string>
-    <string name="book_info_background_blur">背景設定</string>
+    <string name="book_info_follow_cover_color_summary">僅在顯示背景封面時生效</string>
+    <string name="book_info_network_cover_background">網路封面背景設定</string>
+    <string name="book_info_default_cover_background">預設封面背景設定</string>
     <string name="book_info_background_blur_off">關閉模糊封面</string>
     <string name="book_info_background_blur_on">開啟模糊封面</string>
     <string name="book_info_background_blur_off_for_default">不顯示背景封面</string>
@@ -2053,6 +2065,8 @@
     <string name="homepage_select_one_kind">選擇一個分類</string>
     <string name="or">或</string>
     <string name="read_menu_bg_color_summary">閱讀器頂部和底部工具列的背景色</string>
+    <string name="read_menu_text_color">選單文字顏色</string>
+    <string name="read_menu_text_color_summary">預設時使用主題色</string>
     <string name="read_menu_color_source">調色板來源</string>
     <string name="container_background_color">容器背景色</string>
     <string name="read_menu_container_color_summary">閱讀器選單調色板的基礎表面色</string>
@@ -2086,14 +2100,14 @@
     <string name="read_menu_bar_liquid_glass_buttons">液態玻璃底部按鈕</string>
     <string name="read_menu_top_bar_title_capsule">標題膠囊佈局</string>
     <string name="read_menu_bottom_bar_liquid_glass_buttons_summary">為底部工具列按鈕和滑桿滑塊套用液態玻璃效果。需要 Android 13+</string>
-    <string name="read_menu_bar_blur_style">模糊樣式</string>
-    <string name="read_menu_blur_style_solid">實體模糊</string>
-    <string name="read_menu_blur_style_progressive">漸進式模糊</string>
+    <string name="read_menu_bar_blur_style">著色樣式</string>
+    <string name="read_menu_blur_style_solid">填充</string>
+    <string name="read_menu_blur_style_progressive">漸變</string>
     <string name="read_menu_top_bar_liquid_glass_buttons_summary">為頂部工具列操作按鈕套用液態玻璃效果。需要 Android 13+</string>
     <string name="read_menu_blur_radius">模糊半徑</string>
     <string name="read_menu_blur_radius_summary">較大的半徑可能降低效能</string>
     <string name="read_menu_blur_alpha">選單不透明度</string>
-    <string name="read_menu_blur_color">模糊色調顏色</string>
+    <string name="read_menu_blur_color">選單著色</string>
     <string name="read_menu_border">邊框</string>
     <string name="read_menu_border_width">寬度</string>
     <string name="read_menu_border_color">顏色</string>
@@ -2291,6 +2305,24 @@
     <string name="a11y_not_selected">未選取</string>
     <string name="a11y_on">開啟</string>
     <string name="a11y_off">關閉</string>
+    <string name="a11y_decrease">減小</string>
+    <string name="a11y_increase">增大</string>
+    <string name="a11y_move_up">上移</string>
+    <string name="a11y_move_down">下移</string>
+    <string name="a11y_reorder_named">調整%1$s順序</string>
+    <string name="a11y_previous_chapter">上一章</string>
+    <string name="a11y_next_chapter">下一章</string>
+    <string name="a11y_grid_columns">網格欄數</string>
+    <string name="a11y_switch_layout">切換版面配置</string>
+    <string name="a11y_group_filter">依分組篩選</string>
+    <string name="a11y_parent_folder">返回上層目錄</string>
+    <string name="a11y_previous_result">上一個結果</string>
+    <string name="a11y_next_result">下一個結果</string>
+    <string name="a11y_locate_current_chapter">定位目前章節</string>
+    <string name="a11y_read_progress_page">第 %1$d 頁，共 %2$d 頁</string>
+    <string name="a11y_read_progress_chapter">第 %1$d 章，共 %2$d 章</string>
+    <string name="a11y_server_list">伺服器清單</string>
+    <string name="a11y_pin_source">置頂書源</string>
     <string name="a11y_expanded">已展開</string>
     <string name="a11y_collapsed">已收合</string>
     <string name="a11y_long_press_reorder">長按並拖曳可排序</string>
@@ -2558,4 +2590,12 @@
     <string name="cloud_tts_http_engine_summary">HTTP TTS · 使用規則提供的預設音色</string>
     <string name="cloud_tts_http_catalog_hint">規則音色 · 由 HTTP TTS 設定決定</string>
     <string name="cloud_tts_request_failed">TTS 請求失敗</string>
+    <string name="edit_menu_items">編輯選單項</string>
+    <string name="edit_select_menu">編輯選擇選單</string>
+    <string name="primary_menu">一級選單</string>
+    <string name="collapsed_menu">折疊選單</string>
+    <string name="hidden_items">已隱藏項目</string>
+    <string name="merged_in_multiline">多行模式下將合併顯示</string>
+    <string name="source_categories">書源分類</string>
+    <string name="my_tags">我的標籤</string>
 </resources>

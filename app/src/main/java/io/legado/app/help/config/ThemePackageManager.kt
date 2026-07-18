@@ -177,15 +177,41 @@ class ThemePackageManager(
 
     suspend fun loadSavedThemes(): List<SavedTheme> = withContext(Dispatchers.IO) {
         savedThemesRoot.mkdirs()
-        val folderThemes = savedThemesRoot
+        savedThemesRoot
             .listFiles()
             .orEmpty()
             .filter(File::isDirectory)
+            .filterNot { it.name.endsWith(".tmp") }
             .mapNotNull(::readSavedThemeFolder)
-        ThemeImportExport.reload()
-        val folderThemeNames = folderThemes.mapTo(mutableSetOf()) { it.name }
-        folderThemes + ThemeImportExport.savedThemes.filter { it.name !in folderThemeNames }
     }
+
+    suspend fun hasLegacySavedThemes(): Boolean = withContext(Dispatchers.IO) {
+        savedThemesRoot.listFiles().orEmpty().any { it.isFile && it.extension == "json" }
+    }
+
+    suspend fun migrateLegacySavedThemes(): LegacyThemeMigrationResult =
+        withContext(Dispatchers.IO) {
+            var migratedCount = 0
+            var failedCount = 0
+            savedThemesRoot.listFiles().orEmpty()
+                .filter { it.isFile && it.extension == "json" }
+                .forEach { file ->
+                    runCatching {
+                        val data = ThemeImportExport.parseLegacyThemeData(file.readText())
+                            ?: error("Unsupported legacy theme: ${file.name}")
+                        saveTheme(
+                            name = uniqueSavedThemeName(file.nameWithoutExtension),
+                            data = data,
+                        )
+                        check(file.delete()) { "Unable to remove migrated theme: ${file.name}" }
+                    }.onSuccess {
+                        migratedCount++
+                    }.onFailure {
+                        failedCount++
+                    }
+                }
+            LegacyThemeMigrationResult(migratedCount, failedCount)
+        }
 
     suspend fun saveTheme(
         name: String,
@@ -210,43 +236,22 @@ class ThemePackageManager(
                 error("Failed to delete saved theme: ${theme.name}")
             }
 
-            ThemeImportExport.deleteSavedTheme(theme)
         }
     }
 
     suspend fun applySavedTheme(theme: SavedTheme): Result<Unit> =
         withContext(Dispatchers.IO) {
             runSuspendCatching {
-                val packageRoot = theme.packageRootPath?.let(::File)
-                val packageManifest = theme.packageManifest
-                if (packageRoot?.isDirectory == true && packageManifest != null) {
-                    applySavedThemeFolder(theme, packageRoot, packageManifest)
-                    return@runSuspendCatching
+                val packageRoot = requireNotNull(theme.packageRootPath?.let(::File)) {
+                    "Saved theme folder is missing: ${theme.name}"
                 }
-
-                val savedAlbumId = theme.data.selectedCoverAlbumId
-                    ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
-                val appliedAssets = ThemeImportExport.applyToThemeConfig(
-                    data = theme.data,
-                    applyEmbeddedCoverAssets = savedAlbumId == null,
-                )
-                val selectedCoverAlbumId = if (savedAlbumId != null) {
-                    coverAlbumUseCase.selectAlbum(savedAlbumId)
-                    savedAlbumId
-                } else {
-                    importLegacyCoverAlbums(
-                        albumName = theme.name,
-                        appliedAssets = appliedAssets,
-                    )
+                val packageManifest = requireNotNull(theme.packageManifest) {
+                    "Saved theme manifest is missing: ${theme.name}"
                 }
-                if (selectedCoverAlbumId != theme.data.selectedCoverAlbumId) {
-                    ThemeImportExport.saveCurrentAsTheme(
-                        name = theme.name,
-                        data = theme.data.copy(
-                            selectedCoverAlbumId = selectedCoverAlbumId,
-                        ),
-                    )
+                require(packageRoot.isDirectory) {
+                    "Saved theme folder does not exist: ${theme.name}"
                 }
+                applySavedThemeFolder(theme, packageRoot, packageManifest)
             }
         }
 
@@ -417,10 +422,16 @@ class ThemePackageManager(
             if (path != null) {
                 val extension = sourceExtension(path, source.key)
                 val entryPath = "${source.entryBase}.$extension"
-                openSource(path).use { input ->
-                    input.copyToPackageFile(root, entryPath)
+                val copied = runCatching {
+                    openSource(path).use { input ->
+                        input.copyToPackageFile(root, entryPath)
+                    }
+                }.isSuccess
+                if (copied) {
+                    result[source.key] = entryPath
+                } else if (config.assets?.get(source.legacyAssetKey).isNullOrBlank()) {
+                    error("无法读取主题资源: $path")
                 }
-                result[source.key] = entryPath
             }
         }
         copyEmbeddedAssetsToFolder(root, config, result)
@@ -698,11 +709,18 @@ class ThemePackageManager(
         selectedCoverAlbumId: String?,
     ) {
         saveTheme(
-            name = ThemeImportExport.uniqueSavedThemeName(name),
+            name = uniqueSavedThemeName(name),
             data = ThemeImportExport.exportFromCurrent().copy(
                 selectedCoverAlbumId = selectedCoverAlbumId,
             ),
         )
+    }
+
+    private fun uniqueSavedThemeName(name: String): String {
+        if (!savedThemeDir(name).exists()) return name
+        var index = 2
+        while (savedThemeDir("$name $index").exists()) index++
+        return "$name $index"
     }
 
     private fun importedThemeName(
@@ -922,13 +940,31 @@ class ThemePackageManager(
         val key: String,
         val sourcePath: String?,
         val entryBase: String,
-    )
+    ) {
+        val legacyAssetKey: String
+            get() = when (key) {
+                ASSET_BACKGROUND_LIGHT -> "bgImageLight"
+                ASSET_BACKGROUND_DARK -> "bgImageDark"
+                ASSET_NAV_HOME -> "navIconHome"
+                ASSET_NAV_BOOKSHELF -> "navIconBookshelf"
+                ASSET_NAV_EXPLORE -> "navIconExplore"
+                ASSET_NAV_RSS -> "navIconRss"
+                ASSET_NAV_MY -> "navIconMy"
+                ASSET_FONT -> "appFontPath"
+                else -> key
+            }
+    }
 
     private data class ExportedCoverData(
         val albums: List<ThemePackageCoverAlbum>,
         val selection: ThemePackageCoverSelection,
     )
 }
+
+data class LegacyThemeMigrationResult(
+    val migratedCount: Int,
+    val failedCount: Int,
+)
 
 @Keep
 data class ThemePackageManifest(

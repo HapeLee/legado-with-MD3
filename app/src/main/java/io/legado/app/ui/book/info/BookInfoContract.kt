@@ -22,6 +22,7 @@ data class HighlightedTag(
 data class BookInfoUiState(
     val book: BookInfoBookUi? = null,
     val hasChapters: Boolean = false,
+    val tocLoadFailed: Boolean = false,
     val webFiles: List<BookInfoWebFile> = emptyList(),
     val highlightedTags: List<HighlightedTag> = emptyList(),
     val kindLabels: List<String> = emptyList(),
@@ -62,6 +63,7 @@ data class BookInfoBookUi(
     val latestChapterTitle: String?,
     val totalChapterNum: Int,
     val durChapterIndex: Int,
+    val durChapterPos: Int,
     val remark: String?,
     val displayIntro: String?,
 )
@@ -70,6 +72,7 @@ data class BookInfoBookUi(
 data class BookInfoSourceUi(
     val sourceUrl: String,
     val hasLogin: Boolean,
+    val hasCustomButton: Boolean,
 )
 
 @Stable
@@ -272,9 +275,11 @@ sealed interface BookInfoCallbackAction {
     data class ShareText(val chooserTitle: String, val text: String) : BookInfoCallbackAction
     data class CopyText(val text: String) : BookInfoCallbackAction
     data object ClearCache : BookInfoCallbackAction
+    data object None : BookInfoCallbackAction
 }
 
 enum class BookInfoMenuAction {
+    CustomButton,
     Edit,
     Share,
     Upload,

@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -40,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemePackageManager
@@ -119,6 +119,22 @@ fun ThemeManageScreen(
                     showRestartDialog = true
                 }
 
+                is ThemeManageEffect.LegacyMigrationFinished -> {
+                    val message = if (effect.failedCount == 0) {
+                        context.getString(
+                            R.string.theme_manage_migrate_success,
+                            effect.migratedCount,
+                        )
+                    } else {
+                        context.getString(
+                            R.string.theme_manage_migrate_partial,
+                            effect.migratedCount,
+                            effect.failedCount,
+                        )
+                    }
+                    context.toastOnUi(message)
+                }
+
                 is ThemeManageEffect.ShowResult -> {
                     val message = buildString {
                         append(context.getString(effect.messageRes))
@@ -195,6 +211,17 @@ fun ThemeManageScreen(
                             importLegacyLauncher.launch(arrayOf("application/json", "text/json"))
                         }
                     )
+                    if (state.hasLegacyThemes) {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.theme_manage_migrate_legacy),
+                            description = stringResource(
+                                R.string.theme_manage_migrate_legacy_summary
+                            ),
+                            onClick = {
+                                viewModel.onIntent(ThemeManageIntent.MigrateLegacyThemes)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -459,15 +486,18 @@ private fun SavedThemeItem(
                 ) {
                     SmallPlainButton(
                         onClick = onEdit,
-                        icon = Icons.Default.Edit
+            icon = Icons.Default.Edit,
+            contentDescription = stringResource(R.string.edit)
                     )
                     SmallPlainButton(
                         onClick = onExport,
-                        icon = Icons.Default.Share
+            icon = Icons.Default.Share,
+            contentDescription = stringResource(R.string.share)
                     )
                     SmallPlainButton(
                         onClick = onDelete,
-                        icon = Icons.Default.Delete
+            icon = Icons.Default.Delete,
+            contentDescription = stringResource(R.string.delete)
                     )
                 }
             }

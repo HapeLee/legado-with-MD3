@@ -118,6 +118,13 @@ fun OtherConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.auto_check_update_on_start_title),
+                    description = stringResource(R.string.auto_check_update_on_start_summary),
+                    checked = OtherConfig.autoCheckUpdateOnStart,
+                    onCheckedChange = { OtherConfig.autoCheckUpdateOnStart = it }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.web_service_auto_start),
                     checked = OtherConfig.webServiceAutoStart,
                     onCheckedChange = { OtherConfig.webServiceAutoStart = it }
@@ -342,7 +349,7 @@ fun OtherConfigScreen(
             title = stringResource(R.string.clear_webview_data),
             text = stringResource(R.string.sure_del),
             onConfirm = {
-                viewModel.clearWebViewData(context)
+                viewModel.clearWebViewData()
                 showClearWebViewDialog = false
             },
             onDismiss = { showClearWebViewDialog = false }

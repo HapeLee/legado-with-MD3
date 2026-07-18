@@ -40,6 +40,7 @@ class TTSReadAloudService : BaseReadAloudService() {
     private val ttsUtteranceListener = TTSUtteranceListener()
     private var speakJob: Coroutine<*>? = null
     private var utteranceStartPos = 0
+    private var utteranceStartReadAloudNumber = 0
     private var needParagraphInterval = false // 是否需要进行段落间隔延迟
     private var activeEngine = ""
     private var activeVoiceName = ""
@@ -324,6 +325,7 @@ class TTSReadAloudService : BaseReadAloudService() {
             if (!isCurrentUtterance(s)) return
             LogUtils.d(TAG, "onStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$s")
             utteranceStartPos = paragraphStartPos
+            utteranceStartReadAloudNumber = readAloudNumber
             textChapter?.let {
                 if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
                     nextParagraph()
@@ -353,17 +355,13 @@ class TTSReadAloudService : BaseReadAloudService() {
             super.onRangeStart(utteranceId, start, end, frame)
             if (!isCurrentUtterance(utteranceId)) return
             paragraphStartPos = utteranceStartPos + start
+            readAloudNumber = currentRangePosition(utteranceStartReadAloudNumber, start)
+            updateReadAloudProgressSnapshot(readAloudNumber + 1)
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
             LogUtils.d(TAG, msg)
-            textChapter?.let {
-                if (pageIndex + 1 < it.pageSize
-                    && readAloudNumber + start > it.getReadLength(pageIndex + 1)
-                ) {
-                    pageIndex++
-                    ReadBook.moveToNextPage()
-                    upTtsProgress(readAloudNumber + start)
-                }
+            if (moveToReadAloudPage(readAloudNumber)) {
+                upTtsProgress(readAloudNumber + 1)
             }
         }
 
@@ -389,7 +387,11 @@ class TTSReadAloudService : BaseReadAloudService() {
             }
             //跳过全标点段落
             do {
-                readAloudNumber += contentList[nowSpeak].length + 1 - paragraphStartPos
+                readAloudNumber = nextParagraphPosition(
+                    currentPosition = readAloudNumber,
+                    paragraphLength = contentList[nowSpeak].length,
+                    paragraphStartPosition = paragraphStartPos,
+                )
                 paragraphStartPos = 0
                 nowSpeak++
                 if (nowSpeak >= contentList.size) {
@@ -420,3 +422,14 @@ class TTSReadAloudService : BaseReadAloudService() {
     }
 
 }
+
+internal fun nextParagraphPosition(
+    currentPosition: Int,
+    paragraphLength: Int,
+    paragraphStartPosition: Int,
+): Int = currentPosition + paragraphLength + 1 - paragraphStartPosition
+
+internal fun currentRangePosition(
+    utteranceStartPosition: Int,
+    rangeStart: Int,
+): Int = utteranceStartPosition + rangeStart

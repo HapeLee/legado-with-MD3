@@ -32,14 +32,15 @@ import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
+import io.legado.app.help.book.getDisplayTagList
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.isWebFile
+import io.legado.app.help.book.parseHighlightedTags
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.upKind
-import io.legado.app.help.book.parseHighlightedTags
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -61,7 +62,6 @@ import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -70,14 +70,14 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -140,6 +140,7 @@ class BookInfoViewModel(
             observeReadRecordIfNeeded(value)
         }
     private var currentChapterList: List<BookChapter> = emptyList()
+    private var tocLoadFailed = false
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
     private var currentRelatedBooks: List<RelatedBooksUi> = emptyList()
     private var currentCharacters: List<BookInfoCharacterUi> = emptyList()
@@ -179,7 +180,8 @@ class BookInfoViewModel(
         origin: String? = null,
         coverPath: String? = null
     ) {
-        if (currentBook?.bookUrl == bookUrl) return
+        val current = currentBook
+        if (current != null) return
         _uiState.value = BookInfoUiState() // 立即重置 UI 状态
         currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
             Book(
@@ -846,6 +848,7 @@ class BookInfoViewModel(
     private fun upBook(book: Book, source: BookSource?) {
         currentBook = book
         currentChapterList = emptyList()
+        tocLoadFailed = false
         currentWebFiles = emptyList()
         currentRelatedBooks = emptyList()
         currentCharacters = emptyList()
@@ -907,7 +910,7 @@ class BookInfoViewModel(
             val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
             val normalizedGroupNames = groupNames.ifBlank { null }
             appDb.bookDao.update(book)
-            val finalKinds = book.kind?.splitNotBlank(",", "\n").orEmpty().toList()
+            val finalKinds = book.getDisplayTagList()
             val enabledRules = appDb.highlightTagRuleDao.getEnabled()
             val (highlighted, regular) = parseHighlightedTags(finalKinds, enabledRules)
             HighlightMeta(highlighted, regular, normalizedGroupNames, hasCustomGroup)
@@ -933,6 +936,7 @@ class BookInfoViewModel(
         scope: CoroutineScope = viewModelScope,
         showLoading: Boolean = true,
     ) {
+        tocLoadFailed = false
         syncUiState(isTocLoading = showLoading)
         if (book.isLocal) {
             execute(scope) {
@@ -948,6 +952,7 @@ class BookInfoViewModel(
                 syncUiState(isTocLoading = false)
             }.onError {
                 currentChapterList = emptyList()
+                tocLoadFailed = true
                 syncUiState(isTocLoading = false)
             }
         } else {
@@ -974,6 +979,7 @@ class BookInfoViewModel(
                     syncUiState(isTocLoading = false)
                 }.onError {
                     currentChapterList = emptyList()
+                    tocLoadFailed = true
                     syncUiState(isTocLoading = false)
                     AppLog.put("获取目录失败\n${it.localizedMessage}", it)
                 }
@@ -1139,6 +1145,14 @@ class BookInfoViewModel(
     private fun handleMenuAction(action: BookInfoMenuAction) {
         val book = currentBook ?: return
         when (action) {
+            BookInfoMenuAction.CustomButton -> emitEffect(
+                BookInfoEffect.RunSourceCallback(
+                    event = SourceCallBack.CLICK_CUSTOM_BUTTON,
+                    source = bookSource,
+                    book = book.uiCopy(),
+                    action = BookInfoCallbackAction.None,
+                )
+            )
             BookInfoMenuAction.Edit -> openEdit()
             BookInfoMenuAction.Share -> {
                 val bookJson = GSON.toJson(book)
@@ -1379,6 +1393,7 @@ class BookInfoViewModel(
             it.copy(
                 book = currentBook?.toBookInfoBookUi(),
                 hasChapters = currentChapterList.isNotEmpty(),
+                tocLoadFailed = tocLoadFailed,
                 webFiles = currentWebFiles,
                 relatedBooks = currentRelatedBooks.toImmutableList(),
                 characters = currentCharacters.toImmutableList(),
@@ -1664,6 +1679,7 @@ class BookInfoViewModel(
             latestChapterTitle = latestChapterTitle,
             totalChapterNum = totalChapterNum,
             durChapterIndex = durChapterIndex,
+            durChapterPos = durChapterPos,
             remark = remark,
             displayIntro = getDisplayIntro(),
         )
@@ -1673,6 +1689,7 @@ class BookInfoViewModel(
         return BookInfoSourceUi(
             sourceUrl = bookSourceUrl,
             hasLogin = !loginUrl.isNullOrBlank(),
+            hasCustomButton = customButton,
         )
     }
 

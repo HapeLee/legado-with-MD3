@@ -63,8 +63,8 @@ data class TextColumn(
         val drawColor = if (textLine.isReadAloud || isSearchResult) {
             ReadBookConfig.textAccentColor
         } else {
-            textColor ?: if (textLine.isTitle && ReadBookConfig.titleColor != 0) {
-                ReadBookConfig.titleColor
+            textColor ?: if (textLine.isTitle && ReadBookConfig.resolvedTitleColor != 0) {
+                ReadBookConfig.resolvedTitleColor
             } else {
                 ReadBookConfig.textColor
             }

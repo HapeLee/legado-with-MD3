@@ -1,0 +1,16 @@
+name: Release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  release:
+    if: github.actor == 'HapeLee' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/auto-release.yml
+    with:
+      publish: true
+    secrets: inherit

@@ -3,8 +3,6 @@ package io.legado.app.ui.config.themeConfig
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -66,7 +64,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -86,7 +83,6 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -100,7 +96,6 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
@@ -120,7 +115,6 @@ fun ThemeConfigScreen(
     var selectedThemeMode by remember { mutableStateOf(ThemeConfig.themeMode) }
     var selectedTheme by remember { mutableStateOf(ThemeConfig.appTheme) }
     var useMiuixMonet by remember { mutableStateOf(ThemeConfig.useMiuixMonet) }
-    var showRestartDialog by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
     var showBorderColorPicker by remember { mutableStateOf(false) }
     var showNavIconSheet by remember { mutableStateOf(false) }
@@ -220,7 +214,7 @@ fun ThemeConfigScreen(
                             )
                             SmallPlainButton(
                                 icon = AppIcons.Close,
-                                contentDescription = "关闭",
+                                contentDescription = stringResource(R.string.close),
                                 onClick = {
                                     viewModel.setShowThemeRefactorTip(false)
                                 }
@@ -240,7 +234,7 @@ fun ThemeConfigScreen(
                             onValueChange = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                ThemeConfigStore.applyDayNightLive()
                             }
                         )
 
@@ -269,7 +263,7 @@ fun ThemeConfigScreen(
                                     selectedTheme = newTheme
                                     ThemeConfig.appTheme = newTheme
                                     if (oldTheme != newTheme) {
-                                        showRestartDialog = true
+                                        postEvent(EventBus.RECREATE, "")
                                     }
                                 }
                             )
@@ -280,7 +274,7 @@ fun ThemeConfigScreen(
                             onModeSelected = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                ThemeConfigStore.applyDayNightLive()
                             }
                         )
                     }
@@ -311,15 +305,9 @@ fun ThemeConfigScreen(
                                         ThemeConfig.containerOpacity = 0
                                     }
                                 }
-                                val oldTheme = selectedTheme
                                 selectedTheme = theme
                                 ThemeConfig.appTheme = theme
-                                val isDynamicSwitch = (oldTheme == "12" || theme == "12")
-                                if (isDynamicSwitch) {
-                                    showRestartDialog = true
-                                } else {
-                                    postEvent(EventBus.RECREATE, "")
-                                }
+                                postEvent(EventBus.RECREATE, "")
                             }
                         )
                     }
@@ -458,11 +446,18 @@ fun ThemeConfigScreen(
                         onCheckedChange = { ThemeConfig.bookInfoFollowCoverColor = it }
                     )
                     DropdownListSettingItem(
-                        title = stringResource(R.string.book_info_background_blur),
-                        selectedValue = ThemeConfig.bookInfoBackgroundBlur,
+                        title = stringResource(R.string.book_info_network_cover_background),
+                        selectedValue = ThemeConfig.bookInfoNetworkCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = { ThemeConfig.bookInfoBackgroundBlur = it }
+                        onValueChange = { ThemeConfig.bookInfoNetworkCoverBackground = it }
+                    )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.book_info_default_cover_background),
+                        selectedValue = ThemeConfig.bookInfoDefaultCoverBackground,
+                        displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
+                        entryValues = stringArrayResource(R.array.book_info_background_blur_values),
+                        onValueChange = { ThemeConfig.bookInfoDefaultCoverBackground = it }
                     )
                 }
 
@@ -813,25 +808,6 @@ fun ThemeConfigScreen(
     }
 
 
-    AppAlertDialog(
-        show = showRestartDialog,
-        onDismissRequest = { showRestartDialog = false },
-        title = stringResource(R.string.restart_required_message),
-        onConfirm = {
-            showRestartDialog = false
-            Handler(Looper.getMainLooper()).postDelayed({
-                context.restart()
-            }, 100)
-        },
-        confirmText = stringResource(R.string.ok),
-        onDismiss = {
-            showRestartDialog = false
-            context.toastOnUi(R.string.restart_later_message)
-        },
-        dismissText = stringResource(R.string.cancel)
-    )
-
-
     BackgroundImageManageSheet(
         isDarkTheme = manageKey,
         onDismissRequest = { manageKey = null }
@@ -875,7 +851,7 @@ fun ThemeConfigScreen(
         selectedFontPath = ThemeConfig.appFontPath,
         onDismissRequest = { showFontSheet = false },
         onSelectFont = { doc ->
-            ThemeConfig.appFontPath = doc.uri.toString()
+            viewModel.setAppFont(doc)
         },
         onOpenFolderPicker = { fontFolderLauncher.launch(null) },
         startAction = {
@@ -921,17 +897,12 @@ fun ThemeModeSelector(
 
         modes.forEachIndexed { index, (value, label, icon) ->
             val checked = selectedIndex == index
-            val modeStateDescription = stringResource(
-                if (checked) R.string.a11y_selected else R.string.a11y_not_selected
-            )
-
             ToggleButton(
                 checked = checked,
                 onCheckedChange = { onModeSelected(value) },
                 modifier = modifiers[index]
                     .semantics {
                         role = Role.RadioButton
-                        stateDescription = modeStateDescription
                     },
 
                 shapes = when (index) {
@@ -1004,15 +975,20 @@ fun ThemeColorButton(
     customNightSeedColor: Int,
     onClick: () -> Unit
 ) {
-    val colors = getThemeColorPalette(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    // 配色方案由种子色实时生成，开销不小，缓存避免无关重组时重复计算
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColorPalette(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 0.dp,
         label = "borderWidth"
@@ -1105,15 +1081,19 @@ fun ThemeCard(
     customLightSeedColor: Int,
     customNightSeedColor: Int
 ) {
-    val colors = getThemeColors(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColors(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally

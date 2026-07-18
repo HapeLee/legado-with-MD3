@@ -325,7 +325,8 @@ fun SpeakEngineConfigSheet(
         startAction = {
             SmallTonalButton(
                 onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
-                icon = Icons.Default.Add
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add)
             )
         },
         endAction = {
@@ -333,7 +334,8 @@ fun SpeakEngineConfigSheet(
             Box {
                 SmallTonalButton(
                     onClick = { expanded = true },
-                    icon = Icons.Default.MoreVert
+                        icon = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     RoundDropdownMenuItem(
@@ -393,11 +395,13 @@ fun SpeakEngineConfigSheet(
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 SmallTonalButton(
                                     onClick = { onIntent(ReadBookIntent.EditHttpTts(httpTtsId)) },
-                                    icon = Icons.Default.Edit,
+                        icon = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.edit),
                                 )
                                 SmallTonalButton(
                                     onClick = { onIntent(ReadBookIntent.DeleteHttpTts(httpTtsId)) },
-                                    icon = Icons.Default.Delete,
+                        icon = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete),
                                 )
                             }
                         }
@@ -438,7 +442,8 @@ fun HttpTtsEditSheet(
             Box {
                 SmallTonalButton(
                     onClick = { expanded = true },
-                    icon = Icons.Default.MoreVert
+                        icon = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     RoundDropdownMenuItem(
@@ -481,6 +486,7 @@ fun HttpTtsEditSheet(
         endAction = {
             SmallTonalButton(
                 icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.save),
                 onClick = {
                     onIntent(
                         ReadBookIntent.SaveHttpTts(

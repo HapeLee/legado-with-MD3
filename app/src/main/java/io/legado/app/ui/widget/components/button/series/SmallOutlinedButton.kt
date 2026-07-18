@@ -20,8 +20,7 @@ fun SmallOutlinedButton(
     text: String? = null,
     contentDescription: String? = null
 ) {
-    SmallNoMinTouchTarget {
-        SeriesButton(
+    SeriesButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -40,6 +39,5 @@ fun SmallOutlinedButton(
                 padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                 spacing = 4.dp
             )
-        }
     }
 }

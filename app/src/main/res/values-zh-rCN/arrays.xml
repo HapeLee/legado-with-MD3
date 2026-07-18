@@ -212,6 +212,14 @@
         <item>不显示</item>
     </string-array>
 
+    <string-array name="click_image_way_title">
+        <item>新版行为</item>
+        <item>预览图片</item>
+        <item>经典</item>
+        <item>禁用点击</item>
+        <item>双击</item>
+    </string-array>
+
     <string-array name="title_bar_mode">
         <item>在应用栏上显示</item>
         <item>在独立行上显示</item>

@@ -1,8 +1,6 @@
 package io.legado.app.ui.book.read
 
 import android.content.Context
-import android.os.Build
-import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -86,6 +84,7 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -102,7 +101,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -147,15 +145,11 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.capsule.ContinuousCapsule
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
@@ -163,7 +157,6 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.animation.DampedDragAnimation
-import io.legado.app.ui.animation.InteractiveHighlight
 import io.legado.app.ui.book.read.sheet.AutoReadContent
 import io.legado.app.ui.book.read.sheet.HeaderFooterPage
 import io.legado.app.ui.book.read.sheet.PaddingConfigContent
@@ -172,24 +165,27 @@ import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
 import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppVerticalSlider
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.reader.ReaderMenuEffect
+import io.legado.app.ui.widget.components.reader.ReaderMenuPlacement
+import io.legado.app.ui.widget.components.reader.ReaderMenuTintStyle
+import io.legado.app.ui.widget.components.reader.ReaderMenuVisualState
+import io.legado.app.ui.widget.components.reader.readerMenuHazeEffect
+import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlass
+import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
+import io.legado.app.ui.widget.components.reader.readerMenuSurfaceBrush
+import io.legado.app.ui.widget.components.text.AnimatedText
 import io.legado.app.ui.widget.components.text.AppText
-import kotlin.math.abs
-import kotlin.math.atan2
 import kotlin.math.ceil
-import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
-import kotlin.math.tanh
 
 /**
  * Compose replacement for ReadMenu — main reading menu overlay.
@@ -199,6 +195,7 @@ fun ReadBookMenuBar(
     state: ReadBookUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
+    onBrightnessPreview: (Int) -> Unit,
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
 ) {
@@ -221,7 +218,7 @@ fun ReadBookMenuBar(
     }
     val hideTopBar = dialogLikeRoute ||
             currentRoute == ReadBookMenuRoute.TextTitle
-    val menuColors = readMenuColors()
+    val menuColors = readMenuColors(preferences.readBarStyle)
 
     Box(Modifier.fillMaxSize()) {
         AnimatedVisibility(
@@ -259,6 +256,7 @@ fun ReadBookMenuBar(
                     onIntent = onIntent,
                     backdrop = backdrop,
                     hazeState = hazeState,
+                    titleBarMode = preferences.titleBarMode,
                 )
                 if (state.menuConfig.showTitleBarIcons && state.menuConfig.titleBarIconPosition <= 1) {
                     FloatingIconRow(
@@ -285,6 +283,13 @@ fun ReadBookMenuBar(
             hazeState = hazeState,
             menuConfig = state.menuConfig,
             isFloating = false,
+        )
+        val brightnessVisualState = ReaderMenuVisualState(
+            effect = if (useBrightnessHaze) ReaderMenuEffect.Haze else ReaderMenuEffect.None,
+            tintStyle = ReaderMenuTintStyle.Fill,
+            styleEnabled = false,
+            tintAllowed = true,
+            tintFill = false,
         )
         AnimatedVisibility(
             visible = brightnessMode == "2" && state.menuVisible && currentRoute == ReadBookMenuRoute.Main,
@@ -314,7 +319,7 @@ fun ReadBookMenuBar(
                             colors = menuColors,
                             shape = brightnessShape,
                             menuConfig = state.menuConfig,
-                            progressive = false,
+                            visualState = brightnessVisualState,
                         )
                     } else {
                         Modifier
@@ -350,6 +355,7 @@ fun ReadBookMenuBar(
                             menuConfig = state.menuConfig,
                         ),
                         glassThumbEnabled = false,
+                        onBrightnessPreview = onBrightnessPreview,
                     )
                 }
             }
@@ -390,6 +396,8 @@ fun ReadBookMenuBar(
                     hazeState = hazeState,
                     readStylePage = readStylePage,
                     onReadStylePageChanged = { readStylePage = it },
+                    progressBarBehavior = preferences.progressBarBehavior,
+                    onBrightnessPreview = onBrightnessPreview,
                 )
             }
         }
@@ -413,6 +421,8 @@ private fun ReadBookMenuSurface(
     hazeState: HazeState?,
     readStylePage: Int,
     onReadStylePageChanged: (Int) -> Unit,
+    progressBarBehavior: String,
+    onBrightnessPreview: (Int) -> Unit,
 ) {
     val route = when (contentTarget) {
         ReadBookMenuContent.Search -> ReadBookMenuRoute.Main
@@ -505,14 +515,33 @@ private fun ReadBookMenuSurface(
         menuConfig = state.menuConfig,
     )
     val useLens = useLiquidGlass && isFloating && mainCorner > 0.dp
-    val bottomBarProgressiveBlur = route == ReadBookMenuRoute.Main &&
-            !isFloating &&
-            state.menuConfig.readMenuBottomBarBlurStyle == ReadMenuBlurStyle.Progressive
-    val bottomBarTextColor = if (bottomBarProgressiveBlur) {
-        Color.White.copy(alpha = 0.87f).compositeOver(colors.background)
+    val bottomBarVisualState = ReaderMenuVisualState(
+        effect = when {
+            useLiquidGlass -> ReaderMenuEffect.LiquidGlass
+            useHaze -> ReaderMenuEffect.Haze
+            else -> ReaderMenuEffect.None
+        },
+        tintStyle = state.menuConfig.readMenuBottomBarBlurStyle.toReaderMenuTintStyle(),
+        styleEnabled = route == ReadBookMenuRoute.Main && !isFloating,
+        tintAllowed = route == ReadBookMenuRoute.Main,
+        tintFill = false,
+    )
+    val bottomBarMenuTintColor = readMenuTintColor(state.menuConfig)
+        .takeIf { bottomBarVisualState.useTint }
+    val bottomBarSurfaceAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val bottomBarFillAlpha = if (expanded) {
+        bottomBarSurfaceAlpha.coerceAtLeast(0.85f)
     } else {
-        LegadoTheme.colorScheme.onSurface
+        bottomBarSurfaceAlpha
     }
+    val bottomBarTextColor = Color(
+        if (ReadStyleResolver.isNightTheme()) {
+            state.menuConfig.readMenuTextColorNight
+        } else {
+            state.menuConfig.readMenuTextColor
+        }
+    ).takeUnless { it == Color.Unspecified || it.alpha == 0f }
+        ?: LegadoTheme.colorScheme.onSurface
     val surfaceWindowInsetSides = when {
         isFloating || extendSurfaceToNavigationBar -> WindowInsetsSides.Horizontal
         else -> WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
@@ -562,8 +591,34 @@ private fun ReadBookMenuSurface(
                         colors = colors,
                         shape = surfaceShape,
                         menuConfig = state.menuConfig,
-                        progressive = bottomBarProgressiveBlur,
+                        visualState = bottomBarVisualState,
+                        blurRadiusDp = if (expanded) 32 else null,
                     )
+                } else {
+                    Modifier
+                }
+            )
+            .then(
+                if (!useLiquidGlass && !useHaze) {
+                    Modifier
+                        .clip(surfaceShape)
+                        .background(
+                            if (bottomBarVisualState.isGradient) {
+                                readerMenuSurfaceBrush(
+                                    style = ReaderMenuTintStyle.Gradient,
+                                    placement = ReaderMenuPlacement.Bottom,
+                                    color = bottomBarMenuTintColor ?: colors.background,
+                                    alpha = bottomBarFillAlpha,
+                                )
+                            } else {
+                                readerMenuSurfaceBrush(
+                                    style = ReaderMenuTintStyle.Fill,
+                                    placement = ReaderMenuPlacement.Bottom,
+                                    color = colors.background,
+                                    alpha = bottomBarFillAlpha,
+                                )
+                            }
+                        )
                 } else {
                     Modifier
                 }
@@ -588,9 +643,7 @@ private fun ReadBookMenuSurface(
                 }
             },
         shape = surfaceShape,
-        color = if (useLiquidGlass || useHaze) Color.Transparent else colors.background.copy(
-            alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-        ),
+        color = Color.Transparent,
         contentColor = colors.content
     ) {
         AnimatedContent(
@@ -625,6 +678,8 @@ private fun ReadBookMenuSurface(
                         buttonGlassEnabled = useBottomBarButtonGlass,
                         backdrop = backdrop,
                         labelColor = bottomBarTextColor,
+                        progressBarBehavior = progressBarBehavior,
+                        onBrightnessPreview = onBrightnessPreview,
                     )
                 }
 
@@ -672,7 +727,8 @@ private fun ReadBookMenuSurface(
                         ReadBookMenuRoutePage(
                             title = stringResource(R.string.padding),
                             maxHeight = maxHeight,
-                            scrollContent = true,
+                            scrollContent = false,
+                            animateSize = false,
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
@@ -745,6 +801,9 @@ private fun ReadBookMenuSurface(
                                 },
                                 onGoToBackground = {
                                     onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+                                },
+                                onOpenMainMenu = {
+                                    onIntent(ReadBookIntent.ReadMenuBack)
                                 },
                                 onShowReadAloudConfig = {
                                     onIntent(ReadBookIntent.ShowReadAloudConfig)
@@ -846,9 +905,8 @@ private fun MenuTitleBar(
     onIntent: (ReadBookIntent) -> Unit,
     backdrop: Backdrop?,
     hazeState: HazeState?,
+    titleBarMode: String,
 ) {
-    val titleBarMode = ReadConfig.titleBarMode
-
     var expanded by remember { mutableStateOf(false) }
 
     val topBarBorderWidth = state.menuConfig.readMenuBorderWidth
@@ -860,50 +918,64 @@ private fun MenuTitleBar(
         ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
     val topBarAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
     val useTopBarBlur = readMenuTopBarHazeEnabled(hazeState, state.menuConfig)
-    val topBarProgressiveBlur = state.menuConfig.readMenuTopBarBlurStyle ==
-            ReadMenuBlurStyle.Progressive
-    val progressiveBlurActive = useTopBarBlur && topBarProgressiveBlur
-    val titleTextColor = if (progressiveBlurActive) {
-        Color.White.copy(alpha = 0.72f).compositeOver(colors.background)
-    } else {
-        LegadoTheme.colorScheme.onSurface
-    }
-    val labelStyle = if (progressiveBlurActive) {
-        LegadoTheme.typography.labelSmallEmphasized.copy(
-            shadow = androidx.compose.ui.graphics.Shadow(
-                color = Color.Black.copy(alpha = 0.12f),
-                offset = Offset.Zero,
-                blurRadius = 12f,
-            )
+    val topBarVisualState = ReaderMenuVisualState(
+        effect = if (useTopBarBlur) ReaderMenuEffect.Haze else ReaderMenuEffect.None,
+        tintStyle = state.menuConfig.readMenuTopBarBlurStyle.toReaderMenuTintStyle(),
+        styleEnabled = true,
+        tintAllowed = true,
+        tintFill = true,
+    )
+    val topBarTintColor = readMenuTintColor(state.menuConfig)
+        .takeIf { topBarVisualState.useTint }
+        ?: colors.background
+    val titleTextColor = Color(
+        if (ReadStyleResolver.isNightTheme()) {
+            state.menuConfig.readMenuTextColorNight
+        } else {
+            state.menuConfig.readMenuTextColor
+        }
+    ).takeUnless { it == Color.Unspecified || it.alpha == 0f }
+        ?: LegadoTheme.colorScheme.onSurface
+    val labelStyle = LegadoTheme.typography.labelSmallEmphasized.copy(
+        shadow = androidx.compose.ui.graphics.Shadow(
+            color = Color.Black.copy(alpha = 0.12f),
+            offset = Offset.Zero,
+            blurRadius = 12f,
         )
-    } else {
-        LegadoTheme.typography.labelSmallEmphasized
-    }
+    )
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .then(
                 if (useTopBarBlur && hazeState != null) {
-                    Modifier
-                        .background(
-                            if (topBarProgressiveBlur) {
-                                readMenuTopBarSurfaceBrush(
-                                    colors = colors,
-                                    alpha = topBarAlpha,
-                                )
-                            } else {
-                                readMenuTopBarSurfaceBrush(colors, topBarAlpha)
-                            }
-                        )
-                        .readMenuHazeEffect(
-                            state = hazeState,
-                            colors = colors,
-                            menuConfig = state.menuConfig,
-                            progressive = topBarProgressiveBlur,
-                        )
+                    Modifier.readerMenuHazeEffect(
+                        state = hazeState,
+                        visualState = topBarVisualState,
+                        placement = ReaderMenuPlacement.Top,
+                        baseColor = colors.background,
+                        tintColor = readMenuTintColor(state.menuConfig),
+                        blurRadius = state.menuConfig.readMenuBlurRadius,
+                        surfaceAlpha = state.menuConfig.readMenuBlurAlpha,
+                    )
                 } else {
-                    Modifier.background(colors.background.copy(alpha = topBarAlpha))
+                    Modifier.background(
+                        if (topBarVisualState.isGradient) {
+                            readerMenuSurfaceBrush(
+                                style = ReaderMenuTintStyle.Gradient,
+                                placement = ReaderMenuPlacement.Top,
+                                color = topBarTintColor,
+                                alpha = topBarAlpha,
+                            )
+                        } else {
+                            readerMenuSurfaceBrush(
+                                style = ReaderMenuTintStyle.Fill,
+                                placement = ReaderMenuPlacement.Top,
+                                color = topBarTintColor,
+                                alpha = topBarAlpha,
+                            )
+                        }
+                    )
                 }
             )
             .then(
@@ -926,7 +998,7 @@ private fun MenuTitleBar(
             )
     ) {
         val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
-                && progressiveBlurActive
+                && topBarVisualState.isProgressiveBlur
         val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
 
         // Title row: left group (back + capsule/title) + right group (actions)
@@ -994,6 +1066,14 @@ private fun MenuTitleBar(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!state.isLocalBook) {
+                        if (state.bookSource?.customButton == true) {
+                            SourceCustomActionButton(
+                                state = state,
+                                colors = colors,
+                                onIntent = onIntent,
+                                backdrop = backdrop,
+                            )
+                        }
                         SourceActionButton(
                             state = state,
                             colors = colors,
@@ -1181,6 +1261,7 @@ private fun MenuTitleGlassButton(
         backdrop = backdrop,
         menuConfig = state.menuConfig,
         glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig),
+        iconStyle = state.menuConfig.titleBarIconStyle,
         modifier = modifier,
         onLongClick = onLongClick,
         contentDescription = contentDescription,
@@ -1196,6 +1277,7 @@ private fun ReadMenuGlassIconButton(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
     glassEnabled: Boolean,
+    iconStyle: Int = menuConfig.readMenuIconStyle,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     selected: Boolean = false,
@@ -1207,6 +1289,7 @@ private fun ReadMenuGlassIconButton(
         backdrop = backdrop,
         menuConfig = menuConfig,
         glassEnabled = glassEnabled,
+        iconStyle = iconStyle,
         modifier = modifier,
         onLongClick = onLongClick,
         selected = selected,
@@ -1229,6 +1312,7 @@ private fun ReadMenuGlassButtonSurface(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
     glassEnabled: Boolean,
+    iconStyle: Int = menuConfig.readMenuIconStyle,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     selected: Boolean = false,
@@ -1242,12 +1326,13 @@ private fun ReadMenuGlassButtonSurface(
     }
     val containerColor = when {
         selected -> LegadoTheme.colorScheme.secondaryContainer
-        else -> LegadoTheme.colorScheme.surfaceContainerLow
+        iconStyle == 1 -> LegadoTheme.colorScheme.surfaceContainerLow
+        else -> Color.Transparent
     }
-    val border = if (selected) {
-        BorderStroke(1.5.dp, LegadoTheme.colorScheme.secondary)
-    } else {
-        null
+    val border = when {
+        selected -> BorderStroke(1.5.dp, LegadoTheme.colorScheme.secondary)
+        !glassEnabled && iconStyle == 2 -> BorderStroke(1.dp, tint.copy(alpha = 0.45f))
+        else -> null
     }
     val outerSize = if (glassEnabled) 48.dp else 40.dp
     val innerSize = 40.dp
@@ -1403,6 +1488,41 @@ private fun MenuTitleBarMergedGlassButton(
             ) {
             // SwapHoriz - change source
             if (!state.isLocalBook) {
+                if (state.bookSource?.customButton == true) {
+                    val customButtonDescription = stringResource(R.string.custom_button)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .combinedClickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() },
+                                role = Role.Button,
+                                onClick = { onIntent(ReadBookIntent.SourceCustomButton(false)) },
+                                onLongClick = { onIntent(ReadBookIntent.SourceCustomButton(true)) },
+                            )
+                            .semantics {
+                                contentDescription = customButtonDescription
+                                role = Role.Button
+                            },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(tint.copy(alpha = 0.15f))
+                            .clearAndSetSemantics { }
+                    )
+                }
+
                 val changeSourceDescription = stringResource(R.string.change_origin)
                 Box(
                     contentAlignment = Alignment.Center,
@@ -1606,7 +1726,7 @@ private fun MenuTitleBarMergedGlassButton(
             ) { dismiss ->
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.change_origin),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuBookChangeSource) },
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.chapter_change_source),
@@ -1639,6 +1759,24 @@ private fun MenuTitleBarMergedGlassButton(
 }
 
 @Composable
+private fun SourceCustomActionButton(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    MenuTitleGlassButton(
+        onClick = { onIntent(ReadBookIntent.SourceCustomButton(false)) },
+        onLongClick = { onIntent(ReadBookIntent.SourceCustomButton(true)) },
+        icon = Icons.Default.Build,
+        contentDescription = stringResource(R.string.custom_button),
+        state = state,
+        colors = colors,
+        backdrop = backdrop,
+    )
+}
+
+@Composable
 private fun SourceActionButton(
     state: ReadBookUiState,
     colors: ReadMenuColors,
@@ -1664,7 +1802,7 @@ private fun SourceActionButton(
         ) { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.change_origin),
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuBookChangeSource) },
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.chapter_change_source),
@@ -1774,6 +1912,8 @@ private fun FloatingIconRow(
         state.menuConfig.titleBarButtons,
         state.isReadAloudRunning,
         state.isAutoPage,
+        state.translationMode,
+        state.useReplaceRule,
     ) {
         loadFloatingIcons(context, state, onIntent)
     }
@@ -1806,6 +1946,7 @@ private fun FloatingIconRow(
                     backdrop,
                     state.menuConfig
                 ),
+                iconStyle = state.menuConfig.titleBarIconStyle,
                 selected = iconDef.isActive,
                 modifier = Modifier.padding(horizontal = 4.dp),
                 onLongClick = iconDef.onLongClick,
@@ -2070,37 +2211,36 @@ private fun SearchBottomMenuContent(
             .padding(top = 12.dp, bottom = bottomPadding)
             .animateContentSize(),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SearchInfoPill(
-                modifier = Modifier.weight(0.7f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
+                AnimatedText(
                     text = if (totalResults > 0) "${currentIndex + 1} / $totalResults" else "0 / 0",
-                    style = LegadoTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "$percent%",
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                TextCard(
+                    text = "$percent%"
                 )
-            }
-
-            SearchInfoPill(
-                modifier = Modifier.weight(1.3f),
-            ) {
-                Text(
+                Spacer(Modifier.width(16.dp))
+                VerticalDivider(
+                    color = LegadoTheme.colorScheme.outlineVariant,
+                    modifier = Modifier
+                        .height(8.dp)
+                        .width(1.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                AnimatedText(
                     text = state.chapterName.ifBlank { "-" },
-                    style = LegadoTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -2113,14 +2253,14 @@ private fun SearchBottomMenuContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SearchMenuActionButton(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(2f),
                 icon = Icons.Default.Search,
-                text = stringResource(R.string.search),
+                text = stringResource(R.string.all_results),
                 onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
             )
             SearchMenuActionButton(
@@ -2135,7 +2275,8 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(0.55f),
                 icon = Icons.Default.Close,
-                text = stringResource(R.string.exit),
+                text = null,
+                iconContentDescription = stringResource(R.string.exit),
                 onClick = { onIntent(ReadBookIntent.ExitSearch) },
             )
         }
@@ -2163,33 +2304,36 @@ private fun SearchInfoPill(
 private fun SearchMenuActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
-    text: String,
+    text: String?,
+    iconContentDescription: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = modifier
-            .height(44.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(LegadoTheme.colorScheme.surfaceContainerLow)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = iconContentDescription,
             tint = LegadoTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(16.dp),
         )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = text,
-            style = LegadoTheme.typography.labelMediumEmphasized,
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (text != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = LegadoTheme.typography.labelMediumEmphasized,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -2204,6 +2348,8 @@ private fun MenuBottomBar(
     buttonGlassEnabled: Boolean = false,
     backdrop: Backdrop? = null,
     labelColor: Color = LegadoTheme.colorScheme.onSurface,
+    progressBarBehavior: String,
+    onBrightnessPreview: (Int) -> Unit,
 ) {
     val seekMax = state.seekMax.coerceAtLeast(0)
     val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
@@ -2216,7 +2362,6 @@ private fun MenuBottomBar(
     } else {
         0.dp
     }
-    val progressBarBehavior = ReadConfig.progressBarBehavior
     val progressCurrent = sliderValue.roundToInt().coerceIn(0, seekMax) + 1
     val progressTotal = seekMax + 1
     val progressValueDescription = stringResource(
@@ -2288,6 +2433,7 @@ private fun MenuBottomBar(
                 backdrop = backdrop,
                 buttonGlassEnabled = buttonGlassEnabled,
                 glassThumbEnabled = buttonGlassEnabled,
+                onBrightnessPreview = onBrightnessPreview,
             )
             Spacer(Modifier.height(4.dp))
         }
@@ -2343,7 +2489,7 @@ private fun MenuBottomBar(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Tool buttons
         val toolButtons = remember(
@@ -2351,7 +2497,9 @@ private fun MenuBottomBar(
             state.menuConfig.bottomBarButtons,
             state.menuConfig.readMenuCustomIcons,
             state.isReadAloudRunning,
-            state.isAutoPage
+            state.isAutoPage,
+            state.translationMode,
+            state.useReplaceRule,
         ) {
             loadToolButtons(context, state, onIntent)
         }
@@ -2882,11 +3030,14 @@ private fun loadToolButtons(
         infoMap.getValue("next_chapter").toButton {
             onIntent(ReadBookIntent.NextChapter)
         },
-        infoMap.getValue("replace").toButton {
-            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+        infoMap.getValue("replace").toButton(
+            isActive = state.useReplaceRule,
+            onLongClick = { onIntent(ReadBookIntent.MenuSettingReplace) },
+        ) {
+            onIntent(ReadBookIntent.MenuEnableReplace)
         },
         infoMap.getValue("replace_badge").toButton {
-            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+            onIntent(ReadBookIntent.MenuSettingReplace)
         },
         infoMap.getValue("auto_page").toButton(isActive = state.isAutoPage) {
             if (state.isAutoPage) {
@@ -2920,8 +3071,12 @@ private data class ReadMenuColors(
     val content: Color,
 )
 
-private fun readMenuLiquidGlassAvailable(backdrop: Backdrop?): Boolean {
-    return backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+private fun Int.toReaderMenuTintStyle(): ReaderMenuTintStyle {
+    return if (this == ReadMenuBlurStyle.Progressive) {
+        ReaderMenuTintStyle.Gradient
+    } else {
+        ReaderMenuTintStyle.Fill
+    }
 }
 
 private fun readMenuTopBarButtonLiquidGlassEnabled(
@@ -2930,7 +3085,7 @@ private fun readMenuTopBarButtonLiquidGlassEnabled(
 ): Boolean {
     return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
             menuConfig.readMenuTopBarLiquidGlassButtons &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readerMenuLiquidGlassAvailable(backdrop)
 }
 
 private fun readMenuTopBarTitleCapsuleEnabled(
@@ -2939,7 +3094,7 @@ private fun readMenuTopBarTitleCapsuleEnabled(
 ): Boolean {
     return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
             menuConfig.readMenuTopBarTitleCapsule &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readerMenuLiquidGlassAvailable(backdrop)
 }
 
 private fun readMenuBottomBarButtonLiquidGlassEnabled(
@@ -2947,7 +3102,7 @@ private fun readMenuBottomBarButtonLiquidGlassEnabled(
     menuConfig: ReadMenuConfig,
 ): Boolean {
     return menuConfig.readMenuBottomBarLiquidGlassButtons &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readerMenuLiquidGlassAvailable(backdrop)
 }
 
 private fun readMenuTopBarHazeEnabled(
@@ -2979,7 +3134,7 @@ private fun readMenuBottomBarLiquidGlassEnabled(
                 menuConfig,
                 isFloating
             ) == ReadMenuBlurMode.LiquidGlass &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readerMenuLiquidGlassAvailable(backdrop)
 }
 
 private fun readMenuBottomBarHazeEnabled(
@@ -3002,181 +3157,79 @@ private fun Modifier.readMenuLiquidGlass(
     interactive: Boolean = false,
     menuConfig: ReadMenuConfig,
 ): Modifier {
-    if (!readMenuLiquidGlassAvailable(backdrop)) return this
-    val animationScope = rememberCoroutineScope()
-    val interactiveHighlight = if (interactive) {
-        remember(animationScope) { InteractiveHighlight(animationScope = animationScope) }
-    } else {
-        null
-    }
     val resolvedBlurRadius = blurRadius ?: menuConfig.readMenuBlurRadius.dp
     val blurAlpha = menuConfig.readMenuBlurAlpha
-    val containerColor = colors.background.copy(
+    val surfaceColor = readMenuTintColor(menuConfig) ?: colors.background
+    val containerColor = surfaceColor.copy(
         alpha = (blurAlpha.coerceIn(0, 100) / 100f).coerceAtMost(0.6f)
     )
-    val topBarSurfaceBrush = readMenuTopBarSurfaceBrush(
-        colors = colors,
+    val topBarSurfaceBrush = readerMenuSurfaceBrush(
+        style = ReaderMenuTintStyle.Gradient,
+        placement = ReaderMenuPlacement.Top,
+        color = surfaceColor,
         alpha = containerColor.alpha,
     )
 
-    return drawBackdrop(
-        backdrop = backdrop!!,
-        shape = { shape },
-        effects = {
-            vibrancy()
-            blur(resolvedBlurRadius.coerceAtLeast(0.dp).toPx())
-            if (useLens) {
-                val lensRadius = menuConfig.readMenuLensRadius
-                lens(lensRadius.dp.toPx(), lensRadius.dp.toPx())
-            }
-        },
-        highlight = {
-            Highlight.Default
-        },
-        shadow = null,
-        layerBlock = if (interactiveHighlight != null) {
-            {
-                val width = size.width
-                val height = size.height
-                if (width > 0f && height > 0f) {
-                    val progress = interactiveHighlight.pressProgress
-                    val scale = 1f + 4.dp.toPx() / height * progress
-                    val maxOffset = size.minDimension
-                    val initialDerivative = 0.05f
-                    val offset = interactiveHighlight.offset
-                    translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-                    translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-
-                    val maxDragScale = 4.dp.toPx() / height
-                    val offsetAngle = atan2(offset.y, offset.x)
-                    scaleX = scale + maxDragScale *
-                            abs(cos(offsetAngle) * offset.x / size.maxDimension) *
-                            (width / height).coerceAtMost(1f)
-                    scaleY = scale + maxDragScale *
-                            abs(sin(offsetAngle) * offset.y / size.maxDimension) *
-                            (height / width).coerceAtMost(1f)
-                }
-            }
-        } else {
-            null
-        },
-        onDrawSurface = {
-            if (useTopBarStyle) {
-                drawRect(topBarSurfaceBrush)
-            } else {
-                drawRect(containerColor)
-            }
-        },
+    val surfaceBrush = if (useTopBarStyle) {
+        topBarSurfaceBrush
+    } else {
+        readerMenuSurfaceBrush(
+            style = ReaderMenuTintStyle.Fill,
+            placement = ReaderMenuPlacement.Bottom,
+            color = surfaceColor,
+            alpha = containerColor.alpha,
+        )
+    }
+    return readerMenuLiquidGlass(
+        backdrop = backdrop,
+        shape = shape,
+        surfaceBrush = surfaceBrush,
+        blurRadius = resolvedBlurRadius,
+        lensRadius = menuConfig.readMenuLensRadius.dp,
+        useLens = useLens,
+        interactive = interactive,
     )
-        .then(interactiveHighlight?.modifier ?: Modifier)
-        .then(interactiveHighlight?.gestureModifier ?: Modifier)
 }
 
-@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 private fun Modifier.readMenuBottomBarHazeEffect(
     state: HazeState,
     colors: ReadMenuColors,
     shape: Shape,
     menuConfig: ReadMenuConfig,
-    progressive: Boolean,
+    visualState: ReaderMenuVisualState,
+    blurRadiusDp: Int? = null,
 ): Modifier {
-    val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-    val backgroundModifier = if (progressive) {
-        Modifier.background(
-            readMenuBottomBarSurfaceBrush(
-                colors = colors,
-                alpha = surfaceAlpha,
-            )
-        )
-    } else {
-        Modifier
-    }
     return clip(shape)
-        .then(backgroundModifier)
-        .readMenuHazeEffect(
+        .readerMenuHazeEffect(
             state = state,
-            colors = colors,
-            menuConfig = menuConfig,
-            progressive = progressive,
-            progressiveBottomToTop = progressive,
+            visualState = visualState,
+            placement = ReaderMenuPlacement.Bottom,
+            baseColor = colors.background,
+            tintColor = readMenuTintColor(menuConfig),
+            blurRadius = blurRadiusDp ?: menuConfig.readMenuBlurRadius,
+            surfaceAlpha = menuConfig.readMenuBlurAlpha,
         )
 }
 
-@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-private fun Modifier.readMenuHazeEffect(
-    state: HazeState,
-    colors: ReadMenuColors,
-    menuConfig: ReadMenuConfig,
-    progressive: Boolean = false,
-    progressiveBottomToTop: Boolean = false,
-): Modifier {
-    val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-    val blurTintColor = menuConfig.readMenuBlurColor.takeIf { it != 0 }?.let { Color(it) }
-    val hazeContainerColor = if (progressive) {
-        (blurTintColor ?: Color.Black).copy(alpha = surfaceAlpha)
-    } else {
-        colors.background.copy(alpha = surfaceAlpha)
-    }
-    val style = HazeLegado.custom(
-        containerColor = hazeContainerColor,
-        blurRadius = menuConfig.readMenuBlurRadius,
-        blurAlpha = menuConfig.readMenuBlurAlpha,
-    )
-
-    return hazeEffect(
-        state = state,
-        style = style,
-    ) {
-        this.progressive = if (progressive) {
-            HazeProgressive.verticalGradient(
-                startIntensity = if (progressiveBottomToTop) 0f else 1f,
-                endIntensity = if (progressiveBottomToTop) 1f else 0f,
-            )
-        } else {
-            null
-        }
-    }
+private fun readMenuTintColor(menuConfig: ReadMenuConfig): Color? {
+    return menuConfig.readMenuBlurColorNight
+        .takeIf { it != 0 && ReadStyleResolver.isNightTheme() }
+        ?.let(::Color)
+        ?: menuConfig.readMenuBlurColor
+            .takeIf { it != 0 && !ReadStyleResolver.isNightTheme() }
+            ?.let(::Color)
+        ?: menuConfig.readMenuBlurColor
+            .takeIf { it != 0 }
+            ?.let(::Color)
 }
 
 @Composable
-private fun readMenuTopBarSurfaceBrush(
-    colors: ReadMenuColors,
-    alpha: Float,
-): Brush {
-    val topColor = colors.background.copy(
-        alpha = alpha.coerceIn(0f, 1f),
-    )
-    val bottomColor = colors.background.copy(
-        alpha = (alpha * 0.72f).coerceIn(0f, 1f),
-    )
-    return Brush.verticalGradient(
-        colors = listOf(topColor, bottomColor),
-    )
-}
-
-@Composable
-private fun readMenuBottomBarSurfaceBrush(
-    colors: ReadMenuColors,
-    alpha: Float,
-): Brush {
-    val strongColor = colors.background.copy(
-        alpha = alpha.coerceIn(0f, 1f),
-    )
-    val weakColor = colors.background.copy(
-        alpha = (alpha * 0.72f).coerceIn(0f, 1f),
-    )
-    return Brush.verticalGradient(
-        colors = listOf(weakColor, strongColor),
-    )
-}
-
-@Composable
-private fun readMenuColors(): ReadMenuColors {
+private fun readMenuColors(readBarStyle: Int): ReadMenuColors {
     val themeBackground = LegadoTheme.colorScheme.surfaceContainerHigh
     val themeContent = LegadoTheme.colorScheme.onSurface
-    return when (ReadConfig.readBarStyle) {
+    return when (readBarStyle) {
         1 -> ReadMenuColors(
             background = themeBackground,
             content = themeContent,
@@ -3225,8 +3278,8 @@ private fun loadFloatingIcons(
         "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
         "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
         "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
-        "replace" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
-        "replace_badge" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
+        "replace" to { onIntent(ReadBookIntent.MenuEnableReplace) },
+        "replace_badge" to { onIntent(ReadBookIntent.MenuSettingReplace) },
         "auto_page" to {
             if (state.isAutoPage) {
                 onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
@@ -3243,6 +3296,8 @@ private fun loadFloatingIcons(
     val activeIds = buildSet {
         if (state.isReadAloudRunning) add("read_aloud")
         if (state.isAutoPage) add("auto_page")
+        if (state.translationMode) add("translate")
+        if (state.useReplaceRule) add("replace")
     }
 
     return state.menuConfig.titleBarButtons
@@ -3257,10 +3312,16 @@ private fun loadFloatingIcons(
                 label = info.label,
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},
-                onLongClick = if (id == "read_aloud") {
-                    { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
-                } else {
-                    null
+                onLongClick = when (id) {
+                    "read_aloud" -> {
+                        { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
+                    }
+
+                    "replace" -> {
+                        { onIntent(ReadBookIntent.MenuSettingReplace) }
+                    }
+
+                    else -> null
                 },
             )
         }
@@ -3281,8 +3342,8 @@ private fun BrightnessBar(
     backdrop: Backdrop? = null,
     buttonGlassEnabled: Boolean = false,
     glassThumbEnabled: Boolean = false,
+    onBrightnessPreview: (Int) -> Unit,
 ) {
-    val activity = LocalActivity.current
     var sliderValue by remember(vertical, buttonGlassEnabled) {
         mutableFloatStateOf(brightness.toFloat())
     }
@@ -3306,14 +3367,7 @@ private fun BrightnessBar(
         val target = value.roundToInt().coerceIn(0, 100)
 
         //直接先改亮度，如果在这里onBrightnessChange，会ANR
-        activity?.let { act ->
-            val lp = act.window.attributes
-            val targetBrightness = target / 100f
-            if (lp.screenBrightness != targetBrightness) {
-                lp.screenBrightness = targetBrightness
-                act.window.attributes = lp
-            }
-        }
+        onBrightnessPreview(target)
     }
 
     fun commitSliderValue(value: Float) {

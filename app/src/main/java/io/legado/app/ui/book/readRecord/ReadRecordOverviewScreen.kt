@@ -263,7 +263,7 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
                 dailyReadTimes = state.allReadTimes,
                 currentMode = HeatmapMode.TIME,
                 selectedDate = null,
-                onDateSelected = {}
+                onDateSelected = null
             )
         }
     }

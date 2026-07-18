@@ -53,22 +53,28 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
+import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.pager.pagerHeight
+import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // Color picker IDs
 private const val COLOR_TEXT = 1
 private const val COLOR_ACCENT = 2
 private const val COLOR_TITLE = 4
+private const val COLOR_TITLE_NIGHT = 5
 
 @Composable
 fun ReadStyleTextTitleContent(
@@ -228,6 +234,8 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.text_letter_spacing),
             value = (letterSpacing * 100) + 50,
             valueRange = 0f..100f,
+            steps = 99,
+            valueFormat = { ((it - 50) / 100f).toString() },
             onValueChange = { value ->
                 letterSpacing = (value - 50) / 100f
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.LetterSpacing(letterSpacing)))
@@ -237,7 +245,8 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.line_size),
             value = lineSpacing,
             valueRange = 0f..20f,
-            showDecimal = true,
+            steps = 19,
+            valueFormat = { ((it - 10) / 10f).toString() },
             onValueChange = { value ->
                 lineSpacing = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.LineSpacing(value.toInt())))
@@ -247,7 +256,8 @@ internal fun LayoutSpacingPage(
             title = stringResource(R.string.paragraph_size),
             value = paragraphSpacing,
             valueRange = 0f..20f,
-            showDecimal = true,
+            steps = 19,
+            valueFormat = { (it / 10f).toString() },
             onValueChange = { value ->
                 paragraphSpacing = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ParagraphSpacing(value.toInt())))
@@ -433,19 +443,33 @@ internal fun TitleSettingsPage(
             },
         )
 
-        TinyColorSettingItem(
+        TinyColorModeSettingItem(
             title = stringResource(R.string.title_color),
-            colorValue = if (ReadBookConfig.titleColor != 0) {
-                ReadBookConfig.titleColor or 0xFF000000.toInt()
+            dayColor = if (ReadBookConfig.titleColor != 0) {
+                ReadBookConfig.titleColor
             } else {
-                ReadBookConfig.textColor or 0xFF000000.toInt()
+                ReadBookConfig.textColor
             },
-            onClick = {
-                colorPickerId = COLOR_TITLE
-                colorPickerInitial = if (ReadBookConfig.titleColor != 0) {
-                    ReadBookConfig.titleColor or 0xFF000000.toInt()
+            nightColor = if (ReadBookConfig.titleColorNight != 0) {
+                ReadBookConfig.titleColorNight
+            } else {
+                ReadBookConfig.textColorNight
+            },
+            onClickColor = { isNight ->
+                if (isNight) {
+                    colorPickerId = COLOR_TITLE_NIGHT
+                    colorPickerInitial = if (ReadBookConfig.titleColorNight != 0) {
+                        ReadBookConfig.titleColorNight
+                    } else {
+                        ReadBookConfig.textColorNight
+                    }
                 } else {
-                    ReadBookConfig.textColor or 0xFF000000.toInt()
+                    colorPickerId = COLOR_TITLE
+                    colorPickerInitial = if (ReadBookConfig.titleColor != 0) {
+                        ReadBookConfig.titleColor
+                    } else {
+                        ReadBookConfig.textColor
+                    }
                 }
                 showColorPicker = true
             },
@@ -523,9 +547,12 @@ internal fun TitleSettingsPage(
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
             value = titleSegScaling,
-            valueRange = -20f..20f,
+            valueRange = -2f..2f,
+            steps = 39,
+            stepSize = 0.1f,
+            valueFormat = { "%.1f".format(it) },
             onValueChange = { value ->
-                titleSegScaling = value
+                titleSegScaling = (value * 10).roundToInt() / 10f
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegScaling(titleSegScaling)))
             },
         )
@@ -587,6 +614,9 @@ internal fun TitleSettingsPage(
                 COLOR_TITLE -> {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(color)))
                 }
+                COLOR_TITLE_NIGHT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(color)))
+                }
             }
             showColorPicker = false
         },
@@ -610,14 +640,6 @@ private fun FontWeightSetting(
         )
     }
     val weightEntries = stringArrayResource(R.array.text_font_weight)
-    val presetValue = when (value) {
-        2 -> 2
-        1 -> 1
-        0 -> 0
-        in 100..350 -> 2
-        in 650..900 -> 1
-        else -> 0
-    }
 
     Column {
         Row(
@@ -627,7 +649,7 @@ private fun FontWeightSetting(
             Box(modifier = Modifier.weight(1f)) {
                 TinyDropdownSettingItem(
                     title = stringResource(R.string.font_weight_text),
-                    selectedValue = presetValue.toString(),
+                    selectedValue = value.toString(),
                     displayEntries = arrayOf(
                         weightEntries[2],
                         weightEntries[0],
@@ -676,22 +698,29 @@ private fun FontWeightSetting(
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 cornerRadius = 12.dp,
             ) {
-                Box(
+                ValueStepper(
+                    value = sliderValue,
+                    displayValue = sliderValue,
+                    valueRange = 100f..900f,
+                    onValueChange = {
+                        sliderValue = it
+                        onValueChange(it.toInt())
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppSlider(
-                        value = sliderValue,
-                        onValueChange = { sliderValue = it },
-                        onValueChangeFinished = {
-                            onValueChange(sliderValue.toInt())
-                        },
-                        valueRange = 100f..900f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                    content = {
+                        AppSlider(
+                            value = sliderValue,
+                            onValueChange = { sliderValue = it },
+                            onValueChangeFinished = {
+                                onValueChange(sliderValue.toInt())
+                            },
+                            valueRange = 100f..900f,
+                            modifier = Modifier.weight(1f),
+                        )
+                    },
+                )
             }
         }
     }

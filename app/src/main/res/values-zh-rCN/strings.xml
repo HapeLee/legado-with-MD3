@@ -105,6 +105,7 @@
     <string name="version">版本</string>
     <string name="local">本地</string>
     <string name="search">搜索</string>
+    <string name="all_results">全部结果</string>
     <string name="search_placeholder">搜索…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">来源：%s</string>
@@ -1018,6 +1019,7 @@
     <string name="use_default_cover_s">总是显示默认封面（不显示网络封面）</string>
     <string name="title_font_size">字号</string>
     <string name="title_color">标题颜色</string>
+    <string name="reset_to_body_color">重置为正文颜色</string>
     <string name="title_margin_top">上边距</string>
     <string name="title_margin_bottom">下边距</string>
     <string name="show">显示</string>
@@ -1056,6 +1058,9 @@
     <string name="clipboard_empty">剪贴板没有内容</string>
     <string name="clipboard_empty_or_invalid">剪贴板为空或格式不正确</string>
     <string name="invalid_format">格式不正确</string>
+    <string name="regex_is_empty">正则表达式为空</string>
+    <string name="example_is_empty">示例为空</string>
+    <string name="invalid_regex">正则表达式无效</string>
     <string name="complete_required_information">请填写完整信息</string>
     <string name="sort_by_respondTime">响应时间排序</string>
     <string name="respondTime">响应时间：%1$d ms</string>
@@ -1104,13 +1109,12 @@
     <string name="tts_speech_add">语速加</string>
     <string name="open_sys_dir_picker_error">打开系统文件夹选择器出错，将自动打开应用文件夹选择器</string>
     <string name="open_sys_doc_picker_error">打开系统文件选择器出错，将自动打开应用文件选择器</string>
-    <string name="expand_text_menu">展开文本选择菜单</string>
-    <string name="show_select_menu_icon">展示选择菜单图标</string>
-    <string name="text_select_menu_filter">选择菜单应用过滤</string>
-    <string name="text_select_menu_filter_desc">过滤文字选择操作菜单中显示的第三方应用</string>
+    <string name="expand_text_menu">多行展示</string>
+    <string name="show_select_menu_icon">展示图标</string>
+
     <string name="show_all">全部显示</string>
     <string name="hide_all">全不显示</string>
-    <string name="no_apps_found">未找到支持文字处理的第三方应用</string>
+
     <string name="book_tree_uri_t">书籍保存位置</string>
     <string name="book_tree_uri_s">从其它应用打开的书籍保存位置</string>
     <string name="select_book_folder">选择保存书籍的文件夹</string>
@@ -1354,6 +1358,7 @@
     <string name="adjust_chapter_page">调整本章页数</string>
     <string name="adjust_chapter_index">调整章节位置</string>
     <string name="clear_webview_data_success">清除成功，3秒后自动重启应用</string>
+    <string name="clear_webview_data_failed">清除 WebView 数据失败</string>
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
@@ -1391,6 +1396,8 @@
     <string name="start_chapter">起始章</string>
     <string name="update_to_variant_title">检查更新查找版本</string>
     <string name="update_to_variant_summary">检查更新时查找其他签名版本</string>
+    <string name="auto_check_update_on_start_title">启动时自动检测更新</string>
+    <string name="auto_check_update_on_start_summary">仅在应用进程完全重新启动时检测，从后台返回不会触发</string>
     <string name="default_version">当前</string>
     <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>
@@ -1450,6 +1457,10 @@
     <string name="theme_manage_import_package_summary">导入包含资源和封面图集的主题包</string>
     <string name="theme_manage_import_config">导入旧版主题配置</string>
     <string name="theme_manage_import_config_summary">从旧版 JSON 文件导入主题配置</string>
+    <string name="theme_manage_migrate_legacy">迁移旧版主题</string>
+    <string name="theme_manage_migrate_legacy_summary">将已保存的 JSON 主题转换为新版主题格式</string>
+    <string name="theme_manage_migrate_success">已迁移 %1$d 个旧版主题</string>
+    <string name="theme_manage_migrate_partial">已迁移 %1$d 个主题，%2$d 个迁移失败</string>
     <string name="theme_manage_saved_themes">已保存的主题</string>
     <string name="theme_manage_save_theme">保存主题</string>
     <string name="theme_manage_save">保存</string>
@@ -1481,8 +1492,9 @@
     <string name="theme_manage_section_blur">模糊效果</string>
     <string name="book_info_page">书籍详情页</string>
     <string name="book_info_follow_cover_color">界面颜色跟随封面取色</string>
-    <string name="book_info_follow_cover_color_summary">从书籍封面提取详情页配色</string>
-    <string name="book_info_background_blur">背景设置</string>
+    <string name="book_info_follow_cover_color_summary">仅在显示背景封面时生效</string>
+    <string name="book_info_network_cover_background">网络封面背景设置</string>
+    <string name="book_info_default_cover_background">默认封面背景设置</string>
     <string name="book_info_background_blur_off">关闭模糊封面</string>
     <string name="book_info_background_blur_on">开启模糊封面</string>
     <string name="book_info_background_blur_off_for_default">不显示背景封面</string>
@@ -2109,6 +2121,8 @@
     <string name="ai_test_failed">AI 连接测试失败</string>
     <string name="ai_profile_counts">供应商：%1$d，模型：%2$d，预设：%3$d</string>
     <string name="read_menu_bg_color_summary">阅读顶栏和底栏背景色</string>
+    <string name="read_menu_text_color">菜单文字颜色</string>
+    <string name="read_menu_text_color_summary">默认时使用主题色</string>
     <string name="read_menu_color_source">色板来源</string>
     <string name="container_background_color">容器背景色</string>
     <string name="read_menu_container_color_summary">用于生成阅读菜单色板的基础表面色</string>
@@ -2118,8 +2132,8 @@
     <string name="read_menu_show_icon_text">显示图标文字</string>
     <string name="read_menu_icon_container_style">图标容器样式</string>
     <string name="read_menu_icon_style_plain">无容器</string>
-    <string name="read_menu_icon_style_tonal">Tonal</string>
-    <string name="read_menu_icon_style_outlined">Outlined</string>
+    <string name="read_menu_icon_style_tonal">色调</string>
+    <string name="read_menu_icon_style_outlined">描边</string>
     <string name="read_menu_icons_per_row">每行图标数</string>
     <string name="read_menu_icon_row_count">图标行数</string>
     <string name="read_menu_custom_icons">自定义图标</string>
@@ -2140,17 +2154,17 @@
     <string name="read_menu_blur_mode_none">关闭</string>
     <string name="read_menu_bar_liquid_glass_summary">为悬浮底栏应用液态玻璃效果，需要 Android 13 及以上系统</string>
     <string name="read_menu_bottom_bar_liquid_glass_buttons_summary">需要 Android 13 及以上系统</string>
-    <string name="read_menu_bar_blur_style">模糊样式</string>
-    <string name="read_menu_blur_style_progressive">渐进式模糊</string>
+    <string name="read_menu_bar_blur_style">着色样式</string>
+    <string name="read_menu_blur_style_progressive">渐变</string>
     <string name="read_menu_top_bar_liquid_glass_buttons_summary">需要 Android 13 及以上系统</string>
     <string name="read_menu_blur_radius">模糊半径</string>
     <string name="read_menu_blur_radius_summary">模糊半径越大，系统运行越卡顿</string>
     <string name="read_menu_blur_alpha">菜单不透明度</string>
-    <string name="read_menu_blur_color">模糊着色</string>
+    <string name="read_menu_blur_color">菜单着色</string>
     <string name="read_menu_border">边框</string>
     <string name="read_menu_border_width">宽度</string>
     <string name="read_menu_border_color">颜色</string>
-    <string name="read_menu_blur_style_solid">实心模糊</string>
+    <string name="read_menu_blur_style_solid">填充</string>
     <string name="read_menu_bar_liquid_glass_buttons">液态玻璃按钮</string>
     <string name="read_menu_top_bar_title_capsule">标题胶囊布局</string>
     <string name="read_menu_bar_blur">模糊效果</string>
@@ -2361,6 +2375,22 @@
     <string name="a11y_not_selected">未选中</string>
     <string name="a11y_on">开启</string>
     <string name="a11y_off">关闭</string>
+    <string name="a11y_decrease">减小</string>
+    <string name="a11y_increase">增大</string>
+    <string name="a11y_move_up">上移</string>
+    <string name="a11y_move_down">下移</string>
+    <string name="a11y_reorder_named">调整%1$s顺序</string>
+    <string name="a11y_previous_chapter">上一章</string>
+    <string name="a11y_next_chapter">下一章</string>
+    <string name="a11y_grid_columns">网格列数</string>
+    <string name="a11y_switch_layout">切换布局</string>
+    <string name="a11y_group_filter">按分组筛选</string>
+    <string name="a11y_parent_folder">返回上级目录</string>
+    <string name="a11y_previous_result">上一个结果</string>
+    <string name="a11y_next_result">下一个结果</string>
+    <string name="a11y_locate_current_chapter">定位当前章节</string>
+    <string name="a11y_server_list">服务器列表</string>
+    <string name="a11y_pin_source">置顶书源</string>
     <string name="a11y_expanded">已展开</string>
     <string name="a11y_collapsed">已折叠</string>
     <string name="a11y_long_press_reorder">长按并拖动可排序</string>
@@ -2485,7 +2515,6 @@
     <string name="delete_chapter_cache_message">删除章节缓存：%1$s？</string>
     <string name="about_open_project_homepage">打开项目主页</string>
     <string name="about_open_github">打开 GitHub</string>
-    <string name="apply">应用</string>
     <string name="book_characters">人物</string>
     <string name="book_info_knowledge">知识</string>
     <string name="character_network">关系网</string>
@@ -2731,4 +2760,13 @@
     <string name="cloud_tts_http_engine_summary">HTTP TTS · 使用规则提供的默认音色</string>
     <string name="cloud_tts_http_catalog_hint">规则音色 · 由 HTTP TTS 配置决定</string>
     <string name="cloud_tts_request_failed">TTS 请求失败</string>
+    <string name="edit_menu_items">编辑菜单项</string>
+    <string name="edit_select_menu">编辑选择菜单</string>
+    <string name="primary_menu">一级菜单</string>
+    <string name="collapsed_menu">折叠菜单</string>
+    <string name="hidden_items">已隐藏项目</string>
+    <string name="merged_in_multiline">多行模式下将合并展示</string>
+    <string name="apply">应用</string>
+    <string name="source_categories">书源分类</string>
+    <string name="my_tags">我的标签</string>
 </resources>

@@ -34,6 +34,7 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
@@ -93,6 +94,18 @@ abstract class BaseReadAloudService : BaseService(),
 
         @JvmStatic
         var timeMinute: Int = 0
+            private set(value) {
+                field = PlaybackTimer.normalize(value)
+            }
+
+        @JvmStatic
+        @Volatile
+        var currentChapterIndex: Int = -1
+            private set
+
+        @JvmStatic
+        @Volatile
+        var currentProgress: Int = 0
             private set
 
         fun isPlay(): Boolean {
@@ -176,8 +189,8 @@ abstract class BaseReadAloudService : BaseService(),
         initPhoneStateListener()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         setTimer(ReadConfig.ttsTimer)
-        if (ReadConfig.ttsTimer > 0) {
-            toastOnUi("朗读定时 ${ReadConfig.ttsTimer} 分钟")
+        if (timeMinute > 0) {
+            toastOnUi("朗读定时 $timeMinute 分钟")
         }
         execute {
             ImageLoader
@@ -211,6 +224,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     override fun onDestroy() {
+        ReadBook.upReadTime()
         super.onDestroy()
         prepareReadAloudGeneration++
         prepareReadAloudJob?.cancel()
@@ -221,6 +235,8 @@ abstract class BaseReadAloudService : BaseService(),
         isRun = false
         pause = true
         sessionStore.stop()
+        currentChapterIndex = -1
+        currentProgress = 0
         abandonFocus()
         unregisterReceiver(broadcastReceiver)
         postEvent(EventBus.ALOUD_STATE, Status.STOP)
@@ -229,6 +245,10 @@ abstract class BaseReadAloudService : BaseService(),
         mediaSessionCompat.release()
         ReadBook.uploadProgress()
         unregisterPhoneStateListener(phoneStateListener)
+        if (!ReadBook.isUiActive) {
+            ReadBook.stopAutoSaveSession()
+            ReadBook.commitReadSession()
+        }
         upNotificationJob?.invokeOnCompletion {
             notificationManager.cancel(NotificationId.ReadAloudService)
         }
@@ -245,6 +265,7 @@ abstract class BaseReadAloudService : BaseService(),
             IntentAction.pause -> pauseReadAloud()
             IntentAction.resume -> resumeReadAloud()
             IntentAction.upTtsSpeechRate -> upSpeechRate(true)
+            IntentAction.syncReadAloudLayout -> syncTextChapterLayout()
             IntentAction.prevParagraph -> prevP()
             IntentAction.nextParagraph -> nextP()
             IntentAction.prev -> prevChapter()
@@ -328,6 +349,7 @@ abstract class BaseReadAloudService : BaseService(),
             nowSpeak = preparedNowSpeak
             readAloudNumber = preparedReadAloudNumber
             paragraphStartPos = preparedParagraphStartPos
+            updateReadAloudProgressSnapshot(preparedReadAloudNumber + 1)
             if (moveToLast) toLast = false
             preparedPlaybackCursor?.takeIf { hasSpeechPlaybackQueue }?.let(::publishPlaybackInfo)
             launch(Main) {
@@ -374,12 +396,16 @@ abstract class BaseReadAloudService : BaseService(),
         upReadAloudNotification()
         sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
+        if (!ReadBook.isAutoSaveSessionRunning) {
+            ReadBook.startReadSession()
+        }
     }
 
     abstract fun playStop()
 
     @CallSuper
     open fun pauseReadAloud(abandonFocus: Boolean = true) {
+        ReadBook.upReadTime()
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
@@ -394,6 +420,10 @@ abstract class BaseReadAloudService : BaseService(),
         postEvent(EventBus.ALOUD_STATE, Status.PAUSE)
         ReadBook.uploadProgress()
         doDs()
+        if (!ReadBook.isUiActive) {
+            ReadBook.stopAutoSaveSession()
+            ReadBook.commitReadSession()
+        }
     }
 
     @SuppressLint("WakelockTimeout")
@@ -410,11 +440,15 @@ abstract class BaseReadAloudService : BaseService(),
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
+        if (!ReadBook.isAutoSaveSessionRunning) {
+            ReadBook.startReadSession()
+        }
     }
 
     abstract fun upSpeechRate(reset: Boolean = false)
 
     fun upTtsProgress(progress: Int) {
+        ReadBook.upReadTime()
         val chapterPosition = progress.coerceAtLeast(0)
         if (hasSpeechPlaybackQueue) {
             playbackQueue.cursorAt(chapterPosition)?.let(::publishPlaybackInfo)
@@ -430,10 +464,52 @@ abstract class BaseReadAloudService : BaseService(),
                 )
             )
         }
+        updateReadAloudProgressSnapshot(progress)
         postEvent(EventBus.TTS_PROGRESS, progress)
     }
 
+    protected fun updateReadAloudProgressSnapshot(progress: Int) {
+        currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
+        currentProgress = progress.coerceAtLeast(0)
+    }
+
+    protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
+        val chapter = textChapter ?: return false
+        val targetPageIndex = findReadAloudPageIndex(
+            currentPageIndex = pageIndex,
+            chapterPosition = chapterPosition,
+            pageCount = chapter.pageSize,
+            pageStart = chapter::getReadLength,
+        )
+        if (targetPageIndex == pageIndex) return false
+        repeat(targetPageIndex - pageIndex) {
+            pageIndex++
+            ReadBook.moveToNextPage()
+        }
+        return true
+    }
+
+    private fun syncTextChapterLayout() {
+        val latestChapter = ReadBook.curTextChapter ?: return
+        val serviceChapter = textChapter ?: return
+        if (!latestChapter.isCompleted || latestChapter.chapter.index != serviceChapter.chapter.index) {
+            return
+        }
+        val latestPageIndex = latestChapter.getPageIndexByCharIndex(
+            (currentProgress - 1).coerceAtLeast(0)
+        )
+        if (latestPageIndex < 0) return
+        textChapter = latestChapter
+        pageIndex = latestPageIndex
+        ReadBook.syncReadAloudPage(
+            chapterIndex = latestChapter.chapter.index,
+            chapterPos = latestChapter.getReadLength(latestPageIndex),
+        )
+        upTtsProgress(currentProgress)
+    }
+
     private fun prevP() {
+        ReadBook.upReadTime()
         if (hasSpeechPlaybackQueue) {
             val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
             playbackQueue.previous(current)?.let { previous ->
@@ -548,12 +624,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun addTimer() {
-        if (timeMinute == 180) {
-            timeMinute = 0
-        } else {
-            timeMinute += 10
-            if (timeMinute > 180) timeMinute = 180
-        }
+        timeMinute = PlaybackTimer.addIncrement(timeMinute)
         doDs()
     }
 
@@ -566,14 +637,15 @@ abstract class BaseReadAloudService : BaseService(),
         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
         upReadAloudNotification()
         dsJob?.cancel()
+        dsJob = null
+        if (timeMinute == PlaybackTimer.MIN_MINUTES) return
         dsJob = lifecycleScope.launch {
             while (isActive) {
                 delay(60000)
+                if (timeMinute == PlaybackTimer.MIN_MINUTES) break
                 if (!pause) {
-                    if (timeMinute >= 0) {
-                        timeMinute--
-                    }
-                    if (timeMinute == 0) {
+                    timeMinute--
+                    if (timeMinute == PlaybackTimer.MIN_MINUTES) {
                         ReadAloud.stop(this@BaseReadAloudService)
                         sessionStore.updateTimer(timeMinute)
                         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
@@ -868,6 +940,7 @@ abstract class BaseReadAloudService : BaseService(),
     abstract fun aloudServicePendingIntent(actionStr: String): PendingIntent?
 
     open fun prevChapter() {
+        ReadBook.upReadTime()
         toLast = false
         resumeReadAloudInternal()
         ReadBook.moveToPrevChapter(true, toLast = false)
@@ -959,4 +1032,20 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+}
+
+internal inline fun findReadAloudPageIndex(
+    currentPageIndex: Int,
+    chapterPosition: Int,
+    pageCount: Int,
+    pageStart: (Int) -> Int,
+): Int {
+    var targetPageIndex = currentPageIndex
+    while (
+        targetPageIndex + 1 < pageCount &&
+        chapterPosition > pageStart(targetPageIndex + 1)
+    ) {
+        targetPageIndex++
+    }
+    return targetPageIndex
 }

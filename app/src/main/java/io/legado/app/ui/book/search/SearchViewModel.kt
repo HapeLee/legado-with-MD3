@@ -849,11 +849,24 @@ class SearchViewModel(
     }
 
     private fun mergeSearchResults(books: List<SearchBook>) {
+        val bookUrlIndex = HashMap<String, SearchResultKey>()
+        searchResultBooks.forEach { (key, book) ->
+            bookUrlIndex[book.bookUrl] = key
+        }
         books.forEach { book ->
             val key = SearchResultKey(book.name, book.author)
+            val existingUrlKey = bookUrlIndex[book.bookUrl]
+            if (existingUrlKey != null && existingUrlKey != key) {
+                val existingBook = searchResultBooks[existingUrlKey]
+                if (existingBook != null) {
+                    existingBook.addOrigin(book.origin)
+                    return@forEach
+                }
+            }
             val currentBook = searchResultBooks[key]
             if (currentBook == null) {
                 searchResultBooks[key] = book
+                bookUrlIndex[book.bookUrl] = key
             } else {
                 book.origins.forEach { origin -> currentBook.addOrigin(origin) }
             }

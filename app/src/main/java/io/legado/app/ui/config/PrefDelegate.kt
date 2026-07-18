@@ -61,6 +61,10 @@ fun <T> prefDelegate(
         @Volatile
         private var currentValue: T = defaultValue
         private val scope = CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+
+        // 单并发调度器保证同一 key 的 DataStore 写入按提交顺序落盘
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        private val dsWriteDispatcher = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1)
         private var dsObserverJob: Job? = null
 
         init {
@@ -131,9 +135,10 @@ fun <T> prefDelegate(
                     is Long -> appCtx.putPrefLong(key, value)
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
-                // 同步写入 DataStore，确保持久化后再返回
-                runCatching {
-                    runBlocking {
+                // 异步串行写入 DataStore；runBlocking 会把整文件重写 + fsync
+                // 挂在调用线程（通常是主线程的点击回调）上，造成明显掉帧
+                scope.launch(dsWriteDispatcher) {
+                    runCatching {
                         when (value) {
                             is String? -> DsSync.putString(key, value)
                             is Int -> DsSync.putInt(key, value)

@@ -79,13 +79,9 @@ private fun rememberReadBackgroundTheme(
     }
 
     val sourceColor = seedColor ?: return null
-    val surfaceColor = when (background.type) {
-        0 -> background.value.toColorOrNull()
-        else -> ReadBookConfig.bgMeanColor.takeIf { it != 0 }?.let(::Color)
-    }
     return rememberReadThemeOverride(
         seedColor = sourceColor,
-        backgroundColor = surfaceColor,
+        backgroundColor = null,
         containerColor = null,
         deriveDarkFromColor = false,
         paletteStyle = paletteStyle,

@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.read
 
 import android.annotation.SuppressLint
+import android.app.SearchManager
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Gravity
@@ -12,6 +14,7 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -51,10 +54,14 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
+import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
+import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import io.legado.app.utils.share
 import io.legado.app.utils.sysBattery
 import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
@@ -62,7 +69,13 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
 
 /**
  * Encapsulates all the reader logic that used to be in ReadBookActivity.
@@ -74,8 +87,7 @@ class ReadBookController(
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadView.CallBack,
-    ContentTextView.CallBack,
-    TextActionMenu.CallBack {
+    ContentTextView.CallBack {
 
     var refs: ReadBookViewRefs? = null
 
@@ -89,6 +101,15 @@ class ReadBookController(
 
     fun resetPageChanged() {
         pageChanged = false
+    }
+
+    override fun previewBrightness(value: Int) {
+        val targetBrightness = value.coerceIn(0, 100) / 100f
+        val attributes = activity.window.attributes
+        if (attributes.screenBrightness != targetBrightness) {
+            attributes.screenBrightness = targetBrightness
+            activity.window.attributes = attributes
+        }
     }
 
     // Callbacks to Activity for operations that require Activity-level state
@@ -106,12 +127,16 @@ class ReadBookController(
     private val networkChangedListener by lazy { NetworkChangedListener(activity) }
     private val handler by lazy { buildMainHandler() }
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
-    private val textActionMenu by lazy {
-        TextActionMenu(
-            context = activity,
-            callBack = this,
-            expandTextMenu = { viewModel.readPreferences.value.expandTextMenu }
-        )
+    private val _textMenuState = MutableStateFlow<TextMenuState?>(null)
+    val textMenuState = _textMenuState.asStateFlow()
+    private var textMenuRequestVersion = 0L
+    private val menuMutex = Mutex()
+    @Volatile
+    private var cachedActionMenuItems: List<ActionMenuItem>? = null
+
+    fun dismissTextActionMenu() {
+        textMenuRequestVersion++
+        _textMenuState.value = null
     }
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
@@ -134,7 +159,7 @@ class ReadBookController(
     fun clearTts() {
         tts?.clearTts()
         tts = null
-        textActionMenu.dismiss()
+        dismissTextActionMenu()
         popupAction.dismiss()
         refs?.readView?.onDestroy()
         networkChangedListener.unRegister()
@@ -174,6 +199,7 @@ class ReadBookController(
         }
         newRefs.readView.upTime()
         newRefs.readView.upBattery(activity.sysBattery)
+        refreshActionMenuItems()
     }
 
     fun onMenuVisibilityChanged(visible: Boolean) {
@@ -285,22 +311,30 @@ class ReadBookController(
 
     override fun showTextActionMenu() {
         val r = refs ?: return
-        val navigationBarHeight =
-            if (!ReadBookConfig.hideNavigationBar && activity.navigationBarGravity == Gravity.BOTTOM) {
-                r.navigationBar.height
-            } else {
-                0
+        val text = selectedText
+        val startX = r.textMenuPosition.x.toInt()
+        val startTopY = r.textMenuPosition.y.toInt()
+        val startBottomY = r.cursorLeft.y.toInt() + r.cursorLeft.height
+        val endX = r.cursorRight.x.toInt()
+        val endBottomY = r.cursorRight.y.toInt() + r.cursorRight.height
+        val requestVersion = ++textMenuRequestVersion
+
+        activity.lifecycleScope.launch {
+            val items = getActionMenuItems()
+            val readView = refs?.readView
+            if (textMenuRequestVersion != requestVersion || readView?.isTextSelected != true) {
+                return@launch
             }
-        textActionMenu.upMenu()
-        textActionMenu.show(
-            r.textMenuPosition,
-            r.root.height + navigationBarHeight,
-            r.textMenuPosition.x.toInt(),
-            r.textMenuPosition.y.toInt(),
-            r.cursorLeft.y.toInt() + r.cursorLeft.height,
-            r.cursorRight.x.toInt(),
-            r.cursorRight.y.toInt() + r.cursorRight.height
-        )
+            _textMenuState.value = TextMenuState(
+                selectedText = text,
+                startX = startX,
+                startTopY = startTopY,
+                startBottomY = startBottomY,
+                endX = endX,
+                endBottomY = endBottomY,
+                items = items
+            )
+        }
     }
 
     override fun autoPageStop() {
@@ -415,7 +449,7 @@ class ReadBookController(
     override fun onCancelSelect() {
         refs?.cursorLeft?.invisible()
         refs?.cursorRight?.invisible()
-        textActionMenu.dismiss()
+        dismissTextActionMenu()
     }
 
     override fun onLongScreenshotTouchEvent(event: MotionEvent): Boolean =
@@ -501,11 +535,18 @@ class ReadBookController(
 
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         val r = refs ?: return false
-        if (v == null || event == null || !r.readView.isTextSelected) {
+        if (v == null || event == null) {
             return false
         }
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> textActionMenu.dismiss()
+        val action = event.action
+        if (!r.readView.isTextSelected
+            && action != MotionEvent.ACTION_UP
+            && action != MotionEvent.ACTION_CANCEL
+        ) {
+            return false
+        }
+        when (action) {
+            MotionEvent.ACTION_DOWN -> dismissTextActionMenu()
             MotionEvent.ACTION_MOVE -> {
                 when (v.id) {
                     R.id.cursor_left -> if (!r.readView.curPage.getReverseStartCursor()) {
@@ -534,17 +575,25 @@ class ReadBookController(
                 }
             }
 
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                if (action == MotionEvent.ACTION_UP) {
+                    v.performClick()
+                }
                 r.readView.curPage.resetReverseCursor()
-                showTextActionMenu()
+                if (r.readView.isTextSelected) {
+                    showTextActionMenu()
+                } else {
+                    dismissTextActionMenu()
+                }
             }
         }
         return true
     }
 
-    override val selectedText: String get() = refs?.readView?.getSelectText().orEmpty()
+    val selectedText: String get() = refs?.readView?.getSelectText().orEmpty()
 
-    override fun onMenuItemSelected(itemId: Int): Boolean {
+    fun onMenuItemSelected(itemId: Int): Boolean {
         when (itemId) {
             R.id.menu_aloud -> {
                 viewModel.onIntent(
@@ -612,9 +661,138 @@ class ReadBookController(
         return false
     }
 
-    override fun onMenuActionFinally() {
-        textActionMenu.dismiss()
+    fun onMenuActionFinally() {
+        dismissTextActionMenu()
         refs?.readView?.cancelSelect()
+    }
+
+    suspend fun getActionMenuItems(): List<ActionMenuItem> = withContext(IO) {
+        menuMutex.withLock {
+            cachedActionMenuItems?.let { return@withContext it }
+
+            val items = mutableListOf<ActionMenuItem>()
+            items.add(ActionMenuItem(R.id.menu_copy, activity.getString(android.R.string.copy)))
+            items.add(ActionMenuItem(R.id.menu_share_str, activity.getString(R.string.share)))
+            items.add(ActionMenuItem(R.id.menu_browser, activity.getString(R.string.browser)))
+            items.add(ActionMenuItem(R.id.menu_aloud, activity.getString(R.string.read_aloud)))
+            items.add(ActionMenuItem(R.id.menu_bookmark, activity.getString(R.string.bookmark)))
+            items.add(ActionMenuItem(R.id.menu_dict, activity.getString(R.string.dict)))
+            items.add(ActionMenuItem(R.id.menu_replace, activity.getString(R.string.replace)))
+            items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
+            items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
+            items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
+            items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
+
+            val thirdPartyItems = mutableListOf<ActionMenuItem>()
+            runCatching {
+                val pm = activity.packageManager
+                val intent = Intent().setAction(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
+                val resolveInfos = pm.queryIntentActivities(intent, 0)
+                for (resolveInfo in resolveInfos) {
+                    val processIntent = Intent()
+                        .setAction(Intent.ACTION_PROCESS_TEXT)
+                        .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)
+                        .setClassName(resolveInfo.activityInfo.packageName, resolveInfo.activityInfo.name)
+                    
+                    val title = resolveInfo.loadLabel(pm).toString()
+                    val icon = if (ReadConfig.showSelectMenuIcon) {
+                        runCatching { resolveInfo.loadIcon(pm) }.getOrNull()
+                    } else null
+
+                    thirdPartyItems.add(ActionMenuItem(id = -1, title = title, iconDrawable = icon, intent = processIntent))
+                }
+            }
+
+            val allItems = items + thirdPartyItems
+            val configStr = ReadConfig.textSelectMenuConfig
+            val result = if (configStr.isEmpty()) {
+                allItems
+            } else {
+                runCatching {
+                    val savedConfigs = GSON.fromJsonObject<List<SelectionMenuConfigItem>>(configStr).getOrNull() ?: emptyList()
+                    val savedMap = savedConfigs.associateBy { it.id }
+
+                    val sortedItems = mutableListOf<ActionMenuItem>()
+                    for (saved in savedConfigs) {
+                        val found = allItems.find { it.uniqueId == saved.id }
+                        if (found != null) {
+                            val resolvedShowState = saved.showState ?: if (saved.enabled == false) 1 else 0
+                            sortedItems.add(found.copy(showState = resolvedShowState))
+                        }
+                    }
+                    for (item in allItems) {
+                        val uniqueId = item.uniqueId
+                        if (!savedMap.containsKey(uniqueId)) {
+                            sortedItems.add(item)
+                        }
+                    }
+                    sortedItems
+                }.getOrDefault(allItems)
+            }
+            cachedActionMenuItems = result
+            result
+        }
+    }
+
+    fun refreshActionMenuItems() {
+        activity.lifecycleScope.launch {
+            menuMutex.withLock {
+                cachedActionMenuItems = null
+            }
+            val menuItems = getActionMenuItems()
+            _textMenuState.value?.let { currentState ->
+                _textMenuState.value = currentState.copy(items = menuItems)
+            }
+        }
+    }
+
+    fun saveMenuConfig(items: List<ActionMenuItem>) {
+        val configs = items.map { item ->
+            SelectionMenuConfigItem(
+                id = item.uniqueId,
+                enabled = item.showState == 0,
+                showState = item.showState
+            )
+        }
+        ReadConfig.textSelectMenuConfig = GSON.toJson(configs)
+        refreshActionMenuItems()
+    }
+
+    fun onTextMenuItemClick(item: ActionMenuItem) {
+        if (item.intent != null) {
+            runCatching {
+                item.intent.putExtra(Intent.EXTRA_PROCESS_TEXT, selectedText)
+                activity.startActivity(item.intent)
+            }.onFailure { e ->
+                AppLog.put("执行文本菜单操作出错\n$e", e, true)
+            }
+        } else {
+            when (item.id) {
+                R.id.menu_copy -> activity.sendToClip(selectedText)
+                R.id.menu_share_str -> activity.share(selectedText)
+                R.id.menu_browser -> {
+                    runCatching {
+                        val intent = if (selectedText.isAbsUrl()) {
+                            Intent(Intent.ACTION_VIEW).apply {
+                                data = selectedText.toUri()
+                            }
+                        } else {
+                            Intent(Intent.ACTION_WEB_SEARCH).apply {
+                                putExtra(SearchManager.QUERY, selectedText)
+                            }
+                        }
+                        activity.startActivity(intent)
+                    }.onFailure { e ->
+                        e.printOnDebug()
+                        activity.toastOnUi(e.localizedMessage ?: "ERROR")
+                    }
+                }
+                else -> {
+                    onMenuItemSelected(item.id)
+                }
+            }
+        }
+        onMenuActionFinally()
     }
 
     // ── Effect handling ───────────────────────────────────────────────
@@ -638,6 +816,7 @@ class ReadBookController(
                         ConfigUpdateAction.UpdateBackgroundAlpha -> r.readView.upBgAlpha()
                         ConfigUpdateAction.UpdatePageSlopSquare -> r.readView.upPageSlopSquare()
                         ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
+                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) ReadBook.relayoutContent()
                         ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
                         ConfigUpdateAction.UpdateChapterStyle -> ChapterProvider.upStyle()
                         ConfigUpdateAction.InvalidateTextPage -> r.readView.invalidateTextPage()
@@ -704,20 +883,6 @@ class ReadBookController(
                 }
             }
 
-            is ReadBookEffect.UpTtsAloudSpan -> {
-                activity.lifecycleScope.launch(IO) {
-                    if (BaseReadAloudService.isPlay()) {
-                        ReadBook.curTextChapter?.let { textChapter ->
-                            val pageIndex = ReadBook.durPageIndex
-                            val aloudSpanStart =
-                                effect.chapterStart - textChapter.getReadLength(pageIndex)
-                            textChapter.getPage(pageIndex)?.upPageAloudSpan(aloudSpanStart)
-                            refs?.readView?.upContent()
-                        }
-                    }
-                }
-            }
-
             is ReadBookEffect.RefreshBookContent -> {
                 ReadBook.curTextChapter = null
                 refs?.readView?.upContent()
@@ -736,6 +901,7 @@ class ReadBookController(
             }
 
             is ReadBookEffect.ContentLoadFinish -> {
+                viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
                 onStartContentLoadFinish?.invoke()
             }
 
@@ -855,6 +1021,7 @@ class ReadBookController(
             is ReadBookEffect.OpenSearchActivity,
             is ReadBookEffect.ShowLogin,
             is ReadBookEffect.OpenWebView,
+            is ReadBookEffect.RunSourceCustomButton,
             is ReadBookEffect.MenuSettingReplace,
             is ReadBookEffect.TextActionReplace,
             is ReadBookEffect.OpenReplaceEditor,
@@ -885,6 +1052,17 @@ class ReadBookController(
                 // Handled by route/ViewModel — no-op here
             }
         }
+    }
+
+    fun updateReadAloudProgress(chapterStart: Int) {
+        if (!BaseReadAloudService.isPlay()) return
+        val textChapter = ReadBook.curTextChapter ?: return
+        if (textChapter.chapter.index != BaseReadAloudService.currentChapterIndex) return
+        val pageIndex = textChapter.getPageIndexByCharIndex(chapterStart)
+        if (pageIndex < 0 || pageIndex != ReadBook.durPageIndex) return
+        val aloudSpanStart = chapterStart - textChapter.getReadLength(pageIndex)
+        textChapter.getPage(pageIndex)?.upPageAloudSpan(aloudSpanStart)
+        refs?.readView?.upContent(resetPageOffset = false)
     }
 
     // ── Key handling ──
@@ -1248,3 +1426,51 @@ class ReadBookController(
         }
     }
 }
+
+data class TextMenuState(
+    val selectedText: String,
+    val startX: Int,
+    val startTopY: Int,
+    val startBottomY: Int,
+    val endX: Int,
+    val endBottomY: Int,
+    val items: List<ActionMenuItem>
+)
+
+data class ActionMenuItem(
+    val id: Int,
+    val title: String,
+    val iconDrawable: android.graphics.drawable.Drawable? = null,
+    val intent: Intent? = null,
+    val showState: Int = 0 // 0: 一级, 1: 折叠, 2: 隐藏
+) {
+    val enabled: Boolean
+        get() = showState == 0
+
+    val uniqueId: String
+        get() = if (intent != null) {
+            val comp = intent.component
+            if (comp != null) "${comp.packageName}/${comp.className}" else title
+        } else {
+            when (id) {
+                R.id.menu_copy -> "menu_copy"
+                R.id.menu_share_str -> "menu_share_str"
+                R.id.menu_browser -> "menu_browser"
+                R.id.menu_aloud -> "menu_aloud"
+                R.id.menu_bookmark -> "menu_bookmark"
+                R.id.menu_dict -> "menu_dict"
+                R.id.menu_replace -> "menu_replace"
+                R.id.menu_edit -> "menu_edit"
+                R.id.menu_ai_clean -> "menu_ai_clean"
+                R.id.menu_ai_rewrite -> "menu_ai_rewrite"
+                R.id.menu_search_content -> "menu_search_content"
+                else -> id.toString()
+            }
+        }
+}
+
+data class SelectionMenuConfigItem(
+    val id: String,
+    val enabled: Boolean? = null,
+    val showState: Int? = null
+)

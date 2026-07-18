@@ -18,6 +18,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,13 +43,16 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
@@ -87,6 +92,8 @@ interface ReadBookRouteHost :
 
     fun closeReadBook()
 
+    fun previewBrightness(value: Int)
+
     fun upSystemUiVisibility(
         isInMultiWindow: Boolean,
         toolBarHide: Boolean,
@@ -121,6 +128,7 @@ fun ReadBookRouteScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
+    val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
@@ -135,6 +143,14 @@ fun ReadBookRouteScreen(
 
     LaunchedEffect(state.menuVisible) {
         controller.onMenuVisibilityChanged(state.menuVisible)
+    }
+
+    LaunchedEffect(viewModel, controller, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.readAloudProgress.collect { chapterStart ->
+                chapterStart?.let(controller::updateReadAloudProgress)
+            }
+        }
     }
 
     // ── ActivityResult Launchers ──────────────────────────────────────
@@ -303,8 +319,7 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
                                     Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("type", "bookSource")
-                                        putExtra("key", effect.sourceUrl)
+                                        putExtra("bookType", BookType.text)
                                     }
                                 )
                             }
@@ -327,6 +342,18 @@ fun ReadBookRouteScreen(
                                         effect.html?.let { putExtra("html", it) }
                                     }
                                 )
+                            }
+                            is ReadBookEffect.RunSourceCustomButton -> {
+                                (context as? AppCompatActivity)?.let { activity ->
+                                    SourceCallBack.callBackBtn(
+                                        activity,
+                                        effect.event,
+                                        effect.source,
+                                        effect.book,
+                                        effect.chapter,
+                                        BookType.text,
+                                    )
+                                }
                             }
                             is ReadBookEffect.OpenSearchActivity -> {
                                 onOpenSearch(effect.word, effect.bookUrl)
@@ -450,13 +477,26 @@ fun ReadBookRouteScreen(
                     SearchContentResult.resetReplayCache()
                     return@collect
                 }
-                viewModel.onIntent(
-                    ReadBookIntent.SetSearchResults(result.searchResults, result.index, result.query)
-                )
-                result.searchResults.getOrNull(result.index)?.let { searchResult ->
-                    viewModel.onIntent(
-                        ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
-                    )
+                when (result) {
+                    is SearchContentResult.Clear -> {
+                        viewModel.onIntent(ReadBookIntent.SetSearchResults(emptyList(), 0, ""))
+                        viewModel.onIntent(ReadBookIntent.ExitSearch)
+                    }
+
+                    is SearchContentResult.Result -> {
+                        viewModel.onIntent(
+                            ReadBookIntent.SetSearchResults(
+                                result.searchResults,
+                                result.index,
+                                result.query
+                            )
+                        )
+                        result.searchResults.getOrNull(result.index)?.let { searchResult ->
+                            viewModel.onIntent(
+                                ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
+                            )
+                        }
+                    }
                 }
                 SearchContentResult.resetReplayCache()
             }
@@ -464,6 +504,8 @@ fun ReadBookRouteScreen(
     }
 
     // ── View layer + Compose UI ───────────────────────────────────────
+
+    var showSelectMenuConfigSheet by rememberSaveable { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {
@@ -485,6 +527,7 @@ fun ReadBookRouteScreen(
                 state = state,
                 preferences = readPreferences,
                 onIntent = viewModel::onIntent,
+                onBrightnessPreview = host::previewBrightness,
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
             )
@@ -514,8 +557,47 @@ fun ReadBookRouteScreen(
             }
             ReadBookScreen(
                 state = state,
+                preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
+                onOpenTextSelectMenuConfig = {
+                    viewModel.onIntent(ReadBookIntent.DismissSheet)
+                    showSelectMenuConfigSheet = true
+                },
+            )
+            TextActionSelectionMenu(
+                menuState = textMenuState,
+                expandTextMenu = readPreferences.expandTextMenu,
+                onDismiss = { controller.dismissTextActionMenu() },
+                onItemClick = { item -> controller.onTextMenuItemClick(item) },
+                onOpenManage = {
+                    controller.dismissTextActionMenu()
+                    controller.refs?.readView?.cancelSelect()
+                    showSelectMenuConfigSheet = true
+                }
+            )
+            var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
+            LaunchedEffect(showSelectMenuConfigSheet) {
+                if (showSelectMenuConfigSheet) {
+                    configItems = controller.getActionMenuItems()
+                } else {
+                    configItems = emptyList()
+                }
+            }
+            TextSelectMenuConfigSheet(
+                show = showSelectMenuConfigSheet,
+                items = configItems,
+                expandTextMenu = readPreferences.expandTextMenu,
+                showSelectMenuIcon = readPreferences.showSelectMenuIcon,
+                onExpandTextMenuChange = {
+                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
+                },
+                onShowSelectMenuIconChange = {
+                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
+                    controller.refreshActionMenuItems()
+                },
+                onDismissRequest = { showSelectMenuConfigSheet = false },
+                onSaved = { items -> controller.saveMenuConfig(items) }
             )
         }
     }

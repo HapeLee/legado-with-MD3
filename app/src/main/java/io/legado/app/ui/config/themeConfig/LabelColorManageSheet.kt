@@ -63,7 +63,8 @@ fun LabelColorManageSheet(
                     tagColors.addAll(generatedColors)
                     ThemeConfig.saveCustomTagColors(tagColors)
                 },
-                icon = Icons.Default.AutoAwesome
+                icon = Icons.Default.AutoAwesome,
+                contentDescription = stringResource(R.string.ai_generate)
             )
         },
         endAction = {
@@ -74,7 +75,8 @@ fun LabelColorManageSheet(
                     editingTextColor = 0
                     showColorPicker = true
                 },
-                icon = Icons.Default.Add
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
             )
         }
     ) {
@@ -116,14 +118,16 @@ fun LabelColorManageSheet(
                                     editingTextColor = colorPair.textColor
                                     showColorPicker = true
                                 },
-                                icon = Icons.Default.Edit
+                                icon = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit)
                             )
                             SmallPlainButton(
                                 onClick = {
                                     tagColors.removeAt(index)
                                     ThemeConfig.saveCustomTagColors(tagColors)
                                 },
-                                icon = Icons.Default.Delete
+                                icon = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete)
                             )
                         }
                     }

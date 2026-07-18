@@ -69,14 +69,16 @@ fun DirectLinkUploadBottomSheet(
                 onClick = {
                     viewModel.testRule { result -> showTestResult = result }
                 },
-                icon = Icons.Default.Checklist
+                icon = Icons.Default.Checklist,
+                contentDescription = stringResource(R.string.test)
             )
         },
         endAction = {
             Box {
                 MediumPlainButton(
                     onClick = { showMenu = true },
-                    icon = Icons.Default.MoreVert
+                icon = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(
                     expanded = showMenu,

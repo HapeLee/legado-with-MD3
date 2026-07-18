@@ -221,7 +221,8 @@ fun ChangeSourceSheet(
                 Box {
                     MediumPlainButton(
                         onClick = { showOptionsMenu = true },
-                        icon = Icons.Default.MoreVert
+                icon = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_menu)
                     )
                     RoundDropdownMenu(
                         expanded = showOptionsMenu,
@@ -270,7 +271,8 @@ fun ChangeSourceSheet(
                 }
                 MediumPlainButton(
                     onClick = { showMigrationOptions = true },
-                    icon = Icons.Outlined.Settings
+                    icon = Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.setting)
                 )
             }
         },
@@ -279,10 +281,12 @@ fun ChangeSourceSheet(
                 MediumPlainButton(
                     onClick = { viewModel.startOrStopSearch() },
                     icon = if (isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
+                    contentDescription = stringResource(if (isSearching) R.string.pause else R.string.refresh),
                 )
                 MediumPlainButton(
                     onClick = { showFilterSheet = true },
-                    icon = Icons.Default.FilterList
+                    icon = Icons.Default.FilterList,
+                    contentDescription = stringResource(R.string.screen)
                 )
             }
         }
@@ -339,7 +343,7 @@ fun ChangeSourceSheet(
                                 },
                                 icon = Icons.Default.PushPin,
                                 tint = if (bookScore > 0) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.outline,
-                                contentDescription = null
+                                contentDescription = stringResource(R.string.a11y_pin_source)
                             )
                         },
                         supportingContent = {

@@ -83,6 +83,8 @@ data class ReadBookStyleConfig(
     val textColor: String = "#3E3D3B",
     val textColorNight: String = "#CCCCCC",
     val textColorEInk: String = "#000000",
+    val textFont: String = "",
+    val titleFont: String = "",
     // Page anim
     val pageAnim: Int = 0,
     val pageAnimEInk: Int = 4,
@@ -311,8 +313,11 @@ data class ReadMenuConfig(
     val readMenuBorderWidth: Int = 0,
     val readMenuBorderColor: Int = 0,
     val readMenuBorderColorNight: Int = 0,
+    val readMenuTextColor: Int = 0,
+    val readMenuTextColorNight: Int = 0,
     val readMenuBlurAlpha: Int = 60,
     val readMenuBlurColor: Int = 0,
+    val readMenuBlurColorNight: Int = 0,
     val readMenuPaletteStyle: String = "",
     val readMenuBlurRadius: Int = 24,
     val readMenuLensRadius: Float = 24f,
@@ -324,6 +329,7 @@ data class ReadMenuConfig(
     val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuIconStyle: Int = 0,
+    val titleBarIconStyle: Int = 0,
     val readMenuIconShowText: Boolean = true,
     val readSliderMode: String = "0",
     val titleBarCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
@@ -476,6 +482,7 @@ sealed interface ReadBookIntent {
     data object OpenBookInfo : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
     data object OpenChapterUrl : ReadBookIntent
+    data class SourceCustomButton(val longClick: Boolean) : ReadBookIntent
     data object ToggleReadUrlInBrowser : ReadBookIntent
 
     // Content edit
@@ -684,7 +691,6 @@ sealed interface ReadBookIntent {
     data object ReadAloudPrevChapter : ReadBookIntent
     data object ReadAloudNextChapter : ReadBookIntent
     data class SetReadAloudTtsTimer(val value: Int) : ReadBookIntent
-    data class SaveReadAloudTtsTimer(val value: Int) : ReadBookIntent
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
     data class SetSpeechAnalysisMode(val value: String) : ReadBookIntent
@@ -791,6 +797,13 @@ sealed interface ReadBookEffect {
         val html: String? = null,
     ) : ReadBookEffect
 
+    data class RunSourceCustomButton(
+        val event: String,
+        val source: BookSource,
+        val book: Book,
+        val chapter: BookChapter?,
+    ) : ReadBookEffect
+
     // Menu actions that need Activity
     data object MenuChangeSource : ReadBookEffect
     data object MenuBookChangeSource : ReadBookEffect
@@ -810,7 +823,6 @@ sealed interface ReadBookEffect {
     data class UpTextSelectAble(val enabled: Boolean) : ReadBookEffect
 
     // TTS
-    data class UpTtsAloudSpan(val chapterStart: Int) : ReadBookEffect
 
     // Dialogs (Activity-driven)
     data object ShowConfirmSkipToChapter : ReadBookEffect
@@ -892,7 +904,6 @@ sealed interface ReadBookSheet {
     data object ParagraphIntervalConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet
     data object PageKeyConfig : ReadBookSheet
-    data object TextSelectMenuFilterConfig : ReadBookSheet
     data object InfoConfig : ReadBookSheet
     data class Dict(val word: String) : ReadBookSheet
     data class Bookmark(
@@ -928,6 +939,7 @@ sealed interface ConfigUpdateAction {
     data object UpdateBackgroundAlpha : ConfigUpdateAction
     data object UpdatePageSlopSquare : ConfigUpdateAction
     data object ReloadContent : ConfigUpdateAction
+    data object RelayoutContent : ConfigUpdateAction
     data object UpdateContent : ConfigUpdateAction
     data object UpdateChapterStyle : ConfigUpdateAction
     data object InvalidateTextPage : ConfigUpdateAction
@@ -1001,6 +1013,9 @@ sealed interface ConfigUpdate {
     data class TitleColor(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
     }
+    data class TitleColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
+    }
     data class TitleFont(val path: String) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
     }
@@ -1048,7 +1063,13 @@ sealed interface ConfigUpdate {
     data class TipHeaderColor(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
+    data class TipHeaderColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
     data class TipFooterColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TipFooterColorNight(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipDividerColor(val color: Int) : ConfigUpdate {
@@ -1099,6 +1120,12 @@ sealed interface ConfigUpdate {
     }
     data class MenuContainerColorNight(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuTextColor(val color: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuTextColorNight(val color: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuColorMode(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
@@ -1243,6 +1270,10 @@ sealed interface ConfigUpdate {
     data class MenuIconStyle(val value: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
+
+    data class TitleBarIconStyle(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
@@ -1283,6 +1314,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuBlurColor(val color: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuBlurColorNight(val color: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuPaletteStyle(val value: String) : ConfigUpdate {
@@ -1413,9 +1447,6 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ShowSelectMenuIcon(val value: Boolean) : ConfigUpdate {
-        override val actions = emptySet<ConfigUpdateAction>()
-    }
-    data class TextSelectMenuFilter(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate {

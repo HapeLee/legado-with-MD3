@@ -146,6 +146,7 @@ class TextChapterLayout(
     private val textFullJustify = ReadBookConfig.textFullJustify
     private val adaptSpecialStyle = ReadConfig.adaptSpecialStyle
     private val pageAnim = book.getPageAnim()
+    private val isSingleImageStyle = book.getImageStyle().equals(Book.imgStyleSingle, true)
     private val titleSegType = ReadBookConfig.titleSegType
     private val titleSegDistance = ReadBookConfig.titleSegDistance
     private val titleSegFlag = ReadBookConfig.titleSegFlag
@@ -271,7 +272,6 @@ class TextChapterLayout(
     ) {
         val contents = bookContent.textList
         val imageStyle = book.getImageStyle()
-        val isSingleImageStyle = imageStyle.equals(Book.imgStyleSingle, true)
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         val allTitleSegments = if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
@@ -356,16 +356,19 @@ class TextChapterLayout(
         val sb = StringBuffer()
         var isSetTypedImage = false
         var wordCount = 0
-        contents.forEach { content ->
+        contents.forEachIndexed { contentIndex, content ->
             currentCoroutineContext().ensureActive()
+            highlightStyleContext?.bodyContentOffsets?.getOrNull(contentIndex)?.let {
+                bodyHighlightOffset = it
+            }
             if (adaptSpecialStyle) {
                 val text = content.trim()
                 if (text == "[newpage]") {
                     prepareNextPageIfNeed()
-                    return@forEach
+                    return@forEachIndexed
                 } else if (text.startsWith("<usehtml>")) {
                     setTypeHtml(imageStyle, book, text.substring(9, text.lastIndexOf("<")))
-                    return@forEach
+                    return@forEachIndexed
                 }
             }
             var text = content.replace(srcReplaceCharC, srcReplaceCharD)
@@ -1034,8 +1037,9 @@ class TextChapterLayout(
             val textPage = pendingTextPage
             textPage.addLine(textLine)
             durY += textHeight * if (isTitle) titleLineSpacingExtra else lineSpacingExtra
-            if (textPage.height < durY) {
-                textPage.height = durY
+            val pageHeight = if (isSingleImageStyle) visibleHeight.toFloat() else durY
+            if (textPage.height < pageHeight) {
+                textPage.height = pageHeight
             }
         }
         durY += textHeight * paragraphSpacing / 10f
@@ -1421,13 +1425,14 @@ class TextChapterLayout(
             isTitle = true,
             rules = rules
         )
+        val bodyHighlightText = buildBodyHighlightText(contents)
         val bodyStyles = createHighlightStyles(
-            text = buildBodyHighlightText(contents),
+            text = bodyHighlightText.text,
             isTitle = false,
             rules = rules
         )
         if (titleStyles == null && bodyStyles == null) return null
-        return HighlightStyleContext(titleStyles, bodyStyles)
+        return HighlightStyleContext(titleStyles, bodyStyles, bodyHighlightText.contentOffsets)
     }
 
     private fun buildTitleHighlightText(titleSegments: List<TitleSegment>?): String {
@@ -1440,14 +1445,16 @@ class TextChapterLayout(
         }
     }
 
-    private fun buildBodyHighlightText(contents: List<String>): String {
-        if (contents.isEmpty()) return ""
-        return buildString {
-            contents.forEach { content ->
+    private fun buildBodyHighlightText(contents: List<String>): BodyHighlightText {
+        if (contents.isEmpty()) return BodyHighlightText("", IntArray(0))
+        val contentOffsets = IntArray(contents.size)
+        val text = buildString {
+            contents.forEachIndexed { index, content ->
+                contentOffsets[index] = length
                 if (adaptSpecialStyle) {
                     val text = content.trim()
                     if (text == "[newpage]" || text.startsWith("<usehtml>")) {
-                        return@forEach
+                        return@forEachIndexed
                     }
                 }
                 append(
@@ -1457,6 +1464,7 @@ class TextChapterLayout(
                 append('\n')
             }
         }
+        return BodyHighlightText(text, contentOffsets)
     }
 
     private fun String.replaceImagesForHighlight(): String {
@@ -1521,6 +1529,7 @@ class TextChapterLayout(
     private data class HighlightStyleContext(
         val titleStyles: Array<CharStyle?>?,
         val bodyStyles: Array<CharStyle?>?,
+        val bodyContentOffsets: IntArray,
     ) {
         fun stylesFor(isTitle: Boolean, offset: Int, length: Int): Array<CharStyle?>? {
             if (length <= 0) return null
@@ -1545,6 +1554,11 @@ class TextChapterLayout(
             return result
         }
     }
+
+    private data class BodyHighlightText(
+        val text: String,
+        val contentOffsets: IntArray,
+    )
 
     private data class CompiledHighlightRule(
         val rule: HighlightRule,

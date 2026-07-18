@@ -61,7 +61,10 @@ class ExploreBooksUseCase(
     ): ExploreRequest {
         val base = gateway.getBookSource(sourceUrl)
             ?: throw SourceNotFound(sourceUrl)
-        val source = args?.let { base.copy().also { s -> s.setTemporaryVariable(it) } } ?: base
+        val source = args
+            ?.takeIf(String::isNotBlank)
+            ?.let { base.copy().also { s -> s.setTemporaryVariable(it) } }
+            ?: base
         val url = moduleUrl
             ?: (if (key != null) source.searchUrl else null)
             ?: source.exploreUrl

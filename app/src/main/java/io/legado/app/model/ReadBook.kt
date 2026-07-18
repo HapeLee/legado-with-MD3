@@ -94,6 +94,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
+    var isUiActive = false
+    val isAutoSaveSessionRunning: Boolean
+        get() = autoSaveJob != null
+
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
@@ -316,69 +320,88 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    fun initReadTime() {
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        if (currentActiveSession != null &&
-            (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
-        ) {
-            commitReadSession()
+    fun startReadSession() {
+        synchronized(this) {
+            readStartTime = System.currentTimeMillis()
+            initReadTime()
+            startAutoSaveSession()
         }
+    }
 
-        if (currentActiveSession == null) {
-            lastReadLength = currentReadLength
-            currentActiveSession = ReadRecordSession(
-                deviceId = "",
-                bookName = currentBookName,
-                bookAuthor = currentBookAuthor,
-                startTime = readStartTime,
-                endTime = readStartTime,
-                words = durChapterIndex.toLong()
-            )
+    fun initReadTime() {
+        synchronized(this) {
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            if (currentActiveSession != null &&
+                (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
+            ) {
+                commitReadSession()
+            }
+
+            if (currentActiveSession == null) {
+                lastReadLength = currentReadLength
+                currentActiveSession = ReadRecordSession(
+                    deviceId = "",
+                    bookName = currentBookName,
+                    bookAuthor = currentBookAuthor,
+                    startTime = readStartTime,
+                    endTime = readStartTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
         }
     }
 
     fun upReadTime() {
-        val currentLength = currentReadLength
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        val endTime = System.currentTimeMillis()
+        synchronized(this) {
+            val currentLength = currentReadLength
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            val endTime = System.currentTimeMillis()
 
-        if (currentActiveSession == null ||
-            currentActiveSession!!.bookName != currentBookName ||
-            currentActiveSession!!.bookAuthor != currentBookAuthor
-        ) {
-            initReadTime()
-            return
+            if (currentActiveSession == null ||
+                currentActiveSession!!.bookName != currentBookName ||
+                currentActiveSession!!.bookAuthor != currentBookAuthor
+            ) {
+                initReadTime()
+                return
+            }
+
+            currentActiveSession = currentActiveSession!!.copy(
+                endTime = endTime,
+                words = durChapterIndex.toLong()
+            )
+
+            readStartTime = endTime
+            lastReadLength = currentLength
         }
-
-        currentActiveSession = currentActiveSession!!.copy(
-            endTime = endTime,
-            words = durChapterIndex.toLong()
-        )
-
-        readStartTime = endTime
-        lastReadLength = currentLength
     }
 
     fun startAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = ioScope.launch {
-            while (isActive) {
-                delay(AUTO_SAVE_INTERVAL)
-                commitSessionInternal()
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = ioScope.launch {
+                while (isActive) {
+                    delay(AUTO_SAVE_INTERVAL)
+                    commitSessionInternal()
+                }
             }
         }
     }
 
     fun stopAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = null
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = null
+        }
     }
 
     fun commitReadSession() {
-        val sessionToCommit = currentActiveSession ?: return
-        currentActiveSession = null
+        val sessionToCommit = synchronized(this) {
+            val session = currentActiveSession
+            currentActiveSession = null
+            session
+        } ?: return
         ioScope.launch {
             saveSessionToDb(sessionToCommit)
         }
@@ -388,7 +411,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 内部提交逻辑（auto-save 专用）：保存后立即创建新 session 保证连续记录
      */
     private suspend fun commitSessionInternal() {
-        val sessionToSave = currentActiveSession ?: return
+        val sessionToSave = synchronized(this) { currentActiveSession } ?: return
         val sessionDuration = sessionToSave.endTime - sessionToSave.startTime
         if (sessionDuration < MIN_READ_DURATION) {
             return
@@ -400,11 +423,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             return
         }
         // 保存成功后立即创建新 session，避免 auto-save 空窗期
-        currentActiveSession = sessionToSave.copy(
-            startTime = sessionToSave.endTime,
-            endTime = sessionToSave.endTime,
-            words = durChapterIndex.toLong()
-        )
+        synchronized(this) {
+            val current = currentActiveSession
+            if (current != null &&
+                current.bookName == sessionToSave.bookName &&
+                current.bookAuthor == sessionToSave.bookAuthor
+            ) {
+                currentActiveSession = current.copy(
+                    startTime = sessionToSave.endTime,
+                    endTime = sessionToSave.endTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
+        }
     }
 
     /**
@@ -596,15 +627,26 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     /**
      * 当前页面变化
      */
-    private fun curPageChanged(pageChanged: Boolean = false) {
+    private fun curPageChanged(
+        pageChanged: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
+    ) {
         callBack?.pageChanged()
         curTextChapter?.let {
             if (BaseReadAloudService.isRun && it.isCompleted) {
-                val scrollPageAnim = pageAnim() == 3
-                if (scrollPageAnim && pageChanged) {
-                    ReadAloud.pause(appCtx)
+                if (shouldRestartReadAloudAfterContentLoad(
+                        preserveReadAloudPosition = preserveReadAloudPosition,
+                        serviceChapterIndex = BaseReadAloudService.currentChapterIndex,
+                        loadedChapterIndex = it.chapter.index,
+                    )
+                ) {
+                    if (isScroll && pageChanged) {
+                        ReadAloud.pause(appCtx)
+                    } else {
+                        readAloud(!BaseReadAloudService.pause)
+                    }
                 } else {
-                    readAloud(!BaseReadAloudService.pause)
+                    ReadAloud.syncLayout()
                 }
             }
         }
@@ -621,6 +663,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (textChapter.isCompleted) {
             ReadAloud.play(appCtx, play, startPos = startPos)
         }
+    }
+
+    fun syncReadAloudPage(chapterIndex: Int, chapterPos: Int) {
+        if (durChapterIndex != chapterIndex || durChapterPos == chapterPos) return
+        durChapterPos = chapterPos
+        callBack?.upContent(resetPageOffset = false)
+        saveRead(pageChanged = true)
     }
 
     /**
@@ -663,22 +712,39 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      */
     fun loadContent(
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null
     ) {
-        loadContent(durChapterIndex, resetPageOffset = resetPageOffset) {
+        loadContent(
+            durChapterIndex,
+            resetPageOffset = resetPageOffset,
+            preserveReadAloudPosition = preserveReadAloudPosition,
+        ) {
             success?.invoke()
         }
         loadContent(durChapterIndex + 1, resetPageOffset = resetPageOffset)
         loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
     }
 
+    fun relayoutContent() {
+        loadContent(
+            resetPageOffset = false,
+            preserveReadAloudPosition = true,
+        )
+    }
+
     fun loadOrUpContent(success: (() -> Unit)? = null) {
         val curChapter = curTextChapter
         if (curChapter == null || !curChapter.isLayoutSizeMatch()) {
+            val preserveReadAloudPosition = BaseReadAloudService.isRun &&
+                    BaseReadAloudService.currentChapterIndex == durChapterIndex
             curTextChapter = null
             nextTextChapter = null
             prevTextChapter = null
-            loadContent(durChapterIndex) {
+            loadContent(
+                durChapterIndex,
+                preserveReadAloudPosition = preserveReadAloudPosition,
+            ) {
                 success?.invoke()
             }
         } else {
@@ -707,6 +773,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         index: Int,
         upContent: Boolean = true,
         resetPageOffset: Boolean = false,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null
     ) {
         Coroutine.async {
@@ -736,12 +803,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         it,
                         upContent,
                         resetPageOffset,
+                        preserveReadAloudPosition,
                         success = success
                     )
                 } ?: download(
                     downloadScope,
                     chapter,
-                    resetPageOffset
+                    resetPageOffset,
+                    preserveReadAloudPosition = preserveReadAloudPosition,
                 )
             }
         }.onError {
@@ -800,7 +869,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         } else {
             delay(1000)
             if (addLoading(index)) {
-                download(downloadScope, chapter, false, preDownloadSemaphore)
+                download(
+                    scope = downloadScope,
+                    chapter = chapter,
+                    resetPageOffset = false,
+                    semaphore = preDownloadSemaphore,
+                )
             }
         }
     }
@@ -812,6 +886,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         scope: CoroutineScope,
         chapter: BookChapter,
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         semaphore: Semaphore? = null,
         success: (() -> Unit)? = null
     ) {
@@ -819,7 +894,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val bookSource = bookSource
         if (bookSource != null) {
             val started =
-                CacheBook.getOrCreate(bookSource, book).download(scope, chapter, semaphore)
+                CacheBook.getOrCreate(bookSource, book).download(
+                    scope = scope,
+                    chapter = chapter,
+                    semaphore = semaphore,
+                    resetPageOffset = resetPageOffset,
+                    preserveReadAloudPosition = preserveReadAloudPosition,
+                )
             if (!started) {
                 removeLoading(chapter.index)
             }
@@ -830,6 +911,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chapter,
                 "加载正文失败\n$msg",
                 resetPageOffset = resetPageOffset,
+                preserveReadAloudPosition = preserveReadAloudPosition,
                 success = success
             )
         }
@@ -896,6 +978,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         content: String,
         upContent: Boolean = true,
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         canceled: Boolean = false,
         success: (() -> Unit)? = null
     ) {
@@ -940,7 +1023,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         callBack?.onLayoutPageCompleted(index, page)
                     }
                     if (upContent) callBack?.upContent(offset, !available && resetPageOffset)
-                    curPageChanged()
+                    curPageChanged(
+                        preserveReadAloudPosition = preserveReadAloudPosition,
+                    )
                     callBack?.contentLoadFinish()
                 }
 

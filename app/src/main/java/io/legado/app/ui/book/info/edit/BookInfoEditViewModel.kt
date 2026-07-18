@@ -20,6 +20,7 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
+import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,7 @@ data class BookInfoEditUiState(
     val coverUrl: String? = null,
     val intro: String? = null,
     val remark: String? = null,
+    val sourceKindList: List<String> = emptyList(),
     val kindList: List<String> = emptyList(),
     val originalKindList: List<String> = emptyList(),
     val selectedType: BookInfoEditType = BookInfoEditType.TEXT,
@@ -59,16 +61,17 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     it.isAudio -> BookInfoEditType.AUDIO
                     else -> BookInfoEditType.TEXT
                 }
-                val kinds =
-                    it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty()
+                val sourceKinds = it.kind?.splitNotBlank(",", "\n").orEmpty().distinct()
+                val customTags = it.customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
                 _uiState.value = BookInfoEditUiState(
                     name = it.name,
                     author = it.author,
                     coverUrl = it.getDisplayCover(),
                     intro = it.getDisplayIntro(),
                     remark = it.remark,
-                    kindList = kinds,
-                    originalKindList = kinds,
+                    sourceKindList = sourceKinds,
+                    kindList = customTags,
+                    originalKindList = customTags,
                     selectedType = selectedType,
                     fixedType = it.config.fixedType,
                     book = it
@@ -102,7 +105,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     fun onKindListChange(kindList: List<String>) {
-        _uiState.value = _uiState.value.copy(kindList = kindList)
+        _uiState.value = _uiState.value.copy(kindList = kindList.distinct())
     }
 
     fun onBookTypeChange(bookType: BookInfoEditType) {
@@ -136,7 +139,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 book.config.fixedType = currentState.fixedType
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
-                book.kind = currentState.kindList.joinToString(",")
+                book.customTag = currentState.kindList.joinToString(",").ifBlank { null }
                 BookHelp.updateCacheFolder(oldBook, book)
 
                 if (ReadBook.book?.bookUrl == book.bookUrl) {

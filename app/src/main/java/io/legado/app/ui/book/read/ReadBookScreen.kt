@@ -12,8 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
 import io.legado.app.ui.book.read.sheet.AiTextRewriteSheet
@@ -43,7 +42,6 @@ import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
-import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
 import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
@@ -70,8 +68,10 @@ import org.koin.compose.koinInject
 @Composable
 fun ReadBookScreen(
     state: ReadBookUiState,
+    preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
+    onOpenTextSelectMenuConfig: () -> Unit,
 ) {
     BackHandler {
         when {
@@ -199,24 +199,15 @@ fun ReadBookScreen(
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
-    val fontSelectReadSettings: ReadSettingsRepository = org.koin.compose.koinInject()
-    val fontSelectPreferences by fontSelectReadSettings.preferences.collectAsStateWithLifecycle(
-        initialValue = null
-    )
-    val fontSelectFolderState = remember(fontSelectPreferences) {
-        val pref = fontSelectPreferences
-        if (pref == null) {
-            FontFolderState.Loading
-        } else {
-            FontFolderState.Loaded(pref.fontFolder.takeIf { it.isNotEmpty() }?.toUri())
-        }
+    val fontSelectFolderState = remember(preferences.fontFolder) {
+        FontFolderState.Loaded(preferences.fontFolder.takeIf { it.isNotEmpty() }?.toUri())
     }
     val fontSelectSystemTypefaces = stringArrayResource(R.array.system_typefaces)
     FontSelectSheet(
         show = state.activeSheet is ReadBookSheet.FontSelect,
         title = stringResource(R.string.select_font),
         folderState = fontSelectFolderState,
-        selectedFontPath = ReadBookConfig.textFont,
+        selectedFontPath = state.styleConfig.textFont,
         onDismissRequest = dismissSheet,
         onSelectFont = { onIntent(ReadBookIntent.SelectFont(it.uri.toString())) },
         onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectSystemTypeface(it)) },
@@ -227,7 +218,7 @@ fun ReadBookScreen(
         show = state.activeSheet is ReadBookSheet.TitleFontSelect,
         title = stringResource(R.string.read_config_title_settings),
         folderState = fontSelectFolderState,
-        selectedFontPath = ReadBookConfig.titleFont,
+        selectedFontPath = state.styleConfig.titleFont,
         onDismissRequest = dismissSheet,
         onSelectFont = { onIntent(ReadBookIntent.SelectTitleFont(it.uri.toString())) },
         onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectTitleSystemTypeface(it)) },
@@ -296,10 +287,7 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.DismissSheet)
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
         },
-        onOpenTextSelectMenuFilterConfig = {
-            onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextSelectMenuFilterConfig))
-        },
+        onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
     )
     ReadAloudConfigSheet(
         show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
@@ -482,15 +470,7 @@ fun ReadBookScreen(
             )
         }
 
-        is ReadBookSheet.TextSelectMenuFilterConfig -> {
-            TextSelectMenuFilterSheet(
-                show = true,
-                onDismissRequest = dismissSheet,
-                onFilterChanged = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSelectMenuFilter(it)))
-                }
-            )
-        }
+
 
         is ReadBookSheet.PageAnim -> {
             PageAnimConfigSheet(

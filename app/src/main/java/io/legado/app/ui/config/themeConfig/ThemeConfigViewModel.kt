@@ -12,6 +12,7 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
+import io.legado.app.utils.openInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
@@ -93,6 +94,31 @@ class ThemeConfigViewModel(
 
     fun removeBackground(isDarkTheme: Boolean) {
         updateBackgroundPath(isDarkTheme, null)
+    }
+
+    fun setAppFont(fileDoc: FileDoc) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val extension = fileDoc.name.substringAfterLast('.', "ttf")
+                    .lowercase()
+                    .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+                    ?: "ttf"
+                val fontDir = File(appCtx.filesDir, "fonts").apply { mkdirs() }
+                val target = File(fontDir, "app_font.$extension")
+                val temp = File(fontDir, "app_font.$extension.tmp")
+                fileDoc.openInputStream().getOrThrow().use { input ->
+                    FileOutputStream(temp).use(input::copyTo)
+                }
+                if (target.exists() && !target.delete()) {
+                    error("Unable to replace app font")
+                }
+                if (!temp.renameTo(target)) {
+                    temp.copyTo(target, overwrite = true)
+                    temp.delete()
+                }
+                ThemeConfig.appFontPath = target.absolutePath
+            }.onFailure(Throwable::printStackTrace)
+        }
     }
 
     /**

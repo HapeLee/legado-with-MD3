@@ -37,6 +37,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,9 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -93,6 +96,10 @@ fun SearchContentScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.leaveSearch() }
+    }
 
     val scrollToCurrentChapter = {
         val targetIndex = searchResults.indexOfFirst { it.chapterIndex == durChapterIndex }
@@ -196,9 +203,12 @@ fun SearchContentScreen(
                     label = "FabIconTransition"
                 ) { searching ->
                     if (searching) {
-                        AppIcon(Icons.Default.Stop, contentDescription = "停止搜索")
+                        AppIcon(Icons.Default.Stop, contentDescription = stringResource(R.string.stop))
                     } else {
-                        AppIcon(Icons.Default.MyLocation, contentDescription = "定位当前章节")
+                        AppIcon(
+                            Icons.Default.MyLocation,
+                            contentDescription = stringResource(R.string.a11y_locate_current_chapter)
+                        )
                     }
                 }
             }
@@ -332,7 +342,7 @@ fun SearchHistoryList(
                             SmallPlainButton(
                                 onClick = { onDeleteHistory(item) },
                                 icon = Icons.Default.Close,
-                                contentDescription = "删除"
+                                contentDescription = stringResource(R.string.delete)
                             )
                         },
                         colors = ListItemDefaults.colors(

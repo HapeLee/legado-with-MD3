@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
@@ -11,17 +10,17 @@
         android:id="@+id/cb_source_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:minHeight="48dp"
         android:maxLines="2"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/tv_source_state"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:ignore="TouchTargetSizeCheck" />
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/tv_source_state"
         android:layout_width="wrap_content"
-        android:layout_height="40dp"
+        android:layout_height="48dp"
         style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
         android:minWidth="0dp"
         android:textSize="11sp"
@@ -33,9 +32,10 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/tv_open"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+        android:contentDescription="@string/edit"
         app:icon="@drawable/ic_edit"
         app:iconGravity="textStart"
         app:layout_constraintBottom_toBottomOf="parent"

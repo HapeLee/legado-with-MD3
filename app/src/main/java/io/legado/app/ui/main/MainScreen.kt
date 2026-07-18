@@ -86,6 +86,7 @@ import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
@@ -107,6 +108,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.NavigationRailDefaults
+import top.yukonga.miuix.kmp.basic.NavigationRailValue
+import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
+import top.yukonga.miuix.kmp.basic.NavigationRail as MiuixNavigationRail
+import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
@@ -189,7 +196,7 @@ fun MainScreen(
     val floatingBarSurfaceColor = if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
         Color(customSecondaryColor)
     } else {
-        MaterialTheme.colorScheme.surface
+        LegadoTheme.colorScheme.surface
     }
     val floatingBarBackdrop = rememberLayerBackdrop {
         drawRect(floatingBarSurfaceColor)
@@ -209,11 +216,20 @@ fun MainScreen(
         orientation = Orientation.Horizontal,
     )
     var bookshelfScrollToTopRequest by remember { mutableLongStateOf(0L) }
+    var homeOverflowMenuRequest by remember { mutableLongStateOf(0L) }
     fun requestBookshelfScrollToTop() {
         bookshelfScrollToTopRequest++
     }
 
     fun handleMainDestinationClick(index: Int, destination: MainDestination) {
+        if (
+            destination == MainDestination.Home &&
+            pagerState.currentPage == index &&
+            pagerState.targetPage == index
+        ) {
+            homeOverflowMenuRequest++
+            return
+        }
         if (
             destination == MainDestination.Bookshelf &&
             pagerState.currentPage == index &&
@@ -250,7 +266,83 @@ fun MainScreen(
 
     Row(modifier = Modifier.fillMaxSize()) {
         if (useRail && mainUiState.showBottomView) {
-            WideNavigationRail(
+            if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+                val miuixNavState = rememberNavigationRailState(
+                    initialValue = if (mainUiState.navExtended) {
+                        NavigationRailValue.Expanded
+                    } else {
+                        NavigationRailValue.Collapsed
+                    }
+                )
+                LaunchedEffect(miuixNavState.currentValue) {
+                    viewModel.setNavExtended(miuixNavState.isExpanded)
+                }
+                MiuixNavigationRail(
+                    state = miuixNavState,
+                    header = {
+                        FloatingActionButton(
+                            modifier = Modifier
+                                .align(Alignment.Start)
+                                .padding(start = NavigationRailDefaults.ExpandedItemHorizontalMargin),
+                            onClick = { onNavigateToSearch(null) },
+                        ) {
+                            AppIcon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+                    }
+                ) {
+                    destinations.forEachIndexed { index, destination ->
+                        val selected = pagerState.targetPage == index
+                        var showGroupMenu by remember { mutableStateOf(false) }
+                        val haptic = LocalHapticFeedback.current
+                        val destinationLabel = stringResource(destination.labelId)
+                        Box {
+                            MiuixNavigationRailItem(
+                                modifier = Modifier
+                                    .semantics(mergeDescendants = true) {
+                                        contentDescription = destinationLabel
+                                    }
+                                    .then(
+                                        if (destination == MainDestination.Bookshelf) {
+                                            Modifier.combinedClickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = {
+                                                    handleMainDestinationClick(
+                                                        index,
+                                                        destination
+                                                    )
+                                                },
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    showGroupMenu = true
+                                                }
+                                            )
+                                        } else Modifier
+                                    ),
+                                selected = selected,
+                                onClick = { handleMainDestinationClick(index, destination) },
+                                icon = AppIcons.mainDestination(destination, selected),
+                                label = destinationLabel,
+                            )
+                            if (destination == MainDestination.Bookshelf && showGroupMenu) {
+                                BookshelfRailGroupMenu(
+                                    expanded = showGroupMenu,
+                                    onDismissRequest = { showGroupMenu = false },
+                                    onBeforeSelectGroup = {
+                                        if (pagerState.currentPage != index) {
+                                            pagerState.scrollToPage(index)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else WideNavigationRail(
                 state = navState,
                 header = {
                     val expanded = navState.targetValue == WideNavigationRailValue.Expanded
@@ -376,7 +468,7 @@ fun MainScreen(
                                     )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
-                                    noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
                                     blurAlpha = GlassDefaults.ThickBlurAlpha
                                 ),
                                 m3ShowLabel = showLabel && !customIconPath.isNotEmpty(),
@@ -423,6 +515,7 @@ fun MainScreen(
                         CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
                             when (destination) {
                             MainDestination.Home -> HomeRouteScreen(
+                                showOverflowMenuRequest = homeOverflowMenuRequest,
                                 onOpenBook = { book ->
                                     context.startActivityForBook(book)
                                 },

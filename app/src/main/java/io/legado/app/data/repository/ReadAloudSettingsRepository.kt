@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -110,12 +111,8 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setTtsTimer(value: Int) {
-        val timer = value.coerceIn(0, 180)
+        val timer = PlaybackTimer.normalize(value)
         ReadConfig.ttsTimer = timer
-    }
-
-    suspend fun saveTtsTimer(value: Int) {
-        settingsRepository.putInt(PreferKey.ttsTimer, value.coerceIn(0, 180))
     }
 
     suspend fun setTtsFollowSys(value: Boolean) {
@@ -154,7 +151,7 @@ class ReadAloudSettingsRepository(
             systemMediaControlCompatibilityChange =
                 this[Keys.SystemMediaControlCompatibilityChange] ?: true,
             streamReadAloudAudio = this[Keys.StreamReadAloudAudio] ?: false,
-            ttsTimer = this[Keys.TtsTimer] ?: 0,
+            ttsTimer = PlaybackTimer.normalize(this[Keys.TtsTimer] ?: 0),
             ttsFollowSys = this[Keys.TtsFollowSys] ?: true,
             ttsSpeechRate = this[Keys.TtsSpeechRate] ?: 5,
             speechAnalysisMode = this[Keys.SpeechAnalysisMode] ?: "rule",

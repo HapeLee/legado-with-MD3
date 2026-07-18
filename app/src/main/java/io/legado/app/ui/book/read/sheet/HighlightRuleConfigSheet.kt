@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -121,7 +122,8 @@ fun HighlightRuleConfigSheet(
         startAction = {
             SmallTonalButton(
                 onClick = { onIntent(ReadBookIntent.AddHighlightRule) },
-                icon = Icons.Default.Add
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
             )
         },
         endAction = {
@@ -129,7 +131,8 @@ fun HighlightRuleConfigSheet(
             Box {
                 SmallTonalButton(
                     onClick = { expanded = true },
-                    icon = Icons.Default.MoreVert
+                    icon = Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(
                     expanded = expanded,
@@ -170,7 +173,7 @@ fun HighlightRuleConfigSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                items(state.rules, key = { it.id }) { rule ->
+                itemsIndexed(state.rules, key = { _, rule -> rule.id }) { index, rule ->
                     ReorderableItem(reorderableState, key = rule.id) { isDragging ->
                         HighlightRuleItem(
                             rule = rule,
@@ -184,6 +187,13 @@ fun HighlightRuleConfigSheet(
                                 onIntent(ReadBookIntent.RequestDeleteHighlightRule(rule))
                             },
                             modifier = Modifier
+                                .reorderAccessibility(
+                                    index = index,
+                                    itemCount = state.rules.size,
+                                ) { from, to ->
+                                    onIntent(ReadBookIntent.MoveHighlightRule(from, to))
+                                    onIntent(ReadBookIntent.SaveHighlightRuleOrder)
+                                }
                                 .longPressDraggableHandle()
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .animateItem(),
@@ -251,11 +261,13 @@ private fun HighlightRuleItem(
                 )
                 SmallTonalButton(
                     onClick = onEditClick,
-                    icon = Icons.Default.Edit
+                    icon = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.edit)
                 )
                 SmallTonalButton(
                     onClick = onDeleteClick,
-                    icon = Icons.Default.Delete
+                    icon = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete)
                 )
             }
         },

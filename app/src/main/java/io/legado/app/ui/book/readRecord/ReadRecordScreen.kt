@@ -729,7 +729,7 @@ fun HeatmapCalendarSection(
     dailyReadTimes: Map<LocalDate, Long>,
     currentMode: HeatmapMode,
     selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     config: HeatmapConfig = HeatmapConfig()
 ) {
     val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
@@ -752,7 +752,7 @@ fun HeatmapCalendarSection(
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             WeekdayLabelsColumn(
-                cellSize = config.cellSize,
+                cellSize = config.interactiveCellSize,
                 cellSpacing = config.cellSpacing
             )
 
@@ -770,7 +770,10 @@ fun HeatmapCalendarSection(
 
                 if (firstReadDate != null) {
                     item {
-                        NoEarlierDataIndicator(cellSize = config.cellSize)
+                        NoEarlierDataIndicator(
+                            cellSize = config.cellSize,
+                            touchTargetSize = config.interactiveCellSize,
+                        )
                     }
                 }
 

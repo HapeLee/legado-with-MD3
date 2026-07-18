@@ -7,9 +7,15 @@ import kotlinx.collections.immutable.persistentListOf
 @Stable
 data class DictUiState(
     val word: String = "",
-    val isLoading: Boolean = false,
     val rules: ImmutableList<DictRuleUi> = persistentListOf(),
     val selectedIndex: Int = 0,
+    val pages: ImmutableList<DictPageUiState> = persistentListOf(),
+    val emptyReason: DictEmptyReason? = null,
+)
+
+@Stable
+data class DictPageUiState(
+    val isLoading: Boolean = false,
     val htmlContent: String = "",
     val emptyReason: DictEmptyReason? = null,
 )

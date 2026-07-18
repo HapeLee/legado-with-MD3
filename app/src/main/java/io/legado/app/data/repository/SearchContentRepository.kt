@@ -44,6 +44,14 @@ class SearchContentRepository {
         cacheResults(bookUrl, query, replaceEnabled, regexReplace, emptyList())
     }
 
+    fun clearSession(bookUrl: String) {
+        if (lastSearchSession?.bookUrl == bookUrl) {
+            lastSearchResults = null
+            lastQueryKey = null
+            lastSearchSession = null
+        }
+    }
+
     fun getCache(
         bookUrl: String,
         query: String,

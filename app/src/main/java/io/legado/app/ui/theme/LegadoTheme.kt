@@ -75,7 +75,10 @@ data class LegadoColorScheme(
     val cardContainer: Color,
     val onCardContainer: Color,
     val onSheetContent: Color,
-    val cardPrimaryContainer: Color
+    val cardPrimaryContainer: Color,
+
+    /** 输入框背景色覆盖；未配置时由当前主题引擎提供默认色 */
+    val surfaceInput: Color,
 )
 
 data class LegadoTypography(

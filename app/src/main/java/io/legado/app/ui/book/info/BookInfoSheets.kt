@@ -148,13 +148,15 @@ fun GroupSelectSheet(
         startAction = {
             MediumPlainButton(
                 onClick = { showAddGroup = true },
-                icon = Icons.Default.Add
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.group_add)
             )
         },
         endAction = {
             MediumPlainButton(
                 onClick = { onConfirm(selectedGroupId) },
-                icon = Icons.Default.Check
+                icon = Icons.Default.Check,
+                contentDescription = stringResource(R.string.confirm)
             )
         }
     ) {
@@ -190,7 +192,8 @@ fun GroupSelectSheet(
                         trailingAction = {
                             SmallPlainButton(
                                 onClick = { editingGroup = group },
-                                icon = Icons.Default.Edit
+                                icon = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit)
                             )
                         },
                         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
@@ -239,7 +242,10 @@ fun ChangeCoverSheet(
         endAction = {
             MediumPlainButton(
                 onClick = { viewModel.startOrStopSearch() },
-                icon = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh
+                icon = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
+                contentDescription = stringResource(
+                    if (isSearching) R.string.more_menu else R.string.refresh
+                )
             )
         }
     ) {

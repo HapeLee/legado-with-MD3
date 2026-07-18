@@ -1,6 +1,5 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -49,8 +48,6 @@ sealed interface ChangeSourceSearchEvent {
 class ChangeSourceSearchUseCase(
     private val gateway: BookSearchGateway,
 ) {
-    private val threadCount = OtherConfig.threadCount
-
     @OptIn(ExperimentalCoroutinesApi::class)
     fun search(
         name: String,
@@ -70,7 +67,7 @@ class ChangeSourceSearchUseCase(
 
         var processedSources = 0
         var resultCount = 0
-        val concurrency = threadCount.coerceIn(1, AppConst.MAX_THREAD)
+        val concurrency = OtherConfig.threadCount.coerceAtLeast(1)
 
         bookSourceParts.asFlow()
             .mapNotNull { it.getBookSource() }
@@ -124,7 +121,7 @@ class ChangeSourceSearchUseCase(
     ): Flow<ChangeSourceSearchEvent> = flow {
         val contentProcessor = ContentProcessor.get(oldBook)
         val totalBooks = books.size
-        val concurrency = threadCount.coerceIn(1, AppConst.MAX_THREAD)
+        val concurrency = OtherConfig.threadCount.coerceAtLeast(1)
         var processedBooks = 0
         var resultCount = 0
 
