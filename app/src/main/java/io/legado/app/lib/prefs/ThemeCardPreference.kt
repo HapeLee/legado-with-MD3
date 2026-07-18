@@ -16,11 +16,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
@@ -99,7 +97,6 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                     callChangeListener(value)
                     ThemeConfig.appTheme = value
                     notifyDataSetChanged()
-                    postEvent(EventBus.RECREATE, "")
                 }
             }
         }
@@ -157,4 +154,3 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
         val background : MaterialCardView = view.findViewById(R.id.cardView)
     }
 }
-

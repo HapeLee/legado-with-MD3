@@ -30,7 +30,6 @@ import io.legado.app.utils.FileDoc
 import io.legado.app.utils.find
 import io.legado.app.utils.isUri
 import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,6 +84,7 @@ sealed interface RemoteBookIntent {
     data class SortToggle(val sort: RemoteBookSort) : RemoteBookIntent
     data object SelectAll : RemoteBookIntent
     data object SelectInvert : RemoteBookIntent
+    data object ClearSelection : RemoteBookIntent
     data class ToggleSelection(val id: String) : RemoteBookIntent
     data class OpenItem(val book: RemoteBook) : RemoteBookIntent
     data object NavigateBack : RemoteBookIntent
@@ -95,6 +95,8 @@ sealed interface RemoteBookIntent {
     data class BookFolderPicked(val uri: android.net.Uri?) : RemoteBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
     data class ImportArchiveConfirmed(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
+    data class DeleteServer(val server: Server) : RemoteBookIntent
+    data class SaveServer(val server: Server) : RemoteBookIntent
 }
 
 sealed interface RemoteBookEffect {
@@ -139,6 +141,7 @@ class RemoteBookViewModel(
             is RemoteBookIntent.SortToggle -> toggleSort(intent.sort)
             RemoteBookIntent.SelectAll -> selectAllCheckable()
             RemoteBookIntent.SelectInvert -> invertSelection()
+            RemoteBookIntent.ClearSelection -> clearSelection()
             is RemoteBookIntent.ToggleSelection -> toggleSelection(intent.id)
             is RemoteBookIntent.OpenItem -> onOpenItem(intent.book)
             RemoteBookIntent.NavigateBack -> navigateBack()
@@ -156,6 +159,8 @@ class RemoteBookViewModel(
                 intent.fileDoc,
                 intent.fileName
             )
+            is RemoteBookIntent.DeleteServer -> deleteServer(intent.server)
+            is RemoteBookIntent.SaveServer -> saveServer(intent.server)
         }
     }
 
@@ -236,7 +241,7 @@ class RemoteBookViewModel(
                     onSuccess()
                 }
             } catch (e: Exception) {
-                context.toastOnUi("初始化webDav出错:${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("初始化webDav出错:${e.localizedMessage}"))
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
         }
@@ -254,7 +259,7 @@ class RemoteBookViewModel(
                 _state.update { it.copy(remoteBooks = bookList) }
             } catch (e: Exception) {
                 AppLog.put("获取webDav书籍出错\n${e.localizedMessage}", e)
-                context.toastOnUi("获取webDav书籍出错\n${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("获取webDav书籍出错\n${e.localizedMessage}"))
             } finally {
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
@@ -286,7 +291,7 @@ class RemoteBookViewModel(
             Result.failure(e)
         } catch (e: Exception) {
             AppLog.put("导入出错\n${e.localizedMessage}", e)
-            context.toastOnUi("导入出错\n${e.localizedMessage}")
+            _effects.tryEmit(RemoteBookEffect.ShowToast("导入出错\n${e.localizedMessage}"))
             Result.failure(e)
         } finally {
             _state.update { it.copy(interaction = it.interaction.copy(isUploading = false)) }

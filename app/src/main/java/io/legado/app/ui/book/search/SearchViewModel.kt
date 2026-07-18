@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.MatchMode
@@ -49,10 +49,10 @@ class SearchViewModel(
     private val searchBooksUseCase: SearchBooksUseCase,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
 ) : ViewModel() {
 
-    val searchLayoutMode = localPreferencesRepository
+    private val searchLayoutMode = localPreferencesRepository
         .getPreference(LocalPreferencesKeys.SEARCH_LAYOUT_MODE, 0)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -111,6 +111,9 @@ class SearchViewModel(
         observeQueryHistory()
         observeQueryBookshelfHints()
         observeMatchMode()
+        viewModelScope.launch {
+            searchLayoutMode.collect { mode -> _uiState.update { it.copy(layoutMode = mode) } }
+        }
     }
 
     fun onAddToShelf(book: SearchBook) {
@@ -160,6 +163,10 @@ class SearchViewModel(
                 )
             }
 
+            is SearchIntent.AddToShelf -> viewModelScope.launch {
+                addToBookshelfUseCase.execute(intent.book)
+            }
+
             is SearchIntent.OpenBookshelfBook -> {
                 emitEffect(
                     SearchEffect.OpenBookInfo(
@@ -194,6 +201,16 @@ class SearchViewModel(
 
             is SearchIntent.SetSettingsSheetVisible -> {
                 _uiState.update { it.copy(showSettingsSheet = intent.visible) }
+            }
+
+            is SearchIntent.SetLayoutMode -> {
+                _uiState.update { it.copy(layoutMode = intent.mode) }
+                viewModelScope.launch {
+                    localPreferencesRepository.updatePreference(
+                        LocalPreferencesKeys.SEARCH_LAYOUT_MODE,
+                        intent.mode,
+                    )
+                }
             }
 
             is SearchIntent.ToggleSourceType -> {

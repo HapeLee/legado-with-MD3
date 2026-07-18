@@ -51,6 +51,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun HighlightRuleConfigSheet(
     show: Boolean,
     state: HighlightRuleConfigUiState,
+    allConfigNames: List<String>,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -209,6 +210,7 @@ fun HighlightRuleConfigSheet(
     HighlightRuleEditSheet(
         show = show && editingRuleValue != null,
         rule = editingRuleValue,
+        allConfigNames = allConfigNames,
         onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
         onSave = { updated ->
             onIntent(ReadBookIntent.SaveHighlightRule(updated))
@@ -218,6 +220,7 @@ fun HighlightRuleConfigSheet(
     HighlightRuleEditSheet(
         show = show && state.showNewRule,
         rule = null,
+        allConfigNames = allConfigNames,
         onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
         onSave = { newRule ->
             onIntent(ReadBookIntent.SaveHighlightRule(newRule))

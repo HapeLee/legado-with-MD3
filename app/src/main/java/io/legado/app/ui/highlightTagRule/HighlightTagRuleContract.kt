@@ -58,7 +58,9 @@ sealed interface HighlightTagRuleIntent {
     data object SaveImportedRules : HighlightTagRuleIntent
 }
 
-sealed interface HighlightTagRuleEffect
+sealed interface HighlightTagRuleEffect {
+    data class ShowMessage(val message: String) : HighlightTagRuleEffect
+}
 
 data class HighlightTagRuleRenderState(
     val uiState: HighlightTagRuleUiState,

@@ -8,7 +8,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.permission.Permissions
@@ -44,7 +44,7 @@ abstract class BaseService : LifecycleService() {
         startForegroundNotification()
         isForeground = true
         LifecycleHelp.onServiceCreate(this)
-        val localPreferencesRepository: LocalPreferencesRepository = get(LocalPreferencesRepository::class.java)
+        val localPreferencesRepository: SettingsRepository = get(SettingsRepository::class.java)
         val checked: Boolean = runBlocking {
             localPreferencesRepository.getPreference(
                 LocalPreferencesKeys.PERMISSION_CHECKED, false

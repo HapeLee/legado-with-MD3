@@ -114,6 +114,7 @@ import io.legado.app.utils.StringUtils.formatFriendlyDate
 import io.legado.app.utils.formatReadDuration
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -125,19 +126,43 @@ data class TimelineItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ReadRecordScreen(
+fun ReadRecordRouteScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onBookClick: (String, String) -> Unit,
     onSummaryClick: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ReadRecordScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        loadBookCover = viewModel::getBookCover,
+        loadChapterTitle = viewModel::getChapterTitle,
+        loadMergeCandidates = viewModel::getMergeCandidates,
+        onBackClick = onBackClick,
+        onBookClick = onBookClick,
+        onSummaryClick = onSummaryClick,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ReadRecordScreen(
+    state: ReadRecordUiState,
+    onIntent: (ReadRecordIntent) -> Unit,
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
+    loadMergeCandidates: suspend (ReadRecord) -> List<ReadRecord>,
+    onBackClick: () -> Unit,
+    onBookClick: (String, String) -> Unit,
+    onSummaryClick: () -> Unit,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val state by viewModel.uiState.collectAsState()
-    val displayMode by viewModel.displayMode.collectAsState()
-    val readRecordEnabled by viewModel.readRecordEnabled.collectAsState()
+    val displayMode = state.displayMode
+    val readRecordEnabled = state.readRecordEnabled
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
@@ -239,7 +264,7 @@ fun ReadRecordScreen(
                                         deleteSelectedReadRecords(
                                             state = state,
                                             selectedItemKeys = selectedItemKeys,
-                                            viewModel = viewModel
+                                            onIntent = onIntent
                                         )
                                         selectedItemKeys = emptySet()
                                     }
@@ -258,7 +283,7 @@ fun ReadRecordScreen(
                                     DisplayMode.TIMELINE -> DisplayMode.LATEST
                                     DisplayMode.LATEST -> DisplayMode.AGGREGATE
                                 }
-                                viewModel.setDisplayMode(newMode)
+                                onIntent(ReadRecordIntent.SetDisplayMode(newMode))
                                 selectedItemKeys = emptySet()
                             }) {
                                 val icon = when (displayMode) {
@@ -293,7 +318,7 @@ fun ReadRecordScreen(
                 ) {
                     SearchBar(
                         query = state.searchKey ?: "",
-                        onQueryChange = { viewModel.setSearchKey(it) }
+                        onQueryChange = { onIntent(ReadRecordIntent.Search(it)) }
                     )
                 }
             }
@@ -347,12 +372,14 @@ fun ReadRecordScreen(
                             )
                         ) {
                             item(key = "summary_card") {
-                                SummarySection(state, viewModel, onSummaryClick)
+                                SummarySection(state, loadBookCover, onSummaryClick)
                             }
                             renderListByMode(
                                 displayMode = displayMode,
                                 state = state,
-                                viewModel = viewModel,
+                                onIntent = onIntent,
+                                loadBookCover = loadBookCover,
+                                loadChapterTitle = loadChapterTitle,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
                                 selectedItemKeys = selectedItemKeys,
@@ -369,7 +396,7 @@ fun ReadRecordScreen(
                                 },
                                 onMergeClick = { record ->
                                     scope.launch {
-                                        val candidates = viewModel.getMergeCandidates(record)
+                                        val candidates = loadMergeCandidates(record)
                                         if (candidates.isEmpty()) {
                                             snackbarHostState.showSnackbar(
                                                 context.getString(R.string.no_merge_candidates)
@@ -423,12 +450,12 @@ fun ReadRecordScreen(
             showActionsSheet = false
         },
         onReadRecordEnabledChange = { checked ->
-            viewModel.setReadRecordEnabled(checked)
+            onIntent(ReadRecordIntent.SetEnabled(checked))
         },
         onClearReadRecords = {
             showActionsSheet = false
             onConfirmDelete(-1) {
-                viewModel.clearReadRecords()
+                onIntent(ReadRecordIntent.ClearRecords)
                 selectedItemKeys = emptySet()
             }
         }
@@ -488,7 +515,7 @@ fun ReadRecordScreen(
         endAction = {
             HeatmapCalendarEndAction(
                 onClearDate = {
-                    viewModel.setSelectedDate(null)
+                    onIntent(ReadRecordIntent.SelectDate(null))
                     showCalendar = false
                 }
             )
@@ -500,7 +527,7 @@ fun ReadRecordScreen(
             currentMode = heatmapMode,
             selectedDate = state.selectedDate,
             onDateSelected = { date ->
-                viewModel.setSelectedDate(date)
+                onIntent(ReadRecordIntent.SelectDate(date))
                 showCalendar = false
             }
         )
@@ -561,9 +588,11 @@ fun ReadRecordScreen(
         },
         confirmText = stringResource(R.string.merge),
         onConfirm = { (targetRecord, candidates) ->
-            viewModel.mergeReadRecords(
-                targetRecord,
-                candidates.filter { selectedMergeKeys.contains(it.mergeKey()) }
+            onIntent(
+                ReadRecordIntent.MergeRecords(
+                    targetRecord,
+                    candidates.filter { selectedMergeKeys.contains(it.mergeKey()) },
+                )
             )
             mergeDialogData = null
         },
@@ -637,17 +666,17 @@ private fun ReadRecord.selectionKey(): String {
 private fun deleteSelectedReadRecords(
     state: ReadRecordUiState,
     selectedItemKeys: Set<String>,
-    viewModel: ReadRecordViewModel
+    onIntent: (ReadRecordIntent) -> Unit,
 ) {
     state.groupedRecords.values.flatten()
         .filter { selectedItemKeys.contains(it.selectionKey()) }
-        .forEach(viewModel::deleteDetail)
+        .forEach { onIntent(ReadRecordIntent.DeleteDetail(it)) }
     state.timelineRecords.values.flatten()
         .filter { selectedItemKeys.contains(it.selectionKey()) }
-        .forEach(viewModel::deleteSession)
+        .forEach { onIntent(ReadRecordIntent.DeleteSession(it)) }
     state.latestRecords
         .filter { selectedItemKeys.contains(it.selectionKey()) }
-        .forEach(viewModel::deleteReadRecord)
+        .forEach { onIntent(ReadRecordIntent.DeleteRecord(it)) }
 }
 
 @Composable
@@ -678,7 +707,7 @@ private fun SelectionCheckmark(
 @Composable
 fun SummarySection(
     state: ReadRecordUiState,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onSummaryClick: () -> Unit
 ) {
     val selectedDate = state.selectedDate
@@ -700,7 +729,7 @@ fun SummarySection(
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
-                viewModel = viewModel,
+                loadBookCover = loadBookCover,
                 onClick = onSummaryClick
             )
         }
@@ -714,7 +743,7 @@ fun SummarySection(
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
-                viewModel = viewModel,
+                loadBookCover = loadBookCover,
                 onClick = onSummaryClick
             )
         }
@@ -803,7 +832,9 @@ fun HeatmapCalendarSection(
 fun LazyListScope.renderListByMode(
     displayMode: DisplayMode,
     state: ReadRecordUiState,
-    viewModel: ReadRecordViewModel,
+    onIntent: (ReadRecordIntent) -> Unit,
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
     onBookClick: (String, String) -> Unit,
     onConfirmDelete: (Int, () -> Unit) -> Unit,
     selectedItemKeys: Set<String>,
@@ -828,7 +859,7 @@ fun LazyListScope.renderListByMode(
                     val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                         ReadRecordItem(
                             detail,
-                            viewModel,
+                            loadBookCover,
                             onClick = {
                                 if (inSelectionMode) {
                                     onToggleSelection(itemKey)
@@ -852,7 +883,9 @@ fun LazyListScope.renderListByMode(
                                 icon = Icons.Default.Delete,
                                 background = LegadoTheme.colorScheme.error,
                                 onSwipe = {
-                                    onConfirmDelete(1) { viewModel.deleteDetail(detail) }
+                                    onConfirmDelete(1) {
+                                        onIntent(ReadRecordIntent.DeleteDetail(detail))
+                                    }
                                 },
                                 contentDescription = deleteActionDescription
                             )
@@ -883,7 +916,8 @@ fun LazyListScope.renderListByMode(
                             onLongClick = { onEnterSelection(itemKey) },
                             inSelectionMode = inSelectionMode,
                             isSelected = isSelected,
-                            viewModel = viewModel,
+                            loadBookCover = loadBookCover,
+                            loadChapterTitle = loadChapterTitle,
                             modifier = modifier
                         )
                     }
@@ -897,7 +931,9 @@ fun LazyListScope.renderListByMode(
                                 icon = Icons.Default.Delete,
                                 background = LegadoTheme.colorScheme.error,
                                 onSwipe = {
-                                    onConfirmDelete(1) { viewModel.deleteSession(session) }
+                                    onConfirmDelete(1) {
+                                        onIntent(ReadRecordIntent.DeleteSession(session))
+                                    }
                                 },
                                 contentDescription = deleteActionDescription
                             )
@@ -916,7 +952,7 @@ fun LazyListScope.renderListByMode(
                 val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                     LatestReadItem(
                         record = record,
-                        viewModel = viewModel,
+                        loadBookCover = loadBookCover,
                         onClick = {
                             if (inSelectionMode) {
                                 onToggleSelection(itemKey)
@@ -941,7 +977,9 @@ fun LazyListScope.renderListByMode(
                             icon = Icons.Default.Delete,
                             background = LegadoTheme.colorScheme.error,
                             onSwipe = {
-                                onConfirmDelete(1) { viewModel.deleteReadRecord(record) }
+                                onConfirmDelete(1) {
+                                    onIntent(ReadRecordIntent.DeleteRecord(record))
+                                }
                             },
                             contentDescription = deleteActionDescription
                         ),
@@ -965,7 +1003,7 @@ fun LazyListScope.renderListByMode(
 @Composable
 fun LatestReadItem(
     record: ReadRecord,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     inSelectionMode: Boolean = false,
@@ -975,7 +1013,7 @@ fun LatestReadItem(
     var coverPath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(record.bookName, record.bookAuthor) {
-        coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
+        coverPath = loadBookCover(record.bookName, record.bookAuthor)
     }
     val unknownAuthor = stringResource(R.string.unknown_author)
     val author = record.bookAuthor.ifBlank { unknownAuthor }
@@ -1056,7 +1094,8 @@ fun LatestReadItem(
 @Composable
 fun TimelineSessionItem(
     item: TimelineItem,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
     onBookClick: (String, String) -> Unit,
     onLongClick: () -> Unit = {},
     inSelectionMode: Boolean = false,
@@ -1070,8 +1109,8 @@ fun TimelineSessionItem(
     var chapterTitle by remember { mutableStateOf<String?>(loadingText) }
 
     LaunchedEffect(session.bookName, session.bookAuthor, session.words, fallbackChapterTitle) {
-        coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
-        val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
+        coverPath = loadBookCover(session.bookName, session.bookAuthor)
+        val title = loadChapterTitle(session.bookName, session.bookAuthor, session.words)
         chapterTitle = title ?: fallbackChapterTitle
     }
 
@@ -1185,7 +1224,7 @@ fun TimelineSessionItem(
 @Composable
 fun ReadRecordItem(
     detail: ReadRecordDetail,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     inSelectionMode: Boolean = false,
@@ -1195,7 +1234,7 @@ fun ReadRecordItem(
     var coverPath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(detail.bookName, detail.bookAuthor) {
-        coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
+        coverPath = loadBookCover(detail.bookName, detail.bookAuthor)
     }
     val unknownAuthor = stringResource(R.string.unknown_author)
     val author = detail.bookAuthor.ifBlank { unknownAuthor }
@@ -1288,13 +1327,13 @@ fun ReadingSummaryCard(
     bookCount: Int,
     totalTimeMillis: Long,
     bookNamesForCover: List<Pair<String, String>>,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit
 ) {
 
     val coverPaths by produceState(initialValue = emptyList(), key1 = bookNamesForCover) {
         value = bookNamesForCover.map { (name, author) ->
-            viewModel.getBookCover(name, author)
+            loadBookCover(name, author)
         }
     }
 

@@ -6,10 +6,9 @@ import io.legado.app.ui.config.prefDelegate
 
 object OtherConfig {
 
-    var language by prefDelegate(
+    val language by prefDelegate(
         PreferKey.language,
-        "auto",
-        sync = true
+        "auto"
     )
 
     var updateToVariant by prefDelegate(

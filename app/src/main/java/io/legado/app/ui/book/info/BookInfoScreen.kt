@@ -70,14 +70,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.ui.config.coverConfig.CoverConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -127,6 +125,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 @Composable
 fun BookInfoScreen(
     state: BookInfoUiState,
+    groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -161,11 +160,22 @@ fun BookInfoScreen(
     ) {
         mutableStateOf(initiallyUsesDefaultCover)
     }
-    val backdropStyle = state.book?.let { resolveBookInfoBackdropStyle(it, usesDefaultCover) }
+    val backdropStyle = state.book?.let {
+        resolveBookInfoBackdropStyle(
+            book = it,
+            usesDefaultCover = usesDefaultCover,
+            defaultCoverBackground = state.bookInfoDefaultCoverBackground,
+            networkCoverBackground = state.bookInfoNetworkCoverBackground,
+        )
+    }
     val bookColorTheme = rememberBookInfoColorTheme(
         book = state.book,
         enabled = backdropStyle?.showCover == true,
         usesDefaultCover = usesDefaultCover,
+        followCoverColor = state.bookInfoFollowCoverColor,
+        defaultCover = state.defaultCover,
+        defaultCoverDark = state.defaultCoverDark,
+        loadCoverOnlyOnWifi = state.loadCoverOnlyOnWifi,
     )
 
     BookInfoColorTheme(theme = bookColorTheme.takeIf {
@@ -173,6 +183,7 @@ fun BookInfoScreen(
     }) {
         BookInfoScreenContent(
             state = state,
+            groups = groups,
             onIntent = onIntent,
             onBack = onBack,
             sharedTransitionScope = sharedTransitionScope,
@@ -195,6 +206,7 @@ fun BookInfoScreen(
 @Composable
 private fun BookInfoScreenContent(
     state: BookInfoUiState,
+    groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
@@ -350,7 +362,6 @@ private fun BookInfoScreenContent(
             onSelect = { onIntent(BookInfoIntent.SelectCover(it)) },
         )
         BookInfoSheet.GroupPicker -> {
-            val groups by koinInject<io.legado.app.data.repository.BookGroupRepository>().flowSelect().collectAsStateWithLifecycle(initialValue = emptyList())
             GroupSelectSheet(
                 show = currentSheet == BookInfoSheet.GroupPicker,
                 groups = groups,
@@ -518,11 +529,15 @@ private fun rememberBookInfoColorTheme(
     book: BookInfoBookUi?,
     enabled: Boolean,
     usesDefaultCover: Boolean,
+    followCoverColor: Boolean,
+    defaultCover: String,
+    defaultCoverDark: String,
+    loadCoverOnlyOnWifi: Boolean,
 ): ThemeOverrideState? {
     if (
         book == null ||
         !enabled ||
-        !ThemeConfig.bookInfoFollowCoverColor
+        !followCoverColor
     ) {
         return null
     }
@@ -530,7 +545,7 @@ private fun rememberBookInfoColorTheme(
     val imageLoader = koinInject<ImageLoader>()
     val isNight = LegadoTheme.isDark
     val defaultCoverPaths =
-        if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
+        if (isNight) defaultCoverDark else defaultCover
     val coverPath = remember(
         book.name,
         book.author,
@@ -549,7 +564,7 @@ private fun rememberBookInfoColorTheme(
         }
     } ?: return null
     val sourceOrigin = if (usesDefaultCover) null else book.origin
-    val loadOnlyWifi = !usesDefaultCover && CoverConfig.loadCoverOnlyWifi
+    val loadOnlyWifi = !usesDefaultCover && loadCoverOnlyOnWifi
     val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
         listOf(coverPath, sourceOrigin, loadOnlyWifi)
     }
@@ -569,11 +584,13 @@ private fun rememberBookInfoColorTheme(
 private fun resolveBookInfoBackdropStyle(
     book: BookInfoBookUi,
     usesDefaultCover: Boolean,
+    defaultCoverBackground: String,
+    networkCoverBackground: String,
 ): BookInfoBackdropStyle {
     val backgroundMode = if (usesDefaultCover) {
-        ThemeConfig.bookInfoDefaultCoverBackground
+        defaultCoverBackground
     } else {
-        ThemeConfig.bookInfoNetworkCoverBackground
+        networkCoverBackground
     }
     return resolveBookInfoBackdropStyle(backgroundMode)
 }

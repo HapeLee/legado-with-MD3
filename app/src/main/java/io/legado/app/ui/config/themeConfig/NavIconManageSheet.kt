@@ -1,7 +1,5 @@
 package io.legado.app.ui.config.themeConfig
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,14 +15,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -35,54 +28,34 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import java.io.File
+import io.legado.app.domain.model.settings.AppShellSettings
 
 private data class NavIconDestination(
     val key: String,
     @param:StringRes val labelRes: Int,
     val path: String,
-    val onSetPath: (String) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavIconManageSheet(
     show: Boolean,
-    onDismissRequest: () -> Unit
+    settings: AppShellSettings,
+    onDismissRequest: () -> Unit,
+    onSelectIcon: (String) -> Unit,
+    onClearIcon: (String) -> Unit,
 ) {
-    val context = LocalContext.current
-    var activeDest by remember { mutableStateOf<String?>(null) }
-
     val destinations = listOf(
         NavIconDestination(
             "home",
             R.string.home,
-            ThemeConfig.navIconHome
-        ) { ThemeConfig.navIconHome = it },
-        NavIconDestination("bookshelf", R.string.bookshelf, ThemeConfig.navIconBookshelf) { ThemeConfig.navIconBookshelf = it },
-        NavIconDestination("explore", R.string.discovery, ThemeConfig.navIconExplore) { ThemeConfig.navIconExplore = it },
-        NavIconDestination("rss", R.string.rss, ThemeConfig.navIconRss) { ThemeConfig.navIconRss = it },
-        NavIconDestination("my", R.string.my, ThemeConfig.navIconMy) { ThemeConfig.navIconMy = it },
+            settings.navIconHome
+        ),
+        NavIconDestination("bookshelf", R.string.bookshelf, settings.navIconBookshelf),
+        NavIconDestination("explore", R.string.discovery, settings.navIconExplore),
+        NavIconDestination("rss", R.string.rss, settings.navIconRss),
+        NavIconDestination("my", R.string.my, settings.navIconMy),
     )
-
-    val selectImage = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        val dest = activeDest ?: return@rememberLauncherForActivityResult
-        uri?.let {
-            val inputStream = context.contentResolver.openInputStream(it)
-            val iconDir = File(context.filesDir, "nav_icons")
-            iconDir.mkdirs()
-            val destFile = File(iconDir, "$dest.png")
-            inputStream?.use { input ->
-                destFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-            destinations.firstOrNull { it.key == dest }?.onSetPath?.invoke(destFile.absolutePath)
-        }
-        activeDest = null
-    }
 
     AppModalBottomSheet(
         show = show,
@@ -106,8 +79,7 @@ fun NavIconManageSheet(
                     ) {
                         NormalCard(
                             onClick = {
-                                activeDest = dest.key
-                                selectImage.launch("image/png")
+                                onSelectIcon(dest.key)
                             },
                             cornerRadius = 12.dp,
                             containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
@@ -124,7 +96,7 @@ fun NavIconManageSheet(
                                         contentScale = ContentScale.Fit
                                     )
                                     SmallTonalButton(
-                                        onClick = { dest.onSetPath("") },
+                                        onClick = { onClearIcon(dest.key) },
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
                                             .padding(4.dp)

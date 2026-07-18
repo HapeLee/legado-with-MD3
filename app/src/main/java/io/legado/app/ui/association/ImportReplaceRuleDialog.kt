@@ -124,7 +124,7 @@ class ImportReplaceRuleDialog() : BaseDialogFragment(R.layout.dialog_recycler_vi
             R.id.menu_new_group -> alertCustomGroup(item)
             R.id.menu_keep_original_name -> {
                 item.isChecked = !item.isChecked
-                putPrefBoolean(PreferKey.importKeepName, item.isChecked)
+                requireContext().putPrefBoolean(PreferKey.importKeepName, item.isChecked)
             }
         }
         return true

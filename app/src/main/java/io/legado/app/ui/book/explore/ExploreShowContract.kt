@@ -20,6 +20,7 @@ data class ExploreShowUiState(
     val isEnd: Boolean = false,
     val errorMsg: String? = null,
     val sheet: ExploreShowSheet = ExploreShowSheet.None,
+    val filterStateId: Int = 0,
 )
 
 @Stable

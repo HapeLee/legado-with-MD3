@@ -37,6 +37,7 @@ import io.legado.app.constant.Status
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.glide.ImageLoader
@@ -51,13 +52,14 @@ import io.legado.app.utils.LogUtils
 import io.legado.app.utils.activityPendingIntent
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.observeSharedPreferences
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
@@ -190,12 +192,12 @@ abstract class BaseReadAloudService : BaseService(),
             val startPos = it.getInt("startPos")
             newReadAloud(play, pageIndex, startPos)
         }
-        observeSharedPreferences { _, key ->
-            when (key) {
-                PreferKey.ignoreAudioFocus,
-                PreferKey.pauseReadAloudWhilePhoneCalls -> {
-                    initPhoneStateListener()
-                }
+        lifecycleScope.launch {
+            merge(
+                AppConfigStore.observeBoolean(PreferKey.ignoreAudioFocus).drop(1),
+                AppConfigStore.observeBoolean(PreferKey.pauseReadAloudWhilePhoneCalls).drop(1),
+            ).collect {
+                initPhoneStateListener()
             }
         }
     }

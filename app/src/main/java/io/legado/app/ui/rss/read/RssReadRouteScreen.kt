@@ -51,9 +51,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.AppConst
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieManager
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -124,7 +122,8 @@ fun RssReadRouteScreen(
     val content by viewModel.contentState.collectAsStateWithLifecycle()
     val analyzeUrl by viewModel.urlState.collectAsStateWithLifecycle()
     val isSpeaking by viewModel.isSpeakingState.collectAsStateWithLifecycle()
-    val fallbackUserAgent = OtherConfig.userAgent
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val fallbackUserAgent = settings.userAgent
 
     fun hideCustomView() {
         val currentCustomView = customView ?: return
@@ -132,7 +131,7 @@ fun RssReadRouteScreen(
         customView = null
         customViewCallback = null
         activity?.keepScreenOn(false)
-        activity?.toggleSystemBar(AppConfig.showStatusBar)
+        activity?.toggleSystemBar(settings.showStatusBar)
     }
 
     LaunchedEffect(origin, link, openUrl, title, startPage) {

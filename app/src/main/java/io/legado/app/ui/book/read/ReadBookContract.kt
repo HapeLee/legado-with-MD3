@@ -9,6 +9,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
@@ -95,6 +96,60 @@ data class ReadBookStyleConfig(
     val isDayBgImage: Boolean get() = bgType != 0
     val isNightBgImage: Boolean get() = bgTypeNight != 0
 }
+
+@Stable
+data class ReadSheetConfigUiState(
+    val letterSpacing: Float = 0f,
+    val lineSpacing: Int = 0,
+    val paragraphSpacing: Int = 0,
+    val paragraphIndentCount: Int = 2,
+    val textItalic: Boolean = false,
+    val textBold: Int = 0,
+    val chineseConverterType: Int = 0,
+    val textColor: Int = 0,
+    val textAccentColor: Int = 0,
+    val titleMode: Int = 0,
+    val titleBold: Int = 0,
+    val titleSegType: Int = 0,
+    val titleSegDistance: Int = 0,
+    val titleSegFlag: String = "",
+    val titleSegScaling: Float = 1f,
+    val titleLineSpacingExtra: Int = 0,
+    val titleLineSpacingSub: Int = 0,
+    val titleSize: Int = 0,
+    val titleTopSpacing: Int = 0,
+    val titleBottomSpacing: Int = 0,
+    val titleColor: Int = 0,
+    val titleColorNight: Int = 0,
+    val textColorDay: Int = 0,
+    val textColorNight: Int = 0,
+    val textShadow: Boolean = false,
+    val textShadowColor: Int = 0,
+    val shadowRadius: Float = 0f,
+    val shadowDx: Float = 0f,
+    val shadowDy: Float = 0f,
+    val underline: Boolean = false,
+    val dottedLine: Boolean = false,
+    val underlineExtend: Boolean = false,
+    val underlineColor: Int = 0,
+    val underlineHeight: Int = 0,
+    val underlinePadding: Int = 0,
+    val dottedBase: Float = 0f,
+    val dottedRatio: Float = 0f,
+    val paddingTop: Int = 0,
+    val paddingBottom: Int = 0,
+    val paddingLeft: Int = 0,
+    val paddingRight: Int = 0,
+    val headerPaddingTop: Int = 0,
+    val headerPaddingBottom: Int = 0,
+    val headerPaddingLeft: Int = 0,
+    val headerPaddingRight: Int = 0,
+    val footerPaddingTop: Int = 0,
+    val footerPaddingBottom: Int = 0,
+    val footerPaddingLeft: Int = 0,
+    val footerPaddingRight: Int = 0,
+    val configNames: ImmutableList<String> = persistentListOf(),
+)
 
 @Stable
 data class ChapterSummaryUiState(
@@ -199,6 +254,8 @@ data class ReadBookUiState(
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
     val effectiveContentProcessCount: Int = 0,
+    val effectiveReplaceRules: ImmutableList<ReplaceRule> = persistentListOf(),
+    val chineseConverterActive: Boolean = false,
     // Translation
     val translationMode: Boolean = false,
     // Chapter info
@@ -247,6 +304,7 @@ data class ReadBookUiState(
     val readAloudParagraphInterval: Int = 0,
     // Style config (reactive state for ReadBookConfig)
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
+    val sheetConfig: ReadSheetConfigUiState = ReadSheetConfigUiState(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
     val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
@@ -514,6 +572,9 @@ sealed interface ReadBookIntent {
     // Replace editor (needs Activity context for ActivityResult)
     data class OpenReplaceEditor(val id: Long, val pattern: String?) : ReadBookIntent
     data object ReplaceRuleChanged : ReadBookIntent
+    data class DisableEffectiveReplace(val rule: ReplaceRule) : ReadBookIntent
+    data object DisableChineseConverter : ReadBookIntent
+    data object DisableReSegment : ReadBookIntent
 
     // Font folder picker (needs Activity context for ActivityResult)
     data object OpenFontFolderPicker : ReadBookIntent
@@ -714,7 +775,6 @@ sealed interface ReadBookEffect {
 
     // Navigation / lifecycle
     data object Finish : ReadBookEffect
-    data object Recreate : ReadBookEffect
 
     // ReadView operations (require Activity/View reference)
     data class UpdateReadViewConfig(val actions: Set<ConfigUpdateAction>) : ReadBookEffect

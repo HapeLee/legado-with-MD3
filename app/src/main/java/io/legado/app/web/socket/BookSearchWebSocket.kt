@@ -8,7 +8,7 @@ import io.ktor.websocket.readText
 import io.ktor.websocket.send
 import io.legado.app.R
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.MatchMode
 import io.legado.app.domain.usecase.BookSearchControl
@@ -32,7 +32,7 @@ import splitties.init.appCtx
 class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : CoroutineScope by session {
 
     private val searchBooksUseCase: SearchBooksUseCase by lazy { GlobalContext.get().get() }
-    private val localPreferencesRepository: LocalPreferencesRepository by lazy {
+    private val localPreferencesRepository: SettingsRepository by lazy {
         GlobalContext.get().get()
     }
     private val searchControl = BookSearchControl()

@@ -2,274 +2,150 @@ package io.legado.app.ui.config.readConfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.constant.EventBus
-import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadBook
-import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.utils.postEvent
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsUpdate
+import io.legado.app.domain.model.settings.ReadSettings
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ReadConfigViewModel(
-    private val readSettingsRepository: ReadSettingsRepository
+    private val settingsGateway: ReadSettingsGateway,
+    private val applyReadSetting: ApplyReadSettingUseCase,
 ) : ViewModel() {
 
-    val uiState = readSettingsRepository.preferences.map { it.toUiState() }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ReadConfigUiState()
-    )
+    private val _uiState = MutableStateFlow(ReadConfigUiState())
+    val uiState = _uiState.asStateFlow()
 
-    fun onIntent(intent: ReadConfigIntent) {
+    private val _effects = MutableSharedFlow<ReadConfigEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    init {
         viewModelScope.launch {
-            when (intent) {
-                is ReadConfigIntent.ScreenOrientationChanged -> {
-                    ReadConfig.screenOrientation = intent.value
-                    readSettingsRepository.setScreenOrientation(intent.value)
-                }
-
-                is ReadConfigIntent.KeepLightChanged -> {
-                    ReadConfig.keepLight = intent.value
-                    readSettingsRepository.setKeepLight(intent.value)
-                }
-
-                is ReadConfigIntent.HideStatusBarChanged -> {
-                    readSettingsRepository.setHideStatusBar(intent.value)
-                    ReadBookConfig.hideStatusBar = intent.value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
-                }
-
-                is ReadConfigIntent.HideNavigationBarChanged -> {
-                    readSettingsRepository.setHideNavigationBar(intent.value)
-                    ReadBookConfig.hideNavigationBar = intent.value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
-                }
-
-                is ReadConfigIntent.PaddingDisplayCutoutsChanged -> {
-                    ReadConfig.paddingDisplayCutouts = intent.value
-                    readSettingsRepository.setPaddingDisplayCutouts(intent.value)
-                }
-
-                is ReadConfigIntent.TitleBarModeChanged -> {
-                    ReadConfig.titleBarMode = intent.value
-                    readSettingsRepository.setTitleBarMode(intent.value)
-                }
-
-                is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
-                    ReadBookConfig.readMenuBlurAlpha = intent.value
-                    readSettingsRepository.setReadMenuBlurAlpha(intent.value)
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
-
-                is ReadConfigIntent.ReadBodyToLhChanged -> {
-                    ReadBookConfig.readBodyToLh = intent.value
-                    readSettingsRepository.setReadBodyToLh(intent.value)
-                }
-
-                is ReadConfigIntent.DefaultSourceChangeAllChanged -> {
-                    readSettingsRepository.setDefaultSourceChangeAll(intent.value)
-                }
-
-                is ReadConfigIntent.TextFullJustifyChanged -> {
-                    readSettingsRepository.setTextFullJustify(intent.value)
-                    upLayout()
-                }
-
-                is ReadConfigIntent.TextBottomJustifyChanged -> {
-                    readSettingsRepository.setTextBottomJustify(intent.value)
-                    upLayout()
-                }
-
-                is ReadConfigIntent.AdaptSpecialStyleChanged -> {
-                    ReadConfig.adaptSpecialStyle = intent.value
-                    readSettingsRepository.setAdaptSpecialStyle(intent.value)
-                }
-
-                is ReadConfigIntent.UseZhLayoutChanged -> {
-                    readSettingsRepository.setUseZhLayout(intent.value)
-                    ReadBookConfig.useZhLayout = intent.value
-                    upLayout()
-                }
-
-                is ReadConfigIntent.ShowBrightnessViewChanged -> {
-                    readSettingsRepository.setShowBrightnessView(intent.value)
-                }
-
-                is ReadConfigIntent.BrightnessVwPosChanged -> {
-                    readSettingsRepository.setBrightnessVwPos(intent.value)
-                }
-
-                is ReadConfigIntent.UseUnderlineChanged -> {
-                    ReadConfig.useUnderline = intent.value
-                    readSettingsRepository.setUseUnderline(intent.value)
-                }
-
-                is ReadConfigIntent.ReadSliderModeChanged -> {
-                    ReadBookConfig.readSliderMode = intent.value
-                    readSettingsRepository.setReadSliderMode(intent.value)
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
-
-                is ReadConfigIntent.DoubleHorizontalPageChanged -> {
-                    ReadConfig.doubleHorizontalPage = intent.value
-                    readSettingsRepository.setDoubleHorizontalPage(intent.value)
-                    upLayout()
-                }
-
-                is ReadConfigIntent.ProgressBarBehaviorChanged -> {
-                    ReadConfig.progressBarBehavior = intent.value
-                    readSettingsRepository.setProgressBarBehavior(intent.value)
-                    postEvent(EventBus.UP_SEEK_BAR, true)
-                }
-
-                is ReadConfigIntent.MouseWheelPageChanged -> {
-                    ReadConfig.mouseWheelPage = intent.value
-                    readSettingsRepository.setMouseWheelPage(intent.value)
-                }
-
-                is ReadConfigIntent.VolumeKeyPageChanged -> {
-                    ReadConfig.volumeKeyPage = intent.value
-                    readSettingsRepository.setVolumeKeyPage(intent.value)
-                }
-
-                is ReadConfigIntent.VolumeKeyPageOnPlayChanged -> {
-                    ReadConfig.volumeKeyPageOnPlay = intent.value
-                    readSettingsRepository.setVolumeKeyPageOnPlay(intent.value)
-                }
-
-                is ReadConfigIntent.KeyPageOnLongPressChanged -> {
-                    ReadConfig.keyPageOnLongPress = intent.value
-                    readSettingsRepository.setKeyPageOnLongPress(intent.value)
-                }
-
-                is ReadConfigIntent.PageTouchSlopChanged -> {
-                    readSettingsRepository.setPageTouchSlop(intent.value)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(4))
-                }
-
-                is ReadConfigIntent.SliderVibratorChanged -> {
-                    ReadConfig.sliderVibrator = intent.value
-                    readSettingsRepository.setSliderVibrator(intent.value)
-                }
-
-                is ReadConfigIntent.SelectVibratorChanged -> {
-                    ReadConfig.selectVibrator = intent.value
-                    readSettingsRepository.setSelectVibrator(intent.value)
-                }
-
-                is ReadConfigIntent.AutoChangeSourceChanged -> {
-                    ReadConfig.autoChangeSource = intent.value
-                    readSettingsRepository.setAutoChangeSource(intent.value)
-                }
-
-                is ReadConfigIntent.AutoSuggestDayNightChanged -> {
-                    ReadConfig.autoSuggestDayNight = intent.value
-                    readSettingsRepository.setAutoSuggestDayNight(intent.value)
-                }
-
-                is ReadConfigIntent.SelectTextChanged -> {
-                    ReadConfig.selectText = intent.value
-                    readSettingsRepository.setSelectText(intent.value)
-                }
-
-                is ReadConfigIntent.NoAnimScrollPageChanged -> {
-                    readSettingsRepository.setNoAnimScrollPage(intent.value)
-                    ReadBook.callBack?.upPageAnim()
-                }
-
-                is ReadConfigIntent.ClickImgWayChanged -> {
-                    ReadConfig.clickImgWay = intent.value
-                    readSettingsRepository.setClickImgWay(intent.value)
-                }
-
-                is ReadConfigIntent.OptimizeRenderChanged -> {
-                    ReadConfig.optimizeRender = intent.value
-                    readSettingsRepository.setOptimizeRender(intent.value)
-                    upStyle()
-                }
-
-                is ReadConfigIntent.DisableReturnKeyChanged -> {
-                    ReadConfig.disableReturnKey = intent.value
-                    readSettingsRepository.setDisableReturnKey(intent.value)
-                }
-
-                is ReadConfigIntent.ShowReadTitleAdditionChanged -> {
-                    ReadConfig.showReadTitleAddition = intent.value
-                    readSettingsRepository.setShowReadTitleAddition(intent.value)
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
-
-                is ReadConfigIntent.ShowMenuIconChanged -> {
-                    ReadConfig.showMenuIcon = intent.value
-                    readSettingsRepository.setShowMenuIcon(intent.value)
-                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
-                }
-
-                is ReadConfigIntent.PageKeysChanged -> {
-                    readSettingsRepository.setPageKeys(intent.prevKeys, intent.nextKeys)
-                }
+            settingsGateway.settings.collect { settings ->
+                _uiState.update { settings.toUiState(activeSheet = it.activeSheet) }
             }
         }
     }
 
-    private fun upLayout() {
-        ChapterProvider.upLayout()
-        ReadBook.loadContent(false)
+    fun onIntent(intent: ReadConfigIntent) {
+        when (intent) {
+            ReadConfigIntent.OpenPageKeys -> setSheet(ReadConfigSheet.PageKeys)
+            ReadConfigIntent.OpenClickActions -> setSheet(ReadConfigSheet.ClickActions)
+            ReadConfigIntent.DismissSheet -> setSheet(null)
+            else -> updateSetting(intent.toSettingsUpdate())
+        }
     }
 
-    private fun upStyle() {
-        ChapterProvider.upStyle()
-        ReadBook.callBack?.upPageAnim(true)
-        ReadBook.loadContent(false)
+    private fun setSheet(sheet: ReadConfigSheet?) {
+        _uiState.update { it.copy(activeSheet = sheet) }
     }
 
-    private fun ReadPreferences.toUiState(): ReadConfigUiState {
-        return ReadConfigUiState(
-            screenOrientation = screenOrientation,
-            keepLight = keepLight,
-            hideStatusBar = hideStatusBar,
-            hideNavigationBar = hideNavigationBar,
-            paddingDisplayCutouts = paddingDisplayCutouts,
-            titleBarMode = titleBarMode,
-            readMenuBlurAlpha = readMenuBlurAlpha,
-            readBodyToLh = readBodyToLh,
-            defaultSourceChangeAll = defaultSourceChangeAll,
-            textFullJustify = textFullJustify,
-            textBottomJustify = textBottomJustify,
-            adaptSpecialStyle = adaptSpecialStyle,
-            useZhLayout = useZhLayout,
-            showBrightnessView = showBrightnessView,
-            brightnessVwPos = brightnessVwPos,
-            brightnessAuto = brightnessAuto,
-            useUnderline = useUnderline,
-            readSliderMode = readSliderMode,
-            doubleHorizontalPage = doubleHorizontalPage,
-            progressBarBehavior = progressBarBehavior,
-            mouseWheelPage = mouseWheelPage,
-            volumeKeyPage = volumeKeyPage,
-            volumeKeyPageOnPlay = volumeKeyPageOnPlay,
-            keyPageOnLongPress = keyPageOnLongPress,
-            pageTouchSlop = pageTouchSlop,
-            sliderVibrator = sliderVibrator,
-            selectVibrator = selectVibrator,
-            autoChangeSource = autoChangeSource,
-            autoSuggestDayNight = autoSuggestDayNight,
-            selectText = selectText,
-            noAnimScrollPage = noAnimScrollPage,
-            clickImgWay = clickImgWay,
-            optimizeRender = optimizeRender,
-            disableReturnKey = disableReturnKey,
-            expandTextMenu = expandTextMenu,
-            showSelectMenuIcon = showSelectMenuIcon,
-            showReadTitleAddition = showReadTitleAddition,
-            autoReadSpeed = autoReadSpeed,
-            prevKeys = prevKeys,
-            nextKeys = nextKeys,
-            showMenuIcon = showMenuIcon
-        )
+    private fun updateSetting(update: ReadSettingsUpdate) {
+        viewModelScope.launch {
+            runCatching { settingsGateway.update(update) }
+                .onSuccess {
+                    applyReadSetting(update)
+                    if (update is ReadSettingsUpdate.PageKeys) setSheet(null)
+                }
+                .onFailure { error ->
+                    _effects.tryEmit(
+                        ReadConfigEffect.SettingsUpdateFailed(
+                            error.message ?: error.javaClass.simpleName
+                        )
+                    )
+                }
+        }
     }
 }
+
+private fun ReadConfigIntent.toSettingsUpdate(): ReadSettingsUpdate = when (this) {
+    is ReadConfigIntent.ScreenOrientationChanged -> ReadSettingsUpdate.ScreenOrientation(value)
+    is ReadConfigIntent.KeepLightChanged -> ReadSettingsUpdate.KeepLight(value)
+    is ReadConfigIntent.HideStatusBarChanged -> ReadSettingsUpdate.HideStatusBar(value)
+    is ReadConfigIntent.HideNavigationBarChanged -> ReadSettingsUpdate.HideNavigationBar(value)
+    is ReadConfigIntent.PaddingDisplayCutoutsChanged -> ReadSettingsUpdate.PaddingDisplayCutouts(value)
+    is ReadConfigIntent.TitleBarModeChanged -> ReadSettingsUpdate.TitleBarMode(value)
+    is ReadConfigIntent.ReadMenuBlurAlphaChanged -> ReadSettingsUpdate.ReadMenuBlurAlpha(value)
+    is ReadConfigIntent.ReadBodyToLhChanged -> ReadSettingsUpdate.ReadBodyToLh(value)
+    is ReadConfigIntent.DefaultSourceChangeAllChanged -> ReadSettingsUpdate.DefaultSourceChangeAll(value)
+    is ReadConfigIntent.TextFullJustifyChanged -> ReadSettingsUpdate.TextFullJustify(value)
+    is ReadConfigIntent.TextBottomJustifyChanged -> ReadSettingsUpdate.TextBottomJustify(value)
+    is ReadConfigIntent.AdaptSpecialStyleChanged -> ReadSettingsUpdate.AdaptSpecialStyle(value)
+    is ReadConfigIntent.UseZhLayoutChanged -> ReadSettingsUpdate.UseZhLayout(value)
+    is ReadConfigIntent.ShowBrightnessViewChanged -> ReadSettingsUpdate.ShowBrightnessView(value)
+    is ReadConfigIntent.BrightnessVwPosChanged -> ReadSettingsUpdate.BrightnessVwPos(value)
+    is ReadConfigIntent.UseUnderlineChanged -> ReadSettingsUpdate.UseUnderline(value)
+    is ReadConfigIntent.ReadSliderModeChanged -> ReadSettingsUpdate.ReadSliderMode(value)
+    is ReadConfigIntent.DoubleHorizontalPageChanged -> ReadSettingsUpdate.DoubleHorizontalPage(value)
+    is ReadConfigIntent.ProgressBarBehaviorChanged -> ReadSettingsUpdate.ProgressBarBehavior(value)
+    is ReadConfigIntent.MouseWheelPageChanged -> ReadSettingsUpdate.MouseWheelPage(value)
+    is ReadConfigIntent.VolumeKeyPageChanged -> ReadSettingsUpdate.VolumeKeyPage(value)
+    is ReadConfigIntent.VolumeKeyPageOnPlayChanged -> ReadSettingsUpdate.VolumeKeyPageOnPlay(value)
+    is ReadConfigIntent.KeyPageOnLongPressChanged -> ReadSettingsUpdate.KeyPageOnLongPress(value)
+    is ReadConfigIntent.PageTouchSlopChanged -> ReadSettingsUpdate.PageTouchSlop(value)
+    is ReadConfigIntent.SliderVibratorChanged -> ReadSettingsUpdate.SliderVibrator(value)
+    is ReadConfigIntent.SelectVibratorChanged -> ReadSettingsUpdate.SelectVibrator(value)
+    is ReadConfigIntent.AutoChangeSourceChanged -> ReadSettingsUpdate.AutoChangeSource(value)
+    is ReadConfigIntent.AutoSuggestDayNightChanged -> ReadSettingsUpdate.AutoSuggestDayNight(value)
+    is ReadConfigIntent.SelectTextChanged -> ReadSettingsUpdate.SelectText(value)
+    is ReadConfigIntent.NoAnimScrollPageChanged -> ReadSettingsUpdate.NoAnimScrollPage(value)
+    is ReadConfigIntent.ClickImgWayChanged -> ReadSettingsUpdate.ClickImgWay(value)
+    is ReadConfigIntent.OptimizeRenderChanged -> ReadSettingsUpdate.OptimizeRender(value)
+    is ReadConfigIntent.DisableReturnKeyChanged -> ReadSettingsUpdate.DisableReturnKey(value)
+    is ReadConfigIntent.ShowReadTitleAdditionChanged -> ReadSettingsUpdate.ShowReadTitleAddition(value)
+    is ReadConfigIntent.ShowMenuIconChanged -> ReadSettingsUpdate.ShowMenuIcon(value)
+    is ReadConfigIntent.PageKeysChanged -> ReadSettingsUpdate.PageKeys(prevKeys, nextKeys)
+    ReadConfigIntent.OpenPageKeys,
+    ReadConfigIntent.OpenClickActions,
+    ReadConfigIntent.DismissSheet -> error("Sheet intents do not update settings")
+}
+
+private fun ReadSettings.toUiState(activeSheet: ReadConfigSheet?): ReadConfigUiState =
+    ReadConfigUiState(
+        screenOrientation = screenOrientation,
+        keepLight = keepLight,
+        hideStatusBar = hideStatusBar,
+        hideNavigationBar = hideNavigationBar,
+        paddingDisplayCutouts = paddingDisplayCutouts,
+        titleBarMode = titleBarMode,
+        readMenuBlurAlpha = readMenuBlurAlpha,
+        readBodyToLh = readBodyToLh,
+        defaultSourceChangeAll = defaultSourceChangeAll,
+        textFullJustify = textFullJustify,
+        textBottomJustify = textBottomJustify,
+        adaptSpecialStyle = adaptSpecialStyle,
+        useZhLayout = useZhLayout,
+        showBrightnessView = showBrightnessView,
+        brightnessVwPos = brightnessVwPos,
+        brightnessAuto = brightnessAuto,
+        useUnderline = useUnderline,
+        readSliderMode = readSliderMode,
+        doubleHorizontalPage = doubleHorizontalPage,
+        progressBarBehavior = progressBarBehavior,
+        mouseWheelPage = mouseWheelPage,
+        volumeKeyPage = volumeKeyPage,
+        volumeKeyPageOnPlay = volumeKeyPageOnPlay,
+        keyPageOnLongPress = keyPageOnLongPress,
+        pageTouchSlop = pageTouchSlop,
+        sliderVibrator = sliderVibrator,
+        selectVibrator = selectVibrator,
+        autoChangeSource = autoChangeSource,
+        autoSuggestDayNight = autoSuggestDayNight,
+        selectText = selectText,
+        noAnimScrollPage = noAnimScrollPage,
+        clickImgWay = clickImgWay,
+        optimizeRender = optimizeRender,
+        disableReturnKey = disableReturnKey,
+        expandTextMenu = expandTextMenu,
+        showSelectMenuIcon = showSelectMenuIcon,
+        showReadTitleAddition = showReadTitleAddition,
+        autoReadSpeed = autoReadSpeed,
+        prevKeys = prevKeys,
+        nextKeys = nextKeys,
+        showMenuIcon = showMenuIcon,
+        activeSheet = activeSheet,
+    )

@@ -7,6 +7,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
+import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.help.source.sortUrls
 import io.legado.app.utils.GSONStrict
@@ -14,8 +15,18 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
-class RssSortViewModel(application: Application) : BaseViewModel(application) {
+class RssSortViewModel(
+    application: Application,
+    bookshelfSettingsGateway: BookshelfSettingsGateway,
+) : BaseViewModel(application) {
+    val shouldShowExpandButton = bookshelfSettingsGateway.settings
+        .map { it.shouldShowExpandButton }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     var url: String? = null
     var rssSource: RssSource? = null
     val titleLiveData = MutableLiveData<String>()

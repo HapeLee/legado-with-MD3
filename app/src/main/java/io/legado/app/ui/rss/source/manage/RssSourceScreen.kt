@@ -18,7 +18,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -52,23 +50,44 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun RssSourceScreen(
+fun RssSourceRouteScreen(
     viewModel: RssSourceViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onEditSource: (RssSource) -> Unit,
     onAddSource: () -> Unit
 ) {
-    val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
-    val groups by viewModel.groupsFlow.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    RssSourceScreen(
+        state = uiState,
+        onIntent = viewModel::onIntent,
+        effects = viewModel.effects,
+        onBackClick = onBackClick,
+        onEditSource = onEditSource,
+        onAddSource = onAddSource,
+    )
+}
 
-    val rules = uiState.items
-    val selectedIds = uiState.selectedIds
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun RssSourceScreen(
+    state: RssSourceUiState,
+    onIntent: (RssSourceIntent) -> Unit,
+    effects: Flow<RssSourceEffect>,
+    onBackClick: () -> Unit,
+    onEditSource: (RssSource) -> Unit,
+    onAddSource: () -> Unit,
+) {
+    val context = LocalContext.current
+    val groups = state.groups
+
+    val rules = state.items
+    val selectedIds = state.selectedIds
     val inSelectionMode = selectedIds.isNotEmpty()
 
     val listState = rememberLazyListState()
@@ -84,18 +103,18 @@ fun RssSourceScreen(
     var showImportMenu by remember { mutableStateOf(false) }
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        viewModel.moveItemInList(from.index, to.index)
+        onIntent(RssSourceIntent.MoveItem(from.index, to.index))
         hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
 
     val clipboardManager = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val importState by viewModel.importState.collectAsStateWithLifecycle()
+    val importState = state.importState
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        effects.collect { event ->
             when (event) {
-                is BaseRuleEvent.ShowSnackbar -> {
+                is RssSourceEffect.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
                         message = event.message,
                         actionLabel = event.actionLabel,
@@ -117,7 +136,7 @@ fun RssSourceScreen(
             uri?.let {
                 context.contentResolver.openInputStream(it)?.use { stream ->
                     val text = stream.reader().readText()
-                    viewModel.importSource(text)
+                    onIntent(RssSourceIntent.Import(text))
                 }
             }
         }
@@ -126,7 +145,7 @@ fun RssSourceScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { viewModel.exportToUri(it, rules, selectedIds) }
+            uri?.let { onIntent(RssSourceIntent.Export(it, rules, selectedIds)) }
         }
     )
 
@@ -136,7 +155,7 @@ fun RssSourceScreen(
         onDismissRequest = { showUrlInput = false },
         onConfirm = {
             showUrlInput = false
-            viewModel.importSource(it)
+            onIntent(RssSourceIntent.Import(it))
         }
     )
 
@@ -148,9 +167,9 @@ fun RssSourceScreen(
         suggestions = groups,
         onDismissRequest = { showAddToGroupDialog = false },
         onConfirm = { text ->
-            viewModel.selectionAddToGroups(selectedIds, text)
+            onIntent(RssSourceIntent.AddSelectionToGroup(selectedIds, text))
             showAddToGroupDialog = false
-            viewModel.setSelection(emptySet())
+            onIntent(RssSourceIntent.SetSelection(emptySet()))
         }
     )
 
@@ -161,9 +180,9 @@ fun RssSourceScreen(
         suggestions = groups,
         onDismissRequest = { showRemoveFromGroupDialog = false },
         onConfirm = { text ->
-            viewModel.selectionRemoveFromGroups(selectedIds, text)
+            onIntent(RssSourceIntent.RemoveSelectionFromGroup(selectedIds, text))
             showRemoveFromGroupDialog = false
-            viewModel.setSelection(emptySet())
+            onIntent(RssSourceIntent.SetSelection(emptySet()))
         }
     )
 
@@ -171,8 +190,8 @@ fun RssSourceScreen(
         show = showGroupManageSheet,
         groups = groups,
         onDismissRequest = { showGroupManageSheet = false },
-        onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
-        onDeleteGroup = { viewModel.delGroup(it) }
+        onUpdateGroup = { old, new -> onIntent(RssSourceIntent.UpdateGroup(old, new)) },
+        onDeleteGroup = { onIntent(RssSourceIntent.DeleteGroup(it)) }
     )
 
 
@@ -185,7 +204,7 @@ fun RssSourceScreen(
         },
         onUpload = {
             showFilePickerSheet = false
-            viewModel.uploadSelectedRules(selectedIds, rules)
+            onIntent(RssSourceIntent.Upload(selectedIds, rules))
         },
         allowExtensions = arrayOf("json")
     )
@@ -193,11 +212,13 @@ fun RssSourceScreen(
     BatchImportDialog(
         title = stringResource(R.string.import_rss_source),
         importState = importState,
-        onDismissRequest = { viewModel.cancelImport() },
-        onToggleItem = { viewModel.toggleImportSelection(it) },
-        onToggleAll = { viewModel.toggleImportAll(it) },
-        onUpdateItem = { index, source -> viewModel.updateImportItem(index, source) },
-        onConfirm = { viewModel.saveImportedRules() },
+        onDismissRequest = { onIntent(RssSourceIntent.CancelImport) },
+        onToggleItem = { onIntent(RssSourceIntent.ToggleImportItem(it)) },
+        onToggleAll = { onIntent(RssSourceIntent.ToggleImportAll(it)) },
+        onUpdateItem = { index, source ->
+            onIntent(RssSourceIntent.UpdateImportItem(index, source))
+        },
+        onConfirm = { onIntent(RssSourceIntent.SaveImportedRules) },
         itemTitle = { rule -> rule.sourceName },
         itemSubtitle = { rule ->
             rule.sourceUrl.takeIf { it.isNotBlank() }
@@ -206,7 +227,7 @@ fun RssSourceScreen(
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
-            viewModel.saveSortOrder()
+            onIntent(RssSourceIntent.SaveSortOrder)
         }
     }
 
@@ -216,7 +237,7 @@ fun RssSourceScreen(
         title = stringResource(R.string.delete),
         confirmText = stringResource(R.string.ok),
         onConfirm = { rule ->
-            viewModel.del(rule)
+            onIntent(RssSourceIntent.Delete(rule))
             showDeleteRuleDialog = null
         },
         dismissText = stringResource(R.string.cancel),
@@ -225,27 +246,27 @@ fun RssSourceScreen(
 
     RuleListScaffold(
         title = stringResource(R.string.rss_source),
-        subtitle = uiState.groupFilterName ?: stringResource(R.string.all),
-        state = uiState,
+        subtitle = state.groupFilterName ?: stringResource(R.string.all),
+        state = state,
         onBackClick = { onBackClick() },
-        onSearchToggle = { active -> viewModel.setSearchMode(active) },
-        onSearchQueryChange = { viewModel.setSearchKey(it) },
+        onSearchToggle = { active -> onIntent(RssSourceIntent.SetSearchMode(active)) },
+        onSearchQueryChange = { onIntent(RssSourceIntent.SetSearchQuery(it)) },
         searchPlaceholder = stringResource(R.string.search_rss_source),
-        onClearSelection = { viewModel.setSelection(emptySet()) },
-        onSelectAll = { viewModel.setSelection(rules.map { it.id }.toSet()) },
+        onClearSelection = { onIntent(RssSourceIntent.SetSelection(emptySet())) },
+        onSelectAll = { onIntent(RssSourceIntent.SetSelection(rules.map { it.id }.toSet())) },
         onSelectInvert = {
             val allIds = rules.map { it.id }.toSet()
-            viewModel.setSelection(allIds - selectedIds)
+            onIntent(RssSourceIntent.SetSelection(allIds - selectedIds))
         },
         topBarActions = {},
         selectionSecondaryActions = listOf(
             ActionItem(text = stringResource(R.string.enable), onClick = {
-                viewModel.enableSelectionByIds(selectedIds)
-                viewModel.setSelection(emptySet())
+                onIntent(RssSourceIntent.EnableSelection(selectedIds))
+                onIntent(RssSourceIntent.SetSelection(emptySet()))
             }),
             ActionItem(text = stringResource(R.string.disable_selection), onClick = {
-                viewModel.disableSelectionByIds(selectedIds)
-                viewModel.setSelection(emptySet())
+                onIntent(RssSourceIntent.DisableSelection(selectedIds))
+                onIntent(RssSourceIntent.SetSelection(emptySet()))
             }),
             ActionItem(
                 text = stringResource(R.string.add_group),
@@ -257,13 +278,13 @@ fun RssSourceScreen(
                 text = stringResource(R.string.export),
                 onClick = { showFilePickerSheet = true }),
             ActionItem(text = stringResource(R.string.check_selected_interval), onClick = {
-                viewModel.checkSelectedInterval(selectedIds, rules)
+                onIntent(RssSourceIntent.CheckSelectedInterval(selectedIds, rules))
             })
         ),
         onDeleteSelected = { ids ->
             @Suppress("UNCHECKED_CAST")
-            viewModel.delSelectionByIds(ids as Set<String>)
-            viewModel.setSelection(emptySet())
+            onIntent(RssSourceIntent.DeleteSelection(ids as Set<String>))
+            onIntent(RssSourceIntent.SetSelection(emptySet()))
         },
         onAddClick = { onAddSource() },
         snackbarHostState = snackbarHostState,
@@ -302,7 +323,7 @@ fun RssSourceScreen(
                         onClick = {
                             showImportMenu = false
                             dismiss()
-                            viewModel.importDefault()
+                            onIntent(RssSourceIntent.ImportDefault)
                         }
                     )
                 }
@@ -310,29 +331,32 @@ fun RssSourceScreen(
             PillDivider()
             RoundDropdownMenuItem(
                 text = stringResource(R.string.all),
-                onClick = { dismiss(); viewModel.setGroupFilter(null) }
+                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(null)) }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.enabled),
-                onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_ENABLED) }
+                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_ENABLED)) }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.disabled),
-                onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_DISABLED) }
+                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_DISABLED)) }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.need_login),
-                onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_LOGIN) }
+                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_LOGIN)) }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.no_group),
-                onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_NO_GROUP) }
+                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_NO_GROUP)) }
             )
             PillDivider()
             groups.forEach { group ->
                 RoundDropdownMenuItem(
                     text = group,
-                    onClick = { dismiss(); viewModel.setGroupFilter("${RssSourceViewModel.PREFIX_GROUP}$group") }
+                    onClick = {
+                        dismiss()
+                        onIntent(RssSourceIntent.SetGroupFilter("${RssSourceViewModel.PREFIX_GROUP}$group"))
+                    }
                 )
             }
         }
@@ -353,14 +377,16 @@ fun RssSourceScreen(
                         key = item.id,
                         reorderIndex = rules.indexOf(item),
                         reorderItemCount = rules.size,
-                        onMoveItem = viewModel::moveItemInList,
+                        onMoveItem = { from, to -> onIntent(RssSourceIntent.MoveItem(from, to)) },
                         title = item.name,
                         subtitle = item.group,
                         isEnabled = item.isEnabled,
                         isSelected = selectedIds.contains(item.id),
                         inSelectionMode = inSelectionMode,
-                        onToggleSelection = { viewModel.toggleSelection(item.id) },
-                        onEnabledChange = { enabled -> viewModel.update(item.source.copy(enabled = enabled)) },
+                        onToggleSelection = { onIntent(RssSourceIntent.ToggleSelection(item.id)) },
+                        onEnabledChange = { enabled ->
+                            onIntent(RssSourceIntent.Update(item.source.copy(enabled = enabled)))
+                        },
                         onClickEdit = { onEditSource(item.source) },
                         trailingAction = {
                             SmallPlainButton(
@@ -377,7 +403,7 @@ fun RssSourceScreen(
                     listState = listState,
                     items = rules,
                     selectedIds = selectedIds,
-                    onSelectionChange = { viewModel.setSelection(it) },
+                    onSelectionChange = { onIntent(RssSourceIntent.SetSelection(it)) },
                     idProvider = { it.id },
                     modifier = Modifier
                         .fillMaxHeight()

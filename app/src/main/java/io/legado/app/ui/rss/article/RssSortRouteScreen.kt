@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun RssSortRouteScreen(
@@ -52,6 +53,7 @@ fun RssSortRouteScreen(
     var showReadRecordSheet by remember { mutableStateOf(false) }
     var readRecords by remember { mutableStateOf<List<RssReadRecord>>(emptyList()) }
     var sourceVariableSheet by remember { mutableStateOf<RssSourceVariableSheetState?>(null) }
+    val shouldShowExpandButton by viewModel.shouldShowExpandButton.collectAsStateWithLifecycle()
 
     suspend fun reloadSourceState() {
         withContext(Dispatchers.IO) {
@@ -86,6 +88,7 @@ fun RssSortRouteScreen(
         showReadRecordSheet = showReadRecordSheet,
         readRecords = readRecords,
         sourceVariableSheet = sourceVariableSheet,
+        shouldShowExpandButton = shouldShowExpandButton,
         onBackClick = onBackClick,
         onSearch = onSearch,
         onLogin = {

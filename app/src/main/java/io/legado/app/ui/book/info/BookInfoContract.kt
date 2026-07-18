@@ -40,6 +40,13 @@ data class BookInfoUiState(
     val showAppLogSheet: Boolean = false,
     val sheet: BookInfoSheet = BookInfoSheet.None,
     val dialog: BookInfoDialog? = null,
+    val bookInfoFollowCoverColor: Boolean = true,
+    val bookInfoNetworkCoverBackground: String = "on",
+    val bookInfoDefaultCoverBackground: String = "on",
+    val loadCoverOnlyOnWifi: Boolean = false,
+    val defaultCover: String = "",
+    val defaultCoverDark: String = "",
+    val showMangaUi: Boolean = true,
 )
 
 @Stable
@@ -167,9 +174,12 @@ sealed interface BookInfoIntent {
 
     data class RelatedBookClick(val book: SearchBook) : BookInfoIntent
     data class RelatedBooksMore(val title: String, val url: String) : BookInfoIntent
+    data class SetDefaultBookTreeUri(val value: String) : BookInfoIntent
 }
 
 sealed interface BookInfoEffect {
+    data class ShowMessage(val message: String) : BookInfoEffect
+
     data class Finish(
         val resultCode: Int? = null,
         val afterTransition: Boolean = false,

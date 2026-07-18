@@ -37,7 +37,6 @@ class ThemeManageViewModel(
     }
 
     fun onIntent(intent: ThemeManageIntent) {
-        if (operationMutex.isLocked) return
         when (intent) {
             ThemeManageIntent.LoadSavedThemes -> loadSavedThemes()
             is ThemeManageIntent.ExportPackage -> exportPackage(intent)
@@ -47,6 +46,26 @@ class ThemeManageViewModel(
             is ThemeManageIntent.ApplySavedTheme -> applySavedTheme(intent.theme)
             is ThemeManageIntent.DeleteSavedTheme -> deleteSavedTheme(intent.theme)
             ThemeManageIntent.MigrateLegacyThemes -> migrateLegacyThemes()
+            ThemeManageIntent.OpenSaveDialog ->
+                _uiState.update { it.copy(dialog = ThemeManageDialog.Save()) }
+            is ThemeManageIntent.UpdateSaveName -> _uiState.update { state ->
+                val dialog = state.dialog as? ThemeManageDialog.Save ?: return@update state
+                state.copy(dialog = dialog.copy(name = intent.value))
+            }
+            is ThemeManageIntent.OpenApplyDialog ->
+                _uiState.update { it.copy(dialog = ThemeManageDialog.Apply(intent.theme)) }
+            is ThemeManageIntent.OpenDeleteDialog ->
+                _uiState.update { it.copy(dialog = ThemeManageDialog.Delete(intent.theme)) }
+            is ThemeManageIntent.OpenEditSheet ->
+                _uiState.update { it.copy(dialog = ThemeManageDialog.Edit(intent.theme)) }
+            ThemeManageIntent.DismissDialog ->
+                _uiState.update { it.copy(dialog = null) }
+            is ThemeManageIntent.RequestExport ->
+                _effects.tryEmit(ThemeManageEffect.OpenExportDocument(intent.theme))
+            ThemeManageIntent.RequestImportPackage ->
+                _effects.tryEmit(ThemeManageEffect.OpenImportPackage)
+            ThemeManageIntent.RequestImportLegacyJson ->
+                _effects.tryEmit(ThemeManageEffect.OpenImportLegacyJson)
         }
     }
 
@@ -106,8 +125,8 @@ class ThemeManageViewModel(
             _uiState.update { it.copy(loading = true) }
             val result = themePackageManager.applySavedTheme(theme)
             if (result.isSuccess) {
+                // Compose 由响应式设置直接更新；旧 View 由 BaseActivity 的配置兼容层处理。
                 refreshSavedThemes()
-                _effects.emit(ThemeManageEffect.RestartRequired)
             } else {
                 _uiState.update { it.copy(loading = false) }
                 _effects.emit(
@@ -179,7 +198,6 @@ class ThemeManageViewModel(
             if (result.isSuccess) {
                 ThemeManageEffect.ShowResult(
                     messageRes = R.string.theme_manage_import_success,
-                    restartRequired = true,
                 )
             } else {
                 ThemeManageEffect.ShowResult(
@@ -222,7 +240,15 @@ data class ThemeManageUiState(
     val loading: Boolean = false,
     val savedThemes: ImmutableList<SavedTheme> = persistentListOf(),
     val hasLegacyThemes: Boolean = false,
+    val dialog: ThemeManageDialog? = null,
 )
+
+sealed interface ThemeManageDialog {
+    data class Save(val name: String = "") : ThemeManageDialog
+    data class Apply(val theme: SavedTheme) : ThemeManageDialog
+    data class Delete(val theme: SavedTheme) : ThemeManageDialog
+    data class Edit(val theme: SavedTheme) : ThemeManageDialog
+}
 
 sealed interface ThemeManageIntent {
     data object LoadSavedThemes : ThemeManageIntent
@@ -245,11 +271,21 @@ sealed interface ThemeManageIntent {
     data class ApplySavedTheme(val theme: SavedTheme) : ThemeManageIntent
     data class DeleteSavedTheme(val theme: SavedTheme) : ThemeManageIntent
     data object MigrateLegacyThemes : ThemeManageIntent
+    data object OpenSaveDialog : ThemeManageIntent
+    data class UpdateSaveName(val value: String) : ThemeManageIntent
+    data class OpenApplyDialog(val theme: SavedTheme) : ThemeManageIntent
+    data class OpenDeleteDialog(val theme: SavedTheme) : ThemeManageIntent
+    data class OpenEditSheet(val theme: SavedTheme) : ThemeManageIntent
+    data object DismissDialog : ThemeManageIntent
+    data class RequestExport(val theme: SavedTheme? = null) : ThemeManageIntent
+    data object RequestImportPackage : ThemeManageIntent
+    data object RequestImportLegacyJson : ThemeManageIntent
 }
 
 sealed interface ThemeManageEffect {
-    data object RestartRequired : ThemeManageEffect
-
+    data class OpenExportDocument(val theme: SavedTheme?) : ThemeManageEffect
+    data object OpenImportPackage : ThemeManageEffect
+    data object OpenImportLegacyJson : ThemeManageEffect
     data class LegacyMigrationFinished(
         val migratedCount: Int,
         val failedCount: Int,
@@ -258,6 +294,5 @@ sealed interface ThemeManageEffect {
     data class ShowResult(
         @param:StringRes val messageRes: Int,
         val detail: String? = null,
-        val restartRequired: Boolean = false,
     ) : ThemeManageEffect
 }

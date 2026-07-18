@@ -44,4 +44,5 @@ sealed interface ReplaceEditIntent {
 
 sealed interface ReplaceEditEffect {
     data object NavigateBack : ReplaceEditEffect
+    data class ShowMessage(val message: String) : ReplaceEditEffect
 }

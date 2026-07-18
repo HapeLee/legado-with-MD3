@@ -17,7 +17,7 @@ class TocActivity : BaseComposeActivity() {
     override fun Content() {
         val context = LocalContext.current
 
-        TocScreen(
+        TocRouteScreen(
             onBackClick = { finish() },
             onChapterClick = { index ->
                 val data = Intent().apply {

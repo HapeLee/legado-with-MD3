@@ -76,12 +76,30 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReadRecordOverviewScreen(
+fun ReadRecordOverviewRouteScreen(
     viewModel: ReadRecordOverviewViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onBookClick: (String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ReadRecordOverviewScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        loadBookCover = viewModel::getBookCover,
+        onBackClick = onBackClick,
+        onBookClick = onBookClick,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReadRecordOverviewScreen(
+    state: ReadRecordOverviewUiState,
+    onIntent: (ReadRecordOverviewIntent) -> Unit,
+    loadBookCover: suspend (String, String) -> String?,
+    onBackClick: () -> Unit,
+    onBookClick: (String, String) -> Unit,
+) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
     AppScaffold(
@@ -103,14 +121,14 @@ fun ReadRecordOverviewScreen(
         ) {
             PeriodSelector(
                 selectedPeriod = state.period,
-                onPeriodSelected = { viewModel.setPeriod(it) }
+                onPeriodSelected = { onIntent(ReadRecordOverviewIntent.SetPeriod(it)) }
             )
 
             DateNavigator(
                 period = state.period,
                 referenceDate = state.referenceDate,
-                onPrevClick = { viewModel.prevDate() },
-                onNextClick = { viewModel.nextDate() }
+                onPrevClick = { onIntent(ReadRecordOverviewIntent.PreviousDate) },
+                onNextClick = { onIntent(ReadRecordOverviewIntent.NextDate) }
             )
 
             LazyColumn(
@@ -142,12 +160,12 @@ fun ReadRecordOverviewScreen(
 
                 if (state.topBooks.isNotEmpty()) {
                     item {
-                        TopReadingListCard(state.topBooks, viewModel, onBookClick)
+                        TopReadingListCard(state.topBooks, loadBookCover, onBookClick)
                     }
                 }
 
                 item {
-                    ReadingCalendarCard(state, viewModel)
+                    ReadingCalendarCard(state, loadBookCover)
                 }
             }
         }
@@ -272,7 +290,7 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
 @Composable
 fun TopReadingListCard(
     topBooks: List<ReadBookRanking>,
-    viewModel: ReadRecordOverviewViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onBookClick: (String, String) -> Unit
 ) {
     GlassCard(
@@ -302,7 +320,7 @@ fun TopReadingListCard(
             topBooks.forEachIndexed { index, book ->
                 var coverPath by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(book.bookName, book.bookAuthor) {
-                    coverPath = viewModel.getBookCover(book.bookName, book.bookAuthor)
+                    coverPath = loadBookCover(book.bookName, book.bookAuthor)
                 }
                 val rankingDescription = stringResource(
                     R.string.a11y_reading_ranking_item,
@@ -366,7 +384,7 @@ fun TopReadingListCard(
 @Composable
 fun ReadingCalendarCard(
     state: ReadRecordOverviewUiState,
-    viewModel: ReadRecordOverviewViewModel
+    loadBookCover: suspend (String, String) -> String?,
 ) {
     val currentMonth = YearMonth.from(state.referenceDate)
     val daysInMonth = currentMonth.lengthOfMonth()
@@ -421,7 +439,7 @@ fun ReadingCalendarCard(
                         ) {
                             if (dayOfMonth in 1..daysInMonth) {
                                 val date = currentMonth.atDay(dayOfMonth)
-                                CalendarDayCell(date, state, viewModel)
+                                CalendarDayCell(date, state, loadBookCover)
                             }
                         }
                     }
@@ -435,14 +453,14 @@ fun ReadingCalendarCard(
 fun CalendarDayCell(
     date: LocalDate,
     state: ReadRecordOverviewUiState,
-    viewModel: ReadRecordOverviewViewModel
+    loadBookCover: suspend (String, String) -> String?,
 ) {
     val topBook = state.dailyTopBook[date]
     var coverPath by remember { mutableStateOf<String?>(null) }
     
     LaunchedEffect(topBook) {
         topBook?.let { (name, author) ->
-            coverPath = viewModel.getBookCover(name, author)
+            coverPath = loadBookCover(name, author)
         }
     }
     val dayDescription = if (topBook != null) {

@@ -15,11 +15,12 @@ import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,6 +34,8 @@ class DictRuleViewModel(
     uploadRepository
 ) {
     private val repository = DictRuleRepository()
+    private val _effects = MutableSharedFlow<DictRuleEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     override val rawDataFlow: Flow<List<DictRule>> = repository.flowAll()
 
@@ -203,13 +206,13 @@ class DictRuleViewModel(
     fun pasteRule(): DictRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            _effects.tryEmit(DictRuleEffect.ShowMessage("剪贴板没有内容"))
             return null
         }
         return try {
             GSON.fromJsonObject<DictRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            _effects.tryEmit(DictRuleEffect.ShowMessage("格式不对"))
             null
         }
     }
