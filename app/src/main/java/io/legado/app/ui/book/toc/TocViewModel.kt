@@ -293,24 +293,26 @@ class TocViewModel(
                 initialValue = emptyList()
             )
 
-    val screenState: StateFlow<TocUiState> = combine(
-        uiState,
-        bookState,
-        collapsedVolumes,
-        bookmarkUiList,
-    ) { action, book, collapsed, bookmarks ->
-        TocUiState(
-            action = action,
-            book = book,
-            collapsedVolumes = collapsed.toImmutableSet(),
-            bookmarks = bookmarks.toImmutableList(),
-            isSplitLongChapter = book?.getSplitLongChapter() ?: false,
+    val screenState: StateFlow<TocUiState> by lazy {
+        combine(
+            uiState,
+            bookState,
+            collapsedVolumes,
+            bookmarkUiList,
+        ) { action, book, collapsed, bookmarks ->
+            TocUiState(
+                action = action,
+                book = book,
+                collapsedVolumes = collapsed.toImmutableSet(),
+                bookmarks = bookmarks.toImmutableList(),
+                isSplitLongChapter = book?.getSplitLongChapter() ?: false,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TocUiState(),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = TocUiState(),
-    )
+    }
 
     private val reverseFlow =
         bookState.map { it?.getReverseToc() ?: false }
