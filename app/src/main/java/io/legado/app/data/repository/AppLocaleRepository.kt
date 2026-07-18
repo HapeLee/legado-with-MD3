@@ -34,8 +34,13 @@ class AppLocaleRepository internal constructor(
 ) : AppLocaleGateway {
 
     private var mirroredLanguage = normalizeLanguage(readPersistedLanguage())
+    private val initialPlatformLocales = platform.getApplicationLocales()
     private val _language = MutableStateFlow(
-        languageForLocaleList(platform.getApplicationLocales())
+        if (initialPlatformLocales.isEmpty) {
+            mirroredLanguage
+        } else {
+            languageForLocaleList(initialPlatformLocales)
+        }
     )
     override val language = _language.asStateFlow()
     override val currentLanguage: String

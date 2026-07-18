@@ -12,6 +12,17 @@ import org.robolectric.annotation.Config
 class AppLocaleRepositoryTest {
 
     @Test
+    fun initialization_keepsPersistedLanguageWhenPlatformLocalesAreNotReady() {
+        val repository = AppLocaleRepository(
+            FakeAppLocalePlatform(),
+            { },
+            { "zh" },
+        )
+
+        assertEquals("zh", repository.currentLanguage)
+    }
+
+    @Test
     fun setLanguage_updatesPlatformStateAndMirror() {
         val platform = FakeAppLocalePlatform()
         val persisted = mutableListOf<String>()
