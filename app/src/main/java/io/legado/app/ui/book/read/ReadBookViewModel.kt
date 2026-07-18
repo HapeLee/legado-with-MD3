@@ -2041,6 +2041,61 @@ class ReadBookViewModel(
         )
     }
 
+    private fun buildSheetConfig(): ReadSheetConfigUiState = ReadSheetConfigUiState(
+        letterSpacing = ReadBookConfig.letterSpacing,
+        lineSpacing = ReadBookConfig.lineSpacingExtra,
+        paragraphSpacing = ReadBookConfig.paragraphSpacing,
+        paragraphIndentCount = ReadBookConfig.paragraphIndent.length,
+        textItalic = ReadBookConfig.textItalic,
+        textBold = ReadBookConfig.textBold,
+        chineseConverterType = ReadConfig.chineseConverterType,
+        textColor = ReadBookConfig.durConfig.curTextColor(),
+        textAccentColor = ReadBookConfig.durConfig.curTextAccentColor(),
+        titleMode = ReadBookConfig.titleMode,
+        titleBold = ReadBookConfig.titleBold,
+        titleSegType = ReadBookConfig.titleSegType,
+        titleSegDistance = ReadBookConfig.titleSegDistance,
+        titleSegFlag = ReadBookConfig.titleSegFlag,
+        titleSegScaling = ReadBookConfig.titleSegScaling,
+        titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra,
+        titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub,
+        titleSize = ReadBookConfig.titleSize,
+        titleTopSpacing = ReadBookConfig.titleTopSpacing,
+        titleBottomSpacing = ReadBookConfig.titleBottomSpacing,
+        titleColor = ReadBookConfig.titleColor,
+        titleColorNight = ReadBookConfig.titleColorNight,
+        textColorDay = ReadBookConfig.textColor,
+        textColorNight = ReadBookConfig.textColorNight,
+        textShadow = ReadBookConfig.textShadow,
+        textShadowColor = ReadBookConfig.durConfig.curTextShadowColor(),
+        shadowRadius = ReadBookConfig.shadowRadius,
+        shadowDx = ReadBookConfig.shadowDx,
+        shadowDy = ReadBookConfig.shadowDy,
+        underline = ReadBookConfig.underline,
+        dottedLine = ReadBookConfig.dottedLine,
+        underlineExtend = ReadBookConfig.underlineExtend,
+        underlineColor = ReadBookConfig.durConfig.curUnderlineColor(),
+        underlineHeight = ReadBookConfig.underlineHeight,
+        underlinePadding = ReadBookConfig.underlinePadding,
+        dottedBase = ReadBookConfig.durConfig.dottedBase,
+        dottedRatio = ReadBookConfig.durConfig.dottedRatio,
+        paddingTop = ReadBookConfig.paddingTop,
+        paddingBottom = ReadBookConfig.paddingBottom,
+        paddingLeft = ReadBookConfig.paddingLeft,
+        paddingRight = ReadBookConfig.paddingRight,
+        headerPaddingTop = ReadBookConfig.headerPaddingTop,
+        headerPaddingBottom = ReadBookConfig.headerPaddingBottom,
+        headerPaddingLeft = ReadBookConfig.headerPaddingLeft,
+        headerPaddingRight = ReadBookConfig.headerPaddingRight,
+        footerPaddingTop = ReadBookConfig.footerPaddingTop,
+        footerPaddingBottom = ReadBookConfig.footerPaddingBottom,
+        footerPaddingLeft = ReadBookConfig.footerPaddingLeft,
+        footerPaddingRight = ReadBookConfig.footerPaddingRight,
+        configNames = ReadBookConfig.configList.map { it.name }
+            .filter { it.isNotBlank() }
+            .toImmutableList(),
+    )
+
     private fun syncFromReadBook(current: ReadBookUiState): ReadBookUiState {
         val book = ReadBook.book
         val textChapter = ReadBook.curTextChapter
@@ -2074,6 +2129,7 @@ class ReadBookViewModel(
             sameTitleRemoved = textChapter?.sameTitleRemoved ?: false,
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
             styleConfig = buildStyleConfig(),
+            sheetConfig = buildSheetConfig(),
             menuConfig = ReadMenuConfig(
                 titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
                 showTitleBarIcons = ReadBookConfig.showTitleBarIcons,

@@ -69,7 +69,6 @@ import io.legado.app.domain.gateway.ThemeFloatSetting
 import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.gateway.ThemeStringSetting
-import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -246,7 +245,7 @@ fun ThemeConfigScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val visibleThemes = themes.filter { (_, value) ->
-                            value != "4" || (LabConfig.labEnabled && LabConfig.eInkDisplay)
+                            value != "4" || state.showEInkTheme
                         }
                         ThemeColorSelector(
                             context = context,

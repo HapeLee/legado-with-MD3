@@ -733,6 +733,7 @@ private fun ReadBookMenuSurface(
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             PaddingConfigContent(
+                                config = state.sheetConfig,
                                 onIntent = onIntent,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
@@ -763,6 +764,7 @@ private fun ReadBookMenuSurface(
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleTextTitleContent(
+                                config = state.sheetConfig,
                                 onOpenShadowSet = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ShadowSet))
                                 },

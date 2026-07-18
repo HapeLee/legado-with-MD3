@@ -46,6 +46,7 @@ data class BookInfoUiState(
     val loadCoverOnlyOnWifi: Boolean = false,
     val defaultCover: String = "",
     val defaultCoverDark: String = "",
+    val showMangaUi: Boolean = true,
 )
 
 @Stable
@@ -173,6 +174,7 @@ sealed interface BookInfoIntent {
 
     data class RelatedBookClick(val book: SearchBook) : BookInfoIntent
     data class RelatedBooksMore(val title: String, val url: String) : BookInfoIntent
+    data class SetDefaultBookTreeUri(val value: String) : BookInfoIntent
 }
 
 sealed interface BookInfoEffect {

@@ -45,10 +45,9 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppTextField
@@ -78,6 +77,7 @@ private const val COLOR_TITLE_NIGHT = 5
 
 @Composable
 fun ReadStyleTextTitleContent(
+    config: ReadSheetConfigUiState,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
@@ -105,6 +105,7 @@ fun ReadStyleTextTitleContent(
     }
 
     ReadStyleTextTitleContent(
+        config = config,
         tabTitles = tabTitles,
         selectedTab = selectedTab,
         pagerState = pagerState,
@@ -134,6 +135,7 @@ fun ReadStyleTextTitleContent(
 
 @Composable
 internal fun ReadStyleTextTitleContent(
+    config: ReadSheetConfigUiState,
     tabTitles: List<String>,
     selectedTab: Int,
     pagerState: PagerState,
@@ -183,6 +185,7 @@ internal fun ReadStyleTextTitleContent(
             ) {
                 when (page) {
                     0 -> TextEffectsPage(
+                        config = config,
                         onOpenShadowSet = onOpenShadowSet,
                         onOpenUnderlineConfig = onOpenUnderlineConfig,
                         onOpenHighlightRule = onOpenHighlightRule,
@@ -190,8 +193,9 @@ internal fun ReadStyleTextTitleContent(
                         onIntent = onIntent,
                     )
 
-                    1 -> LayoutSpacingPage(onIntent = onIntent)
+                    1 -> LayoutSpacingPage(config = config, onIntent = onIntent)
                     2 -> TitleSettingsPage(
+                        config = config,
                         onOpenTitleFontSelect = onOpenTitleFontSelect,
                         onIntent = onIntent,
                     )
@@ -205,13 +209,14 @@ internal fun ReadStyleTextTitleContent(
 
 @Composable
 internal fun LayoutSpacingPage(
+    config: ReadSheetConfigUiState,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    var letterSpacing by remember { mutableFloatStateOf(ReadBookConfig.letterSpacing) }
-    var lineSpacing by remember { mutableFloatStateOf(ReadBookConfig.lineSpacingExtra.toFloat()) }
-    var paragraphSpacing by remember { mutableFloatStateOf(ReadBookConfig.paragraphSpacing.toFloat()) }
-    var indentCount by remember { mutableIntStateOf(ReadBookConfig.paragraphIndent.length) }
+    var letterSpacing by remember { mutableFloatStateOf(config.letterSpacing) }
+    var lineSpacing by remember { mutableFloatStateOf(config.lineSpacing.toFloat()) }
+    var paragraphSpacing by remember { mutableFloatStateOf(config.paragraphSpacing.toFloat()) }
+    var indentCount by remember { mutableIntStateOf(config.paragraphIndentCount) }
 
     Column(
         modifier = modifier
@@ -270,6 +275,7 @@ internal fun LayoutSpacingPage(
 
 @Composable
 internal fun TextEffectsPage(
+    config: ReadSheetConfigUiState,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
@@ -277,8 +283,8 @@ internal fun TextEffectsPage(
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    var textItalic by remember { mutableStateOf(ReadBookConfig.textItalic) }
-    var textBold by remember { mutableIntStateOf(ReadBookConfig.textBold) }
+    var textItalic by remember { mutableStateOf(config.textItalic) }
+    var textBold by remember { mutableIntStateOf(config.textBold) }
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerId by remember { mutableIntStateOf(0) }
@@ -318,7 +324,7 @@ internal fun TextEffectsPage(
         val chineseConvertValues = remember { arrayOf("0", "1", "2") }
         TinyDropdownSettingItem(
             title = stringResource(R.string.chinese_converter),
-            selectedValue = ReadConfig.chineseConverterType.toString(),
+            selectedValue = config.chineseConverterType.toString(),
             displayEntries = chineseConvertEntries,
             entryValues = chineseConvertValues,
             onValueChange = {
@@ -330,19 +336,19 @@ internal fun TextEffectsPage(
         SectionTitle(stringResource(R.string.read_color))
         TinyColorSettingItem(
             title = stringResource(R.string.text_color),
-            colorValue = ReadBookConfig.durConfig.curTextColor(),
+            colorValue = config.textColor,
             onClick = {
                 colorPickerId = COLOR_TEXT
-                colorPickerInitial = ReadBookConfig.durConfig.curTextColor()
+                colorPickerInitial = config.textColor
                 showColorPicker = true
             },
         )
         TinyColorSettingItem(
             title = stringResource(R.string.text_accent_color),
-            colorValue = ReadBookConfig.durConfig.curTextAccentColor(),
+            colorValue = config.textAccentColor,
             onClick = {
                 colorPickerId = COLOR_ACCENT
-                colorPickerInitial = ReadBookConfig.durConfig.curTextAccentColor()
+                colorPickerInitial = config.textAccentColor
                 showColorPicker = true
             },
         )
@@ -394,21 +400,22 @@ internal fun TextEffectsPage(
 
 @Composable
 internal fun TitleSettingsPage(
+    config: ReadSheetConfigUiState,
     onOpenTitleFontSelect: () -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
-    var titleBold by remember(ReadBookConfig.titleBold) { mutableIntStateOf(ReadBookConfig.titleBold) }
-    var titleSegType by remember(ReadBookConfig.titleSegType) { mutableIntStateOf(ReadBookConfig.titleSegType) }
-    var titleSegDistance by remember(ReadBookConfig.titleSegDistance) { mutableIntStateOf(ReadBookConfig.titleSegDistance) }
-    var titleSegFlag by remember(ReadBookConfig.titleSegFlag) { mutableStateOf(ReadBookConfig.titleSegFlag) }
-    var titleSegScaling by remember(ReadBookConfig.titleSegScaling) { mutableFloatStateOf(ReadBookConfig.titleSegScaling) }
-    var titleLineSpacingExtra by remember(ReadBookConfig.titleLineSpacingExtra) { mutableIntStateOf(ReadBookConfig.titleLineSpacingExtra) }
-    var titleLineSpacingSub by remember(ReadBookConfig.titleLineSpacingSub) { mutableIntStateOf(ReadBookConfig.titleLineSpacingSub) }
-    var titleSize by remember(ReadBookConfig.titleSize) { mutableIntStateOf(ReadBookConfig.titleSize) }
-    var titleTopSpacing by remember(ReadBookConfig.titleTopSpacing) { mutableIntStateOf(ReadBookConfig.titleTopSpacing) }
-    var titleBottomSpacing by remember(ReadBookConfig.titleBottomSpacing) { mutableIntStateOf(ReadBookConfig.titleBottomSpacing) }
+    var titleMode by remember(config.titleMode) { mutableIntStateOf(config.titleMode) }
+    var titleBold by remember(config.titleBold) { mutableIntStateOf(config.titleBold) }
+    var titleSegType by remember(config.titleSegType) { mutableIntStateOf(config.titleSegType) }
+    var titleSegDistance by remember(config.titleSegDistance) { mutableIntStateOf(config.titleSegDistance) }
+    var titleSegFlag by remember(config.titleSegFlag) { mutableStateOf(config.titleSegFlag) }
+    var titleSegScaling by remember(config.titleSegScaling) { mutableFloatStateOf(config.titleSegScaling) }
+    var titleLineSpacingExtra by remember(config.titleLineSpacingExtra) { mutableIntStateOf(config.titleLineSpacingExtra) }
+    var titleLineSpacingSub by remember(config.titleLineSpacingSub) { mutableIntStateOf(config.titleLineSpacingSub) }
+    var titleSize by remember(config.titleSize) { mutableIntStateOf(config.titleSize) }
+    var titleTopSpacing by remember(config.titleTopSpacing) { mutableIntStateOf(config.titleTopSpacing) }
+    var titleBottomSpacing by remember(config.titleBottomSpacing) { mutableIntStateOf(config.titleBottomSpacing) }
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerId by remember { mutableIntStateOf(0) }
@@ -445,30 +452,30 @@ internal fun TitleSettingsPage(
 
         TinyColorModeSettingItem(
             title = stringResource(R.string.title_color),
-            dayColor = if (ReadBookConfig.titleColor != 0) {
-                ReadBookConfig.titleColor
+            dayColor = if (config.titleColor != 0) {
+                config.titleColor
             } else {
-                ReadBookConfig.textColor
+                config.textColorDay
             },
-            nightColor = if (ReadBookConfig.titleColorNight != 0) {
-                ReadBookConfig.titleColorNight
+            nightColor = if (config.titleColorNight != 0) {
+                config.titleColorNight
             } else {
-                ReadBookConfig.textColorNight
+                config.textColorNight
             },
             onClickColor = { isNight ->
                 if (isNight) {
                     colorPickerId = COLOR_TITLE_NIGHT
-                    colorPickerInitial = if (ReadBookConfig.titleColorNight != 0) {
-                        ReadBookConfig.titleColorNight
+                    colorPickerInitial = if (config.titleColorNight != 0) {
+                        config.titleColorNight
                     } else {
-                        ReadBookConfig.textColorNight
+                        config.textColorNight
                     }
                 } else {
                     colorPickerId = COLOR_TITLE
-                    colorPickerInitial = if (ReadBookConfig.titleColor != 0) {
-                        ReadBookConfig.titleColor
+                    colorPickerInitial = if (config.titleColor != 0) {
+                        config.titleColor
                     } else {
-                        ReadBookConfig.textColor
+                        config.textColorDay
                     }
                 }
                 showColorPicker = true

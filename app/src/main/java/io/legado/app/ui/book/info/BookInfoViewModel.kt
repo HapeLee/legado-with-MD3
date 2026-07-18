@@ -27,6 +27,8 @@ import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
@@ -98,6 +100,7 @@ class BookInfoViewModel(
     private val imageLoader: ImageLoader,
     private val themeSettingsGateway: ThemeSettingsGateway,
     private val coverSettingsGateway: CoverSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseViewModel(application) {
 
     val allGroups = bookGroupRepository.flowSelect().map { it.toImmutableList() }
@@ -111,6 +114,7 @@ class BookInfoViewModel(
     init {
         collectEventBus()
         collectAppearanceSettings()
+        collectOtherSettings()
     }
 
     private fun collectAppearanceSettings() {
@@ -131,6 +135,14 @@ class BookInfoViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    private fun collectOtherSettings() {
+        viewModelScope.launch {
+            otherSettingsGateway.settings.collectLatest { settings ->
+                _uiState.update { it.copy(showMangaUi = settings.showMangaUi) }
+            }
         }
     }
 
@@ -354,6 +366,9 @@ class BookInfoViewModel(
 
             is BookInfoIntent.RelatedBookClick -> onRelatedBookClick(intent.book)
             is BookInfoIntent.RelatedBooksMore -> onRelatedBooksMore(intent.title, intent.url)
+            is BookInfoIntent.SetDefaultBookTreeUri -> viewModelScope.launch {
+                otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(intent.value))
+            }
         }
     }
 

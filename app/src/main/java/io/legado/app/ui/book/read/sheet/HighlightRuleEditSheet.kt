@@ -48,7 +48,6 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
@@ -74,6 +73,7 @@ import java.io.File
 fun HighlightRuleEditSheet(
     show: Boolean,
     rule: HighlightRule?,
+    allConfigNames: List<String>,
     onDismissRequest: () -> Unit,
     onSave: (HighlightRule) -> Unit,
 ) {
@@ -123,7 +123,6 @@ fun HighlightRuleEditSheet(
     var hasBgImage by remember(show, rule) { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
 
     // Config binding state — empty set = global (applies to all configs)
-    val allConfigNames = remember { ReadBookConfig.configList.map { it.name }.filter { it.isNotBlank() } }
     var configNames by remember(show, rule) {
         mutableStateOf(initial.configName.orEmpty().configNames().toSet())
     }

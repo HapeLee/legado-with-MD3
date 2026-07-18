@@ -16,6 +16,7 @@ import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.gateway.ThemeStringSetting
+import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -38,6 +39,7 @@ class ThemeConfigViewModel(
     private val appShellSettingsGateway: AppShellSettingsGateway,
     private val readSettingsGateway: ReadSettingsGateway,
     private val themeSettingsGateway: ThemeSettingsGateway,
+    private val labSettingsGateway: LabSettingsGateway,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -65,6 +67,13 @@ class ThemeConfigViewModel(
         viewModelScope.launch {
             readSettingsGateway.settings.collect { settings ->
                 _uiState.update { it.copy(fontFolder = settings.fontFolder) }
+            }
+        }
+        viewModelScope.launch {
+            labSettingsGateway.settings.collect { settings ->
+                _uiState.update {
+                    it.copy(showEInkTheme = settings.enabled && settings.eInkDisplay)
+                }
             }
         }
     }

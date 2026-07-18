@@ -157,6 +157,7 @@ fun ReadBookScreen(
 
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
@@ -189,6 +190,7 @@ fun ReadBookScreen(
     )
     UnderlineConfigSheet(
         show = state.activeSheet is ReadBookSheet.UnderlineConfig,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
@@ -235,6 +237,7 @@ fun ReadBookScreen(
     HighlightRuleConfigSheet(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
         state = state.highlightRuleConfig,
+        allConfigNames = state.sheetConfig.configNames,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
