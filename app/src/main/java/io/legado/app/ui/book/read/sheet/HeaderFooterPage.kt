@@ -194,12 +194,7 @@ internal fun HeaderFooterPage(
         }
     }
 
-    /**
-     * 当某个位置的 tip 被切换时统一处理：清空同值重复、更新本地 state、派发 ConfigUpdate，
-     * 必要时自动弹出自定义模板编辑弹窗。
-     */
-    fun handleTipChange(target: CustomTipTarget, value: Int) {
-        clearRepeat(value)
+    fun applyTipValue(target: CustomTipTarget, value: Int) {
         when (target) {
             CustomTipTarget.HEADER_LEFT -> {
                 headerLeft = value
@@ -226,9 +221,19 @@ internal fun HeaderFooterPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(value)))
             }
         }
+    }
+
+    /**
+     * 当某个位置的 tip 被切换时统一处理：清空同值重复、更新本地 state、派发 ConfigUpdate，
+     * 必要时自动弹出自定义模板编辑弹窗。
+     */
+    fun handleTipChange(target: CustomTipTarget, value: Int) {
         if (value == ReadBookConfig.tipCustom) {
             editingCustomTarget = target
+            return
         }
+        clearRepeat(value)
+        applyTipValue(target, value)
     }
 
     LaunchedEffect(pagerState) {
@@ -646,7 +651,10 @@ internal fun HeaderFooterPage(
         show = editingCustomTarget != null,
         initialTemplate = editingCustomInitial,
         onConfirm = { template ->
-            editingCustomTarget?.applyTemplate(template, onIntent)
+            editingCustomTarget?.let { target ->
+                applyTipValue(target, ReadBookConfig.tipCustom)
+                target.applyTemplate(template, onIntent)
+            }
             editingCustomTarget = null
         },
         onDismissRequest = { editingCustomTarget = null },
