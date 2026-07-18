@@ -30,7 +30,7 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
@@ -160,7 +160,7 @@ class ReadBookViewModel(
     private val readSettingsRepository: ReadSettingsRepository,
     private val readBookStyleConfigRepository: ReadBookStyleConfigRepository,
     private val readAloudSettingsRepository: ReadAloudSettingsRepository,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
     private val uploadRepository: UploadRepository,
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,

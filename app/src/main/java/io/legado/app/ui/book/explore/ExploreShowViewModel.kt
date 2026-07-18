@@ -12,7 +12,7 @@ import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import android.content.res.Configuration
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,7 +51,7 @@ class ExploreShowViewModel(
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())

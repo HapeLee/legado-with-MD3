@@ -37,6 +37,8 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.collections.immutable.persistentListOf
+import io.legado.app.data.entities.BookGroup
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -205,6 +207,8 @@ fun BookInfoRouteScreen(
 
     BookInfoScreen(
         state = viewModel.uiState.collectAsStateWithLifecycle().value,
+        groups = viewModel.allGroups
+            .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
         onIntent = viewModel::onIntent,
         onBack = onBack,
         sharedTransitionScope = sharedTransitionScope,

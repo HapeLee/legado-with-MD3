@@ -80,6 +80,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -95,7 +96,7 @@ class BookInfoViewModel(
     private val imageLoader: ImageLoader,
 ) : BaseViewModel(application) {
 
-    val allGroups = bookGroupRepository.flowAll()
+    val allGroups = bookGroupRepository.flowSelect().map { it.toImmutableList() }
 
     private val _uiState = MutableStateFlow(BookInfoUiState())
     val uiState = _uiState.asStateFlow()

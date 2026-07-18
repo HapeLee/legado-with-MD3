@@ -10,13 +10,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import com.materialkolor.PaletteStyle
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.data.local.preferences.AppSettings
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.settings.customColors
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -49,7 +49,6 @@ private fun AppThemePreview(
         composeEngine = "material"
     )
     CompositionLocalProvider(
-        LocalAppSettings provides AppSettings(),
         LocalLegadoThemeColors provides themeColors
     ) {
         MaterialThemeWrapper(
@@ -66,29 +65,39 @@ private fun AppThemeActual(
     darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
-    val preferencesRepository = koinInject<LocalPreferencesRepository>()
-    val settings by preferencesRepository.appSettings.collectAsStateWithLifecycle()
+    val appShellSettingsGateway = koinInject<AppShellSettingsGateway>()
+    val themeSettingsGateway = koinInject<ThemeSettingsGateway>()
+    val initialAppShellSettings = remember(appShellSettingsGateway) {
+        appShellSettingsGateway.currentSettings
+    }
+    val initialThemeSettings = remember(themeSettingsGateway) {
+        themeSettingsGateway.currentSettings
+    }
+    val appShellSettings by appShellSettingsGateway.settings
+        .collectAsStateWithLifecycle(initialAppShellSettings)
+    val themeSettings by themeSettingsGateway.settings
+        .collectAsStateWithLifecycle(initialThemeSettings)
     val context = LocalContext.current
     
     // 1. 获取基础配置
-    val appThemeMode = ThemeResolver.resolveThemeMode(ThemeConfig.appTheme)
-    val themeModeValue = ThemeConfig.themeMode
+    val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
+    val themeModeValue = appShellSettings.themeMode
     val effectiveDarkTheme = when (themeModeValue) {
         "1" -> false
         "2" -> true
         else -> darkTheme
     }
-    val isPureBlack = ThemeConfig.isPureBlack
-    val paletteStyleValue = ThemeConfig.paletteStyle
-    val materialVersion = ThemeConfig.materialVersion
-    val composeEngine = ThemeConfig.composeEngine
-    val customPrimary = ThemeConfig.cPrimary
-    val customNightPrimary = ThemeConfig.cNPrimary
-    val appFontPath = ThemeConfig.appFontPath
+    val isPureBlack = themeSettings.isPureBlack
+    val paletteStyleValue = themeSettings.paletteStyle
+    val materialVersion = themeSettings.materialVersion
+    val composeEngine = appShellSettings.composeEngine
+    val customPrimary = themeSettings.customPrimary
+    val customNightPrimary = themeSettings.customNightPrimary
+    val appFontPath = themeSettings.appFontPath
 
     // 2. 深度个性化配置
-    val enableDeepPersonalization = ThemeConfig.enableDeepPersonalization
-    val customColors = ThemeConfig.customThemeColors(effectiveDarkTheme)
+    val enableDeepPersonalization = themeSettings.enableDeepPersonalization
+    val customColors = themeSettings.customColors(effectiveDarkTheme)
 
     // 3. 加载自定义字体
     val customFontFamily = rememberCustomFont(appFontPath)
@@ -162,7 +171,6 @@ private fun AppThemeActual(
 
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
-        LocalAppSettings provides settings,
         LocalLegadoThemeColors provides themeColors
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {

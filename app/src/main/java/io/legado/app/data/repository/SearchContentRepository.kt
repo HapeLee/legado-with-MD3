@@ -7,7 +7,6 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.utils.ChineseUtils
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +16,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
-class SearchContentRepository {
+class SearchContentRepository(
+    private val titleModeProvider: () -> Int = { 0 },
+) {
 
     private var lastSearchResults: List<SearchResult>? = null
     private var lastQueryKey: String? = null
@@ -126,7 +127,7 @@ class SearchContentRepository {
         replaceEnabled: Boolean,
         regexReplace: Boolean
     ): String {
-        return "$bookUrl-$query-$replaceEnabled-$regexReplace-${ReadBookConfig.titleMode}"
+        return "$bookUrl-$query-$replaceEnabled-$regexReplace-${titleModeProvider()}"
     }
 
     private suspend fun searchChapter(
@@ -153,7 +154,7 @@ class SearchContentRepository {
             includeTitle = false,
             useReplace = replaceEnabled
         )
-        val includeTitle = ReadBookConfig.titleMode != 2 ||
+        val includeTitle = titleModeProvider() != 2 ||
                 chapter.isVolume ||
                 bodyContent.textList.isEmpty()
         val mContent = if (includeTitle) {

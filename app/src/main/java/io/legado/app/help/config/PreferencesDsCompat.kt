@@ -72,6 +72,24 @@ fun Preferences.compatDsStringSet(key: String): Set<String>? = when (val raw = r
 }
 
 /**
+ * 按默认值的运行时类型读取设置，并兼容历史版本中同名 key 的存储类型漂移。
+ *
+ * 该入口用于数据层的类型化设置映射，避免每个 repository 重复实现 String/Int/Boolean
+ * 兼容规则。调用方必须传入非空、可识别类型的默认值。
+ */
+@Suppress("UNCHECKED_CAST")
+fun <T : Any> Preferences.compatDsValue(key: Preferences.Key<T>, defaultValue: T): T =
+    when (defaultValue) {
+        is String -> (compatDsString(key.name) ?: defaultValue) as T
+        is Int -> (compatDsInt(key.name) ?: defaultValue) as T
+        is Boolean -> (compatDsBoolean(key.name) ?: defaultValue) as T
+        is Long -> (compatDsLong(key.name) ?: defaultValue) as T
+        is Float -> (compatDsFloat(key.name) ?: defaultValue) as T
+        is Set<*> -> (compatDsStringSet(key.name) ?: defaultValue) as T
+        else -> defaultValue
+    }
+
+/**
  * 按 value 的运行时类型写入对应类型的 key；value 为 null 表示移除。
  * 由于 Key 按 name 判等，写入会覆盖同名的旧类型条目，移除一次即可清掉任意类型的条目。
  */

@@ -130,4 +130,16 @@ class PreferencesDsCompatTest {
         assertEquals(3f, prefs.compatDsFloat("f"))
         assertEquals(setOf("x"), prefs.compatDsStringSet("set"))
     }
+
+    @Test
+    fun `compatDsValue 按默认值类型兼容读取并在缺失时回退`() {
+        val prefs = mutablePreferencesOf(
+            stringPreferencesKey("int") to "7",
+            intPreferencesKey("boolean") to 1,
+        )
+
+        assertEquals(7, prefs.compatDsValue(intPreferencesKey("int"), 0))
+        assertEquals(true, prefs.compatDsValue(booleanPreferencesKey("boolean"), false))
+        assertEquals("fallback", prefs.compatDsValue(stringPreferencesKey("absent"), "fallback"))
+    }
 }

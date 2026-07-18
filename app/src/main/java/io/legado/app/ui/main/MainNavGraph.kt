@@ -54,11 +54,11 @@ import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
-import io.legado.app.ui.config.customTheme.CustomThemeScreen
+import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
 import io.legado.app.ui.config.labConfig.LabConfigScreen
-import io.legado.app.ui.config.otherConfig.OtherConfigScreen
-import io.legado.app.ui.config.readConfig.ReadConfigScreen
+import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
+import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
 import io.legado.app.ui.config.translation.TranslationConfigScreen
@@ -202,11 +202,11 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsOther> {
-        OtherConfigScreen(onBackClick = { onNavigateBack() })
+        OtherConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsRead> {
-        ReadConfigScreen(onBackClick = { onNavigateBack() })
+        ReadConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsCover> {
@@ -305,7 +305,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsCustomTheme> {
-        CustomThemeScreen(
+        CustomThemeRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }

@@ -1,0 +1,25 @@
+package io.legado.app.domain.model.settings
+
+data class OtherSettings(
+    val language: String = "auto",
+    val updateToVariant: String = "official_version",
+    val autoCheckUpdateOnStart: Boolean = false,
+    val webServiceAutoStart: Boolean = false,
+    val autoRefresh: Boolean = false,
+    val defaultToRead: Boolean = false,
+    val notificationsPost: Boolean = true,
+    val ignoreBatteryPermission: Boolean = true,
+    val firebaseEnable: Boolean = true,
+    val defaultBookTreeUri: String? = null,
+    val antiAlias: Boolean = false,
+    val replaceEnableDefault: Boolean = true,
+    val autoClearExpired: Boolean = true,
+    val showAddToShelfAlert: Boolean = true,
+    val showMangaUi: Boolean = true,
+    val webServiceWakeLock: Boolean = false,
+    val sourceEditMaxLine: Int = Int.MAX_VALUE,
+    val webPort: Int = 1122,
+    val processText: Boolean = true,
+    val recordLog: Boolean = false,
+    val recordHeapDump: Boolean = false,
+)

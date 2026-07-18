@@ -4,10 +4,12 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.local.preferences.AppSettings
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
-import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsUpdate
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
@@ -25,17 +27,12 @@ import java.io.File
 import java.io.FileOutputStream
 
 class ThemeConfigViewModel(
-    private val localPreferencesRepository: LocalPreferencesRepository,
-    private val readSettingsRepository: ReadSettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val readSettingsGateway: ReadSettingsGateway,
+    private val themeSettingsGateway: ThemeSettingsGateway,
 ) : ViewModel() {
 
-    val appSettings = localPreferencesRepository.appSettings
-
-    fun updateSettings(transform: (AppSettings) -> AppSettings) {
-        localPreferencesRepository.updateSettings(transform)
-    }
-
-    val fontFolder = readSettingsRepository.preferences
+    val fontFolder = readSettingsGateway.settings
         .map { preferences ->
             val fontFolder: String? = preferences.fontFolder
             fontFolder
@@ -45,18 +42,18 @@ class ThemeConfigViewModel(
     fun setFontFolder(path: String) {
         viewModelScope.launch {
             runCatching {
-                readSettingsRepository.setFontFolder(path)
+                readSettingsGateway.update(ReadSettingsUpdate.FontFolder(path))
             }
         }
     }
 
-    val showThemeRefactorTip = localPreferencesRepository
+    val showThemeRefactorTip = settingsRepository
         .getPreference(LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP, true)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     fun setShowThemeRefactorTip(show: Boolean) {
         viewModelScope.launch {
-            localPreferencesRepository.updatePreference(
+            settingsRepository.updatePreference(
                 LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP,
                 show
             )
@@ -123,7 +120,7 @@ class ThemeConfigViewModel(
                     temp.copyTo(target, overwrite = true)
                     temp.delete()
                 }
-                ThemeConfig.appFontPath = target.absolutePath
+                themeSettingsGateway.update(ThemeSettingsUpdate.AppFontPath(target.absolutePath))
             }.onFailure(Throwable::printStackTrace)
         }
     }

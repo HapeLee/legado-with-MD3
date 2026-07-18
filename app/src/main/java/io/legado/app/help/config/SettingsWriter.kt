@@ -30,7 +30,8 @@ object SettingsWriter {
 
     /**
      * 串行写队列：所有经 [AppConfigStore] 的写入按提交顺序落盘。
-     * 写入失败仅吞掉异常（与旧 PrefDelegate 行为一致），此时值仍在内存快照中，重启后丢失。
+     * 写入异常由提交的 block 负责处理；[AppConfigStore] 会移除对应 pending overlay，
+     * 使读取回退到最近一次已落盘快照。
      */
     fun launchWrite(block: suspend () -> Unit): Job {
         pendingCount.incrementAndGet()

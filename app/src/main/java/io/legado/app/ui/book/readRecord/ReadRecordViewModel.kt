@@ -7,7 +7,7 @@ import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +46,7 @@ enum class DisplayMode {
 class ReadRecordViewModel(
     private val repository: ReadRecordRepository,
     private val bookRepository: BookRepository,
-    private val localPreferencesRepository: LocalPreferencesRepository
+    private val localPreferencesRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)

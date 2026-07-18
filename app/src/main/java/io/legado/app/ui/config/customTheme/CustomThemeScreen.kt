@@ -10,23 +10,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.constant.EventBus
-import io.legado.app.lib.theme.ThemeStore
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.gateway.ThemeColorSlot
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -37,40 +29,15 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.postEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomThemeScreen(
-    onBackClick: () -> Unit
+    state: CustomThemeUiState,
+    onIntent: (CustomThemeIntent) -> Unit,
+    onBackClick: () -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    var showColorPicker by remember { mutableStateOf(false) }
-    var currentColorKey by remember { mutableStateOf("themeColor") }
-    val context = LocalContext.current
-
-    val enableDeepPersonalization = ThemeConfig.enableDeepPersonalization
-
-    val themeColor = ThemeConfig.themeColor
-    val secondaryThemeColor = ThemeConfig.secondaryThemeColor
-    val primaryTextColor = ThemeConfig.primaryTextColor
-    val secondaryTextColor = ThemeConfig.secondaryTextColor
-    val themeBackgroundColor = ThemeConfig.themeBackgroundColor
-    val labelContainerColor = ThemeConfig.labelContainerColor
-    val themeColorNight = ThemeConfig.themeColorNight
-    val secondaryThemeColorNight = ThemeConfig.secondaryThemeColorNight
-    val primaryTextColorNight = ThemeConfig.primaryTextColorNight
-    val secondaryTextColorNight = ThemeConfig.secondaryTextColorNight
-    val themeBackgroundColorNight = ThemeConfig.themeBackgroundColorNight
-    val labelContainerColorNight = ThemeConfig.labelContainerColorNight
-
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    // 自定义主题 seed color
-    var showSeedColorPicker by remember { mutableStateOf(false) }
-    var pickNightSeedColor by remember { mutableStateOf(false) }
-    val primaryColorValue = remember { mutableIntStateOf(ThemeConfig.cPrimary) }
-    val nightPrimaryColorValue = remember { mutableIntStateOf(ThemeConfig.cNPrimary) }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -96,44 +63,40 @@ fun CustomThemeScreen(
                 SplicedColumnGroup {
                     SwitchSettingItem(
                         title = stringResource(R.string.theme_manage_use_palette_colors),
-                        checked = !enableDeepPersonalization,
-                        onCheckedChange = { ThemeConfig.enableDeepPersonalization = !it }
+                        checked = !state.enableDeepPersonalization,
+                        onCheckedChange = {
+                            onIntent(CustomThemeIntent.DeepPersonalizationChanged(!it))
+                        }
                     )
                 }
             }
 
-            // Color settings vs Seed color toggle based on enableDeepPersonalization
-            if (enableDeepPersonalization) {
+            // Color settings vs Seed color toggle based on state.enableDeepPersonalization
+            if (state.enableDeepPersonalization) {
                 item {
                     CustomColorSettings(
                         title = stringResource(R.string.day),
-                        primary = themeColor,
-                        secondary = secondaryThemeColor,
-                        primaryText = primaryTextColor,
-                        secondaryText = secondaryTextColor,
-                        background = themeBackgroundColor,
-                        labelContainer = labelContainerColor,
+                        primary = state.themeColor,
+                        secondary = state.secondaryThemeColor,
+                        primaryText = state.primaryTextColor,
+                        secondaryText = state.secondaryTextColor,
+                        background = state.themeBackgroundColor,
+                        labelContainer = state.labelContainerColor,
                         keySuffix = "",
-                        onSelect = {
-                            currentColorKey = it
-                            showColorPicker = true
-                        },
+                        onSelect = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.DeepColor(it))) },
                     )
                 }
                 item {
                     CustomColorSettings(
                         title = stringResource(R.string.night),
-                        primary = themeColorNight,
-                        secondary = secondaryThemeColorNight,
-                        primaryText = primaryTextColorNight,
-                        secondaryText = secondaryTextColorNight,
-                        background = themeBackgroundColorNight,
-                        labelContainer = labelContainerColorNight,
+                        primary = state.themeColorNight,
+                        secondary = state.secondaryThemeColorNight,
+                        primaryText = state.primaryTextColorNight,
+                        secondaryText = state.secondaryTextColorNight,
+                        background = state.themeBackgroundColorNight,
+                        labelContainer = state.labelContainerColorNight,
                         keySuffix = "Night",
-                        onSelect = {
-                            currentColorKey = it
-                            showColorPicker = true
-                        },
+                        onSelect = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.DeepColor(it))) },
                     )
                 }
             } else {
@@ -142,45 +105,39 @@ fun CustomThemeScreen(
                         ClickableSettingItem(
                             title = stringResource(R.string.seed_color),
                             description = stringResource(R.string.day),
-                            option = formatColorOption(primaryColorValue.intValue)
+                            option = formatColorOption(state.primarySeedColor)
                                 ?: stringResource(R.string.click_to_select),
-                            onClick = {
-                                pickNightSeedColor = false
-                                showSeedColorPicker = true
-                            },
-                            trailingContent = { ColorSwatch(colorValue = primaryColorValue.intValue) }
+                            onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.DaySeed)) },
+                            trailingContent = { ColorSwatch(colorValue = state.primarySeedColor) }
                         )
                         ClickableSettingItem(
                             title = stringResource(R.string.seed_color),
                             description = stringResource(R.string.night),
-                            option = formatColorOption(nightPrimaryColorValue.intValue)
+                            option = formatColorOption(state.nightPrimarySeedColor)
                                 ?: stringResource(R.string.click_to_select),
-                            onClick = {
-                                pickNightSeedColor = true
-                                showSeedColorPicker = true
-                            },
-                            trailingContent = { ColorSwatch(colorValue = nightPrimaryColorValue.intValue) }
+                            onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.NightSeed)) },
+                            trailingContent = { ColorSwatch(colorValue = state.nightPrimarySeedColor) }
                         )
                         DropdownListSettingItem(
                             title = stringResource(R.string.palette_style),
-                            selectedValue = ThemeConfig.paletteStyle,
+                            selectedValue = state.paletteStyle,
                             displayEntries = stringArrayResource(R.array.paletteStyle),
                             entryValues = stringArrayResource(R.array.paletteStyle_value),
-                            onValueChange = { ThemeConfig.paletteStyle = it }
+                            onValueChange = { onIntent(CustomThemeIntent.PaletteStyleChanged(it)) }
                         )
                         DropdownListSettingItem(
                             title = stringResource(R.string.preferred_contrast),
-                            selectedValue = ThemeConfig.customContrast,
+                            selectedValue = state.customContrast,
                             displayEntries = stringArrayResource(R.array.customContrast),
                             entryValues = stringArrayResource(R.array.customContrast_value),
-                            onValueChange = { ThemeConfig.customContrast = it }
+                            onValueChange = { onIntent(CustomThemeIntent.CustomContrastChanged(it)) }
                         )
                         DropdownListSettingItem(
                             title = stringResource(R.string.material_version),
-                            selectedValue = ThemeConfig.materialVersion,
+                            selectedValue = state.materialVersion,
                             displayEntries = stringArrayResource(R.array.materialVersion),
                             entryValues = stringArrayResource(R.array.materialVersion_value),
-                            onValueChange = { ThemeConfig.materialVersion = it }
+                            onValueChange = { onIntent(CustomThemeIntent.MaterialVersionChanged(it)) }
                         )
                     }
                 }
@@ -188,65 +145,19 @@ fun CustomThemeScreen(
 
         }
 
-        // Deep personalization color picker
         ColorPickerSheet(
-            show = showColorPicker,
-            initialColor = when (currentColorKey) {
-                "themeColor" -> themeColor
-                "secondaryThemeColor" -> secondaryThemeColor
-                "primaryTextColor" -> primaryTextColor
-                "secondaryTextColor" -> secondaryTextColor
-                "themeBackgroundColor" -> themeBackgroundColor
-                "labelContainerColor" -> labelContainerColor
-                "themeColorNight" -> themeColorNight
-                "secondaryThemeColorNight" -> secondaryThemeColorNight
-                "primaryTextColorNight" -> primaryTextColorNight
-                "secondaryTextColorNight" -> secondaryTextColorNight
-                "themeBackgroundColorNight" -> themeBackgroundColorNight
-                "labelContainerColorNight" -> labelContainerColorNight
-                else -> 0
-            },
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = {
-                when (currentColorKey) {
-                    "themeColor" -> ThemeConfig.themeColor = it
-                    "secondaryThemeColor" -> ThemeConfig.secondaryThemeColor = it
-                    "primaryTextColor" -> ThemeConfig.primaryTextColor = it
-                    "secondaryTextColor" -> ThemeConfig.secondaryTextColor = it
-                    "themeBackgroundColor" -> ThemeConfig.themeBackgroundColor = it
-                    "labelContainerColor" -> ThemeConfig.labelContainerColor = it
-                    "themeColorNight" -> ThemeConfig.themeColorNight = it
-                    "secondaryThemeColorNight" -> ThemeConfig.secondaryThemeColorNight = it
-                    "primaryTextColorNight" -> ThemeConfig.primaryTextColorNight = it
-                    "secondaryTextColorNight" -> ThemeConfig.secondaryTextColorNight = it
-                    "themeBackgroundColorNight" -> ThemeConfig.themeBackgroundColorNight = it
-                    "labelContainerColorNight" -> ThemeConfig.labelContainerColorNight = it
-                }
-            }
+            show = state.activePicker is CustomThemePicker.DeepColor,
+            initialColor = state.colorForPicker(),
+            onDismissRequest = { onIntent(CustomThemeIntent.DismissPicker) },
+            onColorSelected = { onIntent(CustomThemeIntent.ColorSelected(it)) },
         )
 
-        // Seed color picker (from ThemeConfigScreen)
         ColorPickerSheet(
-            show = showSeedColorPicker,
-            initialColor = if (pickNightSeedColor) {
-                nightPrimaryColorValue.value
-            } else {
-                primaryColorValue.value
-            },
-            onDismissRequest = { showSeedColorPicker = false },
-            onColorSelected = { color ->
-                if (pickNightSeedColor) {
-                    nightPrimaryColorValue.intValue = color
-                    ThemeConfig.cNPrimary = color
-                } else {
-                    primaryColorValue.intValue = color
-                    ThemeConfig.cPrimary = color
-                    ThemeStore.editTheme(context)
-                        .primaryColor(color)
-                        .apply()
-                    postEvent(EventBus.RECREATE, "")
-                }
-            }
+            show = state.activePicker == CustomThemePicker.DaySeed ||
+                state.activePicker == CustomThemePicker.NightSeed,
+            initialColor = state.colorForPicker(),
+            onDismissRequest = { onIntent(CustomThemeIntent.DismissPicker) },
+            onColorSelected = { onIntent(CustomThemeIntent.ColorSelected(it)) },
         )
 
     }
@@ -262,38 +173,43 @@ private fun CustomColorSettings(
     background: Int,
     labelContainer: Int,
     keySuffix: String,
-    onSelect: (String) -> Unit,
+    onSelect: (ThemeColorSlot) -> Unit,
 ) {
     SplicedColumnGroup(title = title) {
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_primary_color),
             colorValue = primary,
-            onClick = { onSelect("themeColor$keySuffix") },
+            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.Primary else ThemeColorSlot.PrimaryNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_secondary_color),
             colorValue = secondary,
-            onClick = { onSelect("secondaryThemeColor$keySuffix") },
+            onClick = {
+                onSelect(
+                    if (keySuffix.isEmpty()) ThemeColorSlot.Secondary
+                    else ThemeColorSlot.SecondaryNight
+                )
+            },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_primary_text_color),
             colorValue = primaryText,
-            onClick = { onSelect("primaryTextColor$keySuffix") },
+            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.PrimaryText else ThemeColorSlot.PrimaryTextNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_secondary_text_color),
             colorValue = secondaryText,
-            onClick = { onSelect("secondaryTextColor$keySuffix") },
+            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.SecondaryText else ThemeColorSlot.SecondaryTextNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_background_color),
             colorValue = background,
-            onClick = { onSelect("themeBackgroundColor$keySuffix") },
+            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.Background else ThemeColorSlot.BackgroundNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_label_container_color),
             colorValue = labelContainer,
-            onClick = { onSelect("labelContainerColor$keySuffix") },
+            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.LabelContainer else ThemeColorSlot.LabelContainerNight) },
         )
     }
 }
@@ -331,4 +247,24 @@ private fun ColorSwatch(colorValue: Int) {
                 CircleShape
             )
     )
+}
+
+private fun CustomThemeUiState.colorForPicker(): Int = when (val picker = activePicker) {
+    is CustomThemePicker.DeepColor -> when (picker.slot) {
+        ThemeColorSlot.Primary -> themeColor
+        ThemeColorSlot.Secondary -> secondaryThemeColor
+        ThemeColorSlot.PrimaryText -> primaryTextColor
+        ThemeColorSlot.SecondaryText -> secondaryTextColor
+        ThemeColorSlot.Background -> themeBackgroundColor
+        ThemeColorSlot.LabelContainer -> labelContainerColor
+        ThemeColorSlot.PrimaryNight -> themeColorNight
+        ThemeColorSlot.SecondaryNight -> secondaryThemeColorNight
+        ThemeColorSlot.PrimaryTextNight -> primaryTextColorNight
+        ThemeColorSlot.SecondaryTextNight -> secondaryTextColorNight
+        ThemeColorSlot.BackgroundNight -> themeBackgroundColorNight
+        ThemeColorSlot.LabelContainerNight -> labelContainerColorNight
+    }
+    CustomThemePicker.DaySeed -> primarySeedColor
+    CustomThemePicker.NightSeed -> nightPrimarySeedColor
+    null -> 0
 }

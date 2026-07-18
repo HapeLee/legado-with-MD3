@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.MatchMode
@@ -49,7 +49,7 @@ class SearchViewModel(
     private val searchBooksUseCase: SearchBooksUseCase,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
 ) : ViewModel() {
 
     val searchLayoutMode = localPreferencesRepository

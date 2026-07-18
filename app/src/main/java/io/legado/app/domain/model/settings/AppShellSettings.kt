@@ -1,0 +1,25 @@
+package io.legado.app.domain.model.settings
+
+data class AppShellSettings(
+    val themeMode: String = "0",
+    val language: String = "auto",
+    val fontScale: Int = 10,
+    val composeEngine: String = "material",
+    val showHome: Boolean = true,
+    val showDiscovery: Boolean = true,
+    val showRss: Boolean = true,
+    val showStatusBar: Boolean = true,
+    val showBottomView: Boolean = true,
+    val useFloatingBottomBar: Boolean = false,
+    val useFloatingBottomBarLiquidGlass: Boolean = false,
+    val tabletInterface: String = "auto",
+    val labelVisibilityMode: String = "auto",
+    val defaultHomePage: String = "bookshelf",
+    val mainNavigationOrder: String = "home,bookshelf,explore,rss,my",
+    val navExtended: Boolean = false,
+    val navIconHome: String = "",
+    val navIconBookshelf: String = "",
+    val navIconExplore: String = "",
+    val navIconRss: String = "",
+    val navIconMy: String = "",
+)

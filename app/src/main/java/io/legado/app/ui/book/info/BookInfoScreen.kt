@@ -70,12 +70,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -127,6 +127,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 @Composable
 fun BookInfoScreen(
     state: BookInfoUiState,
+    groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -173,6 +174,7 @@ fun BookInfoScreen(
     }) {
         BookInfoScreenContent(
             state = state,
+            groups = groups,
             onIntent = onIntent,
             onBack = onBack,
             sharedTransitionScope = sharedTransitionScope,
@@ -195,6 +197,7 @@ fun BookInfoScreen(
 @Composable
 private fun BookInfoScreenContent(
     state: BookInfoUiState,
+    groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
@@ -350,7 +353,6 @@ private fun BookInfoScreenContent(
             onSelect = { onIntent(BookInfoIntent.SelectCover(it)) },
         )
         BookInfoSheet.GroupPicker -> {
-            val groups by koinInject<io.legado.app.data.repository.BookGroupRepository>().flowSelect().collectAsStateWithLifecycle(initialValue = emptyList())
             GroupSelectSheet(
                 show = currentSheet == BookInfoSheet.GroupPicker,
                 groups = groups,

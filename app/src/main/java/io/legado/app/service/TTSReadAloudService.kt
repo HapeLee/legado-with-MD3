@@ -8,7 +8,8 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import androidx.lifecycle.lifecycleScope
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.coroutine.Coroutine
@@ -23,6 +24,7 @@ import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -31,7 +33,9 @@ import org.koin.core.component.inject
  */
 class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener, KoinComponent {
 
-    private val localPreferencesRepository: LocalPreferencesRepository by inject()
+    private val readAloudSettingsGateway: ReadAloudSettingsGateway by inject()
+    @Volatile
+    private var speechRateSetting: Int = 5
 
     private var textToSpeech: TextToSpeech? = null
     private var ttsInitFinish = false
@@ -44,6 +48,12 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener,
 
     override fun onCreate() {
         super.onCreate()
+        speechRateSetting = readAloudSettingsGateway.currentSettings.ttsSpeechRate
+        lifecycleScope.launch {
+            readAloudSettingsGateway.settings.collect {
+                speechRateSetting = it.ttsSpeechRate
+            }
+        }
         initTts()
     }
 
@@ -212,7 +222,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener,
                 initTts()
             }
         } else {
-            val speechRate = (localPreferencesRepository.appSettings.value.readAloudSpeed + 5) / 10f
+            val speechRate = (speechRateSetting + 5) / 10f
             textToSpeech?.setSpeechRate(speechRate)
             if (reset && !pause) {
                 play()
