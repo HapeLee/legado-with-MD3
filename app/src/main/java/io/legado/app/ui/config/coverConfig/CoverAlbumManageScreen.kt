@@ -402,7 +402,7 @@ private fun CoverAlbumDialogs(
         )
 
         is CoverAlbumDialog.Delete -> AppAlertDialog(
-            show = true,
+            data = dialog,
             onDismissRequest = { onIntent(CoverAlbumIntent.DismissDialog) },
             title = stringResource(R.string.cover_album_delete),
             text = stringResource(R.string.cover_album_delete_confirmation, dialog.name),

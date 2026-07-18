@@ -2,6 +2,8 @@ package io.legado.app.data.repository
 
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
@@ -66,6 +68,17 @@ class ReadAloudSettingsRepository(
         ReadConfig.readAloudWakeLock = value
     }
 
+    suspend fun setShowReadAloudCapsule(value: Boolean) {
+        ReadConfig.showReadAloudCapsule = value
+    }
+
+    suspend fun setCapsulePosition(x: Float, y: Float) {
+        settingsRepository.putFloat(Keys.CapsuleOffsetX.name, x)
+        settingsRepository.putFloat(Keys.CapsuleOffsetY.name, y)
+    }
+
+    suspend fun resetCapsulePosition() = setCapsulePosition(0f, 0f)
+
     suspend fun setMediaButtonPerNext(value: Boolean) {
         ReadConfig.mediaButtonPerNext = value
     }
@@ -95,6 +108,21 @@ class ReadAloudSettingsRepository(
         ReadConfig.ttsSpeechRate = value.coerceIn(0, 80)
     }
 
+    suspend fun setSpeechAnalysisMode(value: String) {
+        ReadConfig.speechAnalysisMode = value
+    }
+
+    suspend fun setUseMultiSpeaker(value: Boolean) {
+        ReadConfig.useMultiSpeaker = value
+    }
+
+    suspend fun setDefaultInterface(value: String) {
+        settingsRepository.putString(
+            PreferKey.defaultReadAloudInterface,
+            value.takeIf { it in AVAILABLE_INTERFACES } ?: DEFAULT_INTERFACE_CLASSIC,
+        )
+    }
+
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
         return ReadAloudPreferences(
             ignoreAudioFocus = compatDsValue(Keys.IgnoreAudioFocus, false),
@@ -102,6 +130,9 @@ class ReadAloudSettingsRepository(
             readAloudByMediaButton = compatDsValue(Keys.ReadAloudByMediaButton, false),
             pauseReadAloudWhilePhoneCalls = compatDsValue(Keys.PauseReadAloudWhilePhoneCalls, false),
             readAloudWakeLock = compatDsValue(Keys.ReadAloudWakeLock, false),
+            showReadAloudCapsule = compatDsValue(Keys.ShowReadAloudCapsule, true),
+            capsuleOffsetX = compatDsValue(Keys.CapsuleOffsetX, 0f),
+            capsuleOffsetY = compatDsValue(Keys.CapsuleOffsetY, 0f),
             mediaButtonPerNext = compatDsValue(Keys.MediaButtonPerNext, false),
             readAloudByPage = compatDsValue(Keys.ReadAloudByPage, false),
             systemMediaControlCompatibilityChange =
@@ -110,6 +141,9 @@ class ReadAloudSettingsRepository(
             ttsTimer = PlaybackTimer.normalize(compatDsValue(Keys.TtsTimer, 0)),
             ttsFollowSys = compatDsValue(Keys.TtsFollowSys, true),
             ttsSpeechRate = compatDsValue(Keys.TtsSpeechRate, 5),
+            speechAnalysisMode = compatDsValue(Keys.SpeechAnalysisMode, "rule"),
+            useMultiSpeaker = compatDsValue(Keys.UseMultiSpeaker, true),
+            defaultInterface = compatDsValue(Keys.DefaultInterface, DEFAULT_INTERFACE_CLASSIC),
         )
     }
 
@@ -120,6 +154,9 @@ class ReadAloudSettingsRepository(
         val PauseReadAloudWhilePhoneCalls =
             booleanPreferencesKey(PreferKey.pauseReadAloudWhilePhoneCalls)
         val ReadAloudWakeLock = booleanPreferencesKey(PreferKey.readAloudWakeLock)
+        val ShowReadAloudCapsule = booleanPreferencesKey(PreferKey.showReadAloudCapsule)
+        val CapsuleOffsetX = floatPreferencesKey("read_aloud_capsule_offset_x")
+        val CapsuleOffsetY = floatPreferencesKey("read_aloud_capsule_offset_y")
         val MediaButtonPerNext = booleanPreferencesKey(KEY_MEDIA_BUTTON_PER_NEXT)
         val ReadAloudByPage = booleanPreferencesKey(PreferKey.readAloudByPage)
         val SystemMediaControlCompatibilityChange =
@@ -130,9 +167,15 @@ class ReadAloudSettingsRepository(
         val TtsSpeechRate = androidx.datastore.preferences.core.intPreferencesKey(
             PreferKey.ttsSpeechRate
         )
+        val SpeechAnalysisMode = stringPreferencesKey(PreferKey.speechAnalysisMode)
+        val UseMultiSpeaker = booleanPreferencesKey(PreferKey.useMultiSpeaker)
+        val DefaultInterface = stringPreferencesKey(PreferKey.defaultReadAloudInterface)
     }
 
     companion object {
         const val KEY_MEDIA_BUTTON_PER_NEXT = "mediaButtonPerNext"
+        const val DEFAULT_INTERFACE_CLASSIC = "classic"
+        const val DEFAULT_INTERFACE_PLAYER = "player"
+        val AVAILABLE_INTERFACES = setOf(DEFAULT_INTERFACE_CLASSIC, DEFAULT_INTERFACE_PLAYER)
     }
 }

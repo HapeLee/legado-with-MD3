@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
@@ -193,6 +194,11 @@ fun ReadAloudContent(
                 icon = Icons.Default.Settings,
                 label = stringResource(R.string.setting),
                 onClick = onShowReadAloudConfig,
+            )
+            ActionButton(
+                icon = Icons.Default.Headphones,
+                label = stringResource(R.string.switch_to_read_aloud_player),
+                onClick = { onIntent(ReadBookIntent.OpenReadAloudPlayer) },
             )
         }
     }

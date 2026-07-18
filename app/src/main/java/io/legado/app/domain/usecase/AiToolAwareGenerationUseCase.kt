@@ -106,7 +106,7 @@ class AiToolAwareGenerationUseCase(
 
         private val TOOL_CONTEXT_MESSAGE = AiMessage(
             role = AiMessageRole.SYSTEM,
-            content = "Read-only local book tools are available. Use them when needed to inspect the current book, list chapters, search cached chapter text by character or plot keyword, or read cached neighboring chapters for continuity. Use tools silently; the final response must still follow the original task output format.",
+            content = "Read-only local book tools are available. Use them when needed to inspect the current book, list chapters, search cached chapter text by character or plot keyword, read cached neighboring chapters for continuity, or look up saved character profiles, relationships, world-book entries, and outlines. Use tools silently; the final response must still follow the original task output format.",
         )
     }
 }

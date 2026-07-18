@@ -183,6 +183,9 @@ object ReadConfig {
     var readAloudWakeLock
         get() = ReadTtsConfig.readAloudWakeLock
         set(value) { ReadTtsConfig.readAloudWakeLock = value }
+    var showReadAloudCapsule
+        get() = ReadTtsConfig.showReadAloudCapsule
+        set(value) { ReadTtsConfig.showReadAloudCapsule = value }
     var mediaButtonPerNext
         get() = ReadTtsConfig.mediaButtonPerNext
         set(value) { ReadTtsConfig.mediaButtonPerNext = value }
@@ -198,6 +201,12 @@ object ReadConfig {
     var contentSelectSpeakMod
         get() = ReadTtsConfig.contentSelectSpeakMod
         set(value) { ReadTtsConfig.contentSelectSpeakMod = value }
+    var speechAnalysisMode
+        get() = ReadTtsConfig.speechAnalysisMode
+        set(value) { ReadTtsConfig.speechAnalysisMode = value }
+    var useMultiSpeaker
+        get() = ReadTtsConfig.useMultiSpeaker
+        set(value) { ReadTtsConfig.useMultiSpeaker = value }
     var audioPreDownloadNum
         get() = ReadTtsConfig.audioPreDownloadNum
         set(value) { ReadTtsConfig.audioPreDownloadNum = value }

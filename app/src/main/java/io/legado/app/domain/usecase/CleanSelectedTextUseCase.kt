@@ -52,7 +52,7 @@ class CleanSelectedTextUseCase(
             }
 
             val preset = resolvePreset() ?: error("No AI model configured")
-            val prompt = AiPromptTemplate.DEFAULT_CLEAN_SELECTION
+            val prompt = preset.promptTemplate.ifBlank { AiPromptTemplate.DEFAULT_CLEAN_SELECTION }
             val input = buildUserContent(
                 chapterTitle = chapterTitle,
                 selectedText = selectedText,

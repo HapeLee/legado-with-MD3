@@ -6,6 +6,9 @@ data class ReadAloudSettings(
     val readAloudByMediaButton: Boolean = false,
     val pauseReadAloudWhilePhoneCalls: Boolean = false,
     val readAloudWakeLock: Boolean = false,
+    val showReadAloudCapsule: Boolean = true,
+    val capsuleOffsetX: Float = 0f,
+    val capsuleOffsetY: Float = 0f,
     val mediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
     val systemMediaControlCompatibilityChange: Boolean = true,
@@ -13,4 +16,7 @@ data class ReadAloudSettings(
     val ttsTimer: Int = 0,
     val ttsFollowSys: Boolean = true,
     val ttsSpeechRate: Int = 5,
+    val speechAnalysisMode: String = "rule",
+    val useMultiSpeaker: Boolean = true,
+    val defaultInterface: String = "classic",
 )

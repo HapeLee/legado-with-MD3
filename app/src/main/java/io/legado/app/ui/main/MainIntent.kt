@@ -14,6 +14,9 @@ object MainIntent {
     const val EXTRA_BOOK_URL = "bookUrl"
     const val EXTRA_BOOK_ORIGIN = "origin"
     const val EXTRA_BOOK_COVER = "coverPath"
+    const val EXTRA_CHARACTER_ID = "characterId"
+    const val EXTRA_ENTRY_ID = "entryId"
+    const val EXTRA_EVENT_ID = "eventId"
     const val EXTRA_READ_ALOUD = "readAloud"
     const val EXTRA_IN_BOOKSHELF = "inBookshelf"
     const val EXTRA_CHAPTER_CHANGED = "chapterChanged"
@@ -148,6 +151,82 @@ object MainIntent {
             putExtra(EXTRA_BOOK_URL, bookUrl)
             putExtra(EXTRA_BOOK_ORIGIN, origin)
             putExtra(EXTRA_BOOK_COVER, coverPath)
+        }
+    }
+
+    fun createBookCharacterDetailIntent(
+        context: Context,
+        bookUrl: String,
+        characterId: String? = null,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_CHARACTER_DETAIL)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+            putExtra(EXTRA_CHARACTER_ID, characterId)
+        }
+    }
+
+    fun createBookCharacterNetworkIntent(
+        context: Context,
+        bookUrl: String,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_CHARACTER_NETWORK)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+        }
+    }
+
+    fun createBookCharacterListIntent(
+        context: Context,
+        bookUrl: String,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_CHARACTER_LIST)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+        }
+    }
+
+    fun createBookKnowledgeListIntent(
+        context: Context,
+        bookUrl: String,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_KNOWLEDGE_LIST)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+        }
+    }
+
+    fun createBookKnowledgeDetailIntent(
+        context: Context,
+        bookUrl: String,
+        entryId: String? = null,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_KNOWLEDGE_DETAIL)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+            entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
+        }
+    }
+
+    fun createBookEventListIntent(
+        context: Context,
+        bookUrl: String,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_EVENT_LIST)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+        }
+    }
+
+    fun createBookEventDetailIntent(
+        context: Context,
+        bookUrl: String,
+        eventId: String? = null,
+    ): Intent {
+        return createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_EVENT_DETAIL)
+            putExtra(EXTRA_BOOK_URL, bookUrl)
+            eventId?.let { putExtra(EXTRA_EVENT_ID, it) }
         }
     }
 

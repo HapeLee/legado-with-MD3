@@ -114,7 +114,7 @@ fun TxtTocRulePreviewScreen(
     when (val sheet = state.activeSheet) {
         is TxtTocRulePreviewSheet.ChapterList -> {
             AppModalBottomSheet(
-                show = true,
+                data = sheet.item,
                 onDismissRequest = { onIntent(TxtTocRulePreviewIntent.DismissSheet) },
             ) {
                 ChapterListSheetContent(

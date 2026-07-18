@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -49,7 +50,8 @@ fun EmptyMessage(
         modifier = modifier
             .wrapContentSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         AnimatedContent(
             targetState = isLoading,
@@ -71,11 +73,9 @@ fun EmptyMessage(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         AnimatedTextLine(
             text = message,
-            style = LegadoTheme.typography.labelLarge,
+            style = LegadoTheme.typography.labelMediumEmphasized,
             textAlign = TextAlign.Center,
             maxLines = 2,
             softWrap = true,

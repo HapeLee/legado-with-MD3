@@ -36,6 +36,14 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
+import io.legado.app.domain.model.readaloud.SpeechPlanItem
+import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
+import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
+import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
+import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
+import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
+import io.legado.app.help.readaloud.segment.toCanonicalSpeechParagraphs
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -44,6 +52,7 @@ import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.model.ReadAloud
+import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.receiver.MediaButtonReceiver
 import io.legado.app.ui.book.read.page.entities.TextChapter
@@ -62,6 +71,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.get
 import splitties.init.appCtx
 import splitties.systemservices.audioManager
 import splitties.systemservices.notificationManager
@@ -108,6 +118,10 @@ abstract class BaseReadAloudService : BaseService(),
 
     }
 
+    private val sessionStore: ReadAloudSessionStore by lazy {
+        get(ReadAloudSessionStore::class.java)
+    }
+
     private val useWakeLock = ReadConfig.readAloudWakeLock
     private val wakeLock by lazy {
         powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "legado:ReadAloudService")
@@ -132,6 +146,10 @@ abstract class BaseReadAloudService : BaseService(),
         ReadAloudPhoneStateListener()
     }
     internal var contentList = emptyList<String>()
+    /** Canonical, character-aware plan for the current chapter. Playback adoption is incremental. */
+    internal var speechPlan = emptyList<SpeechPlanItem>()
+    internal var playbackQueue = ReadAloudPlaybackQueue.Empty
+    internal var playbackCursor: ReadAloudPlaybackCursor? = null
     internal var nowSpeak: Int = 0
     internal var readAloudNumber: Int = 0
     internal var textChapter: TextChapter? = null
@@ -141,6 +159,8 @@ abstract class BaseReadAloudService : BaseService(),
     private var registeredPhoneStateListener = false
     private var dsJob: Job? = null
     private var upNotificationJob: Coroutine<*>? = null
+    private var prepareReadAloudJob: Coroutine<*>? = null
+    private var prepareReadAloudGeneration = 0L
     private var cover: Bitmap =
         BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)
     var pageChanged = false
@@ -148,6 +168,9 @@ abstract class BaseReadAloudService : BaseService(),
     var paragraphStartPos = 0
     var readAloudByPage = false
         private set
+    protected open val useSpeechPlaybackQueue: Boolean = false
+    protected val hasSpeechPlaybackQueue: Boolean
+        get() = useSpeechPlaybackQueue && !playbackQueue.isEmpty
 
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -205,12 +228,15 @@ abstract class BaseReadAloudService : BaseService(),
     override fun onDestroy() {
         ReadBook.upReadTime()
         super.onDestroy()
+        prepareReadAloudGeneration++
+        prepareReadAloudJob?.cancel()
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
         }
         isRun = false
         pause = true
+        sessionStore.stop()
         currentChapterIndex = -1
         currentProgress = 0
         abandonFocus()
@@ -254,20 +280,32 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun newReadAloud(play: Boolean, pageIndex: Int, startPos: Int) {
-        execute(executeContext = IO) {
-            this@BaseReadAloudService.pageIndex = pageIndex
-            textChapter = ReadBook.curTextChapter
-            val textChapter = textChapter ?: return@execute
-            if (!textChapter.isCompleted) {
+        val generation = ++prepareReadAloudGeneration
+        prepareReadAloudJob?.cancel()
+        prepareReadAloudJob = execute(executeContext = IO) {
+            val preparedChapter = ReadBook.curTextChapter ?: return@execute
+            if (!preparedChapter.isCompleted) {
                 return@execute
             }
-            readAloudNumber = textChapter.getReadLength(pageIndex) + startPos
-            readAloudByPage = ReadConfig.readAloudByPage
-            contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0)
+            val preparedReadAloudByPage = ReadConfig.readAloudByPage
+            var preparedReadAloudNumber = preparedChapter.getReadLength(pageIndex) + startPos
+            var preparedContentList = preparedChapter.getNeedReadAloud(0, preparedReadAloudByPage, 0)
                 .split("\n")
                 .filter { it.isNotEmpty() }
+            val preparedSpeechPlan = buildSpeechPlan(
+                bookUrl = ReadBook.book?.bookUrl.orEmpty(),
+                chapterIndex = ReadBook.durChapterIndex,
+                textChapter = preparedChapter,
+            )
+            if (generation != prepareReadAloudGeneration) return@execute
+            val preparedPlaybackQueue = runCatching {
+                ReadAloudPlaybackQueue.from(preparedSpeechPlan)
+            }.onFailure {
+                AppLog.put("创建多角色播放队列失败，使用原朗读方式\n${it.localizedMessage}", it)
+            }.getOrDefault(ReadAloudPlaybackQueue.Empty)
+            var preparedPlaybackCursor = preparedPlaybackQueue.cursorAt(preparedReadAloudNumber)
             var pos = startPos
-            val page = textChapter.getPage(pageIndex)!!
+            val page = preparedChapter.getPage(pageIndex) ?: return@execute
             if (pos > 0) {
                 for (paragraph in page.paragraphs) {
                     val tmp = pos - paragraph.length - 1
@@ -275,29 +313,76 @@ abstract class BaseReadAloudService : BaseService(),
                     pos = tmp
                 }
             }
-            nowSpeak = textChapter.getParagraphNum(readAloudNumber + 1, readAloudByPage) - 1
-            if (!readAloudByPage && startPos == 0 && !toLast) {
+            var preparedNowSpeak = preparedChapter.getParagraphNum(
+                preparedReadAloudNumber + 1,
+                preparedReadAloudByPage,
+            ) - 1
+            val moveToLast = toLast
+            if (!preparedReadAloudByPage && startPos == 0 && !moveToLast) {
                 pos = page.chapterPosition -
-                        textChapter.paragraphs[nowSpeak].chapterPosition
+                        preparedChapter.paragraphs[preparedNowSpeak].chapterPosition
             }
-            if (toLast) {
-                toLast = false
-                readAloudNumber = textChapter.getLastParagraphPosition()
-                nowSpeak = contentList.lastIndex
+            if (moveToLast) {
+                preparedReadAloudNumber = preparedChapter.getLastParagraphPosition()
+                preparedNowSpeak = preparedContentList.lastIndex
                 if (page.paragraphs.size == 1) {
                     pos = page.chapterPosition -
-                            textChapter.paragraphs[nowSpeak].chapterPosition
+                            preparedChapter.paragraphs[preparedNowSpeak].chapterPosition
                 }
             }
-            updateReadAloudProgressSnapshot(readAloudNumber + 1)
-            paragraphStartPos = pos
+            var preparedParagraphStartPos = pos
+            if (useSpeechPlaybackQueue && !preparedPlaybackQueue.isEmpty) {
+                preparedPlaybackQueue.cursorAt(preparedReadAloudNumber)?.let { cursor ->
+                    preparedPlaybackCursor = cursor
+                    preparedContentList = preparedPlaybackQueue.cues.map { it.text }
+                    preparedNowSpeak = cursor.cueIndex
+                    preparedParagraphStartPos = cursor.offset
+                    preparedReadAloudNumber = preparedPlaybackQueue.cues[cursor.cueIndex].chapterStart
+                }
+            }
+            if (generation != prepareReadAloudGeneration) return@execute
+            this@BaseReadAloudService.pageIndex = pageIndex
+            textChapter = preparedChapter
+            readAloudByPage = preparedReadAloudByPage
+            contentList = preparedContentList
+            speechPlan = preparedSpeechPlan
+            playbackQueue = preparedPlaybackQueue
+            playbackCursor = preparedPlaybackCursor
+            nowSpeak = preparedNowSpeak
+            readAloudNumber = preparedReadAloudNumber
+            paragraphStartPos = preparedParagraphStartPos
+            updateReadAloudProgressSnapshot(preparedReadAloudNumber + 1)
+            if (moveToLast) toLast = false
+            preparedPlaybackCursor?.takeIf { hasSpeechPlaybackQueue }?.let(::publishPlaybackInfo)
             launch(Main) {
+                if (generation != prepareReadAloudGeneration) return@launch
                 upMediaMetadata()
                 if (play) play() else pageChanged = true
             }
         }.onError {
             AppLog.put("启动朗读出错\n${it.localizedMessage}", it, true)
         }
+    }
+
+    protected suspend fun buildSpeechPlan(
+        bookUrl: String,
+        chapterIndex: Int,
+        textChapter: TextChapter,
+    ): List<SpeechPlanItem> {
+        if (bookUrl.isEmpty() || !ReadConfig.useMultiSpeaker) return emptyList()
+        val prepareSpeechPlan: PrepareChapterSpeechPlanUseCase =
+            get(PrepareChapterSpeechPlanUseCase::class.java)
+        return runCatching {
+            prepareSpeechPlan(
+                bookUrl = bookUrl,
+                chapterIndex = chapterIndex,
+                paragraphs = textChapter.toCanonicalSpeechParagraphs(),
+                analysisMode = SpeechAnalysisMode.fromStorage(ReadConfig.speechAnalysisMode),
+                useMultiSpeaker = ReadConfig.useMultiSpeaker,
+            )
+        }.onFailure {
+            AppLog.put("生成多角色朗读计划失败，使用原朗读方式\n${it.localizedMessage}", it)
+        }.getOrDefault(emptyList())
     }
 
     @SuppressLint("WakelockTimeout")
@@ -311,6 +396,7 @@ abstract class BaseReadAloudService : BaseService(),
         needResumeOnAudioFocusGain = false
         needResumeOnCallStateIdle = false
         upReadAloudNotification()
+        sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
         if (!ReadBook.isAutoSaveSessionRunning) {
             ReadBook.startReadSession()
@@ -332,6 +418,7 @@ abstract class BaseReadAloudService : BaseService(),
         }
         upReadAloudNotification()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PAUSED)
+        sessionStore.setStatus(ReadAloudSessionStatus.Paused)
         postEvent(EventBus.ALOUD_STATE, Status.PAUSE)
         ReadBook.uploadProgress()
         doDs()
@@ -353,6 +440,7 @@ abstract class BaseReadAloudService : BaseService(),
         needResumeOnCallStateIdle = false
         upReadAloudNotification()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+        sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
         if (!ReadBook.isAutoSaveSessionRunning) {
             ReadBook.startReadSession()
@@ -363,6 +451,21 @@ abstract class BaseReadAloudService : BaseService(),
 
     fun upTtsProgress(progress: Int) {
         ReadBook.upReadTime()
+        val chapterPosition = progress.coerceAtLeast(0)
+        if (hasSpeechPlaybackQueue) {
+            playbackQueue.cursorAt(chapterPosition)?.let(::publishPlaybackInfo)
+        } else {
+            val chapterLength = textChapter?.paragraphs?.lastOrNull()?.let { paragraph ->
+                paragraph.chapterPosition + paragraph.text.length
+            } ?: chapterPosition
+            sessionStore.updatePlayback(
+                ReadAloudPlaybackInfo(
+                    chapterPosition = chapterPosition,
+                    chapterLength = chapterLength.coerceAtLeast(1),
+                    text = contentList.getOrNull(nowSpeak).orEmpty(),
+                )
+            )
+        }
         updateReadAloudProgressSnapshot(progress)
         postEvent(EventBus.TTS_PROGRESS, progress)
     }
@@ -409,6 +512,18 @@ abstract class BaseReadAloudService : BaseService(),
 
     private fun prevP() {
         ReadBook.upReadTime()
+        if (hasSpeechPlaybackQueue) {
+            val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
+            playbackQueue.previous(current)?.let { previous ->
+                playStop()
+                moveToPlaybackCursor(previous)
+                play()
+            } ?: run {
+                toLast = true
+                ReadBook.moveToPrevChapter(true)
+            }
+            return
+        }
         if (nowSpeak > 0) {
             playStop()
             do {
@@ -436,6 +551,15 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun nextP() {
+        if (hasSpeechPlaybackQueue) {
+            val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
+            playbackQueue.next(current)?.let { next ->
+                playStop()
+                moveToPlaybackCursor(next)
+                play()
+            } ?: nextChapter()
+            return
+        }
         if (nowSpeak < contentList.size - 1) {
             playStop()
             readAloudNumber += contentList[nowSpeak].length.plus(1) - paragraphStartPos
@@ -461,6 +585,41 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+    protected fun moveToPlaybackCursor(cursor: ReadAloudPlaybackCursor) {
+        val cue = playbackQueue.cues[cursor.cueIndex]
+        playbackCursor = cursor
+        nowSpeak = cursor.cueIndex
+        paragraphStartPos = cursor.offset
+        readAloudNumber = cue.chapterStart
+        publishPlaybackInfo(cursor)
+        textChapter?.let { chapter ->
+            val targetPosition = cue.chapterStart + cursor.offset
+            val targetPage = chapter.getPageIndexByCharIndex(targetPosition)
+            while (pageIndex < targetPage) {
+                pageIndex++
+                ReadBook.moveToNextPage()
+            }
+            while (pageIndex > targetPage) {
+                pageIndex--
+                ReadBook.moveToPrevPage()
+            }
+            upTtsProgress(targetPosition + 1)
+        }
+        upMediaMetadata(showContent = true)
+    }
+
+    private fun publishPlaybackInfo(cursor: ReadAloudPlaybackCursor) {
+        val cue = playbackQueue.cues.getOrNull(cursor.cueIndex) ?: return
+        sessionStore.updatePlayback(ReadAloudPlaybackInfo(
+            chapterPosition = cue.chapterStart + cursor.offset,
+            chapterLength = playbackQueue.cues.lastOrNull()?.chapterEnd ?: cue.chapterEnd,
+            text = cue.text,
+            engineName = cue.voice?.displayName.orEmpty(),
+            characterName = speechPlan.getOrNull(cursor.cueIndex)?.segment?.characterName.orEmpty(),
+            roleType = cue.roleType,
+        ))
+    }
+
     private fun setTimer(minute: Int) {
         timeMinute = minute
         doDs()
@@ -476,6 +635,7 @@ abstract class BaseReadAloudService : BaseService(),
      */
     @Synchronized
     private fun doDs() {
+        sessionStore.updateTimer(timeMinute)
         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
         upReadAloudNotification()
         dsJob?.cancel()
@@ -489,10 +649,12 @@ abstract class BaseReadAloudService : BaseService(),
                     timeMinute--
                     if (timeMinute == PlaybackTimer.MIN_MINUTES) {
                         ReadAloud.stop(this@BaseReadAloudService)
+                        sessionStore.updateTimer(timeMinute)
                         postEvent(EventBus.READ_ALOUD_DS, timeMinute)
                         break
                     }
                 }
+                sessionStore.updateTimer(timeMinute)
                 postEvent(EventBus.READ_ALOUD_DS, timeMinute)
                 upReadAloudNotification()
             }
