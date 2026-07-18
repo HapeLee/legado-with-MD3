@@ -51,6 +51,8 @@ data class ThemeSettings(
     val eyeProtectionStartTime: String = "22:00",
     val eyeProtectionEndTime: String = "07:00",
     val showRefactorTip: Boolean = true,
+    val enableCustomTagColors: Boolean = false,
+    val customTagColorsJson: String? = null,
 )
 
 data class ThemeCustomColors(

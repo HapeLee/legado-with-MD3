@@ -141,6 +141,7 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
                 ThemeBooleanSetting.EyeProtectionSchedule -> PreferKey.eyeProtectionSchedule to update.value
                 ThemeBooleanSetting.ShowRefactorTip ->
                     io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name to update.value
+                ThemeBooleanSetting.EnableCustomTagColors -> PreferKey.enableCustomTagColors to update.value
             }
             is ThemeSettingsUpdate.IntValue -> when (update.setting) {
                 ThemeIntSetting.ContainerOpacity -> PreferKey.containerOpacity to update.value
@@ -169,6 +170,7 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
                 ThemeStringSetting.BackgroundImageDark -> PreferKey.bgImageN to update.value
                 ThemeStringSetting.EyeProtectionStartTime -> PreferKey.eyeProtectionStartTime to update.value
                 ThemeStringSetting.EyeProtectionEndTime -> PreferKey.eyeProtectionEndTime to update.value
+                ThemeStringSetting.CustomTagColorsJson -> PreferKey.customTagColors to update.value
             }
             }
             key to value
@@ -442,6 +444,8 @@ private fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     showRefactorTip = compatDsBoolean(
         io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name
     ) ?: true,
+    enableCustomTagColors = compatDsBoolean(PreferKey.enableCustomTagColors) ?: false,
+    customTagColorsJson = compatDsString(PreferKey.customTagColors),
 )
 
 class OtherSettingsRepository : OtherSettingsGateway {

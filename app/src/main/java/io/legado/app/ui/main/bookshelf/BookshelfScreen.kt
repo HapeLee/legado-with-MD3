@@ -102,12 +102,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.book.group.GroupEditSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -179,20 +176,20 @@ fun BookshelfScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is BaseRuleEvent.ShowSnackbar -> {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is BookshelfEffect.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
-                        message = event.message,
-                        actionLabel = event.actionLabel,
+                        message = effect.message,
+                        actionLabel = effect.actionLabel,
                         withDismissAction = true
                     )
-                    if (result == SnackbarResult.ActionPerformed && event.url != null) {
+                    if (result == SnackbarResult.ActionPerformed && effect.url != null) {
                         clipboardManager.setClipEntry(
                             ClipEntry(
                                 ClipData.newPlainText(
                                     "url",
-                                    event.url
+                                    effect.url
                                 )
                             )
                         )
@@ -207,7 +204,7 @@ fun BookshelfScreen(
         onResult = { uri ->
             uri?.let {
                 val groupId = uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
-                viewModel.importBookshelf(it, groupId)
+                viewModel.onIntent(BookshelfIntent.ImportFromUri(it, groupId))
             }
         }
     )
@@ -215,7 +212,7 @@ fun BookshelfScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { viewModel.exportToUri(it, uiState.items) }
+            uri?.let { viewModel.onIntent(BookshelfIntent.ExportToUri(it, uiState.items)) }
         }
     )
 
@@ -268,7 +265,7 @@ fun BookshelfScreen(
                 if (groups.isNotEmpty() && page in groups.indices) {
                     val targetGroupId = groups[page].groupId
                     if (latestSelectedGroupId != targetGroupId) {
-                        viewModel.changeGroup(targetGroupId)
+                        viewModel.onIntent(BookshelfIntent.ChangeGroup(targetGroupId))
                     }
                 }
             }
@@ -315,16 +312,16 @@ fun BookshelfScreen(
     val currentGroupBookCount by remember { derivedStateOf { uiState.currentGroupBookCount } }
 
     val clearSelection = {
-        viewModel.clearSelection()
+        viewModel.onIntent(BookshelfIntent.ClearSelection)
     }
     val exitEditMode = {
-        viewModel.exitEditMode()
+        viewModel.onIntent(BookshelfIntent.ExitEditMode)
     }
     val toggleEditMode = {
-        viewModel.toggleEditMode()
+        viewModel.onIntent(BookshelfIntent.ToggleEditMode)
     }
     val toggleBookSelection: (String) -> Unit = { bookUrl ->
-        viewModel.toggleBookSelection(bookUrl)
+        viewModel.onIntent(BookshelfIntent.ToggleBookSelection(bookUrl))
     }
 
     LaunchedEffect(pagerState.currentPage, isInFolderRoot) {
@@ -346,7 +343,7 @@ fun BookshelfScreen(
             progress.collect { backEvent ->
                 transitionState.seekTo(backEvent.progress, targetState = true)
             }
-            viewModel.setInFolderRoot(true)
+            viewModel.onIntent(BookshelfIntent.SetInFolderRoot(true))
             transitionState.animateTo(true)
         } catch (e: CancellationException) {
             transitionState.animateTo(false)
@@ -357,20 +354,20 @@ fun BookshelfScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val bookshelfFolderLayoutMode by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfFolderLayoutModeLandscapeState.value
-            else BookshelfConfig.bookshelfFolderLayoutModePortraitState.value
+            if (isLandscape) uiState.settings.bookshelfFolderLayoutModeLandscape
+            else uiState.settings.bookshelfFolderLayoutModePortrait
         }
     }
     val bookshelfFolderLayoutGrid by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfFolderLayoutGridLandscapeState.value
-            else BookshelfConfig.bookshelfFolderLayoutGridPortraitState.value
+            if (isLandscape) uiState.settings.bookshelfFolderLayoutGridLandscape
+            else uiState.settings.bookshelfFolderLayoutGridPortrait
         }
     }
     val bookshelfFolderLayoutList by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfFolderLayoutListLandscapeState.value
-            else BookshelfConfig.bookshelfFolderLayoutListPortraitState.value
+            if (isLandscape) uiState.settings.bookshelfFolderLayoutListLandscape
+            else uiState.settings.bookshelfFolderLayoutListPortrait
         }
     }
     val currentMenuGroupId by remember {
@@ -394,13 +391,13 @@ fun BookshelfScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showTopBarMenu by remember { mutableStateOf(false) }
     val onSearchClick = {
-        if (BookshelfConfig.bookshelfSearchActionDirectToSearchState.value) {
+        if (uiState.settings.bookshelfSearchActionDirectToSearch) {
             onNavigateToSearch(uiState.searchKey.trim())
         } else {
             val active = !uiState.isSearch
-            viewModel.setSearchMode(active)
+            viewModel.onIntent(BookshelfIntent.SetSearchMode(active))
             if (!active && uiState.selectedGroupId != currentTabGroupId) {
-                viewModel.changeGroup(currentTabGroupId)
+                viewModel.onIntent(BookshelfIntent.ChangeGroup(currentTabGroupId))
             }
         }
     }
@@ -424,24 +421,24 @@ fun BookshelfScreen(
                 uiState = uiState,
                 scrollBehavior = scrollBehavior,
                 onSearchClick = onSearchClick,
-                onSearchQueryChange = { viewModel.setSearchKey(it) },
+                onSearchQueryChange = { viewModel.onIntent(BookshelfIntent.SetSearchKey(it)) },
                 onSearchSubmit = { rawQuery ->
                     rawQuery.trim()
                         .takeIf { it.isNotEmpty() }
                         ?.let(onNavigateToSearch)
                 },
-                onClearSearch = { viewModel.setSearchKey("") },
+                onClearSearch = { viewModel.onIntent(BookshelfIntent.SetSearchKey("")) },
                 actions = {
                     AnimatedVisibility(visible = isEditMode) {
                         TopBarActionButton(
-                            onClick = { viewModel.selectAllVisible() },
+                            onClick = { viewModel.onIntent(BookshelfIntent.SelectAllVisible) },
                             imageVector = Icons.Default.SelectAll,
                             contentDescription = stringResource(R.string.select_all)
                         )
                     }
                     AnimatedVisibility(visible = isEditMode) {
                         TopBarActionButton(
-                            onClick = { viewModel.invertVisibleSelection() },
+                            onClick = { viewModel.onIntent(BookshelfIntent.InvertVisibleSelection) },
                             imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.revert_selection)
                         )
@@ -450,7 +447,7 @@ fun BookshelfScreen(
                         TopBarActionButton(
                             onClick = {
                                 if (selectedBookUrls.isNotEmpty()) {
-                                    viewModel.showOverlay(BookshelfOverlay.BatchDownloadConfirmDialog)
+                                    viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.BatchDownloadConfirmDialog))
                                 }
                             },
                             imageVector = Icons.Default.Download,
@@ -461,7 +458,7 @@ fun BookshelfScreen(
                         TopBarActionButton(
                             onClick = {
                                 if (selectedBookUrls.isNotEmpty()) {
-                                    viewModel.showOverlay(BookshelfOverlay.GroupSelectSheet)
+                                    viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupSelectSheet))
                                 }
                             },
                             imageVector = Icons.Default.Bookmarks,
@@ -492,13 +489,16 @@ fun BookshelfScreen(
                                 )
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.update_toc),
-                                    onClick = { viewModel.upToc(uiState.items); dismiss() },
+                                    onClick = {
+                                        viewModel.onIntent(BookshelfIntent.RefreshToc(uiState.items))
+                                        dismiss()
+                                    },
                                     leadingIcon = { Icon(Icons.Default.Refresh, null) }
                                 )
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.layout_setting),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.ConfigSheet)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ConfigSheet))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Default.GridView, null) }
@@ -506,7 +506,7 @@ fun BookshelfScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.group_manage),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.GroupManageSheet)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupManageSheet))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Outlined.ViewCarousel, null) }
@@ -514,7 +514,7 @@ fun BookshelfScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.add_url),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.AddUrlDialog)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.AddUrlDialog))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Default.Link, null) }
@@ -541,7 +541,7 @@ fun BookshelfScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.export_bookshelf),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.ExportSheet)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ExportSheet))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Default.UploadFile, null) }
@@ -549,7 +549,7 @@ fun BookshelfScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.import_bookshelf),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.ImportSheet)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ImportSheet))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Default.CloudDownload, null) }
@@ -557,7 +557,7 @@ fun BookshelfScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.log),
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.LogSheet)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.LogSheet))
                                         dismiss()
                                     },
                                     leadingIcon = { Icon(Icons.Default.History, null) }
@@ -589,16 +589,16 @@ fun BookshelfScreen(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            val showExpandButton by BookshelfConfig.shouldShowExpandButtonState
+                            val showExpandButton = uiState.settings.shouldShowExpandButton
                             if (showExpandButton) {
                                 Box(modifier = Modifier) {
                                     SmallToggleButton(
                                         checked = showGroupMenu,
                                         onCheckedChange = {
                                             if (it) {
-                                                viewModel.showOverlay(BookshelfOverlay.GroupMenu)
+                                                viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu))
                                             } else {
-                                                viewModel.dismissOverlay()
+                                                viewModel.onIntent(BookshelfIntent.DismissOverlay)
                                             }
                                         },
                                         style = ToggleStyle.Outlined,
@@ -607,14 +607,14 @@ fun BookshelfScreen(
                                     )
                                     RoundDropdownMenu(
                                         expanded = showGroupMenu,
-                                        onDismissRequest = { viewModel.dismissOverlay() }
+                                        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
                                     ) { dismiss ->
                                         uiState.groups.forEachIndexed { index, group ->
                                             RoundDropdownMenuItem(
                                                 text = group.groupName,
                                                 onClick = {
                                                     if (uiState.isSearch) {
-                                                        viewModel.changeGroup(group.groupId)
+                                                        viewModel.onIntent(BookshelfIntent.ChangeGroup(group.groupId))
                                                     }
                                                     scope.launch {
                                                         pagerState.animateScrollToPage(
@@ -661,7 +661,7 @@ fun BookshelfScreen(
                                                     RoundDropdownMenuItem(
                                                         text = group.groupName,
                                                         onClick = {
-                                                            viewModel.changeGroup(group.groupId)
+                                                            viewModel.onIntent(BookshelfIntent.ChangeGroup(group.groupId))
                                                             dismiss()
                                                         },
                                                         trailingIcon = {
@@ -680,7 +680,7 @@ fun BookshelfScreen(
                                                     RoundDropdownMenuItem(
                                                         text = group.groupName,
                                                         onClick = {
-                                                            viewModel.changeGroup(group.groupId)
+                                                            viewModel.onIntent(BookshelfIntent.ChangeGroup(group.groupId))
                                                             dismiss()
                                                         },
                                                         trailingIcon = {
@@ -721,7 +721,7 @@ fun BookshelfScreen(
         Box(Modifier.fillMaxSize()) {
             AppPullToRefresh(
                 isRefreshing = uiState.isRefreshing,
-                onRefresh = { viewModel.refreshBooks(uiState.items) },
+                onRefresh = { viewModel.onIntent(BookshelfIntent.RefreshBooks(uiState.items)) },
                 enabled = pullToRefreshEnabled,
                 topPadding = paddingValues.calculateTopPadding(),
                 scrollBehavior = scrollBehavior
@@ -785,17 +785,17 @@ fun BookshelfScreen(
                             ),
                         contentPadding = adaptiveContentPaddingBookshelf(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
+                            bottom = if (uiState.useRaisedBottomInset) 120.dp else 8.dp,
                             horizontal = 4.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
                         horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-                        showFastScroll = BookshelfConfig.showBookshelfFastScrollerState.value
+                        showFastScroll = uiState.settings.showBookshelfFastScroller
                     ) {
                         itemsIndexed(
                             uiState.groups,
                             key = { _, it -> it.groupId }) { index, group ->
-                            val countText = if (BookshelfConfig.showBookCountState.value) {
+                            val countText = if (uiState.settings.showBookCount) {
                                 uiState.groupBookCounts[group.groupId]?.let {
                                     stringResource(R.string.book_count, it)
                                 }
@@ -804,41 +804,43 @@ fun BookshelfScreen(
                             }
                             if (bookshelfFolderLayoutMode == 0) {
                                 BookGroupItemList(
+                                    settings = uiState.settings,
                                     group = group,
                                     previewBooks = uiState.groupPreviews[group.groupId]
                                         ?: emptyList(),
                                     countText = countText,
-                                    isCompact = BookshelfConfig.bookshelfLayoutCompactState.value,
-                                    titleSmallFont = BookshelfConfig.bookshelfTitleSmallFontState.value,
-                                    titleCenter = BookshelfConfig.bookshelfTitleCenterState.value,
-                                    titleMaxLines = BookshelfConfig.bookshelfTitleMaxLinesState.value,
-                                    coverShadow = BookshelfConfig.bookshelfCoverShadowState.value,
+                                    isCompact = uiState.settings.bookshelfLayoutCompact,
+                                    titleSmallFont = uiState.settings.bookshelfTitleSmallFont,
+                                    titleCenter = uiState.settings.bookshelfTitleCenter,
+                                    titleMaxLines = uiState.settings.bookshelfTitleMaxLines,
+                                    coverShadow = uiState.settings.bookshelfCoverShadow,
                                     onClick = {
                                         scope.launch { pagerState.scrollToPage(index) }
-                                        viewModel.setInFolderRoot(false)
+                                        viewModel.onIntent(BookshelfIntent.SetInFolderRoot(false))
                                     },
                                     onLongClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.GroupEditSheet(group.groupId))
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupEditSheet(group.groupId)))
                                     },
                                     onBookClick = onBookClick
                                 )
                             } else {
                                 BookGroupItemGrid(
+                                    settings = uiState.settings,
                                     group = group,
                                     previewBooks = uiState.groupPreviews[group.groupId]
                                         ?: emptyList(),
                                     countText = countText,
-                                    gridStyle = BookshelfConfig.bookshelfGridLayoutState.value,
-                                    titleSmallFont = BookshelfConfig.bookshelfTitleSmallFontState.value,
-                                    titleCenter = BookshelfConfig.bookshelfTitleCenterState.value,
-                                    titleMaxLines = BookshelfConfig.bookshelfTitleMaxLinesState.value,
-                                    coverShadow = BookshelfConfig.bookshelfCoverShadowState.value,
+                                    gridStyle = uiState.settings.bookshelfGridLayout,
+                                    titleSmallFont = uiState.settings.bookshelfTitleSmallFont,
+                                    titleCenter = uiState.settings.bookshelfTitleCenter,
+                                    titleMaxLines = uiState.settings.bookshelfTitleMaxLines,
+                                    coverShadow = uiState.settings.bookshelfCoverShadow,
                                     onClick = {
                                         scope.launch { pagerState.scrollToPage(index) }
-                                        viewModel.setInFolderRoot(false)
+                                        viewModel.onIntent(BookshelfIntent.SetInFolderRoot(false))
                                     },
                                     onLongClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.GroupEditSheet(group.groupId))
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupEditSheet(group.groupId)))
                                     }
                                 )
                             }
@@ -909,15 +911,15 @@ fun BookshelfScreen(
                                         null
                                     },
                                     onDragStarted = {
-                                        if (isSelectedGroup) viewModel.startDraggingBooks(it)
+                                        if (isSelectedGroup) viewModel.onIntent(BookshelfIntent.StartDragging(it))
                                     },
                                     onMoveBook = { from, to, currentBooks ->
                                         if (isSelectedGroup) {
-                                            viewModel.moveDraggingBook(from, to, currentBooks)
+                                            viewModel.onIntent(BookshelfIntent.MoveDragging(from, to, currentBooks))
                                         }
                                     },
                                     onDragFinished = {
-                                        if (isSelectedGroup) viewModel.finishDraggingBooks()
+                                        if (isSelectedGroup) viewModel.onIntent(BookshelfIntent.FinishDragging)
                                     },
                                     onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                                     onBookClick = onBookClick,
@@ -993,7 +995,7 @@ fun BookshelfScreen(
                                         role = Role.Button
                                     },
                                     onClick = {
-                                        viewModel.showOverlay(BookshelfOverlay.GroupMenu)
+                                        viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu))
                                     }
                                 )
                             }
@@ -1004,7 +1006,7 @@ fun BookshelfScreen(
                     if (summary.showGroupName) {
                         RoundDropdownMenu(
                             expanded = showGroupMenu,
-                            onDismissRequest = { viewModel.dismissOverlay() }
+                            onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
                         ) { dismiss ->
                             uiState.groups.forEach { group ->
                                 RoundDropdownMenuItem(
@@ -1020,10 +1022,10 @@ fun BookshelfScreen(
                                             }
                                         }
                                         if (uiState.isSearch || uiState.selectedGroupId != group.groupId) {
-                                            viewModel.changeGroup(group.groupId)
+                                            viewModel.onIntent(BookshelfIntent.ChangeGroup(group.groupId))
                                         }
                                         if (bookGroupStyle == 2) {
-                                            viewModel.setInFolderRoot(false)
+                                            viewModel.onIntent(BookshelfIntent.SetInFolderRoot(false))
                                         }
                                         dismiss()
                                     },
@@ -1127,12 +1129,21 @@ private fun BookshelfOverlays(
 ) {
     BookshelfConfigSheet(
         show = activeOverlay == BookshelfOverlay.ConfigSheet,
-        onDismissRequest = { viewModel.dismissOverlay() }
+        settings = uiState.settings,
+        onUpdate = { viewModel.onIntent(BookshelfIntent.UpdateSetting(it)) },
+        enableCustomTagColors = uiState.enableCustomTagColors,
+        customTagColors = uiState.customTagColors,
+        themeColor = uiState.themeColor,
+        onThemeUpdate = { viewModel.onIntent(BookshelfIntent.UpdateThemeSetting(it)) },
+        onCustomTagColorsChange = {
+            viewModel.onIntent(BookshelfIntent.SetCustomTagColors(it))
+        },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
     )
 
     GroupManageSheet(
         show = activeOverlay == BookshelfOverlay.GroupManageSheet,
-        onDismissRequest = { viewModel.dismissOverlay() }
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
     )
 
     val groups by viewModel.allGroupsFlow.collectAsStateWithLifecycle()
@@ -1143,7 +1154,7 @@ private fun BookshelfOverlays(
             GroupEditSheet(
                 show = true,
                 group = editGroup,
-                onDismissRequest = { viewModel.dismissOverlay() }
+                onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
             )
         }
     }
@@ -1152,10 +1163,10 @@ private fun BookshelfOverlays(
         show = activeOverlay == BookshelfOverlay.GroupSelectSheet,
         groups = groups.filter { it.groupId > 0 },
         currentGroupId = 0L,
-        onDismissRequest = { viewModel.dismissOverlay() },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) },
         onConfirm = { groupId ->
-            viewModel.moveBooksToGroup(selectedBookUrls, groupId)
-            viewModel.dismissOverlay()
+            viewModel.onIntent(BookshelfIntent.MoveBooksToGroup(selectedBookUrls, groupId))
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
             clearSelection()
         }
     )
@@ -1163,58 +1174,58 @@ private fun BookshelfOverlays(
     SourceInputDialog(
         show = activeOverlay == BookshelfOverlay.AddUrlDialog,
         title = stringResource(R.string.add_book_url),
-        onDismissRequest = { viewModel.dismissOverlay() },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) },
         onConfirm = { url ->
-            viewModel.addBookByUrl(url)
-            viewModel.dismissOverlay()
+            viewModel.onIntent(BookshelfIntent.AddBookByUrl(url))
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
         }
     )
 
     FilePickerSheet(
         show = activeOverlay == BookshelfOverlay.ImportSheet,
-        onDismissRequest = { viewModel.dismissOverlay() },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) },
         title = stringResource(R.string.import_bookshelf),
         onSelectSysFile = { types ->
             importLauncher.launch(types)
-            viewModel.dismissOverlay()
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
         },
         onManualInput = {
-            viewModel.showOverlay(BookshelfOverlay.AddUrlDialog)
+            viewModel.onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.AddUrlDialog))
         },
         allowExtensions = arrayOf("json", "txt")
     )
 
     FilePickerSheet(
         show = activeOverlay == BookshelfOverlay.ExportSheet,
-        onDismissRequest = { viewModel.dismissOverlay() },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) },
         title = stringResource(R.string.export_bookshelf),
         onSelectSysDir = {
-            viewModel.dismissOverlay()
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
             exportLauncher.launch("bookshelf.json")
         },
         onUpload = {
-            viewModel.dismissOverlay()
-            viewModel.uploadBookshelf(uiState.items)
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
+            viewModel.onIntent(BookshelfIntent.UploadBookshelf(uiState.items))
         }
     )
 
     AppLogSheet(
         show = activeOverlay == BookshelfOverlay.LogSheet,
-        onDismissRequest = { viewModel.dismissOverlay() }
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
     )
 
     AppAlertDialog(
         show = activeOverlay == BookshelfOverlay.BatchDownloadConfirmDialog,
-        onDismissRequest = { viewModel.dismissOverlay() },
+        onDismissRequest = { viewModel.onIntent(BookshelfIntent.DismissOverlay) },
         title = stringResource(R.string.draw),
         text = stringResource(R.string.sure_cache_book),
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
-            viewModel.dismissOverlay()
-            viewModel.downloadBooks(selectedBookUrls)
+            viewModel.onIntent(BookshelfIntent.DismissOverlay)
+            viewModel.onIntent(BookshelfIntent.DownloadBooks(selectedBookUrls))
         },
         dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { viewModel.dismissOverlay() }
+        onDismiss = { viewModel.onIntent(BookshelfIntent.DismissOverlay) }
     )
 
     if (uiState.isLoading) {
@@ -1306,20 +1317,20 @@ fun BookshelfPage(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val bookshelfLayoutMode by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscapeState.value
-            else BookshelfConfig.bookshelfLayoutModePortraitState.value
+            if (isLandscape) uiState.settings.bookshelfLayoutModeLandscape
+            else uiState.settings.bookshelfLayoutModePortrait
         }
     }
     val bookshelfLayoutGrid by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscapeState.value
-            else BookshelfConfig.bookshelfLayoutGridPortraitState.value
+            if (isLandscape) uiState.settings.bookshelfLayoutGridLandscape
+            else uiState.settings.bookshelfLayoutGridPortrait
         }
     }
     val bookshelfLayoutList by remember(isLandscape) {
         derivedStateOf {
-            if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscapeState.value
-            else BookshelfConfig.bookshelfLayoutListPortraitState.value
+            if (isLandscape) uiState.settings.bookshelfLayoutListLandscape
+            else uiState.settings.bookshelfLayoutListPortrait
         }
     }
     val columns by remember {
@@ -1328,13 +1339,13 @@ fun BookshelfPage(
         }
     }
     val isGridMode by remember { derivedStateOf { bookshelfLayoutMode != 0 } }
-    val bookItemGridStyle by BookshelfConfig.bookshelfGridLayoutState
-    val bookItemIsCompact by BookshelfConfig.bookshelfLayoutCompactState
-    val bookItemTitleSmallFont by BookshelfConfig.bookshelfTitleSmallFontState
-    val bookItemTitleCenter by BookshelfConfig.bookshelfTitleCenterState
-    val bookItemTitleMaxLines by BookshelfConfig.bookshelfTitleMaxLinesState
-    val bookItemCoverShadow by BookshelfConfig.bookshelfCoverShadowState
-    val showFastScroll by BookshelfConfig.showBookshelfFastScrollerState
+    val bookItemGridStyle = uiState.settings.bookshelfGridLayout
+    val bookItemIsCompact = uiState.settings.bookshelfLayoutCompact
+    val bookItemTitleSmallFont = uiState.settings.bookshelfTitleSmallFont
+    val bookItemTitleCenter = uiState.settings.bookshelfTitleCenter
+    val bookItemTitleMaxLines = uiState.settings.bookshelfTitleMaxLines
+    val bookItemCoverShadow = uiState.settings.bookshelfCoverShadow
+    val showFastScroll = uiState.settings.showBookshelfFastScroller
     val listContentDescription = stringResource(R.string.bookshelf)
     val totalHorizontalPadding =
         if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
@@ -1376,7 +1387,7 @@ fun BookshelfPage(
                 ),
             contentPadding = adaptiveContentPaddingBookshelf(
                 top = paddingValues.calculateTopPadding(),
-                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
+                bottom = if (uiState.useRaisedBottomInset) 120.dp else 8.dp,
                 horizontal = 8.dp
             ),
             verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
@@ -1395,6 +1406,12 @@ fun BookshelfPage(
                     enabled = canReorderBooks
                 ) { isDragging ->
                     BookItem(
+                        settings = uiState.settings,
+                        customTagColors = if (uiState.enableCustomTagColors) {
+                            uiState.customTagColors
+                        } else {
+                            persistentListOf()
+                        },
                         bookUi = bookUi,
                         modifier = Modifier
                             .reorderAccessibility(

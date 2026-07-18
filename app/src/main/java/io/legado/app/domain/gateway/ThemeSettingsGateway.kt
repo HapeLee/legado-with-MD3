@@ -49,6 +49,7 @@ enum class ThemeBooleanSetting {
     EyeProtectionEnabled,
     EyeProtectionSchedule,
     ShowRefactorTip,
+    EnableCustomTagColors,
 }
 
 enum class ThemeIntSetting {
@@ -78,6 +79,7 @@ enum class ThemeStringSetting {
     BackgroundImageDark,
     EyeProtectionStartTime,
     EyeProtectionEndTime,
+    CustomTagColorsJson,
 }
 
 enum class ThemeColorSlot {

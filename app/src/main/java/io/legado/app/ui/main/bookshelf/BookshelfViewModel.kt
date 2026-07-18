@@ -2,10 +2,8 @@ package io.legado.app.ui.main.bookshelf
 
 import android.app.Application
 import android.net.Uri
-import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
@@ -25,21 +23,27 @@ import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
+import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import io.legado.app.domain.gateway.BookshelfSettingsUpdate
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.CacheBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.CacheBookService
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.move
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
@@ -47,7 +51,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -66,7 +69,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -88,20 +91,24 @@ class BookshelfViewModel(
     private val refreshTocUseCase: RefreshTocUseCase,
     private val addBookUseCase: AddBookUseCase,
     private val importBookshelfUseCase: ImportBookshelfUseCase,
-    private val exportBookshelfUseCase: ExportBookshelfUseCase
+    private val exportBookshelfUseCase: ExportBookshelfUseCase,
+    private val bookshelfSettingsGateway: BookshelfSettingsGateway,
+    private val appShellSettingsGateway: AppShellSettingsGateway,
+    private val themeSettingsGateway: ThemeSettingsGateway,
 ) : BaseViewModel(application) {
     private var addBookJob: Coroutine<*>? = null
 
-    private val groupIdFlow = MutableStateFlow(BookshelfConfig.saveTabPosition)
+    private val initialSettings = bookshelfSettingsGateway.currentSettings
+    private val groupIdFlow = MutableStateFlow(initialSettings.saveTabPosition)
     private val searchKeyFlow = MutableStateFlow("")
     private val searchModeFlow = MutableStateFlow(false)
     private val loadingTextFlow = MutableStateFlow<String?>(null)
     private val activeOverlayFlow = MutableStateFlow<BookshelfOverlay?>(null)
     private val isEditModeFlow = MutableStateFlow(false)
     private val selectedBookUrlsFlow = MutableStateFlow<Set<String>>(emptySet())
-    private val isInFolderRootFlow = MutableStateFlow(BookshelfConfig.bookGroupStyle == 2)
+    private val isInFolderRootFlow = MutableStateFlow(initialSettings.bookGroupStyle == 2)
     private val isRefreshingFlow = MutableStateFlow(false)
-    private val bookGroupStyleFlow = MutableStateFlow(BookshelfConfig.bookGroupStyle)
+    private val bookGroupStyleFlow = MutableStateFlow(initialSettings.bookGroupStyle)
     private val draggingBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
     private val pendingSavedBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
     private val isInitialLoadingFlow = MutableStateFlow(true)
@@ -111,15 +118,19 @@ class BookshelfViewModel(
         val sortOrder: Int
     )
 
-    private fun readSortConfig() = BookshelfSortConfig(
-        sort = BookshelfConfig.bookshelfSort,
-        sortOrder = BookshelfConfig.bookshelfSortOrder
-    )
+    private val bookshelfSettings = bookshelfSettingsGateway.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialSettings)
+    private val initialAppShellSettings = appShellSettingsGateway.currentSettings
+    private val initialThemeSettings = themeSettingsGateway.currentSettings
 
-    private val sortConfigFlow: StateFlow<BookshelfSortConfig> = snapshotFlow {
-        readSortConfig()
-    }.distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), readSortConfig())
+    private val sortConfigFlow: StateFlow<BookshelfSortConfig> = bookshelfSettings
+        .map { BookshelfSortConfig(it.bookshelfSort, it.bookshelfSortOrder) }
+        .distinctUntilChanged()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            BookshelfSortConfig(initialSettings.bookshelfSort, initialSettings.bookshelfSortOrder)
+        )
 
     // 更新相关
     private val updateQueueLock = Any()
@@ -140,8 +151,8 @@ class BookshelfViewModel(
     private val updateDispatcher: CoroutineDispatcher
         get() = Dispatchers.IO.limitedParallelism(updateConcurrency)
 
-    protected val _eventChannel = Channel<BaseRuleEvent>()
-    val events = _eventChannel.receiveAsFlow()
+    private val _effects = MutableSharedFlow<BookshelfEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     val groupsFlow: SharedFlow<List<BookGroup>> = bookGroupRepository.flowShow()
         .onEach {
@@ -436,7 +447,7 @@ class BookshelfViewModel(
         val allGroupBooks: ImmutableMap<Long, ImmutableList<BookUiItem>>
     )
 
-    val uiState: StateFlow<BookshelfUiState> = combine(
+    private val contentUiState: Flow<BookshelfUiState> = combine(
         dataStateFlow,
         interactionStateFlow,
         isInitialLoadingFlow
@@ -517,7 +528,39 @@ class BookshelfViewModel(
             pendingSavedBooks = interaction.pendingSavedBooks?.toImmutableList(),
             visibleGroupBooks = visibleGroupBooks
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BookshelfUiState())
+    }
+
+    val uiState: StateFlow<BookshelfUiState> = combine(
+        contentUiState,
+        bookshelfSettings,
+        appShellSettingsGateway.settings,
+        themeSettingsGateway.settings,
+    ) { state, settings, appShellSettings, themeSettings ->
+        state.copy(
+            settings = settings,
+            useRaisedBottomInset = appShellSettings.useFloatingBottomBar || themeSettings.enableBlur,
+            enableCustomTagColors = themeSettings.enableCustomTagColors,
+            customTagColors = parseTagColors(themeSettings.customTagColorsJson),
+            themeColor = themeSettings.themeColor,
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        BookshelfUiState(
+            settings = initialSettings,
+            useRaisedBottomInset = initialAppShellSettings.useFloatingBottomBar || initialThemeSettings.enableBlur,
+            enableCustomTagColors = initialThemeSettings.enableCustomTagColors,
+            customTagColors = parseTagColors(initialThemeSettings.customTagColorsJson),
+            themeColor = initialThemeSettings.themeColor,
+        ),
+    )
+
+    private fun parseTagColors(json: String?): ImmutableList<TagColorPair> = try {
+        if (json.isNullOrBlank()) persistentListOf()
+        else GSON.fromJson(json, Array<TagColorPair>::class.java).toImmutableList()
+    } catch (_: Exception) {
+        persistentListOf()
+    }
 
     init {
         viewModelScope.launch {
@@ -530,18 +573,10 @@ class BookshelfViewModel(
             }
         }
         viewModelScope.launch {
-            snapshotFlow { BookshelfConfig.bookGroupStyle }
-                .distinctUntilChanged()
-                .collect { style ->
-                    updateBookGroupStyle(style)
-                }
-        }
-        viewModelScope.launch {
-            snapshotFlow { BookshelfConfig.showWaitUpCount }
-                .distinctUntilChanged()
-                .collect {
+            bookshelfSettings.collect { settings ->
+                updateBookGroupStyle(settings.bookGroupStyle)
                     postUpBooksCount()
-                }
+            }
         }
 
         viewModelScope.launch {
@@ -557,9 +592,53 @@ class BookshelfViewModel(
 
         viewModelScope.launch {
             isInitialLoadingFlow.filter { !it }.collect {
-                if (BookshelfConfig.autoRefreshBook) {
+                if (bookshelfSettings.value.autoRefreshBook) {
                     upAllBookToc()
                 }
+            }
+        }
+    }
+
+    fun onIntent(intent: BookshelfIntent) {
+        when (intent) {
+            is BookshelfIntent.ChangeGroup -> changeGroup(intent.groupId)
+            is BookshelfIntent.SetSearchKey -> setSearchKey(intent.value)
+            is BookshelfIntent.SetSearchMode -> setSearchMode(intent.active)
+            is BookshelfIntent.ShowOverlay -> showOverlay(intent.overlay)
+            BookshelfIntent.DismissOverlay -> dismissOverlay()
+            BookshelfIntent.ToggleEditMode -> toggleEditMode()
+            BookshelfIntent.ExitEditMode -> exitEditMode()
+            BookshelfIntent.ClearSelection -> clearSelection()
+            BookshelfIntent.SelectAllVisible -> selectAllVisible()
+            BookshelfIntent.InvertVisibleSelection -> invertVisibleSelection()
+            is BookshelfIntent.ToggleBookSelection -> toggleBookSelection(intent.bookUrl)
+            is BookshelfIntent.SetInFolderRoot -> setInFolderRoot(intent.value)
+            is BookshelfIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
+            is BookshelfIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.allChapters)
+            is BookshelfIntent.RefreshBooks -> refreshBooks(intent.books)
+            is BookshelfIntent.StartDragging -> startDraggingBooks(intent.books)
+            is BookshelfIntent.MoveDragging -> moveDraggingBook(intent.from, intent.to, intent.books)
+            BookshelfIntent.FinishDragging -> finishDraggingBooks()
+            BookshelfIntent.ScrollToTop -> gotoTop()
+            BookshelfIntent.RefreshAll -> upAllBookToc()
+            is BookshelfIntent.RefreshToc -> upToc(intent.books)
+            is BookshelfIntent.AddBookByUrl -> addBookByUrl(intent.urls)
+            is BookshelfIntent.ExportToUri -> exportToUri(intent.uri, intent.books)
+            is BookshelfIntent.UploadBookshelf -> uploadBookshelf(intent.books)
+            is BookshelfIntent.ImportFromUri -> importBookshelf(intent.uri, intent.groupId)
+            is BookshelfIntent.UpdateSetting -> viewModelScope.launch {
+                bookshelfSettingsGateway.update(intent.update)
+            }
+            is BookshelfIntent.UpdateThemeSetting -> viewModelScope.launch {
+                themeSettingsGateway.update(intent.update)
+            }
+            is BookshelfIntent.SetCustomTagColors -> viewModelScope.launch {
+                themeSettingsGateway.update(
+                    io.legado.app.domain.gateway.ThemeSettingsUpdate.StringValue(
+                        io.legado.app.domain.gateway.ThemeStringSetting.CustomTagColorsJson,
+                        GSON.toJson(intent.colors),
+                    )
+                )
             }
         }
     }
@@ -607,7 +686,9 @@ class BookshelfViewModel(
     fun changeGroup(groupId: Long) {
         if (groupIdFlow.value != groupId) {
             groupIdFlow.value = groupId
-            BookshelfConfig.saveTabPosition = groupId
+            viewModelScope.launch {
+                bookshelfSettingsGateway.update(BookshelfSettingsUpdate.SaveTabPosition(groupId))
+            }
             clearSelection()
             clearDragState()
         }
@@ -704,7 +785,7 @@ class BookshelfViewModel(
 
     fun saveBookOrder(reorderedBooks: List<BookUiItem>) {
         if (reorderedBooks.isEmpty()) return
-        val isDescending = BookshelfConfig.bookshelfSortOrder == 1
+        val isDescending = bookshelfSettings.value.bookshelfSortOrder == 1
         val maxOrder = reorderedBooks.size
         execute {
             val updates = reorderedBooks.mapIndexedNotNull { index, bookUi ->
@@ -742,7 +823,7 @@ class BookshelfViewModel(
     fun refreshBooks(books: List<BookUiItem>) {
         if (isRefreshingFlow.value) return
         isRefreshingFlow.value = true
-        val limit = BookshelfConfig.bookshelfRefreshingLimit
+        val limit = bookshelfSettings.value.bookshelfRefreshingLimit
         val list = if (limit > 0) books.take(limit) else books
         enqueueTocUpdate(list.map { it.book }, resetRefreshWhenIdle = true)
     }
@@ -793,7 +874,7 @@ class BookshelfViewModel(
     }
 
     fun upToc(books: List<BookUiItem>) {
-        val limit = BookshelfConfig.bookshelfRefreshingLimit
+        val limit = bookshelfSettings.value.bookshelfRefreshingLimit
         val list = if (limit > 0) books.take(limit) else books
         enqueueTocUpdate(list.map { it.book }, resetRefreshWhenIdle = false)
     }
@@ -917,7 +998,7 @@ class BookshelfViewModel(
     }
 
     private fun postUpBooksCount() {
-        val count = if (BookshelfConfig.showWaitUpCount) {
+        val count = if (bookshelfSettings.value.showWaitUpCount) {
             synchronized(updateQueueLock) {
                 waitUpTocBooks.size + onUpTocBooks.size
             }
@@ -983,9 +1064,9 @@ class BookshelfViewModel(
         execute {
             exportBookshelfUseCase.exportToUri(uri, items).getOrThrow()
         }.onSuccess {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出成功"))
+            _effects.tryEmit(BookshelfEffect.ShowSnackbar("导出成功"))
         }.onError {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfEffect.ShowSnackbar("导出失败\n${it.localizedMessage}"))
         }
     }
 
@@ -998,16 +1079,16 @@ class BookshelfViewModel(
                 contentType = "application/json"
             )
         }.onSuccess { url ->
-            _eventChannel.trySend(
-                BaseRuleEvent.ShowSnackbar(
+            _effects.tryEmit(
+                BookshelfEffect.ShowSnackbar(
                     message = "上传成功: $url",
                     actionLabel = "复制链接",
                     url = url
                 )
             )
         }.onError {
-            _eventChannel.trySend(
-                BaseRuleEvent.ShowSnackbar(
+            _effects.tryEmit(
+                BookshelfEffect.ShowSnackbar(
                     message = "上传失败: ${it.localizedMessage}"
                 )
             )

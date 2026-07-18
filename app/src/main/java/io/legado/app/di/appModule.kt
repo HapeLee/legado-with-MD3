@@ -25,6 +25,7 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookshelfRepository
+import io.legado.app.data.repository.BookshelfSettingsRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
 import io.legado.app.data.repository.CoverAlbumRepository
 import io.legado.app.data.repository.CoverSettingsRepository
@@ -78,6 +79,7 @@ import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
+import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
@@ -241,6 +243,7 @@ val appModule = module {
     single<BackupSettingsGateway> { BackupSettingsRepository() }
     single<LabSettingsGateway> { LabSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }
+    single<BookshelfSettingsGateway> { BookshelfSettingsRepository() }
     singleOf(::ReadSettingsRepository)
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     singleOf(::ReadAloudSettingsRepository)
