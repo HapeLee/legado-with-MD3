@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 
 private val fontGridHeight = 360.dp
 
-enum class FontSort(@StringRes val labelRes: Int) {
+enum class FontSort(@param:StringRes val labelRes: Int) {
     NameAsc(R.string.sort_name_asc),
     NameDesc(R.string.sort_name_desc),
     SizeAsc(R.string.sort_size_asc),
