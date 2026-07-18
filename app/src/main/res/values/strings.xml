@@ -1723,6 +1723,10 @@
     <string name="sort_new_to_old">Newest First</string>
     <string name="sort_name_asc">Name Ascending</string>
     <string name="sort_name_desc">Name Descending</string>
+    <string name="sort_size_asc">Size Ascending</string>
+    <string name="sort_size_desc">Size Descending</string>
+    <string name="sort_time_asc">Time Ascending</string>
+    <string name="sort_time_desc">Time Descending</string>
     <string name="text_dottedline">Dotted Underline</string>
     <string name="jump_to_volume">Jump to Volume</string>
     <string name="cancel_select">Cancel Selection</string>

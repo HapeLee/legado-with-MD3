@@ -66,6 +66,7 @@ object PreferKey {
     const val processText = "process_text"
     const val saveTabPosition = "saveTabPosition"
     const val fontFolder = "fontFolder"
+    const val fontSort = "fontSort"
     const val backupPath = "backupUri"
     const val restoreIgnore = "restoreIgnore"
     const val threadCount = "threadCount"

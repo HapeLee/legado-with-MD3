@@ -1674,6 +1674,10 @@
     <string name="sort_new_to_old">从新到旧</string>
     <string name="sort_name_asc">名称升序</string>
     <string name="sort_name_desc">名称降序</string>
+    <string name="sort_size_asc">大小升序</string>
+    <string name="sort_size_desc">大小降序</string>
+    <string name="sort_time_asc">时间升序</string>
+    <string name="sort_time_desc">时间降序</string>
     <string name="text_dottedline">下划虚线</string>
     <string name="jump_to_volume">跳转到卷</string>
     <string name="cancel_select">取消选择</string>
