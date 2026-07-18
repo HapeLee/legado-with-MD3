@@ -49,8 +49,8 @@ import io.legado.app.R
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.config.FontConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.utils.FileDoc
+import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -117,8 +117,8 @@ fun FontSelectGrid(
         else fontItems.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
         val comparator = when (FontSort.fromInt(fontSort)) {
-            FontSort.NameAsc -> compareBy<FileDoc> { it.name }
-            FontSort.NameDesc -> compareByDescending<FileDoc> { it.name }
+            FontSort.NameAsc -> Comparator<FileDoc> { a, b -> a.name.cnCompare(b.name) }
+            FontSort.NameDesc -> Comparator<FileDoc> { a, b -> b.name.cnCompare(a.name) }
             FontSort.SizeAsc -> compareBy<FileDoc> { it.size }
             FontSort.SizeDesc -> compareByDescending<FileDoc> { it.size }
             FontSort.DateAsc -> compareBy<FileDoc> { it.lastModified }
