@@ -43,6 +43,8 @@ data class ReadSettings(
     val showSelectMenuIcon: Boolean = true,
     val showReadTitleAddition: Boolean = true,
     val autoReadSpeed: Int = 10,
+    val systemTypefaces: Int = 0,
+    val preDownloadNum: Int = 10,
     val prevKeys: String = "",
     val nextKeys: String = "",
     val tocUiUseReplace: Boolean = false,
@@ -101,4 +103,3 @@ data class ReadSettings(
     val chineseConverterType: Int = 0,
     val showMenuIcon: Boolean = true,
 )
-

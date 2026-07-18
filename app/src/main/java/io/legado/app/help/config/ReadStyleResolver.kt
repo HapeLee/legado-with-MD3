@@ -77,14 +77,18 @@ object ReadStyleResolver {
             2 -> config.bgTypeEInk
             else -> error("unknown bgIndex: $bgIndex")
         }
-        if (bgType != 2) {
-            return null
-        }
         val bgStr = when (bgIndex) {
             0 -> config.bgStr
             1 -> config.bgStrNight
             2 -> config.bgStrEInk
             else -> error("unknown bgIndex: $bgIndex")
+        }
+        return backgroundPath(bgType, bgStr)
+    }
+
+    fun backgroundPath(bgType: Int, bgStr: String): String? {
+        if (bgType != 2) {
+            return null
         }
         return if (bgStr.contains(File.separator)) {
             bgStr

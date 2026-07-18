@@ -22,7 +22,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter.Companion.TYPE_FOOTER_VIEW
 import io.legado.app.databinding.ItemBookMangaEdgeBinding
 import io.legado.app.databinding.ItemBookMangaPageBinding
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.help.glide.progress.ProgressManager
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadManga
@@ -34,7 +34,10 @@ import io.legado.app.ui.book.manga.entities.ReaderLoading
 import io.legado.app.utils.dpToPx
 
 
-class MangaAdapter(private val context: Context) :
+class MangaAdapter(
+    private val context: Context,
+    private val settingsProvider: () -> MangaSettings,
+) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>(), PreloadModelProvider<Any> {
 
     private val inflater: LayoutInflater = LayoutInflater.from(context)
@@ -135,8 +138,9 @@ class MangaAdapter(private val context: Context) :
         }
 
         fun setBackground() {
-            binding.rootView.setBackgroundColor(ReadMangaConfig.mangaBackground)
-            binding.flProgress.setBackgroundColor(ReadMangaConfig.mangaBackground)
+            val background = settingsProvider().background
+            binding.rootView.setBackgroundColor(background)
+            binding.flProgress.setBackgroundColor(background)
         }
     }
 

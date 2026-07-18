@@ -14,6 +14,7 @@ import androidx.core.graphics.toColorInt
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadStyleResolver
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideThemeOverride
@@ -74,7 +75,7 @@ private fun rememberReadBackgroundTheme(
         seedColor = when (background.type) {
             0 -> background.value.toColorOrNull()
             else -> extractCurrentReadBackgroundSeed()
-                ?: ReadBookConfig.bgMeanColor.takeIf { it != 0 }?.let(::Color)
+                ?: ReadSessionState.backgroundMeanColor.takeIf { it != 0 }?.let(::Color)
         }
     }
 

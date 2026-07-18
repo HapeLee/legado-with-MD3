@@ -49,6 +49,8 @@ class ReadSettingsRepository(
             is ReadSettingsUpdate.UseZhLayout -> setUseZhLayout(update.value)
             is ReadSettingsUpdate.ShowBrightnessView -> setShowBrightnessView(update.value)
             is ReadSettingsUpdate.BrightnessVwPos -> setBrightnessVwPos(update.value)
+            is ReadSettingsUpdate.Brightness -> setReadBrightness(update.value)
+            is ReadSettingsUpdate.BrightnessAuto -> setBrightnessAuto(update.value)
             is ReadSettingsUpdate.UseUnderline -> setUseUnderline(update.value)
             is ReadSettingsUpdate.ReadSliderMode -> setReadSliderMode(update.value)
             is ReadSettingsUpdate.DoubleHorizontalPage -> setDoubleHorizontalPage(update.value)
@@ -71,6 +73,8 @@ class ReadSettingsRepository(
             is ReadSettingsUpdate.ShowMenuIcon -> setShowMenuIcon(update.value)
             is ReadSettingsUpdate.PageKeys -> setPageKeys(update.previous, update.next)
             is ReadSettingsUpdate.FontFolder -> setFontFolder(update.value)
+            is ReadSettingsUpdate.SystemTypefaces -> setSystemTypefaces(update.value)
+            is ReadSettingsUpdate.PreDownloadNum -> setPreDownloadNum(update.value)
         }
     }
 
@@ -190,6 +194,12 @@ class ReadSettingsRepository(
 
     suspend fun setAutoReadSpeed(value: Int) =
         settingsRepository.putInt(PreferKey.autoReadSpeed, value)
+
+    suspend fun setSystemTypefaces(value: Int) =
+        settingsRepository.putInt(PreferKey.systemTypefaces, value)
+
+    suspend fun setPreDownloadNum(value: Int) =
+        settingsRepository.putInt(PreferKey.preDownloadNum, value)
 
     suspend fun setPageKeys(prevKeys: String, nextKeys: String) {
         settingsRepository.putStrings(
@@ -391,6 +401,8 @@ class ReadSettingsRepository(
             showSelectMenuIcon = compatDsValue(Keys.ShowSelectMenuIcon, true),
             showReadTitleAddition = compatDsValue(Keys.ShowReadTitleAddition, true),
             autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
+            systemTypefaces = compatDsValue(Keys.SystemTypefaces, 0),
+            preDownloadNum = compatDsValue(Keys.PreDownloadNum, 10),
             prevKeys = compatDsValue(Keys.PrevKeys, ""),
             nextKeys = compatDsValue(Keys.NextKeys, ""),
             tocUiUseReplace = compatDsValue(Keys.TocUiUseReplace, false),
@@ -491,6 +503,8 @@ class ReadSettingsRepository(
         val ShowSelectMenuIcon = booleanPreferencesKey(PreferKey.showSelectMenuIcon)
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
+        val SystemTypefaces = intPreferencesKey(PreferKey.systemTypefaces)
+        val PreDownloadNum = intPreferencesKey(PreferKey.preDownloadNum)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)
         val NextKeys = stringPreferencesKey(PreferKey.nextKeys)
         val TocUiUseReplace = booleanPreferencesKey(PreferKey.tocUiUseReplace)

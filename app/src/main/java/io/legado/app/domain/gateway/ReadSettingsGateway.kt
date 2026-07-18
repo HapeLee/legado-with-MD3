@@ -26,6 +26,8 @@ sealed interface ReadSettingsUpdate {
     data class UseZhLayout(val value: Boolean) : ReadSettingsUpdate
     data class ShowBrightnessView(val value: String) : ReadSettingsUpdate
     data class BrightnessVwPos(val value: String) : ReadSettingsUpdate
+    data class Brightness(val value: Int) : ReadSettingsUpdate
+    data class BrightnessAuto(val value: Boolean) : ReadSettingsUpdate
     data class UseUnderline(val value: Boolean) : ReadSettingsUpdate
     data class ReadSliderMode(val value: String) : ReadSettingsUpdate
     data class DoubleHorizontalPage(val value: String) : ReadSettingsUpdate
@@ -48,4 +50,6 @@ sealed interface ReadSettingsUpdate {
     data class ShowMenuIcon(val value: Boolean) : ReadSettingsUpdate
     data class PageKeys(val previous: String, val next: String) : ReadSettingsUpdate
     data class FontFolder(val value: String) : ReadSettingsUpdate
+    data class SystemTypefaces(val value: Int) : ReadSettingsUpdate
+    data class PreDownloadNum(val value: Int) : ReadSettingsUpdate
 }

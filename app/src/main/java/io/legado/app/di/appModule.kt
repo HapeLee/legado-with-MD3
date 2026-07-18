@@ -44,6 +44,7 @@ import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LabSettingsRepository
+import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.LocalBookRepository
 import io.legado.app.data.repository.OtherSettingsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
@@ -102,6 +103,7 @@ import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomeDashboardGateway
 import io.legado.app.domain.gateway.HomepageModulesGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
+import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
@@ -109,6 +111,7 @@ import io.legado.app.domain.gateway.ReadAloudVoiceGateway
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
@@ -283,6 +286,7 @@ val appModule = module {
     single<CoverSettingsGateway> { CoverSettingsRepository() }
     single<BackupSettingsGateway> { BackupSettingsRepository() }
     single<LabSettingsGateway> { LabSettingsRepository() }
+    single<MangaSettingsGateway> { MangaSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }
     single<BookshelfSettingsGateway> { BookshelfSettingsRepository() }
     singleOf(::ReadSettingsRepository)
@@ -295,6 +299,7 @@ val appModule = module {
     singleOf(::HighlightRuleRepository)
     singleOf(::ReadStyleRepository)
     singleOf(::ReadBookStyleConfigRepository)
+    single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
     singleOf(::SaveSearchBooksUseCase)

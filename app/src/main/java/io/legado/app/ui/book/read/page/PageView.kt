@@ -21,6 +21,7 @@ import io.legado.app.databinding.ViewBookPageBinding
 import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -413,8 +414,8 @@ class PageView(
     fun upBg() {
         binding.vwRoot.background = LayerDrawable(
             arrayOf(
-                ReadBookConfig.bgMeanColor.toDrawable(),
-                ReadBookConfig.bg
+                ReadSessionState.backgroundMeanColor.toDrawable(),
+                ReadSessionState.background
             )
         )
         upBgAlpha()
@@ -424,7 +425,7 @@ class PageView(
      * 更新背景透明度
      */
     fun upBgAlpha() {
-        ReadBookConfig.bg?.alpha = (ReadBookConfig.bgAlpha / 100f * 255).toInt()
+        ReadSessionState.background?.alpha = (ReadBookConfig.bgAlpha / 100f * 255).toInt()
         binding.vwRoot.invalidate()
     }
 

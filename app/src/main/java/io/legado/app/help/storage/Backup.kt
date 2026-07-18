@@ -8,6 +8,7 @@ import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.DirectLinkUpload
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileInputStream
@@ -47,6 +49,9 @@ import java.util.concurrent.TimeUnit
  * 备份
  */
 object Backup {
+
+    private val readStyleGateway: ReadStyleGateway
+        get() = GlobalContext.get().get()
 
     val backupPath: String by lazy {
         appCtx.filesDir.getFile("backup").createFolderIfNotExist().absolutePath
@@ -166,11 +171,11 @@ object Backup {
             }
         }
         currentCoroutineContext().ensureActive()
-        GSON.toJson(ReadBookConfig.configList).let {
+        readStyleGateway.exportConfigsJson().let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
                 .writeText(it)
         }
-        GSON.toJson(ReadBookConfig.shareConfig).let {
+        readStyleGateway.exportShareConfigJson().let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
                 .writeText(it)
         }

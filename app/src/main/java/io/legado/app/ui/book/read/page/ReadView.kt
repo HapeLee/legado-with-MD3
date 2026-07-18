@@ -18,6 +18,7 @@ import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadSessionState
 import io.legado.app.service.BaseReadAloudService
 
 import io.legado.app.ui.book.read.page.api.DataSource
@@ -680,7 +681,7 @@ class ReadView(
      * 更新背景
      */
     fun upBg() {
-        ReadBookConfig.upBg(width, height)
+        ReadSessionState.updateBackground(width, height)
         curPage.upBg()
         prevPage.upBg()
         nextPage.upBg()

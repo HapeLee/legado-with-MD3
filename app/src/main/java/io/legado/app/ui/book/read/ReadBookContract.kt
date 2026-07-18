@@ -10,6 +10,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
@@ -93,6 +94,7 @@ data class ReadBookStyleConfig(
     val shareLayout: Boolean = false,
     // Config list for style selector
     val configCount: Int = 1,
+    val styleItems: ImmutableList<ReadStyleItem> = persistentListOf(),
 ) {
     // Computed properties for background mode
     val isDayBgImage: Boolean get() = bgType != 0

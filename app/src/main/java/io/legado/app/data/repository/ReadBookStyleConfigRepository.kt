@@ -1,62 +1,117 @@
 package io.legado.app.data.repository
 
+import io.legado.app.constant.PreferKey
+import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.domain.model.settings.ReadStyleItem
+import io.legado.app.domain.model.settings.ReadStyleState
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.utils.GSON
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.io.InputStream
 
-/**
- * Repository boundary for the legacy read style config file.
- *
- * The underlying model is still [ReadBookConfig.Config] because each read style
- * keeps a full layout/background/text configuration. This wrapper centralizes
- * file mutations so UI and ViewModel code do not call persistence helpers directly.
- */
 class ReadBookStyleConfigRepository(
     private val readStyleRepository: ReadStyleRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
-) {
+) : ReadStyleGateway {
 
-    fun save() {
-        ReadBookConfig.save()
+    private data class SaveSnapshot(
+        val configs: List<ReadBookConfig.Config>,
+        val shareConfig: ReadBookConfig.Config,
+    )
+
+    private val saveQueue = Channel<SaveSnapshot>(Channel.UNLIMITED)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _state = MutableStateFlow(buildState())
+    override val state: StateFlow<ReadStyleState> = _state.asStateFlow()
+    override val currentState: ReadStyleState get() = _state.value
+
+    init {
+        scope.launch {
+            for (snapshot in saveQueue) {
+                readStyleRepository.save(snapshot.configs, snapshot.shareConfig)
+            }
+        }
     }
 
-    fun addStyle(): Int {
-        ReadBookConfig.configList.add(ReadBookConfig.Config())
+    override fun refresh() {
+        ReadBookConfig.initConfigs()
+        ReadBookConfig.initShareConfig()
+        publishState()
+    }
+
+    override fun save() {
+        publishState()
+        saveQueue.trySend(
+            SaveSnapshot(
+                configs = ReadBookConfig.configsSnapshot(),
+                shareConfig = ReadBookConfig.shareConfigSnapshot(),
+            )
+        )
+    }
+
+    override fun addStyle(): Int {
+        val index = ReadBookConfig.addConfig(ReadBookConfig.Config())
         save()
-        return ReadBookConfig.configList.lastIndex
+        return index
     }
 
-    fun deleteCurrentStyle(): Boolean {
+    override fun deleteCurrentStyle(): Boolean {
         val deletedConfigName = ReadBookConfig.durConfig.name
-        val deleted = ReadBookConfig.deleteDur()
-        if (deleted) {
+        val removedIndex = ReadBookConfig.deleteDur()
+        if (removedIndex != null) {
+            val readIndex = AppConfigStore.getInt(PreferKey.readStyleSelect) ?: 0
+            val comicIndex = AppConfigStore.getInt(PreferKey.comicStyleSelect) ?: readIndex
+            AppConfigStore.putAll(
+                mapOf(
+                    PreferKey.readStyleSelect to if (removedIndex <= readIndex) {
+                        (readIndex - 1).coerceAtLeast(0)
+                    } else readIndex,
+                    PreferKey.comicStyleSelect to if (removedIndex <= comicIndex) {
+                        (comicIndex - 1).coerceAtLeast(0)
+                    } else comicIndex,
+                )
+            )
             highlightRuleRepository.removeConfigBinding(deletedConfigName)
             save()
         }
-        return deleted
+        return removedIndex != null
     }
 
-    fun importCurrentStyle(bytes: ByteArray) {
+    override fun importCurrentStyle(bytes: ByteArray) {
         ReadBookConfig.durConfig = readStyleRepository.import(bytes)
         save()
     }
 
-    fun exportCurrentStyle(): ByteArray {
+    override fun importOrReplaceStyle(bytes: ByteArray): String {
+        val name = ReadBookConfig.importOrReplaceConfig(readStyleRepository.import(bytes))
+        save()
+        return name
+    }
+
+    override fun exportCurrentStyle(): ByteArray {
         val config = ReadBookConfig.getExportConfig().copy(
             highlightRules = ArrayList(highlightRuleRepository.load(ReadBookConfig.durConfig.name))
         )
         return readStyleRepository.export(config)
     }
 
-    fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String {
-        return ReadBookConfig.saveBackgroundImage(inputStream, displayName)
-    }
+    override fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String =
+        readStyleRepository.saveBackgroundImage(inputStream, displayName)
 
-    fun setCurrentBackgroundImage(path: String) {
+    override fun setCurrentBackgroundImage(path: String) {
         ReadBookConfig.durConfig.setCurBg(2, path)
         save()
     }
 
-    fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean) {
+    override fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean) {
         if (isNight) {
             ReadBookConfig.durConfig.bgTypeNight = 2
             ReadBookConfig.durConfig.bgStrNight = path
@@ -67,4 +122,33 @@ class ReadBookStyleConfigRepository(
         save()
     }
 
+    override fun exportConfigsJson(): String = GSON.toJson(ReadBookConfig.configsSnapshot())
+
+    override fun exportShareConfigJson(): String = GSON.toJson(ReadBookConfig.shareConfigSnapshot())
+
+    private fun publishState() {
+        _state.value = buildState()
+    }
+
+    private fun buildState(): ReadStyleState = ReadStyleState(
+        items = ReadBookConfig.configsSnapshot().map { config ->
+            ReadStyleItem(
+                name = config.name,
+                bgType = config.bgType,
+                bgValue = config.bgStr,
+                bgTypeNight = config.bgTypeNight,
+                bgValueNight = config.bgStrNight,
+                bgTypeEInk = config.bgTypeEInk,
+                bgValueEInk = config.bgStrEInk,
+                textColor = config.getTextColor().toColorIntOrDefault(),
+                textColorNight = config.getTextColorNight().toColorIntOrDefault(),
+                textColorEInk = config.getTextColorEInk().toColorIntOrDefault(),
+            )
+        },
+        selectedIndex = ReadBookConfig.styleSelect,
+        shareLayout = ReadBookConfig.shareLayout,
+    )
+
+    private fun String.toColorIntOrDefault(): Int =
+        runCatching { android.graphics.Color.parseColor(this) }.getOrDefault(0)
 }

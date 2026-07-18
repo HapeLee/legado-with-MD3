@@ -10,6 +10,7 @@ import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.compatDsString
 import io.legado.app.help.config.compatDsValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,6 +32,9 @@ class ReadAloudSettingsRepository(
 
     override suspend fun update(update: ReadAloudSettingsUpdate) {
         when (update) {
+            is ReadAloudSettingsUpdate.TtsEngine -> setTtsEngine(update.value)
+            is ReadAloudSettingsUpdate.ParagraphInterval -> setTtsParagraphInterval(update.value)
+            is ReadAloudSettingsUpdate.AudioCacheCleanTime -> setAudioCacheCleanTime(update.value)
             is ReadAloudSettingsUpdate.IgnoreAudioFocus -> setIgnoreAudioFocus(update.value)
             is ReadAloudSettingsUpdate.MediaButtonOnExit -> setMediaButtonOnExit(update.value)
             is ReadAloudSettingsUpdate.ReadAloudByMediaButton -> setReadAloudByMediaButton(update.value)
@@ -45,6 +49,18 @@ class ReadAloudSettingsRepository(
             is ReadAloudSettingsUpdate.FollowSystem -> setTtsFollowSys(update.value)
             is ReadAloudSettingsUpdate.SpeechRate -> setTtsSpeechRate(update.value)
         }
+    }
+
+    suspend fun setTtsEngine(value: String?) {
+        AppConfigStore.putString(PreferKey.ttsEngine, value)
+    }
+
+    suspend fun setTtsParagraphInterval(value: Int) {
+        settingsRepository.putInt(PreferKey.ttsParagraphInterval, value)
+    }
+
+    suspend fun setAudioCacheCleanTime(value: Int) {
+        settingsRepository.putInt(PreferKey.audioCacheCleanTime, value)
     }
 
     suspend fun setIgnoreAudioFocus(value: Boolean) {
@@ -124,6 +140,9 @@ class ReadAloudSettingsRepository(
 
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
         return ReadAloudPreferences(
+            ttsEngine = compatDsString(PreferKey.ttsEngine),
+            ttsParagraphInterval = compatDsValue(Keys.TtsParagraphInterval, 0),
+            audioCacheCleanTime = compatDsValue(Keys.AudioCacheCleanTime, 10),
             ignoreAudioFocus = compatDsValue(Keys.IgnoreAudioFocus, false),
             mediaButtonOnExit = compatDsValue(Keys.MediaButtonOnExit, true),
             readAloudByMediaButton = compatDsValue(Keys.ReadAloudByMediaButton, false),
@@ -147,6 +166,12 @@ class ReadAloudSettingsRepository(
     }
 
     private object Keys {
+        val TtsParagraphInterval = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.ttsParagraphInterval
+        )
+        val AudioCacheCleanTime = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.audioCacheCleanTime
+        )
         val IgnoreAudioFocus = booleanPreferencesKey(PreferKey.ignoreAudioFocus)
         val MediaButtonOnExit = booleanPreferencesKey(PreferKey.mediaButtonOnExit)
         val ReadAloudByMediaButton = booleanPreferencesKey(PreferKey.readAloudByMediaButton)

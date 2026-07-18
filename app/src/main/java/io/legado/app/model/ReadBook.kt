@@ -213,7 +213,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upReadBookConfig(book: Book) {
         val oldIndex = ReadBookConfig.styleSelect
-        ReadBookConfig.isComic = book.isImage
+        ReadSessionState.isComic = book.isImage
         if (oldIndex != ReadBookConfig.styleSelect) {
             postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
             if (ReadConfig.readBarStyleFollowPage) {

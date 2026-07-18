@@ -16,6 +16,8 @@ import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.gateway.MangaSettingsUpdate
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
@@ -28,13 +30,14 @@ import io.legado.app.model.ReadManga
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -50,10 +53,24 @@ import io.legado.app.ui.config.readConfig.ReadConfig as GlobalReadConfig
 
 class ReadMangaViewModel(
     application: Application,
-    private val getReadingProgressUseCase: GetReadingProgressUseCase
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    private val mangaSettingsGateway: MangaSettingsGateway,
 ) : BaseViewModel(application) {
 
+    private val _mangaSettings = MutableStateFlow(mangaSettingsGateway.currentSettings)
+    val mangaSettings = _mangaSettings.asStateFlow()
+
     private var changeSourceCoroutine: Coroutine<*>? = null
+
+    init {
+        viewModelScope.launch {
+            mangaSettingsGateway.settings.collect { _mangaSettings.value = it }
+        }
+    }
+
+    suspend fun updateMangaSettings(update: MangaSettingsUpdate) {
+        mangaSettingsGateway.update(update)
+    }
 
     /**
      * 初始化
@@ -335,11 +352,13 @@ class ReadMangaViewModel(
 
 
     fun getEffectiveScrollMode(): Int {
-        return ReadManga.book?.readConfig?.mangaScrollMode ?: ReadMangaConfig.mangaScrollMode
+        return ReadManga.book?.readConfig?.mangaScrollMode
+            ?: mangaSettings.value.scrollMode
     }
 
     fun getEffectiveWebtoonSidePadding(): Int {
-        return ReadManga.book?.readConfig?.webtoonSidePaddingDp ?: ReadMangaConfig.webtoonSidePaddingDp
+        return ReadManga.book?.readConfig?.webtoonSidePaddingDp
+            ?: mangaSettings.value.webtoonSidePaddingDp
     }
 
     fun saveImageToGallery(url: String, folderName: String = "Legado") {

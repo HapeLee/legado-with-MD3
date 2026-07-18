@@ -3,6 +3,7 @@ package io.legado.app.help.config
 import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
@@ -10,7 +11,6 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.getPrefBoolean
@@ -22,9 +22,13 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.sysConfiguration
 import splitties.init.appCtx
+import org.koin.core.context.GlobalContext
 
 @Suppress("MemberVisibilityCanBePrivate", "ConstPropertyName")
 object AppConfig {
+    private val mangaSettings
+        get() = GlobalContext.get().get<MangaSettingsGateway>().currentSettings
+
     val isCronet get() = DownloadCacheConfig.cronetEnable
     val useAntiAlias get() = OtherConfig.antiAlias
     val userAgent: String get() = DownloadCacheConfig.userAgent
@@ -43,33 +47,15 @@ object AppConfig {
     val clickActionBR get() = appCtx.getPrefInt(PreferKey.clickActionBR, 1)
 
     //    -1无操作 1下一页 2上一页 0显示菜单
-    var mangaClickActionTL
-        get() = ReadMangaConfig.mangaClickActionTL
-        set(value) { ReadMangaConfig.mangaClickActionTL = value }
-    var mangaClickActionTC
-        get() = ReadMangaConfig.mangaClickActionTC
-        set(value) { ReadMangaConfig.mangaClickActionTC = value }
-    var mangaClickActionTR
-        get() = ReadMangaConfig.mangaClickActionTR
-        set(value) { ReadMangaConfig.mangaClickActionTR = value }
-    var mangaClickActionML
-        get() = ReadMangaConfig.mangaClickActionML
-        set(value) { ReadMangaConfig.mangaClickActionML = value }
-    var mangaClickActionMC
-        get() = ReadMangaConfig.mangaClickActionMC
-        set(value) { ReadMangaConfig.mangaClickActionMC = value }
-    var mangaClickActionMR
-        get() = ReadMangaConfig.mangaClickActionMR
-        set(value) { ReadMangaConfig.mangaClickActionMR = value }
-    var mangaClickActionBL
-        get() = ReadMangaConfig.mangaClickActionBL
-        set(value) { ReadMangaConfig.mangaClickActionBL = value }
-    var mangaClickActionBC
-        get() = ReadMangaConfig.mangaClickActionBC
-        set(value) { ReadMangaConfig.mangaClickActionBC = value }
-    var mangaClickActionBR
-        get() = ReadMangaConfig.mangaClickActionBR
-        set(value) { ReadMangaConfig.mangaClickActionBR = value }
+    val mangaClickActionTL get() = mangaSettings.clickActionTL
+    val mangaClickActionTC get() = mangaSettings.clickActionTC
+    val mangaClickActionTR get() = mangaSettings.clickActionTR
+    val mangaClickActionML get() = mangaSettings.clickActionML
+    val mangaClickActionMC get() = mangaSettings.clickActionMC
+    val mangaClickActionMR get() = mangaSettings.clickActionMR
+    val mangaClickActionBL get() = mangaSettings.clickActionBL
+    val mangaClickActionBC get() = mangaSettings.clickActionBC
+    val mangaClickActionBR get() = mangaSettings.clickActionBR
 
     val AppTheme get() = ThemeConfig.appTheme
 
@@ -573,20 +559,14 @@ object AppConfig {
 
     //跳转到漫画界面不使用富文本模式
     val showMangaUi: Boolean
-        get() = ReadMangaConfig.showMangaUi
+        get() = mangaSettings.showMangaUi
 
     //禁用漫画缩放
-    var disableMangaScale: Boolean
-        get() = ReadMangaConfig.disableMangaScale
-        set(value) { ReadMangaConfig.disableMangaScale = value }
+    val disableMangaScale: Boolean get() = mangaSettings.disableMangaScale
 
-    var disableMangaScrollAnimation: Boolean
-        get() = ReadMangaConfig.disableMangaScrollAnimation
-        set(value) { ReadMangaConfig.disableMangaScrollAnimation = value }
+    val disableMangaScrollAnimation: Boolean get() = mangaSettings.disableMangaScrollAnimation
 
-    var disableMangaCrossFade: Boolean
-        get() = ReadMangaConfig.disableMangaCrossFade
-        set(value) { ReadMangaConfig.disableMangaCrossFade = value }
+    val disableMangaCrossFade: Boolean get() = mangaSettings.disableMangaCrossFade
 
     var titleBarMode
         get() = ReadConfig.titleBarMode
@@ -595,76 +575,46 @@ object AppConfig {
         }
 
     //漫画预加载数量
-    var mangaPreDownloadNum
-        get() = ReadMangaConfig.mangaPreDownloadNum
-        set(value) { ReadMangaConfig.mangaPreDownloadNum = value }
+    val mangaPreDownloadNum get() = mangaSettings.preDownloadNum
 
     //点击翻页
-    var disableClickScroll
-        get() = ReadMangaConfig.disableClickScroll
-        set(value) { ReadMangaConfig.disableClickScroll = value }
+    val disableClickScroll get() = mangaSettings.disableClickScroll
 
     //漫画滚动速度
-    var mangaAutoPageSpeed
-        get() = ReadMangaConfig.mangaAutoPageSpeed
-        set(value) { ReadMangaConfig.mangaAutoPageSpeed = value }
+    val mangaAutoPageSpeed get() = mangaSettings.autoPageSpeed
 
     //漫画页脚配置
-    var mangaFooterConfig
-        get() = ReadMangaConfig.mangaFooterConfig
-        set(value) { ReadMangaConfig.mangaFooterConfig = value }
+    val mangaFooterConfig get() = mangaSettings.footerConfig
 
     //漫画滚动方式
-    var mangaScrollMode: Int
-        get() = ReadMangaConfig.mangaScrollMode
-        set(value) { ReadMangaConfig.mangaScrollMode = value }
+    val mangaScrollMode: Int get() = mangaSettings.scrollMode
 
-    var mangaLongClick
-        get() = ReadMangaConfig.mangaLongClick
-        set(value) { ReadMangaConfig.mangaLongClick = value }
+    val mangaLongClick get() = mangaSettings.longClick
 
-    var mangaBackground: Int
-        get() = ReadMangaConfig.mangaBackground
-        set(value) { ReadMangaConfig.mangaBackground = value }
+    val mangaBackground: Int get() = mangaSettings.background
 
     //漫画滤镜
-    var mangaColorFilter
-        get() = ReadMangaConfig.mangaColorFilter
-        set(value) { ReadMangaConfig.mangaColorFilter = value }
+    val mangaColorFilter get() = mangaSettings.colorFilter
 
     //禁用漫画内标题
-    var hideMangaTitle
-        get() = ReadMangaConfig.hideMangaTitle
-        set(value) { ReadMangaConfig.hideMangaTitle = value }
+    val hideMangaTitle get() = mangaSettings.hideTitle
 
     //开启墨水屏模式
-    var enableMangaEInk
-        get() = ReadMangaConfig.enableMangaEInk
-        set(value) { ReadMangaConfig.enableMangaEInk = value }
+    val enableMangaEInk get() = mangaSettings.enableEInk
 
     //墨水屏阈值
-    var mangaEInkThreshold
-        get() = ReadMangaConfig.mangaEInkThreshold
-        set(value) { ReadMangaConfig.mangaEInkThreshold = value }
+    val mangaEInkThreshold get() = mangaSettings.eInkThreshold
 
     //漫画灰度
-    var enableMangaGray
-        get() = ReadMangaConfig.enableMangaGray
-        set(value) { ReadMangaConfig.enableMangaGray = value }
+    val enableMangaGray get() = mangaSettings.enableGray
 
     //条漫侧边距
-    var webtoonSidePaddingDp: Int
-        get() = ReadMangaConfig.webtoonSidePaddingDp
-        set(value) { ReadMangaConfig.webtoonSidePaddingDp = value }
+    val webtoonSidePaddingDp: Int get() = mangaSettings.webtoonSidePaddingDp
 
     //漫画音量键翻页
-    var MangaVolumeKeyPage: Boolean
-        get() = ReadMangaConfig.mangaVolumeKeyPage
-        set(value) { ReadMangaConfig.mangaVolumeKeyPage = value }
+    val MangaVolumeKeyPage: Boolean get() = mangaSettings.volumeKeyPage
 
-    var reverseVolumeKeyPage: Boolean
-        get() = ReadMangaConfig.reverseVolumeKeyPage
-        set(value) { ReadMangaConfig.reverseVolumeKeyPage = value }
+    val reverseVolumeKeyPage: Boolean get() = mangaSettings.reverseVolumeKeyPage
 
     var tabletInterface
         get() = ThemeConfig.tabletInterface
@@ -706,17 +656,11 @@ object AppConfig {
         }
 
     @Deprecated("Use ReadBookConfig.readMenuBlurAlpha instead", ReplaceWith("ReadBookConfig.readMenuBlurAlpha"))
-    var menuAlpha: Int
+    val menuAlpha: Int
         get() = ReadBookConfig.readMenuBlurAlpha
-        set(value) {
-            ReadBookConfig.readMenuBlurAlpha = value
-        }
 
-    var readSliderMode
+    val readSliderMode
         get() = ReadBookConfig.readSliderMode
-        set(value) {
-            ReadBookConfig.readSliderMode = value
-        }
 
     var bookshelfRefreshingLimit: Int
         get() = BookshelfConfig.bookshelfRefreshingLimit
