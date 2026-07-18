@@ -25,4 +25,5 @@ data class OtherSettings(
     val importKeepName: Boolean = false,
     val importKeepGroup: Boolean = false,
     val importKeepEnable: Boolean = false,
+    val fontSort: Int = 0,
 )

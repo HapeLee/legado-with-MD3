@@ -9,7 +9,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
  *
  * 每个目标集中管理：
  *  - [tipValue]：该位置在 [ReadBookConfig] 中保存的 tip 类型常量
- *  - [customTemplate]：自定义模板字符串的 getter / setter（直接读写 [ReadBookConfig]）
+ *  - [customTemplate]：自定义模板字符串的只读 getter（读取 [ReadBookConfig]）
  *  - [configUpdate]：持久化时使用的 [ConfigUpdate] 工厂
  *  - [applyTemplate]：把模板保存到 [ReadBookConfig] 并派发 [ReadBookIntent.UpdateConfig]
  *
@@ -23,9 +23,8 @@ internal enum class CustomTipTarget {
     FOOTER_MIDDLE,
     FOOTER_RIGHT;
 
-    /** 把模板字符串持久化到 [ReadBookConfig] 并通过 ViewModel 派发 [ConfigUpdate]。 */
+    /** 通过 ViewModel 派发 [ConfigUpdate]，由 gateway 管线持久化到 [ReadBookConfig]。 */
     fun applyTemplate(template: String, onIntent: (ReadBookIntent) -> Unit) {
-        customTemplate = template
         onIntent(ReadBookIntent.UpdateConfig(configUpdate(template)))
     }
 
@@ -49,7 +48,7 @@ internal enum class CustomTipTarget {
             FOOTER_RIGHT -> ReadBookConfig.tipFooterRight
         }
 
-    var customTemplate: String
+    val customTemplate: String
         get() = when (this) {
             HEADER_LEFT -> ReadBookConfig.customTipHeaderLeft
             HEADER_MIDDLE -> ReadBookConfig.customTipHeaderMiddle
@@ -57,15 +56,5 @@ internal enum class CustomTipTarget {
             FOOTER_LEFT -> ReadBookConfig.customTipFooterLeft
             FOOTER_MIDDLE -> ReadBookConfig.customTipFooterMiddle
             FOOTER_RIGHT -> ReadBookConfig.customTipFooterRight
-        }
-        set(value) {
-            when (this) {
-                HEADER_LEFT -> ReadBookConfig.customTipHeaderLeft = value
-                HEADER_MIDDLE -> ReadBookConfig.customTipHeaderMiddle = value
-                HEADER_RIGHT -> ReadBookConfig.customTipHeaderRight = value
-                FOOTER_LEFT -> ReadBookConfig.customTipFooterLeft = value
-                FOOTER_MIDDLE -> ReadBookConfig.customTipFooterMiddle = value
-                FOOTER_RIGHT -> ReadBookConfig.customTipFooterRight = value
-            }
         }
 }

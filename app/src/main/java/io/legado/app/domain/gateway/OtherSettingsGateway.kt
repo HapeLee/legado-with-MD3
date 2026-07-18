@@ -32,4 +32,5 @@ sealed interface OtherSettingsUpdate {
     data class ImportKeepName(val value: Boolean) : OtherSettingsUpdate
     data class ImportKeepGroup(val value: Boolean) : OtherSettingsUpdate
     data class ImportKeepEnable(val value: Boolean) : OtherSettingsUpdate
+    data class FontSort(val value: Int) : OtherSettingsUpdate
 }

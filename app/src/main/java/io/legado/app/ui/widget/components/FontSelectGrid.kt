@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,15 +46,21 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.help.loadFontFiles
-import io.legado.app.ui.config.FontConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 private val fontGridHeight = 360.dp
 
@@ -92,12 +99,19 @@ fun FontSelectGrid(
     selectedFontName: String?,
     onSelectFont: (FileDoc) -> Unit,
     emptyText: String? = null,
+    otherSettings: OtherSettingsGateway = koinInject(),
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
     var filesLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val fontSort by FontConfig.fontSortState
+    val fontSortFlow = remember(otherSettings) {
+        otherSettings.settings.map { it.fontSort }.distinctUntilChanged()
+    }
+    val fontSort by fontSortFlow.collectAsStateWithLifecycle(
+        initialValue = otherSettings.currentSettings.fontSort
+    )
 
     LaunchedEffect(folderState) {
         if (folderState is FontFolderState.Loaded) {
@@ -157,7 +171,9 @@ fun FontSelectGrid(
                             DropdownMenuItem(
                                 text = { Text(stringResource(sort.labelRes)) },
                                 onClick = {
-                                    FontConfig.fontSort = sort.ordinal
+                                    scope.launch {
+                                        otherSettings.update(OtherSettingsUpdate.FontSort(sort.ordinal))
+                                    }
                                     expanded = false
                                 },
                                 trailingIcon = if (fontSort == sort.ordinal) {

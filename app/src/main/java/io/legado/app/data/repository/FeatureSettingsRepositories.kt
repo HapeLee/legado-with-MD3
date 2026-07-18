@@ -502,6 +502,7 @@ internal fun Preferences.toOtherSettings(): OtherSettings {
         importKeepName = compatDsBoolean(PreferKey.importKeepName) ?: false,
         importKeepGroup = compatDsBoolean(PreferKey.importKeepGroup) ?: false,
         importKeepEnable = compatDsBoolean(PreferKey.importKeepEnable) ?: false,
+        fontSort = compatDsInt(PreferKey.fontSort) ?: 0,
     )
 }
 
@@ -537,6 +538,7 @@ class OtherSettingsRepository : OtherSettingsGateway {
             is OtherSettingsUpdate.ImportKeepName -> PreferKey.importKeepName to update.value
             is OtherSettingsUpdate.ImportKeepGroup -> PreferKey.importKeepGroup to update.value
             is OtherSettingsUpdate.ImportKeepEnable -> PreferKey.importKeepEnable to update.value
+            is OtherSettingsUpdate.FontSort -> PreferKey.fontSort to update.value
         }
         AppConfigStore.putAllAndAwait(mapOf(key to value))
     }
