@@ -12,7 +12,9 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.searchContent.SearchResult
@@ -189,6 +191,11 @@ data class ReadBookUiState(
     // Read aloud / auto page
     val isReadAloudRunning: Boolean = false,
     val isReadAloudPaused: Boolean = false,
+    val readAloudEngineName: String = "",
+    val readAloudCharacterName: String = "",
+    val readAloudRoleType: SpeechRoleType = SpeechRoleType.Narrator,
+    val readAloudChapterPosition: Int = 0,
+    val readAloudChapterLength: Int = 0,
     val isAutoPage: Boolean = false,
     // Seek bar
     val seekProgress: Int = 0,
@@ -235,6 +242,9 @@ data class ReadBookUiState(
     val readAloudIgnoreAudioFocus: Boolean = false,
     val readAloudPauseOnPhoneCall: Boolean = false,
     val readAloudWakeLock: Boolean = false,
+    val showReadAloudCapsule: Boolean = true,
+    val readAloudCapsuleOffsetX: Float = 0f,
+    val readAloudCapsuleOffsetY: Float = 0f,
     val readAloudMediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
     val readAloudSystemMediaCompat: Boolean = true,
@@ -242,6 +252,9 @@ data class ReadBookUiState(
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
     val readAloudTtsTimer: Int = 0,
+    val speechAnalysisMode: String = "rule",
+    val useMultiSpeaker: Boolean = true,
+    val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
     val readAloudParagraphInterval: Int = 0,
     // Style config (reactive state for ReadBookConfig)
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
@@ -657,6 +670,9 @@ sealed interface ReadBookIntent {
     data class SetReadAloudIgnoreAudioFocus(val value: Boolean) : ReadBookIntent
     data class SetReadAloudPauseOnPhoneCall(val value: Boolean) : ReadBookIntent
     data class SetReadAloudWakeLock(val value: Boolean) : ReadBookIntent
+    data class SetShowReadAloudCapsule(val value: Boolean) : ReadBookIntent
+    data object ResetReadAloudCapsulePosition : ReadBookIntent
+    data class SetReadAloudCapsulePosition(val x: Float, val y: Float) : ReadBookIntent
     data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
     data class SetReadAloudByPage(val value: Boolean) : ReadBookIntent
     data class SetReadAloudSystemMediaCompat(val value: Boolean) : ReadBookIntent
@@ -671,8 +687,15 @@ sealed interface ReadBookIntent {
     data class SaveReadAloudTtsTimer(val value: Int) : ReadBookIntent
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
+    data class SetSpeechAnalysisMode(val value: String) : ReadBookIntent
+    data class SetUseMultiSpeaker(val value: Boolean) : ReadBookIntent
+    data class SetDefaultReadAloudInterface(val value: String) : ReadBookIntent
     data object OpenSystemTtsSettings : ReadBookIntent
     data object ClearTtsCache : ReadBookIntent
+    data object OpenTtsEnginesAndVoices : ReadBookIntent
+    data object OpenBookVoiceCasting : ReadBookIntent
+    data object OpenReadAloudPlayer : ReadBookIntent
+    data object OpenClassicReadAloudControls : ReadBookIntent
     data class SelectFont(val path: String) : ReadBookIntent
     data class SelectTitleFont(val path: String) : ReadBookIntent
     data class SelectTitleSystemTypeface(val index: Int) : ReadBookIntent
@@ -808,6 +831,8 @@ sealed interface ReadBookEffect {
     data object OpenHttpTtsImportPicker : ReadBookEffect
     data object OpenHttpTtsExportPicker : ReadBookEffect
     data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
+    data object OpenTtsEnginesAndVoices : ReadBookEffect
+    data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
     data object OpenHighlightRuleImportPicker : ReadBookEffect
     data object OpenHighlightRuleExportPicker : ReadBookEffect
 
@@ -859,6 +884,7 @@ sealed interface ReadBookSheet {
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
+    data object ReadAloudPlayer : ReadBookSheet
     data object SpeakEngineConfig : ReadBookSheet
     data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet

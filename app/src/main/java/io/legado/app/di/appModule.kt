@@ -21,6 +21,7 @@ import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
+import io.legado.app.data.repository.ChapterSpeechRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceRepository
@@ -38,6 +39,9 @@ import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LocalBookRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
+import io.legado.app.data.repository.ReadAloudVoiceRepository
+import io.legado.app.data.repository.CloudTtsEngineRepository
+import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
@@ -67,6 +71,7 @@ import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
@@ -77,10 +82,13 @@ import io.legado.app.domain.gateway.HomeDashboardGateway
 import io.legado.app.domain.gateway.HomepageModulesGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
+import io.legado.app.domain.gateway.ReadAloudVoiceGateway
+import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
+import io.legado.app.domain.usecase.AnalyzeChapterSpeechUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.AiChatGenerationUseCase
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
@@ -88,6 +96,7 @@ import io.legado.app.domain.usecase.AiToolAwareGenerationUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.BuildSpeechPlanUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
@@ -106,13 +115,20 @@ import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
 import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.ResolveLocalSpeakersUseCase
+import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
+import io.legado.app.domain.usecase.RefineSpeechWithAiUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
+import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
+import io.legado.app.domain.gateway.HttpTtsEngineGateway
+import io.legado.app.data.repository.HttpTtsEngineRepository
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
+import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
 import io.legado.app.help.coil.CoverFetcher
@@ -145,6 +161,10 @@ import io.legado.app.ui.book.knowledge.BookEventDetailViewModel
 import io.legado.app.ui.book.manage.BookshelfManageScreenViewModel
 import io.legado.app.ui.book.manga.ReadMangaViewModel
 import io.legado.app.ui.book.read.ReadBookViewModel
+import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingViewModel
+import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerCoordinator
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.search.SearchViewModel
@@ -214,6 +234,8 @@ val appModule = module {
     singleOf(::SettingsRepository)
     singleOf(::ReadSettingsRepository)
     singleOf(::ReadAloudSettingsRepository)
+    singleOf(::ReadAloudSessionStore)
+    single<HttpTtsEngineGateway> { HttpTtsEngineRepository(get()) }
     singleOf(::HighlightRuleRepository)
     singleOf(::ReadStyleRepository)
     singleOf(::ReadBookStyleConfigRepository)
@@ -224,6 +246,12 @@ val appModule = module {
     singleOf(::AppStartupMaintenanceUseCase)
     singleOf(::BackupRestoreUseCase)
     singleOf(::BatchCacheDownloadUseCase)
+    singleOf(::BuildSpeechPlanUseCase)
+    singleOf(::AnalyzeChapterSpeechUseCase)
+    singleOf(::ResolveLocalSpeakersUseCase)
+    singleOf(::PrepareChapterSpeechPlanUseCase)
+    singleOf(::RefineSpeechWithAiUseCase)
+    singleOf(::SyncReadAloudVoicesUseCase)
     singleOf(::CacheBookChaptersUseCase)
     singleOf(::ChangeBookSourceUseCase)
     singleOf(::ClearBookCacheUseCase)
@@ -269,6 +297,10 @@ val appModule = module {
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
     single<BookKnowledgeGateway> { BookKnowledgeRepository(get()) }
+    single<ReadAloudVoiceGateway> { ReadAloudVoiceRepository(get()) }
+    singleOf(::CloudTtsCredentialCipher)
+    single<CloudTtsEngineGateway> { CloudTtsEngineRepository(get(), get()) }
+    single<ChapterSpeechGateway> { ChapterSpeechRepository(get()) }
     single { ExploreRepositoryImpl(get()) }
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
@@ -389,6 +421,16 @@ val appModule = module {
             bookKnowledgeGateway = get(),
         )
     }
+    viewModel { (bookUrl: String) ->
+        BookVoiceCastingViewModel(
+            bookUrl = bookUrl,
+            bookKnowledgeGateway = get(),
+            voiceGateway = get(),
+        )
+    }
+    viewModelOf(::CloudTtsViewModel)
+    singleOf(::ReadAloudPlayerCoordinator)
+    viewModelOf(::ReadAloudPlayerViewModel)
     viewModel { (bookUrl: String, entryId: String?) ->
         BookKnowledgeDetailViewModel(
             bookUrl = bookUrl,
@@ -430,6 +472,9 @@ val appModule = module {
             bookContentProcessGateway = get(),
             aiArtifactGateway = get(),
             aiPromptPresetGateway = get(),
+            aiProfileGateway = get(),
+            syncReadAloudVoicesUseCase = get(),
+            readAloudSessionStore = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)

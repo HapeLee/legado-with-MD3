@@ -40,6 +40,9 @@ import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerSheet
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.config.readConfig.TextSelectMenuFilterSheet
 import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.widget.components.FontFolderState
@@ -49,7 +52,16 @@ import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.utils.toastOnUi
+import coil.ImageLoader
+import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.rememberImageSeedColor
+import io.legado.app.ui.theme.rememberThemeOverride
+import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
+import io.legado.app.model.BookCover as BookCoverModel
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.compose.koinInject
 
 /**
  * Stateless ReadBook screen — renders BackHandler + dialogs + sheets.
@@ -63,6 +75,7 @@ fun ReadBookScreen(
 ) {
     BackHandler {
         when {
+            state.activeSheet != null -> onIntent(ReadBookIntent.DismissSheet)
             state.isShowingSearchResult -> onIntent(ReadBookIntent.ExitSearch)
             state.menuVisible -> onIntent(ReadBookIntent.ReadMenuBack)
             state.isAutoPage -> onIntent(ReadBookIntent.StopAutoPage)
@@ -368,6 +381,69 @@ fun ReadBookScreen(
         onExportConfig = { onIntent(ReadBookIntent.OpenReadStyleExport) },
         styleConfig = state.styleConfig,
     )
+
+    val aloudPlayerViewModel: ReadAloudPlayerViewModel =
+        org.koin.androidx.compose.koinViewModel()
+    val aloudPlayerState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
+    val playerTheme = run {
+        val imageLoader: ImageLoader = koinInject()
+        val isNight = LegadoTheme.isDark
+        val useDefaultCover = usesDefaultBookCover(aloudPlayerState.coverPath)
+        val defaultCoverPaths = if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
+        val coverPath = remember(
+            aloudPlayerState.bookName,
+            aloudPlayerState.author,
+            aloudPlayerState.coverPath,
+            useDefaultCover,
+            isNight,
+            defaultCoverPaths,
+        ) {
+            if (useDefaultCover) {
+                BookCoverModel.getRandomDefaultPath(
+                    seed = aloudPlayerState.bookName,
+                    isNight = isNight,
+                )
+            } else {
+                aloudPlayerState.coverPath
+            }
+        }
+        val sourceOrigin = if (useDefaultCover) null else aloudPlayerState.sourceOrigin
+        val loadOnlyWifi = !useDefaultCover && CoverConfig.loadCoverOnlyWifi
+        val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
+            listOf(coverPath, sourceOrigin, loadOnlyWifi)
+        }
+        val seedColor = rememberImageSeedColor(
+            imageLoader = imageLoader,
+            data = coverPath,
+            requestKey = requestKey,
+        ) {
+            setParameter("sourceOrigin", sourceOrigin)
+            setParameter("loadOnlyWifi", loadOnlyWifi)
+        }
+        rememberThemeOverride(seedColor)
+    }
+    ProvideThemeOverride(playerTheme.takeIf { state.activeSheet is ReadBookSheet.ReadAloudPlayer }) {
+        ReadAloudPlayerSheet(
+            show = state.activeSheet is ReadBookSheet.ReadAloudPlayer,
+            onDismissRequest = dismissSheet,
+            state = aloudPlayerState,
+            onIntent = aloudPlayerViewModel::onIntent,
+        )
+    }
+    LaunchedEffect(state.activeSheet) {
+        if (state.activeSheet is ReadBookSheet.ReadAloudPlayer) {
+            aloudPlayerViewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    ReadAloudPlayerEffect.OpenToc -> onIntent(ReadBookIntent.OpenChapterList)
+                    ReadAloudPlayerEffect.ReturnToReaderSettings ->
+                        onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+                    ReadAloudPlayerEffect.ReturnToClassic ->
+                        onIntent(ReadBookIntent.OpenClassicReadAloudControls)
+                }
+            }
+        }
+    }
+
     val dictSheet = state.activeSheet as? ReadBookSheet.Dict
     DictSheet(
         show = dictSheet != null,

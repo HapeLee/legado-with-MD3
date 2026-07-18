@@ -9,6 +9,11 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
+import io.legado.app.domain.model.readaloud.ReadAloudVoice
+import io.legado.app.domain.model.readaloud.SpeechEngineRoute
+import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
+import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
 import io.legado.app.help.MediaHelp
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -26,7 +31,9 @@ import kotlinx.coroutines.ensureActive
 /**
  * 本地朗读
  */
-class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener {
+class TTSReadAloudService : BaseReadAloudService() {
+
+    override val useSpeechPlaybackQueue: Boolean = true
 
     private var textToSpeech: TextToSpeech? = null
     private var ttsInitFinish = false
@@ -34,6 +41,10 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     private var speakJob: Coroutine<*>? = null
     private var utteranceStartPos = 0
     private var needParagraphInterval = false // 是否需要进行段落间隔延迟
+    private var activeEngine = ""
+    private var activeVoiceName = ""
+    private var defaultVoiceName = ""
+    private var initGeneration = 0
     private val TAG = "TTSReadAloudService"
 
     override fun onCreate() {
@@ -47,14 +58,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     }
 
     @Synchronized
-    private fun initTts() {
+    private fun initTts(engineOverride: String? = null) {
         ttsInitFinish = false
-        val engine = GSON.fromJsonObject<SelectItem<String>>(ReadAloud.ttsEngine).getOrNull()?.value
+        val engine = engineOverride
+            ?: GSON.fromJsonObject<SelectItem<String>>(ReadAloud.ttsEngine).getOrNull()?.value
+        activeEngine = engine.orEmpty()
+        val generation = ++initGeneration
         LogUtils.d(TAG, "initTts engine:$engine")
         textToSpeech = if (engine.isNullOrBlank()) {
-            TextToSpeech(this, this)
+            TextToSpeech(this) { status -> onTtsInitialized(status, generation) }
         } else {
-            TextToSpeech(this, this, engine)
+            TextToSpeech(this, { status -> onTtsInitialized(status, generation) }, engine)
         }
         upSpeechRate()
     }
@@ -67,12 +81,18 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
         textToSpeech = null
         ttsInitFinish = false
+        activeVoiceName = ""
+        defaultVoiceName = ""
+        initGeneration++
     }
 
-    override fun onInit(status: Int) {
+    private fun onTtsInitialized(status: Int, generation: Int) {
+        if (generation != initGeneration) return
         if (status == TextToSpeech.SUCCESS) {
             textToSpeech?.let {
                 it.setOnUtteranceProgressListener(ttsUtteranceListener)
+                defaultVoiceName = it.defaultVoice?.name.orEmpty()
+                activeVoiceName = defaultVoiceName
                 ttsInitFinish = true
                 play()
             }
@@ -83,6 +103,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
     @Synchronized
     override fun play() {
+        if (hasSpeechPlaybackQueue) {
+            val route = systemVoiceForCurrentCue()
+            val requiredEngine = route.engineId
+            if (requiredEngine != activeEngine || textToSpeech == null) {
+                clearTTS()
+                initTts(requiredEngine)
+                return
+            }
+            applyVoice(route.speakerId)
+            applyPreset(route)
+        }
         if (!ttsInitFinish) return
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
@@ -102,7 +133,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
             val interval = ReadConfig.ttsParagraphInterval.toLong()
             AppLog.putDebug("TTS_PLAY: nowSpeak=$nowSpeak, isDelay=$isDelay, interval=$interval")
             
-            if (interval > 0) {
+            if (hasSpeechPlaybackQueue || interval > 0) {
                 // 段落间隔模式：单段播放
                 if (isDelay) {
                     AppLog.putDebug("TTS开始延迟: $interval 毫秒")
@@ -190,6 +221,55 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
     }
 
+    private fun systemVoiceForCurrentCue(): ReadAloudVoice {
+        val configured = GSON.fromJsonObject<SelectItem<String>>(ReadAloud.ttsEngine)
+            .getOrNull()?.value.orEmpty()
+        val fallback = ReadAloudVoice(
+            id = "runtime-system:$configured",
+            engineType = ReadAloudVoice.ENGINE_SYSTEM,
+            engineId = configured,
+            speakerId = "",
+            displayName = configured,
+        )
+        val cue = playbackQueue.cues.getOrNull(nowSpeak) ?: return fallback
+        return SpeechVoiceRouter.route(
+            cue = cue,
+            supportedEngineTypes = setOf(ReadAloudVoice.ENGINE_SYSTEM),
+            defaultRoute = SpeechEngineRoute(ReadAloudVoice.ENGINE_SYSTEM, configured),
+        ).voice ?: fallback
+    }
+
+    private fun applyVoice(voiceName: String) {
+        val requestedName = voiceName.ifBlank { defaultVoiceName }
+        if (requestedName == activeVoiceName) return
+        val tts = textToSpeech ?: return
+        val voice = tts.voices.orEmpty().firstOrNull { it.name == requestedName }
+        if (voice == null) {
+            AppLog.putDebug("系统 TTS 音色不可用: $requestedName")
+            return
+        }
+        if (tts.setVoice(voice) == TextToSpeech.SUCCESS) {
+            activeVoiceName = requestedName
+        } else {
+            AppLog.putDebug("系统 TTS 音色切换失败: $requestedName")
+        }
+    }
+
+    private fun applyPreset(voice: ReadAloudVoice) {
+        val config = runCatching {
+            GSON.fromJson(voice.traitsJson, SystemTtsVoiceConfig::class.java)
+        }.getOrNull() ?: SystemTtsVoiceConfig()
+        val globalRate = if (ReadConfig.ttsFollowSys) {
+            1f
+        } else {
+            (ReadConfig.ttsSpeechRate + 5) / 10f
+        }
+        textToSpeech?.apply {
+            setSpeechRate(config.speechRate ?: globalRate)
+            setPitch(config.pitch ?: 1f)
+        }
+    }
+
     override fun playStop() {
         textToSpeech?.runCatching {
             stop()
@@ -241,6 +321,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         private val TAG = "TTSUtteranceListener"
 
         override fun onStart(s: String) {
+            if (!isCurrentUtterance(s)) return
             LogUtils.d(TAG, "onStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$s")
             utteranceStartPos = paragraphStartPos
             textChapter?.let {
@@ -259,16 +340,18 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
 
         override fun onDone(s: String) {
+            if (!isCurrentUtterance(s)) return
             LogUtils.d(TAG, "onDone utteranceId:$s")
             nextParagraph()
-            if (!pause && ReadConfig.ttsParagraphInterval > 0) {
-                needParagraphInterval = true
+            if (!pause && (hasSpeechPlaybackQueue || ReadConfig.ttsParagraphInterval > 0)) {
+                needParagraphInterval = ReadConfig.ttsParagraphInterval > 0
                 play()
             }
         }
 
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             super.onRangeStart(utteranceId, start, end, frame)
+            if (!isCurrentUtterance(utteranceId)) return
             paragraphStartPos = utteranceStartPos + start
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
@@ -285,18 +368,25 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
 
         override fun onError(utteranceId: String?, errorCode: Int) {
+            if (!isCurrentUtterance(utteranceId)) return
             LogUtils.d(
                 TAG,
                 "onError nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId errorCode:$errorCode"
             )
             nextParagraph()
-            if (!pause && ReadConfig.ttsParagraphInterval > 0) {
-                needParagraphInterval = true
+            if (!pause && (hasSpeechPlaybackQueue || ReadConfig.ttsParagraphInterval > 0)) {
+                needParagraphInterval = ReadConfig.ttsParagraphInterval > 0
                 play()
             }
         }
 
         private fun nextParagraph() {
+            if (hasSpeechPlaybackQueue) {
+                val current = playbackCursor
+                    ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
+                playbackQueue.next(current)?.let(::moveToPlaybackCursor) ?: nextChapter()
+                return
+            }
             //跳过全标点段落
             do {
                 readAloudNumber += contentList[nowSpeak].length + 1 - paragraphStartPos
@@ -311,13 +401,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
         @Deprecated("Deprecated in Java")
         override fun onError(s: String) {
+            if (!isCurrentUtterance(s)) return
             LogUtils.d(TAG, "onError nowSpeak:$nowSpeak pageIndex:$pageIndex s:$s")
             nextParagraph()
-            if (!pause && ReadConfig.ttsParagraphInterval > 0) {
-                needParagraphInterval = true
+            if (!pause && (hasSpeechPlaybackQueue || ReadConfig.ttsParagraphInterval > 0)) {
+                needParagraphInterval = ReadConfig.ttsParagraphInterval > 0
                 play()
             }
         }
+
+        private fun isCurrentUtterance(utteranceId: String?): Boolean =
+            !hasSpeechPlaybackQueue || utteranceId == AppConst.APP_TAG + nowSpeak
 
     }
 

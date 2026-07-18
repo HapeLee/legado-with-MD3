@@ -55,6 +55,11 @@ object ReadTtsConfig {
         false
     )
 
+    var showReadAloudCapsule by prefDelegate(
+        PreferKey.showReadAloudCapsule,
+        true
+    )
+
     var mediaButtonPerNext by prefDelegate(
         "mediaButtonPerNext",
         false
@@ -78,6 +83,16 @@ object ReadTtsConfig {
     var contentSelectSpeakMod by prefDelegate(
         PreferKey.contentSelectSpeakMod,
         0
+    )
+
+    var speechAnalysisMode by prefDelegate(
+        PreferKey.speechAnalysisMode,
+        "rule"
+    )
+
+    var useMultiSpeaker by prefDelegate(
+        PreferKey.useMultiSpeaker,
+        true
     )
 
     var audioPreDownloadNum by prefDelegate(

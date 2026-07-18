@@ -19,7 +19,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
-import io.legado.app.constant.Status
+import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.Book
@@ -40,16 +40,20 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
+import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.model.readaloud.ReadAloudVoice
+import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.CleanSelectedTextUseCase
 import io.legado.app.domain.usecase.GenerateChapterSummaryUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
+import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.DefaultData
@@ -72,6 +76,7 @@ import io.legado.app.help.source.getSourceType
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
+import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeRule
@@ -130,6 +135,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
+import org.json.JSONObject
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
@@ -137,6 +143,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.FileNotFoundException
 import java.util.Date
 import java.util.UUID
@@ -169,6 +176,9 @@ class ReadBookViewModel(
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val aiArtifactGateway: AiArtifactGateway,
     private val aiPromptPresetGateway: AiPromptPresetGateway,
+    private val aiProfileGateway: AiProfileGateway,
+    private val syncReadAloudVoicesUseCase: SyncReadAloudVoicesUseCase,
+    private val readAloudSessionStore: ReadAloudSessionStore,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -221,6 +231,7 @@ class ReadBookViewModel(
         collectReadPreferences()
         collectReadAloudPreferences()
         collectEventBus()
+        execute { syncConfiguredTtsVoices() }
     }
 
     // --- MVI Intent Dispatcher ---
@@ -865,7 +876,15 @@ class ReadBookViewModel(
 
             is ReadBookIntent.TtsProgress -> _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(intent.chapterStart))
             is ReadBookIntent.ReadAloudAction -> {
-                openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                if (_uiState.value.defaultReadAloudInterface ==
+                    ReadAloudSettingsRepository.DEFAULT_INTERFACE_PLAYER
+                ) {
+                    _uiState.update {
+                        it.copy(menuState = ReadBookMenuState(), activeSheet = ReadBookSheet.ReadAloudPlayer)
+                    }
+                } else {
+                    openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                }
             }
             is ReadBookIntent.ConfirmAddCurrentBookToBookshelf -> addCurrentBookToBookshelfAndFinish()
             is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()
@@ -1095,6 +1114,27 @@ class ReadBookViewModel(
             is ReadBookIntent.SetReadAloudWakeLock -> {
                 viewModelScope.launch { readAloudSettingsRepository.setReadAloudWakeLock(intent.value) }
             }
+            is ReadBookIntent.SetShowReadAloudCapsule -> {
+                viewModelScope.launch { readAloudSettingsRepository.setShowReadAloudCapsule(intent.value) }
+            }
+            ReadBookIntent.ResetReadAloudCapsulePosition -> {
+                _uiState.update { it.copy(
+                    readAloudCapsuleOffsetX = 0f,
+                    readAloudCapsuleOffsetY = 0f,
+                ) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.resetCapsulePosition()
+                }
+            }
+            is ReadBookIntent.SetReadAloudCapsulePosition -> {
+                _uiState.update { it.copy(
+                    readAloudCapsuleOffsetX = intent.x,
+                    readAloudCapsuleOffsetY = intent.y,
+                ) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.setCapsulePosition(intent.x, intent.y)
+                }
+            }
             is ReadBookIntent.SetReadAloudMediaButtonPerNext -> {
                 viewModelScope.launch { readAloudSettingsRepository.setMediaButtonPerNext(intent.value) }
             }
@@ -1131,12 +1171,81 @@ class ReadBookViewModel(
                 _uiState.update { it.copy(readAloudTtsFollowSys = intent.value) }
             }
             is ReadBookIntent.SetReadAloudTtsSpeechRate -> setReadAloudTtsSpeechRate(intent.value)
+            is ReadBookIntent.SetSpeechAnalysisMode -> {
+                viewModelScope.launch {
+                    if (intent.value != "rule") {
+                        val configured = aiProfileGateway.getTaskPreset(AiTaskType.ANALYZE_SPEECH)
+                            ?: aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
+                        if (configured == null) {
+                            _effects.emit(ReadBookEffect.ShowToast(
+                                context.getString(R.string.speech_analysis_ai_model_required)
+                            ))
+                            return@launch
+                        }
+                    }
+                    readAloudSettingsRepository.setSpeechAnalysisMode(intent.value)
+                    _uiState.update { it.copy(speechAnalysisMode = intent.value) }
+                }
+            }
+            is ReadBookIntent.SetUseMultiSpeaker -> {
+                viewModelScope.launch {
+                    val shouldRestart = BaseReadAloudService.isRun
+                    val resumePlaying = shouldRestart && !BaseReadAloudService.pause
+                    val chapter = ReadBook.curTextChapter
+                    val chapterPosition = readAloudSessionStore.state.value.playback.chapterPosition
+                    readAloudSettingsRepository.setUseMultiSpeaker(intent.value)
+                    _uiState.update { it.copy(useMultiSpeaker = intent.value) }
+                    if (shouldRestart && chapter != null) {
+                        val pageIndex = chapter.getPageIndexByCharIndex(chapterPosition)
+                        val startPos = chapterPosition - chapter.getReadLength(pageIndex)
+                        ReadAloud.stop(context)
+                        val stopped = withTimeoutOrNull(2_000) {
+                            readAloudSessionStore.state.first {
+                                it.status == ReadAloudSessionStatus.Idle
+                            }
+                        }
+                        if (stopped == null) return@launch
+                        ReadAloud.refreshReadAloudClass()
+                        ReadAloud.play(
+                            context = context,
+                            play = resumePlaying,
+                            pageIndex = pageIndex,
+                            startPos = startPos.coerceAtLeast(0),
+                        )
+                    }
+                }
+            }
+            is ReadBookIntent.SetDefaultReadAloudInterface -> {
+                viewModelScope.launch {
+                    readAloudSettingsRepository.setDefaultInterface(intent.value)
+                }
+                _uiState.update { it.copy(defaultReadAloudInterface = intent.value) }
+            }
             is ReadBookIntent.OpenSystemTtsSettings -> {
                 _effects.tryEmit(ReadBookEffect.OpenSystemTtsSettings)
             }
             is ReadBookIntent.ClearTtsCache -> {
                 io.legado.app.utils.TTSCacheUtils.clearTtsCache()
                 _effects.tryEmit(ReadBookEffect.TtsCacheCleared(context.getString(R.string.clear_cache_success)))
+            }
+            ReadBookIntent.OpenTtsEnginesAndVoices -> {
+                _uiState.update { it.copy(activeSheet = null) }
+                _effects.tryEmit(ReadBookEffect.OpenTtsEnginesAndVoices)
+            }
+            ReadBookIntent.OpenBookVoiceCasting -> {
+                ReadBook.book?.bookUrl?.let { bookUrl ->
+                    _uiState.update { it.copy(activeSheet = null) }
+                    _effects.tryEmit(ReadBookEffect.OpenBookVoiceCasting(bookUrl))
+                }
+            }
+            ReadBookIntent.OpenReadAloudPlayer -> {
+                _uiState.update {
+                    it.copy(menuState = ReadBookMenuState(), activeSheet = ReadBookSheet.ReadAloudPlayer)
+                }
+            }
+            ReadBookIntent.OpenClassicReadAloudControls -> {
+                _uiState.update { it.copy(activeSheet = null) }
+                openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
             }
 
             is ReadBookIntent.SelectFont -> selectFont(intent.path)
@@ -1405,8 +1514,11 @@ class ReadBookViewModel(
 
     private fun loadTtsEngineItems(onSuccess: (() -> Unit)? = null) {
         execute {
+            val systemTtsLabel = context.getString(R.string.system_tts)
+            val httpTtsList = appDb.httpTTSDao.all
+            syncConfiguredTtsVoices(systemTtsLabel, httpTtsList)
             buildList {
-                add(ReadBookTtsEngineItem(context.getString(R.string.system_tts), null))
+                add(ReadBookTtsEngineItem(systemTtsLabel, null))
                 sysEngines.forEach { engine ->
                     add(
                         ReadBookTtsEngineItem(
@@ -1415,7 +1527,7 @@ class ReadBookViewModel(
                         )
                     )
                 }
-                appDb.httpTTSDao.all.forEach { httpTts ->
+                httpTtsList.forEach { httpTts ->
                     add(
                         ReadBookTtsEngineItem(
                             title = httpTts.name,
@@ -1434,6 +1546,43 @@ class ReadBookViewModel(
             }
             onSuccess?.invoke()
         }
+    }
+
+    private suspend fun syncConfiguredTtsVoices(
+        systemTtsLabel: String = context.getString(R.string.system_tts),
+        httpTtsList: List<HttpTTS> = appDb.httpTTSDao.all,
+    ) {
+        syncReadAloudVoicesUseCase(
+            entries = buildList {
+                add(
+                    VoiceCatalogEntry(
+                        engineType = ReadAloudVoice.ENGINE_SYSTEM,
+                        engineId = "",
+                        displayName = systemTtsLabel,
+                    )
+                )
+                sysEngines.forEach { engine ->
+                    add(
+                        VoiceCatalogEntry(
+                            engineType = ReadAloudVoice.ENGINE_SYSTEM,
+                            engineId = engine.name,
+                            displayName = engine.label,
+                        )
+                    )
+                }
+                httpTtsList.forEach { httpTts ->
+                    add(
+                        VoiceCatalogEntry(
+                            engineType = ReadAloudVoice.ENGINE_HTTP,
+                            engineId = httpTts.id.toString(),
+                            displayName = httpTts.name,
+                            sourceRevision = httpTts.lastUpdateTime,
+                        )
+                    )
+                }
+            },
+            managedSources = setOf(ReadAloudVoice.MANAGED_BY_CONFIGURED_TTS),
+        )
     }
 
     private fun importHttpTtsSource(text: String) {
@@ -1832,16 +1981,29 @@ class ReadBookViewModel(
             }
         }
         viewModelScope.launch {
-            eventFlow<Int>(EventBus.ALOUD_STATE).collect { state ->
-                _uiState.update {
-                    it.copy(
-                        isReadAloudRunning = state != Status.STOP,
-                        isReadAloudPaused = state == Status.PAUSE,
+            var previousStatus: ReadAloudSessionStatus? = null
+            readAloudSessionStore.state.collect { session ->
+                val status = session.status
+                val info = session.playback
+                _uiState.update { state ->
+                    state.copy(
+                        isReadAloudRunning = status != ReadAloudSessionStatus.Idle,
+                        isReadAloudPaused = status == ReadAloudSessionStatus.Paused,
+                        readAloudEngineName = info.engineName,
+                        readAloudCharacterName = info.characterName,
+                        readAloudRoleType = info.roleType,
+                        readAloudChapterPosition = info.chapterPosition,
+                        readAloudChapterLength = info.chapterLength,
+                        readAloudTtsTimer = session.timerMinutes,
                     )
                 }
-                if (state == Status.STOP || state == Status.PAUSE) {
+                if (previousStatus != null && previousStatus != status &&
+                    (status == ReadAloudSessionStatus.Idle ||
+                        status == ReadAloudSessionStatus.Paused)
+                ) {
                     _effects.tryEmit(ReadBookEffect.UpAloudState)
                 }
+                previousStatus = status
             }
         }
         viewModelScope.launch {
@@ -1915,6 +2077,9 @@ class ReadBookViewModel(
                         readAloudIgnoreAudioFocus = prefs.ignoreAudioFocus,
                         readAloudPauseOnPhoneCall = prefs.pauseReadAloudWhilePhoneCalls,
                         readAloudWakeLock = prefs.readAloudWakeLock,
+                        showReadAloudCapsule = prefs.showReadAloudCapsule,
+                        readAloudCapsuleOffsetX = prefs.capsuleOffsetX,
+                        readAloudCapsuleOffsetY = prefs.capsuleOffsetY,
                         readAloudMediaButtonPerNext = prefs.mediaButtonPerNext,
                         readAloudByPage = prefs.readAloudByPage,
                         readAloudSystemMediaCompat = prefs.systemMediaControlCompatibilityChange,
@@ -1922,6 +2087,9 @@ class ReadBookViewModel(
                         readAloudTtsFollowSys = prefs.ttsFollowSys,
                         readAloudTtsSpeechRate = prefs.ttsSpeechRate,
                         readAloudTtsTimer = prefs.ttsTimer,
+                        speechAnalysisMode = prefs.speechAnalysisMode,
+                        useMultiSpeaker = prefs.useMultiSpeaker,
+                        defaultReadAloudInterface = prefs.defaultInterface,
                     )
                 }
             }

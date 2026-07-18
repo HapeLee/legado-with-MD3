@@ -127,6 +127,14 @@ data class MainRouteBookCharacterList(
 ) : MainRoute
 
 @Serializable
+data class MainRouteBookVoiceCasting(
+    val bookUrl: String,
+) : MainRoute
+
+@Serializable
+data object MainRouteCloudTtsEngines : MainRoute
+
+@Serializable
 data class MainRouteBookKnowledgeList(
     val bookUrl: String,
 ) : MainRoute

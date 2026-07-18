@@ -64,6 +64,12 @@ class AiPromptConfigViewModel(
             nameResId = R.string.ai_prompt_task_text_factory,
             descResId = R.string.ai_prompt_task_text_factory_desc,
             defaultPromptResId = R.string.ai_prompt_default_text_factory
+        ),
+        TaskPromptMeta(
+            taskType = AiTaskType.ANALYZE_SPEECH,
+            nameResId = R.string.ai_prompt_task_analyze_speech,
+            descResId = R.string.ai_prompt_task_analyze_speech_desc,
+            defaultPromptResId = R.string.ai_prompt_default_analyze_speech
         )
     )
 

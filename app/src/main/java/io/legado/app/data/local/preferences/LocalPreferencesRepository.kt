@@ -2,6 +2,7 @@ package io.legado.app.data.local.preferences
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import kotlinx.coroutines.flow.Flow
@@ -31,5 +32,9 @@ class LocalPreferencesRepository(private val context: Context) {
         dataStore.edit { preferences ->
             preferences[key] = value
         }
+    }
+
+    suspend fun updatePreferences(transform: MutablePreferences.() -> Unit) {
+        dataStore.edit(transform)
     }
 }

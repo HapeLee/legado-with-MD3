@@ -125,6 +125,8 @@ object MainNavigator {
             is MainRouteBookCharacterDetail,
             is MainRouteBookCharacterNetwork,
             is MainRouteBookCharacterList,
+            is MainRouteBookVoiceCasting,
+            MainRouteCloudTtsEngines,
             is MainRouteBookKnowledgeList,
             is MainRouteBookKnowledgeDetail,
             is MainRouteBookEventList,
@@ -134,10 +136,13 @@ object MainNavigator {
                     currentRoute is MainRouteBookCharacterDetail ||
                     currentRoute is MainRouteBookCharacterNetwork ||
                     currentRoute is MainRouteBookCharacterList ||
+                    currentRoute is MainRouteBookVoiceCasting ||
+                    currentRoute == MainRouteCloudTtsEngines ||
                     currentRoute is MainRouteBookKnowledgeList ||
                     currentRoute is MainRouteBookKnowledgeDetail ||
                     currentRoute is MainRouteBookEventList ||
-                    currentRoute is MainRouteBookEventDetail
+                    currentRoute is MainRouteBookEventDetail ||
+                    currentRoute is MainRouteReadBook
                 ) {
                     backStack.add(route)
                 } else {

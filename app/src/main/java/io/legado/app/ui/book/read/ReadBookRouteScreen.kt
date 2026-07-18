@@ -1,5 +1,11 @@
 package io.legado.app.ui.book.read
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
@@ -110,6 +116,8 @@ fun ReadBookRouteScreen(
     controller: ReadBookController,
     onEffectsReady: () -> Unit = {},
     onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
+    onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
+    onOpenTtsEnginesAndVoices: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -323,6 +331,10 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.OpenSearchActivity -> {
                                 onOpenSearch(effect.word, effect.bookUrl)
                             }
+                            is ReadBookEffect.OpenBookVoiceCasting -> {
+                                onOpenVoiceCasting(effect.bookUrl)
+                            }
+                            ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             is ReadBookEffect.MenuSettingReplace -> {
                                 replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
                             }
@@ -477,6 +489,29 @@ fun ReadBookRouteScreen(
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
             )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
+            AnimatedVisibility(
+                visible = state.isReadAloudRunning &&
+                    state.showReadAloudCapsule &&
+                    state.menuVisible,
+                enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),
+                exit = fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 0.88f),
+            ) {
+                ReadAloudCapsule(
+                    book = state.book,
+                    isPaused = state.isReadAloudPaused,
+                    offsetXDp = state.readAloudCapsuleOffsetX,
+                    offsetYDp = state.readAloudCapsuleOffsetY,
+                    progress = state.readAloudChapterPosition.toFloat() /
+                        state.readAloudChapterLength.coerceAtLeast(1),
+                    onPositionChanged = { x, y ->
+                        viewModel.onIntent(ReadBookIntent.SetReadAloudCapsulePosition(x, y))
+                    },
+                    onTogglePause = {
+                        viewModel.onIntent(ReadBookIntent.ReadAloudTogglePause)
+                    },
+                    onStop = { viewModel.onIntent(ReadBookIntent.ReadAloudStop) },
+                )
+            }
             ReadBookScreen(
                 state = state,
                 onIntent = viewModel::onIntent,

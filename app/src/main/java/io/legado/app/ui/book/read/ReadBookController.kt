@@ -871,6 +871,8 @@ class ReadBookController(
             is ReadBookEffect.OpenHttpTtsImportPicker,
             is ReadBookEffect.OpenHttpTtsExportPicker,
             is ReadBookEffect.OpenHttpTtsLogin,
+            ReadBookEffect.OpenTtsEnginesAndVoices,
+            is ReadBookEffect.OpenBookVoiceCasting,
             is ReadBookEffect.OpenHighlightRuleImportPicker,
             is ReadBookEffect.OpenHighlightRuleExportPicker,
             is ReadBookEffect.TtsCacheCleared,

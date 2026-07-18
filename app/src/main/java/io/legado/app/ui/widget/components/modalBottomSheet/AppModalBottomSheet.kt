@@ -15,8 +15,11 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.SheetValue.Expanded
+import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -100,7 +103,10 @@ fun AppModalBottomSheet(
         }
     } else {
         if (show) {
-            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            val sheetState = rememberBottomSheetState(
+                initialValue = Expanded,
+                enabledValues = setOf(Hidden, Expanded)
+            )
             val density = LocalDensity.current
             val maxHeight = with(density) {
                 LocalWindowInfo.current.containerSize.height.toDp() * 0.8f

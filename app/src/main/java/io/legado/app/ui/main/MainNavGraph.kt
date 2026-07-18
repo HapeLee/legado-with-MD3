@@ -65,6 +65,10 @@ import io.legado.app.ui.book.read.ReadBookController
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
+import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingScreen
+import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingViewModel
+import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
+import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewScreen
 import io.legado.app.ui.book.readRecord.ReadRecordScreen
 import io.legado.app.ui.book.search.SearchIntent
@@ -428,6 +432,12 @@ fun MainActivity.mainEntryProvider(
                         searchResultIndex = readBookViewModel.uiState.value.searchResultIndex
                     )
                 )
+            },
+            onOpenVoiceCasting = { bookUrl ->
+                onNavigateToRoute(MainRouteBookVoiceCasting(bookUrl))
+            },
+            onOpenTtsEnginesAndVoices = {
+                onNavigateToRoute(MainRouteCloudTtsEngines)
             },
         )
 
@@ -809,6 +819,30 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteBookCharacterDetail(route.bookUrl, characterId))
             },
             onRefresh = viewModel::refresh,
+        )
+    }
+
+    entry<MainRouteBookVoiceCasting> { route ->
+        val viewModel = koinViewModel<BookVoiceCastingViewModel>(
+            key = "BookVoiceCasting:${route.bookUrl}",
+            parameters = { parametersOf(route.bookUrl) },
+        )
+        BookVoiceCastingScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
+            onManageCloudTts = { onNavigateToRoute(MainRouteCloudTtsEngines) },
+        )
+    }
+
+    entry<MainRouteCloudTtsEngines> {
+        val viewModel = koinViewModel<CloudTtsViewModel>()
+        CloudTtsScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() },
         )
     }
 
