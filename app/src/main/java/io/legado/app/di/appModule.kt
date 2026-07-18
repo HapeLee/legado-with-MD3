@@ -64,6 +64,7 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.ThemeSettingsRepository
+import io.legado.app.data.repository.ThemePackageSettingsRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
 import io.legado.app.data.repository.TranslationSettingsRepository
@@ -93,6 +94,7 @@ import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
 import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -272,6 +274,7 @@ val appModule = module {
     single<AppLocaleGateway> { AppLocaleRepository() }
     single<AppShellSettingsGateway> { AppShellSettingsRepository() }
     single<ThemeSettingsGateway> { ThemeSettingsRepository() }
+    single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
     single<AppUiConfigurationGateway> {
         AppUiConfigurationRepository(get(), get(), get())
     }

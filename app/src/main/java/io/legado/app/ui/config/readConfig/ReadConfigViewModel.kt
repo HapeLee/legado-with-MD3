@@ -17,7 +17,9 @@ class ReadConfigViewModel(
     private val applyReadSetting: ApplyReadSettingUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ReadConfigUiState())
+    private val _uiState = MutableStateFlow(
+        settingsGateway.currentSettings.toUiState(activeSheet = null)
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<ReadConfigEffect>(extraBufferCapacity = 16)

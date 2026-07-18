@@ -22,6 +22,9 @@ class ReadSettingsRepository(
     private val settingsRepository: SettingsRepository
 ) : ReadSettingsGateway {
 
+    override val currentSettings: ReadSettings
+        get() = AppConfigStore.preferences.toReadSettings()
+
     override val settings: Flow<ReadSettings> = AppConfigStore.preferencesFlow
         .map { preferences ->
             preferences.toReadSettings()

@@ -25,7 +25,9 @@ class DownloadCacheConfigViewModel(
     private val settingsGateway: DownloadCacheSettingsGateway,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DownloadCacheConfigUiState())
+    private val _uiState = MutableStateFlow(
+        DownloadCacheConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     init {

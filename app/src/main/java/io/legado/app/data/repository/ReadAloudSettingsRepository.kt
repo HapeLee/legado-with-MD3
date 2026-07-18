@@ -11,7 +11,6 @@ import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsValue
-import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -49,7 +48,7 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setIgnoreAudioFocus(value: Boolean) {
-        ReadConfig.ignoreAudioFocus = value
+        settingsRepository.putBoolean(PreferKey.ignoreAudioFocus, value)
     }
 
     suspend fun setMediaButtonOnExit(value: Boolean) {
@@ -61,11 +60,11 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setPauseReadAloudWhilePhoneCalls(value: Boolean) {
-        ReadConfig.pauseReadAloudWhilePhoneCalls = value
+        settingsRepository.putBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, value)
     }
 
     suspend fun setReadAloudWakeLock(value: Boolean) {
-        ReadConfig.readAloudWakeLock = value
+        settingsRepository.putBoolean(PreferKey.readAloudWakeLock, value)
     }
 
     suspend fun setShowReadAloudCapsule(value: Boolean) {
@@ -80,32 +79,32 @@ class ReadAloudSettingsRepository(
     suspend fun resetCapsulePosition() = setCapsulePosition(0f, 0f)
 
     suspend fun setMediaButtonPerNext(value: Boolean) {
-        ReadConfig.mediaButtonPerNext = value
+        settingsRepository.putBoolean(KEY_MEDIA_BUTTON_PER_NEXT, value)
     }
 
     suspend fun setReadAloudByPage(value: Boolean) {
-        ReadConfig.readAloudByPage = value
+        settingsRepository.putBoolean(PreferKey.readAloudByPage, value)
     }
 
     suspend fun setSystemMediaControlCompatibilityChange(value: Boolean) {
-        ReadConfig.systemMediaControlCompatibilityChange = value
+        settingsRepository.putBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
     }
 
     suspend fun setStreamReadAloudAudio(value: Boolean) {
-        ReadConfig.streamReadAloudAudio = value
+        settingsRepository.putBoolean(PreferKey.streamReadAloudAudio, value)
     }
 
     suspend fun setTtsTimer(value: Int) {
         val timer = PlaybackTimer.normalize(value)
-        ReadConfig.ttsTimer = timer
+        settingsRepository.putInt(PreferKey.ttsTimer, timer)
     }
 
     suspend fun setTtsFollowSys(value: Boolean) {
-        ReadConfig.ttsFollowSys = value
+        settingsRepository.putBoolean(PreferKey.ttsFollowSys, value)
     }
 
     suspend fun setTtsSpeechRate(value: Int) {
-        ReadConfig.ttsSpeechRate = value.coerceIn(0, 80)
+        settingsRepository.putInt(PreferKey.ttsSpeechRate, value.coerceIn(0, 80))
     }
 
     suspend fun setSpeechAnalysisMode(value: String) {

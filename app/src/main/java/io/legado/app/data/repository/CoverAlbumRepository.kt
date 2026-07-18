@@ -5,13 +5,14 @@ import androidx.annotation.Keep
 import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.model.CoverAlbum
 import io.legado.app.domain.model.CoverAlbumImage
 import io.legado.app.domain.model.CoverAlbumImageInput
 import io.legado.app.domain.model.CoverAlbumSelection
-import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -238,8 +239,12 @@ class CoverAlbumRepository(
                 LocalPreferencesKeys.COVER_ALBUM_MIGRATED,
                 false,
             ).first()
-            val legacyLight = CoverConfig.defaultCover.toExistingFiles()
-            val legacyDark = CoverConfig.defaultCoverDark.toExistingFiles()
+            val legacyLight = AppConfigStore.getString(PreferKey.defaultCover)
+                .orEmpty()
+                .toExistingFiles()
+            val legacyDark = AppConfigStore.getString(PreferKey.defaultCoverDark)
+                .orEmpty()
+                .toExistingFiles()
             val needsRecovery = _albums.value.isEmpty() &&
                 _selection.value.albumId == null &&
                 (legacyLight.isNotEmpty() || legacyDark.isNotEmpty())
@@ -287,8 +292,12 @@ class CoverAlbumRepository(
     }
 
     private fun syncLegacyCoverPaths() {
-        CoverConfig.defaultCover = selectedImagePaths(isDark = false).joinToString(",")
-        CoverConfig.defaultCoverDark = selectedImagePaths(isDark = true).joinToString(",")
+        AppConfigStore.putAll(
+            mapOf(
+                PreferKey.defaultCover to selectedImagePaths(isDark = false).joinToString(","),
+                PreferKey.defaultCoverDark to selectedImagePaths(isDark = true).joinToString(","),
+            )
+        )
     }
 
     private fun copyImages(

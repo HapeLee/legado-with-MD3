@@ -14,7 +14,9 @@ import kotlinx.coroutines.launch
 class LabConfigViewModel(
     private val settingsGateway: LabSettingsGateway,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(LabConfigUiState())
+    private val _uiState = MutableStateFlow(
+        LabConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<LabConfigEffect>(extraBufferCapacity = 16)

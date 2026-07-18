@@ -185,23 +185,11 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
 }
 
 class DownloadCacheSettingsRepository : DownloadCacheSettingsGateway {
+    override val currentSettings: DownloadCacheSettings
+        get() = AppConfigStore.preferences.toDownloadCacheSettings()
+
     override val settings: Flow<DownloadCacheSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            DownloadCacheSettings(
-                bitmapCacheSize = preferences.compatDsInt(PreferKey.bitmapCacheSize) ?: 50,
-                imageRetainNum = preferences.compatDsInt(PreferKey.imageRetainNum) ?: 0,
-                preDownloadNum = preferences.compatDsInt(PreferKey.preDownloadNum) ?: 10,
-                threadCount = preferences.compatDsInt(PreferKey.threadCount) ?: 16,
-                cacheBookThreadCount =
-                    preferences.compatDsInt(PreferKey.cacheBookThreadCount) ?: 16,
-                userAgent = preferences.compatDsString(PreferKey.userAgent).orEmpty().ifBlank {
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                        "Chrome/${BuildConfig.Cronet_Main_Version} Safari/537.36"
-                },
-                cronetEnabled = preferences.compatDsBoolean(PreferKey.cronet) ?: false,
-            )
-        }
+        .map { it.toDownloadCacheSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: DownloadCacheSettingsUpdate) {
@@ -220,28 +208,11 @@ class DownloadCacheSettingsRepository : DownloadCacheSettingsGateway {
 }
 
 class CoverSettingsRepository : CoverSettingsGateway {
+    override val currentSettings: CoverSettings
+        get() = AppConfigStore.preferences.toCoverSettings()
+
     override val settings: Flow<CoverSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            CoverSettings(
-                loadOnlyOnWifi = preferences.compatDsBoolean(PreferKey.loadCoverOnlyWifi) ?: false,
-                useDefaultCover = preferences.compatDsBoolean(PreferKey.useDefaultCover) ?: false,
-                showShadow = preferences.compatDsBoolean(PreferKey.coverShowShadow) ?: false,
-                showStroke = preferences.compatDsBoolean(PreferKey.coverShowStroke) ?: true,
-                useDefaultColor = preferences.compatDsBoolean(PreferKey.coverDefaultColor) ?: true,
-                textColor = preferences.compatDsInt(PreferKey.coverTextColor) ?: -16777216,
-                shadowColor = preferences.compatDsInt(PreferKey.coverShadowColor) ?: -16777216,
-                showName = preferences.compatDsBoolean(PreferKey.coverShowName) ?: true,
-                showAuthor = preferences.compatDsBoolean(PreferKey.coverShowAuthor) ?: true,
-                textColorDark = preferences.compatDsInt(PreferKey.coverTextColorN) ?: -1,
-                shadowColorDark = preferences.compatDsInt(PreferKey.coverShadowColorN) ?: -1,
-                showNameDark = preferences.compatDsBoolean(PreferKey.coverShowNameN) ?: true,
-                showAuthorDark = preferences.compatDsBoolean(PreferKey.coverShowAuthorN) ?: true,
-                infoOrientation = preferences.compatDsString(PreferKey.coverInfoOrientation) ?: "0",
-                exploreFilterState = preferences.compatDsInt(PreferKey.exploreFilterState) ?: 0,
-                defaultCover = preferences.compatDsString(PreferKey.defaultCover).orEmpty(),
-                defaultCoverDark = preferences.compatDsString(PreferKey.defaultCoverDark).orEmpty(),
-            )
-        }
+        .map { it.toCoverSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: CoverSettingsUpdate) {
@@ -267,14 +238,11 @@ class CoverSettingsRepository : CoverSettingsGateway {
 }
 
 class LabSettingsRepository : LabSettingsGateway {
+    override val currentSettings: LabSettings
+        get() = AppConfigStore.preferences.toLabSettings()
+
     override val settings: Flow<LabSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            LabSettings(
-                enabled = preferences.compatDsBoolean(PreferKey.labEnabled) ?: false,
-                eInkDisplay = preferences.compatDsBoolean(PreferKey.labEInkDisplay) ?: false,
-                eyeProtection = preferences.compatDsBoolean(PreferKey.labEyeProtection) ?: false,
-            )
-        }
+        .map { it.toLabSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: LabSettingsUpdate) {
@@ -288,20 +256,11 @@ class LabSettingsRepository : LabSettingsGateway {
 }
 
 class TranslationSettingsRepository : TranslationSettingsGateway {
+    override val currentSettings: TranslationSettings
+        get() = AppConfigStore.preferences.toTranslationSettings()
+
     override val settings: Flow<TranslationSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            val storedProvider = preferences.compatDsString(PreferKey.llmProvider)
-                ?: TranslationConstants.PROVIDER_GOOGLE
-            TranslationSettings(
-                provider = if (storedProvider == TranslationConstants.PROVIDER_OPENAI) {
-                    TranslationConstants.PROVIDER_APP_AI
-                } else {
-                    storedProvider
-                },
-                targetLanguage = preferences.compatDsString(PreferKey.llmTargetLanguage) ?: "zh",
-                maxCharsPerChunk = preferences.compatDsInt(PreferKey.llmMaxCharsPerChunk) ?: 10000,
-            )
-        }
+        .map { it.toTranslationSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: TranslationSettingsUpdate) {
@@ -315,24 +274,11 @@ class TranslationSettingsRepository : TranslationSettingsGateway {
 }
 
 class BackupSettingsRepository : BackupSettingsGateway {
+    override val currentSettings: BackupSettings
+        get() = AppConfigStore.preferences.toBackupSettings()
+
     override val settings: Flow<BackupSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            BackupSettings(
-                webDavUrl = preferences.compatDsString(PreferKey.webDavUrl).orEmpty(),
-                webDavAccount = preferences.compatDsString(PreferKey.webDavAccount).orEmpty(),
-                webDavPassword = preferences.compatDsString(PreferKey.webDavPassword).orEmpty(),
-                webDavDir = preferences.compatDsString(PreferKey.webDavDir) ?: "legado",
-                webDavDeviceName = preferences.compatDsString(PreferKey.webDavDeviceName).orEmpty(),
-                syncBookProgress = preferences.compatDsBoolean(PreferKey.syncBookProgress) ?: true,
-                syncBookProgressPlus =
-                    preferences.compatDsBoolean(PreferKey.syncBookProgressPlus) ?: false,
-                autoCheckNewBackup =
-                    preferences.compatDsBoolean(PreferKey.autoCheckNewBackup) ?: true,
-                onlyLatestBackup = preferences.compatDsBoolean(PreferKey.onlyLatestBackup) ?: true,
-                backupSyncMode = preferences.compatDsString(PreferKey.backupSyncMode) ?: "both",
-                backupPath = preferences.compatDsString(PreferKey.backupPath),
-            )
-        }
+        .map { it.toBackupSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: BackupSettingsUpdate) = updateAll(listOf(update))
@@ -366,6 +312,75 @@ class BackupSettingsRepository : BackupSettingsGateway {
         AppConfigStore.putAll(values)
     }
 }
+
+internal fun Preferences.toDownloadCacheSettings(): DownloadCacheSettings =
+    DownloadCacheSettings(
+        bitmapCacheSize = compatDsInt(PreferKey.bitmapCacheSize) ?: 50,
+        imageRetainNum = compatDsInt(PreferKey.imageRetainNum) ?: 0,
+        preDownloadNum = compatDsInt(PreferKey.preDownloadNum) ?: 10,
+        threadCount = compatDsInt(PreferKey.threadCount) ?: 16,
+        cacheBookThreadCount = compatDsInt(PreferKey.cacheBookThreadCount) ?: 16,
+        userAgent = compatDsString(PreferKey.userAgent).orEmpty().ifBlank {
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/${BuildConfig.Cronet_Main_Version} Safari/537.36"
+        },
+        cronetEnabled = compatDsBoolean(PreferKey.cronet) ?: false,
+    )
+
+internal fun Preferences.toCoverSettings(): CoverSettings = CoverSettings(
+    loadOnlyOnWifi = compatDsBoolean(PreferKey.loadCoverOnlyWifi) ?: false,
+    useDefaultCover = compatDsBoolean(PreferKey.useDefaultCover) ?: false,
+    showShadow = compatDsBoolean(PreferKey.coverShowShadow) ?: false,
+    showStroke = compatDsBoolean(PreferKey.coverShowStroke) ?: true,
+    useDefaultColor = compatDsBoolean(PreferKey.coverDefaultColor) ?: true,
+    textColor = compatDsInt(PreferKey.coverTextColor) ?: -16777216,
+    shadowColor = compatDsInt(PreferKey.coverShadowColor) ?: -16777216,
+    showName = compatDsBoolean(PreferKey.coverShowName) ?: true,
+    showAuthor = compatDsBoolean(PreferKey.coverShowAuthor) ?: true,
+    textColorDark = compatDsInt(PreferKey.coverTextColorN) ?: -1,
+    shadowColorDark = compatDsInt(PreferKey.coverShadowColorN) ?: -1,
+    showNameDark = compatDsBoolean(PreferKey.coverShowNameN) ?: true,
+    showAuthorDark = compatDsBoolean(PreferKey.coverShowAuthorN) ?: true,
+    infoOrientation = compatDsString(PreferKey.coverInfoOrientation) ?: "0",
+    exploreFilterState = compatDsInt(PreferKey.exploreFilterState) ?: 0,
+    defaultCover = compatDsString(PreferKey.defaultCover).orEmpty(),
+    defaultCoverDark = compatDsString(PreferKey.defaultCoverDark).orEmpty(),
+)
+
+internal fun Preferences.toLabSettings(): LabSettings = LabSettings(
+    enabled = compatDsBoolean(PreferKey.labEnabled) ?: false,
+    eInkDisplay = compatDsBoolean(PreferKey.labEInkDisplay) ?: false,
+    eyeProtection = compatDsBoolean(PreferKey.labEyeProtection) ?: false,
+)
+
+internal fun Preferences.toTranslationSettings(): TranslationSettings {
+    val storedProvider = compatDsString(PreferKey.llmProvider)
+        ?: TranslationConstants.PROVIDER_GOOGLE
+    return TranslationSettings(
+        provider = if (storedProvider == TranslationConstants.PROVIDER_OPENAI) {
+            TranslationConstants.PROVIDER_APP_AI
+        } else {
+            storedProvider
+        },
+        targetLanguage = compatDsString(PreferKey.llmTargetLanguage) ?: "zh",
+        maxCharsPerChunk = compatDsInt(PreferKey.llmMaxCharsPerChunk) ?: 10000,
+    )
+}
+
+internal fun Preferences.toBackupSettings(): BackupSettings = BackupSettings(
+    webDavUrl = compatDsString(PreferKey.webDavUrl).orEmpty(),
+    webDavAccount = compatDsString(PreferKey.webDavAccount).orEmpty(),
+    webDavPassword = compatDsString(PreferKey.webDavPassword).orEmpty(),
+    webDavDir = compatDsString(PreferKey.webDavDir) ?: "legado",
+    webDavDeviceName = compatDsString(PreferKey.webDavDeviceName).orEmpty(),
+    syncBookProgress = compatDsBoolean(PreferKey.syncBookProgress) ?: true,
+    syncBookProgressPlus = compatDsBoolean(PreferKey.syncBookProgressPlus) ?: false,
+    autoCheckNewBackup = compatDsBoolean(PreferKey.autoCheckNewBackup) ?: true,
+    onlyLatestBackup = compatDsBoolean(PreferKey.onlyLatestBackup) ?: true,
+    backupSyncMode = compatDsString(PreferKey.backupSyncMode) ?: "both",
+    backupPath = compatDsString(PreferKey.backupPath),
+)
 
 internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
     themeMode = compatDsString(PreferKey.themeMode) ?: "0",
@@ -456,35 +471,38 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     customTagColorsJson = compatDsString(PreferKey.customTagColors),
 )
 
+internal fun Preferences.toOtherSettings(): OtherSettings {
+    val rawSourceEditMaxLine = compatDsInt(PreferKey.sourceEditMaxLine) ?: Int.MAX_VALUE
+    return OtherSettings(
+        updateToVariant = compatDsString(PreferKey.updateToVariant) ?: "official_version",
+        autoCheckUpdateOnStart = compatDsBoolean(PreferKey.autoCheckUpdateOnStart) ?: false,
+        webServiceAutoStart = compatDsBoolean(PreferKey.webServiceAutoStart) ?: false,
+        autoRefresh = compatDsBoolean(PreferKey.autoRefresh) ?: false,
+        defaultToRead = compatDsBoolean(PreferKey.defaultToRead) ?: false,
+        notificationsPost = compatDsBoolean(PreferKey.notificationsPost) ?: true,
+        ignoreBatteryPermission = compatDsBoolean(PreferKey.ignoreBatteryPermission) ?: true,
+        firebaseEnable = compatDsBoolean(PreferKey.firebaseEnable) ?: true,
+        defaultBookTreeUri = compatDsString(PreferKey.defaultBookTreeUri),
+        antiAlias = compatDsBoolean(PreferKey.antiAlias) ?: false,
+        replaceEnableDefault = compatDsBoolean(PreferKey.replaceEnableDefault) ?: true,
+        autoClearExpired = compatDsBoolean(PreferKey.autoClearExpired) ?: true,
+        showAddToShelfAlert = compatDsBoolean(PreferKey.showAddToShelfAlert) ?: true,
+        showMangaUi = compatDsBoolean(PreferKey.showMangaUi) ?: true,
+        webServiceWakeLock = compatDsBoolean(PreferKey.webServiceWakeLock) ?: false,
+        sourceEditMaxLine = rawSourceEditMaxLine.takeIf { it >= 10 } ?: Int.MAX_VALUE,
+        webPort = compatDsInt(PreferKey.webPort) ?: 1122,
+        processText = compatDsBoolean(PreferKey.processText) ?: true,
+        recordLog = compatDsBoolean(PreferKey.recordLog) ?: false,
+        recordHeapDump = compatDsBoolean(PreferKey.recordHeapDump) ?: false,
+    )
+}
+
 class OtherSettingsRepository : OtherSettingsGateway {
+    override val currentSettings: OtherSettings
+        get() = AppConfigStore.preferences.toOtherSettings()
+
     override val settings: Flow<OtherSettings> = AppConfigStore.preferencesFlow
-        .map { preferences ->
-            val rawSourceEditMaxLine = preferences.compatDsInt(PreferKey.sourceEditMaxLine) ?: Int.MAX_VALUE
-            OtherSettings(
-                updateToVariant = preferences.compatDsString(PreferKey.updateToVariant) ?: "official_version",
-                autoCheckUpdateOnStart =
-                    preferences.compatDsBoolean(PreferKey.autoCheckUpdateOnStart) ?: false,
-                webServiceAutoStart = preferences.compatDsBoolean(PreferKey.webServiceAutoStart) ?: false,
-                autoRefresh = preferences.compatDsBoolean(PreferKey.autoRefresh) ?: false,
-                defaultToRead = preferences.compatDsBoolean(PreferKey.defaultToRead) ?: false,
-                notificationsPost = preferences.compatDsBoolean(PreferKey.notificationsPost) ?: true,
-                ignoreBatteryPermission =
-                    preferences.compatDsBoolean(PreferKey.ignoreBatteryPermission) ?: true,
-                firebaseEnable = preferences.compatDsBoolean(PreferKey.firebaseEnable) ?: true,
-                defaultBookTreeUri = preferences.compatDsString(PreferKey.defaultBookTreeUri),
-                antiAlias = preferences.compatDsBoolean(PreferKey.antiAlias) ?: false,
-                replaceEnableDefault = preferences.compatDsBoolean(PreferKey.replaceEnableDefault) ?: true,
-                autoClearExpired = preferences.compatDsBoolean(PreferKey.autoClearExpired) ?: true,
-                showAddToShelfAlert = preferences.compatDsBoolean(PreferKey.showAddToShelfAlert) ?: true,
-                showMangaUi = preferences.compatDsBoolean(PreferKey.showMangaUi) ?: true,
-                webServiceWakeLock = preferences.compatDsBoolean(PreferKey.webServiceWakeLock) ?: false,
-                sourceEditMaxLine = rawSourceEditMaxLine.takeIf { it >= 10 } ?: Int.MAX_VALUE,
-                webPort = preferences.compatDsInt(PreferKey.webPort) ?: 1122,
-                processText = preferences.compatDsBoolean(PreferKey.processText) ?: true,
-                recordLog = preferences.compatDsBoolean(PreferKey.recordLog) ?: false,
-                recordHeapDump = preferences.compatDsBoolean(PreferKey.recordHeapDump) ?: false,
-            )
-        }
+        .map { it.toOtherSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(update: OtherSettingsUpdate) {

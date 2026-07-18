@@ -22,7 +22,9 @@ class CoverConfigViewModel(
     private val settingsGateway: CoverSettingsGateway,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CoverConfigUiState())
+    private val _uiState = MutableStateFlow(
+        CoverConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<CoverConfigEffect>(extraBufferCapacity = 16)

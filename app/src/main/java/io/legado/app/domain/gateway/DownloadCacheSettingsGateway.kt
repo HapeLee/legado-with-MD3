@@ -4,6 +4,7 @@ import io.legado.app.domain.model.settings.DownloadCacheSettings
 import kotlinx.coroutines.flow.Flow
 
 interface DownloadCacheSettingsGateway {
+    val currentSettings: DownloadCacheSettings
     val settings: Flow<DownloadCacheSettings>
     suspend fun update(update: DownloadCacheSettingsUpdate)
 }

@@ -4,6 +4,7 @@ import io.legado.app.domain.model.settings.CoverSettings
 import kotlinx.coroutines.flow.Flow
 
 interface CoverSettingsGateway {
+    val currentSettings: CoverSettings
     val settings: Flow<CoverSettings>
     suspend fun update(update: CoverSettingsUpdate)
 }

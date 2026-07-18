@@ -14,7 +14,9 @@ import kotlinx.coroutines.launch
 class TranslationConfigViewModel(
     private val settingsGateway: TranslationSettingsGateway,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(TranslationConfigUiState())
+    private val _uiState = MutableStateFlow(
+        TranslationConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<TranslationConfigEffect>(extraBufferCapacity = 16)

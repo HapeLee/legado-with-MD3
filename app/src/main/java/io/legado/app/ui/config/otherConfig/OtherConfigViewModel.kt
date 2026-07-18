@@ -55,7 +55,14 @@ class OtherConfigViewModel(
     private var clearWebViewDataJob: Job? = null
     private var restartScheduled = false
 
-    private val _uiState = MutableStateFlow(initialState)
+    private val _uiState = MutableStateFlow(
+        otherSettingsGateway.currentSettings.toUiState(initialState).copy(
+            mediaButtonOnExit = readAloudSettingsGateway.currentSettings.mediaButtonOnExit,
+            readAloudByMediaButton =
+                readAloudSettingsGateway.currentSettings.readAloudByMediaButton,
+            ignoreAudioFocus = readAloudSettingsGateway.currentSettings.ignoreAudioFocus,
+        )
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<OtherConfigEffect>(extraBufferCapacity = 16)

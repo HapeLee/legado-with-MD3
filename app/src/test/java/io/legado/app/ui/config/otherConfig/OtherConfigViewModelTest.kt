@@ -71,6 +71,8 @@ class OtherConfigViewModelTest {
         private val state = MutableStateFlow(OtherSettings())
         val updates = mutableListOf<OtherSettingsUpdate>()
 
+        override val currentSettings: OtherSettings
+            get() = state.value
         override val settings: Flow<OtherSettings> = state
 
         override suspend fun update(update: OtherSettingsUpdate) {

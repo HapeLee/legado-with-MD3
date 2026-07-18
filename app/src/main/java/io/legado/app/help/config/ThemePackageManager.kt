@@ -4,10 +4,13 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.annotation.Keep
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import io.legado.app.R
+import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.model.CoverAlbumImageInput
+import io.legado.app.domain.model.settings.ThemeExportData
 import io.legado.app.domain.usecase.CoverAlbumUseCase
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.GSON
@@ -29,6 +32,7 @@ import java.util.zip.ZipOutputStream
 class ThemePackageManager(
     private val context: Context,
     private val coverAlbumUseCase: CoverAlbumUseCase,
+    private val themePackageSettingsGateway: ThemePackageSettingsGateway,
 ) {
 
     companion object {
@@ -63,9 +67,7 @@ class ThemePackageManager(
                 return@runSuspendCatching
             }
 
-            val rawConfig = themeData ?: ThemeImportExport.exportFromCurrent(
-                includeEmbeddedAssets = false
-            )
+            val rawConfig = themeData ?: themePackageSettingsGateway.exportCurrent()
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 ZipOutputStream(BufferedOutputStream(output)).use { zip ->
                     val assetEntries = exportAssets(zip, rawConfig)
@@ -122,7 +124,7 @@ class ThemePackageManager(
                     manifest.coverSelection.albumRef,
                     albumIdMap,
                 )
-                ThemeImportExport.applyToThemeConfig(
+                applyThemeSettings(
                     manifest.config.copy(
                         bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                         bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
@@ -161,12 +163,13 @@ class ThemePackageManager(
             val json = context.contentResolver.openInputStream(uri)?.use {
                 it.bufferedReader().readText()
             } ?: error("无法读取旧主题配置")
-            val appliedAssets = ThemeImportExport.importFromJsonWithAssets(json)
+            val preparedTheme = ThemeImportExport.prepareLegacyJson(json)
                 ?: error("旧主题配置格式无效或字段已被混淆")
+            applyThemeSettings(preparedTheme.data)
             val name = importedThemeName(uri)
             val selectedCoverAlbumId = importLegacyCoverAlbums(
                 albumName = name,
-                appliedAssets = appliedAssets,
+                appliedAssets = preparedTheme.appliedAssets,
             )
             saveImportedTheme(
                 name = name,
@@ -217,7 +220,7 @@ class ThemePackageManager(
         name: String,
         data: ThemeExportData? = null,
     ): SavedTheme = withContext(Dispatchers.IO) {
-        val themeData = data ?: ThemeImportExport.exportFromCurrent(includeEmbeddedAssets = false)
+        val themeData = data ?: themePackageSettingsGateway.exportCurrent()
         val selectedCoverAlbumId = themeData.selectedCoverAlbumId
             ?: coverAlbumUseCase.selection.value.albumId
         saveThemeFolder(
@@ -361,7 +364,7 @@ class ThemePackageManager(
         } else {
             importSavedCoverAlbum(root, manifest)
         }
-        ThemeImportExport.applyToThemeConfig(
+        applyThemeSettings(
             data = manifest.config.copy(
                 bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                 bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
@@ -376,7 +379,6 @@ class ThemePackageManager(
                 selectedCoverAlbumId = selectedAlbumId,
                 assets = null,
             ),
-            applyEmbeddedCoverAssets = false,
         )
         coverAlbumUseCase.selectAlbum(selectedAlbumId)
         if (selectedAlbumId != manifest.config.selectedCoverAlbumId) {
@@ -710,10 +712,22 @@ class ThemePackageManager(
     ) {
         saveTheme(
             name = uniqueSavedThemeName(name),
-            data = ThemeImportExport.exportFromCurrent().copy(
+            data = themePackageSettingsGateway.exportCurrent().copy(
                 selectedCoverAlbumId = selectedCoverAlbumId,
             ),
         )
+    }
+
+    private suspend fun applyThemeSettings(data: ThemeExportData) {
+        themePackageSettingsGateway.apply(data)
+        withContext(Dispatchers.Main.immediate) {
+            val mode = when (data.themeMode) {
+                "1" -> AppCompatDelegate.MODE_NIGHT_NO
+                "2" -> AppCompatDelegate.MODE_NIGHT_YES
+                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
     }
 
     private fun uniqueSavedThemeName(name: String): String {
