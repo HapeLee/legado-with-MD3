@@ -1808,6 +1808,10 @@
     <string name="sort_new_to_old">最新到最舊</string>
     <string name="sort_name_asc">名稱升序</string>
     <string name="sort_name_desc">名稱降序</string>
+    <string name="sort_size_asc">大小升序</string>
+    <string name="sort_size_desc">大小降序</string>
+    <string name="sort_time_asc">時間升序</string>
+    <string name="sort_time_desc">時間降序</string>
     <string name="text_dottedline">圓點底線</string>
     <string name="jump_to_volume">跳轉到卷</string>
     <string name="cancel_select">取消選擇</string>
