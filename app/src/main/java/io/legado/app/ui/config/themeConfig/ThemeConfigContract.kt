@@ -65,7 +65,6 @@ sealed interface ThemeConfigIntent {
 
 sealed interface ThemeConfigEffect {
     data object ApplyDayNight : ThemeConfigEffect
-    data object Recreate : ThemeConfigEffect
     data object NotifyMain : ThemeConfigEffect
     data class ChangeLauncherIcon(val value: String) : ThemeConfigEffect
     data object OpenFontFolder : ThemeConfigEffect

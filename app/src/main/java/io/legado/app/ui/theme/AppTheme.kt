@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import com.materialkolor.PaletteStyle
@@ -17,6 +18,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.customColors
+import io.legado.app.utils.sysConfiguration
+import androidx.compose.ui.unit.Density
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -90,10 +93,18 @@ private fun AppThemeActual(
     val isPureBlack = themeSettings.isPureBlack
     val paletteStyleValue = themeSettings.paletteStyle
     val materialVersion = themeSettings.materialVersion
+    val customContrast = themeSettings.customContrast
     val composeEngine = appShellSettings.composeEngine
     val customPrimary = themeSettings.customPrimary
     val customNightPrimary = themeSettings.customNightPrimary
     val appFontPath = themeSettings.appFontPath
+    val currentDensity = LocalDensity.current
+    val fontScale = (appShellSettings.fontScale / 10f)
+        .takeIf { it in 0.8f..1.6f }
+        ?: sysConfiguration.fontScale
+    val appDensity = remember(currentDensity.density, fontScale) {
+        Density(currentDensity.density, fontScale)
+    }
 
     // 2. 深度个性化配置
     val enableDeepPersonalization = themeSettings.enableDeepPersonalization
@@ -106,7 +117,7 @@ private fun AppThemeActual(
     val colorScheme = remember(
         context, appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
         enableDeepPersonalization, customColors,
-        paletteStyleValue, materialVersion
+        paletteStyleValue, materialVersion, customContrast,
     ) {
         if (appThemeMode == AppThemeMode.Custom &&
             enableDeepPersonalization &&
@@ -130,7 +141,8 @@ private fun AppThemeActual(
                 isAmoled = isPureBlack,
                 paletteStyle = paletteStyleValue,
                 materialVersion = materialVersion,
-                customSeedColor = customSeedColor
+                customSeedColor = customSeedColor,
+                customContrast = customContrast,
             )
         }
     }
@@ -171,7 +183,8 @@ private fun AppThemeActual(
 
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
-        LocalLegadoThemeColors provides themeColors
+        LocalLegadoThemeColors provides themeColors,
+        LocalDensity provides appDensity,
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {
             MiuixThemeWrapper(

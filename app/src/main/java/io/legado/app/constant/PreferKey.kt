@@ -49,6 +49,7 @@ object PreferKey {
     const val enableReview = "enableReview"
     const val showRss = "showRss"
     const val mainNavigationOrder = "mainNavigationOrder"
+    const val navExtended = "navExtended"
     const val showStatusBar = "showStatusBar"
     const val swipeAnimation = "swipeAnimation"
     const val bookshelfLayout = "bookshelfLayout"

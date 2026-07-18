@@ -240,6 +240,21 @@ fun BookshelfScreen(
         }
     }
 
+    LaunchedEffect(uiState.pendingUploadUrl) {
+        val url = uiState.pendingUploadUrl ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = "上传成功: $url",
+            actionLabel = "复制链接",
+            withDismissAction = true,
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            clipboardManager.setClipEntry(
+                ClipEntry(ClipData.newPlainText("url", url))
+            )
+        }
+        onIntent(BookshelfIntent.UploadResultConsumed)
+    }
+
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->

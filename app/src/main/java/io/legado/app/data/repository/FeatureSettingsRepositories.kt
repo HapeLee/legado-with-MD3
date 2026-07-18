@@ -73,7 +73,7 @@ class AppShellSettingsRepository : AppShellSettingsGateway {
                 AppShellBooleanSetting.UseFloatingBottomBar -> PreferKey.useFloatingBottomBar to update.value
                 AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass ->
                     PreferKey.useFloatingBottomBarLiquidGlass to update.value
-                AppShellBooleanSetting.NavExtended -> "navExtended" to update.value
+                AppShellBooleanSetting.NavExtended -> PreferKey.navExtended to update.value
             }
             is AppShellSettingsUpdate.StringValue -> when (update.setting) {
                 AppShellStringSetting.TabletInterface -> PreferKey.tabletInterface to update.value
@@ -382,7 +382,7 @@ private fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSetting
     defaultHomePage = compatDsString(PreferKey.defaultHomePage) ?: "bookshelf",
     mainNavigationOrder = compatDsString(PreferKey.mainNavigationOrder)
         ?: "home,bookshelf,explore,rss,my",
-    navExtended = compatDsBoolean("navExtended") ?: false,
+    navExtended = compatDsBoolean(PreferKey.navExtended) ?: false,
     navIconHome = compatDsString(PreferKey.navIconHome) ?: "",
     navIconBookshelf = compatDsString(PreferKey.navIconBookshelf) ?: "",
     navIconExplore = compatDsString(PreferKey.navIconExplore) ?: "",

@@ -37,6 +37,7 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -70,6 +71,8 @@ import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.chromium.base.ThreadUtils
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
@@ -150,7 +153,12 @@ class App : Application(), ImageLoaderFactory {
         oldConfig = Configuration(resources.configuration)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         Coroutine.async {
-            AppWebDav.upConfig()
+            get<BackupSettingsGateway>().settings
+                .map {
+                    listOf(it.webDavUrl, it.webDavDir, it.webDavAccount, it.webDavPassword)
+                }
+                .distinctUntilChanged()
+                .collect { AppWebDav.upConfig() }
         }
         Coroutine.async {
             LogUtils.init(this@App)

@@ -65,9 +65,10 @@ abstract class BaseComposeActivity(
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // manifest 声明 uiMode configChanges 后，切换深浅色不再 recreate，
-        // 而 AppCompat 手动回调本方法时不会走 View 树分发，需要自己同步给
-        // Compose（LocalConfiguration）并刷新系统栏与背景图
+        // manifest 声明 locale/layoutDirection/uiMode configChanges 后，Compose 主壳
+        // 可直接响应语言与深浅色变化，无需销毁 Activity。AppCompat 手动回调本方法时
+        // 不会走 View 树分发，需要自己同步给 Compose（LocalConfiguration），并刷新
+        // 系统栏与背景图。
         window.decorView.dispatchConfigurationChanged(newConfig)
         setupSystemBar()
         if (imageBg) {

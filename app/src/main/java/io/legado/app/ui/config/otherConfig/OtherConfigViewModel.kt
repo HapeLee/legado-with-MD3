@@ -37,6 +37,7 @@ import splitties.init.appCtx
 class OtherConfigViewModel(
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
+    initialState: OtherConfigUiState = defaultOtherConfigUiState(),
 ) : ViewModel() {
 
     companion object {
@@ -52,16 +53,7 @@ class OtherConfigViewModel(
     private var clearWebViewDataJob: Job? = null
     private var restartScheduled = false
 
-    private val _uiState = MutableStateFlow(
-        OtherConfigUiState(
-            checkSourceTimeoutSeconds = CheckSource.timeout / 1000,
-            checkSearch = CheckSource.checkSearch,
-            checkDiscovery = CheckSource.checkDiscovery,
-            checkInfo = CheckSource.checkInfo,
-            checkCategory = CheckSource.checkCategory,
-            checkContent = CheckSource.checkContent,
-        )
-    )
+    private val _uiState = MutableStateFlow(initialState)
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<OtherConfigEffect>(extraBufferCapacity = 16)
@@ -385,6 +377,15 @@ class OtherConfigViewModel(
 
 
 }
+
+internal fun defaultOtherConfigUiState() = OtherConfigUiState(
+    checkSourceTimeoutSeconds = CheckSource.timeout / 1000,
+    checkSearch = CheckSource.checkSearch,
+    checkDiscovery = CheckSource.checkDiscovery,
+    checkInfo = CheckSource.checkInfo,
+    checkCategory = CheckSource.checkCategory,
+    checkContent = CheckSource.checkContent,
+)
 
 private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
     current.copy(

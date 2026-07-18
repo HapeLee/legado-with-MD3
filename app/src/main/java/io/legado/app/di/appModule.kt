@@ -366,7 +366,7 @@ val appModule = module {
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
     viewModel { TxtTocRulePreviewViewModel(app = get(), repository = get()) }
-    viewModelOf(::OtherConfigViewModel)
+    viewModel { OtherConfigViewModel(get(), get()) }
     viewModelOf(::CustomThemeViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)

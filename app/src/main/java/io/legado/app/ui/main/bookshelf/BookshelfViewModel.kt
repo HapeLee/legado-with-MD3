@@ -8,7 +8,6 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
@@ -111,6 +110,7 @@ class BookshelfViewModel(
     private val draggingBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
     private val pendingSavedBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
     private val isInitialLoadingFlow = MutableStateFlow(true)
+    private val pendingUploadUrlFlow = MutableStateFlow<String?>(null)
 
     private data class BookshelfSortConfig(
         val sort: Int,
@@ -141,7 +141,8 @@ class BookshelfViewModel(
     private var cacheBookJob: Job? = null
     private val eventListenerSource = ConcurrentHashMap<BookSource, Boolean>()
 
-    val scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val scrollTrigger = _scrollTrigger.asSharedFlow()
 
     private val updateConcurrency: Int
         get() = AppConfig.threadCount.coerceIn(1, AppConst.MAX_THREAD)
@@ -534,13 +535,15 @@ class BookshelfViewModel(
         bookshelfSettings,
         appShellSettingsGateway.settings,
         themeSettingsGateway.settings,
-    ) { state, settings, appShellSettings, themeSettings ->
+        pendingUploadUrlFlow,
+    ) { state, settings, appShellSettings, themeSettings, pendingUploadUrl ->
         state.copy(
             settings = settings,
             useRaisedBottomInset = appShellSettings.useFloatingBottomBar || themeSettings.enableBlur,
             enableCustomTagColors = themeSettings.enableCustomTagColors,
             customTagColors = parseTagColors(themeSettings.customTagColorsJson),
             themeColor = themeSettings.themeColor,
+            pendingUploadUrl = pendingUploadUrl,
         )
     }.stateIn(
         viewModelScope,
@@ -573,8 +576,13 @@ class BookshelfViewModel(
         }
         viewModelScope.launch {
             bookshelfSettings.collect { settings ->
+                if (groupIdFlow.value != settings.saveTabPosition) {
+                    groupIdFlow.value = settings.saveTabPosition
+                    clearSelection()
+                    clearDragState()
+                }
                 updateBookGroupStyle(settings.bookGroupStyle)
-                    postUpBooksCount()
+                postUpBooksCount()
             }
         }
 
@@ -639,6 +647,7 @@ class BookshelfViewModel(
                     )
                 )
             }
+            BookshelfIntent.UploadResultConsumed -> pendingUploadUrlFlow.value = null
         }
     }
 
@@ -788,12 +797,12 @@ class BookshelfViewModel(
         val maxOrder = reorderedBooks.size
         execute {
             val updates = reorderedBooks.mapIndexedNotNull { index, bookUi ->
-                appDb.bookDao.getBook(bookUi.book.bookUrl)?.apply {
+                bookRepository.getBook(bookUi.book.bookUrl)?.apply {
                     order = if (isDescending) maxOrder - index else index + 1
                 }
             }
             if (updates.isNotEmpty()) {
-                appDb.bookDao.update(*updates.toTypedArray())
+                bookRepository.update(*updates.toTypedArray())
             }
         }.onError {
             showMessage("排序保存失败\n${it.localizedMessage}")
@@ -864,11 +873,11 @@ class BookshelfViewModel(
     }
 
     fun gotoTop() {
-        scrollTrigger.tryEmit(Unit)
+        _scrollTrigger.tryEmit(Unit)
     }
     fun upAllBookToc() {
         execute {
-            addToWaitUp(appDb.bookDao.hasUpdateBooks)
+            addToWaitUp(bookRepository.getHasUpdateBooks())
         }
     }
 
@@ -884,7 +893,7 @@ class BookshelfViewModel(
     ) {
         execute(context = updateDispatcher) {
             val bookUrls = books.filter { !it.isLocal && it.canUpdate }.map { it.bookUrl }
-            val fullBooks = bookUrls.mapNotNull { appDb.bookDao.getBook(it) }
+            val fullBooks = bookUrls.mapNotNull { bookRepository.getBook(it) }
             addToWaitUp(fullBooks)
         }.onError {
             if (resetRefreshWhenIdle) {
@@ -1078,13 +1087,7 @@ class BookshelfViewModel(
                 contentType = "application/json"
             )
         }.onSuccess { url ->
-            _effects.tryEmit(
-                BookshelfEffect.ShowSnackbar(
-                    message = "上传成功: $url",
-                    actionLabel = "复制链接",
-                    url = url
-                )
-            )
+            pendingUploadUrlFlow.value = url
         }.onError {
             _effects.tryEmit(
                 BookshelfEffect.ShowSnackbar(

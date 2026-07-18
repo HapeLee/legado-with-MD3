@@ -77,7 +77,6 @@ fun ThemeConfigRouteScreen(
         viewModel.effects.collectLatest { effect ->
             when (effect) {
                 ThemeConfigEffect.ApplyDayNight -> ThemeConfigStore.applyDayNightLive()
-                ThemeConfigEffect.Recreate -> postEvent(EventBus.RECREATE, "")
                 ThemeConfigEffect.NotifyMain -> postEvent(EventBus.NOTIFY_MAIN, true)
                 is ThemeConfigEffect.ChangeLauncherIcon ->
                     LauncherIconHelp.changeIcon(effect.value)

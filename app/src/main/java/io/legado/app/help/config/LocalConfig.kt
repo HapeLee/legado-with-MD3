@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.utils.getBoolean
 import io.legado.app.utils.putBoolean
@@ -64,9 +65,9 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         }
 
     var navExtended: Boolean
-        get() = getBoolean("navExtended")
+        get() = getBoolean(PreferKey.navExtended)
         set(value) {
-            putBoolean("navExtended", value)
+            putBoolean(PreferKey.navExtended, value)
         }
 
     /** 旧版语言偏好是否已迁移到 AppCompat per-app locales（App.onCreate 一次性迁移） */

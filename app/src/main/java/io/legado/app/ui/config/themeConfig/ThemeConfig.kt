@@ -83,9 +83,7 @@ object ThemeConfig {
     //m3 or miuix
     var composeEngine by prefDelegate(PreferKey.composeEngine, "material")
 
-    var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false)
 
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 
@@ -124,13 +122,9 @@ object ThemeConfig {
 
     var customMode by prefDelegate<String?>(PreferKey.customMode, "tonalSpot")
 
-    var fontScale by prefDelegate(PreferKey.fontScale, 10) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var fontScale by prefDelegate(PreferKey.fontScale, 10)
 
-    var appFontPath by prefDelegate<String?>(PreferKey.appFontPath, null) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var appFontPath by prefDelegate<String?>(PreferKey.appFontPath, null)
 
     var cPrimary by prefDelegate(PreferKey.cPrimary, 0)
 
@@ -193,13 +187,9 @@ object ThemeConfig {
 
     var bookInfoInputColor by prefDelegate(PreferKey.bookInfoInputColor, 0)
 
-    var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0)
 
-    var customContrast by prefDelegate(PreferKey.customContrast, "Default") {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var customContrast by prefDelegate(PreferKey.customContrast, "Default")
 
     var launcherIcon by prefDelegate(PreferKey.launcherIcon, "ic_launcher")
 
@@ -251,7 +241,7 @@ object ThemeConfig {
         "home,bookshelf,explore,rss,my",
     )
 
-    var navExtended by prefDelegate("navExtended", false)
+    var navExtended by prefDelegate(PreferKey.navExtended, false)
 
     var webServiceAutoStart by prefDelegate(PreferKey.webServiceAutoStart, false)
 

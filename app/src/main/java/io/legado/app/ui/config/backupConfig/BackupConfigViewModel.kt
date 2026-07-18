@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,13 +37,6 @@ class BackupConfigViewModel(
             settingsGateway.settings.collect { settings ->
                 _uiState.update { it.copy(settings = settings) }
             }
-        }
-        viewModelScope.launch {
-            settingsGateway.settings
-                .map { listOf(it.webDavUrl, it.webDavDir, it.webDavAccount, it.webDavPassword) }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { withContext(Dispatchers.IO) { webDavBackupUseCase.refreshConfig() } }
         }
     }
 

@@ -162,7 +162,6 @@ class ThemeConfigViewModel(
                 add(ThemeSettingsUpdate.AppTheme(value))
             }
             themeSettingsGateway.updateAll(updates)
-            _effects.tryEmit(ThemeConfigEffect.Recreate)
         }
     }
 
@@ -182,7 +181,6 @@ class ThemeConfigViewModel(
                     }
                 }
             )
-            _effects.tryEmit(ThemeConfigEffect.Recreate)
         }
     }
 

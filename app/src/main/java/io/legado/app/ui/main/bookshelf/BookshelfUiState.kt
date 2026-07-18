@@ -65,6 +65,7 @@ sealed interface BookshelfIntent {
     data class UpdateSetting(val update: BookshelfSettingsUpdate) : BookshelfIntent
     data class UpdateThemeSetting(val update: ThemeSettingsUpdate) : BookshelfIntent
     data class SetCustomTagColors(val colors: List<TagColorPair>) : BookshelfIntent
+    data object UploadResultConsumed : BookshelfIntent
 }
 
 sealed interface BookshelfEffect {
@@ -113,4 +114,5 @@ data class BookshelfUiState(
     val enableCustomTagColors: Boolean = false,
     val customTagColors: ImmutableList<TagColorPair> = persistentListOf(),
     val themeColor: Int = 0,
+    val pendingUploadUrl: String? = null,
 ) : ListUiState<BookUiItem>
