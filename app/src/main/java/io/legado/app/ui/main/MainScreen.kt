@@ -77,7 +77,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
-import io.legado.app.ui.main.bookshelf.BookshelfScreen
+import io.legado.app.ui.main.bookshelf.BookshelfRouteScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreRouteScreen
 import io.legado.app.ui.main.home.HomeRouteScreen
@@ -120,7 +120,9 @@ import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
 )
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel = koinViewModel(),
+    mainUiState: MainUiState,
+    onIntent: (MainUiIntent) -> Unit,
+    effects: kotlinx.coroutines.flow.Flow<MainEffect>,
     useRail: Boolean,
     onOpenSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
@@ -151,11 +153,10 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val mainUiState by viewModel.uiState.collectAsStateWithLifecycle()
     val defaultHelpTitle = stringResource(R.string.help)
 
-    LaunchedEffect(viewModel, context) {
-        viewModel.effects.collectLatest { effect ->
+    LaunchedEffect(effects, context) {
+        effects.collectLatest { effect ->
             when (effect) {
                 is MainEffect.OpenUrl -> {
                     context.startActivity(
@@ -279,7 +280,7 @@ fun MainScreen(
                     }
                 )
                 LaunchedEffect(miuixNavState.currentValue) {
-                    viewModel.onIntent(MainUiIntent.SetNavigationRailExpanded(miuixNavState.isExpanded))
+                    onIntent(MainUiIntent.SetNavigationRailExpanded(miuixNavState.isExpanded))
                 }
                 MiuixNavigationRail(
                     state = miuixNavState,
@@ -333,7 +334,7 @@ fun MainScreen(
                                 label = destinationLabel,
                             )
                             if (destination == MainDestination.Bookshelf && showGroupMenu) {
-                                BookshelfRailGroupMenu(
+                                BookshelfRailGroupMenuRoute(
                                     expanded = showGroupMenu,
                                     onDismissRequest = { showGroupMenu = false },
                                     onBeforeSelectGroup = {
@@ -359,7 +360,7 @@ fun MainScreen(
                                     val targetExpanded = !expanded
                                     if (targetExpanded) navState.expand()
                                     else navState.collapse()
-                                    viewModel.onIntent(MainUiIntent.SetNavigationRailExpanded(targetExpanded))
+                                    onIntent(MainUiIntent.SetNavigationRailExpanded(targetExpanded))
                                 }
                             }
                         ) {
@@ -423,7 +424,7 @@ fun MainScreen(
                                 )
 
                                 if (destination == MainDestination.Bookshelf && showGroupMenu) {
-                                    BookshelfRailGroupMenu(
+                                    BookshelfRailGroupMenuRoute(
                                         expanded = showGroupMenu,
                                         onDismissRequest = { showGroupMenu = false },
                                         onBeforeSelectGroup = {
@@ -543,7 +544,7 @@ fun MainScreen(
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )
 
-                            MainDestination.Bookshelf -> BookshelfScreen(
+                            MainDestination.Bookshelf -> BookshelfRouteScreen(
                                 scrollToTopRequest = bookshelfScrollToTopRequest,
                                 onScrollToTopRequestHandled = { handledRequest ->
                                     if (bookshelfScrollToTopRequest == handledRequest) {
@@ -591,7 +592,7 @@ fun MainScreen(
                                     when (event) {
                                         PrefClickEvent.OpenBookCacheManage -> onNavigateToBookCacheManage()
                                         PrefClickEvent.OpenReadRecord -> onNavigateToReadRecord()
-                                        else -> viewModel.onIntent(MainUiIntent.HandlePreferenceClick(event))
+                                        else -> onIntent(MainUiIntent.HandlePreferenceClick(event))
                                     }
                                 }
                             )
@@ -722,31 +723,50 @@ private class MainPageLifecycleOwner : LifecycleOwner {
 }
 
 @Composable
-private fun BookshelfRailGroupMenu(
+private fun BookshelfRailGroupMenuRoute(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     onBeforeSelectGroup: suspend () -> Unit,
     viewModel: BookshelfViewModel = koinViewModel()
 ) {
     val groupState by viewModel.groupSelectorState.collectAsStateWithLifecycle()
+    BookshelfRailGroupMenu(
+        expanded = expanded,
+        state = groupState,
+        onDismissRequest = onDismissRequest,
+        onSelectGroup = { groupId ->
+            onBeforeSelectGroup()
+            viewModel.onIntent(
+                io.legado.app.ui.main.bookshelf.BookshelfIntent.ChangeGroup(groupId)
+            )
+        },
+    )
+}
+
+@Composable
+private fun BookshelfRailGroupMenu(
+    expanded: Boolean,
+    state: io.legado.app.ui.main.bookshelf.BookshelfGroupSelectorState,
+    onDismissRequest: () -> Unit,
+    onSelectGroup: suspend (Long) -> Unit,
+) {
     val coroutineScope = rememberCoroutineScope()
 
     RoundDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest
     ) { dismiss ->
-        groupState.groups.forEachIndexed { groupIndex, group ->
+        state.groups.forEachIndexed { groupIndex, group ->
             RoundDropdownMenuItem(
                 text = group.groupName,
                 onClick = {
                     coroutineScope.launch {
-                        onBeforeSelectGroup()
-                        viewModel.changeGroup(group.groupId)
+                        onSelectGroup(group.groupId)
                         dismiss()
                     }
                 },
                 trailingIcon = {
-                    if (groupState.selectedGroupIndex == groupIndex) {
+                    if (state.selectedGroupIndex == groupIndex) {
                         Icon(
                             Icons.Default.Check,
                             null,

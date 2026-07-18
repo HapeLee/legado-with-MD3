@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -92,7 +93,12 @@ fun MainActivity.mainEntryProvider(
     onRegisterVariableSetter: (((String, String?) -> Unit)?) -> Unit
 ) = entryProvider {
     entry<MainRouteHome> {
+        val mainViewModel = koinViewModel<MainViewModel>()
+        val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
         MainScreen(
+            mainUiState = mainUiState,
+            onIntent = mainViewModel::onIntent,
+            effects = mainViewModel.effects,
             useRail = useRail,
             onOpenSettings = {
                 onNavigateToRoute(MainRouteSettings)
