@@ -8,8 +8,10 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.BatchChangeSourceCandidate
@@ -43,6 +45,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -81,7 +86,8 @@ data class BookshelfManageScreenUiState(
     val batchChangeOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     val cacheVersion: Long = 0,
     val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
-    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig()
+    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig(),
+    val bookSources: ImmutableList<BookSourcePart> = persistentListOf(),
 )
 
 sealed interface BookshelfManageScreenIntent {
@@ -148,6 +154,7 @@ sealed interface BookshelfManageScreenEffect {
 class BookshelfManageScreenViewModel(
     application: Application,
     private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
     private val bookGroupRepository: BookGroupRepository,
     private val searchRepository: SearchRepository,
     val bookshelfManageScreenConfig: BookshelfManageScreenConfig,
@@ -178,6 +185,14 @@ class BookshelfManageScreenViewModel(
     private var observersStarted = false
     private val pendingDownloadStatusBookUrls = ConcurrentHashMap.newKeySet<String>()
     private val pendingCacheCountRefreshBookUrls = ConcurrentHashMap.newKeySet<String>()
+
+    init {
+        viewModelScope.launch {
+            bookSourceRepository.flowEnabled().collect { sources ->
+                _uiState.update { it.copy(bookSources = sources.toImmutableList()) }
+            }
+        }
+    }
     @Volatile
     private var pendingDownloadRunningRefresh = false
 

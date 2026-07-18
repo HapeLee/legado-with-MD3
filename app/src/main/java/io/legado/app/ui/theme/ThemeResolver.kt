@@ -69,8 +69,8 @@ object ThemeResolver {
         return materialPaletteStyles[value] ?: PaletteStyle.TonalSpot
     }
 
-    fun resolveContrastLevel(): Double {
-        return runCatching { Contrast.valueOf(ThemeConfig.customContrast).value }
+    fun resolveContrastLevel(value: String = ThemeConfig.customContrast): Double {
+        return runCatching { Contrast.valueOf(value).value }
             .getOrDefault(Contrast.Default.value)
     }
 

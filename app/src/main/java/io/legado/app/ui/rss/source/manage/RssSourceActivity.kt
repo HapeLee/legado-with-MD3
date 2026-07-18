@@ -11,7 +11,7 @@ class RssSourceActivity : BaseComposeActivity() {
     @Composable
     override fun Content() {
         AppTheme {
-            RssSourceScreen(
+            RssSourceRouteScreen(
                 onBackClick = { finish() },
                 onEditSource = { source ->
                     startActivity<RssSourceEditActivity> {

@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,17 +24,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.model.ReadBook
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import kotlinx.coroutines.launch
 
 private const val CHINESE_CONVERT_ID = -1L
 private const val RE_SEGMENT_ID = -2L
@@ -43,21 +38,20 @@ private const val RE_SEGMENT_ID = -2L
 @Composable
 fun EffectiveReplacesSheet(
     show: Boolean,
+    effectiveRules: List<ReplaceRule>,
+    chineseConvertActive: Boolean,
+    reSegmentActive: Boolean,
     onDismissRequest: () -> Unit,
     onOpenReplaceEditor: (id: Long, pattern: String?) -> Unit,
     onReplaceRuleChanged: () -> Unit,
     onNavigateToTextEffects: () -> Unit,
     onOpenContentProcesses: () -> Unit,
+    onDisableRule: (ReplaceRule) -> Unit,
+    onDisableChineseConverter: () -> Unit,
+    onDisableReSegment: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    val chineseConvertActive = ReadConfig.chineseConverterType > 0
     val chineseConvertItem = remember { ReplaceRule(CHINESE_CONVERT_ID, "繁简转换") }
-    val reSegmentActive = ReadBook.book?.getReSegment() == true
     val reSegmentItem = remember { ReplaceRule(RE_SEGMENT_ID, "") }
-
-    val effectiveRules = remember(show) {
-        ReadBook.curTextChapter?.effectiveReplaceRules ?: emptyList()
-    }
 
     val items = remember(show, effectiveRules, chineseConvertActive, reSegmentActive) {
         buildList {
@@ -155,15 +149,11 @@ fun EffectiveReplacesSheet(
                                     isEdited = true
                                     when (rule.id) {
                                         RE_SEGMENT_ID -> {
-                                            ReadBook.book?.setReSegment(false)
-                                            ReadBook.loadContent(false)
+                                            onDisableReSegment()
                                         }
 
-                                        CHINESE_CONVERT_ID -> ReadConfig.chineseConverterType = 0
-                                        else -> scope.launch {
-                                            rule.isEnabled = false
-                                            appDb.replaceRuleDao.insert(rule)
-                                        }
+                                        CHINESE_CONVERT_ID -> onDisableChineseConverter()
+                                        else -> onDisableRule(rule)
                                     }
                                 },
                 icon = Icons.Default.Close,

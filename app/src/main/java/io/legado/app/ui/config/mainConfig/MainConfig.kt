@@ -21,7 +21,7 @@ object MainConfig {
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
     var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")
     var swipeAnimation by prefDelegate(PreferKey.swipeAnimation, true)
-    var navExtended by prefDelegate("navExtended", false)
+    var navExtended by prefDelegate(PreferKey.navExtended, false)
     var webServiceAutoStart by prefDelegate(PreferKey.webServiceAutoStart, false)
     var autoRefreshBook by prefDelegate(PreferKey.autoRefresh, false)
     var autoCheckNewBackup by prefDelegate(PreferKey.autoCheckNewBackup, true)

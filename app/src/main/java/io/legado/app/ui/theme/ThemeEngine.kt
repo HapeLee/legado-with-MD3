@@ -7,6 +7,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.ThemeResolver.resolvePaletteStyle
 import io.legado.app.ui.theme.colorScheme.AugustColorScheme
 import io.legado.app.ui.theme.colorScheme.CarlottaColorScheme
@@ -46,7 +47,8 @@ object ThemeEngine {
         paletteStyle: String?,
         materialVersion: String? = null,
         forceOpaque: Boolean = false,
-        customSeedColor: Int? = null
+        customSeedColor: Int? = null,
+        customContrast: String? = null,
     ): ColorScheme {
         val resolvedMode = resolveMode(mode = mode, forceOpaque = forceOpaque)
         val baseColorScheme = resolveBaseColorScheme(
@@ -55,7 +57,8 @@ object ThemeEngine {
             darkTheme = darkTheme,
             paletteStyle = paletteStyle,
             materialVersion = materialVersion,
-            customSeedColor = customSeedColor
+            customSeedColor = customSeedColor,
+            customContrast = customContrast,
         )
 
         return baseColorScheme
@@ -80,7 +83,8 @@ object ThemeEngine {
         darkTheme: Boolean,
         paletteStyle: String?,
         materialVersion: String?,
-        customSeedColor: Int?
+        customSeedColor: Int?,
+        customContrast: String?,
     ): ColorScheme {
         if (mode == AppThemeMode.Dynamic) {
             return resolveDynamicColorScheme(context = context, darkTheme = darkTheme)
@@ -90,7 +94,8 @@ object ThemeEngine {
                 seedColor = customSeedColor ?: context.primaryColor,
                 darkTheme = darkTheme,
                 paletteStyle = paletteStyle,
-                materialVersion = materialVersion
+                materialVersion = materialVersion,
+                customContrast = customContrast,
             )
         }
         return (predefinedColorSchemes[mode] ?: GRColorScheme).getColorScheme(darkTheme)
@@ -110,11 +115,19 @@ object ThemeEngine {
         seedColor: Int,
         darkTheme: Boolean,
         paletteStyle: String?,
-        materialVersion: String?
+        materialVersion: String?,
+        customContrast: String?,
     ): ColorScheme {
         val style = resolvePaletteStyle(paletteStyle)
         val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(materialVersion)
-        return CustomColorScheme(seedColor, style, colorSpec).getColorScheme(darkTheme)
+        return CustomColorScheme(
+            seed = seedColor,
+            style = style,
+            colorSpec = colorSpec,
+            contrastLevel = ThemeResolver.resolveContrastLevel(
+                customContrast ?: ThemeConfig.customContrast
+            ),
+        ).getColorScheme(darkTheme)
     }
 
     private fun ColorScheme.applyAmoledIfNeeded(

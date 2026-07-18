@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -865,6 +864,7 @@ private fun BookshelfManageScreen(
     BookSourcePickerSheet(
         show = showBatchSourcePickerSheet,
         title = "选择目标书源",
+        sources = state.bookSources,
         onDismissRequest = { showBatchSourcePickerSheet = false },
         onConfirm = { sources ->
             pendingBatchSources = sources
@@ -1288,11 +1288,10 @@ private fun BookshelfManageScreen(
 private fun BookSourcePickerSheet(
     show: Boolean,
     title: String,
+    sources: List<BookSourcePart>,
     onDismissRequest: () -> Unit,
     onConfirm: (List<BookSource>) -> Unit,
 ) {
-    val sources by appDb.bookSourceDao.flowEnabled()
-        .collectAsStateWithLifecycle(initialValue = emptyList())
     var searchKey by rememberSaveable(show) { mutableStateOf("") }
     var selectedSources by remember(show) { mutableStateOf<List<BookSourcePart>>(emptyList()) }
     val selectedUrls = remember(selectedSources) {

@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components
 
 import android.graphics.Typeface
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +20,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,13 +47,30 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.loadFontFiles
+import io.legado.app.ui.config.FontConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.FileDoc
+import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private val fontGridHeight = 360.dp
+
+enum class FontSort(@param:StringRes val labelRes: Int) {
+    NameAsc(R.string.sort_name_asc),
+    NameDesc(R.string.sort_name_desc),
+    SizeAsc(R.string.sort_size_asc),
+    SizeDesc(R.string.sort_size_desc),
+    DateAsc(R.string.sort_time_asc),
+    DateDesc(R.string.sort_time_desc);
+
+    companion object {
+        fun fromInt(value: Int): FontSort {
+            return entries.getOrElse(value) { NameAsc }
+        }
+    }
+}
 
 
 sealed interface FontFolderState {
@@ -75,6 +97,7 @@ fun FontSelectGrid(
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
     var filesLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    val fontSort by FontConfig.fontSortState
 
     LaunchedEffect(folderState) {
         if (folderState is FontFolderState.Loaded) {
@@ -89,9 +112,19 @@ fun FontSelectGrid(
         }
     }
 
-    val filteredItems = remember(fontItems, searchQuery) {
-        if (searchQuery.isBlank()) fontItems
+    val filteredItems = remember(fontItems, searchQuery, fontSort) {
+        val filtered = if (searchQuery.isBlank()) fontItems
         else fontItems.filter { it.name.contains(searchQuery, ignoreCase = true) }
+
+        val comparator = when (FontSort.fromInt(fontSort)) {
+            FontSort.NameAsc -> Comparator<FileDoc> { a, b -> a.name.cnCompare(b.name) }
+            FontSort.NameDesc -> Comparator<FileDoc> { a, b -> b.name.cnCompare(a.name) }
+            FontSort.SizeAsc -> compareBy<FileDoc> { it.size }
+            FontSort.SizeDesc -> compareByDescending<FileDoc> { it.size }
+            FontSort.DateAsc -> compareBy<FileDoc> { it.lastModified }
+            FontSort.DateDesc -> compareByDescending<FileDoc> { it.lastModified }
+        }
+        filtered.sortedWith(comparator)
     }
 
     val showLoading = folderState is FontFolderState.Loading || filesLoading
@@ -106,6 +139,41 @@ fun FontSelectGrid(
             onQueryChange = { searchQuery = it },
             placeholder = stringResource(R.string.search_placeholder),
             autoFocus = false,
+            trailingIcon = {
+                var expanded by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = stringResource(R.string.sort),
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        FontSort.entries.forEach { sort ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(sort.labelRes)) },
+                                onClick = {
+                                    FontConfig.fontSort = sort.ordinal
+                                    expanded = false
+                                },
+                                trailingIcon = if (fontSort == sort.ordinal) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = LegadoTheme.colorScheme.primary
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+                }
+            }
         )
 
         Spacer(Modifier.height(4.dp))

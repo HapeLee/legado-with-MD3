@@ -2,7 +2,6 @@ package io.legado.app.ui.main
 
 import androidx.annotation.StringRes
 import io.legado.app.R
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import kotlinx.collections.immutable.persistentListOf
 
 sealed class MainDestination(
@@ -48,12 +47,3 @@ sealed class MainDestination(
         }
     }
 }
-
-val MainDestination.customIconPath: String
-    get() = when (this) {
-        MainDestination.Home -> ThemeConfig.navIconHome
-        MainDestination.Bookshelf -> ThemeConfig.navIconBookshelf
-        MainDestination.Explore -> ThemeConfig.navIconExplore
-        MainDestination.Rss -> ThemeConfig.navIconRss
-        MainDestination.My -> ThemeConfig.navIconMy
-    }

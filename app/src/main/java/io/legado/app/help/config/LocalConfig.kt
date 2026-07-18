@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.constant.PreferKey
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.utils.getBoolean
 import io.legado.app.utils.putBoolean
 import io.legado.app.utils.putLong
@@ -21,8 +22,8 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
 
     private const val versionCodeKey = "appVersionCode"
 
-    private val localPreferencesRepository: LocalPreferencesRepository
-        by lazy { get(LocalPreferencesRepository::class.java) }
+    private val localPreferencesRepository: SettingsRepository
+        by lazy { get(SettingsRepository::class.java) }
 
     /**
      * 本地密码,用来对需要备份的敏感信息加密,如 webdav 配置等
@@ -64,9 +65,16 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         }
 
     var navExtended: Boolean
-        get() = getBoolean("navExtended")
+        get() = getBoolean(PreferKey.navExtended)
         set(value) {
-            putBoolean("navExtended", value)
+            putBoolean(PreferKey.navExtended, value)
+        }
+
+    /** 旧版语言偏好是否已迁移到 AppCompat per-app locales（App.onCreate 一次性迁移） */
+    var appLocaleMigrated: Boolean
+        get() = getBoolean("appLocaleMigrated")
+        set(value) {
+            putBoolean("appLocaleMigrated", value)
         }
 
     val readHelpVersionIsLast: Boolean

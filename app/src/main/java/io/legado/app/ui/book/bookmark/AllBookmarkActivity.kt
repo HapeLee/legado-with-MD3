@@ -12,7 +12,7 @@ class AllBookmarkActivity : BaseComposeActivity() {
     @Composable
     override fun Content() {
         MaterialTheme {
-            AllBookmarkScreen(
+            AllBookmarkRouteScreen(
                 onBack = { finish() }
             )
         }

@@ -6,7 +6,6 @@ import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.model.CoverAlbum
 import io.legado.app.domain.model.CoverAlbumImage
@@ -35,7 +34,7 @@ import java.util.UUID
 
 class CoverAlbumRepository(
     private val context: Context,
-    private val preferences: LocalPreferencesRepository,
+    private val preferences: SettingsRepository,
 ) : CoverAlbumGateway {
 
     companion object {

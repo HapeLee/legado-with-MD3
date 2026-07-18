@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
@@ -30,10 +31,14 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun MainNavigationSettingsSheet(
     show: Boolean,
+    settings: AppShellSettings,
     onDismissRequest: () -> Unit,
+    onSetVisible: (String, Boolean) -> Unit,
+    onSetOrder: (String) -> Unit,
+    onSetDefault: (String) -> Unit,
 ) {
     var navigationItems by remember(show) {
-        mutableStateOf(MainDestination.ordered(ThemeConfig.mainNavigationOrder))
+        mutableStateOf(MainDestination.ordered(settings.mainNavigationOrder))
     }
     val navigationListState = rememberLazyListState()
     val reorderableState =
@@ -45,48 +50,31 @@ fun MainNavigationSettingsSheet(
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
-            ThemeConfig.mainNavigationOrder =
-                navigationItems.joinToString(",") { it.route }
-        }
-    }
-
-    fun updateVisibility(
-        route: String,
-        visible: Boolean,
-        update: (Boolean) -> Unit,
-    ) {
-        update(visible)
-        if (!visible && ThemeConfig.defaultHomePage == route) {
-            ThemeConfig.defaultHomePage = MainDestination.Bookshelf.route
+            onSetOrder(navigationItems.joinToString(",") { it.route })
         }
     }
 
     fun isRouteVisible(route: String): Boolean = when (route) {
-        MainDestination.Home.route -> ThemeConfig.showHome
-        MainDestination.Explore.route -> ThemeConfig.showDiscovery
-        MainDestination.Rss.route -> ThemeConfig.showRss
+        MainDestination.Home.route -> settings.showHome
+        MainDestination.Explore.route -> settings.showDiscovery
+        MainDestination.Rss.route -> settings.showRss
         else -> true
     }
 
     fun getVisibilityForRoute(route: String): Boolean = isRouteVisible(route)
 
     fun setVisibilityForRoute(route: String, visible: Boolean) {
-        when (route) {
-            MainDestination.Home.route -> updateVisibility(route, visible) { ThemeConfig.showHome = it }
-            MainDestination.Explore.route -> updateVisibility(route, visible) { ThemeConfig.showDiscovery = it }
-            MainDestination.Rss.route -> updateVisibility(route, visible) { ThemeConfig.showRss = it }
-        }
+        onSetVisible(route, visible)
         if (!visible) {
             val item = navigationItems.find { it.route == route } ?: return
             navigationItems = navigationItems.filter { it.route != route } + item
-            ThemeConfig.mainNavigationOrder =
-                navigationItems.joinToString(",") { it.route }
+            onSetOrder(navigationItems.joinToString(",") { it.route })
         }
     }
 
     val visibleItems = navigationItems.filter { isRouteVisible(it.route) }
     val hiddenItems = navigationItems.filter { !isRouteVisible(it.route) }
-    val selectedDefault = ThemeConfig.defaultHomePage.takeIf { route ->
+    val selectedDefault = settings.defaultHomePage.takeIf { route ->
         visibleItems.any { it.route == route }
     } ?: MainDestination.Bookshelf.route
 
@@ -105,7 +93,7 @@ fun MainNavigationSettingsSheet(
                 selectedValue = selectedDefault,
                 displayEntries = visibleItems.map { stringResource(it.labelId) }.toTypedArray(),
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
-                onValueChange = { ThemeConfig.defaultHomePage = it },
+                onValueChange = onSetDefault,
             )
             Spacer(modifier = Modifier.padding(bottom = 4.dp))
             LazyColumn(
@@ -130,8 +118,7 @@ fun MainNavigationSettingsSheet(
                             navigationItems = navigationItems.toMutableList().apply {
                                 move(indexOf(fromItem), indexOf(toItem))
                             }
-                            ThemeConfig.mainNavigationOrder =
-                                navigationItems.joinToString(",") { it.route }
+                            onSetOrder(navigationItems.joinToString(",") { it.route })
                         },
                         title = stringResource(destination.labelId),
                         isEnabled = true,

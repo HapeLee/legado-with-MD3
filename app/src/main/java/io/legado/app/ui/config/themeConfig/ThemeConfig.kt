@@ -3,7 +3,6 @@ package io.legado.app.ui.config.themeConfig
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.GSON
@@ -83,9 +82,7 @@ object ThemeConfig {
     //m3 or miuix
     var composeEngine by prefDelegate(PreferKey.composeEngine, "material")
 
-    var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false)
 
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 
@@ -105,29 +102,24 @@ object ThemeConfig {
 
     var isPureBlack by prefDelegate(PreferKey.pureBlack, false)
 
-    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null) {
-        postEvent(EventBus.RECREATE, false)
-    }
+    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null)
 
-    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null) {
-        postEvent(EventBus.RECREATE, false)
-    }
+    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null)
 
     var bgImageBlurring by prefDelegate(PreferKey.bgImageBlurring, 0)
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
+    // Compose 消费点（BackHandler enabled / predictivePopTransitionSpec）直接响应状态。
+    // 读的是 prefDelegate 的 Compose state，切换即时生效；View 系 Activity 在下次
+    // onCreate 时按新值注册 OnBackInvokedCallback（与旧版行为一致）
     var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true)
 
     var customMode by prefDelegate<String?>(PreferKey.customMode, "tonalSpot")
 
-    var fontScale by prefDelegate(PreferKey.fontScale, 10) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var fontScale by prefDelegate(PreferKey.fontScale, 10)
 
-    var appFontPath by prefDelegate<String?>(PreferKey.appFontPath, null) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var appFontPath by prefDelegate<String?>(PreferKey.appFontPath, null)
 
     var cPrimary by prefDelegate(PreferKey.cPrimary, 0)
 
@@ -190,9 +182,7 @@ object ThemeConfig {
 
     var bookInfoInputColor by prefDelegate(PreferKey.bookInfoInputColor, 0)
 
-    var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0)
 
     var customContrast by prefDelegate(PreferKey.customContrast, "Default")
 
@@ -246,7 +236,7 @@ object ThemeConfig {
         "home,bookshelf,explore,rss,my",
     )
 
-    var navExtended by prefDelegate("navExtended", false)
+    var navExtended by prefDelegate(PreferKey.navExtended, false)
 
     var webServiceAutoStart by prefDelegate(PreferKey.webServiceAutoStart, false)
 

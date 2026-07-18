@@ -7,7 +7,6 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiPromptTemplate
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.TranslationConstants
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -51,7 +50,11 @@ class AiSummaryConfigViewModel(
                         initialized = true
                     )
                 }
-                appCtx.toastOnUi("加载章节摘要配置失败: ${error.localizedMessage ?: "使用默认参数"}")
+                _effects.tryEmit(
+                    AiSummaryConfigEffect.ShowMessage(
+                        "加载章节摘要配置失败: ${error.localizedMessage ?: "使用默认参数"}"
+                    )
+                )
             }
         }
     }
@@ -105,7 +108,9 @@ class AiSummaryConfigViewModel(
                     )
                 }
             }.onSuccess {
-                appCtx.toastOnUi(R.string.ai_config_saved_success)
+                _effects.tryEmit(
+                    AiSummaryConfigEffect.ShowMessage(appCtx.getString(R.string.ai_config_saved_success))
+                )
                 _effects.tryEmit(AiSummaryConfigEffect.NavigateBack)
             }.onFailure { error ->
                 _effects.tryEmit(

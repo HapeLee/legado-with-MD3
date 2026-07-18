@@ -5,18 +5,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.config.prefDelegate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import splitties.init.appCtx
 
 object ChangeSourceConfig {
 
-    private val repo = LocalPreferencesRepository(appCtx)
+    private val repo = SettingsRepository()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _searchScope = mutableStateOf("")
@@ -120,7 +119,7 @@ object ChangeSourceConfig {
         observe(LocalPreferencesKeys.CHANGE_SOURCE_LOAD_WORD_COUNT, false, _loadWordCount)
     }
 
-    private fun <T> observe(
+    private fun <T : Any> observe(
         key: Preferences.Key<T>,
         defaultValue: T,
         state: MutableState<T>,
