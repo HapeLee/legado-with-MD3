@@ -16,4 +16,6 @@ data class CoverSettings(
     val showAuthorDark: Boolean = true,
     val infoOrientation: String = "0",
     val exploreFilterState: Int = 0,
+    val defaultCover: String = "",
+    val defaultCoverDark: String = "",
 )

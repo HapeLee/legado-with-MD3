@@ -422,6 +422,7 @@ val appModule = module {
             bookContentProcessGateway = get(),
             aiArtifactGateway = get(),
             aiPromptPresetGateway = get(),
+            replaceRuleRepository = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)

@@ -25,6 +25,8 @@ import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
@@ -94,6 +96,8 @@ class BookInfoViewModel(
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val bookGroupRepository: BookGroupRepository,
     private val imageLoader: ImageLoader,
+    private val themeSettingsGateway: ThemeSettingsGateway,
+    private val coverSettingsGateway: CoverSettingsGateway,
 ) : BaseViewModel(application) {
 
     val allGroups = bookGroupRepository.flowSelect().map { it.toImmutableList() }
@@ -106,6 +110,28 @@ class BookInfoViewModel(
 
     init {
         collectEventBus()
+        collectAppearanceSettings()
+    }
+
+    private fun collectAppearanceSettings() {
+        viewModelScope.launch {
+            combine(
+                themeSettingsGateway.settings,
+                coverSettingsGateway.settings,
+            ) { theme, cover -> theme to cover }
+                .collectLatest { (theme, cover) ->
+                    _uiState.update {
+                        it.copy(
+                            bookInfoFollowCoverColor = theme.bookInfoFollowCoverColor,
+                            bookInfoNetworkCoverBackground = theme.bookInfoNetworkCoverBackground,
+                            bookInfoDefaultCoverBackground = theme.bookInfoDefaultCoverBackground,
+                            loadCoverOnlyOnWifi = cover.loadOnlyOnWifi,
+                            defaultCover = cover.defaultCover,
+                            defaultCoverDark = cover.defaultCoverDark,
+                        )
+                    }
+                }
+        }
     }
 
     private fun collectEventBus() {

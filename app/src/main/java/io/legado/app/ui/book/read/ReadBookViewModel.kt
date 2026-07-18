@@ -34,6 +34,7 @@ import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
@@ -171,6 +172,7 @@ class ReadBookViewModel(
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val aiArtifactGateway: AiArtifactGateway,
     private val aiPromptPresetGateway: AiPromptPresetGateway,
+    private val replaceRuleRepository: ReplaceRuleRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -373,6 +375,17 @@ class ReadBookViewModel(
             is ReadBookIntent.RefreshAllChapters -> refreshAllChapters()
             is ReadBookIntent.RefreshContentAfter -> refreshContentAfter()
             is ReadBookIntent.ChangeReplaceRule -> changeReplaceRule(intent.enabled)
+            is ReadBookIntent.DisableEffectiveReplace -> viewModelScope.launch {
+                replaceRuleRepository.insert(intent.rule.copy(isEnabled = false))
+            }
+            ReadBookIntent.DisableChineseConverter -> {
+                handleConfigUpdate(ConfigUpdate.ChineseConverterType(0))
+            }
+            ReadBookIntent.DisableReSegment -> {
+                ReadBook.book?.setReSegment(false)
+                ReadBook.loadContent(false)
+                _uiState.update { it.copy(reSegment = false) }
+            }
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
             is ReadBookIntent.OpenChapterSummary -> openChapterSummary()
             is ReadBookIntent.OpenAiCurrentChapterRewrite -> openAiCurrentChapterRewrite()
@@ -2049,6 +2062,8 @@ class ReadBookViewModel(
             replaceRuleEnabled = book?.getUseReplaceRule() ?: false,
             effectiveReplaceCount = textChapter?.effectiveReplaceRules?.size ?: 0,
             effectiveContentProcessCount = textChapter?.effectiveContentProcesses?.size ?: 0,
+            effectiveReplaceRules = textChapter?.effectiveReplaceRules.orEmpty().toImmutableList(),
+            chineseConverterActive = ReadConfig.chineseConverterType > 0,
             translationMode = book?.getTranslationMode() ?: false,
             isLocalTxt = book?.isLocalTxt == true,
             isEpub = book?.isEpub == true,

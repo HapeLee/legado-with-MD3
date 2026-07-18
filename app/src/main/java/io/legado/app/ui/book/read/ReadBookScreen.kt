@@ -162,6 +162,9 @@ fun ReadBookScreen(
     )
     EffectiveReplacesSheet(
         show = state.activeSheet is ReadBookSheet.EffectiveReplaces,
+        effectiveRules = state.effectiveReplaceRules,
+        chineseConvertActive = state.chineseConverterActive,
+        reSegmentActive = state.reSegment,
         onDismissRequest = dismissSheet,
         onOpenReplaceEditor = { id, pattern ->
             onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
@@ -174,6 +177,9 @@ fun ReadBookScreen(
         onOpenContentProcesses = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
         },
+        onDisableRule = { onIntent(ReadBookIntent.DisableEffectiveReplace(it)) },
+        onDisableChineseConverter = { onIntent(ReadBookIntent.DisableChineseConverter) },
+        onDisableReSegment = { onIntent(ReadBookIntent.DisableReSegment) },
     )
     ContentProcessesSheet(
         show = state.activeSheet is ReadBookSheet.ContentProcesses,

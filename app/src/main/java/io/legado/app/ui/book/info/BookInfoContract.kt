@@ -40,6 +40,12 @@ data class BookInfoUiState(
     val showAppLogSheet: Boolean = false,
     val sheet: BookInfoSheet = BookInfoSheet.None,
     val dialog: BookInfoDialog? = null,
+    val bookInfoFollowCoverColor: Boolean = true,
+    val bookInfoNetworkCoverBackground: String = "on",
+    val bookInfoDefaultCoverBackground: String = "on",
+    val loadCoverOnlyOnWifi: Boolean = false,
+    val defaultCover: String = "",
+    val defaultCoverDark: String = "",
 )
 
 @Stable

@@ -233,6 +233,8 @@ class CoverSettingsRepository : CoverSettingsGateway {
                 showAuthorDark = preferences.compatDsBoolean(PreferKey.coverShowAuthorN) ?: true,
                 infoOrientation = preferences.compatDsString(PreferKey.coverInfoOrientation) ?: "0",
                 exploreFilterState = preferences.compatDsInt(PreferKey.exploreFilterState) ?: 0,
+                defaultCover = preferences.compatDsString(PreferKey.defaultCover).orEmpty(),
+                defaultCoverDark = preferences.compatDsString(PreferKey.defaultCoverDark).orEmpty(),
             )
         }
         .distinctUntilChanged()

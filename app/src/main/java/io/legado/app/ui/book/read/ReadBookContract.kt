@@ -9,6 +9,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
@@ -199,6 +200,8 @@ data class ReadBookUiState(
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
     val effectiveContentProcessCount: Int = 0,
+    val effectiveReplaceRules: ImmutableList<ReplaceRule> = persistentListOf(),
+    val chineseConverterActive: Boolean = false,
     // Translation
     val translationMode: Boolean = false,
     // Chapter info
@@ -514,6 +517,9 @@ sealed interface ReadBookIntent {
     // Replace editor (needs Activity context for ActivityResult)
     data class OpenReplaceEditor(val id: Long, val pattern: String?) : ReadBookIntent
     data object ReplaceRuleChanged : ReadBookIntent
+    data class DisableEffectiveReplace(val rule: ReplaceRule) : ReadBookIntent
+    data object DisableChineseConverter : ReadBookIntent
+    data object DisableReSegment : ReadBookIntent
 
     // Font folder picker (needs Activity context for ActivityResult)
     data object OpenFontFolderPicker : ReadBookIntent
