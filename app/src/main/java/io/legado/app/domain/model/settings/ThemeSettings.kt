@@ -38,6 +38,7 @@ data class ThemeSettings(
     val bookInfoFollowCoverColor: Boolean = true,
     val bookInfoNetworkCoverBackground: String = "on",
     val bookInfoDefaultCoverBackground: String = "on",
+    val bookInfoInputColor: Int = 0,
     val backgroundImageLight: String? = null,
     val backgroundImageDark: String? = null,
     val backgroundImageBlurring: Int = 0,
@@ -89,3 +90,6 @@ fun ThemeSettings.customColors(isDark: Boolean): ThemeCustomColors =
             labelContainer = labelContainerColor,
         )
     }
+
+fun ThemeSettings.hasBackgroundImage(isDark: Boolean): Boolean =
+    if (isDark) !backgroundImageDark.isNullOrBlank() else !backgroundImageLight.isNullOrBlank()

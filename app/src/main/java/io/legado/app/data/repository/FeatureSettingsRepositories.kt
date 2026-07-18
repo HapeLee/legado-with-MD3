@@ -367,7 +367,7 @@ class BackupSettingsRepository : BackupSettingsGateway {
     }
 }
 
-private fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
+internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
     themeMode = compatDsString(PreferKey.themeMode) ?: "0",
     fontScale = compatDsInt(PreferKey.fontScale) ?: 10,
     composeEngine = compatDsString(PreferKey.composeEngine) ?: "material",
@@ -395,7 +395,7 @@ private fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSetting
     launcherIcon = compatDsString(PreferKey.launcherIcon) ?: "ic_launcher",
 )
 
-private fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
+internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     appTheme = compatDsString(PreferKey.appTheme) ?: "0",
     useMiuixMonet = compatDsBoolean(PreferKey.useMiuixMonet) ?: false,
     isPureBlack = compatDsBoolean(PreferKey.pureBlack) ?: false,
@@ -435,6 +435,7 @@ private fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
         compatDsString(PreferKey.bookInfoNetworkCoverBackground) ?: "on",
     bookInfoDefaultCoverBackground =
         compatDsString(PreferKey.bookInfoDefaultCoverBackground) ?: "on",
+    bookInfoInputColor = compatDsInt(PreferKey.bookInfoInputColor) ?: 0,
     backgroundImageLight = compatDsString(PreferKey.bgImage),
     backgroundImageDark = compatDsString(PreferKey.bgImageN),
     backgroundImageBlurring = compatDsInt(PreferKey.bgImageBlurring) ?: 0,

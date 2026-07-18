@@ -11,8 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.BasicComponent
 
@@ -30,7 +30,7 @@ fun SettingCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val containerAlpha = ThemeConfig.containerOpacity / 100f
+    val containerAlpha = LocalAppUiConfiguration.current.theme.containerOpacity / 100f
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         BasicComponent(

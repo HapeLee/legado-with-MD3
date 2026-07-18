@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
@@ -15,10 +16,10 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.BuildConfig
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
@@ -66,8 +67,11 @@ abstract class BaseComposeActivity(
 
         setupSystemBar()
         // Compose 入口
+        val initialUiConfiguration = appUiConfigurationGateway.currentConfiguration
         setContent {
-            AppTheme {
+            val uiConfiguration by appUiConfigurationGateway.configuration
+                .collectAsStateWithLifecycle(initialUiConfiguration)
+            AppTheme(configuration = uiConfiguration) {
                 SyncWindowBackground()
                 Content()
             }
@@ -113,7 +117,7 @@ abstract class BaseComposeActivity(
             fullScreen
         )
 
-        toggleSystemBar(AppConfig.showStatusBar)
+        toggleSystemBar(appUiConfigurationGateway.currentConfiguration.appShell.showStatusBar)
     }
 
     open fun upBackgroundImage() {

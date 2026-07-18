@@ -8,7 +8,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.hasBackgroundImage
 import org.koin.compose.koinInject
 
 @Composable
@@ -16,12 +16,17 @@ fun AppBackground(
     darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
-    val hasImageBg = ThemeConfig.hasImageBg(darkTheme)
-    val bgImagePath = if (darkTheme) ThemeConfig.bgImageDark else ThemeConfig.bgImageLight
-    val blur = if (darkTheme) {
-        ThemeConfig.bgImageNBlurring
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val hasImageBg = themeSettings.hasBackgroundImage(darkTheme)
+    val bgImagePath = if (darkTheme) {
+        themeSettings.backgroundImageDark
     } else {
-        ThemeConfig.bgImageBlurring
+        themeSettings.backgroundImageLight
+    }
+    val blur = if (darkTheme) {
+        themeSettings.backgroundImageDarkBlurring
+    } else {
+        themeSettings.backgroundImageBlurring
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

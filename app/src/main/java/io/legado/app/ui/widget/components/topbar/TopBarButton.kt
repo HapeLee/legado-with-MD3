@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.series.AnimatedActionButtonCore
@@ -94,7 +94,8 @@ fun TopBarActionButton(
     contentDescription: String?,
     modifier: Modifier = Modifier
 ) {
-    val enableProgressive = ThemeConfig.enableProgressiveBlur
+    val enableProgressive =
+        LocalAppUiConfiguration.current.theme.enableProgressiveBlur
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         MiuixIconButton(
             onClick = onClick,

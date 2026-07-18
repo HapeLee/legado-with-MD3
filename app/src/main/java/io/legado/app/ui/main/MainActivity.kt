@@ -50,7 +50,7 @@ import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.ReadBookRouteHost
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
@@ -245,7 +245,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     override fun Content() {
         val orientation = resources.configuration.orientation
         val smallestWidthDp = resources.configuration.smallestScreenWidthDp
-        val tabletInterface = ThemeConfig.tabletInterface
+        val tabletInterface = LocalAppUiConfiguration.current.appShell.tabletInterface
 
         val useRail = when (tabletInterface) {
             "always" -> true

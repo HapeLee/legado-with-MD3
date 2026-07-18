@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -139,7 +139,7 @@ fun GlassCard(
         contentColor = contentColor,
         elevation = elevation,
         border = border,
-        alpha = ThemeConfig.containerOpacity / 100f,
+        alpha = LocalAppUiConfiguration.current.theme.containerOpacity / 100f,
         content = content
     )
 }

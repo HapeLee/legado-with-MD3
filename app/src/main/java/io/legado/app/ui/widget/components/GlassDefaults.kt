@@ -2,8 +2,9 @@ package io.legado.app.ui.widget.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.customColors
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 
 object GlassDefaults {
 
@@ -14,7 +15,7 @@ object GlassDefaults {
      */
     @Composable
     fun glassColor(noBlurColor: Color, blurAlpha: Float): Color {
-        return if (ThemeConfig.enableBlur) {
+        return if (LocalAppUiConfiguration.current.theme.enableBlur) {
             noBlurColor.copy(alpha = blurAlpha)
         } else {
             noBlurColor
@@ -23,8 +24,9 @@ object GlassDefaults {
 
     @Composable
     fun secondaryColorOr(fallback: @Composable () -> Color): Color {
-        val secondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
-        return if (ThemeConfig.isDeepPersonalizationActive && secondaryColor != 0) {
+        val themeSettings = LocalAppUiConfiguration.current.theme
+        val secondaryColor = themeSettings.customColors(LegadoTheme.isDark).secondary
+        return if (themeSettings.enableDeepPersonalization && secondaryColor != 0) {
             Color(secondaryColor)
         } else {
             fallback()
