@@ -45,7 +45,6 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceEffect
-import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
@@ -105,11 +104,12 @@ fun ChangeSourceSheet(
     val enabledSources by viewModel.enabledSources.collectAsStateWithLifecycle(initialValue = emptyList<io.legado.app.data.entities.BookSourcePart>())
     val scopeState by viewModel.scopeUiState.collectAsStateWithLifecycle()
     val emptyScopeName by viewModel.emptyScopeName.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    val checkAuthor = viewModel.checkAuthor
-    val loadInfo = viewModel.loadInfo
-    val loadToc = viewModel.loadToc
-    val loadWordCount = viewModel.loadWordCount
+    val checkAuthor = settings.checkAuthor
+    val loadInfo = settings.loadInfo
+    val loadToc = settings.loadToc
+    val loadWordCount = settings.loadWordCount
     var actionBook by remember { mutableStateOf<SearchBook?>(null) }
     var mismatchBook by remember { mutableStateOf<SearchBook?>(null) }
     var shelfConflict by remember { mutableStateOf<PendingShelfConflict?>(null) }
@@ -177,7 +177,7 @@ fun ChangeSourceSheet(
             onSuccess = { toc, source ->
                 if (replace) {
                     loadingAction = false
-                    onReplace(source, book, toc, ChangeSourceConfig.getMigrationOptions())
+                    onReplace(source, book, toc, settings.migrationOptions())
                     if (!dismissBeforeLoading) {
                         onDismissRequest()
                     }
@@ -417,7 +417,7 @@ fun ChangeSourceSheet(
                                                 source,
                                                 book,
                                                 toc,
-                                                ChangeSourceConfig.getMigrationOptions()
+                                                settings.migrationOptions()
                                             )
                                         }
                                     }
@@ -473,7 +473,7 @@ fun ChangeSourceSheet(
                 conflict.source,
                 conflict.newBook,
                 conflict.toc,
-                ChangeSourceConfig.getMigrationOptions(),
+                settings.migrationOptions(),
             )
             onDismissRequest()
         },
@@ -558,9 +558,10 @@ fun ChangeSourceSheet(
     ChangeSourceMigrationOptionsSheet(
         show = showMigrationOptions,
         title = "换源选项",
+        initialOptions = settings.migrationOptions(),
         onDismissRequest = { showMigrationOptions = false },
         onConfirm = { options ->
-            ChangeSourceConfig.setMigrationOptions(options)
+            viewModel.setMigrationOptions(options)
             showMigrationOptions = false
         }
     )

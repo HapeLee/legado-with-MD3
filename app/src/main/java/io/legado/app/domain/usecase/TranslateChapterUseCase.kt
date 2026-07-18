@@ -8,6 +8,7 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
+import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
@@ -23,7 +24,6 @@ import io.legado.app.domain.model.TranslationConstants.OUTPUT_FORMAT
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
-import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +37,8 @@ class TranslateChapterUseCase(
     private val aiTextGateway: AiTextGateway,
     private val translationCacheGateway: TranslationCacheGateway,
     private val dictionaryGateway: DictionaryGateway,
-    private val aiProfileGateway: AiProfileGateway
+    private val aiProfileGateway: AiProfileGateway,
+    private val translationSettingsGateway: TranslationSettingsGateway,
 ) {
 
     data class TranslationProgress(
@@ -60,14 +61,15 @@ class TranslateChapterUseCase(
         onTranslateStarted: () -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val provider = TranslationConfig.llmProvider
+            val settings = translationSettingsGateway.currentSettings
+            val provider = settings.provider
             val preset = if (provider == TranslationConstants.PROVIDER_APP_AI) {
                 resolveTranslationPreset()
                     ?: return@withContext Result.failure(Exception("No AI translation preset configured"))
             } else {
                 null
             }
-            val targetLanguage = TranslationConfig.llmTargetLanguage
+            val targetLanguage = settings.targetLanguage
 
             val originalContent = BookHelp.getContent(book, bookChapter)
                 ?: return@withContext Result.failure(Exception("Failed to read original content"))
@@ -99,7 +101,7 @@ class TranslateChapterUseCase(
 
             val chunks = ContentChunker.chunk(
                 originalContent,
-                TranslationConfig.llmMaxCharsPerChunk.coerceAtLeast(1000)
+                settings.maxCharsPerChunk.coerceAtLeast(1000)
             )
             if (chunks.isEmpty()) {
                 return@withContext Result.failure(Exception("Failed to chunk content"))
@@ -149,13 +151,16 @@ class TranslateChapterUseCase(
             onTranslateStarted()
             var translationError: Throwable? = null
             coroutineScope {
-                val concurrentChunks = TranslationConfig.llmConcurrentChunks.coerceIn(1, 4)
+                val concurrentChunks = settings.concurrentChunks.coerceIn(1, 4)
                 val chunkGroups = pendingChunks.chunked(concurrentChunks)
 
                 for ((groupIndex, group) in chunkGroups.withIndex()) {
                     val results = group.map { chunk ->
                         async {
-                            translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, provider, preset, dictionaries, onDictionaryUpdate)
+                            translateAndCacheChunk(
+                                chunk, book, bookChapter, targetLanguage, contentHash, provider,
+                                preset, dictionaries, onDictionaryUpdate, settings.retryCount
+                            )
                         }
                     }.awaitAll()
 
@@ -243,7 +248,8 @@ class TranslateChapterUseCase(
         provider: String,
         preset: AiTaskPresetConfig?,
         dictionaries: MutableList<DictPair>,
-        onDictionaryUpdate: (List<DictPair>) -> Unit
+        onDictionaryUpdate: (List<DictPair>) -> Unit,
+        retryCount: Int,
     ): Result<String> {
         val existingCache =
             translationCacheGateway.getCachedChunk(book, bookChapter, targetLanguage, chunk.index)
@@ -251,7 +257,9 @@ class TranslateChapterUseCase(
             return Result.success(existingCache.translatedChunkContent)
         }
 
-        val result = translateChunkWithRetry(chunk, targetLanguage, provider, preset, dictionaries, onDictionaryUpdate)
+        val result = translateChunkWithRetry(
+            chunk, targetLanguage, provider, preset, dictionaries, onDictionaryUpdate, retryCount
+        )
         if (result.isSuccess) {
             translationCacheGateway.saveChunk(
                 book, bookChapter, targetLanguage,
@@ -277,11 +285,12 @@ class TranslateChapterUseCase(
         provider: String,
         preset: AiTaskPresetConfig?,
         dictionaries: MutableList<DictPair>,
-        onDictionaryUpdate: (List<DictPair>) -> Unit
+        onDictionaryUpdate: (List<DictPair>) -> Unit,
+        retryCount: Int,
     ): Result<String> {
         var lastError: Exception? = null
         var lastRetryReason: RetryReason? = null
-        for (attempt in 0..TranslationConfig.llmRetryCount.coerceIn(0, 5)) {
+        for (attempt in 0..retryCount.coerceIn(0, 5)) {
             val dictSnapshot = synchronized(dictionaryLock) { dictionaries.toList() }
             val result = when (provider) {
                 TranslationConstants.PROVIDER_GOOGLE -> translateWithGoogle(chunk.content, targetLanguage)

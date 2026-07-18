@@ -27,29 +27,30 @@ fun ChangeSourceMigrationOptionsSheet(
     show: Boolean,
     title: String,
     subtitle: String? = null,
+    initialOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     onDismissRequest: () -> Unit,
     onConfirm: (ChangeSourceMigrationOptions) -> Unit,
 ) {
     var migrateReadingProgress by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateReadingProgress)
+        mutableStateOf(initialOptions.migrateReadingProgress)
     }
     var migrateGroup by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateGroup)
+        mutableStateOf(initialOptions.migrateGroup)
     }
     var migrateCover by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateCover)
+        mutableStateOf(initialOptions.migrateCover)
     }
     var migrateCategory by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateCategory)
+        mutableStateOf(initialOptions.migrateCategory)
     }
     var migrateRemark by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateRemark)
+        mutableStateOf(initialOptions.migrateRemark)
     }
     var migrateReadConfig by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.migrateReadConfig)
+        mutableStateOf(initialOptions.migrateReadConfig)
     }
     var deleteDownloadedChapters by rememberSaveable(show) {
-        mutableStateOf(ChangeSourceConfig.deleteDownloadedChapters)
+        mutableStateOf(initialOptions.deleteDownloadedChapters)
     }
 
     AppModalBottomSheet(

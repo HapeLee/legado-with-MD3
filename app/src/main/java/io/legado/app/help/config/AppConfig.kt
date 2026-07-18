@@ -186,11 +186,8 @@ object AppConfig {
             appCtx.putPrefString(PreferKey.episodeExportFileName, value)
         }
 
-    var bookImportFileName: String?
+    val bookImportFileName: String?
         get() = ImportBookConfig.bookImportFileName
-        set(value) {
-            ImportBookConfig.bookImportFileName = value
-        }
 
     var backupPath: String?
         get() = BackupConfig.backupPath
@@ -229,11 +226,8 @@ object AppConfig {
         }
 
     // 添加本地选择的目录
-    var importBookPath: String?
+    val importBookPath: String?
         get() = ImportBookConfig.importBookPath
-        set(value) {
-            ImportBookConfig.importBookPath = value
-        }
 
     var ttsFlowSys: Boolean
         get() = ReadConfig.ttsFollowSys

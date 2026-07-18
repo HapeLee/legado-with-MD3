@@ -268,6 +268,8 @@ class TranslationSettingsRepository : TranslationSettingsGateway {
             is TranslationSettingsUpdate.Provider -> PreferKey.llmProvider to update.value
             is TranslationSettingsUpdate.TargetLanguage -> PreferKey.llmTargetLanguage to update.value
             is TranslationSettingsUpdate.MaxCharsPerChunk -> PreferKey.llmMaxCharsPerChunk to update.value
+            is TranslationSettingsUpdate.ConcurrentChunks -> PreferKey.llmConcurrentChunks to update.value
+            is TranslationSettingsUpdate.RetryCount -> PreferKey.llmRetryCount to update.value
         }
         AppConfigStore.putAll(mapOf(key to value))
     }
@@ -365,6 +367,8 @@ internal fun Preferences.toTranslationSettings(): TranslationSettings {
         },
         targetLanguage = compatDsString(PreferKey.llmTargetLanguage) ?: "zh",
         maxCharsPerChunk = compatDsInt(PreferKey.llmMaxCharsPerChunk) ?: 10000,
+        concurrentChunks = compatDsInt(PreferKey.llmConcurrentChunks) ?: 1,
+        retryCount = compatDsInt(PreferKey.llmRetryCount) ?: 2,
     )
 }
 

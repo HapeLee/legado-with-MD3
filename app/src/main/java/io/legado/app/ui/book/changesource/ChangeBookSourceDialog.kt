@@ -28,6 +28,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
+import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
 import io.legado.app.databinding.DialogBookChangeSourceBinding
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
@@ -53,6 +55,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 /**
  * 换源界面
@@ -72,6 +75,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     private val groups = linkedSetOf<String>()
     private val callBack: CallBack? get() = activity as? CallBack
     private val viewModel: ChangeBookSourceViewModel by viewModels()
+    private val changeSourceSettingsGateway by inject<ChangeSourceSettingsGateway>()
     private val waitDialog by lazy { WaitDialog(requireContext()) }
     private val adapter by lazy { ChangeBookSourceAdapter(requireContext(), viewModel, this) }
     private val editSourceResult =
@@ -90,9 +94,10 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                         setMessage("${group}分组搜索结果为空,是否切换到全部分组")
                         cancelButton()
                         okButton {
-                            ChangeSourceConfig.searchScope = ""
-                            upGroupMenuName()
-                            viewModel.startSearch()
+                            updateSetting(ChangeSourceSettingsUpdate.SearchScope("")) {
+                                upGroupMenuName()
+                                viewModel.startSearch()
+                            }
                         }
                     }
                 }
@@ -315,23 +320,23 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
             R.id.menu_check_author -> {
-                ChangeSourceConfig.checkAuthor = !item.isChecked
+                updateSetting(ChangeSourceSettingsUpdate.CheckAuthor(!item.isChecked))
                 item.isChecked = !item.isChecked
                 viewModel.refresh()
             }
 
             R.id.menu_load_info -> {
-                ChangeSourceConfig.loadInfo = !item.isChecked
+                updateSetting(ChangeSourceSettingsUpdate.LoadInfo(!item.isChecked))
                 item.isChecked = !item.isChecked
             }
 
             R.id.menu_load_toc -> {
-                ChangeSourceConfig.loadToc = !item.isChecked
+                updateSetting(ChangeSourceSettingsUpdate.LoadToc(!item.isChecked))
                 item.isChecked = !item.isChecked
             }
 
             R.id.menu_load_word_count -> {
-                ChangeSourceConfig.loadWordCount = !item.isChecked
+                updateSetting(ChangeSourceSettingsUpdate.LoadWordCount(!item.isChecked))
                 item.isChecked = !item.isChecked
                 viewModel.onLoadWordCountChecked(item.isChecked)
             }
@@ -342,16 +347,18 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             R.id.menu_refresh_list -> viewModel.startRefreshList()
             else -> if (item?.groupId == R.id.source_group && !item.isChecked) {
                 item.isChecked = true
-                if (item.title.toString() == getString(R.string.all_source)) {
-                    ChangeSourceConfig.searchScope = ""
+                val scope = if (item.title.toString() == getString(R.string.all_source)) {
+                    ""
                 } else {
-                    ChangeSourceConfig.searchScope = item.title.toString()
+                    item.title.toString()
                 }
-                upGroupMenuName()
-                lifecycleScope.launch(IO) {
-                    viewModel.stopSearch()
-                    if (viewModel.refresh()) {
-                        viewModel.startSearch()
+                updateSetting(ChangeSourceSettingsUpdate.SearchScope(scope)) {
+                    upGroupMenuName()
+                    lifecycleScope.launch(IO) {
+                        viewModel.stopSearch()
+                        if (viewModel.refresh()) {
+                            viewModel.startSearch()
+                        }
                     }
                 }
             }
@@ -527,6 +534,16 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             menuGroup?.title = getString(R.string.group)
         } else {
             menuGroup?.title = getString(R.string.group) + "(${searchScope.display})"
+        }
+    }
+
+    private fun updateSetting(
+        update: ChangeSourceSettingsUpdate,
+        afterUpdate: (() -> Unit)? = null,
+    ) {
+        lifecycleScope.launch {
+            changeSourceSettingsGateway.update(update)
+            afterUpdate?.invoke()
         }
     }
 

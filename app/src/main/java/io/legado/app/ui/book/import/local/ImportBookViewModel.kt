@@ -15,9 +15,11 @@ import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
+import io.legado.app.domain.gateway.ImportBookSettingsUpdate
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.ui.config.importBookConfig.ImportBookConfig
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.utils.AlphanumComparator
@@ -34,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.delay
@@ -109,7 +112,11 @@ sealed interface ImportBookEffect {
     data class ShowToast(val message: String) : ImportBookEffect
 }
 
-class ImportBookViewModel(application: Application) : BaseViewModel(application) {
+class ImportBookViewModel(
+    application: Application,
+    private val importBookSettingsGateway: ImportBookSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
+) : BaseViewModel(application) {
 
     private enum class SourceMode {
         CURRENT_DIR,
@@ -128,7 +135,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     )
 
     private val _state = MutableStateFlow(
-        InternalState(sort = ImportBookConfig.localBookImportSort)
+        InternalState(sort = importBookSettingsGateway.currentSettings.localBookImportSort)
     )
     private val _effects = MutableSharedFlow<ImportBookEffect>(extraBufferCapacity = 1)
     val effects = _effects.asSharedFlow()
@@ -143,7 +150,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 _effects.tryEmit(
                     ImportBookEffect.RequestFolderPicker(
                         target = ImportFolderPickTarget.IMPORT_FOLDER,
-                        initialUri = ImportBookConfig.importBookPath
+                        initialUri = importBookSettingsGateway.currentSettings.importBookPath
                             ?.takeIf { it.isUri() }
                             ?.toUri()
                     )
@@ -175,15 +182,16 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 intent.fileName
             )
             is ImportBookIntent.SetFileNameRule -> {
-                ImportBookConfig.bookImportFileName = intent.value
+                updateImportBookSetting(ImportBookSettingsUpdate.BookImportFileName(intent.value))
             }
         }
     }
 
     val uiState = combine(
         _state,
-        appDb.bookDao.flowLocal()
-    ) { state, localBooks ->
+        appDb.bookDao.flowLocal(),
+        importBookSettingsGateway.settings,
+    ) { state, localBooks, settings ->
         val localFileNames = localBooks.asSequence().map { it.originName }.toSet()
 
         val docs = state.sourceDocs.map { fileDoc ->
@@ -228,7 +236,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             pathNames = pathNames,
             canGoBack = state.subDocs.isNotEmpty(),
             sort = state.sort,
-            fileNameRule = ImportBookConfig.bookImportFileName.orEmpty(),
+            fileNameRule = settings.bookImportFileName.orEmpty(),
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(
@@ -240,7 +248,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     fun hasRootDoc(): Boolean = _state.value.rootDoc != null
 
     private fun initialize() {
-        val defaultPath = OtherConfig.defaultBookTreeUri?.takeIf { it.isUri() }
+        val defaultPath = otherSettingsGateway.currentSettings.defaultBookTreeUri?.takeIf { it.isUri() }
         val effectiveDefaultPath = defaultPath ?: firstPersistedTreeUri()?.toString()
         if (effectiveDefaultPath.isNullOrBlank()) {
             _effects.tryEmit(
@@ -248,12 +256,12 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             )
             return
         }
-        if (OtherConfig.defaultBookTreeUri != effectiveDefaultPath) {
-            OtherConfig.defaultBookTreeUri = effectiveDefaultPath
+        if (otherSettingsGateway.currentSettings.defaultBookTreeUri != effectiveDefaultPath) {
+            updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(effectiveDefaultPath))
         }
-        val importPath = ImportBookConfig.importBookPath
+        val importPath = importBookSettingsGateway.currentSettings.importBookPath
         if (importPath.isNullOrBlank() || !importPath.isUri()) {
-            ImportBookConfig.importBookPath = effectiveDefaultPath
+            updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(effectiveDefaultPath))
         }
         initRootDoc(changedFolder = true)
         startAutoSync()
@@ -264,16 +272,16 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         val pickedUri = persistFolderPermission(uri)
         when (target) {
             ImportFolderPickTarget.DEFAULT_BOOK -> {
-                OtherConfig.defaultBookTreeUri = pickedUri.toString()
-                if (ImportBookConfig.importBookPath.isNullOrBlank()) {
-                    ImportBookConfig.importBookPath = OtherConfig.defaultBookTreeUri
+                updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
+                if (importBookSettingsGateway.currentSettings.importBookPath.isNullOrBlank()) {
+                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(pickedUri.toString()))
                 }
             }
 
             ImportFolderPickTarget.IMPORT_FOLDER -> {
-                ImportBookConfig.importBookPath = pickedUri.toString()
-                if (OtherConfig.defaultBookTreeUri.isNullOrBlank()) {
-                    OtherConfig.defaultBookTreeUri = pickedUri.toString()
+                updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(pickedUri.toString()))
+                if (otherSettingsGateway.currentSettings.defaultBookTreeUri.isNullOrBlank()) {
+                    updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
                 }
             }
         }
@@ -308,18 +316,18 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             return
         }
         val candidates = linkedSetOf<String>().apply {
-            ImportBookConfig.importBookPath
+            importBookSettingsGateway.currentSettings.importBookPath
                 ?.takeIf { it.isNotBlank() && it.isUri() }
                 ?.let(::add)
-            OtherConfig.defaultBookTreeUri
+            otherSettingsGateway.currentSettings.defaultBookTreeUri
                 ?.takeIf { it.isNotBlank() && it.isUri() }
                 ?.let(::add)
         }
         if (candidates.isEmpty()) {
             firstPersistedTreeUri()?.toString()?.let { persistedPath ->
                 if (trySetRootDoc(persistedPath)) {
-                    OtherConfig.defaultBookTreeUri = persistedPath
-                    ImportBookConfig.importBookPath = persistedPath
+                    updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
+                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
                     return
                 }
             }
@@ -331,8 +339,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
 
         for (path in candidates) {
             if (trySetRootDoc(path)) {
-                if (ImportBookConfig.importBookPath != path) {
-                    ImportBookConfig.importBookPath = path
+                if (importBookSettingsGateway.currentSettings.importBookPath != path) {
+                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(path))
                 }
                 return
             }
@@ -342,7 +350,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             if (persistedUri != null) {
                 val persistedPath = persistedUri.toString()
                 if (trySetRootDoc(persistedPath)) {
-                    ImportBookConfig.importBookPath = persistedPath
+                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
                     return
                 }
             }
@@ -350,8 +358,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
 
         firstPersistedTreeUri()?.toString()?.let { persistedPath ->
             if (trySetRootDoc(persistedPath)) {
-                OtherConfig.defaultBookTreeUri = persistedPath
-                ImportBookConfig.importBookPath = persistedPath
+                updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
+                updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
                 return
             }
         }
@@ -486,7 +494,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
 
     fun setSort(sort: Int) {
         _state.update { it.copy(sort = sort) }
-        ImportBookConfig.localBookImportSort = sort
+        updateImportBookSetting(ImportBookSettingsUpdate.LocalBookImportSort(sort))
     }
 
     fun setSearchMode(isSearch: Boolean) {
@@ -820,6 +828,18 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             .collect {}
 
         return docs
+    }
+
+    private fun updateImportBookSetting(update: ImportBookSettingsUpdate) {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            importBookSettingsGateway.update(update)
+        }
+    }
+
+    private fun updateOtherSetting(update: OtherSettingsUpdate) {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            otherSettingsGateway.update(update)
+        }
     }
 
     override fun onCleared() {

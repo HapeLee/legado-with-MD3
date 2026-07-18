@@ -41,6 +41,7 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
@@ -90,7 +91,6 @@ import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
@@ -184,6 +184,7 @@ class ReadBookViewModel(
     private val syncReadAloudVoicesUseCase: SyncReadAloudVoicesUseCase,
     private val readAloudSessionStore: ReadAloudSessionStore,
     private val replaceRuleRepository: ReplaceRuleRepository,
+    private val changeSourceSettingsGateway: ChangeSourceSettingsGateway,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -2763,7 +2764,7 @@ class ReadBookViewModel(
             oldBook = oldBook,
             newBook = book,
             chapters = toc,
-            options = ChangeSourceConfig.getMigrationOptions(),
+            options = changeSourceSettingsGateway.currentSettings.migrationOptions(),
         )
         ReadBook.resetData(book)
         ReadBook.upMsg(null)

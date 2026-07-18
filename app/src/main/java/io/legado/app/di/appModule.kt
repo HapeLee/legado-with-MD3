@@ -20,6 +20,7 @@ import io.legado.app.data.repository.AppUiConfigurationRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
+import io.legado.app.data.repository.BookExportSettingsRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
@@ -28,6 +29,7 @@ import io.legado.app.data.repository.ChapterSpeechRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.ChangeSourceSettingsRepository
 import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.BookshelfSettingsRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
@@ -43,6 +45,8 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
+import io.legado.app.data.repository.HomepageSettingsRepository
+import io.legado.app.data.repository.ImportBookSettingsRepository
 import io.legado.app.data.repository.LabSettingsRepository
 import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.LocalBookRepository
@@ -88,11 +92,13 @@ import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.CoverAlbumGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.ThemePackageSettingsGateway
@@ -102,6 +108,8 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomeDashboardGateway
 import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.gateway.HomepageSettingsGateway
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
@@ -287,6 +295,8 @@ val appModule = module {
     single<BackupSettingsGateway> { BackupSettingsRepository() }
     single<LabSettingsGateway> { LabSettingsRepository() }
     single<MangaSettingsGateway> { MangaSettingsRepository() }
+    single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
+    single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }
     single<BookshelfSettingsGateway> { BookshelfSettingsRepository() }
     singleOf(::ReadSettingsRepository)
@@ -347,6 +357,8 @@ val appModule = module {
     single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }
+    single<BookExportSettingsGateway> { BookExportSettingsRepository() }
+    single<HomepageSettingsGateway> { HomepageSettingsRepository() }
     single<CoverAlbumGateway> { CoverAlbumRepository(get(), get()) }
     single<BookSourceCallbackGateway> { BookSourceCallbackRepository(get(), get()) }
     single<LocalBookGateway> { LocalBookRepository(get()) }
@@ -541,6 +553,7 @@ val appModule = module {
             syncReadAloudVoicesUseCase = get(),
             readAloudSessionStore = get(),
             replaceRuleRepository = get(),
+            changeSourceSettingsGateway = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)
@@ -559,6 +572,7 @@ val appModule = module {
             bookGroupRepository = get(),
             searchRepository = get(),
             bookshelfManageScreenConfig = get(),
+            bookExportSettingsGateway = get(),
             batchCacheDownloadUseCase = get(),
             cacheBookChaptersUseCase = get(),
             changeBookSourceUseCase = get(),

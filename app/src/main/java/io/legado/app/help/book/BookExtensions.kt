@@ -601,8 +601,10 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
     return false
 }
 
-fun Book.getExportFileName(suffix: String): String {
-    val template = AppConfig.bookExportFileName
+fun Book.getExportFileName(
+    suffix: String,
+    template: String? = AppConfig.bookExportFileName,
+): String {
     if (template.isNullOrBlank()) {
         return "$name 作者：${getRealAuthor()}.$suffix"
     }
