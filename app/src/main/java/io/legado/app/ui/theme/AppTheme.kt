@@ -6,21 +6,21 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import com.materialkolor.PaletteStyle
-import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.materialkolor.PaletteStyle
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.customColors
 import io.legado.app.utils.sysConfiguration
-import androidx.compose.ui.unit.Density
 import org.koin.compose.koinInject
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -52,7 +52,8 @@ private fun AppThemePreview(
         composeEngine = "material"
     )
     CompositionLocalProvider(
-        LocalLegadoThemeColors provides themeColors
+        LocalLegadoThemeColors provides themeColors,
+        LocalThemeSettings provides ThemeSettings(),
     ) {
         MaterialThemeWrapper(
             themeColors = themeColors,
@@ -184,11 +185,13 @@ private fun AppThemeActual(
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
+        LocalThemeSettings provides themeSettings,
         LocalDensity provides appDensity,
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {
             MiuixThemeWrapper(
                 themeColors = themeColors,
+                themeSettings = themeSettings,
                 customFontFamily = customFontFamily,
                 content = content
             )

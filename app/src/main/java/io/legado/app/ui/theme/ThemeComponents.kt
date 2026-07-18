@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.customColors
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -48,12 +50,13 @@ fun rememberCustomFont(fontPath: String?): FontFamily? {
 @Composable
 fun MiuixThemeWrapper(
     themeColors: LegadoThemeMode,
+    themeSettings: ThemeSettings,
     customFontFamily: FontFamily?,
     content: @Composable () -> Unit
 ) {
-    val useMiuixMonet = ThemeConfig.useMiuixMonet
-    val paletteStyleValue = ThemeConfig.paletteStyle
-    val materialVersion = ThemeConfig.materialVersion
+    val useMiuixMonet = themeSettings.useMiuixMonet
+    val paletteStyleValue = themeSettings.paletteStyle
+    val materialVersion = themeSettings.materialVersion
     val darkTheme = themeColors.isDark
 
     // AppTheme has already resolved system mode to an explicit light/dark value.
@@ -116,8 +119,9 @@ fun MiuixThemeWrapper(
         }
 
         val miuixColorScheme = MiuixTheme.colorScheme
-        val customColors = ThemeConfig.customThemeColors(darkTheme)
-        val isDeepPersonalizationActive = ThemeConfig.isDeepPersonalizationActive
+        val customColors = themeSettings.customColors(darkTheme)
+        val isDeepPersonalizationActive =
+            themeSettings.appTheme == "12" && themeSettings.enableDeepPersonalization
         // MiuixTheme keeps one Colors instance and updates its state-backed fields in place.
         // Caching by miuixColorScheme would therefore retain an obsolete LegadoColorScheme
         // after a light/dark change.

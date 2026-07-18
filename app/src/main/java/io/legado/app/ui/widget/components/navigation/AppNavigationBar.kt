@@ -24,9 +24,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.layout.Measured
 import androidx.compose.ui.unit.dp
+import io.legado.app.domain.model.settings.customColors
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.LocalThemeSettings
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
@@ -49,8 +51,11 @@ fun AppNavigationBar(
         alwaysShowLabel -> NavigationBarDisplayMode.IconAndText
         else -> NavigationBarDisplayMode.IconWithSelectedLabel
     }
-    val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
-    val customSecondaryColor = ThemeConfig.customThemeColors(LegadoTheme.isDark).secondary
+    val themeSettings = LocalThemeSettings.current
+    val opacity = (themeSettings.bottomBarOpacity.coerceIn(0, 100)) / 100f
+    val customSecondaryColor = themeSettings.customColors(LegadoTheme.isDark).secondary
+    val hasCustomSecondary = themeSettings.appTheme == "12" &&
+            themeSettings.enableDeepPersonalization && customSecondaryColor != 0
     val hazeState = LocalHazeState.current
     val hazeModifier = if (hazeState != null) {
         Modifier.regularHazeEffect(hazeState)
@@ -60,7 +65,7 @@ fun AppNavigationBar(
 
     if (isMiuix) {
         val baseColor =
-            if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+            if (hasCustomSecondary) {
                 Color(customSecondaryColor)
             } else {
                 GlassDefaults.glassColor(
@@ -78,7 +83,7 @@ fun AppNavigationBar(
         )
     } else {
         val baseColor =
-            if (ThemeConfig.isDeepPersonalizationActive && customSecondaryColor != 0) {
+            if (hasCustomSecondary) {
                 Color(customSecondaryColor)
             } else {
                 GlassDefaults.glassColor(

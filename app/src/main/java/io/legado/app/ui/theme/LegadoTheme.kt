@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import com.materialkolor.PaletteStyle
 import dev.chrisbanes.haze.HazeState
+import io.legado.app.domain.model.settings.ThemeSettings
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 
 data class LegadoThemeMode(
@@ -21,6 +22,8 @@ data class LegadoThemeMode(
     val useDynamicColor: Boolean,
     val composeEngine: String,
 )
+
+val LocalThemeSettings = compositionLocalOf { ThemeSettings() }
 
 data class LegadoColorScheme(
     val primary: Color,
