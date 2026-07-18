@@ -30,7 +30,6 @@ import io.legado.app.utils.isUri
 import io.legado.app.utils.list
 import io.legado.app.utils.mapParallel
 import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -107,6 +106,7 @@ sealed interface ImportBookEffect {
     data class ShowArchiveEntries(val fileDoc: FileDoc, val fileNames: List<String>) : ImportBookEffect
     data class ShowImportArchiveDialog(val fileDoc: FileDoc, val fileName: String) : ImportBookEffect
     data class ShowToastRes(val resId: Int) : ImportBookEffect
+    data class ShowToast(val message: String) : ImportBookEffect
 }
 
 class ImportBookViewModel(application: Application) : BaseViewModel(application) {
@@ -547,10 +547,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(selectedBooks.map { it.file.uri })
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请尝试重新选择文件夹"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }.onFinally {
             clearSelection()
         }
@@ -562,10 +562,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(uris)
         }.onError {
-            context.toastOnUi("添加书架失败，请重新选择书籍文件")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请重新选择书籍文件"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }
     }
 
@@ -574,10 +574,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(listOf(item.file.uri))
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请尝试重新选择文件夹"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }.onFinally {
             _state.update { state ->
                 state.copy(selectedIds = state.selectedIds - item.selectionId)
@@ -683,7 +683,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 }
             }.onFailure {
                 withContext(Main) {
-                    context.toastOnUi("扫描文件夹出错\n${it.localizedMessage}")
+                    _effects.tryEmit(
+                        ImportBookEffect.ShowToast("扫描文件夹出错\n${it.localizedMessage}")
+                    )
                 }
                 _state.update { state ->
                     state.copy(interaction = state.interaction.copy(isLoading = false))
@@ -722,7 +724,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 )
             }
         }.onError {
-            context.toastOnUi("获取文件列表出错\n${it.localizedMessage}")
+            _effects.tryEmit(
+                ImportBookEffect.ShowToast("获取文件列表出错\n${it.localizedMessage}")
+            )
             _state.update { state ->
                 state.copy(interaction = state.interaction.copy(isLoading = false))
             }

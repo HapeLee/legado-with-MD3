@@ -178,6 +178,8 @@ sealed interface BookInfoIntent {
 }
 
 sealed interface BookInfoEffect {
+    data class ShowMessage(val message: String) : BookInfoEffect
+
     data class Finish(
         val resultCode: Int? = null,
         val afterTransition: Boolean = false,

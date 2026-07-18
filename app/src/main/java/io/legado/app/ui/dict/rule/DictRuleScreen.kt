@@ -66,6 +66,7 @@ fun DictRuleRouteScreen(
         state = uiState,
         importState = importState,
         events = viewModel.events,
+        effects = viewModel.effects,
         onIntent = viewModel::onIntent,
         onPasteRule = viewModel::pasteRule,
         onBackClick = onBackClick,
@@ -78,6 +79,7 @@ fun DictRuleScreen(
     state: DictRuleUiState,
     importState: BaseImportUiState<DictRule>,
     events: Flow<BaseRuleEvent>,
+    effects: Flow<DictRuleEffect>,
     onIntent: (DictRuleIntent) -> Unit,
     onPasteRule: () -> DictRule?,
     onBackClick: () -> Unit,
@@ -129,6 +131,14 @@ fun DictRuleScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is DictRuleEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }

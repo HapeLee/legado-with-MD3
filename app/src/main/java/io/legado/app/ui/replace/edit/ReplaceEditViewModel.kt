@@ -11,7 +11,6 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,7 +132,7 @@ class ReplaceEditViewModel(
             val ruleToCopy = getReplaceRuleFromState()
             val json = GSON.toJson(ruleToCopy)
             app.sendToClip(json)
-            app.toastOnUi("规则已复制到剪贴板")
+            _effects.tryEmit(ReplaceEditEffect.ShowMessage("规则已复制到剪贴板"))
         }
     }
 
@@ -152,9 +151,7 @@ class ReplaceEditViewModel(
                     updateStateFromRule(pastedRule)
                 }
             } catch (e: Exception) {
-                launch(Dispatchers.Main) {
-                    app.toastOnUi(e.localizedMessage ?: "格式不对")
-                }
+                _effects.emit(ReplaceEditEffect.ShowMessage(e.localizedMessage ?: "格式不对"))
             }
         }
     }

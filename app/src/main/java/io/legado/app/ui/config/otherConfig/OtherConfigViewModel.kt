@@ -22,7 +22,6 @@ import io.legado.app.receiver.SharedReceiverActivity
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -269,7 +268,9 @@ class OtherConfigViewModel(
                 )
                 updateOtherSetting(OtherSettingsUpdate.ProcessText(enable))
             }.onFailure {
-                appCtx.toastOnUi(it.localizedMessage)
+                _effects.tryEmit(
+                    OtherConfigEffect.SettingsUpdateFailed(it.localizedMessage ?: "设置失败")
+                )
             }
         }
     }
@@ -283,14 +284,18 @@ class OtherConfigViewModel(
                     WebViewDataCleaner.clear(appCtx)
                 }.onSuccess {
                     restartScheduled = true
-                    appCtx.toastOnUi(R.string.clear_webview_data_success)
+                    _effects.tryEmit(
+                        OtherConfigEffect.ShowMessage(R.string.clear_webview_data_success)
+                    )
                     mainHandler.postDelayed(
                         { appCtx.restart() },
                         RESTART_DELAY_MILLIS
                     )
                 }.onFailure {
                     AppLog.put("清除 WebView 数据失败", it)
-                    appCtx.toastOnUi(R.string.clear_webview_data_failed)
+                    _effects.tryEmit(
+                        OtherConfigEffect.ShowMessage(R.string.clear_webview_data_failed)
+                    )
                 }
             }
         }

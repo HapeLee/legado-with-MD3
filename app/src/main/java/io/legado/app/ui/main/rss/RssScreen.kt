@@ -69,6 +69,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
@@ -98,6 +99,7 @@ fun RssRouteScreen(
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
+                is RssEffect.ShowMessage -> currentContext.toastOnUi(effect.message)
                 is RssEffect.OpenSort -> {
                     currentOnOpenSort(effect.sourceUrl, effect.sortUrl, effect.key)
                 }

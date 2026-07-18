@@ -63,7 +63,7 @@ import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
-import io.legado.app.ui.highlightTagRule.HighlightTagRuleScreen
+import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesRouteScreen
@@ -725,7 +725,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteHighlightTagRule> {
-        HighlightTagRuleScreen(
+        HighlightTagRuleRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }

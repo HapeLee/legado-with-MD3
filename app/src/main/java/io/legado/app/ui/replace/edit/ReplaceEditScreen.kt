@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -72,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
+import io.legado.app.utils.toastOnUi
 
 @Composable
 fun keyboardAsState(): State<Boolean> {
@@ -87,11 +89,13 @@ fun ReplaceEditRouteScreen(
     onSaveSuccess: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
                 ReplaceEditEffect.NavigateBack -> onSaveSuccess()
+                is ReplaceEditEffect.ShowMessage -> context.toastOnUi(effect.message)
             }
         }
     }

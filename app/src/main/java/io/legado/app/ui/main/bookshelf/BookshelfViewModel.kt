@@ -38,7 +38,6 @@ import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.move
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -779,7 +778,7 @@ class BookshelfViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, groupId)
         }.onError {
-            context.toastOnUi("更新分组失败\n${it.localizedMessage}")
+            showMessage("更新分组失败\n${it.localizedMessage}")
         }
     }
 
@@ -797,7 +796,7 @@ class BookshelfViewModel(
                 appDb.bookDao.update(*updates.toTypedArray())
             }
         }.onError {
-            context.toastOnUi("排序保存失败\n${it.localizedMessage}")
+            showMessage("排序保存失败\n${it.localizedMessage}")
         }
     }
 
@@ -811,12 +810,12 @@ class BookshelfViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                context.toastOnUi("已加入缓存队列: $count 本")
+                showMessage("已加入缓存队列: $count 本")
             } else {
-                context.toastOnUi(R.string.no_download)
+                showMessage(R.string.no_download)
             }
         }.onError {
-            context.toastOnUi("批量缓存失败\n${it.localizedMessage}")
+            showMessage("批量缓存失败\n${it.localizedMessage}")
         }
     }
 
@@ -1049,9 +1048,9 @@ class BookshelfViewModel(
                 loadingTextFlow.value = "添加中... ($it)"
             }
             if (successCount > 0) {
-                context.toastOnUi(R.string.success)
+                showMessage(R.string.success)
             } else {
-                context.toastOnUi("添加网址失败")
+                showMessage("添加网址失败")
             }
         }.onError {
             AppLog.put("添加网址出错\n${it.localizedMessage}", it, true)
@@ -1102,7 +1101,7 @@ class BookshelfViewModel(
         }.onSuccess {
             success(it)
         }.onError {
-            context.toastOnUi("导出书籍出错\n${it.localizedMessage}")
+            showMessage("导出书籍出错\n${it.localizedMessage}")
         }
     }
 
@@ -1112,9 +1111,9 @@ class BookshelfViewModel(
                 loadingTextFlow.value = it
             }.getOrThrow()
         }.onSuccess {
-            context.toastOnUi(R.string.success)
+            showMessage(R.string.success)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "ERROR")
+            showMessage(it.localizedMessage ?: "ERROR")
         }.onFinally {
             loadingTextFlow.value = null
         }
@@ -1126,9 +1125,9 @@ class BookshelfViewModel(
                 loadingTextFlow.value = it
             }.getOrThrow()
         }.onSuccess {
-            context.toastOnUi(R.string.success)
+            showMessage(R.string.success)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "ERROR")
+            showMessage(it.localizedMessage ?: "ERROR")
         }.onFinally {
             loadingTextFlow.value = null
         }
@@ -1140,6 +1139,12 @@ class BookshelfViewModel(
                 originName.contains(searchKey, true) ||
                 kind?.contains(searchKey, true) == true ||
                 customTag?.contains(searchKey, true) == true
+    }
+
+    private fun showMessage(resId: Int) = showMessage(context.getString(resId))
+
+    private fun showMessage(message: String) {
+        _effects.tryEmit(BookshelfEffect.ShowSnackbar(message))
     }
 
 }

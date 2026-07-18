@@ -6,7 +6,6 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
-import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -188,7 +187,7 @@ class RssViewModel(
                     _effects.tryEmit(RssEffect.OpenExternalUrl(url))
                 }
             }.onError {
-                context.toastOnUi(it.localizedMessage)
+                _effects.tryEmit(RssEffect.ShowMessage(it.localizedMessage ?: "打开订阅源失败"))
             }
     }
 
@@ -221,6 +220,8 @@ class RssViewModel(
 }
 
 sealed interface RssEffect {
+    data class ShowMessage(val message: String) : RssEffect
+
     data class OpenSort(
         val sourceUrl: String,
         val sortUrl: String?,

@@ -20,30 +20,33 @@ import kotlinx.coroutines.flow.flowOn
 
 class SearchContentRepository(
     private val titleModeProvider: () -> Int = { 0 },
-    private val historyDao: SearchContentHistoryDao = appDb.searchContentHistoryDao,
+    private val historyDao: SearchContentHistoryDao? = null,
 ) {
+
+    private val effectiveHistoryDao: SearchContentHistoryDao
+        get() = historyDao ?: appDb.searchContentHistoryDao
 
     fun observeHistory(book: Book?, onlyThisBook: Boolean): Flow<List<SearchContentHistory>> =
         if (onlyThisBook && book != null) {
-            historyDao.getByBook(book.name, book.author)
+            effectiveHistoryDao.getByBook(book.name, book.author)
         } else {
-            historyDao.getAll()
+            effectiveHistoryDao.getAll()
         }
 
     suspend fun saveHistory(book: Book, query: String) {
-        val history = historyDao.get(book.name, book.author, query)
+        val history = effectiveHistoryDao.get(book.name, book.author, query)
             ?: SearchContentHistory(bookName = book.name, bookAuthor = book.author, query = query)
         history.time = System.currentTimeMillis()
-        historyDao.insert(history)
+        effectiveHistoryDao.insert(history)
     }
 
-    suspend fun deleteHistory(id: Long) = historyDao.delete(id)
+    suspend fun deleteHistory(id: Long) = effectiveHistoryDao.delete(id)
 
     suspend fun clearHistory(book: Book?, onlyThisBook: Boolean) {
         if (onlyThisBook && book != null) {
-            historyDao.deleteByBook(book.name, book.author)
+            effectiveHistoryDao.deleteByBook(book.name, book.author)
         } else {
-            historyDao.deleteAll()
+            effectiveHistoryDao.deleteAll()
         }
     }
 

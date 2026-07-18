@@ -113,7 +113,6 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toStringArray
-import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CancellationException
@@ -637,7 +636,11 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuCoverProgress -> {
                 ReadBook.book?.let {
-                    ReadBook.uploadProgress(true) { context.toastOnUi(R.string.upload_book_success) }
+                    ReadBook.uploadProgress(true) {
+                        _effects.tryEmit(
+                            ReadBookEffect.ShowToast(context.getString(R.string.upload_book_success))
+                        )
+                    }
                 }
             }
 
@@ -651,7 +654,7 @@ class ReadBookViewModel(
                             textChapter.chapter.getFileName("nr")
                         )
                     ) {
-                        context.toastOnUi("未找到可移除的重复标题")
+                        _effects.tryEmit(ReadBookEffect.ShowToast("未找到可移除的重复标题"))
                     }
                 }
                 reverseRemoveSameTitle()
@@ -2620,7 +2623,7 @@ class ReadBookViewModel(
                 ReadBook.upMsg(null)
             }.catch {
                 AppLog.put("自动换源失败\n${it.localizedMessage}", it)
-                context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+                _effects.tryEmit(ReadBookEffect.ShowToast("自动换源失败\n${it.localizedMessage}"))
             }.collect()
         }
     }
@@ -2682,7 +2685,7 @@ class ReadBookViewModel(
             _effects.tryEmit(ReadBookEffect.Finish)
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            _effects.tryEmit(ReadBookEffect.ShowToast("添加书籍失败"))
         }
     }
 
@@ -4344,9 +4347,9 @@ class ReadBookViewModel(
             )
             if (!success) throw NoStackTraceException("保存到相册失败")
         }.onError {
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            _effects.tryEmit(ReadBookEffect.ShowToast("保存图片失败: ${it.localizedMessage}"))
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            _effects.tryEmit(ReadBookEffect.ShowToast("已保存到相册"))
         }
     }
 
@@ -5881,8 +5884,12 @@ class ReadBookViewModel(
             localPreferencesRepository.updatePreference(
                 LocalPreferencesKeys.READ_URL_IN_BROWSER, newValue
             )
-            context.toastOnUi(
-                if (newValue) R.string.open_by_browser else R.string.open_by_webview
+            _effects.tryEmit(
+                ReadBookEffect.ShowToast(
+                    context.getString(
+                        if (newValue) R.string.open_by_browser else R.string.open_by_webview
+                    )
+                )
             )
         }
     }
@@ -5892,7 +5899,7 @@ class ReadBookViewModel(
         if (book.isLocal) return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
         if (chapter == null) {
-            context.toastOnUi(R.string.no_chapter)
+            _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.no_chapter)))
             return
         }
         _uiState.update { it.copy(activeDialog = ReadBookDialog.ConfirmChapterPay(chapter.title)) }
@@ -5998,7 +6005,7 @@ class ReadBookViewModel(
             success?.invoke()
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            _effects.tryEmit(ReadBookEffect.ShowToast("添加书籍失败"))
         }
     }
 

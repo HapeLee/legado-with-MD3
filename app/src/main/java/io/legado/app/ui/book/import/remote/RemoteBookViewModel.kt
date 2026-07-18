@@ -30,7 +30,6 @@ import io.legado.app.utils.FileDoc
 import io.legado.app.utils.find
 import io.legado.app.utils.isUri
 import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -242,7 +241,7 @@ class RemoteBookViewModel(
                     onSuccess()
                 }
             } catch (e: Exception) {
-                context.toastOnUi("初始化webDav出错:${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("初始化webDav出错:${e.localizedMessage}"))
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
         }
@@ -260,7 +259,7 @@ class RemoteBookViewModel(
                 _state.update { it.copy(remoteBooks = bookList) }
             } catch (e: Exception) {
                 AppLog.put("获取webDav书籍出错\n${e.localizedMessage}", e)
-                context.toastOnUi("获取webDav书籍出错\n${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("获取webDav书籍出错\n${e.localizedMessage}"))
             } finally {
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
@@ -292,7 +291,7 @@ class RemoteBookViewModel(
             Result.failure(e)
         } catch (e: Exception) {
             AppLog.put("导入出错\n${e.localizedMessage}", e)
-            context.toastOnUi("导入出错\n${e.localizedMessage}")
+            _effects.tryEmit(RemoteBookEffect.ShowToast("导入出错\n${e.localizedMessage}"))
             Result.failure(e)
         } finally {
             _state.update { it.copy(interaction = it.interaction.copy(isUploading = false)) }

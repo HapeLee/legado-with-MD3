@@ -303,6 +303,8 @@ fun ImportBookRouteScreen(
                 is ImportBookEffect.ShowToastRes -> {
                     context.toastOnUi(effect.resId)
                 }
+
+                is ImportBookEffect.ShowToast -> context.toastOnUi(effect.message)
             }
         }
     }

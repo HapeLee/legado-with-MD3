@@ -36,6 +36,7 @@ import io.legado.app.utils.openFileUri
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.data.entities.BookGroup
@@ -126,6 +127,7 @@ fun BookInfoRouteScreen(
     LaunchedEffect(viewModel, activity) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
+                is BookInfoEffect.ShowMessage -> context.toastOnUi(effect.message)
                 is BookInfoEffect.Finish -> {
                     onFinish(effect.resultCode, effect.afterTransition)
                 }
