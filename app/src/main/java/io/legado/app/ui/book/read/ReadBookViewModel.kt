@@ -5601,7 +5601,6 @@ class ReadBookViewModel(
                 ConfigUpdateAction.UpdateSystemUi
             )
         ))
-        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
     }
 
     private fun applyReadStyleBackgroundImage(uri: Uri) {
