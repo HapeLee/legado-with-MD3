@@ -144,7 +144,7 @@ fun FontSelectGrid(
                 Box {
                     IconButton(onClick = { expanded = true }) {
                         Icon(
-                            imageVector = AppIcons.Filter,
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
                             contentDescription = stringResource(R.string.sort),
                             tint = LegadoTheme.colorScheme.onSurfaceVariant
                         )
