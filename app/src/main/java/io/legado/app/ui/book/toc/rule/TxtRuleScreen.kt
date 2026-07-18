@@ -73,6 +73,7 @@ fun TxtRuleRouteScreen(
         state = uiState,
         importState = importState,
         events = viewModel.events,
+        effects = viewModel.effects,
         onIntent = viewModel::onIntent,
         onPasteRule = viewModel::pasteRule,
         initialRule = initialRule,
@@ -87,6 +88,7 @@ fun TxtRuleScreen(
     state: TxtTocRuleUiState,
     importState: BaseImportUiState<TxtTocRule>,
     events: Flow<BaseRuleEvent>,
+    effects: Flow<TxtTocRuleEffect>,
     onIntent: (TxtTocRuleIntent) -> Unit,
     onPasteRule: () -> TxtTocRule?,
     initialRule: String? = null,
@@ -140,6 +142,14 @@ fun TxtRuleScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is TxtTocRuleEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }

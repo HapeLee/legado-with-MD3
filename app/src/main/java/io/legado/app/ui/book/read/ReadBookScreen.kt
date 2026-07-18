@@ -170,11 +170,15 @@ fun ReadBookScreen(
 
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
     EffectiveReplacesSheet(
         show = state.activeSheet is ReadBookSheet.EffectiveReplaces,
+        effectiveRules = state.effectiveReplaceRules,
+        chineseConvertActive = state.chineseConverterActive,
+        reSegmentActive = state.reSegment,
         onDismissRequest = dismissSheet,
         onOpenReplaceEditor = { id, pattern ->
             onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
@@ -187,6 +191,9 @@ fun ReadBookScreen(
         onOpenContentProcesses = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
         },
+        onDisableRule = { onIntent(ReadBookIntent.DisableEffectiveReplace(it)) },
+        onDisableChineseConverter = { onIntent(ReadBookIntent.DisableChineseConverter) },
+        onDisableReSegment = { onIntent(ReadBookIntent.DisableReSegment) },
     )
     ContentProcessesSheet(
         show = state.activeSheet is ReadBookSheet.ContentProcesses,
@@ -196,6 +203,7 @@ fun ReadBookScreen(
     )
     UnderlineConfigSheet(
         show = state.activeSheet is ReadBookSheet.UnderlineConfig,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
@@ -242,6 +250,7 @@ fun ReadBookScreen(
     HighlightRuleConfigSheet(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
         state = state.highlightRuleConfig,
+        allConfigNames = state.sheetConfig.configNames,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )

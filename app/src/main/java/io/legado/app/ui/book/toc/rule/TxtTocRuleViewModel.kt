@@ -17,9 +17,10 @@ import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 class TxtTocRuleViewModel(
@@ -31,6 +32,8 @@ class TxtTocRuleViewModel(
     uploadRepository
 ) {
     private val repository = TxtTocRuleRepository()
+    private val _effects = MutableSharedFlow<TxtTocRuleEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     override val rawDataFlow: Flow<List<TxtTocRule>> = repository.flowAll()
 
@@ -183,20 +186,26 @@ class TxtTocRuleViewModel(
     private fun importBuiltInRules() {
         viewModelScope.launch(Dispatchers.IO) {
             DefaultData.importDefaultTocRules()
-            context.toastOnUi(R.string.import_built_in_rules)
+            _effects.emit(
+                TxtTocRuleEffect.ShowMessage(context.getString(R.string.import_built_in_rules))
+            )
         }
     }
 
     fun pasteRule(): TxtTocRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi(R.string.clipboard_empty)
+            _effects.tryEmit(
+                TxtTocRuleEffect.ShowMessage(context.getString(R.string.clipboard_empty))
+            )
             return null
         }
         return try {
             GSON.fromJsonObject<TxtTocRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi(R.string.invalid_format)
+            _effects.tryEmit(
+                TxtTocRuleEffect.ShowMessage(context.getString(R.string.invalid_format))
+            )
             null
         }
     }

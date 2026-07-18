@@ -93,7 +93,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun SearchScreen(
+fun SearchRouteScreen(
     viewModel: SearchViewModel,
     onBack: () -> Unit,
     onOpenBookInfo: (name: String, author: String, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
@@ -103,80 +103,6 @@ fun SearchScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchLayoutMode by viewModel.searchLayoutMode.collectAsStateWithLifecycle()
-    val isSourceGroupedMode = searchLayoutMode == 1
-    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
-    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
-    val listState = rememberLazyListState()
-    val groupedListState = rememberLazyListState()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var queryInput by rememberSaveable { mutableStateOf(state.query) }
-    var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
-    var keepResultsPinnedToTop by rememberSaveable { mutableStateOf(true) }
-    val showSuggestionPanel = state.showSuggestions
-    val latestQuery by rememberUpdatedState(state.query)
-    val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        GlassTopAppBarDefaults.defaultScrollBehavior()
-    } else {
-        M3GlassScrollBehavior(TopAppBarDefaults.enterAlwaysScrollBehavior())
-    }
-
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val totalCount = listState.layoutInfo.totalItemsCount
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            totalCount > 0 && lastVisible >= totalCount - 3
-        }
-    }
-
-    val shouldLoadMoreGrouped by remember {
-        derivedStateOf {
-            val totalCount = groupedListState.layoutInfo.totalItemsCount
-            val lastVisible = groupedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            totalCount > 0 && lastVisible >= totalCount - 3
-        }
-    }
-
-    LaunchedEffect(state.query) {
-        if (state.query != queryInput) {
-            queryInput = state.query
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { queryInput }
-            .distinctUntilChanged()
-            .debounce(200)
-            .collect { newQuery ->
-                if (ignoreNextDebouncedQuery == newQuery) {
-                    ignoreNextDebouncedQuery = null
-                    return@collect
-                }
-                if (newQuery != latestQuery) {
-                    viewModel.onIntent(SearchIntent.UpdateQuery(newQuery))
-                }
-            }
-    }
-
-    LaunchedEffect(
-        shouldLoadMore,
-        shouldLoadMoreGrouped,
-        state.isSearching,
-        state.hasMore,
-        state.isManualStop,
-        state.showSuggestions,
-        isSourceGroupedMode,
-    ) {
-        val readyToLoad = !state.isSearching &&
-            state.hasMore &&
-            !state.isManualStop &&
-            !state.showSuggestions
-        val nearEnd = if (isSourceGroupedMode) shouldLoadMoreGrouped else shouldLoadMore
-        if (readyToLoad && nearEnd) {
-            viewModel.onIntent(SearchIntent.LoadMore)
-        }
-    }
-
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -197,12 +123,91 @@ fun SearchScreen(
         }
     }
 
+    SearchScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBack = onBack,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+    )
+}
+
+@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@Composable
+fun SearchScreen(
+    state: SearchUiState,
+    onIntent: (SearchIntent) -> Unit,
+    onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    val searchLayoutMode = state.layoutMode
+    val isSourceGroupedMode = searchLayoutMode == 1
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val groupedListState = rememberLazyListState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var queryInput by rememberSaveable { mutableStateOf(state.query) }
+    var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    var keepResultsPinnedToTop by rememberSaveable { mutableStateOf(true) }
+    val showSuggestionPanel = state.showSuggestions
+    val latestQuery by rememberUpdatedState(state.query)
+    val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+        GlassTopAppBarDefaults.defaultScrollBehavior()
+    } else {
+        M3GlassScrollBehavior(TopAppBarDefaults.enterAlwaysScrollBehavior())
+    }
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val totalCount = listState.layoutInfo.totalItemsCount
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            totalCount > 0 && lastVisible >= totalCount - 3
+        }
+    }
+    val shouldLoadMoreGrouped by remember {
+        derivedStateOf {
+            val totalCount = groupedListState.layoutInfo.totalItemsCount
+            val lastVisible = groupedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            totalCount > 0 && lastVisible >= totalCount - 3
+        }
+    }
+    LaunchedEffect(state.query) {
+        if (state.query != queryInput) queryInput = state.query
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { queryInput }
+            .distinctUntilChanged()
+            .debounce(200)
+            .collect { newQuery ->
+                if (ignoreNextDebouncedQuery == newQuery) {
+                    ignoreNextDebouncedQuery = null
+                    return@collect
+                }
+                if (newQuery != latestQuery) onIntent(SearchIntent.UpdateQuery(newQuery))
+            }
+    }
+    LaunchedEffect(
+        shouldLoadMore,
+        shouldLoadMoreGrouped,
+        state.isSearching,
+        state.hasMore,
+        state.isManualStop,
+        state.showSuggestions,
+        isSourceGroupedMode,
+    ) {
+        val readyToLoad = !state.isSearching && state.hasMore &&
+            !state.isManualStop && !state.showSuggestions
+        val nearEnd = if (isSourceGroupedMode) shouldLoadMoreGrouped else shouldLoadMore
+        if (readyToLoad && nearEnd) onIntent(SearchIntent.LoadMore)
+    }
+
     // Activity lifecycle (e.g., Home button, switching apps)
-    DisposableEffect(lifecycleOwner, viewModel) {
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> viewModel.onIntent(SearchIntent.ResumeEngine)
-                Lifecycle.Event.ON_PAUSE -> viewModel.onIntent(SearchIntent.PauseEngine)
+                Lifecycle.Event.ON_RESUME -> onIntent(SearchIntent.ResumeEngine)
+                Lifecycle.Event.ON_PAUSE -> onIntent(SearchIntent.PauseEngine)
                 else -> Unit
             }
         }
@@ -213,23 +218,23 @@ fun SearchScreen(
     }
 
     // Composition lifecycle (e.g., navigating to BookInfo and back)
-    DisposableEffect(viewModel) {
+    DisposableEffect(Unit) {
         onDispose {
-            viewModel.onIntent(SearchIntent.PauseEngine)
+            onIntent(SearchIntent.PauseEngine)
         }
     }
 
-    LaunchedEffect(viewModel) {
-        viewModel.onIntent(SearchIntent.ResumeEngine)
+    LaunchedEffect(Unit) {
+        onIntent(SearchIntent.ResumeEngine)
     }
 
     // Save scroll position before composable leaves composition (e.g., navigating to BookInfo)
-    DisposableEffect(viewModel) {
+    DisposableEffect(Unit) {
         onDispose {
             val first = listState.firstVisibleItemIndex
             val offset = listState.firstVisibleItemScrollOffset
             if (first > 0 || offset > 0) {
-                viewModel.onIntent(SearchIntent.SaveScrollState(first, offset))
+                onIntent(SearchIntent.SaveScrollState(first, offset))
             }
         }
     }
@@ -240,7 +245,7 @@ fun SearchScreen(
         val off = state.savedScrollOffset
         if (idx > 0 || off > 0) {
             listState.scrollToItem(idx, off)
-            viewModel.onIntent(SearchIntent.SaveScrollState(0, 0))
+            onIntent(SearchIntent.SaveScrollState(0, 0))
         }
     }
 
@@ -281,9 +286,9 @@ fun SearchScreen(
             ignoreNextDebouncedQuery = normalized
             queryInput = normalized
             if (normalized != state.query) {
-                viewModel.onIntent(SearchIntent.UpdateQuery(normalized))
+                onIntent(SearchIntent.UpdateQuery(normalized))
             }
-            viewModel.onIntent(SearchIntent.SubmitSearch)
+            onIntent(SearchIntent.SubmitSearch)
         }
     }
 
@@ -311,7 +316,7 @@ fun SearchScreen(
                         TopBarAnimatedActionButton(
                             checked = isSourceGroupedMode || state.selectedSourceTypes.isNotEmpty(),
                             onCheckedChange = {
-                                viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(true))
+                                onIntent(SearchIntent.SetSettingsSheetVisible(true))
                             },
                             iconChecked = AppIcons.Settings,
                             iconUnchecked = AppIcons.Settings,
@@ -322,7 +327,7 @@ fun SearchScreen(
                             checked = state.matchMode == MatchMode.EXACT,
                             onCheckedChange = {
                                 val newMode = if (state.matchMode == MatchMode.EXACT) MatchMode.DEFAULT else MatchMode.EXACT
-                                viewModel.onIntent(SearchIntent.SetMatchMode(newMode))
+                                onIntent(SearchIntent.SetMatchMode(newMode))
                             },
                             iconChecked = AppIcons.PrecisionSearch,
                             iconUnchecked = AppIcons.UnPrecisionSearch,
@@ -332,7 +337,7 @@ fun SearchScreen(
                         TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
                             onCheckedChange = {
-                                viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
+                                onIntent(SearchIntent.SetScopeSheetVisible(true))
                             },
                             iconChecked = AppIcons.Filter,
                             iconUnchecked = AppIcons.Filter,
@@ -360,7 +365,7 @@ fun SearchScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp),
                                     onClick = {
                                         queryInput = ""
-                                        viewModel.onIntent(SearchIntent.UpdateQuery(""))
+                                        onIntent(SearchIntent.UpdateQuery(""))
                                     },
                                     icon = AppIcons.Close,
                                     contentDescription = stringResource(R.string.clear)
@@ -377,9 +382,9 @@ fun SearchScreen(
                 AppFloatingActionButton(
                     onClick = {
                         if (state.isSearching) {
-                            viewModel.onIntent(SearchIntent.StopSearch)
+                            onIntent(SearchIntent.StopSearch)
                         } else {
-                            viewModel.onIntent(SearchIntent.LoadMore)
+                            onIntent(SearchIntent.LoadMore)
                         }
                     },
                     icon = if (state.isSearching) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -403,14 +408,14 @@ fun SearchScreen(
                         state = state,
                         onUseHistory = { keyword ->
                             queryInput = keyword
-                            viewModel.onIntent(SearchIntent.UseHistoryKeyword(keyword))
+                            onIntent(SearchIntent.UseHistoryKeyword(keyword))
                         },
-                        onDeleteHistory = { viewModel.onIntent(SearchIntent.DeleteHistory(it)) },
+                        onDeleteHistory = { onIntent(SearchIntent.DeleteHistory(it)) },
                         onOpenBook = {
-                            viewModel.onIntent(SearchIntent.OpenBookshelfBook(it))
+                            onIntent(SearchIntent.OpenBookshelfBook(it))
                         },
                         onClearHistory = {
-                            viewModel.onIntent(SearchIntent.SetClearHistoryDialogVisible(true))
+                            onIntent(SearchIntent.SetClearHistoryDialogVisible(true))
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -429,7 +434,7 @@ fun SearchScreen(
                                         hasMore = state.hasMore,
                                         hasResult = false,
                                         committedQuery = state.committedQuery,
-                                        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                        onLoadMore = { onIntent(SearchIntent.LoadMore) },
                                     )
                                 }
                             }
@@ -470,7 +475,7 @@ fun SearchScreen(
                                                     sourceName = group.sourceName,
                                                     items = group.items,
                                                     onClickBook = { book, coverKey ->
-                                                        viewModel.onIntent(
+                                                        onIntent(
                                                             SearchIntent.OpenSearchBook(
                                                                 book,
                                                                 coverKey
@@ -482,7 +487,7 @@ fun SearchScreen(
                                                         previewSharedCoverKey = coverKey
                                                     },
                                                     onViewAll = {
-                                                        viewModel.onIntent(
+                                                        onIntent(
                                                             SearchIntent.ExpandSource(
                                                                 group.origin,
                                                                 group.sourceName
@@ -502,7 +507,7 @@ fun SearchScreen(
                                                 hasMore = state.hasMore,
                                                 hasResult = true,
                                                 committedQuery = state.committedQuery,
-                                                onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                                onLoadMore = { onIntent(SearchIntent.LoadMore) },
                                             )
                                         }
                                     }
@@ -528,7 +533,7 @@ fun SearchScreen(
                                                 book = item.book,
                                                 shelfState = item.shelfState,
                                                 onClick = {
-                                                    viewModel.onIntent(
+                                                    onIntent(
                                                         SearchIntent.OpenSearchBook(
                                                             item.book,
                                                             sharedCoverKey
@@ -552,7 +557,7 @@ fun SearchScreen(
                                                 hasMore = state.hasMore,
                                                 hasResult = true,
                                                 committedQuery = state.committedQuery,
-                                                onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                                onLoadMore = { onIntent(SearchIntent.LoadMore) },
                                             )
                                         }
                                     }
@@ -599,22 +604,22 @@ fun SearchScreen(
     AppAlertDialog(
         show = state.showClearHistoryDialog,
         onDismissRequest = {
-            viewModel.onIntent(SearchIntent.SetClearHistoryDialogVisible(false))
+            onIntent(SearchIntent.SetClearHistoryDialogVisible(false))
         },
         title = stringResource(R.string.draw),
         text = stringResource(R.string.sure_clear_search_history),
         confirmText = stringResource(R.string.ok),
-        onConfirm = { viewModel.onIntent(SearchIntent.ConfirmClearHistory) },
+        onConfirm = { onIntent(SearchIntent.ConfirmClearHistory) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = {
-            viewModel.onIntent(SearchIntent.SetClearHistoryDialogVisible(false))
+            onIntent(SearchIntent.SetClearHistoryDialogVisible(false))
         },
     )
 
     AppAlertDialog(
         data = state.emptyScopeAction,
         onDismissRequest = {
-            viewModel.onIntent(SearchIntent.DismissEmptyScopeAction)
+            onIntent(SearchIntent.DismissEmptyScopeAction)
         },
         title = stringResource(R.string.draw),
         textProvider = {
@@ -625,26 +630,26 @@ fun SearchScreen(
             }
         },
         confirmText = stringResource(R.string.ok),
-        onConfirm = { viewModel.onIntent(SearchIntent.ConfirmEmptyScopeAction) },
+        onConfirm = { onIntent(SearchIntent.ConfirmEmptyScopeAction) },
         dismissText = stringResource(R.string.cancel),
-        onDismiss = { viewModel.onIntent(SearchIntent.DismissEmptyScopeAction) },
+        onDismiss = { onIntent(SearchIntent.DismissEmptyScopeAction) },
     )
 
     ScopeSelectSheet(
         show = state.showScopeSheet,
-        onDismissRequest = { viewModel.onIntent(SearchIntent.SetScopeSheetVisible(false)) },
+        onDismissRequest = { onIntent(SearchIntent.SetScopeSheetVisible(false)) },
         isAll = state.isAllScope,
-        onSelectAll = { viewModel.onIntent(SearchIntent.SelectAllScope) },
+        onSelectAll = { onIntent(SearchIntent.SelectAllScope) },
         groups = state.enabledGroups,
         selectedGroups = state.scopeDisplayNames,
-        onToggleGroup = { viewModel.onIntent(SearchIntent.ToggleScopeGroup(it)) },
+        onToggleGroup = { onIntent(SearchIntent.ToggleScopeGroup(it)) },
         sources = state.enabledSources,
         selectedSources = state.selectedScopeSourceUrls,
-        onToggleSource = { viewModel.onIntent(SearchIntent.ToggleScopeSource(it)) },
+        onToggleSource = { onIntent(SearchIntent.ToggleScopeSource(it)) },
         isSourceScope = state.isSourceScope,
-        onConfirm = { viewModel.onIntent(SearchIntent.OpenSourceManage) },
+        onConfirm = { onIntent(SearchIntent.OpenSourceManage) },
         onApplyScope = { selection ->
-            viewModel.onIntent(
+            onIntent(
                 SearchIntent.ApplyScopeSelection(
                     groupNames = selection.groupNames,
                     sources = selection.sources,
@@ -656,7 +661,7 @@ fun SearchScreen(
 
     AppModalBottomSheet(
         show = state.showSettingsSheet,
-        onDismissRequest = { viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(false)) },
+        onDismissRequest = { onIntent(SearchIntent.SetSettingsSheetVisible(false)) },
         title = stringResource(R.string.setting),
     ) {
         Column(
@@ -673,7 +678,7 @@ fun SearchScreen(
                 imageVector = if (isSourceGroupedMode) Icons.Default.GridView else Icons.AutoMirrored.Outlined.FormatListBulleted,
                 onValueChange = { newValue ->
                     if (newValue.toInt() != searchLayoutMode) {
-                        viewModel.toggleSearchLayout()
+                        onIntent(SearchIntent.SetLayoutMode(newValue.toInt()))
                     }
                 }
             )
@@ -703,7 +708,7 @@ fun SearchScreen(
                     onToggleSelection = {
                         if (state.selectedSourceTypes.isNotEmpty()) {
                             state.selectedSourceTypes.forEach {
-                                viewModel.onIntent(SearchIntent.ToggleSourceType(it))
+                                onIntent(SearchIntent.ToggleSourceType(it))
                             }
                         }
                     }
@@ -720,7 +725,7 @@ fun SearchScreen(
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
                         inSelectionMode = true,
                         onToggleSelection = {
-                            viewModel.onIntent(SearchIntent.ToggleSourceType(type))
+                            onIntent(SearchIntent.ToggleSourceType(type))
                         }
                     )
                 }
@@ -743,10 +748,10 @@ fun SearchScreen(
         onDismissRequest = { previewBook = null },
         onOpenDetail = { book, sharedCoverKey ->
             previewBook = null
-            viewModel.onIntent(SearchIntent.OpenSearchBook(book, sharedCoverKey))
+            onIntent(SearchIntent.OpenSearchBook(book, sharedCoverKey))
         },
         onAddToShelf = { book ->
-            viewModel.onAddToShelf(book)
+            onIntent(SearchIntent.AddToShelf(book))
         },
     )
 
@@ -759,13 +764,13 @@ fun SearchScreen(
         errorMsg = state.expandedSourceError,
         savedScrollIndex = state.expandedSourceSavedScrollIndex,
         savedScrollOffset = state.expandedSourceSavedScrollOffset,
-        onDismiss = { viewModel.onIntent(SearchIntent.DismissExpandedSource) },
-        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMoreExpandedSource) },
+        onDismiss = { onIntent(SearchIntent.DismissExpandedSource) },
+        onLoadMore = { onIntent(SearchIntent.LoadMoreExpandedSource) },
         onSaveScrollState = { index, offset ->
-            viewModel.onIntent(SearchIntent.SaveExpandedSourceScrollState(index, offset))
+            onIntent(SearchIntent.SaveExpandedSourceScrollState(index, offset))
         },
         onBookClick = { book, coverKey ->
-            viewModel.onIntent(SearchIntent.OpenExpandedSourceBook(book, coverKey))
+            onIntent(SearchIntent.OpenExpandedSourceBook(book, coverKey))
         },
         onBookLongClick = { book, coverKey ->
             previewBook = book

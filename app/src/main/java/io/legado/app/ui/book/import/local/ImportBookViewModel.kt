@@ -30,7 +30,6 @@ import io.legado.app.utils.isUri
 import io.legado.app.utils.list
 import io.legado.app.utils.mapParallel
 import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -62,7 +61,8 @@ data class ImportBookUiState(
     val interaction: InteractionState = InteractionState(),
     val pathNames: List<String> = emptyList(),
     val canGoBack: Boolean = false,
-    val sort: Int = 0
+    val sort: Int = 0,
+    val fileNameRule: String = "",
 ) : ListUiState<ImportBook> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
@@ -86,12 +86,14 @@ sealed interface ImportBookIntent {
     data class NavigateToLevel(val level: Int) : ImportBookIntent
     data object SelectAll : ImportBookIntent
     data object SelectInvert : ImportBookIntent
+    data object ClearSelection : ImportBookIntent
     data object AddToBookshelf : ImportBookIntent
     data class AddSingleToBookshelf(val item: ImportBook) : ImportBookIntent
     data object DeleteSelection : ImportBookIntent
     data class ItemClick(val item: ImportBook) : ImportBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : ImportBookIntent
     data class ImportArchiveConfirmed(val fileDoc: FileDoc, val fileName: String) : ImportBookIntent
+    data class SetFileNameRule(val value: String) : ImportBookIntent
 }
 
 sealed interface ImportBookEffect {
@@ -104,6 +106,7 @@ sealed interface ImportBookEffect {
     data class ShowArchiveEntries(val fileDoc: FileDoc, val fileNames: List<String>) : ImportBookEffect
     data class ShowImportArchiveDialog(val fileDoc: FileDoc, val fileName: String) : ImportBookEffect
     data class ShowToastRes(val resId: Int) : ImportBookEffect
+    data class ShowToast(val message: String) : ImportBookEffect
 }
 
 class ImportBookViewModel(application: Application) : BaseViewModel(application) {
@@ -157,6 +160,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             is ImportBookIntent.NavigateToLevel -> navigateToLevel(intent.level)
             ImportBookIntent.SelectAll -> selectAllCheckable()
             ImportBookIntent.SelectInvert -> invertSelection()
+            ImportBookIntent.ClearSelection -> clearSelection()
             ImportBookIntent.AddToBookshelf -> addSelectedToBookshelf()
             is ImportBookIntent.AddSingleToBookshelf -> addSingleToBookshelf(intent.item)
             ImportBookIntent.DeleteSelection -> deleteSelectedDocs()
@@ -170,6 +174,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 intent.fileDoc,
                 intent.fileName
             )
+            is ImportBookIntent.SetFileNameRule -> {
+                ImportBookConfig.bookImportFileName = intent.value
+            }
         }
     }
 
@@ -220,7 +227,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             interaction = state.interaction,
             pathNames = pathNames,
             canGoBack = state.subDocs.isNotEmpty(),
-            sort = state.sort
+            sort = state.sort,
+            fileNameRule = ImportBookConfig.bookImportFileName.orEmpty(),
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(
@@ -539,10 +547,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(selectedBooks.map { it.file.uri })
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请尝试重新选择文件夹"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }.onFinally {
             clearSelection()
         }
@@ -554,10 +562,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(uris)
         }.onError {
-            context.toastOnUi("添加书架失败，请重新选择书籍文件")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请重新选择书籍文件"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }
     }
 
@@ -566,10 +574,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(listOf(item.file.uri))
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架失败，请尝试重新选择文件夹"))
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            _effects.tryEmit(ImportBookEffect.ShowToast("添加书架成功"))
         }.onFinally {
             _state.update { state ->
                 state.copy(selectedIds = state.selectedIds - item.selectionId)
@@ -675,7 +683,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 }
             }.onFailure {
                 withContext(Main) {
-                    context.toastOnUi("扫描文件夹出错\n${it.localizedMessage}")
+                    _effects.tryEmit(
+                        ImportBookEffect.ShowToast("扫描文件夹出错\n${it.localizedMessage}")
+                    )
                 }
                 _state.update { state ->
                     state.copy(interaction = state.interaction.copy(isLoading = false))
@@ -714,7 +724,9 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 )
             }
         }.onError {
-            context.toastOnUi("获取文件列表出错\n${it.localizedMessage}")
+            _effects.tryEmit(
+                ImportBookEffect.ShowToast("获取文件列表出错\n${it.localizedMessage}")
+            )
             _state.update { state ->
                 state.copy(interaction = state.interaction.copy(isLoading = false))
             }

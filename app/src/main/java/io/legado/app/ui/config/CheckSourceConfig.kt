@@ -93,7 +93,7 @@ class CheckSourceConfig : BaseBottomSheetDialogFragment(R.layout.dialog_check_so
                 checkCategory = binding.checkCategory.isChecked
                 checkContent = binding.checkContent.isChecked
                 putConfig()
-                putPrefString(PreferKey.checkSource, summary)
+                requireContext().putPrefString(PreferKey.checkSource, summary)
                 dismiss()
             }
         }

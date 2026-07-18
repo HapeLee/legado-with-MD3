@@ -30,10 +30,11 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
@@ -117,7 +118,6 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toStringArray
-import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CancellationException
@@ -167,7 +167,7 @@ class ReadBookViewModel(
     private val readSettingsRepository: ReadSettingsRepository,
     private val readBookStyleConfigRepository: ReadBookStyleConfigRepository,
     private val readAloudSettingsRepository: ReadAloudSettingsRepository,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
     private val uploadRepository: UploadRepository,
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,
@@ -181,6 +181,7 @@ class ReadBookViewModel(
     private val aiProfileGateway: AiProfileGateway,
     private val syncReadAloudVoicesUseCase: SyncReadAloudVoicesUseCase,
     private val readAloudSessionStore: ReadAloudSessionStore,
+    private val replaceRuleRepository: ReplaceRuleRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -384,6 +385,17 @@ class ReadBookViewModel(
             is ReadBookIntent.RefreshAllChapters -> refreshAllChapters()
             is ReadBookIntent.RefreshContentAfter -> refreshContentAfter()
             is ReadBookIntent.ChangeReplaceRule -> changeReplaceRule(intent.enabled)
+            is ReadBookIntent.DisableEffectiveReplace -> viewModelScope.launch {
+                replaceRuleRepository.insert(intent.rule.copy(isEnabled = false))
+            }
+            ReadBookIntent.DisableChineseConverter -> {
+                handleConfigUpdate(ConfigUpdate.ChineseConverterType(0))
+            }
+            ReadBookIntent.DisableReSegment -> {
+                ReadBook.book?.setReSegment(false)
+                ReadBook.loadContent(false)
+                _uiState.update { it.copy(reSegment = false) }
+            }
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
             is ReadBookIntent.OpenChapterSummary -> openChapterSummary()
             is ReadBookIntent.OpenAiCurrentChapterRewrite -> openAiCurrentChapterRewrite()
@@ -635,7 +647,11 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuCoverProgress -> {
                 ReadBook.book?.let {
-                    ReadBook.uploadProgress(true) { context.toastOnUi(R.string.upload_book_success) }
+                    ReadBook.uploadProgress(true) {
+                        _effects.tryEmit(
+                            ReadBookEffect.ShowToast(context.getString(R.string.upload_book_success))
+                        )
+                    }
                 }
             }
 
@@ -649,7 +665,7 @@ class ReadBookViewModel(
                             textChapter.chapter.getFileName("nr")
                         )
                     ) {
-                        context.toastOnUi("未找到可移除的重复标题")
+                        _effects.tryEmit(ReadBookEffect.ShowToast("未找到可移除的重复标题"))
                     }
                 }
                 reverseRemoveSameTitle()
@@ -2198,6 +2214,61 @@ class ReadBookViewModel(
         )
     }
 
+    private fun buildSheetConfig(): ReadSheetConfigUiState = ReadSheetConfigUiState(
+        letterSpacing = ReadBookConfig.letterSpacing,
+        lineSpacing = ReadBookConfig.lineSpacingExtra,
+        paragraphSpacing = ReadBookConfig.paragraphSpacing,
+        paragraphIndentCount = ReadBookConfig.paragraphIndent.length,
+        textItalic = ReadBookConfig.textItalic,
+        textBold = ReadBookConfig.textBold,
+        chineseConverterType = ReadConfig.chineseConverterType,
+        textColor = ReadBookConfig.durConfig.curTextColor(),
+        textAccentColor = ReadBookConfig.durConfig.curTextAccentColor(),
+        titleMode = ReadBookConfig.titleMode,
+        titleBold = ReadBookConfig.titleBold,
+        titleSegType = ReadBookConfig.titleSegType,
+        titleSegDistance = ReadBookConfig.titleSegDistance,
+        titleSegFlag = ReadBookConfig.titleSegFlag,
+        titleSegScaling = ReadBookConfig.titleSegScaling,
+        titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra,
+        titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub,
+        titleSize = ReadBookConfig.titleSize,
+        titleTopSpacing = ReadBookConfig.titleTopSpacing,
+        titleBottomSpacing = ReadBookConfig.titleBottomSpacing,
+        titleColor = ReadBookConfig.titleColor,
+        titleColorNight = ReadBookConfig.titleColorNight,
+        textColorDay = ReadBookConfig.textColor,
+        textColorNight = ReadBookConfig.textColorNight,
+        textShadow = ReadBookConfig.textShadow,
+        textShadowColor = ReadBookConfig.durConfig.curTextShadowColor(),
+        shadowRadius = ReadBookConfig.shadowRadius,
+        shadowDx = ReadBookConfig.shadowDx,
+        shadowDy = ReadBookConfig.shadowDy,
+        underline = ReadBookConfig.underline,
+        dottedLine = ReadBookConfig.dottedLine,
+        underlineExtend = ReadBookConfig.underlineExtend,
+        underlineColor = ReadBookConfig.durConfig.curUnderlineColor(),
+        underlineHeight = ReadBookConfig.underlineHeight,
+        underlinePadding = ReadBookConfig.underlinePadding,
+        dottedBase = ReadBookConfig.durConfig.dottedBase,
+        dottedRatio = ReadBookConfig.durConfig.dottedRatio,
+        paddingTop = ReadBookConfig.paddingTop,
+        paddingBottom = ReadBookConfig.paddingBottom,
+        paddingLeft = ReadBookConfig.paddingLeft,
+        paddingRight = ReadBookConfig.paddingRight,
+        headerPaddingTop = ReadBookConfig.headerPaddingTop,
+        headerPaddingBottom = ReadBookConfig.headerPaddingBottom,
+        headerPaddingLeft = ReadBookConfig.headerPaddingLeft,
+        headerPaddingRight = ReadBookConfig.headerPaddingRight,
+        footerPaddingTop = ReadBookConfig.footerPaddingTop,
+        footerPaddingBottom = ReadBookConfig.footerPaddingBottom,
+        footerPaddingLeft = ReadBookConfig.footerPaddingLeft,
+        footerPaddingRight = ReadBookConfig.footerPaddingRight,
+        configNames = ReadBookConfig.configList.map { it.name }
+            .filter { it.isNotBlank() }
+            .toImmutableList(),
+    )
+
     private fun syncFromReadBook(current: ReadBookUiState): ReadBookUiState {
         val book = ReadBook.book
         val textChapter = ReadBook.curTextChapter
@@ -2219,6 +2290,8 @@ class ReadBookViewModel(
             replaceRuleEnabled = book?.getUseReplaceRule() ?: false,
             effectiveReplaceCount = textChapter?.effectiveReplaceRules?.size ?: 0,
             effectiveContentProcessCount = textChapter?.effectiveContentProcesses?.size ?: 0,
+            effectiveReplaceRules = textChapter?.effectiveReplaceRules.orEmpty().toImmutableList(),
+            chineseConverterActive = ReadConfig.chineseConverterType > 0,
             translationMode = book?.getTranslationMode() ?: false,
             isLocalTxt = book?.isLocalTxt == true,
             isEpub = book?.isEpub == true,
@@ -2229,6 +2302,7 @@ class ReadBookViewModel(
             sameTitleRemoved = textChapter?.sameTitleRemoved ?: false,
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
             styleConfig = buildStyleConfig(),
+            sheetConfig = buildSheetConfig(),
             menuConfig = ReadMenuConfig(
                 titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
                 showTitleBarIcons = ReadBookConfig.showTitleBarIcons,
@@ -2719,7 +2793,7 @@ class ReadBookViewModel(
                 ReadBook.upMsg(null)
             }.catch {
                 AppLog.put("自动换源失败\n${it.localizedMessage}", it)
-                context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+                _effects.tryEmit(ReadBookEffect.ShowToast("自动换源失败\n${it.localizedMessage}"))
             }.collect()
         }
     }
@@ -2781,7 +2855,7 @@ class ReadBookViewModel(
             _effects.tryEmit(ReadBookEffect.Finish)
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            _effects.tryEmit(ReadBookEffect.ShowToast("添加书籍失败"))
         }
     }
 
@@ -4443,9 +4517,9 @@ class ReadBookViewModel(
             )
             if (!success) throw NoStackTraceException("保存到相册失败")
         }.onError {
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            _effects.tryEmit(ReadBookEffect.ShowToast("保存图片失败: ${it.localizedMessage}"))
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            _effects.tryEmit(ReadBookEffect.ShowToast("已保存到相册"))
         }
     }
 
@@ -4659,6 +4733,12 @@ class ReadBookViewModel(
             is ConfigUpdate.TipFooterLeft -> ReadBookConfig.tipFooterLeft = update.value
             is ConfigUpdate.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = update.value
             is ConfigUpdate.TipFooterRight -> ReadBookConfig.tipFooterRight = update.value
+            is ConfigUpdate.CustomTipHeaderLeft -> ReadBookConfig.customTipHeaderLeft = update.value
+            is ConfigUpdate.CustomTipHeaderMiddle -> ReadBookConfig.customTipHeaderMiddle = update.value
+            is ConfigUpdate.CustomTipHeaderRight -> ReadBookConfig.customTipHeaderRight = update.value
+            is ConfigUpdate.CustomTipFooterLeft -> ReadBookConfig.customTipFooterLeft = update.value
+            is ConfigUpdate.CustomTipFooterMiddle -> ReadBookConfig.customTipFooterMiddle = update.value
+            is ConfigUpdate.CustomTipFooterRight -> ReadBookConfig.customTipFooterRight = update.value
             is ConfigUpdate.HeaderFont -> ReadBookConfig.headerFont = update.path
             is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
             is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color
@@ -5691,7 +5771,6 @@ class ReadBookViewModel(
                 ConfigUpdateAction.UpdateSystemUi
             )
         ))
-        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
     }
 
     private fun applyReadStyleBackgroundImage(uri: Uri) {
@@ -5980,8 +6059,12 @@ class ReadBookViewModel(
             localPreferencesRepository.updatePreference(
                 LocalPreferencesKeys.READ_URL_IN_BROWSER, newValue
             )
-            context.toastOnUi(
-                if (newValue) R.string.open_by_browser else R.string.open_by_webview
+            _effects.tryEmit(
+                ReadBookEffect.ShowToast(
+                    context.getString(
+                        if (newValue) R.string.open_by_browser else R.string.open_by_webview
+                    )
+                )
             )
         }
     }
@@ -5991,7 +6074,7 @@ class ReadBookViewModel(
         if (book.isLocal) return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
         if (chapter == null) {
-            context.toastOnUi(R.string.no_chapter)
+            _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.no_chapter)))
             return
         }
         _uiState.update { it.copy(activeDialog = ReadBookDialog.ConfirmChapterPay(chapter.title)) }
@@ -6097,7 +6180,7 @@ class ReadBookViewModel(
             success?.invoke()
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            _effects.tryEmit(ReadBookEffect.ShowToast("添加书籍失败"))
         }
     }
 

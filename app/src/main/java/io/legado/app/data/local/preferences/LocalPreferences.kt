@@ -13,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 val Context.localDataStore: DataStore<Preferences> by preferencesDataStore(name = "local_ui_status")
 
 object LocalPreferencesKeys {
+    val MIGRATED_TO_SETTINGS = booleanPreferencesKey("__local_ui_status_migrated_to_settings")
     val SHOW_THEME_REFACTOR_TIP = booleanPreferencesKey("show_theme_refactor_tip")
     val SEARCH_LAYOUT_MODE = intPreferencesKey("search_layout_mode")
     val SEARCH_SCOPE = stringPreferencesKey("search_scope")

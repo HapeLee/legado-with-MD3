@@ -11,6 +11,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.TTS
 import io.legado.app.help.http.newCallResponseBody
@@ -24,6 +26,9 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 
@@ -35,7 +40,25 @@ data class ReadRssArgs(
     val startPage: Boolean = false
 )
 
-class ReadRssViewModel(application: Application) : BaseViewModel(application) {
+data class ReadRssSettings(
+    val showStatusBar: Boolean = true,
+    val userAgent: String = "",
+)
+
+class ReadRssViewModel(
+    application: Application,
+    appShellSettingsGateway: AppShellSettingsGateway,
+    downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
+) : BaseViewModel(application) {
+    val settings = combine(
+        appShellSettingsGateway.settings,
+        downloadCacheSettingsGateway.settings,
+    ) { appShell, download ->
+        ReadRssSettings(
+            showStatusBar = appShell.showStatusBar,
+            userAgent = download.userAgent,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReadRssSettings())
     var rssSource: RssSource? = null
     var rssArticle: RssArticle? = null
     var tts: TTS? = null

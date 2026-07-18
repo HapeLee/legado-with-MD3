@@ -107,7 +107,7 @@ sealed class RemoteBookSheet {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun RemoteBookScreen(
+fun RemoteBookRouteScreen(
     viewModel: RemoteBookViewModel = koinViewModel(),
     onBackClick: () -> Unit
 ) {
@@ -188,7 +188,7 @@ fun RemoteBookScreen(
                         showSheet = null
                     },
                     onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
-                    onDelete = { viewModel.deleteServer(it) },
+                    onDelete = { viewModel.dispatch(RemoteBookIntent.DeleteServer(it)) },
                     onDefault = {
                         viewModel.dispatch(RemoteBookIntent.SelectServer(AppConst.DEFAULT_WEBDAV_ID))
                         showSheet = null
@@ -200,7 +200,7 @@ fun RemoteBookScreen(
                 ServerConfigSheetContent(
                     server = state.server,
                     onSave = {
-                        viewModel.saveServer(it)
+                        viewModel.dispatch(RemoteBookIntent.SaveServer(it))
                         showSheet = RemoteBookSheet.Servers
                     },
                     onCancel = { showSheet = RemoteBookSheet.Servers }
@@ -210,8 +210,6 @@ fun RemoteBookScreen(
             else -> {}
         }
     }
-
-    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
     LaunchedEffect(viewModel) {
         viewModel.dispatch(RemoteBookIntent.Initialize)
@@ -253,17 +251,37 @@ fun RemoteBookScreen(
         }
     }
 
+    RemoteBookScreen(
+        state = uiState,
+        onIntent = viewModel::dispatch,
+        onBackClick = onBackClick,
+        onOpenServers = { showSheet = RemoteBookSheet.Servers },
+        onRequestReimport = { dialogState = RemoteBookDialog.ReImport(it) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun RemoteBookScreen(
+    state: RemoteBookUiState,
+    onIntent: (RemoteBookIntent) -> Unit,
+    onBackClick: () -> Unit,
+    onOpenServers: () -> Unit,
+    onRequestReimport: (RemoteBook) -> Unit,
+) {
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+
     ListScaffold(
         title = "远程书籍",
-        state = uiState,
+        state = state,
         scrollBehavior = scrollBehavior,
         onBackClick = onBackClick,
-        onSearchToggle = { viewModel.dispatch(RemoteBookIntent.SearchToggle(it)) },
-        onSearchQueryChange = { viewModel.dispatch(RemoteBookIntent.SearchChange(it)) },
+        onSearchToggle = { onIntent(RemoteBookIntent.SearchToggle(it)) },
+        onSearchQueryChange = { onIntent(RemoteBookIntent.SearchChange(it)) },
         searchPlaceholder = "搜索",
         topBarActions = {
             TopBarActionButton(
-                onClick = { showSheet = RemoteBookSheet.Servers },
+                onClick = onOpenServers,
                 imageVector = Icons.Default.Storage,
                 contentDescription = stringResource(R.string.a11y_server_list)
             )
@@ -272,11 +290,11 @@ fun RemoteBookScreen(
             RoundDropdownMenuItem(
                 text = "按名称排序",
                 onClick = {
-                    viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
+                    onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
                     dismiss()
                 },
                 trailingIcon = {
-                    if (uiState.sortKey == RemoteBookSort.Name) {
+                    if (state.sortKey == RemoteBookSort.Name) {
                         Icon(Icons.Default.Check, null)
                     }
                 }
@@ -284,11 +302,11 @@ fun RemoteBookScreen(
             RoundDropdownMenuItem(
                 text = "按时间排序",
                 onClick = {
-                    viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
+                    onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
                     dismiss()
                 },
                 trailingIcon = {
-                    if (uiState.sortKey == RemoteBookSort.Default) {
+                    if (state.sortKey == RemoteBookSort.Default) {
                         Icon(Icons.Default.Check, null)
                     }
                 }
@@ -296,25 +314,25 @@ fun RemoteBookScreen(
         },
         bottomContent = {
             PathNavigationBar(
-                pathNames = uiState.pathNames,
-                canGoBack = uiState.canGoBack,
-                onNavigateBack = { viewModel.dispatch(RemoteBookIntent.NavigateBack) },
-                onNavigateToLevel = { viewModel.dispatch(RemoteBookIntent.NavigateToLevel(it)) }
+                pathNames = state.pathNames,
+                canGoBack = state.canGoBack,
+                onNavigateBack = { onIntent(RemoteBookIntent.NavigateBack) },
+                onNavigateToLevel = { onIntent(RemoteBookIntent.NavigateToLevel(it)) }
             )
         },
         selectionActions = SelectionActions(
-            onClearSelection = { viewModel.clearSelection() },
-            onSelectAll = { viewModel.dispatch(RemoteBookIntent.SelectAll) },
-            onSelectInvert = { viewModel.dispatch(RemoteBookIntent.SelectInvert) },
+            onClearSelection = { onIntent(RemoteBookIntent.ClearSelection) },
+            onSelectAll = { onIntent(RemoteBookIntent.SelectAll) },
+            onSelectInvert = { onIntent(RemoteBookIntent.SelectInvert) },
             primaryAction = ActionItem(
                 text = "添加至书架",
                 icon = Icons.Default.CloudDownload,
                 onClick = {
-                    val selectedBooks = uiState.items
-                        .filter { it.id in uiState.selectedIds }
+                    val selectedBooks = state.items
+                        .filter { it.id in state.selectedIds }
                         .map { it.remoteBook }
                         .toSet()
-                    viewModel.dispatch(RemoteBookIntent.AddBooks(selectedBooks))
+                    onIntent(RemoteBookIntent.AddBooks(selectedBooks))
                 }
             ),
             secondaryActions = emptyList()
@@ -325,13 +343,13 @@ fun RemoteBookScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            isRefreshing = uiState.isLoading,
-            onRefresh = { viewModel.dispatch(RemoteBookIntent.Refresh) },
+            isRefreshing = state.isLoading,
+            onRefresh = { onIntent(RemoteBookIntent.Refresh) },
             topPadding = paddingValues.calculateTopPadding(),
             scrollBehavior = scrollBehavior
         ) {
-            if (uiState.items.isEmpty()) {
-                if (uiState.isLoading) {
+            if (state.items.isEmpty()) {
+                if (state.isLoading) {
                     AppCircularProgressIndicator(modifier = Modifier
                         .fillMaxSize()
                         .wrapContentSize(Alignment.Center))
@@ -345,20 +363,20 @@ fun RemoteBookScreen(
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(uiState.items, key = { it.id }) { itemUi ->
+                    items(state.items, key = { it.id }) { itemUi ->
                         val book = itemUi.remoteBook
                         RemoteBookItem(
                             modifier = Modifier.animateItem(),
                             book = book,
-                            isSelected = itemUi.id in uiState.selectedIds,
+                            isSelected = itemUi.id in state.selectedIds,
                             onClick = {
-                                viewModel.dispatch(RemoteBookIntent.OpenItem(book))
+                                onIntent(RemoteBookIntent.OpenItem(book))
                             },
                             onAddClick = { remoteBook ->
-                                viewModel.dispatch(RemoteBookIntent.AddBooks(setOf(remoteBook)))
+                                onIntent(RemoteBookIntent.AddBooks(setOf(remoteBook)))
                             },
                             onUpdateClick = { remoteBook ->
-                                dialogState = RemoteBookDialog.ReImport(remoteBook)
+                                onRequestReimport(remoteBook)
                             }
                         )
                     }

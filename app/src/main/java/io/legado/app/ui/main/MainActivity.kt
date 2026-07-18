@@ -47,6 +47,7 @@ import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookInputHandler
+import io.legado.app.ui.book.read.ReadBookRouteHost
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
@@ -540,6 +541,15 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (activeReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
         return super.onKeyUp(keyCode, event)
+    }
+
+    override fun setupSystemBar() {
+        val host = activeReadBookInputHandler as? ReadBookRouteHost
+        if (host != null) {
+            host.upSystemUiVisibility()
+        } else {
+            super.setupSystemBar()
+        }
     }
 
     override fun onDestroy() {

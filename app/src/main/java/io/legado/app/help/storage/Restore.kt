@@ -3,12 +3,12 @@ package io.legado.app.help.storage
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
-import androidx.core.content.edit
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
@@ -32,14 +32,16 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.SettingsWriter
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.ACache
@@ -47,7 +49,6 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.compress.ZipUtils
-import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isContentScheme
@@ -58,7 +59,7 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import org.koin.core.component.get
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import splitties.init.appCtx
@@ -70,7 +71,6 @@ import java.io.FileInputStream
  */
 object Restore : KoinComponent {
 
-    private val settingsRepository: SettingsRepository by inject()
     private const val TAG = "Restore"
 
     suspend fun restore(context: Context, uri: Uri) {
@@ -335,6 +335,7 @@ object Restore : KoinComponent {
         appCtx.toastOnUi(R.string.restore_success)
         withContext(Main) {
             delay(100)
+            get<AppLocaleGateway>().setLanguage(OtherConfig.language)
             if (!BuildConfig.DEBUG) {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }
@@ -395,68 +396,17 @@ object Restore : KoinComponent {
     }
 
     private suspend fun applyConfigMap(map: Map<String, Any?>, aes: BackupAES) {
-        val finalMap = mutableMapOf<String, Any>()
-        val legacyBookInfoBackground = map[PreferKey.bookInfoBackgroundBlur] as? String
-        val restoreNetworkCoverBackground =
-            legacyBookInfoBackground != null &&
-                    PreferKey.bookInfoNetworkCoverBackground !in map &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoNetworkCoverBackground)
-        val restoreDefaultCoverBackground =
-            legacyBookInfoBackground != null &&
-                    PreferKey.bookInfoDefaultCoverBackground !in map &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoBackgroundBlur) &&
-                    BackupConfig.keyIsNotIgnore(PreferKey.bookInfoDefaultCoverBackground)
-        appCtx.defaultSharedPreferences.edit {
-            map.forEach { (key, value) ->
-                if (BackupConfig.keyIsNotIgnore(key)) {
-                    when (key) {
-                        PreferKey.webDavPassword -> {
-                            val password = kotlin.runCatching {
-                                aes.decryptStr(value.toString())
-                            }.getOrNull() ?: let {
-                                if (appCtx.getPrefString(PreferKey.webDavPassword).isNullOrBlank()) {
-                                    value.toString()
-                                } else null
-                            }
-                            password?.let {
-                                putString(key, it)
-                                finalMap[key] = it
-                            }
-                        }
-
-                        else -> {
-                            if (value != null) {
-                                when (value) {
-                                    is Int -> { putInt(key, value); finalMap[key] = value }
-                                    is Boolean -> { putBoolean(key, value); finalMap[key] = value }
-                                    is Long -> { putLong(key, value); finalMap[key] = value }
-                                    is Double -> { // JSON 数字会被解析为 Double
-                                        val floatValue = value.toFloat()
-                                        putFloat(key, floatValue)
-                                        finalMap[key] = floatValue
-                                    }
-                                    is Float -> { putFloat(key, value); finalMap[key] = value }
-                                    is String -> { putString(key, value); finalMap[key] = value }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            legacyBookInfoBackground?.let { backgroundMode ->
-                if (restoreNetworkCoverBackground) {
-                    putString(PreferKey.bookInfoNetworkCoverBackground, backgroundMode)
-                    finalMap[PreferKey.bookInfoNetworkCoverBackground] = backgroundMode
-                }
-                if (restoreDefaultCoverBackground) {
-                    putString(PreferKey.bookInfoDefaultCoverBackground, backgroundMode)
-                    finalMap[PreferKey.bookInfoDefaultCoverBackground] = backgroundMode
-                }
-            }
-        }
-        // 同步恢复到 DataStore
-        settingsRepository.batchPutFromMap(finalMap)
+        val finalMap = normalizeConfigMap(
+            map = map,
+            keyIsNotIgnore = { BackupConfig.keyIsNotIgnore(it) },
+            decryptWebDavPassword = { runCatching { aes.decryptStr(it) }.getOrNull() },
+            hasLocalWebDavPassword = !appCtx.getPrefString(PreferKey.webDavPassword)
+                .isNullOrBlank(),
+        )
+        // 经快照层批量恢复：立即对读侧生效（onRestoreFinish 的读取不再依赖回灌时机），单次原子 edit 落盘
+        AppConfigStore.putAll(finalMap)
+        // 恢复完成提示前等待落盘，dataStore.edit 返回即持久化完成
+        SettingsWriter.awaitPendingWrites()
     }
 
     private fun readXmlToMap(file: File): Map<String, Any?> {

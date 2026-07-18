@@ -1,135 +1,75 @@
 package io.legado.app.data.repository
 
-import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsUpdate
+import io.legado.app.domain.model.settings.ReadSettings
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.compatDsValue
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 
-data class ReadPreferences(
-    val screenOrientation: String = "0",
-    val keepLight: String = "0",
-    val hideStatusBar: Boolean = false,
-    val hideNavigationBar: Boolean = false,
-    val paddingDisplayCutouts: Boolean = false,
-    val titleBarMode: String = "1",
-    val menuAlpha: Int = 100,
-    val readBodyToLh: Boolean = true,
-    val defaultSourceChangeAll: Boolean = true,
-    val textFullJustify: Boolean = true,
-    val textBottomJustify: Boolean = true,
-    val adaptSpecialStyle: Boolean = true,
-    val useZhLayout: Boolean = false,
-    val showBrightnessView: String = "1",
-    val brightnessVwPos: String = "1",
-    val readBrightness: Int = 100,
-    val brightnessAuto: Boolean = false,
-    val useUnderline: Boolean = false,
-    val readSliderMode: String = "0",
-    val doubleHorizontalPage: String = "0",
-    val progressBarBehavior: String = "page",
-    val mouseWheelPage: Boolean = true,
-    val volumeKeyPage: Boolean = true,
-    val volumeKeyPageOnPlay: Boolean = true,
-    val keyPageOnLongPress: Boolean = false,
-    val pageTouchSlop: Int = 0,
-    val sliderVibrator: Boolean = false,
-    val selectVibrator: Boolean = false,
-    val autoChangeSource: Boolean = true,
-    val autoSuggestDayNight: Boolean = false,
-    val selectText: Boolean = true,
-    val noAnimScrollPage: Boolean = false,
-    val clickImgWay: String = "2",
-    val optimizeRender: Boolean = false,
-    val disableReturnKey: Boolean = false,
-    val expandTextMenu: Boolean = false,
-    val showSelectMenuIcon: Boolean = true,
-    val showReadTitleAddition: Boolean = true,
-    val autoReadSpeed: Int = 10,
-    val prevKeys: String = "",
-    val nextKeys: String = "",
-    val tocUiUseReplace: Boolean = false,
-    val tocCountWords: Boolean = true,
-    val readStyleSelect: Int = 0,
-    val comicStyleSelect: Int = 0,
-    val shareLayout: Boolean = false,
-    val readBarStyleFollowPage: Boolean = false,
-    val readBarStyle: Int = 0,
-    val clickActionTL: Int = 2,
-    val clickActionTC: Int = 2,
-    val clickActionTR: Int = 1,
-    val clickActionML: Int = 2,
-    val clickActionMC: Int = 0,
-    val clickActionMR: Int = 1,
-    val clickActionBL: Int = 2,
-    val clickActionBC: Int = 1,
-    val clickActionBR: Int = 1,
-    val fontFolder: String = "",
-    val readMenuBgColor: Int = 0,
-    val readMenuAccentColor: Int = 0,
-    val readMenuContainerColor: Int = 0,
-    val readMenuBgColorNight: Int = 0,
-    val readMenuAccentColorNight: Int = 0,
-    val readMenuContainerColorNight: Int = 0,
-    val readMenuTextColor: Int = 0,
-    val readMenuTextColorNight: Int = 0,
-    val readMenuColorMode: Int = 1,
-    val readMenuIconShowText: Boolean = true,
-    val readMenuIconStyle: Int = 0,
-    val titleBarIconStyle: Int = 0,
-    val readMenuIconItemsPerRow: Int = 5,
-    val readMenuIconRowCount: Int = 1,
-    val readMenuBottomCornerRadius: Int = 0,
-    val readMenuFloatingBottomBar: Boolean = false,
-    val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
-    val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
-    val readMenuTopBarLiquidGlassButtons: Boolean = false,
-    val readMenuTopBarTitleCapsule: Boolean = false,
-    val readMenuBottomBarLiquidGlassButtons: Boolean = false,
-    val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
-    val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
-    val readMenuBlurRadius: Int = 24,
-    val readMenuBlurAlpha: Int = 60,
-    val readMenuBlurColor: Int = 0,
-    val readMenuBlurColorNight: Int = 0,
-    val readMenuPaletteStyle: String = "",
-    val readMenuLensRadius: Float = 24f,
-    val readMenuBorderWidth: Int = 0,
-    val readMenuBorderColor: Int = 0,
-    val readMenuBorderColorNight: Int = 0,
-    val readMenuCustomIcons: String = "",
-    val titleBarCustomIcons: String = "",
-    val titleBarIconPosition: Int = 0,
-    val showTitleBarIcons: Boolean = true,
-    val chineseConverterType: Int = 0,
-    val showMenuIcon: Boolean = true,
-)
+typealias ReadPreferences = ReadSettings
 
 class ReadSettingsRepository(
-    private val context: Context,
     private val settingsRepository: SettingsRepository
-) {
+) : ReadSettingsGateway {
 
-    val preferences: Flow<ReadPreferences> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
+    override val settings: Flow<ReadSettings> = AppConfigStore.preferencesFlow
         .map { preferences ->
-            preferences.toReadPreferences()
+            preferences.toReadSettings()
         }
+
+    val preferences: Flow<ReadPreferences> = settings
+
+    override suspend fun update(update: ReadSettingsUpdate) {
+        when (update) {
+            is ReadSettingsUpdate.ScreenOrientation -> setScreenOrientation(update.value)
+            is ReadSettingsUpdate.KeepLight -> setKeepLight(update.value)
+            is ReadSettingsUpdate.HideStatusBar -> setHideStatusBar(update.value)
+            is ReadSettingsUpdate.HideNavigationBar -> setHideNavigationBar(update.value)
+            is ReadSettingsUpdate.PaddingDisplayCutouts -> setPaddingDisplayCutouts(update.value)
+            is ReadSettingsUpdate.TitleBarMode -> setTitleBarMode(update.value)
+            is ReadSettingsUpdate.ReadMenuBlurAlpha -> setReadMenuBlurAlpha(update.value)
+            is ReadSettingsUpdate.ReadBodyToLh -> setReadBodyToLh(update.value)
+            is ReadSettingsUpdate.DefaultSourceChangeAll -> setDefaultSourceChangeAll(update.value)
+            is ReadSettingsUpdate.TextFullJustify -> setTextFullJustify(update.value)
+            is ReadSettingsUpdate.TextBottomJustify -> setTextBottomJustify(update.value)
+            is ReadSettingsUpdate.AdaptSpecialStyle -> setAdaptSpecialStyle(update.value)
+            is ReadSettingsUpdate.UseZhLayout -> setUseZhLayout(update.value)
+            is ReadSettingsUpdate.ShowBrightnessView -> setShowBrightnessView(update.value)
+            is ReadSettingsUpdate.BrightnessVwPos -> setBrightnessVwPos(update.value)
+            is ReadSettingsUpdate.UseUnderline -> setUseUnderline(update.value)
+            is ReadSettingsUpdate.ReadSliderMode -> setReadSliderMode(update.value)
+            is ReadSettingsUpdate.DoubleHorizontalPage -> setDoubleHorizontalPage(update.value)
+            is ReadSettingsUpdate.ProgressBarBehavior -> setProgressBarBehavior(update.value)
+            is ReadSettingsUpdate.MouseWheelPage -> setMouseWheelPage(update.value)
+            is ReadSettingsUpdate.VolumeKeyPage -> setVolumeKeyPage(update.value)
+            is ReadSettingsUpdate.VolumeKeyPageOnPlay -> setVolumeKeyPageOnPlay(update.value)
+            is ReadSettingsUpdate.KeyPageOnLongPress -> setKeyPageOnLongPress(update.value)
+            is ReadSettingsUpdate.PageTouchSlop -> setPageTouchSlop(update.value)
+            is ReadSettingsUpdate.SliderVibrator -> setSliderVibrator(update.value)
+            is ReadSettingsUpdate.SelectVibrator -> setSelectVibrator(update.value)
+            is ReadSettingsUpdate.AutoChangeSource -> setAutoChangeSource(update.value)
+            is ReadSettingsUpdate.AutoSuggestDayNight -> setAutoSuggestDayNight(update.value)
+            is ReadSettingsUpdate.SelectText -> setSelectText(update.value)
+            is ReadSettingsUpdate.NoAnimScrollPage -> setNoAnimScrollPage(update.value)
+            is ReadSettingsUpdate.ClickImgWay -> setClickImgWay(update.value)
+            is ReadSettingsUpdate.OptimizeRender -> setOptimizeRender(update.value)
+            is ReadSettingsUpdate.DisableReturnKey -> setDisableReturnKey(update.value)
+            is ReadSettingsUpdate.ShowReadTitleAddition -> setShowReadTitleAddition(update.value)
+            is ReadSettingsUpdate.ShowMenuIcon -> setShowMenuIcon(update.value)
+            is ReadSettingsUpdate.PageKeys -> setPageKeys(update.previous, update.next)
+            is ReadSettingsUpdate.FontFolder -> setFontFolder(update.value)
+        }
+    }
 
     suspend fun setScreenOrientation(value: String) =
         settingsRepository.putString(PreferKey.screenOrientation, value)
@@ -406,109 +346,105 @@ class ReadSettingsRepository(
         }
     }
 
-    private fun Preferences.toReadPreferences(): ReadPreferences {
-        val readStyleSelect = this[Keys.ReadStyleSelect] ?: 0
-        return ReadPreferences(
-            screenOrientation = this[Keys.ScreenOrientation] ?: "0",
-            keepLight = this[Keys.KeepLight] ?: "0",
-            hideStatusBar = this[Keys.HideStatusBar] ?: false,
-            hideNavigationBar = this[Keys.HideNavigationBar] ?: false,
-            paddingDisplayCutouts = this[Keys.PaddingDisplayCutouts] ?: false,
-            titleBarMode = this[Keys.TitleBarMode] ?: "1",
-            menuAlpha = this[Keys.MenuAlpha] ?: 100,
-            readBodyToLh = this[Keys.ReadBodyToLh] ?: true,
-            defaultSourceChangeAll = this[Keys.DefaultSourceChangeAll] ?: true,
-            textFullJustify = this[Keys.TextFullJustify] ?: true,
-            textBottomJustify = this[Keys.TextBottomJustify] ?: true,
-            adaptSpecialStyle = this[Keys.AdaptSpecialStyle] ?: true,
-            useZhLayout = this[Keys.UseZhLayout] ?: false,
-            showBrightnessView = this[Keys.ShowBrightnessView] ?: "1",
-            brightnessVwPos = this[Keys.BrightnessVwPos] ?: "1",
-            readBrightness = this[Keys.ReadBrightness] ?: 100,
-            brightnessAuto = this[Keys.BrightnessAuto] ?: false,
-            useUnderline = this[Keys.UseUnderline] ?: false,
-            readSliderMode = this[Keys.ReadSliderMode] ?: "0",
-            doubleHorizontalPage = this[Keys.DoubleHorizontalPage] ?: "0",
-            progressBarBehavior = this[Keys.ProgressBarBehavior] ?: "page",
-            mouseWheelPage = this[Keys.MouseWheelPage] ?: true,
-            volumeKeyPage = this[Keys.VolumeKeyPage] ?: true,
-            volumeKeyPageOnPlay = this[Keys.VolumeKeyPageOnPlay] ?: true,
-            keyPageOnLongPress = this[Keys.KeyPageOnLongPress] ?: false,
-            pageTouchSlop = this[Keys.PageTouchSlop] ?: 0,
-            sliderVibrator = this[Keys.SliderVibrator] ?: false,
-            selectVibrator = this[Keys.SelectVibrator] ?: false,
-            autoChangeSource = this[Keys.AutoChangeSource] ?: true,
-            autoSuggestDayNight = this[Keys.AutoSuggestDayNight] ?: false,
-            selectText = this[Keys.SelectText] ?: true,
-            noAnimScrollPage = this[Keys.NoAnimScrollPage] ?: false,
-            clickImgWay = this[Keys.ClickImgWay] ?: "2",
-            optimizeRender = this[Keys.OptimizeRender] ?: false,
-            disableReturnKey = this[Keys.DisableReturnKey] ?: false,
-            expandTextMenu = this[Keys.ExpandTextMenu] ?: false,
-            showSelectMenuIcon = this[Keys.ShowSelectMenuIcon] ?: true,
-            showReadTitleAddition = this[Keys.ShowReadTitleAddition] ?: true,
-            autoReadSpeed = this[Keys.AutoReadSpeed] ?: 10,
-            prevKeys = this[Keys.PrevKeys] ?: "",
-            nextKeys = this[Keys.NextKeys] ?: "",
-            tocUiUseReplace = this[Keys.TocUiUseReplace] ?: false,
-            tocCountWords = this[Keys.TocCountWords] ?: true,
+    private fun Preferences.toReadSettings(): ReadSettings {
+        val readStyleSelect = compatDsValue(Keys.ReadStyleSelect, 0)
+        return ReadSettings(
+            screenOrientation = compatDsValue(Keys.ScreenOrientation, "0"),
+            keepLight = compatDsValue(Keys.KeepLight, "0"),
+            hideStatusBar = compatDsValue(Keys.HideStatusBar, false),
+            hideNavigationBar = compatDsValue(Keys.HideNavigationBar, false),
+            paddingDisplayCutouts = compatDsValue(Keys.PaddingDisplayCutouts, false),
+            titleBarMode = compatDsValue(Keys.TitleBarMode, "1"),
+            menuAlpha = compatDsValue(Keys.MenuAlpha, 100),
+            readBodyToLh = compatDsValue(Keys.ReadBodyToLh, true),
+            defaultSourceChangeAll = compatDsValue(Keys.DefaultSourceChangeAll, true),
+            textFullJustify = compatDsValue(Keys.TextFullJustify, true),
+            textBottomJustify = compatDsValue(Keys.TextBottomJustify, true),
+            adaptSpecialStyle = compatDsValue(Keys.AdaptSpecialStyle, true),
+            useZhLayout = compatDsValue(Keys.UseZhLayout, false),
+            showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "1"),
+            brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
+            readBrightness = compatDsValue(Keys.ReadBrightness, 100),
+            brightnessAuto = compatDsValue(Keys.BrightnessAuto, false),
+            useUnderline = compatDsValue(Keys.UseUnderline, false),
+            readSliderMode = compatDsValue(Keys.ReadSliderMode, "0"),
+            doubleHorizontalPage = compatDsValue(Keys.DoubleHorizontalPage, "0"),
+            progressBarBehavior = compatDsValue(Keys.ProgressBarBehavior, "page"),
+            mouseWheelPage = compatDsValue(Keys.MouseWheelPage, true),
+            volumeKeyPage = compatDsValue(Keys.VolumeKeyPage, true),
+            volumeKeyPageOnPlay = compatDsValue(Keys.VolumeKeyPageOnPlay, true),
+            keyPageOnLongPress = compatDsValue(Keys.KeyPageOnLongPress, false),
+            pageTouchSlop = compatDsValue(Keys.PageTouchSlop, 0),
+            sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
+            selectVibrator = compatDsValue(Keys.SelectVibrator, false),
+            autoChangeSource = compatDsValue(Keys.AutoChangeSource, true),
+            autoSuggestDayNight = compatDsValue(Keys.AutoSuggestDayNight, false),
+            selectText = compatDsValue(Keys.SelectText, true),
+            noAnimScrollPage = compatDsValue(Keys.NoAnimScrollPage, false),
+            clickImgWay = compatDsValue(Keys.ClickImgWay, "2"),
+            optimizeRender = compatDsValue(Keys.OptimizeRender, false),
+            disableReturnKey = compatDsValue(Keys.DisableReturnKey, false),
+            expandTextMenu = compatDsValue(Keys.ExpandTextMenu, false),
+            showSelectMenuIcon = compatDsValue(Keys.ShowSelectMenuIcon, true),
+            showReadTitleAddition = compatDsValue(Keys.ShowReadTitleAddition, true),
+            autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
+            prevKeys = compatDsValue(Keys.PrevKeys, ""),
+            nextKeys = compatDsValue(Keys.NextKeys, ""),
+            tocUiUseReplace = compatDsValue(Keys.TocUiUseReplace, false),
+            tocCountWords = compatDsValue(Keys.TocCountWords, true),
             readStyleSelect = readStyleSelect,
-            comicStyleSelect = this[Keys.ComicStyleSelect] ?: readStyleSelect,
-            shareLayout = this[Keys.ShareLayout] ?: false,
-            readBarStyleFollowPage = this[Keys.ReadBarStyleFollowPage] ?: false,
-            readBarStyle = this[Keys.ReadBarStyle] ?: 0,
-            clickActionTL = this[Keys.ClickActionTL] ?: 2,
-            clickActionTC = this[Keys.ClickActionTC] ?: 2,
-            clickActionTR = this[Keys.ClickActionTR] ?: 1,
-            clickActionML = this[Keys.ClickActionML] ?: 2,
-            clickActionMC = this[Keys.ClickActionMC] ?: 0,
-            clickActionMR = this[Keys.ClickActionMR] ?: 1,
-            clickActionBL = this[Keys.ClickActionBL] ?: 2,
-            clickActionBC = this[Keys.ClickActionBC] ?: 1,
-            clickActionBR = this[Keys.ClickActionBR] ?: 1,
-            fontFolder = this[Keys.FontFolder] ?: "",
-            readMenuBgColor = this[Keys.ReadMenuBgColor] ?: 0,
-            readMenuAccentColor = this[Keys.ReadMenuAccentColor] ?: 0,
-            readMenuContainerColor = this[Keys.ReadMenuContainerColor] ?: 0,
-            readMenuBgColorNight = this[Keys.ReadMenuBgColorNight] ?: 0,
-            readMenuAccentColorNight = this[Keys.ReadMenuAccentColorNight] ?: 0,
-            readMenuContainerColorNight = this[Keys.ReadMenuContainerColorNight] ?: 0,
-            readMenuTextColor = this[Keys.ReadMenuTextColor] ?: 0,
-            readMenuTextColorNight = this[Keys.ReadMenuTextColorNight] ?: 0,
-            readMenuColorMode = this[Keys.ReadMenuColorMode] ?: 1,
-            readMenuIconShowText = this[Keys.ReadMenuIconShowText] ?: true,
-            readMenuIconStyle = this[Keys.ReadMenuIconStyle] ?: 0,
-            titleBarIconStyle = this[Keys.TitleBarIconStyle] ?: 0,
-            readMenuIconItemsPerRow = this[Keys.ReadMenuIconItemsPerRow] ?: 5,
-            readMenuIconRowCount = this[Keys.ReadMenuIconRowCount] ?: 1,
-            readMenuBottomCornerRadius = this[Keys.ReadMenuBottomCornerRadius] ?: 0,
-            readMenuFloatingBottomBar = this[Keys.ReadMenuFloatingBottomBar] ?: false,
-            readMenuTopBarBlurMode = this[Keys.ReadMenuTopBarBlurMode] ?: ReadMenuBlurMode.None,
-            readMenuBottomBarBlurMode = this[Keys.ReadMenuBottomBarBlurMode]
-                ?: ReadMenuBlurMode.None,
-            readMenuTopBarLiquidGlassButtons = this[Keys.ReadMenuTopBarLiquidGlassButtons] ?: false,
-            readMenuTopBarTitleCapsule = this[Keys.ReadMenuTopBarTitleCapsule] ?: false,
-            readMenuBottomBarLiquidGlassButtons = this[Keys.ReadMenuBottomBarLiquidGlassButtons]
-                ?: false,
-            readMenuTopBarBlurStyle = this[Keys.ReadMenuTopBarBlurStyle]
-                ?: ReadMenuBlurStyle.Progressive,
-            readMenuBottomBarBlurStyle = this[Keys.ReadMenuBottomBarBlurStyle]
-                ?: ReadMenuBlurStyle.Solid,
-            readMenuBlurRadius = this[Keys.ReadMenuBlurRadius] ?: 24,
-            readMenuBlurAlpha = this[Keys.ReadMenuBlurAlpha] ?: 60,
-            readMenuBlurColor = this[Keys.ReadMenuBlurColor] ?: 0,
-            readMenuBlurColorNight = this[Keys.ReadMenuBlurColorNight] ?: 0,
-            readMenuPaletteStyle = this[Keys.ReadMenuPaletteStyle] ?: "",
-            readMenuLensRadius = this[Keys.ReadMenuLensRadius] ?: 24f,
-            readMenuBorderWidth = this[Keys.ReadMenuBorderWidth] ?: 0,
-            readMenuBorderColor = this[Keys.ReadMenuBorderColor] ?: 0,
-            readMenuBorderColorNight = this[Keys.ReadMenuBorderColorNight] ?: 0,
-            readMenuCustomIcons = this[Keys.ReadMenuCustomIcons] ?: "",
-            titleBarCustomIcons = this[Keys.TitleBarCustomIcons] ?: "",
-            titleBarIconPosition = this[Keys.TitleBarIconPosition] ?: 0,
-            showTitleBarIcons = this[Keys.ShowTitleBarIcons] ?: false,
-            chineseConverterType = this[Keys.ChineseConverterType] ?: 0,
-            showMenuIcon = this[Keys.ShowMenuIcon] ?: true,
+            comicStyleSelect = compatDsValue(Keys.ComicStyleSelect, readStyleSelect),
+            shareLayout = compatDsValue(Keys.ShareLayout, false),
+            readBarStyleFollowPage = compatDsValue(Keys.ReadBarStyleFollowPage, false),
+            readBarStyle = compatDsValue(Keys.ReadBarStyle, 0),
+            clickActionTL = compatDsValue(Keys.ClickActionTL, 2),
+            clickActionTC = compatDsValue(Keys.ClickActionTC, 2),
+            clickActionTR = compatDsValue(Keys.ClickActionTR, 1),
+            clickActionML = compatDsValue(Keys.ClickActionML, 2),
+            clickActionMC = compatDsValue(Keys.ClickActionMC, 0),
+            clickActionMR = compatDsValue(Keys.ClickActionMR, 1),
+            clickActionBL = compatDsValue(Keys.ClickActionBL, 2),
+            clickActionBC = compatDsValue(Keys.ClickActionBC, 1),
+            clickActionBR = compatDsValue(Keys.ClickActionBR, 1),
+            fontFolder = compatDsValue(Keys.FontFolder, ""),
+            readMenuBgColor = compatDsValue(Keys.ReadMenuBgColor, 0),
+            readMenuAccentColor = compatDsValue(Keys.ReadMenuAccentColor, 0),
+            readMenuContainerColor = compatDsValue(Keys.ReadMenuContainerColor, 0),
+            readMenuBgColorNight = compatDsValue(Keys.ReadMenuBgColorNight, 0),
+            readMenuAccentColorNight = compatDsValue(Keys.ReadMenuAccentColorNight, 0),
+            readMenuContainerColorNight = compatDsValue(Keys.ReadMenuContainerColorNight, 0),
+            readMenuTextColor = compatDsValue(Keys.ReadMenuTextColor, 0),
+            readMenuTextColorNight = compatDsValue(Keys.ReadMenuTextColorNight, 0),
+            readMenuColorMode = compatDsValue(Keys.ReadMenuColorMode, 1),
+            readMenuIconShowText = compatDsValue(Keys.ReadMenuIconShowText, true),
+            readMenuIconStyle = compatDsValue(Keys.ReadMenuIconStyle, 0),
+            titleBarIconStyle = compatDsValue(Keys.TitleBarIconStyle, 0),
+            readMenuIconItemsPerRow = compatDsValue(Keys.ReadMenuIconItemsPerRow, 5),
+            readMenuIconRowCount = compatDsValue(Keys.ReadMenuIconRowCount, 1),
+            readMenuBottomCornerRadius = compatDsValue(Keys.ReadMenuBottomCornerRadius, 0),
+            readMenuFloatingBottomBar = compatDsValue(Keys.ReadMenuFloatingBottomBar, false),
+            readMenuTopBarBlurMode = compatDsValue(Keys.ReadMenuTopBarBlurMode, ReadMenuBlurMode.None),
+            readMenuBottomBarBlurMode = compatDsValue(Keys.ReadMenuBottomBarBlurMode, ReadMenuBlurMode.None),
+            readMenuTopBarLiquidGlassButtons = compatDsValue(Keys.ReadMenuTopBarLiquidGlassButtons, false),
+            readMenuTopBarTitleCapsule = compatDsValue(Keys.ReadMenuTopBarTitleCapsule, false),
+            readMenuBottomBarLiquidGlassButtons = compatDsValue(Keys.ReadMenuBottomBarLiquidGlassButtons, false),
+            readMenuTopBarBlurStyle = compatDsValue(Keys.ReadMenuTopBarBlurStyle, ReadMenuBlurStyle.Progressive),
+            readMenuBottomBarBlurStyle = compatDsValue(Keys.ReadMenuBottomBarBlurStyle, ReadMenuBlurStyle.Solid),
+            readMenuBlurRadius = compatDsValue(Keys.ReadMenuBlurRadius, 24),
+            readMenuBlurAlpha = compatDsValue(Keys.ReadMenuBlurAlpha, 60),
+            readMenuBlurColor = compatDsValue(Keys.ReadMenuBlurColor, 0),
+            readMenuBlurColorNight = compatDsValue(Keys.ReadMenuBlurColorNight, 0),
+            readMenuPaletteStyle = compatDsValue(Keys.ReadMenuPaletteStyle, ""),
+            readMenuLensRadius = compatDsValue(Keys.ReadMenuLensRadius, 24f),
+            readMenuBorderWidth = compatDsValue(Keys.ReadMenuBorderWidth, 0),
+            readMenuBorderColor = compatDsValue(Keys.ReadMenuBorderColor, 0),
+            readMenuBorderColorNight = compatDsValue(Keys.ReadMenuBorderColorNight, 0),
+            readMenuCustomIcons = compatDsValue(Keys.ReadMenuCustomIcons, ""),
+            titleBarCustomIcons = compatDsValue(Keys.TitleBarCustomIcons, ""),
+            titleBarIconPosition = compatDsValue(Keys.TitleBarIconPosition, 0),
+            showTitleBarIcons = compatDsValue(Keys.ShowTitleBarIcons, false),
+            chineseConverterType = compatDsValue(Keys.ChineseConverterType, 0),
+            showMenuIcon = compatDsValue(Keys.ShowMenuIcon, true),
         )
     }
 

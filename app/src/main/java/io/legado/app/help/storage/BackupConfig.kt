@@ -2,10 +2,26 @@ package io.legado.app.help.storage
 
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import splitties.init.appCtx
+
+internal val alwaysIgnoredPreferenceKeys = setOf(
+    PreferKey.defaultCover,
+    PreferKey.defaultCoverDark,
+    PreferKey.backupPath,
+    PreferKey.defaultBookTreeUri,
+    PreferKey.webDavDeviceName,
+    PreferKey.launcherIcon,
+    PreferKey.bitmapCacheSize,
+    PreferKey.webServiceWakeLock,
+    PreferKey.readAloudWakeLock,
+    PreferKey.audioPlayWakeLock,
+    LocalPreferencesKeys.PASSWORD.name,
+    LocalPreferencesKeys.MIGRATED_TO_SETTINGS.name,
+)
 
 /**
  * 备份配置
@@ -47,20 +63,6 @@ object BackupConfig {
         appCtx.getString(R.string.show_rss),
         appCtx.getString(R.string.thread_count),
         appCtx.getString(R.string.local_book)
-    )
-
-    //自动忽略keys
-    private val ignorePrefKeys = arrayOf(
-        PreferKey.defaultCover,
-        PreferKey.defaultCoverDark,
-        PreferKey.backupPath,
-        PreferKey.defaultBookTreeUri,
-        PreferKey.webDavDeviceName,
-        PreferKey.launcherIcon,
-        PreferKey.bitmapCacheSize,
-        PreferKey.webServiceWakeLock,
-        PreferKey.readAloudWakeLock,
-        PreferKey.audioPlayWakeLock
     )
 
     //阅读配置
@@ -139,7 +141,7 @@ object BackupConfig {
     )
 
     fun keyIsNotIgnore(key: String, isBackup: Boolean = false): Boolean {
-        if (ignorePrefKeys.contains(key)) return false
+        if (key in alwaysIgnoredPreferenceKeys) return false
         if (isBackup) return true
         return when {
             ignoreReadConfig && readPrefKeys.contains(key) -> false

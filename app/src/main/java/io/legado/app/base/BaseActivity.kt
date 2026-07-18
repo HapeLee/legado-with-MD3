@@ -14,20 +14,29 @@ import android.view.View
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.LocaleListCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.scale
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewbinding.ViewBinding
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
 import io.legado.app.R
+import io.legado.app.BuildConfig
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.AppUiConfigurationGateway
+import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.domain.model.settings.AppUiConfigurationDiff
+import io.legado.app.domain.model.settings.diffFrom
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.utils.applyOpenTint
 import io.legado.app.utils.applyTint
@@ -35,12 +44,14 @@ import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hideSoftInput
-import io.legado.app.utils.observeEvent
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.windowSize
 import java.io.File
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 
 abstract class BaseActivity<VB : ViewBinding>(
@@ -49,6 +60,17 @@ abstract class BaseActivity<VB : ViewBinding>(
     private val transparent: Boolean = false,
     private val imageBg: Boolean = true
 ) : AppCompatActivity() {
+
+    protected open val legacyUiConfigurationPolicy =
+        LegacyUiConfigurationPolicy.ControlledRecreate
+
+    private val appLocaleGateway by inject<AppLocaleGateway>()
+    private val appUiConfigurationGateway by inject<AppUiConfigurationGateway>()
+    private var lastUiConfiguration: AppUiConfiguration? = null
+    private var lastPlatformConfiguration: Configuration? = null
+    private var pendingControlledRecreate = false
+    private var recreatePosted = false
+    private var hasWindowBackgroundImage = false
 
     protected abstract val binding: VB
 
@@ -79,7 +101,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     override fun onCreate(savedInstanceState: Bundle?) {
         initTheme()
         window.decorView.disableAutoFill()
-        AppContextWrapper.applyLocaleAndFont(this)
+        AppContextWrapper.applyFont(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val enable = !AppConfig.isPredictiveBackEnabled
             if (enable) {
@@ -94,6 +116,8 @@ abstract class BaseActivity<VB : ViewBinding>(
         }
 
         super.onCreate(savedInstanceState)
+        lastPlatformConfiguration = Configuration(resources.configuration)
+        lastUiConfiguration = appUiConfigurationGateway.currentConfiguration
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
             enableEdgeToEdge()
@@ -108,6 +132,8 @@ abstract class BaseActivity<VB : ViewBinding>(
 
 
         observeLiveBus()
+        observeAppUiConfiguration()
+        traceConfiguration("onCreate")
         //onActivityCreated(savedInstanceState)
     }
 
@@ -132,13 +158,43 @@ abstract class BaseActivity<VB : ViewBinding>(
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !isDarkTheme
     }
 
-//    override fun onConfigurationChanged(newConfig: Configuration) {
-//        super.onConfigurationChanged(newConfig)
-//        //findViewById<TitleBar>(R.id.title_bar)
-//        //Log.d("Config", "uiMode = ${newConfig.uiMode}")
-//            //?.onMultiWindowModeChanged(isInMultiWindow, fullScreen)
-//        //setupSystemBar()
-//    }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        val previous = lastPlatformConfiguration
+        super.onConfigurationChanged(newConfig)
+        lastPlatformConfiguration = Configuration(newConfig)
+        appLocaleGateway.synchronizeFromPlatform()
+
+        val platformDiff = AppUiConfigurationDiff(
+            localeChanged = previous != null && previous.locales != newConfig.locales,
+            themeChanged = hasPlatformNightModeChanged(
+                themeMode = appUiConfigurationGateway.currentConfiguration.appShell.themeMode,
+                previousUiMode = previous?.uiMode,
+                newUiMode = newConfig.uiMode,
+            ),
+        )
+        if (platformDiff.hasChanges) {
+            handleAppUiConfiguration(
+                appUiConfigurationGateway.currentConfiguration,
+                platformDiff,
+            )
+        }
+        traceConfiguration("onConfigurationChanged", platformDiff)
+    }
+
+    override fun onLocalesChanged(locales: LocaleListCompat) {
+        super.onLocalesChanged(locales)
+        appLocaleGateway.synchronizeFromPlatform()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        postControlledRecreateIfNeeded()
+    }
+
+    override fun onDestroy() {
+        traceConfiguration("onDestroy")
+        super.onDestroy()
+    }
 
 
 
@@ -230,8 +286,15 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun upBackgroundImage() {
         if (imageBg) {
             try {
-                ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
-                    window.decorView.background = it.toDrawable(resources)
+                val background = ThemeConfigStore.getBgImage(this, windowManager.windowSize)
+                if (background != null) {
+                    hasWindowBackgroundImage = true
+                    window.decorView.background = background.toDrawable(resources)
+                } else if (hasWindowBackgroundImage) {
+                    hasWindowBackgroundImage = false
+                    window.decorView.background = themeColor(
+                        com.google.android.material.R.attr.colorSurface
+                    ).toDrawable()
                 }
             } catch (e: OutOfMemoryError) {
                 toastOnUi("背景图片太大,内存溢出")
@@ -242,9 +305,97 @@ abstract class BaseActivity<VB : ViewBinding>(
     }
 
     open fun observeLiveBus() {
-        observeEvent<String>(EventBus.RECREATE) {
-            recreate()
+        // Legacy feature events are registered by subclasses. App-wide UI configuration
+        // is collected separately through observeAppUiConfiguration().
+    }
+
+    protected open fun applyLegacyUiConfiguration(
+        configuration: AppUiConfiguration,
+        diff: AppUiConfigurationDiff,
+    ) = Unit
+
+    protected open fun rebindLegacyViewTree(
+        configuration: AppUiConfiguration,
+        diff: AppUiConfigurationDiff,
+    ): Boolean = false
+
+    private fun observeAppUiConfiguration() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                appUiConfigurationGateway.configuration.collect { configuration ->
+                    val previous = lastUiConfiguration
+                    lastUiConfiguration = configuration
+                    if (previous == null) return@collect
+                    val diff = configuration.diffFrom(previous)
+                    if (diff.hasChanges) {
+                        handleAppUiConfiguration(configuration, diff)
+                    }
+                }
+            }
         }
+    }
+
+    private fun handleAppUiConfiguration(
+        configuration: AppUiConfiguration,
+        diff: AppUiConfigurationDiff,
+    ) {
+        traceConfiguration("apply", diff)
+        if (diff.themeChanged || diff.windowChanged) {
+            setupSystemBar()
+            upBackgroundImage()
+        }
+        if (!diff.requiresLegacyContentRefresh) return
+        when (legacyUiConfigurationPolicy) {
+            LegacyUiConfigurationPolicy.HotApply -> {
+                if (diff.fontScaleChanged) {
+                    AppContextWrapper.applyFont(this)
+                }
+                applyLegacyUiConfiguration(configuration, diff)
+            }
+            LegacyUiConfigurationPolicy.RebindViewTree -> {
+                if (diff.fontScaleChanged) {
+                    AppContextWrapper.applyFont(this)
+                }
+                if (!rebindLegacyViewTree(configuration, diff)) {
+                    requestControlledRecreate()
+                }
+            }
+            LegacyUiConfigurationPolicy.ControlledRecreate -> requestControlledRecreate()
+            LegacyUiConfigurationPolicy.ApplyOnNextOpen -> Unit
+        }
+    }
+
+    private fun requestControlledRecreate() {
+        pendingControlledRecreate = true
+        postControlledRecreateIfNeeded()
+    }
+
+    private fun postControlledRecreateIfNeeded() {
+        if (!pendingControlledRecreate || recreatePosted || isFinishing || isDestroyed) return
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        recreatePosted = true
+        window.decorView.post {
+            recreatePosted = false
+            if (pendingControlledRecreate && !isFinishing && !isDestroyed &&
+                lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            ) {
+                pendingControlledRecreate = false
+                traceConfiguration("controlledRecreate")
+                recreate()
+            }
+        }
+    }
+
+    private fun traceConfiguration(
+        event: String,
+        diff: AppUiConfigurationDiff? = null,
+    ) {
+        if (!BuildConfig.DEBUG) return
+        LogUtils.d(
+            "UiConfiguration",
+            "${javaClass.simpleName}@${System.identityHashCode(this)} $event" +
+                (diff?.let { " diff=$it" } ?: "")
+        )
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {

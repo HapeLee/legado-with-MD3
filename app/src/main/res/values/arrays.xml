@@ -201,6 +201,7 @@
 		<item>Time and Battery</item>
 		<item>Time and Battery Classic</item>
 		<item>Time and Battery%</item>
+		<item>Custom</item>
 	</string-array>
 
 	<string-array name="text_font_weight">

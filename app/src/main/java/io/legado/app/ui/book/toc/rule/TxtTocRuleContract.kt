@@ -55,7 +55,9 @@ sealed interface TxtTocRuleIntent {
     data object ImportBuiltInRules : TxtTocRuleIntent
 }
 
-sealed interface TxtTocRuleEffect
+sealed interface TxtTocRuleEffect {
+    data class ShowMessage(val message: String) : TxtTocRuleEffect
+}
 
 data class TxtTocRuleRenderState(
     val uiState: TxtTocRuleUiState,

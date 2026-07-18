@@ -39,12 +39,14 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 @Composable
 fun LabelColorManageSheet(
     show: Boolean,
+    themeColor: Int,
+    colors: List<TagColorPair>,
+    onColorsChange: (List<TagColorPair>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
     val primaryColor = LegadoTheme.colorScheme.primary
-    val themeColor = ThemeConfig.themeColor
-    val tagColors = remember(show) {
-        ThemeConfig.getCustomTagColors().toMutableStateList()
+    val tagColors = remember(show, colors) {
+        colors.toMutableStateList()
     }
     var showColorPicker by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
@@ -61,7 +63,7 @@ fun LabelColorManageSheet(
                     val generatedColors = TagColorGenerator.generateTagColors(baseColor)
                     tagColors.clear()
                     tagColors.addAll(generatedColors)
-                    ThemeConfig.saveCustomTagColors(tagColors)
+                    onColorsChange(tagColors.toList())
                 },
                 icon = Icons.Default.AutoAwesome,
                 contentDescription = stringResource(R.string.ai_generate)
@@ -124,7 +126,7 @@ fun LabelColorManageSheet(
                             SmallPlainButton(
                                 onClick = {
                                     tagColors.removeAt(index)
-                                    ThemeConfig.saveCustomTagColors(tagColors)
+                                    onColorsChange(tagColors.toList())
                                 },
                                 icon = Icons.Default.Delete,
                                 contentDescription = stringResource(R.string.delete)
@@ -151,7 +153,7 @@ fun LabelColorManageSheet(
                     textColor = selectedColor,
                     bgColor = bgColor
                 )
-                ThemeConfig.saveCustomTagColors(tagColors)
+                onColorsChange(tagColors.toList())
                 showColorPicker = false
             }
         )

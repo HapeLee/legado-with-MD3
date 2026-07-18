@@ -23,6 +23,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,28 +57,75 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun RuleSubScreen(
+fun RuleSubRouteScreen(
     onBackClick: () -> Unit,
     viewModel: RuleSubViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is RuleSubEffect.ShowMessage -> context.toastOnUi(effect.message)
+                is RuleSubEffect.OpenRule -> {
+                    val ruleSub = effect.rule
+                    when (ruleSub.type) {
+                        RuleSubType.BOOK_SOURCE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportBookSourceDialog(ruleSub.url)
+                            )
+                        RuleSubType.RSS_SOURCE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportRssSourceDialog(ruleSub.url)
+                            )
+                        RuleSubType.REPLACE_RULE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportReplaceRuleDialog(ruleSub.url)
+                            )
+                        RuleSubType.AUTO -> {
+                            val encodedUrl = java.net.URLEncoder.encode(ruleSub.url, "UTF-8")
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    "legado://import/importonline?src=$encodedUrl".toUri(),
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    RuleSubScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun RuleSubScreen(
+    state: RuleSubUiState,
+    onIntent: (RuleSubIntent) -> Unit,
+    onBackClick: () -> Unit,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var showEditDialog by remember { mutableStateOf<RuleSub?>(null) }
 
     RuleListScaffold(
         title = stringResource(R.string.rule_subscription),
         state = state,
         onBackClick = onBackClick,
-        onSearchToggle = viewModel::onSearchToggle,
-        onSearchQueryChange = viewModel::onSearchQueryChange,
-        onClearSelection = viewModel::clearSelection,
-        onSelectAll = viewModel::selectAll,
-        onSelectInvert = viewModel::selectInvert,
-        onDeleteSelected = { viewModel.deleteSelected() },
+        onSearchToggle = { onIntent(RuleSubIntent.ToggleSearch(it)) },
+        onSearchQueryChange = { onIntent(RuleSubIntent.Search(it)) },
+        onClearSelection = { onIntent(RuleSubIntent.ClearSelection) },
+        onSelectAll = { onIntent(RuleSubIntent.SelectAll) },
+        onSelectInvert = { onIntent(RuleSubIntent.InvertSelection) },
+        onDeleteSelected = { onIntent(RuleSubIntent.DeleteSelected) },
         snackbarHostState = snackbarHostState,
         selectionSecondaryActions = emptyList(),
         topBarActions = {},
@@ -88,7 +136,7 @@ fun RuleSubScreen(
                     Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
                 },
                 onClick = {
-                    viewModel.resetOrder()
+                    onIntent(RuleSubIntent.ResetOrder)
                     dismiss()
                 }
             )
@@ -101,7 +149,7 @@ fun RuleSubScreen(
                         alignment = Alignment.BottomEnd,
                     ),
                 onClick = {
-                    showEditDialog = RuleSub(customOrder = state.items.size + 1)
+                    onIntent(RuleSubIntent.Add)
                 },
                 tooltipText = stringResource(R.string.add),
                 icon = Icons.Default.Add
@@ -139,35 +187,14 @@ fun RuleSubScreen(
                         inSelectionMode = state.selectedIds.isNotEmpty(),
                         onToggleSelection = {
                             if (state.selectedIds.isNotEmpty()) {
-                                viewModel.toggleSelection(ruleSub)
+                                onIntent(RuleSubIntent.ToggleSelection(ruleSub))
                             } else {
-                                when (ruleSub.type) {
-                                    RuleSubType.BOOK_SOURCE -> (context as? AppCompatActivity)?.showDialogFragment(
-                                        ImportBookSourceDialog(ruleSub.url)
-                                    )
-
-                                    RuleSubType.RSS_SOURCE -> (context as? AppCompatActivity)?.showDialogFragment(
-                                        ImportRssSourceDialog(ruleSub.url)
-                                    )
-
-                                    RuleSubType.REPLACE_RULE -> (context as? AppCompatActivity)?.showDialogFragment(
-                                        ImportReplaceRuleDialog(ruleSub.url)
-                                    )
-
-                                    RuleSubType.AUTO -> {
-                                        val encodedUrl = java.net.URLEncoder.encode(ruleSub.url, "UTF-8")
-                                        val intent = android.content.Intent(
-                                            android.content.Intent.ACTION_VIEW,
-                                            "legado://import/importonline?src=$encodedUrl".toUri()
-                                        )
-                                        context.startActivity(intent)
-                                    }
-                                }
+                                onIntent(RuleSubIntent.Open(ruleSub))
                             }
                         },
                         trailingAction = {
                             SmallPlainButton(
-                                onClick = { showEditDialog = ruleSub },
+                                onClick = { onIntent(RuleSubIntent.Edit(ruleSub)) },
                                 icon = Icons.Default.Edit,
                                 contentDescription = stringResource(R.string.edit)
                             )
@@ -176,7 +203,7 @@ fun RuleSubScreen(
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.delete),
                                 onClick = {
-                                    viewModel.delete(ruleSub)
+                                    onIntent(RuleSubIntent.Delete(ruleSub))
                                     dismiss()
                                 }
                             )
@@ -188,14 +215,10 @@ fun RuleSubScreen(
     }
 
     RuleSubEditDialog(
-        ruleSub = showEditDialog,
-        onDismiss = { showEditDialog = null },
+        ruleSub = state.editingRule,
+        onDismiss = { onIntent(RuleSubIntent.DismissEditor) },
         onConfirm = { updatedRuleSub ->
-            viewModel.save(
-                updatedRuleSub,
-                onSuccess = { showEditDialog = null },
-                onError = { context.toastOnUi(it) }
-            )
+            onIntent(RuleSubIntent.Save(updatedRuleSub))
         }
     )
 }

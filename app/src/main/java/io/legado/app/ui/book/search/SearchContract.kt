@@ -54,6 +54,7 @@ data class SearchUiState(
     val expandedSourceError: String? = null,
     val expandedSourcePage: Int = 1,
     val showExpandedSource: Boolean = false,
+    val layoutMode: Int = 0,
     val expandedSourceSavedScrollIndex: Int = 0,
     val expandedSourceSavedScrollOffset: Int = 0,
 )
@@ -74,6 +75,7 @@ sealed interface SearchIntent {
     data object ResumeEngine : SearchIntent
     data class UseHistoryKeyword(val keyword: String) : SearchIntent
     data class OpenSearchBook(val book: SearchBook, val sharedCoverKey: String?) : SearchIntent
+    data class AddToShelf(val book: SearchBook) : SearchIntent
     data class OpenBookshelfBook(val book: BookShelfItem) : SearchIntent
     data class ExpandSource(val sourceUrl: String, val sourceName: String) : SearchIntent
     data object DismissExpandedSource : SearchIntent
@@ -85,6 +87,7 @@ sealed interface SearchIntent {
     data object ConfirmClearHistory : SearchIntent
     data class SetScopeSheetVisible(val visible: Boolean) : SearchIntent
     data class SetSettingsSheetVisible(val visible: Boolean) : SearchIntent
+    data class SetLayoutMode(val mode: Int) : SearchIntent
     data class ToggleSourceType(val type: Int) : SearchIntent
     data object ClearAllSourceTypes : SearchIntent
     data object SelectAllScope : SearchIntent

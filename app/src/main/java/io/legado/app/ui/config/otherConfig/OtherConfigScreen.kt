@@ -1,36 +1,18 @@
 package io.legado.app.ui.config.otherConfig
 
-import android.Manifest
-import android.os.Build
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.service.WebService
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
@@ -38,43 +20,15 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.restart
-import io.legado.app.utils.takePersistablePermissionSafely
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtherConfigScreen(
+    state: OtherConfigUiState,
+    onIntent: (OtherConfigIntent) -> Unit,
     onBackClick: () -> Unit,
-    viewModel: OtherConfigViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
-    val readAloudPreferences by viewModel.readAloudPreferences.collectAsStateWithLifecycle()
-
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-
-    }
-
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-
-    var showClearWebViewDialog by remember { mutableStateOf(false) }
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    var showCheckSourceSheet by remember { mutableStateOf(false) }
-    var showDirectLinkUploadSheet by remember { mutableStateOf(false) }
-
-    var tempPassword by remember { mutableStateOf("") }
-
-    var showFilePicker by remember { mutableStateOf(false) }
-    val selectDocTree = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            it.takePersistablePermissionSafely(context)
-            viewModel.updateLocalBookDir(it.toString())
-        }
-    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -99,35 +53,32 @@ fun OtherConfigScreen(
                 SplicedColumnGroup {
                 DropdownListSettingItem(
                     title = stringResource(R.string.language),
-                    selectedValue = OtherConfig.language,
+                    selectedValue = state.language,
                     displayEntries = stringArrayResource(R.array.language),
                     entryValues = stringArrayResource(R.array.language_value),
-                    onValueChange = { newValue ->
-                        OtherConfig.language = newValue
-                        context.restart()
-                    }
+                    onValueChange = { onIntent(OtherConfigIntent.LanguageChanged(it)) }
                 )
 
                 DropdownListSettingItem(
                     title = stringResource(R.string.update_to_variant_title),
                     description = stringResource(R.string.update_to_variant_summary),
-                    selectedValue = OtherConfig.updateToVariant,
+                    selectedValue = state.updateToVariant,
                     displayEntries = stringArrayResource(R.array.default_app_variant),
                     entryValues = stringArrayResource(R.array.default_app_variant_value),
-                    onValueChange = { OtherConfig.updateToVariant = it }
+                    onValueChange = { onIntent(OtherConfigIntent.UpdateToVariantChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.auto_check_update_on_start_title),
                     description = stringResource(R.string.auto_check_update_on_start_summary),
-                    checked = OtherConfig.autoCheckUpdateOnStart,
-                    onCheckedChange = { OtherConfig.autoCheckUpdateOnStart = it }
+                    checked = state.autoCheckUpdateOnStart,
+                    onCheckedChange = { onIntent(OtherConfigIntent.AutoCheckUpdateOnStartChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.web_service_auto_start),
-                    checked = OtherConfig.webServiceAutoStart,
-                    onCheckedChange = { OtherConfig.webServiceAutoStart = it }
+                    checked = state.webServiceAutoStart,
+                    onCheckedChange = { onIntent(OtherConfigIntent.WebServiceAutoStartChanged(it)) }
                 )
             }
 
@@ -136,15 +87,15 @@ fun OtherConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.pt_auto_refresh),
                     description = stringResource(R.string.ps_auto_refresh),
-                    checked = OtherConfig.autoRefresh,
-                    onCheckedChange = { OtherConfig.autoRefresh = it }
+                    checked = state.autoRefresh,
+                    onCheckedChange = { onIntent(OtherConfigIntent.AutoRefreshChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.pt_default_read),
                     description = stringResource(R.string.ps_default_read),
-                    checked = OtherConfig.defaultToRead,
-                    onCheckedChange = { OtherConfig.defaultToRead = it }
+                    checked = state.defaultToRead,
+                    onCheckedChange = { onIntent(OtherConfigIntent.DefaultToReadChanged(it)) }
                 )
             }
 
@@ -153,34 +104,26 @@ fun OtherConfigScreen(
                 ClickableSettingItem(
                     title = stringResource(R.string.notification_permission),
                     description = stringResource(R.string.notification_permission_rationale),
-                    onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            Toast.makeText(context, R.string.permission_not_required, Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    onClick = { onIntent(OtherConfigIntent.RequestNotificationPermission) }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.background_permission),
                     description = stringResource(R.string.ignore_battery_permission_rationale),
-                    onClick = {
-
-                    }
+                    onClick = { onIntent(OtherConfigIntent.RequestBatteryPermission) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.firebase_enable_title),
                     description = stringResource(R.string.firebase_enable_summary),
-                    checked = OtherConfig.firebaseEnable,
-                    onCheckedChange = { OtherConfig.firebaseEnable = it }
+                    checked = state.firebaseEnable,
+                    onCheckedChange = { onIntent(OtherConfigIntent.FirebaseEnableChanged(it)) }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.set_local_password),
                     description = stringResource(R.string.set_local_password_summary),
-                    onClick = { showPasswordDialog = true }
+                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.Password)) }
                 )
 
             }
@@ -189,63 +132,63 @@ fun OtherConfigScreen(
 
                 ClickableSettingItem(
                     title = stringResource(R.string.book_tree_uri_t),
-                    description = OtherConfig.defaultBookTreeUri,
-                    onClick = { showFilePicker = true }
+                    description = state.defaultBookTreeUri,
+                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.FilePicker)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.anti_alias),
                     description = stringResource(R.string.pref_anti_alias_summary),
-                    checked = OtherConfig.antiAlias,
-                    onCheckedChange = { OtherConfig.antiAlias = it }
+                    checked = state.antiAlias,
+                    onCheckedChange = { onIntent(OtherConfigIntent.AntiAliasChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.replace_enable_default_t),
                     description = stringResource(R.string.replace_enable_default_s),
-                    checked = OtherConfig.replaceEnableDefault,
-                    onCheckedChange = { OtherConfig.replaceEnableDefault = it }
+                    checked = state.replaceEnableDefault,
+                    onCheckedChange = { onIntent(OtherConfigIntent.ReplaceEnableDefaultChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.media_button_on_exit_title),
                     description = stringResource(R.string.media_button_on_exit_summary),
-                    checked = readAloudPreferences.mediaButtonOnExit,
-                    onCheckedChange = { viewModel.setMediaButtonOnExit(it) }
+                    checked = state.mediaButtonOnExit,
+                    onCheckedChange = { onIntent(OtherConfigIntent.MediaButtonOnExitChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.read_aloud_by_media_button_title),
                     description = stringResource(R.string.read_aloud_by_media_button_summary),
-                    checked = readAloudPreferences.readAloudByMediaButton,
-                    onCheckedChange = { viewModel.setReadAloudByMediaButton(it) }
+                    checked = state.readAloudByMediaButton,
+                    onCheckedChange = { onIntent(OtherConfigIntent.ReadAloudByMediaButtonChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.ignore_audio_focus_title),
                     description = stringResource(R.string.ignore_audio_focus_summary),
-                    checked = readAloudPreferences.ignoreAudioFocus,
-                    onCheckedChange = { viewModel.setIgnoreAudioFocus(it) }
+                    checked = state.ignoreAudioFocus,
+                    onCheckedChange = { onIntent(OtherConfigIntent.IgnoreAudioFocusChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.auto_clear_expired),
                     description = stringResource(R.string.auto_clear_expired_summary),
-                    checked = OtherConfig.autoClearExpired,
-                    onCheckedChange = { OtherConfig.autoClearExpired = it }
+                    checked = state.autoClearExpired,
+                    onCheckedChange = { onIntent(OtherConfigIntent.AutoClearExpiredChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_add_to_shelf_alert_title),
                     description = stringResource(R.string.show_add_to_shelf_alert_summary),
-                    checked = OtherConfig.showAddToShelfAlert,
-                    onCheckedChange = { OtherConfig.showAddToShelfAlert = it }
+                    checked = state.showAddToShelfAlert,
+                    onCheckedChange = { onIntent(OtherConfigIntent.ShowAddToShelfAlertChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_manga_ui),
-                    checked = ReadMangaConfig.showMangaUi,
-                    onCheckedChange = { ReadMangaConfig.showMangaUi = it }
+                    checked = state.showMangaUi,
+                    onCheckedChange = { onIntent(OtherConfigIntent.ShowMangaUiChanged(it)) }
                 )
             }
 
@@ -254,128 +197,62 @@ fun OtherConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.web_service_wake_lock),
                     description = stringResource(R.string.web_service_wake_lock_summary),
-                    checked = OtherConfig.webServiceWakeLock,
-                    onCheckedChange = { OtherConfig.webServiceWakeLock = it }
+                    checked = state.webServiceWakeLock,
+                    onCheckedChange = { onIntent(OtherConfigIntent.WebServiceWakeLockChanged(it)) }
                 )
 
                 InputSettingItem(
                     title = stringResource(R.string.source_edit_text_max_line),
-                    value = OtherConfig.sourceEditMaxLine.toString(),
+                    value = state.sourceEditMaxLine.toString(),
                     defaultValue = 500.toString(),
-                    onConfirm = { OtherConfig.sourceEditMaxLine = it.toIntOrNull() ?: 500 }
+                    onConfirm = { onIntent(OtherConfigIntent.SourceEditMaxLineChanged(it.toIntOrNull() ?: 500)) }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.check_source_config),
-                    onClick = { showCheckSourceSheet = true }
+                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.CheckSource)) }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.direct_link_upload_rule),
                     description = stringResource(R.string.direct_link_upload_rule_summary),
-                    onClick = { showDirectLinkUploadSheet = true }
+                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.DirectLinkUpload)) }
                 )
 
                 InputSettingItem(
                     title = stringResource(R.string.web_port_title),
-                    value = OtherConfig.webPort.toString(),
-                    onConfirm = { newValue ->
-                        OtherConfig.webPort = newValue.toInt()
-                        if (WebService.isRun) {
-                            WebService.stop(context)
-                            WebService.start(context)
-                        }
-                    }
+                    value = state.webPort.toString(),
+                    onConfirm = { onIntent(OtherConfigIntent.WebPortChanged(it.toInt())) }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.clear_webview_data),
                     description = stringResource(R.string.clear_webview_data_summary),
-                    onClick = { showClearWebViewDialog = true }
+                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.ClearWebViewConfirmation)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.add_to_text_context_menu_t),
                     description = stringResource(R.string.add_to_text_context_menu_s),
-                    checked = OtherConfig.processText,
-                    onCheckedChange = { viewModel.setProcessTextEnable(it) }
+                    checked = state.processText,
+                    onCheckedChange = { onIntent(OtherConfigIntent.ProcessTextChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.record_log),
                     description = stringResource(R.string.record_debug_log),
-                    checked = OtherConfig.recordLog,
-                    onCheckedChange = { OtherConfig.recordLog = it }
+                    checked = state.recordLog,
+                    onCheckedChange = { onIntent(OtherConfigIntent.RecordLogChanged(it)) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.record_heap_dump_t),
                     description = stringResource(R.string.record_heap_dump_s),
-                    checked = OtherConfig.recordHeapDump,
-                    onCheckedChange = { OtherConfig.recordHeapDump = it }
+                    checked = state.recordHeapDump,
+                    onCheckedChange = { onIntent(OtherConfigIntent.RecordHeapDumpChanged(it)) }
                 )
                 }
             }
         }
-
-        FilePickerSheet(
-            show = showFilePicker,
-            onDismissRequest = { showFilePicker = false },
-            onSelectSysDir = {
-                showFilePicker = false
-                try {
-                    selectDocTree.launch(null)
-                } catch (e: Exception) {
-
-                }
-            }
-        )
-
-        CheckSourceBottomSheet(
-            show = showCheckSourceSheet,
-            viewModel = viewModel,
-            onDismiss = { showCheckSourceSheet = false }
-        )
-
-        DirectLinkUploadBottomSheet(
-            show = showDirectLinkUploadSheet,
-            viewModel = viewModel,
-            onDismiss = { showDirectLinkUploadSheet = false }
-        )
-
-        AppAlertDialog(
-            show = showClearWebViewDialog,
-            onDismissRequest = { showClearWebViewDialog = false },
-            title = stringResource(R.string.clear_webview_data),
-            text = stringResource(R.string.sure_del),
-            onConfirm = {
-                viewModel.clearWebViewData()
-                showClearWebViewDialog = false
-            },
-            onDismiss = { showClearWebViewDialog = false }
-        )
-
-        AppAlertDialog(
-            show = showPasswordDialog,
-            onDismissRequest = { showPasswordDialog = false },
-            title = stringResource(R.string.set_local_password),
-            content = {
-                AppTextField(
-                    value = tempPassword,
-                    onValueChange = { tempPassword = it },
-                    label = "Password",
-                    backgroundColor = LegadoTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmText = stringResource(R.string.ok),
-            onConfirm = {
-                viewModel.setLocalPassword(tempPassword)
-                showPasswordDialog = false
-            },
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showPasswordDialog = false }
-        )
     }
-
 }

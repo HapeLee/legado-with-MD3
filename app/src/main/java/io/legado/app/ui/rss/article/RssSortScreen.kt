@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.RssReadRecord
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.read.title
 import io.legado.app.ui.theme.LegadoTheme
@@ -93,6 +92,7 @@ fun RssSortScreen(
     showReadRecordSheet: Boolean,
     readRecords: List<RssReadRecord>,
     sourceVariableSheet: RssSourceVariableSheetState?,
+    shouldShowExpandButton: Boolean,
     onBackClick: () -> Unit,
     onSearch: (String) -> Unit,
     onLogin: () -> Unit,
@@ -276,7 +276,7 @@ fun RssSortScreen(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            if (BookshelfConfig.shouldShowExpandButton) {
+                            if (shouldShowExpandButton) {
                                 Box {
                                     SmallToggleButton(
                                         checked = showGroupMenu,

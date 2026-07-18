@@ -53,6 +53,28 @@ class ExploreViewModel(
         observeExplore()
     }
 
+    fun onIntent(intent: ExploreIntent) {
+        when (intent) {
+            is ExploreIntent.Search -> search(intent.query)
+            is ExploreIntent.ToggleSearch -> toggleSearchVisible(intent.visible)
+            is ExploreIntent.SetGroup -> setGroup(intent.group)
+            is ExploreIntent.ToggleExpand -> toggleExpand(intent.source)
+            is ExploreIntent.TopSource -> topSource(intent.source)
+            is ExploreIntent.RefreshKinds -> refreshExploreKinds(intent.source)
+            is ExploreIntent.DeleteSource -> deleteSource(intent.source)
+            is ExploreIntent.UpdateKindValue ->
+                updateKindValue(intent.sourceUrl, intent.kind, intent.value)
+            is ExploreIntent.RunKindAction -> requestKindAction(intent.sourceUrl, intent.kind)
+            is ExploreIntent.OpenEdit -> _effects.tryEmit(
+                ExploreEffect.OpenEdit(intent.source.bookSourceUrl)
+            )
+            is ExploreIntent.OpenSearch -> _effects.tryEmit(ExploreEffect.OpenSearch(intent.source))
+            is ExploreIntent.OpenLogin -> _effects.tryEmit(
+                ExploreEffect.OpenLogin(intent.source.bookSourceUrl)
+            )
+        }
+    }
+
     private fun observeGroups() {
         viewModelScope.launch {
             exploreRepository.getExploreGroups()
@@ -201,32 +223,6 @@ class ExploreViewModel(
         val loadingKinds: Boolean = false
     ) : ListUiState<BookSourcePart>
 
-    fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {
-        if (state.items.isEmpty()) return persistentListOf()
-        val expandedId = state.expandedId
-        val kindRows = if (expandedId != null) {
-            calculateExploreKindRows(state.exploreKinds, 6)
-        } else {
-            emptyList()
-        }
-        return buildList {
-            state.items.forEach { source ->
-                add(ExploreListItem.Header(source))
-                if (source.bookSourceUrl == expandedId) {
-                    kindRows.forEachIndexed { index, row ->
-                        add(
-                            ExploreListItem.KindRow(
-                                sourceUrl = source.bookSourceUrl,
-                                rowIndex = index,
-                                rowItems = row.toImmutableList()
-                            )
-                        )
-                    }
-                }
-            }
-        }.toImmutableList()
-    }
-
     private fun buildKindValues(
         kinds: List<ExploreKind>,
         sourceUrl: String
@@ -285,4 +281,52 @@ sealed interface ExploreEffect {
         val sourceUrl: String,
         val kind: ExploreKind
     ) : ExploreEffect
+    data class OpenEdit(val sourceUrl: String) : ExploreEffect
+    data class OpenSearch(val source: BookSourcePart) : ExploreEffect
+    data class OpenLogin(val sourceUrl: String) : ExploreEffect
+}
+
+sealed interface ExploreIntent {
+    data class Search(val query: String) : ExploreIntent
+    data class ToggleSearch(val visible: Boolean) : ExploreIntent
+    data class SetGroup(val group: String) : ExploreIntent
+    data class ToggleExpand(val source: BookSourcePart) : ExploreIntent
+    data class TopSource(val source: BookSourcePart) : ExploreIntent
+    data class RefreshKinds(val source: BookSourcePart) : ExploreIntent
+    data class DeleteSource(val source: BookSourcePart) : ExploreIntent
+    data class UpdateKindValue(
+        val sourceUrl: String,
+        val kind: ExploreKind,
+        val value: String,
+    ) : ExploreIntent
+    data class RunKindAction(val sourceUrl: String, val kind: ExploreKind) : ExploreIntent
+    data class OpenEdit(val source: BookSourcePart) : ExploreIntent
+    data class OpenSearch(val source: BookSourcePart) : ExploreIntent
+    data class OpenLogin(val source: BookSourcePart) : ExploreIntent
+}
+
+fun buildExploreListItems(state: ExploreViewModel.ExploreUiState): ImmutableList<ExploreListItem> {
+    if (state.items.isEmpty()) return persistentListOf()
+    val expandedId = state.expandedId
+    val kindRows = if (expandedId != null) {
+        calculateExploreKindRows(state.exploreKinds, 6)
+    } else {
+        emptyList()
+    }
+    return buildList {
+        state.items.forEach { source ->
+            add(ExploreListItem.Header(source))
+            if (source.bookSourceUrl == expandedId) {
+                kindRows.forEachIndexed { index, row ->
+                    add(
+                        ExploreListItem.KindRow(
+                            sourceUrl = source.bookSourceUrl,
+                            rowIndex = index,
+                            rowItems = row.toImmutableList(),
+                        )
+                    )
+                }
+            }
+        }
+    }.toImmutableList()
 }

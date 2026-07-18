@@ -26,7 +26,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -39,12 +39,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PaddingConfigSheet(
-    show: Boolean,
+    config: ReadSheetConfigUiState,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     AppModalBottomSheet(
-        show = show,
+        show = true,
         onDismissRequest = {
             onIntent(ReadBookIntent.SaveReadStyleConfig)
             onDismissRequest()
@@ -52,6 +52,7 @@ fun PaddingConfigSheet(
         title = stringResource(R.string.padding),
     ) {
         PaddingConfigContent(
+            config = config,
             onIntent = onIntent,
             modifier = Modifier
                 .padding(bottom = 16.dp),
@@ -61,6 +62,7 @@ fun PaddingConfigSheet(
 
 @Composable
 fun PaddingConfigContent(
+    config: ReadSheetConfigUiState,
     onIntent: (ReadBookIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -80,20 +82,20 @@ fun PaddingConfigContent(
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
 
-    var paddingTop by remember { mutableFloatStateOf(ReadBookConfig.paddingTop.toFloat()) }
-    var paddingBottom by remember { mutableFloatStateOf(ReadBookConfig.paddingBottom.toFloat()) }
-    var paddingLeft by remember { mutableFloatStateOf(ReadBookConfig.paddingLeft.toFloat()) }
-    var paddingRight by remember { mutableFloatStateOf(ReadBookConfig.paddingRight.toFloat()) }
+    var paddingTop by remember(config.paddingTop) { mutableFloatStateOf(config.paddingTop.toFloat()) }
+    var paddingBottom by remember(config.paddingBottom) { mutableFloatStateOf(config.paddingBottom.toFloat()) }
+    var paddingLeft by remember(config.paddingLeft) { mutableFloatStateOf(config.paddingLeft.toFloat()) }
+    var paddingRight by remember(config.paddingRight) { mutableFloatStateOf(config.paddingRight.toFloat()) }
 
-    var headerPaddingTop by remember { mutableFloatStateOf(ReadBookConfig.headerPaddingTop.toFloat()) }
-    var headerPaddingBottom by remember { mutableFloatStateOf(ReadBookConfig.headerPaddingBottom.toFloat()) }
-    var headerPaddingLeft by remember { mutableFloatStateOf(ReadBookConfig.headerPaddingLeft.toFloat()) }
-    var headerPaddingRight by remember { mutableFloatStateOf(ReadBookConfig.headerPaddingRight.toFloat()) }
+    var headerPaddingTop by remember(config.headerPaddingTop) { mutableFloatStateOf(config.headerPaddingTop.toFloat()) }
+    var headerPaddingBottom by remember(config.headerPaddingBottom) { mutableFloatStateOf(config.headerPaddingBottom.toFloat()) }
+    var headerPaddingLeft by remember(config.headerPaddingLeft) { mutableFloatStateOf(config.headerPaddingLeft.toFloat()) }
+    var headerPaddingRight by remember(config.headerPaddingRight) { mutableFloatStateOf(config.headerPaddingRight.toFloat()) }
 
-    var footerPaddingTop by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingTop.toFloat()) }
-    var footerPaddingBottom by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingBottom.toFloat()) }
-    var footerPaddingLeft by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingLeft.toFloat()) }
-    var footerPaddingRight by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingRight.toFloat()) }
+    var footerPaddingTop by remember(config.footerPaddingTop) { mutableFloatStateOf(config.footerPaddingTop.toFloat()) }
+    var footerPaddingBottom by remember(config.footerPaddingBottom) { mutableFloatStateOf(config.footerPaddingBottom.toFloat()) }
+    var footerPaddingLeft by remember(config.footerPaddingLeft) { mutableFloatStateOf(config.footerPaddingLeft.toFloat()) }
+    var footerPaddingRight by remember(config.footerPaddingRight) { mutableFloatStateOf(config.footerPaddingRight.toFloat()) }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
