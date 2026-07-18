@@ -136,7 +136,7 @@ fun AiPromptConfigScreen(
     when (val dialog = state.activeDialog) {
         is AiPromptConfigDialog.EditPrompt -> {
             AppAlertDialog(
-                show = true,
+                data = dialog,
                 onDismissRequest = { onIntent(AiPromptConfigIntent.CloseDialog) },
                 title = stringResource(R.string.ai_prompt_edit_title),
                 confirmText = stringResource(R.string.confirm),
@@ -162,7 +162,7 @@ fun AiPromptConfigScreen(
 
         is AiPromptConfigDialog.RestoreAllConfirm -> {
             AppAlertDialog(
-                show = true,
+                data = dialog,
                 onDismissRequest = { onIntent(AiPromptConfigIntent.CloseDialog) },
                 title = stringResource(R.string.ai_prompt_restore_all),
                 confirmText = stringResource(R.string.confirm),

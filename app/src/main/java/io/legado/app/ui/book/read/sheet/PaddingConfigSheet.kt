@@ -39,11 +39,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PaddingConfigSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = {
             onIntent(ReadBookIntent.SaveReadStyleConfig)
             onDismissRequest()

@@ -13,6 +13,7 @@ data class CloudTtsUiState(
     val availableEngines: ImmutableList<TtsEngineOptionUi> = persistentListOf(),
     val engineEditor: CloudTtsEngineEditorUi? = null,
     val voiceEditor: TtsVoicePresetEditorUi? = null,
+    val showVoiceEnginePicker: Boolean = false,
     val activeDialog: CloudTtsDialog? = null,
     val testing: Boolean = false,
     val discovering: Boolean = false,
@@ -94,6 +95,7 @@ sealed interface CloudTtsIntent {
     data class UpdateVoiceEditor(val editor: TtsVoicePresetEditorUi) : CloudTtsIntent
     data object DismissEngineEditor : CloudTtsIntent
     data object DismissVoiceEditor : CloudTtsIntent
+    data object DismissVoiceEnginePicker : CloudTtsIntent
     data class SelectEngine(val engineType: String, val engineId: String) : CloudTtsIntent
     data object DiscoverVoices : CloudTtsIntent
     data class SelectVoice(val id: String) : CloudTtsIntent

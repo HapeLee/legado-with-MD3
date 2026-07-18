@@ -84,8 +84,7 @@ fun ReadAloudConfigSheet(
                 selectedTabIndex = pagerState.currentPage,
                 onTabSelected = { page ->
                     scope.launch { pagerState.animateScrollToPage(page) }
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                }
             )
             HorizontalPager(
                 state = pagerState,

@@ -35,6 +35,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun AutoReadSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
     onOpenChapterList: () -> Unit,
@@ -42,7 +43,7 @@ fun AutoReadSheet(
     onShowPageAnimConfig: () -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.auto_page_speed),
     ) {

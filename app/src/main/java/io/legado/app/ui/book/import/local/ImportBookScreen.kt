@@ -345,7 +345,7 @@ fun ImportBookScreen(
 
     pendingSingleAddBook?.let { book ->
         AppAlertDialog(
-            show = true,
+            data = book,
             onDismissRequest = { pendingSingleAddBook = null },
             title = stringResource(R.string.add_to_bookshelf),
             text = stringResource(R.string.check_add_bookshelf, book.name),

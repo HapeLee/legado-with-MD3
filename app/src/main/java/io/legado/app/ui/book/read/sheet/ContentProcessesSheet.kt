@@ -109,7 +109,7 @@ fun ContentProcessesSheet(
 
                 viewingItem?.let { item ->
                     AppAlertDialog(
-                        show = true,
+                        data = item,
                         onDismissRequest = { viewingItem = null },
                         title = contentProcessTitle(item),
                         content = {

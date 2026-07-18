@@ -39,6 +39,7 @@ import kotlin.math.roundToInt
 @Composable
 fun CharacterAvatarCropDialog(
     sourceUri: Uri?,
+    show: Boolean = sourceUri != null,
     onDismissRequest: () -> Unit,
     onConfirm: (CharacterAvatarCrop) -> Unit,
 ) {
@@ -52,7 +53,7 @@ fun CharacterAvatarCropDialog(
     var imageHeight by remember(sourceUri) { mutableFloatStateOf(1f) }
 
     AppAlertDialog(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.character_avatar_crop),
         confirmText = stringResource(R.string.apply),

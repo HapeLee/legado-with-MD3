@@ -103,8 +103,11 @@ class CloudTtsViewModel(
             CloudTtsIntent.AddEngine -> _uiState.update { it.copy(
                 engineEditor = CloudTtsEngineEditorUi(name = "MiMo", model = "mimo-v2.5-tts"),
             ) }
-            CloudTtsIntent.AddVoice -> addVoice()
-            is CloudTtsIntent.AddVoiceForEngine -> addVoice(intent.engineType, intent.engineId)
+            CloudTtsIntent.AddVoice -> _uiState.update { it.copy(showVoiceEnginePicker = true) }
+            is CloudTtsIntent.AddVoiceForEngine -> {
+                _uiState.update { it.copy(showVoiceEnginePicker = false) }
+                addVoice(intent.engineType, intent.engineId)
+            }
             is CloudTtsIntent.EditEngine -> editEngine(intent.id)
             is CloudTtsIntent.DeleteEngine -> deleteEngine(intent.id)
             is CloudTtsIntent.DeleteVoice -> deleteVoice(intent.id)
@@ -113,6 +116,9 @@ class CloudTtsViewModel(
             is CloudTtsIntent.UpdateVoiceEditor -> _uiState.update { it.copy(voiceEditor = intent.editor) }
             CloudTtsIntent.DismissEngineEditor -> _uiState.update { it.copy(engineEditor = null) }
             CloudTtsIntent.DismissVoiceEditor -> _uiState.update { it.copy(voiceEditor = null) }
+            CloudTtsIntent.DismissVoiceEnginePicker -> _uiState.update {
+                it.copy(showVoiceEnginePicker = false)
+            }
             is CloudTtsIntent.SelectEngine -> selectEngine(intent.engineType, intent.engineId)
             CloudTtsIntent.DiscoverVoices -> discoverVoices()
             is CloudTtsIntent.SelectVoice -> selectVoice(intent.id)

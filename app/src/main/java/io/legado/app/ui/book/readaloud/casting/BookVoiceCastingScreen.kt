@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -280,8 +281,7 @@ private fun VoicePickerSheet(
         if (picker == null) return@AppModalBottomSheet
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (voices.none { it.selectable }) {
@@ -300,7 +300,7 @@ private fun VoicePickerSheet(
                         items = voices,
                         key = VoiceOptionUi::id,
                     ) { voice ->
-                        SettingItem(
+                        TinySettingItem(
                             title = voice.name,
                             description = voiceDescription(voice),
                             enabled = voice.selectable,
@@ -319,7 +319,7 @@ private fun VoicePickerSheet(
                 }
             }
             if (picker.selectedVoiceId != null) {
-                SettingItem(
+                TinySettingItem(
                     title = stringResource(R.string.clear_voice_binding),
                     color = LegadoTheme.colorScheme.errorContainer,
                     onClick = { onIntent(BookVoiceCastingIntent.ClearBinding) },

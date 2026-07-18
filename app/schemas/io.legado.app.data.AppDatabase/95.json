@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 95,
-    "identityHash": "9087640670cf6cbc3be250a569ed106e",
+    "identityHash": "f5e225667da6bf6e50b9435bfb2ffb6d",
     "entities": [
       {
         "tableName": "books",
@@ -3922,6 +3922,586 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_book_outline_nodes_bookUrl_parentId_order` ON `${TABLE_NAME}` (`bookUrl`, `parentId`, `order`)"
           }
         ]
+      },
+      {
+        "tableName": "read_aloud_voices",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `engineType` TEXT NOT NULL, `engineId` TEXT NOT NULL DEFAULT '', `speakerId` TEXT NOT NULL DEFAULT '', `displayName` TEXT NOT NULL, `traitsJson` TEXT NOT NULL DEFAULT '[]', `emotionCatalogJson` TEXT NOT NULL DEFAULT '[]', `managedBy` TEXT NOT NULL DEFAULT 'user', `enabled` INTEGER NOT NULL DEFAULT 1, `available` INTEGER NOT NULL DEFAULT 1, `revision` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "engineType",
+            "columnName": "engineType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "engineId",
+            "columnName": "engineId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "speakerId",
+            "columnName": "speakerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "traitsJson",
+            "columnName": "traitsJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'[]'"
+          },
+          {
+            "fieldPath": "emotionCatalogJson",
+            "columnName": "emotionCatalogJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'[]'"
+          },
+          {
+            "fieldPath": "managedBy",
+            "columnName": "managedBy",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'user'"
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "available",
+            "columnName": "available",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "revision",
+            "columnName": "revision",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_read_aloud_voices_engineType_engineId_speakerId",
+            "unique": true,
+            "columnNames": [
+              "engineType",
+              "engineId",
+              "speakerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_read_aloud_voices_engineType_engineId_speakerId` ON `${TABLE_NAME}` (`engineType`, `engineId`, `speakerId`)"
+          },
+          {
+            "name": "index_read_aloud_voices_enabled_displayName",
+            "unique": false,
+            "columnNames": [
+              "enabled",
+              "displayName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_read_aloud_voices_enabled_displayName` ON `${TABLE_NAME}` (`enabled`, `displayName`)"
+          }
+        ]
+      },
+      {
+        "tableName": "book_voice_bindings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bookUrl` TEXT NOT NULL, `subjectType` TEXT NOT NULL, `subjectId` TEXT NOT NULL, `voiceId` TEXT NOT NULL, `locked` INTEGER NOT NULL DEFAULT 0, `source` TEXT NOT NULL DEFAULT 'user', `confidence` REAL NOT NULL DEFAULT 1, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`bookUrl`, `subjectType`, `subjectId`))",
+        "fields": [
+          {
+            "fieldPath": "bookUrl",
+            "columnName": "bookUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subjectType",
+            "columnName": "subjectType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subjectId",
+            "columnName": "subjectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceId",
+            "columnName": "voiceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locked",
+            "columnName": "locked",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'user'"
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bookUrl",
+            "subjectType",
+            "subjectId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_book_voice_bindings_bookUrl_subjectType",
+            "unique": false,
+            "columnNames": [
+              "bookUrl",
+              "subjectType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_book_voice_bindings_bookUrl_subjectType` ON `${TABLE_NAME}` (`bookUrl`, `subjectType`)"
+          },
+          {
+            "name": "index_book_voice_bindings_voiceId",
+            "unique": false,
+            "columnNames": [
+              "voiceId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_book_voice_bindings_voiceId` ON `${TABLE_NAME}` (`voiceId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "chapter_speech_analysis",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bookUrl` TEXT NOT NULL, `chapterIndex` INTEGER NOT NULL, `contentHash` TEXT NOT NULL, `resolverVersion` TEXT NOT NULL, `characterRevision` TEXT NOT NULL DEFAULT '', `status` TEXT NOT NULL DEFAULT 'pending', `error` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookUrl",
+            "columnName": "bookUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterIndex",
+            "columnName": "chapterIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "contentHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolverVersion",
+            "columnName": "resolverVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterRevision",
+            "columnName": "characterRevision",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'pending'"
+          },
+          {
+            "fieldPath": "error",
+            "columnName": "error",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chapter_speech_analysis_bookUrl_chapterIndex_contentHash_resolverVersion",
+            "unique": true,
+            "columnNames": [
+              "bookUrl",
+              "chapterIndex",
+              "contentHash",
+              "resolverVersion"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chapter_speech_analysis_bookUrl_chapterIndex_contentHash_resolverVersion` ON `${TABLE_NAME}` (`bookUrl`, `chapterIndex`, `contentHash`, `resolverVersion`)"
+          },
+          {
+            "name": "index_chapter_speech_analysis_bookUrl_chapterIndex_updatedAt",
+            "unique": false,
+            "columnNames": [
+              "bookUrl",
+              "chapterIndex",
+              "updatedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chapter_speech_analysis_bookUrl_chapterIndex_updatedAt` ON `${TABLE_NAME}` (`bookUrl`, `chapterIndex`, `updatedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "chapter_speech_segments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `analysisId` TEXT NOT NULL, `bookUrl` TEXT NOT NULL, `chapterIndex` INTEGER NOT NULL, `paragraphIndex` INTEGER NOT NULL, `start` INTEGER NOT NULL, `end` INTEGER NOT NULL, `chapterPosition` INTEGER NOT NULL, `text` TEXT NOT NULL, `roleType` TEXT NOT NULL, `characterId` TEXT, `characterName` TEXT NOT NULL DEFAULT '', `emotion` TEXT NOT NULL DEFAULT '', `confidence` REAL NOT NULL DEFAULT 0, `source` TEXT NOT NULL, `userLocked` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "analysisId",
+            "columnName": "analysisId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookUrl",
+            "columnName": "bookUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterIndex",
+            "columnName": "chapterIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paragraphIndex",
+            "columnName": "paragraphIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "start",
+            "columnName": "start",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "end",
+            "columnName": "end",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterPosition",
+            "columnName": "chapterPosition",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleType",
+            "columnName": "roleType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterId",
+            "columnName": "characterId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "characterName",
+            "columnName": "characterName",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "emotion",
+            "columnName": "emotion",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userLocked",
+            "columnName": "userLocked",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chapter_speech_segments_analysisId_paragraphIndex_start_end",
+            "unique": true,
+            "columnNames": [
+              "analysisId",
+              "paragraphIndex",
+              "start",
+              "end"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chapter_speech_segments_analysisId_paragraphIndex_start_end` ON `${TABLE_NAME}` (`analysisId`, `paragraphIndex`, `start`, `end`)"
+          },
+          {
+            "name": "index_chapter_speech_segments_bookUrl_chapterIndex_paragraphIndex",
+            "unique": false,
+            "columnNames": [
+              "bookUrl",
+              "chapterIndex",
+              "paragraphIndex"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chapter_speech_segments_bookUrl_chapterIndex_paragraphIndex` ON `${TABLE_NAME}` (`bookUrl`, `chapterIndex`, `paragraphIndex`)"
+          },
+          {
+            "name": "index_chapter_speech_segments_characterId",
+            "unique": false,
+            "columnNames": [
+              "characterId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chapter_speech_segments_characterId` ON `${TABLE_NAME}` (`characterId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "cloud_tts_engines",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `provider` TEXT NOT NULL, `baseUrl` TEXT NOT NULL DEFAULT '', `apiKey` TEXT NOT NULL DEFAULT '', `secretKey` TEXT NOT NULL DEFAULT '', `region` TEXT NOT NULL DEFAULT '', `appId` TEXT NOT NULL DEFAULT '', `model` TEXT NOT NULL DEFAULT '', `optionsJson` TEXT NOT NULL DEFAULT '{}', `enabled` INTEGER NOT NULL DEFAULT 1, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "provider",
+            "columnName": "provider",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrl",
+            "columnName": "baseUrl",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "apiKey",
+            "columnName": "apiKey",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "secretKey",
+            "columnName": "secretKey",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "region",
+            "columnName": "region",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "appId",
+            "columnName": "appId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "model",
+            "columnName": "model",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "optionsJson",
+            "columnName": "optionsJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'{}'"
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cloud_tts_engines_provider_enabled",
+            "unique": false,
+            "columnNames": [
+              "provider",
+              "enabled"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cloud_tts_engines_provider_enabled` ON `${TABLE_NAME}` (`provider`, `enabled`)"
+          }
+        ]
       }
     ],
     "views": [
@@ -3932,7 +4512,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9087640670cf6cbc3be250a569ed106e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f5e225667da6bf6e50b9435bfb2ffb6d')"
     ]
   }
 }

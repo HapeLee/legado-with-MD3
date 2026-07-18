@@ -310,24 +310,30 @@ private fun BookInfoScreenContent(
                                     onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
                                     onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
                                 )
-                                BookInfoCharacters(
-                                    characters = state.characters,
-                                    onCharacterClick = {
-                                        onIntent(BookInfoIntent.CharacterClick(it))
-                                    },
-                                    onNetworkClick = {
-                                        onIntent(BookInfoIntent.CharacterNetworkClick)
-                                    },
-                                    onViewAllClick = {
-                                        onIntent(BookInfoIntent.CharacterListClick)
-                                    },
-                                    onKnowledgeClick = {
-                                        onIntent(BookInfoIntent.KnowledgeListClick)
-                                    },
-                                    onEventsClick = {
-                                        onIntent(BookInfoIntent.EventListClick)
-                                    },
-                                )
+                                if (
+                                    state.characters.isNotEmpty() ||
+                                    state.knowledgeEntries.isNotEmpty() ||
+                                    state.recentEvents.isNotEmpty()
+                                ) {
+                                    BookInfoCharacters(
+                                        characters = state.characters,
+                                        onCharacterClick = {
+                                            onIntent(BookInfoIntent.CharacterClick(it))
+                                        },
+                                        onNetworkClick = {
+                                            onIntent(BookInfoIntent.CharacterNetworkClick)
+                                        },
+                                        onViewAllClick = {
+                                            onIntent(BookInfoIntent.CharacterListClick)
+                                        },
+                                        onKnowledgeClick = {
+                                            onIntent(BookInfoIntent.KnowledgeListClick)
+                                        },
+                                        onEventsClick = {
+                                            onIntent(BookInfoIntent.EventListClick)
+                                        },
+                                    )
+                                }
                                 state.relatedBooks.forEach { module ->
                                     RelatedBooksBanner(
                                         title = module.title,
