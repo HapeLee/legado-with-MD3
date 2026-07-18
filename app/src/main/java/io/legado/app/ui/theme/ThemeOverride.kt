@@ -2,12 +2,7 @@ package io.legado.app.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
@@ -56,25 +51,11 @@ fun ProvideThemeOverride(
     theme: ThemeOverrideState?,
     content: @Composable () -> Unit,
 ) {
-    var appliedTheme by remember { mutableStateOf<ThemeOverrideState?>(null) }
-    val baseTheme = LocalLegadoThemeColors.current
-
-    LaunchedEffect(theme) {
-        if (theme == null) {
-            appliedTheme = null
-        } else {
-            withFrameNanos { }
-            appliedTheme = theme
-        }
-    }
-
-    val currentTheme = appliedTheme
-
-    if (currentTheme != null) {
+    if (theme != null) {
         ProvideColorSchemeOverride(
-            colorScheme = currentTheme.colorScheme,
-            seedColor = currentTheme.seedColor,
-            overrideIsDark = currentTheme.isDark,
+            colorScheme = theme.colorScheme,
+            seedColor = theme.seedColor,
+            overrideIsDark = theme.isDark,
             content = content
         )
     } else {
