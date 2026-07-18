@@ -47,6 +47,8 @@ sealed interface ReadSettingsUpdate {
     data class OptimizeRender(val value: Boolean) : ReadSettingsUpdate
     data class DisableReturnKey(val value: Boolean) : ReadSettingsUpdate
     data class ShowReadTitleAddition(val value: Boolean) : ReadSettingsUpdate
+    data class TextSelectMenuConfig(val value: String) : ReadSettingsUpdate
+    data class ReadUrlInBrowser(val value: Boolean) : ReadSettingsUpdate
     data class ShowMenuIcon(val value: Boolean) : ReadSettingsUpdate
     data class PageKeys(val previous: String, val next: String) : ReadSettingsUpdate
     data class FontFolder(val value: String) : ReadSettingsUpdate

@@ -14,16 +14,27 @@ import androidx.core.view.ViewCompat
 import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
+import io.legado.app.domain.gateway.ThemeIntSetting
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.activity
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
 @SuppressLint("ResourceType")
 class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(context, attrs) {
+
+    private val themeSettingsGateway by lazy {
+        GlobalContext.get().get<ThemeSettingsGateway>()
+    }
 
     private var entries: Array<CharSequence> = context.resources.getTextArray(R.array.themes_item)
     private var entryValues: Array<CharSequence> = context.resources.getTextArray(R.array.themes_value).takeIf { it.isNotEmpty() }
@@ -36,7 +47,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
     }
 
     override fun onSetInitialValue(defaultValue: Any?) {
-        currentValue = getPersistedString(defaultValue as? String ?: entryValues.getOrNull(0)?.toString())
+        currentValue = themeSettingsGateway.currentSettings.appTheme
     }
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
@@ -89,13 +100,24 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                             context.toastOnUi(R.string.transparent_theme_alarm)
                             return@setOnClickListener
                         } else {
-                            ThemeConfig.containerOpacity = 0
                         }
                     }
                     currentValue = value
-                    persistString(value)
                     callChangeListener(value)
-                    ThemeConfig.appTheme = value
+                    holder.itemView.activity?.lifecycleScope?.launch {
+                        val updates = buildList {
+                            add(ThemeSettingsUpdate.AppTheme(value))
+                            if (value == "13") {
+                                add(
+                                    ThemeSettingsUpdate.IntValue(
+                                        ThemeIntSetting.ContainerOpacity,
+                                        0,
+                                    )
+                                )
+                            }
+                        }
+                        themeSettingsGateway.updateAll(updates)
+                    }
                     notifyDataSetChanged()
                 }
             }

@@ -36,8 +36,9 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.book.BookHelp
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
@@ -49,7 +50,6 @@ import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.ReadBookRouteHost
 import io.legado.app.ui.book.read.page.entities.PageDirection
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.android.ext.android.inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -190,6 +191,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     }
 
     private val viewModel by viewModel<MainViewModel>()
+    private val otherSettingsGateway by inject<OtherSettingsGateway>()
+    private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
     private var shouldApplyDefaultToRead = true
@@ -206,11 +209,11 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         if (checkStartupRoute()) return
         val shouldAutoCheckUpdate = startupUpdateCheckGate.consume(
-            OtherConfig.autoCheckUpdateOnStart
+            otherSettingsGateway.currentSettings.autoCheckUpdateOnStart
         )
 
         // 智能自启：如果上次是手动开启状态（web_service_auto 为 true），则自启
-        if (AppConfig.webServiceAutoStart) {
+        if (otherSettingsGateway.currentSettings.webServiceAutoStart) {
             WebService.startForeground(this)
         }
 
@@ -223,7 +226,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             backupSync()
             //自动更新书籍
             val isAutoRefreshedBook = savedInstanceState?.getBoolean("isAutoRefreshedBook") ?: false
-            if (AppConfig.autoRefreshBook && !isAutoRefreshedBook) {
+            if (otherSettingsGateway.currentSettings.autoRefresh && !isAutoRefreshedBook) {
                 viewModel.upAllBookToc()
             }
             viewModel.postLoad()
@@ -245,7 +248,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     override fun Content() {
         val orientation = resources.configuration.orientation
         val smallestWidthDp = resources.configuration.smallestScreenWidthDp
-        val tabletInterface = LocalAppUiConfiguration.current.appShell.tabletInterface
+        val configuration = LocalAppUiConfiguration.current
+        val tabletInterface = configuration.appShell.tabletInterface
 
         val useRail = when (tabletInterface) {
             "always" -> true
@@ -255,14 +259,16 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             else -> false
         }
 
-        val startRoutes = remember {
+        val startRoutes = remember(configuration.other.defaultToRead) {
             val resolved = MainNavigator.resolveStartRoute(intent)
             val hasExplicitStartRoute = intent?.hasExplicitStartRoute() == true
             when {
                 !hasExplicitStartRoute && restoredReadBookRoute != null -> {
                     arrayOf(MainRouteHome, restoredReadBookRoute!!)
                 }
-                shouldApplyDefaultToRead && OtherConfig.defaultToRead && resolved == MainRouteHome -> {
+                shouldApplyDefaultToRead &&
+                        configuration.other.defaultToRead &&
+                        resolved == MainRouteHome -> {
                     arrayOf(MainRouteHome, MainRouteReadBook())
                 }
                 else -> {
@@ -348,6 +354,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
                 entryProvider = mainEntryProvider(
                     backStack = backStack,
+                    configuration = configuration,
                     useRail = useRail,
                     sharedTransitionScope = this@SharedTransitionLayout,
                     onNavigateToRoute = { route ->
@@ -360,7 +367,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     onRegisterVariableSetter = { setter -> bookInfoVariableSetter = setter }
                 )
             )
-            BackHandler(enabled = !AppConfig.isPredictiveBackEnabled) {
+            BackHandler(
+                enabled = !configuration.appShell.predictiveBackEnabled
+            ) {
                 MainNavigator.navigateBack(this@MainActivity, backStack)
             }
         }
@@ -444,7 +453,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
      * 备份同步
      */
     private fun backupSync() {
-        if (!AppConfig.autoCheckNewBackup) {
+        if (!backupSettingsGateway.currentSettings.autoCheckNewBackup) {
             return
         }
         lifecycleScope.launch {
@@ -469,7 +478,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        if (AppConfig.autoRefreshBook) {
+        if (otherSettingsGateway.currentSettings.autoRefresh) {
             outState.putBoolean("isAutoRefreshedBook", true)
         }
         val readRoute = latestBackStack.lastOrNull() as? MainRouteReadBook

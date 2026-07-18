@@ -278,6 +278,8 @@ val appModule = module {
         SearchContentRepository(
             titleModeProvider = { io.legado.app.help.config.ReadBookConfig.titleMode },
             historyDao = get(),
+            readSettingsGateway = get(),
+            otherSettingsGateway = get(),
         )
     }
     singleOf(::RemoteBookRepository)
@@ -287,7 +289,7 @@ val appModule = module {
     single<ThemeSettingsGateway> { ThemeSettingsRepository() }
     single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
     single<AppUiConfigurationGateway> {
-        AppUiConfigurationRepository(get(), get(), get())
+        AppUiConfigurationRepository(get(), get(), get(), get(), get(), get())
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
     single<DownloadCacheSettingsGateway> { DownloadCacheSettingsRepository() }
@@ -437,7 +439,7 @@ val appModule = module {
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
     viewModel { TxtTocRulePreviewViewModel(app = get(), repository = get()) }
-    viewModel { OtherConfigViewModel(get(), get(), get()) }
+    viewModel { OtherConfigViewModel(get(), get(), get(), get()) }
     viewModelOf(::CustomThemeViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)
@@ -554,6 +556,10 @@ val appModule = module {
             readAloudSessionStore = get(),
             replaceRuleRepository = get(),
             changeSourceSettingsGateway = get(),
+            appShellSettingsGateway = get(),
+            otherSettingsGateway = get(),
+            downloadCacheSettingsGateway = get(),
+            backupSettingsGateway = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)

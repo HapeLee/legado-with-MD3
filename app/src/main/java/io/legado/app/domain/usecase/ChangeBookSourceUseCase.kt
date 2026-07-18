@@ -9,6 +9,8 @@ import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -71,6 +73,8 @@ class ChangeBookSourceUseCase(
     private val database: AppDatabase,
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao,
+    private val otherSettingsGateway: OtherSettingsGateway,
+    private val readSettingsGateway: ReadSettingsGateway,
 ) {
 
     fun applyMigration(
@@ -79,7 +83,13 @@ class ChangeBookSourceUseCase(
         chapters: List<BookChapter>,
         options: ChangeSourceMigrationOptions,
     ): Book {
-        oldBook.applyMigrationTo(newBook, chapters, options)
+        oldBook.applyMigrationTo(
+            newBook,
+            chapters,
+            options,
+            otherSettingsGateway.currentSettings.replaceEnableDefault,
+            readSettingsGateway.currentSettings.chineseConverterType,
+        )
         newBook.removeType(BookType.updateError)
         return newBook
     }
@@ -239,6 +249,8 @@ class ChangeBookSourceUseCase(
         newBook: Book,
         chapters: List<BookChapter>,
         options: ChangeSourceMigrationOptions,
+        defaultReplaceEnabled: Boolean,
+        chineseConverterType: Int,
     ) {
         newBook.totalChapterNum = chapters.size
         if (options.migrateReadingProgress && chapters.isNotEmpty()) {
@@ -247,7 +259,8 @@ class ChangeBookSourceUseCase(
                 .coerceIn(0, chapters.lastIndex)
             newBook.durChapterTitle = chapters[newBook.durChapterIndex].getDisplayTitle(
                 ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules(),
-                getUseReplaceRule()
+                getUseReplaceRule(defaultReplaceEnabled),
+                chineseConverterType = chineseConverterType,
             )
             newBook.durChapterPos = durChapterPos
             newBook.durChapterTime = durChapterTime
@@ -255,7 +268,8 @@ class ChangeBookSourceUseCase(
             newBook.durChapterIndex = 0
             newBook.durChapterTitle = chapters.firstOrNull()?.getDisplayTitle(
                 ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules(),
-                getUseReplaceRule()
+                getUseReplaceRule(defaultReplaceEnabled),
+                chineseConverterType = chineseConverterType,
             )
             newBook.durChapterPos = 0
             newBook.durChapterTime = System.currentTimeMillis()

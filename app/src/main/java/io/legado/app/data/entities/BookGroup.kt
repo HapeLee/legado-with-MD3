@@ -6,7 +6,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import io.legado.app.R
-import io.legado.app.help.config.AppConfig
 import kotlinx.parcelize.Parcelize
 
 @Suppress("ConstPropertyName")
@@ -69,9 +68,9 @@ data class BookGroup(
         }
     }
 
-    fun getRealBookSort(): Int {
+    fun getRealBookSort(defaultBookSort: Int): Int {
         if (bookSort < 0) {
-            return AppConfig.bookshelfSort
+            return defaultBookSort
         }
         return bookSort
     }

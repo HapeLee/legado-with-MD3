@@ -17,6 +17,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsUpdate
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
@@ -55,6 +57,8 @@ class ReadMangaViewModel(
     application: Application,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
     private val mangaSettingsGateway: MangaSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
+    private val readSettingsGateway: ReadSettingsGateway,
 ) : BaseViewModel(application) {
 
     private val _mangaSettings = MutableStateFlow(mangaSettingsGateway.currentSettings)
@@ -297,7 +301,12 @@ class ReadMangaViewModel(
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
             //换源中
-            ReadManga.book?.migrateTo(book, toc)
+            ReadManga.book?.migrateTo(
+                book,
+                toc,
+                otherSettingsGateway.currentSettings.replaceEnableDefault,
+                readSettingsGateway.currentSettings.chineseConverterType,
+            )
             book.removeType(BookType.updateError)
             ReadManga.book?.delete()
             appDb.bookDao.insert(book)

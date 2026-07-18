@@ -28,4 +28,8 @@ sealed interface OtherSettingsUpdate {
     data class ProcessText(val value: Boolean) : OtherSettingsUpdate
     data class RecordLog(val value: Boolean) : OtherSettingsUpdate
     data class RecordHeapDump(val value: Boolean) : OtherSettingsUpdate
+    data class AudioPlayUseWakeLock(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepName(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepGroup(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepEnable(val value: Boolean) : OtherSettingsUpdate
 }

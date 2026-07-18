@@ -29,7 +29,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.R
-import io.legado.app.help.config.AppConfig
+import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.model.Download
 import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
@@ -118,6 +118,7 @@ import org.koin.core.parameter.parametersOf
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
     backStack: MutableList<NavKey>,
+    configuration: AppUiConfiguration,
     useRail: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     onNavigateToRoute: (NavKey) -> Unit,
@@ -480,7 +481,7 @@ fun MainActivity.mainEntryProvider(
                 }
                 MainActivity.hasActiveReadBookRoute = false
                 controller.clearTts()
-                this@mainEntryProvider.toggleSystemBar(AppConfig.showStatusBar)
+                this@mainEntryProvider.toggleSystemBar(configuration.appShell.showStatusBar)
             }
         }
 
@@ -684,7 +685,7 @@ fun MainActivity.mainEntryProvider(
                         fadeOut(animationSpec = tween(300))
             } else null
         } + NavDisplay.predictivePopTransitionSpec { _ ->
-            if (!AppConfig.isPredictiveBackEnabled) {
+            if (!configuration.appShell.predictiveBackEnabled) {
                 null
             } else {
                 val to = targetState.key

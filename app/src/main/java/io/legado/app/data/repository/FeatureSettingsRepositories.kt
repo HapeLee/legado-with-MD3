@@ -498,6 +498,10 @@ internal fun Preferences.toOtherSettings(): OtherSettings {
         processText = compatDsBoolean(PreferKey.processText) ?: true,
         recordLog = compatDsBoolean(PreferKey.recordLog) ?: false,
         recordHeapDump = compatDsBoolean(PreferKey.recordHeapDump) ?: false,
+        audioPlayUseWakeLock = compatDsBoolean(PreferKey.audioPlayWakeLock) ?: false,
+        importKeepName = compatDsBoolean(PreferKey.importKeepName) ?: false,
+        importKeepGroup = compatDsBoolean(PreferKey.importKeepGroup) ?: false,
+        importKeepEnable = compatDsBoolean(PreferKey.importKeepEnable) ?: false,
     )
 }
 
@@ -529,6 +533,10 @@ class OtherSettingsRepository : OtherSettingsGateway {
             is OtherSettingsUpdate.ProcessText -> PreferKey.processText to update.value
             is OtherSettingsUpdate.RecordLog -> PreferKey.recordLog to update.value
             is OtherSettingsUpdate.RecordHeapDump -> PreferKey.recordHeapDump to update.value
+            is OtherSettingsUpdate.AudioPlayUseWakeLock -> PreferKey.audioPlayWakeLock to update.value
+            is OtherSettingsUpdate.ImportKeepName -> PreferKey.importKeepName to update.value
+            is OtherSettingsUpdate.ImportKeepGroup -> PreferKey.importKeepGroup to update.value
+            is OtherSettingsUpdate.ImportKeepEnable -> PreferKey.importKeepEnable to update.value
         }
         AppConfigStore.putAll(mapOf(key to value))
     }

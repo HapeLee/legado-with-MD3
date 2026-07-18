@@ -10,6 +10,8 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -20,7 +22,6 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.webView.WebViewDataCleaner
 import io.legado.app.model.CheckSource
 import io.legado.app.receiver.SharedReceiverActivity
-import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,7 @@ class OtherConfigViewModel(
     private val appLocaleGateway: AppLocaleGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
+    private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
     initialState: OtherConfigUiState = defaultOtherConfigUiState(),
 ) : ViewModel() {
 
@@ -309,7 +311,9 @@ class OtherConfigViewModel(
     }
 
     fun saveUserAgent(input: String) {
-        DownloadCacheConfig.userAgent = input
+        viewModelScope.launch {
+            downloadCacheSettingsGateway.update(DownloadCacheSettingsUpdate.UserAgent(input))
+        }
     }
 
     fun updateLocalBookDir(path: String) {

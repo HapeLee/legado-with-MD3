@@ -33,6 +33,7 @@ import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
 import io.legado.app.databinding.DialogBookChangeSourceBinding
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
@@ -424,7 +425,12 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                 callBack?.changeTo(source, book, toc)
                 dismissAllowingStateLoss()
             } else {
-                ReadBook.book?.migrateTo(book, toc)
+                ReadBook.book?.migrateTo(
+                    book,
+                    toc,
+                    AppConfig.replaceEnableDefault,
+                    AppConfig.chineseConverterType,
+                )
                 callBack?.addToBookshelf(book, toc)
                 context?.toastOnUi(getString(R.string.book_added_to_shelf))
             }

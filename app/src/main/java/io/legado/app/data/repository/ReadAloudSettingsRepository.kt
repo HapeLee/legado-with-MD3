@@ -48,6 +48,10 @@ class ReadAloudSettingsRepository(
             is ReadAloudSettingsUpdate.Timer -> setTtsTimer(update.value)
             is ReadAloudSettingsUpdate.FollowSystem -> setTtsFollowSys(update.value)
             is ReadAloudSettingsUpdate.SpeechRate -> setTtsSpeechRate(update.value)
+            is ReadAloudSettingsUpdate.ContentSelectSpeakMode ->
+                settingsRepository.putInt(PreferKey.contentSelectSpeakMod, update.value)
+            is ReadAloudSettingsUpdate.AudioPreDownloadNum ->
+                settingsRepository.putInt(PreferKey.audioPreDownloadNum, update.value)
         }
     }
 
@@ -84,7 +88,7 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setShowReadAloudCapsule(value: Boolean) {
-        ReadConfig.showReadAloudCapsule = value
+        settingsRepository.putBoolean(PreferKey.showReadAloudCapsule, value)
     }
 
     suspend fun setCapsulePosition(x: Float, y: Float) {
@@ -124,11 +128,11 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setSpeechAnalysisMode(value: String) {
-        ReadConfig.speechAnalysisMode = value
+        settingsRepository.putString(PreferKey.speechAnalysisMode, value)
     }
 
     suspend fun setUseMultiSpeaker(value: Boolean) {
-        ReadConfig.useMultiSpeaker = value
+        settingsRepository.putBoolean(PreferKey.useMultiSpeaker, value)
     }
 
     suspend fun setDefaultInterface(value: String) {
@@ -162,6 +166,8 @@ class ReadAloudSettingsRepository(
             speechAnalysisMode = compatDsValue(Keys.SpeechAnalysisMode, "rule"),
             useMultiSpeaker = compatDsValue(Keys.UseMultiSpeaker, true),
             defaultInterface = compatDsValue(Keys.DefaultInterface, DEFAULT_INTERFACE_CLASSIC),
+            contentSelectSpeakMode = compatDsValue(Keys.ContentSelectSpeakMode, 0),
+            audioPreDownloadNum = compatDsValue(Keys.AudioPreDownloadNum, 10),
         )
     }
 
@@ -194,6 +200,12 @@ class ReadAloudSettingsRepository(
         val SpeechAnalysisMode = stringPreferencesKey(PreferKey.speechAnalysisMode)
         val UseMultiSpeaker = booleanPreferencesKey(PreferKey.useMultiSpeaker)
         val DefaultInterface = stringPreferencesKey(PreferKey.defaultReadAloudInterface)
+        val ContentSelectSpeakMode = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.contentSelectSpeakMod
+        )
+        val AudioPreDownloadNum = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.audioPreDownloadNum
+        )
     }
 
     companion object {

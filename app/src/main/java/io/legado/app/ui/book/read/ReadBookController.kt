@@ -754,7 +754,7 @@ class ReadBookController(
                 showState = item.showState
             )
         }
-        ReadConfig.textSelectMenuConfig = GSON.toJson(configs)
+        viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
         refreshActionMenuItems()
     }
 

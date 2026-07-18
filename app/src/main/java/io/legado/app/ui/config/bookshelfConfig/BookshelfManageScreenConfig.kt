@@ -7,7 +7,8 @@ class BookshelfManageScreenConfig(
 ) {
 
     fun getBookSortByGroupId(groupId: Long): Int {
-        return bookGroupDao.getByID(groupId)?.getRealBookSort() ?: BookshelfConfig.bookshelfSort
+        val defaultSort = BookshelfConfig.bookshelfSort
+        return bookGroupDao.getByID(groupId)?.getRealBookSort(defaultSort) ?: defaultSort
     }
 
     val bookshelfSortOrder: Int

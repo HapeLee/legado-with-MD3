@@ -22,4 +22,6 @@ data class ReadAloudSettings(
     val speechAnalysisMode: String = "rule",
     val useMultiSpeaker: Boolean = true,
     val defaultInterface: String = "classic",
+    val contentSelectSpeakMode: Int = 0,
+    val audioPreDownloadNum: Int = 10,
 )

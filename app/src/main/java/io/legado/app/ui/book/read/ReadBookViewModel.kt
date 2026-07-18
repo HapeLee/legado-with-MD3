@@ -39,10 +39,17 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.AiTaskType
@@ -95,9 +102,6 @@ import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.searchContent.SearchResult
-import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
@@ -113,12 +117,14 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
+import io.legado.app.utils.isNightMode
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toStringArray
+import io.legado.app.utils.sysConfiguration
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CancellationException
@@ -185,6 +191,10 @@ class ReadBookViewModel(
     private val readAloudSessionStore: ReadAloudSessionStore,
     private val replaceRuleRepository: ReplaceRuleRepository,
     private val changeSourceSettingsGateway: ChangeSourceSettingsGateway,
+    private val appShellSettingsGateway: AppShellSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
+    private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
+    private val backupSettingsGateway: BackupSettingsGateway,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -234,12 +244,23 @@ class ReadBookViewModel(
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
 
+    private fun isNightTheme(): Boolean = when (appShellSettingsGateway.currentSettings.themeMode) {
+        "1" -> false
+        "2" -> true
+        else -> sysConfiguration.isNightMode
+    }
+
     fun setAutoPage(active: Boolean) {
         _uiState.update { it.copy(isAutoPage = active) }
     }
 
+    fun setTextSelectMenuConfig(value: String) {
+        viewModelScope.launch {
+            readSettingsRepository.update(ReadSettingsUpdate.TextSelectMenuConfig(value))
+        }
+    }
+
     init {
-        ReadConfig.detectClickArea()
         ReadBook.register(this)
         refreshButtonConfigs()
         collectReadPreferences()
@@ -745,7 +766,9 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuEnableReplace -> {
                 ReadBook.book?.let {
-                    val enabled = !it.getUseReplaceRule()
+                    val enabled = !it.getUseReplaceRule(
+                        otherSettingsGateway.currentSettings.replaceEnableDefault
+                    )
                     it.setUseReplaceRule(enabled)
                     ReadBook.saveRead()
                     _uiState.update { state ->
@@ -1401,7 +1424,7 @@ class ReadBookViewModel(
             is ReadBookIntent.ToggleDayNight -> toggleDayNight()
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
-                when (ReadConfig.contentSelectSpeakMod) {
+                when (readAloudSettingsRepository.currentSettings.contentSelectSpeakMode) {
                     1 -> intent.selectStartPos?.let {
                         _effects.tryEmit(ReadBookEffect.TextActionAloudSelect(it.copy()))
                     } ?: _effects.tryEmit(ReadBookEffect.TextActionSpeak(intent.text))
@@ -1534,7 +1557,7 @@ class ReadBookViewModel(
         _effects.tryEmit(ReadBookEffect.UnregisterNetworkListener)
 
         if (!BuildConfig.DEBUG) {
-            if (ReadConfig.syncBookProgressPlus) {
+            if (backupSettingsGateway.currentSettings.syncBookProgressPlus) {
                 ReadBook.syncProgress()
             } else {
                 ReadBook.uploadProgress()
@@ -1802,7 +1825,11 @@ class ReadBookViewModel(
      * Called from the network changed listener (registered by route).
      */
     fun onNetworkChanged() {
-        if (ReadConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
+        if (
+            backupSettingsGateway.currentSettings.syncBookProgressPlus &&
+            NetworkUtils.isAvailable() &&
+            !justInitData
+        ) {
             ReadBook.syncProgress(newProgressAction = { progress ->
                 sureNewProgress(progress)
             })
@@ -1828,7 +1855,7 @@ class ReadBookViewModel(
 
     private fun handleChangeSource() {
         viewModelScope.launch {
-            if (ReadConfig.defaultSourceChangeAll) {
+            if (readSettingsRepository.currentSettings.defaultSourceChangeAll) {
                 _uiState.update { it.copy(activeSheet = ReadBookSheet.ChangeBookSource) }
             } else {
                 val book = ReadBook.book ?: return@launch
@@ -2111,7 +2138,6 @@ class ReadBookViewModel(
                 _readPreferences.value = preferences
                 _uiState.update { syncFromReadBook(it) }
                 if (!preferences.hasMenuClickArea()) {
-                    ReadConfig.detectClickArea()
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
                 }
                 if (old != null && old.keepLight != preferences.keepLight) {
@@ -2238,7 +2264,7 @@ class ReadBookViewModel(
         paragraphIndentCount = ReadBookConfig.paragraphIndent.length,
         textItalic = ReadBookConfig.textItalic,
         textBold = ReadBookConfig.textBold,
-        chineseConverterType = ReadConfig.chineseConverterType,
+        chineseConverterType = readSettingsRepository.currentSettings.chineseConverterType,
         textColor = ReadBookConfig.durConfig.curTextColor(),
         textAccentColor = ReadBookConfig.durConfig.curTextAccentColor(),
         titleMode = ReadBookConfig.titleMode,
@@ -2304,15 +2330,19 @@ class ReadBookViewModel(
             curTextChapter = textChapter,
             seekProgress = calculateSeekProgress(),
             seekMax = calculateSeekMax(),
-            replaceRuleEnabled = book?.getUseReplaceRule() ?: false,
+            replaceRuleEnabled = book?.getUseReplaceRule(
+                otherSettingsGateway.currentSettings.replaceEnableDefault
+            ) ?: false,
             effectiveReplaceCount = textChapter?.effectiveReplaceRules?.size ?: 0,
             effectiveContentProcessCount = textChapter?.effectiveContentProcesses?.size ?: 0,
             effectiveReplaceRules = textChapter?.effectiveReplaceRules.orEmpty().toImmutableList(),
-            chineseConverterActive = ReadConfig.chineseConverterType > 0,
+            chineseConverterActive = readSettingsRepository.currentSettings.chineseConverterType > 0,
             translationMode = book?.getTranslationMode() ?: false,
             isLocalTxt = book?.isLocalTxt == true,
             isEpub = book?.isEpub == true,
-            useReplaceRule = book?.getUseReplaceRule() ?: false,
+            useReplaceRule = book?.getUseReplaceRule(
+                otherSettingsGateway.currentSettings.replaceEnableDefault
+            ) ?: false,
             reSegment = book?.getReSegment() ?: false,
             delRubyTag = book?.getDelTag(Book.rubyTag) ?: false,
             delHTag = book?.getDelTag(Book.hTag) ?: false,
@@ -2472,14 +2502,14 @@ class ReadBookViewModel(
     }
 
     private fun calculateSeekProgress(): Int {
-        return when (ReadConfig.progressBarBehavior) {
+        return when (readSettingsRepository.currentSettings.progressBarBehavior) {
             "page" -> ReadBook.durPageIndex
             else -> ReadBook.durChapterIndex
         }
     }
 
     private fun calculateSeekMax(): Int {
-        return when (ReadConfig.progressBarBehavior) {
+        return when (readSettingsRepository.currentSettings.progressBarBehavior) {
             "page" -> (ReadBook.curTextChapter?.pages?.size ?: 1) - 1
             else -> ReadBook.chapterSize - 1
         }
@@ -2579,7 +2609,7 @@ class ReadBookViewModel(
         if (ReadBook.chapterChanged) {
             ReadBook.chapterChanged = false
         } else if (!(isSameBook && BaseReadAloudService.isRun) && ReadBook.inBookshelf) {
-            if (ReadConfig.syncBookProgressPlus) {
+            if (backupSettingsGateway.currentSettings.syncBookProgressPlus) {
                 ReadBook.syncProgress({ progress -> sureNewProgress(progress) })
             } else {
                 syncBookProgress(book)
@@ -2675,7 +2705,7 @@ class ReadBookViewModel(
         book: Book,
         alertSync: ((progress: BookProgress) -> Unit)? = null
     ) {
-        if (!ReadConfig.syncBookProgress) return
+        if (!backupSettingsGateway.currentSettings.syncBookProgress) return
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
@@ -2772,7 +2802,7 @@ class ReadBookViewModel(
     }
 
     private fun autoChangeSource(name: String, author: String) {
-        if (!ReadConfig.autoChangeSource) return
+        if (!readSettingsRepository.currentSettings.autoChangeSource) return
         execute {
             val sources = appDb.bookSourceDao.allTextEnabledPart
             flow {
@@ -2783,7 +2813,7 @@ class ReadBookViewModel(
                 }
             }.onStart {
                 ReadBook.upMsg(context.getString(R.string.source_auto_changing))
-            }.mapParallelSafe(OtherConfig.threadCount) { source ->
+            }.mapParallelSafe(downloadCacheSettingsGateway.currentSettings.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
                     WebBook.getBookInfoAwait(source, book)
@@ -2833,7 +2863,7 @@ class ReadBookViewModel(
     private fun closeReadBook(keepReadAloud: Boolean = false) {
         closeReadBookKeepReadAloud = keepReadAloud
         val book = ReadBook.book
-        if (!ReadBook.inBookshelf && book != null && OtherConfig.showAddToShelfAlert) {
+        if (!ReadBook.inBookshelf && book != null && otherSettingsGateway.currentSettings.showAddToShelfAlert) {
             _uiState.update {
                 it.copy(activeDialog = ReadBookDialog.ConfirmAddToBookshelf(book.name))
             }
@@ -4252,7 +4282,9 @@ class ReadBookViewModel(
             val chapter = appDb.bookChapterDao
                 .getChapter(book.bookUrl, ReadBook.durChapterIndex)
                 ?: return@execute
-            val title = chapter.getDisplayTitle()
+            val title = chapter.getDisplayTitle(
+                chineseConverterType = readSettingsRepository.currentSettings.chineseConverterType
+            )
             val contentProcessor = ContentProcessor.get(book.name, book.origin)
             val rawContent = BookHelp.getContent(book, chapter) ?: return@execute
             val text = contentProcessor.getContent(book, chapter, rawContent, includeTitle = false)
@@ -5688,8 +5720,10 @@ class ReadBookViewModel(
         lastSwitchDayNightReminderTime = System.currentTimeMillis()
         hasDismissedDarkReminder = false
         hasDismissedLightReminder = false
-        val nextMode = if (ReadConfig.isNightTheme) "1" else "2"
-        ThemeConfig.themeMode = nextMode
+        val nextMode = if (isNightTheme()) "1" else "2"
+        viewModelScope.launch {
+            appShellSettingsGateway.update(AppShellSettingsUpdate.ThemeMode(nextMode))
+        }
         _uiState.update {
             val newActiveReminder = if (it.activeReminder?.type is ReminderType.DayNightReminder) {
                 null
@@ -5829,7 +5863,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
                     ))
-                    if (ReadConfig.readBarStyleFollowPage) {
+                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }
@@ -5839,7 +5873,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
                     ))
-                    if (ReadConfig.readBarStyleFollowPage) {
+                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }
@@ -5849,7 +5883,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateBackground)
                     ))
-                    if (ReadConfig.readBarStyleFollowPage) {
+                    if (readSettingsRepository.currentSettings.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }
@@ -6059,7 +6093,9 @@ class ReadBookViewModel(
     }
 
     private fun onBooksDirSelected(uri: Uri) {
-        OtherConfig.defaultBookTreeUri = uri.toString()
+        viewModelScope.launch {
+            otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(uri.toString()))
+        }
         val reloadChapterList = pendingBooksDirReloadChapterList
         pendingBooksDirReloadChapterList = false
         val book = ReadBook.book ?: return
@@ -6145,8 +6181,11 @@ class ReadBookViewModel(
     }
 
     private fun checkSwitchDayNight(lux: Float) {
-        if (!ReadConfig.autoSuggestDayNight || isDayNightSwitchCoolingDown()) return
-        val isNight = ReadConfig.isNightTheme
+        if (
+            !readSettingsRepository.currentSettings.autoSuggestDayNight ||
+            isDayNightSwitchCoolingDown()
+        ) return
+        val isNight = isNightTheme()
         val styleConfig = _uiState.value.styleConfig
         if (!isNight && lux <= DARK_LUX_THRESHOLD) {
             if (hasDismissedDarkReminder) return

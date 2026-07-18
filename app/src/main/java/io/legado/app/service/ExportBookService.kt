@@ -18,6 +18,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.exception.NoStackTraceException
@@ -97,6 +99,8 @@ class ExportBookService : BaseService(), KoinComponent {
         val epubScope: String? = null,
         val settings: BookExportSettings,
         val targetLanguage: String,
+        val defaultReplaceEnabled: Boolean,
+        val chineseConverterType: Int,
     )
 
     /**
@@ -110,12 +114,16 @@ class ExportBookService : BaseService(), KoinComponent {
     private val translationCacheRepository: TranslationCacheGateway by inject()
     private val bookExportSettingsGateway: BookExportSettingsGateway by inject()
     private val translationSettingsGateway: TranslationSettingsGateway by inject()
+    private val otherSettingsGateway: OtherSettingsGateway by inject()
+    private val readSettingsGateway: ReadSettingsGateway by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
     private var exportJob: Job? = null
     private var currentExportSettings = BookExportSettings()
     private var currentTargetLanguage = "zh"
+    private var currentDefaultReplaceEnabled = true
+    private var currentChineseConverterType = 0
     private var notificationContentText = appCtx.getString(R.string.service_starting)
 
 
@@ -131,6 +139,10 @@ class ExportBookService : BaseService(), KoinComponent {
                         epubScope = intent.getStringExtra("epubScope"),
                         settings = bookExportSettingsGateway.currentSettings,
                         targetLanguage = translationSettingsGateway.currentSettings.targetLanguage,
+                        defaultReplaceEnabled =
+                            otherSettingsGateway.currentSettings.replaceEnableDefault,
+                        chineseConverterType =
+                            readSettingsGateway.currentSettings.chineseConverterType,
                     )
                     waitExportBooks[bookUrl] = exportConfig
                     exportMsg[bookUrl] = getString(R.string.export_wait)
@@ -211,6 +223,8 @@ class ExportBookService : BaseService(), KoinComponent {
                 waitExportBooks.remove(bookUrl)
                 currentExportSettings = exportConfig.settings
                 currentTargetLanguage = exportConfig.targetLanguage
+                currentDefaultReplaceEnabled = exportConfig.defaultReplaceEnabled
+                currentChineseConverterType = exportConfig.chineseConverterType
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
                     book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
@@ -350,7 +364,8 @@ class ExportBookService : BaseService(), KoinComponent {
         source: ContentSource,
         append: (text: String, srcList: ArrayList<SrcData>?) -> Unit
     ) = coroutineScope {
-        val useReplace = currentExportSettings.exportUseReplace && book.getUseReplaceRule()
+        val useReplace = currentExportSettings.exportUseReplace &&
+                book.getUseReplaceRule(currentDefaultReplaceEnabled)
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
         val qy = "${book.name}\n${
             getString(R.string.author_show, book.getRealAuthor())
@@ -624,7 +639,8 @@ class ExportBookService : BaseService(), KoinComponent {
         source: ContentSource = ContentSource.Original
     ) = coroutineScope {
         //正文
-        val useReplace = currentExportSettings.exportUseReplace && book.getUseReplaceRule()
+        val useReplace = currentExportSettings.exportUseReplace &&
+                book.getUseReplaceRule(currentDefaultReplaceEnabled)
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
         val threads = if (currentExportSettings.parallelExportBook) {
             AppConst.MAX_THREAD
@@ -669,7 +685,8 @@ class ExportBookService : BaseService(), KoinComponent {
                 isVip = false
                 getDisplayTitle(
                     contentProcessor.getTitleReplaceRules(),
-                    useReplace = useReplace
+                    useReplace = useReplace,
+                    chineseConverterType = currentChineseConverterType,
                 )
             }
             val chapterResource = ResourceUtil.createChapterResource(
@@ -819,7 +836,8 @@ class ExportBookService : BaseService(), KoinComponent {
             updateProgress: (chapterList: MutableList<BookChapter>, index: Int) -> Unit
         ) {
             //正文
-            val useReplace = currentExportSettings.exportUseReplace && book.getUseReplaceRule()
+            val useReplace = currentExportSettings.exportUseReplace &&
+                    book.getUseReplaceRule(currentDefaultReplaceEnabled)
             val contentProcessor = ContentProcessor.get(book.name, book.origin)
             var chapterList: MutableList<BookChapter> = ArrayList()
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEachIndexed { index, chapter ->
@@ -863,7 +881,8 @@ class ExportBookService : BaseService(), KoinComponent {
                         isVip = false
                         getDisplayTitle(
                             contentProcessor.getTitleReplaceRules(),
-                            useReplace = useReplace
+                            useReplace = useReplace,
+                            chineseConverterType = currentChineseConverterType,
                         )
                     }
                     epubBook.addSection(

@@ -15,8 +15,8 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadSessionState
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ProvideThemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.ThemeResolver
@@ -96,6 +96,7 @@ private fun rememberCustomReadMenuTheme(
     isAppDark: Boolean,
     paletteStyle: String,
 ): ThemeOverrideState {
+    val themeSettings = LocalAppUiConfiguration.current.theme
     val menuBackgroundColor = remember(
         styleConfig,
         preferences.readMenuBgColor,
@@ -146,6 +147,8 @@ private fun rememberCustomReadMenuTheme(
         containerColor = null,
         isDark = isAppDark,
         paletteStyle = paletteStyle,
+        materialVersion = themeSettings.materialVersion,
+        defaultPaletteStyle = themeSettings.paletteStyle,
     )
 }
 
@@ -157,13 +160,24 @@ private fun rememberCustomReadMenuThemeOverride(
     isDark: Boolean,
     paletteStyle: String,
 ): ThemeOverrideState {
-    return remember(accentColor, menuBackgroundColor, menuContainerColor, isDark, paletteStyle) {
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    return remember(
+        accentColor,
+        menuBackgroundColor,
+        menuContainerColor,
+        isDark,
+        paletteStyle,
+        themeSettings.materialVersion,
+        themeSettings.paletteStyle,
+    ) {
         buildReadThemeOverride(
             seedColor = accentColor,
             backgroundColor = null,
             containerColor = null,
             isDark = isDark,
             paletteStyle = paletteStyle,
+            materialVersion = themeSettings.materialVersion,
+            defaultPaletteStyle = themeSettings.paletteStyle,
         ).let { base ->
             base.copy(
                 colorScheme = base.colorScheme.withCustomReadMenuColors(
@@ -185,6 +199,7 @@ private fun rememberReadThemeOverride(
     deriveDarkFromColor: Boolean = true,
     paletteStyle: String = "",
 ): ThemeOverrideState? {
+    val themeSettings = LocalAppUiConfiguration.current.theme
     val isDark = remember(backgroundColor, containerColor, fallbackDark, deriveDarkFromColor) {
         if (deriveDarkFromColor) {
             (containerColor ?: backgroundColor)?.let { it.luminance() < 0.5f } ?: fallbackDark
@@ -192,13 +207,23 @@ private fun rememberReadThemeOverride(
             fallbackDark
         }
     }
-    return remember(seedColor, backgroundColor, containerColor, isDark, paletteStyle) {
+    return remember(
+        seedColor,
+        backgroundColor,
+        containerColor,
+        isDark,
+        paletteStyle,
+        themeSettings.materialVersion,
+        themeSettings.paletteStyle,
+    ) {
         buildReadThemeOverride(
             seedColor = seedColor,
             backgroundColor = backgroundColor,
             containerColor = containerColor,
             isDark = isDark,
             paletteStyle = paletteStyle,
+            materialVersion = themeSettings.materialVersion,
+            defaultPaletteStyle = themeSettings.paletteStyle,
         )
     }
 }
@@ -209,12 +234,14 @@ private fun buildReadThemeOverride(
     containerColor: Color?,
     isDark: Boolean,
     paletteStyle: String = "",
+    materialVersion: String,
+    defaultPaletteStyle: String,
 ): ThemeOverrideState {
-    val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(ThemeConfig.materialVersion)
+    val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(materialVersion)
     val resolvedPaletteStyle = paletteStyle
         .takeIf { it.isNotBlank() }
         ?.let { ThemeResolver.resolvePaletteStyle(it) }
-        ?: ThemeResolver.resolvePaletteStyle(ThemeConfig.paletteStyle)
+        ?: ThemeResolver.resolvePaletteStyle(defaultPaletteStyle)
     val base = buildThemeOverrideState(
         seedColor = seedColor,
         isDark = isDark,

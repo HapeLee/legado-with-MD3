@@ -18,6 +18,7 @@ import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.AudioPlayService
@@ -374,7 +375,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                 appDb.bookChapterDao.getChapter(book.bookUrl, book.durChapterIndex)?.let {
                     book.durChapterTitle = it.getDisplayTitle(
                         ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
-                        book.getUseReplaceRule()
+                        book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                        chineseConverterType = AppConfig.chineseConverterType,
                     )
                     SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
                 }

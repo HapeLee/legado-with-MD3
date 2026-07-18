@@ -1,322 +1,113 @@
 package io.legado.app.ui.config.readConfig
 
-import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.BuildConfig
+import io.legado.app.constant.PreferKey
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.compatDsBoolean
+import io.legado.app.help.config.compatDsInt
+import io.legado.app.help.config.compatDsString
+import io.legado.app.utils.isNightMode
+import io.legado.app.utils.sysConfiguration
+import org.koin.core.context.GlobalContext
 
 /**
- * 阅读配置门面
+ * 已废弃的同步只读阅读配置门面。
  *
- * 代理到子配置对象，保持向后兼容。
- * 子配置按职责拆分为：
- * - [ReadRenderConfig]  渲染/布局
- * - [ReadMenuConfig]    菜单/标题栏/进度条/点击区域
- * - [ReadInteractionConfig] 按键/触控交互
- * - [ReadTtsConfig]     TTS/朗读/音频
- * - [ReadDataConfig]    数据同步/缓存/屏幕
- *
- * 注意：textFullJustify、textBottomJustify、useZhLayout、readBodyToLh、
- * hideStatusBar、hideNavigationBar、showBrightnessView、brightnessVwPos、
- * readBrightness、brightnessAuto、readSliderMode、readMenuBlurAlpha
- * 已在 [ReadBookConfig] 中定义，此处不重复。
+ * 新代码应注入对应 Gateway；此对象只服务尚未迁移的 View、渲染器与启动路径。
  */
+@Deprecated("使用 ReadSettingsGateway / ReadAloudSettingsGateway.currentSettings")
 object ReadConfig {
+    private val read get() = GlobalContext.get().get<ReadSettingsGateway>().currentSettings
+    private val aloud get() = GlobalContext.get().get<ReadAloudSettingsGateway>().currentSettings
+    private val backup get() = GlobalContext.get().get<BackupSettingsGateway>().currentSettings
+    private val cache get() = GlobalContext.get().get<DownloadCacheSettingsGateway>().currentSettings
+    private val other get() = GlobalContext.get().get<OtherSettingsGateway>().currentSettings
+    private val shell get() = GlobalContext.get().get<AppShellSettingsGateway>().currentSettings
+    private val theme get() = GlobalContext.get().get<ThemeSettingsGateway>().currentSettings
+    private val preferences get() = AppConfigStore.preferences
 
-    // ── 渲染 ──
-
-    val isEInkMode get() = ReadRenderConfig.isEInkMode
-    var isNightTheme
-        get() = ReadRenderConfig.isNightTheme
-        set(value) { ReadRenderConfig.isNightTheme = value }
-    val enableReview get() = ReadRenderConfig.enableReview
-    var useAntiAlias
-        get() = ReadRenderConfig.useAntiAlias
-        set(value) { ReadRenderConfig.useAntiAlias = value }
-    var systemTypefaces
-        get() = ReadRenderConfig.systemTypefaces
-        set(value) { ReadRenderConfig.systemTypefaces = value }
-    var doubleHorizontalPage
-        get() = ReadRenderConfig.doubleHorizontalPage
-        set(value) { ReadRenderConfig.doubleHorizontalPage = value }
-    var adaptSpecialStyle
-        get() = ReadRenderConfig.adaptSpecialStyle
-        set(value) { ReadRenderConfig.adaptSpecialStyle = value }
-    var useUnderline
-        get() = ReadRenderConfig.useUnderline
-        set(value) { ReadRenderConfig.useUnderline = value }
-    var optimizeRender
-        get() = ReadRenderConfig.optimizeRender
-        set(value) { ReadRenderConfig.optimizeRender = value }
-    var noAnimScrollPage
-        get() = ReadRenderConfig.noAnimScrollPage
-        set(value) { ReadRenderConfig.noAnimScrollPage = value }
-    var paddingDisplayCutouts
-        get() = ReadRenderConfig.paddingDisplayCutouts
-        set(value) { ReadRenderConfig.paddingDisplayCutouts = value }
-    var pageTouchSlop
-        get() = ReadRenderConfig.pageTouchSlop
-        set(value) { ReadRenderConfig.pageTouchSlop = value }
-    var selectText
-        get() = ReadRenderConfig.selectText
-        set(value) { ReadRenderConfig.selectText = value }
-    var clickImgWay
-        get() = ReadRenderConfig.clickImgWay
-        set(value) { ReadRenderConfig.clickImgWay = value }
-    var chineseConverterType
-        get() = ReadRenderConfig.chineseConverterType
-        set(value) { ReadRenderConfig.chineseConverterType = value }
-
-    // ── 菜单 ──
-
-    var titleBarMode
-        get() = ReadMenuConfig.titleBarMode
-        set(value) { ReadMenuConfig.titleBarMode = value }
-    var menuAlpha
-        get() = ReadMenuConfig.menuAlpha
-        set(value) { ReadMenuConfig.menuAlpha = value }
-    var readBarStyleFollowPage
-        get() = ReadMenuConfig.readBarStyleFollowPage
-        set(value) { ReadMenuConfig.readBarStyleFollowPage = value }
-    var readBarStyle
-        get() = ReadMenuConfig.readBarStyle
-        set(value) { ReadMenuConfig.readBarStyle = value }
-    var progressBarBehavior
-        get() = ReadMenuConfig.progressBarBehavior
-        set(value) { ReadMenuConfig.progressBarBehavior = value }
-    var expandTextMenu
-        get() = ReadMenuConfig.expandTextMenu
-        set(value) { ReadMenuConfig.expandTextMenu = value }
-    var showSelectMenuIcon
-        get() = ReadMenuConfig.showSelectMenuIcon
-        set(value) { ReadMenuConfig.showSelectMenuIcon = value }
-    var textSelectMenuConfig
-        get() = ReadMenuConfig.textSelectMenuConfig
-        set(value) { ReadMenuConfig.textSelectMenuConfig = value }
-    var showReadTitleAddition
-        get() = ReadMenuConfig.showReadTitleAddition
-        set(value) { ReadMenuConfig.showReadTitleAddition = value }
-    var showMenuIcon
-        get() = ReadMenuConfig.showMenuIcon
-        set(value) { ReadMenuConfig.showMenuIcon = value }
-    var clickActionTL
-        get() = ReadMenuConfig.clickActionTL
-        set(value) { ReadMenuConfig.clickActionTL = value }
-    var clickActionTC
-        get() = ReadMenuConfig.clickActionTC
-        set(value) { ReadMenuConfig.clickActionTC = value }
-    var clickActionTR
-        get() = ReadMenuConfig.clickActionTR
-        set(value) { ReadMenuConfig.clickActionTR = value }
-    var clickActionML
-        get() = ReadMenuConfig.clickActionML
-        set(value) { ReadMenuConfig.clickActionML = value }
-    var clickActionMC
-        get() = ReadMenuConfig.clickActionMC
-        set(value) { ReadMenuConfig.clickActionMC = value }
-    var clickActionMR
-        get() = ReadMenuConfig.clickActionMR
-        set(value) { ReadMenuConfig.clickActionMR = value }
-    var clickActionBL
-        get() = ReadMenuConfig.clickActionBL
-        set(value) { ReadMenuConfig.clickActionBL = value }
-    var clickActionBC
-        get() = ReadMenuConfig.clickActionBC
-        set(value) { ReadMenuConfig.clickActionBC = value }
-    var clickActionBR
-        get() = ReadMenuConfig.clickActionBR
-        set(value) { ReadMenuConfig.clickActionBR = value }
-    fun hasMenuClickArea() = ReadMenuConfig.hasMenuClickArea()
-    fun detectClickArea() = ReadMenuConfig.detectClickArea()
-
-    // ── 交互 ──
-
-    var mouseWheelPage
-        get() = ReadInteractionConfig.mouseWheelPage
-        set(value) { ReadInteractionConfig.mouseWheelPage = value }
-    var volumeKeyPage
-        get() = ReadInteractionConfig.volumeKeyPage
-        set(value) { ReadInteractionConfig.volumeKeyPage = value }
-    var volumeKeyPageOnPlay
-        get() = ReadInteractionConfig.volumeKeyPageOnPlay
-        set(value) { ReadInteractionConfig.volumeKeyPageOnPlay = value }
-    var keyPageOnLongPress
-        get() = ReadInteractionConfig.keyPageOnLongPress
-        set(value) { ReadInteractionConfig.keyPageOnLongPress = value }
-    var sliderVibrator
-        get() = ReadInteractionConfig.sliderVibrator
-        set(value) { ReadInteractionConfig.sliderVibrator = value }
-    var selectVibrator
-        get() = ReadInteractionConfig.selectVibrator
-        set(value) { ReadInteractionConfig.selectVibrator = value }
-    var disableReturnKey
-        get() = ReadInteractionConfig.disableReturnKey
-        set(value) { ReadInteractionConfig.disableReturnKey = value }
-    var prevKeys
-        get() = ReadInteractionConfig.prevKeys
-        set(value) { ReadInteractionConfig.prevKeys = value }
-    var nextKeys
-        get() = ReadInteractionConfig.nextKeys
-        set(value) { ReadInteractionConfig.nextKeys = value }
-
-    // ── TTS ──
-
-    val speechRatePlay get() = ReadTtsConfig.speechRatePlay
-    var ttsEngine
-        get() = ReadTtsConfig.ttsEngine
-        set(value) { ReadTtsConfig.ttsEngine = value }
-    var ttsFollowSys
-        get() = ReadTtsConfig.ttsFollowSys
-        set(value) { ReadTtsConfig.ttsFollowSys = value }
-    var ttsSpeechRate
-        get() = ReadTtsConfig.ttsSpeechRate
-        set(value) { ReadTtsConfig.ttsSpeechRate = value }
-    var ttsTimer
-        get() = ReadTtsConfig.ttsTimer
-        set(value) { ReadTtsConfig.ttsTimer = value }
-    var ttsParagraphInterval
-        get() = ReadTtsConfig.ttsParagraphInterval
-        set(value) { ReadTtsConfig.ttsParagraphInterval = value }
-    var ignoreAudioFocus
-        get() = ReadTtsConfig.ignoreAudioFocus
-        set(value) { ReadTtsConfig.ignoreAudioFocus = value }
-    var pauseReadAloudWhilePhoneCalls
-        get() = ReadTtsConfig.pauseReadAloudWhilePhoneCalls
-        set(value) { ReadTtsConfig.pauseReadAloudWhilePhoneCalls = value }
-    var readAloudWakeLock
-        get() = ReadTtsConfig.readAloudWakeLock
-        set(value) { ReadTtsConfig.readAloudWakeLock = value }
-    var showReadAloudCapsule
-        get() = ReadTtsConfig.showReadAloudCapsule
-        set(value) { ReadTtsConfig.showReadAloudCapsule = value }
-    var mediaButtonPerNext
-        get() = ReadTtsConfig.mediaButtonPerNext
-        set(value) { ReadTtsConfig.mediaButtonPerNext = value }
-    var readAloudByPage
-        get() = ReadTtsConfig.readAloudByPage
-        set(value) { ReadTtsConfig.readAloudByPage = value }
-    var systemMediaControlCompatibilityChange
-        get() = ReadTtsConfig.systemMediaControlCompatibilityChange
-        set(value) { ReadTtsConfig.systemMediaControlCompatibilityChange = value }
-    var streamReadAloudAudio
-        get() = ReadTtsConfig.streamReadAloudAudio
-        set(value) { ReadTtsConfig.streamReadAloudAudio = value }
-    var contentSelectSpeakMod
-        get() = ReadTtsConfig.contentSelectSpeakMod
-        set(value) { ReadTtsConfig.contentSelectSpeakMod = value }
-    var speechAnalysisMode
-        get() = ReadTtsConfig.speechAnalysisMode
-        set(value) { ReadTtsConfig.speechAnalysisMode = value }
-    var useMultiSpeaker
-        get() = ReadTtsConfig.useMultiSpeaker
-        set(value) { ReadTtsConfig.useMultiSpeaker = value }
-    var audioPreDownloadNum
-        get() = ReadTtsConfig.audioPreDownloadNum
-        set(value) { ReadTtsConfig.audioPreDownloadNum = value }
-    var audioCacheCleanTimeOrgin
-        get() = ReadTtsConfig.audioCacheCleanTimeOrgin
-        set(value) { ReadTtsConfig.audioCacheCleanTimeOrgin = value }
-    val audioCacheCleanTime get() = ReadTtsConfig.audioCacheCleanTime
-
-    // ── 数据/屏幕 ──
-
-    var syncBookProgress
-        get() = ReadDataConfig.syncBookProgress
-        set(value) { ReadDataConfig.syncBookProgress = value }
-    var syncBookProgressPlus
-        get() = ReadDataConfig.syncBookProgressPlus
-        set(value) { ReadDataConfig.syncBookProgressPlus = value }
-    var autoChangeSource
-        get() = ReadDataConfig.autoChangeSource
-        set(value) { ReadDataConfig.autoChangeSource = value }
-    var autoSuggestDayNight
-        get() = ReadDataConfig.autoSuggestDayNight
-        set(value) { ReadDataConfig.autoSuggestDayNight = value }
-    var defaultSourceChangeAll
-        get() = ReadDataConfig.defaultSourceChangeAll
-        set(value) { ReadDataConfig.defaultSourceChangeAll = value }
-    var readUrlInBrowser
-        get() = ReadDataConfig.readUrlInBrowser
-        set(value) { ReadDataConfig.readUrlInBrowser = value }
-    var tocUiUseReplace
-        get() = ReadDataConfig.tocUiUseReplace
-        set(value) { ReadDataConfig.tocUiUseReplace = value }
-    var tocCountWords
-        get() = ReadDataConfig.tocCountWords
-        set(value) { ReadDataConfig.tocCountWords = value }
-    var preDownloadNum
-        get() = ReadDataConfig.preDownloadNum
-        set(value) { ReadDataConfig.preDownloadNum = value }
-    var imageRetainNum
-        get() = ReadDataConfig.imageRetainNum
-        set(value) { ReadDataConfig.imageRetainNum = value }
-    var keepLight
-        get() = ReadDataConfig.keepLight
-        set(value) { ReadDataConfig.keepLight = value }
-    var screenOrientation
-        get() = ReadDataConfig.screenOrientation
-        set(value) { ReadDataConfig.screenOrientation = value }
-
-    // ── 同步 ──
-
-    /**
-     * 从 [ReadPreferences] 批量同步到各子配置。
-     *
-     * 注意：textFullJustify、textBottomJustify、useZhLayout、readBodyToLh、
-     * hideStatusBar、hideNavigationBar、showBrightnessView、brightnessVwPos、
-     * readBrightness、brightnessAuto、readSliderMode、readMenuBlurAlpha
-     * 由 [ReadBookConfig] 的 prefDelegate 自动同步，此处不处理。
-     */
-    fun syncReadPreferences(preferences: ReadPreferences) {
-        // 渲染
-        ReadRenderConfig.apply {
-            optimizeRender = preferences.optimizeRender
-            adaptSpecialStyle = preferences.adaptSpecialStyle
-            useUnderline = preferences.useUnderline
-            chineseConverterType = preferences.chineseConverterType
-            doubleHorizontalPage = preferences.doubleHorizontalPage
-            noAnimScrollPage = preferences.noAnimScrollPage
-            paddingDisplayCutouts = preferences.paddingDisplayCutouts
-            pageTouchSlop = preferences.pageTouchSlop
-            selectText = preferences.selectText
-            clickImgWay = preferences.clickImgWay
+    val isEInkMode get() = theme.appTheme == "4"
+    val isNightTheme: Boolean
+        get() = when (shell.themeMode) {
+            "1" -> false
+            "2" -> true
+            else -> sysConfiguration.isNightMode
         }
-        // 菜单
-        ReadMenuConfig.apply {
-            titleBarMode = preferences.titleBarMode
-            readBarStyleFollowPage = preferences.readBarStyleFollowPage
-            readBarStyle = preferences.readBarStyle
-            progressBarBehavior = preferences.progressBarBehavior
-            expandTextMenu = preferences.expandTextMenu
-            showSelectMenuIcon = preferences.showSelectMenuIcon
-            showReadTitleAddition = preferences.showReadTitleAddition
-            showMenuIcon = preferences.showMenuIcon
-            clickActionTL = preferences.clickActionTL
-            clickActionTC = preferences.clickActionTC
-            clickActionTR = preferences.clickActionTR
-            clickActionML = preferences.clickActionML
-            clickActionMC = preferences.clickActionMC
-            clickActionMR = preferences.clickActionMR
-            clickActionBL = preferences.clickActionBL
-            clickActionBC = preferences.clickActionBC
-            clickActionBR = preferences.clickActionBR
-        }
-        // 交互
-        ReadInteractionConfig.apply {
-            mouseWheelPage = preferences.mouseWheelPage
-            volumeKeyPage = preferences.volumeKeyPage
-            volumeKeyPageOnPlay = preferences.volumeKeyPageOnPlay
-            keyPageOnLongPress = preferences.keyPageOnLongPress
-            sliderVibrator = preferences.sliderVibrator
-            selectVibrator = preferences.selectVibrator
-            disableReturnKey = preferences.disableReturnKey
-        }
-        // 数据/屏幕
-        ReadDataConfig.apply {
-            keepLight = preferences.keepLight
-            screenOrientation = preferences.screenOrientation
-            autoChangeSource = preferences.autoChangeSource
-            autoSuggestDayNight = preferences.autoSuggestDayNight
-            defaultSourceChangeAll = preferences.defaultSourceChangeAll
-            tocUiUseReplace = preferences.tocUiUseReplace
-            tocCountWords = preferences.tocCountWords
-        }
-    }
+    val enableReview get() = BuildConfig.DEBUG && (preferences.compatDsBoolean(PreferKey.enableReview) ?: false)
+    val useAntiAlias get() = other.antiAlias
+    val systemTypefaces get() = read.systemTypefaces
+    val doubleHorizontalPage get() = read.doubleHorizontalPage
+    val adaptSpecialStyle get() = read.adaptSpecialStyle
+    val useUnderline get() = read.useUnderline
+    val optimizeRender get() = read.optimizeRender
+    val noAnimScrollPage get() = read.noAnimScrollPage
+    val paddingDisplayCutouts get() = read.paddingDisplayCutouts
+    val pageTouchSlop get() = read.pageTouchSlop
+    val selectText get() = read.selectText
+    val clickImgWay get() = read.clickImgWay
+    val chineseConverterType get() = read.chineseConverterType
+
+    val titleBarMode get() = read.titleBarMode
+    val readBarStyleFollowPage get() = read.readBarStyleFollowPage
+    val readBarStyle get() = read.readBarStyle
+    val progressBarBehavior get() = read.progressBarBehavior
+    val showSelectMenuIcon get() = read.showSelectMenuIcon
+    val textSelectMenuConfig get() = read.textSelectMenuConfig
+    val showReadTitleAddition get() = read.showReadTitleAddition
+    val clickActionTL get() = read.clickActionTL
+    val clickActionTC get() = read.clickActionTC
+    val clickActionTR get() = read.clickActionTR
+    val clickActionML get() = read.clickActionML
+    val clickActionMC get() = read.clickActionMC
+    val clickActionMR get() = read.clickActionMR
+    val clickActionBL get() = read.clickActionBL
+    val clickActionBC get() = read.clickActionBC
+    val clickActionBR get() = read.clickActionBR
+
+    val mouseWheelPage get() = read.mouseWheelPage
+    val volumeKeyPage get() = read.volumeKeyPage
+    val volumeKeyPageOnPlay get() = read.volumeKeyPageOnPlay
+    val keyPageOnLongPress get() = read.keyPageOnLongPress
+    val sliderVibrator get() = read.sliderVibrator
+    val selectVibrator get() = read.selectVibrator
+
+    val speechRatePlay get() = if (aloud.ttsFollowSys) 5 else aloud.ttsSpeechRate
+    val ttsEngine get() = aloud.ttsEngine
+    val ttsFollowSys get() = aloud.ttsFollowSys
+    val ttsSpeechRate get() = aloud.ttsSpeechRate
+    val ttsTimer get() = aloud.ttsTimer
+    val ttsParagraphInterval get() = aloud.ttsParagraphInterval
+    val ignoreAudioFocus get() = aloud.ignoreAudioFocus
+    val pauseReadAloudWhilePhoneCalls get() = aloud.pauseReadAloudWhilePhoneCalls
+    val readAloudWakeLock get() = aloud.readAloudWakeLock
+    val mediaButtonPerNext get() = aloud.mediaButtonPerNext
+    val readAloudByPage get() = aloud.readAloudByPage
+    val systemMediaControlCompatibilityChange get() = aloud.systemMediaControlCompatibilityChange
+    val streamReadAloudAudio get() = aloud.streamReadAloudAudio
+    val contentSelectSpeakMod get() = aloud.contentSelectSpeakMode
+    val audioPreDownloadNum get() = aloud.audioPreDownloadNum
+    val audioCacheCleanTime get() = aloud.audioCacheCleanTime * 60 * 1000L
+    val speechAnalysisMode get() = aloud.speechAnalysisMode
+    val useMultiSpeaker get() = aloud.useMultiSpeaker
+    val defaultInterface get() = aloud.defaultInterface
+
+    val syncBookProgress get() = backup.syncBookProgress
+    val syncBookProgressPlus get() = backup.syncBookProgressPlus
+    val autoChangeSource get() = read.autoChangeSource
+    val autoSuggestDayNight get() = read.autoSuggestDayNight
+    val defaultSourceChangeAll get() = read.defaultSourceChangeAll
+    val readUrlInBrowser get() = read.readUrlInBrowser
+    val tocUiUseReplace get() = read.tocUiUseReplace
+    val tocCountWords get() = read.tocCountWords
+    val preDownloadNum get() = read.preDownloadNum
+    val imageRetainNum get() = cache.imageRetainNum
+    val keepLight get() = read.keepLight
+    val screenOrientation get() = read.screenOrientation
 }

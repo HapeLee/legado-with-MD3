@@ -19,7 +19,6 @@ import io.legado.app.help.book.getFolderNameNoCache
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.GSON
@@ -201,7 +200,7 @@ data class Book(
         config.useReplaceRule = useReplaceRule
     }
 
-    fun getUseReplaceRule(): Boolean {
+    fun getUseReplaceRule(defaultReplaceEnabled: Boolean): Boolean {
         val useReplaceRule = config.useReplaceRule
         if (useReplaceRule != null) {
             return useReplaceRule
@@ -210,7 +209,7 @@ data class Book(
         if (isImage || isEpub) {
             return false
         }
-        return AppConfig.replaceEnableDefault
+        return defaultReplaceEnabled
     }
 
     fun setReSegment(reSegment: Boolean) {
@@ -355,12 +354,18 @@ data class Book(
     /**
      * 迁移旧的书籍的一些信息到新的书籍中
      */
-    fun migrateTo(newBook: Book, toc: List<BookChapter>): Book {
+    fun migrateTo(
+        newBook: Book,
+        toc: List<BookChapter>,
+        defaultReplaceEnabled: Boolean,
+        chineseConverterType: Int,
+    ): Book {
         newBook.durChapterIndex = BookHelp
             .getDurChapter(durChapterIndex, durChapterTitle, toc, totalChapterNum)
         newBook.durChapterTitle = toc[newBook.durChapterIndex].getDisplayTitle(
             ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules(),
-            getUseReplaceRule()
+            getUseReplaceRule(defaultReplaceEnabled),
+            chineseConverterType = chineseConverterType,
         )
         newBook.durChapterPos = durChapterPos
         newBook.durChapterTime = durChapterTime

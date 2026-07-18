@@ -25,4 +25,6 @@ sealed interface ReadAloudSettingsUpdate {
     data class Timer(val value: Int) : ReadAloudSettingsUpdate
     data class FollowSystem(val value: Boolean) : ReadAloudSettingsUpdate
     data class SpeechRate(val value: Int) : ReadAloudSettingsUpdate
+    data class ContentSelectSpeakMode(val value: Int) : ReadAloudSettingsUpdate
+    data class AudioPreDownloadNum(val value: Int) : ReadAloudSettingsUpdate
 }
