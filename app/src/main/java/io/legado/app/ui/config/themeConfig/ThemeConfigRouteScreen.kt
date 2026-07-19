@@ -17,10 +17,9 @@ import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
-import java.io.File
-import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
+import java.io.File
 
 @Composable
 fun ThemeConfigRouteScreen(
@@ -88,31 +87,6 @@ fun ThemeConfigRouteScreen(
                 is ThemeConfigEffect.OpenBackgroundImage -> {
                     pendingBackgroundDark = effect.dark
                     backgroundImageLauncher.launch("image/*")
-                }
-                is ThemeConfigEffect.OpenTimePicker -> {
-                    val parts = effect.currentValue.split(":")
-                    val defaultHour = if (effect.field == ThemeTimeField.EyeProtectionStart) 22 else 7
-                    val hour = parts.getOrNull(0)?.toIntOrNull() ?: defaultHour
-                    val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                    android.app.TimePickerDialog(
-                        context,
-                        { _, selectedHour, selectedMinute ->
-                            viewModel.onIntent(
-                                ThemeConfigIntent.SetTime(
-                                    effect.field,
-                                    String.format(
-                                        Locale.US,
-                                        "%02d:%02d",
-                                        selectedHour.coerceIn(0, 23),
-                                        selectedMinute.coerceIn(0, 59),
-                                    ),
-                                )
-                            )
-                        },
-                        hour.coerceIn(0, 23),
-                        minute.coerceIn(0, 59),
-                        true,
-                    ).show()
                 }
                 is ThemeConfigEffect.ShowToast -> context.toastOnUi(effect.stringRes)
             }

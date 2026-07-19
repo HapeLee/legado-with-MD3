@@ -1457,6 +1457,34 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ToggleDayNight -> toggleDayNight()
+            is ReadBookIntent.ToggleEyeProtection -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update(
+                        ReadSettingsUpdate.EyeProtectionEnabled(
+                            !_readPreferences.value.eyeProtectionEnabled
+                        )
+                    )
+                }
+            }
+            is ReadBookIntent.EyeProtectionEnabledChanged ->
+                updateEyeProtection(ReadSettingsUpdate.EyeProtectionEnabled(intent.value))
+            is ReadBookIntent.EyeProtectionIntensityChanged ->
+                updateEyeProtection(ReadSettingsUpdate.EyeProtectionIntensity(intent.value))
+            is ReadBookIntent.EyeProtectionAutoNightChanged -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update(ReadSettingsUpdate.EyeProtectionAutoNight(intent.value))
+                    if (intent.value) {
+                        EyeProtection.syncEnabledForNight(
+                            isNight = isNightTheme(),
+                            autoNight = true,
+                        )?.let { enabled ->
+                            readSettingsRepository.update(
+                                ReadSettingsUpdate.EyeProtectionEnabled(enabled)
+                            )
+                        }
+                    }
+                }
+            }
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
                 when (readAloudSettingsRepository.currentSettings.contentSelectSpeakMode) {
@@ -5890,6 +5918,12 @@ class ReadBookViewModel(
         val nextMode = if (isNightTheme()) "1" else "2"
         viewModelScope.launch {
             appShellSettingsGateway.update(AppShellSettingsUpdate.ThemeMode(nextMode))
+            EyeProtection.syncEnabledForNight(
+                isNight = nextMode == "1",
+                autoNight = _readPreferences.value.eyeProtectionAutoNight,
+            )?.let { enabled ->
+                readSettingsRepository.update(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
+            }
         }
         _uiState.update {
             val newActiveReminder = if (it.activeReminder?.type is ReminderType.DayNightReminder) {
@@ -5913,6 +5947,10 @@ class ReadBookViewModel(
                 ConfigUpdateAction.UpdateSystemUi
             )
         ))
+    }
+
+    private fun updateEyeProtection(update: ReadSettingsUpdate) {
+        viewModelScope.launch { readSettingsRepository.update(update) }
     }
 
     private fun applyReadStyleBackgroundImage(uri: Uri) {
@@ -6470,7 +6508,6 @@ private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "setting",
 )
 private val DEFAULT_AI_TOOL_BUTTON_IDS = setOf("ai_summary", "ai_rewrite")
-
 private const val DARK_LUX_THRESHOLD = 8f
 private const val BRIGHT_LUX_THRESHOLD = 100f
 private const val LIGHT_LUMINANCE_THRESHOLD = 0.35

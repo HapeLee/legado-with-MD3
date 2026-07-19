@@ -261,6 +261,7 @@ fun ReadBookMenuBar(
                 if (state.menuConfig.showTitleBarIcons && state.menuConfig.titleBarIconPosition <= 1) {
                     FloatingIconRow(
                         state = state,
+                        preferences = preferences,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 0) {
                             Alignment.Start
@@ -375,6 +376,7 @@ fun ReadBookMenuBar(
                 ) {
                     FloatingIconRow(
                         state = state,
+                        preferences = preferences,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 2) {
                             Alignment.Start
@@ -670,6 +672,7 @@ private fun ReadBookMenuSurface(
                     ReadBookMenuRoute.Main -> {
                     MenuBottomBar(
                         state = state,
+                        eyeProtectionEnabled = preferences.eyeProtectionEnabled,
                         colors = colors,
                         onIntent = onIntent,
                         context = context,
@@ -1930,6 +1933,7 @@ private fun CharsetActionButton(
 @Composable
 private fun FloatingIconRow(
     state: ReadBookUiState,
+    preferences: ReadPreferences,
     colors: ReadMenuColors,
     alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
     onIntent: (ReadBookIntent) -> Unit,
@@ -1942,8 +1946,14 @@ private fun FloatingIconRow(
         state.isAutoPage,
         state.translationMode,
         state.useReplaceRule,
+        preferences.eyeProtectionEnabled,
     ) {
-        loadFloatingIcons(context, state, onIntent)
+        loadFloatingIcons(
+            context = context,
+            state = state,
+            preferences = preferences,
+            onIntent = onIntent,
+        )
     }
 
     if (titleBarIcons.isEmpty()) return
@@ -2403,6 +2413,7 @@ private fun SearchMenuActionButton(
 @Composable
 private fun MenuBottomBar(
     state: ReadBookUiState,
+    eyeProtectionEnabled: Boolean,
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     context: Context,
@@ -2563,8 +2574,14 @@ private fun MenuBottomBar(
             state.isAutoPage,
             state.translationMode,
             state.useReplaceRule,
+            eyeProtectionEnabled,
         ) {
-            loadToolButtons(context, state, onIntent)
+            loadToolButtons(
+                context = context,
+                state = state,
+                eyeProtectionEnabled = eyeProtectionEnabled,
+                onIntent = onIntent,
+            )
         }
         val itemsPerRow = state.menuConfig.readMenuIconItemsPerRow
         val rowCount = state.menuConfig.readMenuIconRowCount
@@ -3047,6 +3064,7 @@ private data class ToolButtonDef(
 private fun loadToolButtons(
     context: Context,
     state: ReadBookUiState,
+    eyeProtectionEnabled: Boolean,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<ToolButtonDef> {
     val customIcons = state.menuConfig.readMenuCustomIcons
@@ -3086,6 +3104,12 @@ private fun loadToolButtons(
         },
         infoMap.getValue("theme").toButton {
             onIntent(ReadBookIntent.ToggleDayNight)
+        },
+        infoMap.getValue("eye_protection").toButton(
+            isActive = eyeProtectionEnabled,
+            onLongClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EyeProtection)) },
+        ) {
+            onIntent(ReadBookIntent.ToggleEyeProtection)
         },
         infoMap.getValue("prev_chapter").toButton {
             onIntent(ReadBookIntent.PrevChapter)
@@ -3319,6 +3343,7 @@ private data class TitleBarIconDef(
 private fun loadFloatingIcons(
     context: Context,
     state: ReadBookUiState,
+    preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<TitleBarIconDef> {
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
@@ -3337,6 +3362,7 @@ private fun loadFloatingIcons(
         "setting" to { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) },
         "addBookmark" to { onIntent(ReadBookIntent.AddBookmark) },
         "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
+        "eye_protection" to { onIntent(ReadBookIntent.ToggleEyeProtection) },
         "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
         "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
         "replace" to { onIntent(ReadBookIntent.MenuEnableReplace) },
@@ -3359,6 +3385,7 @@ private fun loadFloatingIcons(
         if (state.isAutoPage) add("auto_page")
         if (state.translationMode) add("translate")
         if (state.useReplaceRule) add("replace")
+        if (preferences.eyeProtectionEnabled) add("eye_protection")
     }
 
     return state.menuConfig.titleBarButtons

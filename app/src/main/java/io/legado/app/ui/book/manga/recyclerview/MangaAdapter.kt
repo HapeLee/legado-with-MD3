@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.manga.recyclerview
 
 import android.content.Context
-import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.util.SparseArray
 import android.view.LayoutInflater
@@ -31,6 +30,7 @@ import io.legado.app.ui.book.manga.entities.EpaperTransformation
 import io.legado.app.ui.book.manga.entities.GrayscaleTransformation
 import io.legado.app.ui.book.manga.entities.MangaPage
 import io.legado.app.ui.book.manga.entities.ReaderLoading
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.dpToPx
 
 
@@ -131,10 +131,8 @@ class MangaAdapter(
                 0f, 0f, (255 - mConfig.b) / 255f, 0f, 0f,
                 0f, 0f, 0f, (255 - mConfig.a) / 255f, 0f
             )
-            val epMatrix = io.legado.app.ui.book.read.EyeProtectionHelper.buildColorMatrix()
-            val combined = android.graphics.ColorMatrix(baseMatrix)
-            combined.postConcat(epMatrix)
-            binding.image.colorFilter = ColorMatrixColorFilter(combined)
+
+            binding.image.colorFilter = ColorMatrixColorFilter(baseMatrix)
         }
 
         fun setBackground() {

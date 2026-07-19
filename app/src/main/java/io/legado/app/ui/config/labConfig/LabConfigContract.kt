@@ -11,7 +11,6 @@ data class LabConfigUiState(
 sealed interface LabConfigIntent {
     data class SetEnabled(val value: Boolean) : LabConfigIntent
     data class SetEInkDisplay(val value: Boolean) : LabConfigIntent
-    data class SetEyeProtection(val value: Boolean) : LabConfigIntent
 }
 
 sealed interface LabConfigEffect

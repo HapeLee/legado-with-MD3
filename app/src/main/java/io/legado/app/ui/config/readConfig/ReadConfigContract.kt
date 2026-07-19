@@ -17,6 +17,9 @@ data class ReadConfigUiState(
     val textBottomJustify: Boolean = true,
     val adaptSpecialStyle: Boolean = true,
     val useZhLayout: Boolean = false,
+    val eyeProtectionEnabled: Boolean = false,
+    val eyeProtectionIntensity: Int = 50,
+    val eyeProtectionAutoNight: Boolean = false,
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
     val brightnessAuto: Boolean = true,
@@ -51,6 +54,7 @@ data class ReadConfigUiState(
 sealed interface ReadConfigSheet {
     data object PageKeys : ReadConfigSheet
     data object ClickActions : ReadConfigSheet
+    data object EyeProtection : ReadConfigSheet
 }
 
 sealed interface ReadConfigIntent {
@@ -70,6 +74,10 @@ sealed interface ReadConfigIntent {
     data class TextBottomJustifyChanged(val value: Boolean) : ReadConfigIntent
     data class AdaptSpecialStyleChanged(val value: Boolean) : ReadConfigIntent
     data class UseZhLayoutChanged(val value: Boolean) : ReadConfigIntent
+    data object OpenEyeProtection : ReadConfigIntent
+    data class EyeProtectionEnabledChanged(val value: Boolean) : ReadConfigIntent
+    data class EyeProtectionIntensityChanged(val value: Int) : ReadConfigIntent
+    data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadConfigIntent
     data class ShowBrightnessViewChanged(val value: String) : ReadConfigIntent
     data class BrightnessVwPosChanged(val value: String) : ReadConfigIntent
     data class UseUnderlineChanged(val value: Boolean) : ReadConfigIntent

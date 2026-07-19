@@ -426,6 +426,7 @@ internal val ReadBookButtonIds = listOf(
     "auto_page",
     "catalog",
     "read_aloud",
+    "eye_protection",
     "setting",
     "addBookmark",
     "theme",
@@ -659,6 +660,10 @@ sealed interface ReadBookIntent {
 
     // Day/night toggle
     data object ToggleDayNight : ReadBookIntent
+    data object ToggleEyeProtection : ReadBookIntent
+    data class EyeProtectionEnabledChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionIntensityChanged(val value: Int) : ReadBookIntent
+    data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadBookIntent
 
     // Default font picker (needs Activity for AlertDialog)
     // Text action menu (moved from Activity)
@@ -947,6 +952,7 @@ sealed interface ReadBookSheet {
     data object Charset : ReadBookSheet
     data object SimulatedReading : ReadBookSheet
     data object ToolButtonConfig : ReadBookSheet
+    data object EyeProtection : ReadBookSheet
     data object TitleBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentProcesses : ReadBookSheet

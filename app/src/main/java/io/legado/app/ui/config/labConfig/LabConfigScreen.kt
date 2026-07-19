@@ -83,15 +83,6 @@ fun LabConfigScreen(
                         if (settings.eInkDisplay) {
                             HintText(R.string.lab_eink_display_hint)
                         }
-                        SwitchSettingItem(
-                            title = stringResource(R.string.lab_eye_protection_title),
-                            description = stringResource(R.string.lab_eye_protection_summary),
-                            checked = settings.eyeProtection,
-                            onCheckedChange = { onIntent(LabConfigIntent.SetEyeProtection(it)) },
-                        )
-                        if (settings.eyeProtection) {
-                            HintText(R.string.lab_eye_protection_hint)
-                        }
                     }
                 }
             }

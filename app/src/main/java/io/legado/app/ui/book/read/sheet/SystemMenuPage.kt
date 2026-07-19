@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -888,6 +889,7 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("setting", Icons.Default.Settings, context.getString(R.string.setting)),
     ReadMenuButtonInfo("addBookmark", Icons.Default.Bookmark, context.getString(R.string.bookmark)),
     ReadMenuButtonInfo("theme", Icons.Default.Brightness6, context.getString(R.string.day_night_switch)),
+    ReadMenuButtonInfo("eye_protection", Icons.Default.Visibility, context.getString(R.string.eye_protection)),
     ReadMenuButtonInfo("prev_chapter", Icons.Default.SkipPrevious, context.getString(R.string.previous_chapter)),
     ReadMenuButtonInfo("next_chapter", Icons.Default.SkipNext, context.getString(R.string.next_chapter)),
     ReadMenuButtonInfo("replace", Icons.Default.FindReplace, context.getString(R.string.replace_purify)),

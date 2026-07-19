@@ -146,8 +146,6 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
 
                 ThemeBooleanSetting.DisableSplicedColumnGroupCornerRadius ->
                     PreferKey.disableSplicedColumnGroupCornerRadius to update.value
-                ThemeBooleanSetting.EyeProtectionEnabled -> PreferKey.eyeProtectionEnabled to update.value
-                ThemeBooleanSetting.EyeProtectionSchedule -> PreferKey.eyeProtectionSchedule to update.value
                 ThemeBooleanSetting.ShowRefactorTip ->
                     io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name to update.value
                 ThemeBooleanSetting.EnableCustomTagColors -> PreferKey.enableCustomTagColors to update.value
@@ -182,8 +180,6 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
                     PreferKey.bookInfoDefaultCoverBackground to update.value
                 ThemeStringSetting.BackgroundImageLight -> PreferKey.bgImage to update.value
                 ThemeStringSetting.BackgroundImageDark -> PreferKey.bgImageN to update.value
-                ThemeStringSetting.EyeProtectionStartTime -> PreferKey.eyeProtectionStartTime to update.value
-                ThemeStringSetting.EyeProtectionEndTime -> PreferKey.eyeProtectionEndTime to update.value
                 ThemeStringSetting.CustomTagColorsJson -> PreferKey.customTagColors to update.value
             }
             }
@@ -355,13 +351,11 @@ internal fun CoverSettings.toPrefMap(): Map<String, Any?> = mapOf(
 internal fun Preferences.toLabSettings(): LabSettings = LabSettings(
     enabled = compatDsBoolean(PreferKey.labEnabled) ?: false,
     eInkDisplay = compatDsBoolean(PreferKey.labEInkDisplay) ?: false,
-    eyeProtection = compatDsBoolean(PreferKey.labEyeProtection) ?: false,
 )
 
 internal fun LabSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.labEnabled to enabled,
     PreferKey.labEInkDisplay to eInkDisplay,
-    PreferKey.labEyeProtection to eyeProtection,
 )
 
 internal fun Preferences.toTranslationSettings(): TranslationSettings {
@@ -488,11 +482,6 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     itemDividerWidth = compatDsFloat(PreferKey.itemDividerWidth) ?: 1f,
     itemDividerLength = compatDsFloat(PreferKey.itemDividerLength) ?: 80f,
     itemDividerColor = compatDsInt(PreferKey.itemDividerColor) ?: 0,
-    eyeProtectionEnabled = compatDsBoolean(PreferKey.eyeProtectionEnabled) ?: false,
-    colorTemperature = compatDsInt(PreferKey.colorTemperature) ?: 50,
-    eyeProtectionSchedule = compatDsBoolean(PreferKey.eyeProtectionSchedule) ?: false,
-    eyeProtectionStartTime = compatDsString(PreferKey.eyeProtectionStartTime) ?: "22:00",
-    eyeProtectionEndTime = compatDsString(PreferKey.eyeProtectionEndTime) ?: "07:00",
     showRefactorTip = compatDsBoolean(
         io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name
     ) ?: true,

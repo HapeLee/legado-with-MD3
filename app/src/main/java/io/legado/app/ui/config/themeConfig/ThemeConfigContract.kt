@@ -26,11 +26,6 @@ sealed interface ThemeConfigSheet {
     data object Font : ThemeConfigSheet
 }
 
-enum class ThemeTimeField {
-    EyeProtectionStart,
-    EyeProtectionEnd,
-}
-
 sealed interface ThemeConfigIntent {
     data class UpdateAppShell(val update: AppShellSettingsUpdate) : ThemeConfigIntent
     data class UpdateTheme(val update: ThemeSettingsUpdate) : ThemeConfigIntent
@@ -56,11 +51,6 @@ sealed interface ThemeConfigIntent {
     data object ClearAppFont : ThemeConfigIntent
     data class SetFontFolder(val path: String) : ThemeConfigIntent
     data object RequestFontFolder : ThemeConfigIntent
-    data class RequestTimePicker(
-        val field: ThemeTimeField,
-        val currentValue: String,
-    ) : ThemeConfigIntent
-    data class SetTime(val field: ThemeTimeField, val value: String) : ThemeConfigIntent
     data object DismissRefactorTip : ThemeConfigIntent
 }
 
@@ -71,9 +61,5 @@ sealed interface ThemeConfigEffect {
     data object OpenFontFolder : ThemeConfigEffect
     data class OpenNavigationIcon(val destination: String) : ThemeConfigEffect
     data class OpenBackgroundImage(val dark: Boolean) : ThemeConfigEffect
-    data class OpenTimePicker(
-        val field: ThemeTimeField,
-        val currentValue: String,
-    ) : ThemeConfigEffect
     data class ShowToast(val stringRes: Int) : ThemeConfigEffect
 }
