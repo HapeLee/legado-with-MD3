@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -51,6 +52,7 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
@@ -131,6 +133,8 @@ fun ReadBookRouteScreen(
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val appIsDark = LegadoTheme.isDark
+    var readerIsDark by remember(controller) { mutableStateOf(appIsDark) }
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -140,6 +144,17 @@ fun ReadBookRouteScreen(
                     !state.menuConfig.readMenuFloatingBottomBar &&
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
+
+    LaunchedEffect(controller, appIsDark) {
+        controller.onAppThemeChanged(appIsDark)
+        readerIsDark = appIsDark
+    }
+
+    DisposableEffect(controller) {
+        onDispose {
+            controller.clearAppThemeOverride()
+        }
+    }
 
     LaunchedEffect(state.menuVisible) {
         controller.onMenuVisibilityChanged(state.menuVisible)
@@ -522,6 +537,7 @@ fun ReadBookRouteScreen(
         ReadBookColorTheme(
             styleConfig = state.styleConfig,
             preferences = readPreferences,
+            isDarkTheme = readerIsDark,
         ) {
             ReadBookMenuBar(
                 state = state,

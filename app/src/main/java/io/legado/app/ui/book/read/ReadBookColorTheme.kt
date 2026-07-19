@@ -30,12 +30,14 @@ import kotlinx.coroutines.withContext
 fun ReadBookColorTheme(
     styleConfig: ReadBookStyleConfig,
     preferences: ReadPreferences,
+    isDarkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
     ProvideThemeOverride(
         theme = rememberReadBookColorTheme(
             styleConfig = styleConfig,
             preferences = preferences,
+            isAppDark = isDarkTheme,
         ),
         content = content
     )
@@ -45,8 +47,8 @@ fun ReadBookColorTheme(
 private fun rememberReadBookColorTheme(
     styleConfig: ReadBookStyleConfig,
     preferences: ReadPreferences,
+    isAppDark: Boolean,
 ): ThemeOverrideState? {
-    val isAppDark = LegadoTheme.isDark
     val paletteStyle = preferences.readMenuPaletteStyle
     return when (preferences.readBarStyle) {
         1 -> rememberReadBackgroundTheme(styleConfig, isAppDark, paletteStyle)
@@ -70,7 +72,9 @@ private fun rememberReadBackgroundTheme(
         .takeUnless { it == Color.Unspecified }
         ?: LegadoTheme.colorScheme.primary
     val background = remember(styleConfig, isAppDark) {
-        runCatching { ReadStyleResolver.currentBackground(ReadBookConfig.durConfig) }.getOrNull()
+        runCatching {
+            ReadStyleResolver.currentBackground(ReadBookConfig.durConfig, isAppDark)
+        }.getOrNull()
     }
     // Keep the last resolved image seed while the next background is decoded.
     var resolvedImageSeedColor by remember { mutableStateOf<Color?>(null) }
@@ -83,7 +87,7 @@ private fun rememberReadBackgroundTheme(
 
     LaunchedEffect(background, styleConfig, isAppDark) {
         if (background != null && background.type != 0) {
-            val seedColor = extractCurrentReadBackgroundSeed()
+            val seedColor = extractCurrentReadBackgroundSeed(isAppDark)
                 ?: ReadSessionState.backgroundMeanColor.takeIf { it != 0 }?.let(::Color)
             if (seedColor != null) {
                 resolvedImageSeedColor = seedColor
@@ -323,13 +327,14 @@ private fun ReadPreferences.readMenuContainerColor(isDark: Boolean): Int {
     }
 }
 
-private suspend fun extractCurrentReadBackgroundSeed(): Color? {
+private suspend fun extractCurrentReadBackgroundSeed(isDarkTheme: Boolean): Color? {
     return withContext(Dispatchers.Default) {
         runCatching {
             val drawable = ReadStyleResolver.currentBackgroundDrawable(
                 config = ReadBookConfig.durConfig,
                 width = 128,
-                height = 128
+                height = 128,
+                isNightTheme = isDarkTheme,
             )
             if (drawable is ColorDrawable) {
                 Color(drawable.color)

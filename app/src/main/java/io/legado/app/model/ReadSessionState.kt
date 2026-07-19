@@ -11,6 +11,10 @@ object ReadSessionState {
     var isComic: Boolean = false
         internal set
 
+    @Volatile
+    var isDarkThemeOverride: Boolean? = null
+        internal set
+
     var lastNavigationBarHeight: Int = 0
 
     var background: Drawable? = null

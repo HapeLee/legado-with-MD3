@@ -33,6 +33,7 @@ import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadSessionState
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -51,6 +52,7 @@ import io.legado.app.ui.widget.PopupAction
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.Debounce
 import io.legado.app.utils.GSON
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
@@ -210,6 +212,24 @@ class ReadBookController(
         } else {
             autoPager.resume()
         }
+    }
+
+    fun onAppThemeChanged(isDarkTheme: Boolean) {
+        val previous = ReadSessionState.isDarkThemeOverride
+        ReadSessionState.isDarkThemeOverride = isDarkTheme
+        refs?.readView?.run {
+            upBg()
+            upStyle()
+        }
+        upSystemUiVisibility()
+        LogUtils.d(
+            "ReadBookTheme",
+            "apply dark=$isDarkTheme previous=$previous refsReady=${refs != null}"
+        )
+    }
+
+    fun clearAppThemeOverride() {
+        ReadSessionState.isDarkThemeOverride = null
     }
 
     fun onRouteInitialized() {
