@@ -22,6 +22,7 @@ import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
@@ -213,7 +214,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upReadBookConfig(book: Book) {
         val oldIndex = ReadBookConfig.styleSelect
-        ReadBookConfig.isComic = book.isImage
+        ReadSessionState.isComic = book.isImage
         if (oldIndex != ReadBookConfig.styleSelect) {
             postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
             if (ReadConfig.readBarStyleFollowPage) {
@@ -991,7 +992,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val contentProcessor = ContentProcessor.get(book.name, book.origin)
             val displayTitle = chapter.getDisplayTitle(
                 contentProcessor.getTitleReplaceRules(),
-                book.getUseReplaceRule()
+                book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
             )
             val contents = contentProcessor
                 .getContent(book, chapter, content, includeTitle = false)
@@ -1099,7 +1101,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val contentProcessor = ContentProcessor.get(book.name, book.origin)
             val displayTitle = chapter.getDisplayTitle(
                 contentProcessor.getTitleReplaceRules(),
-                book.getUseReplaceRule()
+                book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
             )
             val contents = contentProcessor
                 .getContent(book, chapter, content, includeTitle = false)
@@ -1215,7 +1218,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)?.let {
                         book.durChapterTitle = it.getDisplayTitle(
                             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
-                            book.getUseReplaceRule()
+                            book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                            chineseConverterType = AppConfig.chineseConverterType,
                         )
                         SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
                     }

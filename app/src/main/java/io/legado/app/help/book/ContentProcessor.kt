@@ -115,11 +115,12 @@ class ContentProcessor private constructor(
                 if (matcher.find()) {
                     mContent = mContent.substring(matcher.end())
                     sameTitleRemoved = true
-                } else if (useReplace && book.getUseReplaceRule()) {
+                } else if (useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault)) {
                     title = Pattern.quote(
                         chapter.getDisplayTitle(
                             contentReplaceRules,
-                            chineseConvert = false
+                            chineseConvert = false,
+                            chineseConverterType = AppConfig.chineseConverterType,
                         )
                     )
                     matcher = Pattern.compile("^(\\s|\\p{P}|${name})*${title}(\\s)*")
@@ -155,7 +156,7 @@ class ContentProcessor private constructor(
                     placeholder
                 }
             }
-            if (useReplace && book.getUseReplaceRule()) {
+            if (useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault)) {
                 val replaceBook = book.toSearchBook()
                 //替换
                 effectiveReplaceRules = arrayListOf()
@@ -208,7 +209,8 @@ class ContentProcessor private constructor(
             //重新添加标题
             mContent = chapter.getDisplayTitle(
                 getTitleReplaceRules(),
-                useReplace = useReplace && book.getUseReplaceRule()
+                useReplace = useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
             ) + "\n" + mContent
         }
         if (isAndroid8) {

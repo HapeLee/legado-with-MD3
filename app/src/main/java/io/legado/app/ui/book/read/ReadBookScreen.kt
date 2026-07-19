@@ -51,7 +51,7 @@ import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.utils.toastOnUi
 import coil.ImageLoader
-import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideThemeOverride
 import io.legado.app.ui.theme.rememberImageSeedColor
@@ -384,9 +384,10 @@ fun ReadBookScreen(
     val aloudPlayerState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
     val playerTheme = run {
         val imageLoader: ImageLoader = koinInject()
+        val coverSettings = koinInject<CoverSettingsGateway>().currentSettings
         val isNight = LegadoTheme.isDark
         val useDefaultCover = usesDefaultBookCover(aloudPlayerState.coverPath)
-        val defaultCoverPaths = if (isNight) CoverConfig.defaultCoverDark else CoverConfig.defaultCover
+        val defaultCoverPaths = if (isNight) coverSettings.defaultCoverDark else coverSettings.defaultCover
         val coverPath = remember(
             aloudPlayerState.bookName,
             aloudPlayerState.author,
@@ -405,7 +406,7 @@ fun ReadBookScreen(
             }
         }
         val sourceOrigin = if (useDefaultCover) null else aloudPlayerState.sourceOrigin
-        val loadOnlyWifi = !useDefaultCover && CoverConfig.loadCoverOnlyWifi
+        val loadOnlyWifi = !useDefaultCover && coverSettings.loadOnlyOnWifi
         val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
             listOf(coverPath, sourceOrigin, loadOnlyWifi)
         }

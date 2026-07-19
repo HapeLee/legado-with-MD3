@@ -21,9 +21,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.hasBackgroundImage
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeSource
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -46,11 +47,13 @@ fun AppScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isDark = LegadoTheme.isDark
-    val hasImageBg = ThemeConfig.hasImageBg(isDark)
+    val configuration = LocalAppUiConfiguration.current
+    val themeSettings = configuration.theme
+    val hasImageBg = themeSettings.hasBackgroundImage(isDark)
     val hazeState = remember { HazeState() }
     val composeEngine = LegadoTheme.composeEngine
     val contentDrawsBehindBars =
-        alwaysDrawBehindBars || ThemeConfig.enableBlur || ThemeConfig.enableProgressiveBlur
+        alwaysDrawBehindBars || themeSettings.enableBlur || themeSettings.enableProgressiveBlur
 
     val containerColor = if (hasImageBg) {
         Color.Transparent
@@ -65,7 +68,7 @@ fun AppScaffold(
     }
 
     CompositionLocalProvider(
-        LocalHazeState provides if (ThemeConfig.enableBlur) hazeState else null
+        LocalHazeState provides if (themeSettings.enableBlur) hazeState else null
     ) {
         when {
             ThemeResolver.isMiuixEngine(composeEngine) -> {
@@ -88,7 +91,7 @@ fun AppScaffold(
                         containerColor = miuixContainerColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
-                        val scaffoldPadding = if (ThemeConfig.useFloatingBottomBar) {
+                        val scaffoldPadding = if (configuration.appShell.useFloatingBottomBar) {
                             PaddingValues(top = paddingValues.calculateTopPadding())
                         } else {
                             paddingValues
@@ -130,7 +133,7 @@ fun AppScaffold(
                         contentColor = contentColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
-                        val scaffoldPadding = if (ThemeConfig.useFloatingBottomBar) {
+                        val scaffoldPadding = if (configuration.appShell.useFloatingBottomBar) {
                             PaddingValues(top = paddingValues.calculateTopPadding())
                         } else {
                             paddingValues
@@ -165,16 +168,21 @@ private fun BackgroundImageContent(
     isDark: Boolean,
     hazeState: HazeState
 ) {
-    val hasImageBg = ThemeConfig.hasImageBg(isDark)
-    val bgImagePath = if (isDark) ThemeConfig.bgImageDark else ThemeConfig.bgImageLight
-    val blur = if (isDark) {
-        ThemeConfig.bgImageNBlurring
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val hasImageBg = themeSettings.hasBackgroundImage(isDark)
+    val bgImagePath = if (isDark) {
+        themeSettings.backgroundImageDark
     } else {
-        ThemeConfig.bgImageBlurring
+        themeSettings.backgroundImageLight
+    }
+    val blur = if (isDark) {
+        themeSettings.backgroundImageDarkBlurring
+    } else {
+        themeSettings.backgroundImageBlurring
     }
 
     if (hasImageBg && !bgImagePath.isNullOrBlank()) {
-        if (ThemeConfig.enableBlur) {
+        if (themeSettings.enableBlur) {
             AsyncImage(
                 model = bgImagePath,
                 contentDescription = null,

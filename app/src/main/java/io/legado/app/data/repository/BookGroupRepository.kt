@@ -1,6 +1,5 @@
 package io.legado.app.data.repository
 
-import androidx.lifecycle.asFlow
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.BookGroup
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +15,7 @@ class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
     }
 
     fun flowShow(): Flow<List<BookGroup>> {
-        return bookGroupDao.show.asFlow()
+        return bookGroupDao.flowShow()
     }
 
     suspend fun update(vararg bookGroup: BookGroup) {

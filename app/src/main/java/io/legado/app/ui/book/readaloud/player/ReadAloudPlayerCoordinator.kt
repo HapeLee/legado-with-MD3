@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.Observer
 import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.merge
 class ReadAloudPlayerCoordinator(
     private val application: Application,
     private val sessionStore: ReadAloudSessionStore,
+    private val readAloudSettingsGateway: ReadAloudSettingsGateway,
 ) {
     private val refreshRequests = MutableSharedFlow<Unit>(replay = 1)
     private val bookChanges = callbackFlow {
@@ -124,8 +127,8 @@ class ReadAloudPlayerCoordinator(
     fun previousChapter() = ReadBook.moveToPrevChapter(true, false)
     fun nextChapter() = ReadBook.moveToNextChapter(true)
 
-    fun setSpeed(value: Int) {
-        ReadConfig.ttsSpeechRate = value
+    suspend fun setSpeed(value: Int) {
+        readAloudSettingsGateway.update(ReadAloudSettingsUpdate.SpeechRate(value))
         ReadAloud.upTtsSpeechRate(application)
     }
 

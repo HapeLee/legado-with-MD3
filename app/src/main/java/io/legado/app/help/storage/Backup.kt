@@ -7,9 +7,11 @@ import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.DirectLinkUpload
+import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.LocalConfig
@@ -33,6 +35,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileInputStream
@@ -46,6 +49,9 @@ import java.util.concurrent.TimeUnit
  * 备份
  */
 object Backup {
+
+    private val readStyleGateway: ReadStyleGateway
+        get() = GlobalContext.get().get()
 
     val backupPath: String by lazy {
         appCtx.filesDir.getFile("backup").createFolderIfNotExist().absolutePath
@@ -135,7 +141,11 @@ object Backup {
         LocalConfig.lastBackup = System.currentTimeMillis()
         val aes = BackupAES()
         FileUtils.delete(backupPath)
-        writeListToJson(appDb.bookDao.all, "bookshelf.json", backupPath)
+        writeListToJson(
+            appDb.bookDao.all.filterNot { BackupConfig.backupIgnoreLocalBook && it.isLocal },
+            "bookshelf.json",
+            backupPath,
+        )
         if (BackupConfig.dbIsNotIgnored("bookmark", true)) {
             writeListToJson(appDb.bookmarkDao.all, "bookmark.json", backupPath)
         }
@@ -207,25 +217,31 @@ object Backup {
             }
         }
         currentCoroutineContext().ensureActive()
-        GSON.toJson(ReadBookConfig.configList).let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
-                .writeText(it)
+        if (!BackupConfig.backupIgnoreReadConfig) {
+            readStyleGateway.exportConfigsJson().let {
+                FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
+                    .writeText(it)
+            }
+            readStyleGateway.exportShareConfigJson().let {
+                FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
+                    .writeText(it)
+            }
         }
-        GSON.toJson(ReadBookConfig.shareConfig).let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
-                .writeText(it)
-        }
-        GSON.toJson(ThemeConfigStore.configList).let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + ThemeConfigStore.configFileName)
-                .writeText(it)
+        if (!BackupConfig.backupIgnoreThemeConfig) {
+            GSON.toJson(ThemeConfigStore.configList).let {
+                FileUtils.createFileIfNotExist(backupPath + File.separator + ThemeConfigStore.configFileName)
+                    .writeText(it)
+            }
         }
         DirectLinkUpload.getConfig()?.let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + DirectLinkUpload.ruleFileName)
                 .writeText(GSON.toJson(it))
         }
-        BookCover.getConfig()?.let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
-                .writeText(GSON.toJson(it))
+        if (!BackupConfig.backupIgnoreCoverConfig) {
+            BookCover.getConfig()?.let {
+                FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
+                    .writeText(GSON.toJson(it))
+            }
         }
         currentCoroutineContext().ensureActive()
         val configMap = AppConfigStore.preferences.asMap()
@@ -254,10 +270,10 @@ object Backup {
 
         currentCoroutineContext().ensureActive()
         val zipFileName = getNowZipFileName()
-        val paths = arrayListOf(*backupFileNames)
-        for (i in 0 until paths.size) {
-            paths[i] = backupPath + File.separator + paths[i]
-        }
+        val paths = backupFileNames
+            .map { File(backupPath, it) }
+            .filter(File::isFile)
+            .map(File::getAbsolutePath)
         FileUtils.delete(zipFilePath)
         FileUtils.delete(zipFilePath.replace("tmp_", ""))
         val backupFileName = if (AppConfig.onlyLatestBackup) {

@@ -21,6 +21,7 @@ import io.legado.app.databinding.ViewBookPageBinding
 import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -92,9 +93,9 @@ class PageView(
         callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
-        if (ReadBookConfig.lastNavigationBarHeight > 0) {
+        if (ReadSessionState.lastNavigationBarHeight > 0) {
             binding.vwNavigationBar.updateLayoutParams {
-                height = ReadBookConfig.lastNavigationBarHeight
+                height = ReadSessionState.lastNavigationBarHeight
             }
         }
         binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
@@ -105,7 +106,7 @@ class PageView(
             //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
             val navHeight = windowInsets.navigationBarHeight
             if (navHeight > 0) {
-                ReadBookConfig.lastNavigationBarHeight = navHeight
+                ReadSessionState.lastNavigationBarHeight = navHeight
             }
             v.updateLayoutParams {
                 height = navHeight
@@ -164,6 +165,33 @@ class PageView(
         }
         upTime()
         upBattery(battery)
+    }
+
+    /** 仅更新日夜模式相关颜色，避免主题切换时重新加载字体和重排正文。 */
+    fun upThemeColors() = binding.run {
+        val textColor = ReadBookConfig.textColor
+        val headerColor = with(ReadBookConfig) {
+            if (resolvedTipHeaderColor == 0) textColor else resolvedTipHeaderColor
+        }
+        val footerColor = with(ReadBookConfig) {
+            if (resolvedTipFooterColor == 0) textColor else resolvedTipFooterColor
+        }
+        val tipDividerColor = with(ReadBookConfig) {
+            when (tipDividerColor) {
+                -1 -> ContextCompat.getColor(context, R.color.divider)
+                0 -> textColor
+                else -> tipDividerColor
+            }
+        }
+        tvHeaderLeft.setColor(headerColor)
+        tvHeaderMiddle.setColor(headerColor)
+        tvHeaderRight.setColor(headerColor)
+        tvFooterLeft.setColor(footerColor)
+        tvFooterMiddle.setColor(footerColor)
+        tvFooterRight.setColor(footerColor)
+        vwTopDivider.backgroundColor = tipDividerColor
+        vwBottomDivider.backgroundColor = tipDividerColor
+        contentTextView.invalidate()
     }
 
     private fun loadTypeface(fontPath: String): Typeface? {
@@ -413,8 +441,8 @@ class PageView(
     fun upBg() {
         binding.vwRoot.background = LayerDrawable(
             arrayOf(
-                ReadBookConfig.bgMeanColor.toDrawable(),
-                ReadBookConfig.bg
+                ReadSessionState.backgroundMeanColor.toDrawable(),
+                ReadSessionState.background
             )
         )
         upBgAlpha()
@@ -424,7 +452,7 @@ class PageView(
      * 更新背景透明度
      */
     fun upBgAlpha() {
-        ReadBookConfig.bg?.alpha = (ReadBookConfig.bgAlpha / 100f * 255).toInt()
+        ReadSessionState.background?.alpha = (ReadBookConfig.bgAlpha / 100f * 255).toInt()
         binding.vwRoot.invalidate()
     }
 

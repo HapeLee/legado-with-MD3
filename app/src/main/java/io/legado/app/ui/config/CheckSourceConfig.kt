@@ -2,20 +2,22 @@ package io.legado.app.ui.config
 
 import android.os.Bundle
 import android.view.View
+import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogCheckSourceConfigBinding
-//import io.legado.app.lib.theme.primaryColor
-import io.legado.app.model.CheckSource
-import io.legado.app.utils.putPrefString
+import io.legado.app.domain.gateway.CheckSourceSettings
+import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import splitties.views.onClick
 
 class CheckSourceConfig : BaseBottomSheetDialogFragment(R.layout.dialog_check_source_config) {
 
     private val binding by viewBinding(DialogCheckSourceConfigBinding::bind)
+    private val settingsGateway: CheckSourceSettingsGateway by inject()
 
     //允许的最小超时时间，秒
     private val minTimeout = 0L
@@ -56,8 +58,8 @@ class CheckSourceConfig : BaseBottomSheetDialogFragment(R.layout.dialog_check_so
                 }
             }
         }
-        CheckSource.run {
-            binding.checkSourceTimeout.setText((timeout / 1000).toString())
+        settingsGateway.currentSettings.run {
+            binding.checkSourceTimeout.setText((timeoutMillis / 1000).toString())
             binding.checkSearch.isChecked = checkSearch
             binding.checkDiscovery.isChecked = checkDiscovery
             binding.checkInfo.isChecked = checkInfo
@@ -85,16 +87,26 @@ class CheckSourceConfig : BaseBottomSheetDialogFragment(R.layout.dialog_check_so
                         )
                         return@onClick
                     }
-                    else -> timeout = text.toLong() * 1000
+                    else -> Unit
                 }
-                checkSearch = binding.checkSearch.isChecked
-                checkDiscovery = binding.checkDiscovery.isChecked
-                checkInfo = binding.checkInfo.isChecked
-                checkCategory = binding.checkCategory.isChecked
-                checkContent = binding.checkContent.isChecked
-                putConfig()
-                requireContext().putPrefString(PreferKey.checkSource, summary)
-                dismiss()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    runCatching {
+                        settingsGateway.update(
+                            CheckSourceSettings(
+                                timeoutMillis = text.toLong() * 1000,
+                                checkSearch = binding.checkSearch.isChecked,
+                                checkDiscovery = binding.checkDiscovery.isChecked,
+                                checkInfo = binding.checkInfo.isChecked,
+                                checkCategory = binding.checkCategory.isChecked,
+                                checkContent = binding.checkContent.isChecked,
+                            )
+                        )
+                    }.onSuccess {
+                        dismiss()
+                    }.onFailure {
+                        toastOnUi(it.localizedMessage ?: getString(R.string.error))
+                    }
+                }
             }
         }
     }

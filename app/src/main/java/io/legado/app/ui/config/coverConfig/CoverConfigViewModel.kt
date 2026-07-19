@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.usecase.CoverAlbumUseCase
 import io.legado.app.help.DefaultData
 import io.legado.app.model.BookCover
@@ -22,7 +23,9 @@ class CoverConfigViewModel(
     private val settingsGateway: CoverSettingsGateway,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CoverConfigUiState())
+    private val _uiState = MutableStateFlow(
+        CoverConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<CoverConfigEffect>(extraBufferCapacity = 16)
@@ -49,9 +52,36 @@ class CoverConfigViewModel(
 
     fun onIntent(intent: CoverConfigIntent) {
         when (intent) {
-            is CoverConfigIntent.UpdateSetting -> viewModelScope.launch {
-                settingsGateway.update(intent.update)
-            }
+            is CoverConfigIntent.SetLoadOnlyOnWifi ->
+                updateSettings { it.copy(loadOnlyOnWifi = intent.value) }
+            is CoverConfigIntent.SetUseDefaultCover ->
+                updateSettings { it.copy(useDefaultCover = intent.value) }
+            is CoverConfigIntent.SetShowShadow ->
+                updateSettings { it.copy(showShadow = intent.value) }
+            is CoverConfigIntent.SetShowStroke ->
+                updateSettings { it.copy(showStroke = intent.value) }
+            is CoverConfigIntent.SetUseDefaultColor ->
+                updateSettings { it.copy(useDefaultColor = intent.value) }
+            is CoverConfigIntent.SetInfoOrientation ->
+                updateSettings { it.copy(infoOrientation = intent.value) }
+            is CoverConfigIntent.SetExploreFilterState ->
+                updateSettings { it.copy(exploreFilterState = intent.value) }
+            is CoverConfigIntent.SetShowName ->
+                updateSettings { it.copy(showName = intent.value) }
+            is CoverConfigIntent.SetShowAuthor ->
+                updateSettings { it.copy(showAuthor = intent.value) }
+            is CoverConfigIntent.SetShowNameDark ->
+                updateSettings { it.copy(showNameDark = intent.value) }
+            is CoverConfigIntent.SetShowAuthorDark ->
+                updateSettings { it.copy(showAuthorDark = intent.value) }
+            is CoverConfigIntent.SetTextColor ->
+                updateSettings { it.copy(textColor = intent.value) }
+            is CoverConfigIntent.SetShadowColor ->
+                updateSettings { it.copy(shadowColor = intent.value) }
+            is CoverConfigIntent.SetTextColorDark ->
+                updateSettings { it.copy(textColorDark = intent.value) }
+            is CoverConfigIntent.SetShadowColorDark ->
+                updateSettings { it.copy(shadowColorDark = intent.value) }
             is CoverConfigIntent.ShowSheet -> {
                 _uiState.update { it.copy(activeSheet = intent.sheet) }
                 if (intent.sheet == CoverConfigSheet.Rule) loadRule()
@@ -78,6 +108,10 @@ class CoverConfigViewModel(
             }
             CoverConfigIntent.SaveRule -> saveRule()
         }
+    }
+
+    private fun updateSettings(transform: (CoverSettings) -> CoverSettings) {
+        viewModelScope.launch { settingsGateway.update(transform) }
     }
 
     private fun loadRule() {

@@ -20,10 +20,9 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.replace.edit.ReplaceEditRouteScreen
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
-import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import kotlinx.serialization.json.Json
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -44,7 +43,7 @@ class ReplaceRuleActivity : BaseComposeActivity() {
 
     @Composable
     override fun Content() {
-        AppTheme {
+            val configuration = LocalAppUiConfiguration.current
             val context = LocalActivity.current
             val startRouteJson = intent.getStringExtra(EXTRA_START_ROUTE)
             val backStack = rememberNavBackStack(
@@ -169,14 +168,13 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     }
                 }
             )
-            BackHandler(enabled = !AppConfig.isPredictiveBackEnabled) {
+            BackHandler(enabled = !configuration.appShell.predictiveBackEnabled) {
                 if (backStack.size > 1) {
                     backStack.removeLastOrNull()
                 } else {
                     finish()
                 }
             }
-        }
     }
 
     private fun resolveStartRoute(route: String?): NavKey {

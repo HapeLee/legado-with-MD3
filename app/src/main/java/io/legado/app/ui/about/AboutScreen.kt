@@ -73,7 +73,10 @@ fun AboutScreen(
         )
     }
 
-    AboutOverlays(state = state, onIntent = onIntent)
+    AboutOverlays(
+        state = state,
+        onIntent = onIntent,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -259,6 +262,7 @@ private fun AboutOverlays(
         is AboutSheet.Update -> UpdateSheet(
             show = currentSheet is AboutSheet.Update,
             updateInfo = sheet.updateInfo,
+            updateToVariant = state.updateToVariant,
             mode = sheet.mode,
             onDismissRequest = { onIntent(AboutIntent.DismissSheet) },
             onStartDownload = { onIntent(AboutIntent.StartDownload) },

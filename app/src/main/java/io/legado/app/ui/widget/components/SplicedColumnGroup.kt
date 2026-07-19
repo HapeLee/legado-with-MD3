@@ -15,8 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.divider.SettingItemDivider
 import io.legado.app.ui.widget.components.title.AdaptiveTitle
@@ -41,11 +41,12 @@ fun SplicedColumnGroup(
     items: @Composable ColumnScope.() -> Unit,
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val enableItemDivider = ThemeConfig.enableItemDivider
-    val cornerRadius = if (ThemeConfig.disableSplicedColumnGroupCornerRadius) 0.dp else 16.dp
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val enableItemDivider = themeSettings.enableItemDivider
+    val cornerRadius = if (themeSettings.disableSplicedColumnGroupCornerRadius) 0.dp else 16.dp
     val currentIndex = remember { mutableIntStateOf(0) }
 
-    val groupState = remember {
+    val groupState = remember(enableItemDivider) {
         SplicedColumnGroupState(
             enableItemDivider = enableItemDivider,
             currentIndex = { currentIndex.intValue },

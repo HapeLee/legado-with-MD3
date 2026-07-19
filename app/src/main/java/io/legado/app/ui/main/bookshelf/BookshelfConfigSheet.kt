@@ -42,6 +42,7 @@ import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
@@ -79,6 +80,8 @@ fun BookshelfConfigSheet(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PillHeaderDivider(title = stringResource(R.string.group))
+
             CompactDropdownSettingItem(
                 title = stringResource(R.string.group_style),
                 selectedValue = settings.bookGroupStyle.toString(),
@@ -87,7 +90,15 @@ fun BookshelfConfigSheet(
                 onValueChange = { onUpdate(BookshelfSettingsUpdate.IntValue(BookshelfIntSetting.BookGroupStyle, it.toInt())) }
             )
 
-            // Sort
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.hide_empty_groups),
+                checked = settings.hideEmptyGroups,
+                color = LegadoTheme.colorScheme.surface,
+                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.HideEmptyGroups, it)) }
+            )
+
+            PillHeaderDivider(title = stringResource(R.string.sort))
+
             CompactDropdownSettingItem(
                 title = stringResource(R.string.sort),
                 selectedValue = settings.bookshelfSort.toString(),
@@ -108,6 +119,8 @@ fun BookshelfConfigSheet(
                 onValueChange = { onUpdate(BookshelfSettingsUpdate.IntValue(BookshelfIntSetting.SortOrder, it.toInt())) }
             )
 
+            PillHeaderDivider(title = stringResource(R.string.bookshelf_section_layout))
+
             // Layout Mode (non-folder)
             val layoutMode =
                 if (isLandscape) settings.bookshelfLayoutModeLandscape
@@ -119,8 +132,6 @@ fun BookshelfConfigSheet(
             // Folder Layout Mode
             AnimatedVisibility(visible = settings.bookGroupStyle == 2) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                    PillDivider()
 
                     CompactDropdownSettingItem(
                         title = stringResource(R.string.folder_layout_mode),
@@ -486,14 +497,8 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.CoverShadow, it)) }
             )
 
-            CompactSwitchSettingItem(
-                title = stringResource(R.string.search_filter_first),
-                checked = settings.bookshelfSearchActionDirectToSearch,
-                color = LegadoTheme.colorScheme.surface,
-                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.SearchActionDirectToSearch, it)) }
-            )
+            PillHeaderDivider(title = stringResource(R.string.bookshelf_section_badge))
 
-            // Switches
             CompactSwitchSettingItem(
                 title = stringResource(R.string.show_unread),
                 checked = settings.showUnread,
@@ -509,10 +514,10 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
-                title = stringResource(R.string.show_tip),
-                checked = settings.showTip,
+                title = stringResource(R.string.show_wait_up_count),
+                checked = settings.showWaitUpCount,
                 color = LegadoTheme.colorScheme.surface,
-                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.ShowTip, it)) }
+                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.ShowWaitUpCount, it)) }
             )
 
             CompactSwitchSettingItem(
@@ -530,10 +535,19 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
-                title = stringResource(R.string.show_wait_up_count),
-                checked = settings.showWaitUpCount,
+                title = stringResource(R.string.show_tip),
+                checked = settings.showTip,
                 color = LegadoTheme.colorScheme.surface,
-                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.ShowWaitUpCount, it)) }
+                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.ShowTip, it)) }
+            )
+
+            PillHeaderDivider(title = stringResource(R.string.other))
+
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.search_filter_first),
+                checked = settings.bookshelfSearchActionDirectToSearch,
+                color = LegadoTheme.colorScheme.surface,
+                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.SearchActionDirectToSearch, it)) }
             )
 
             CompactSwitchSettingItem(
@@ -550,7 +564,6 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.ShowExpandButton, it)) }
             )
 
-            // Refresh Limit
             CompactSliderSettingItem(
                 title = stringResource(R.string.bookshelf_update_limit),
                 description = if (settings.bookshelfRefreshingLimit <= 0) stringResource(R.string.refresh_limit_unlimited) else stringResource(R.string.refresh_limit_books, settings.bookshelfRefreshingLimit),

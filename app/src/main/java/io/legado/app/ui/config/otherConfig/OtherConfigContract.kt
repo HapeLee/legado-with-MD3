@@ -1,6 +1,9 @@
 package io.legado.app.ui.config.otherConfig
 
 import androidx.compose.runtime.Stable
+import androidx.annotation.StringRes
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Stable
 data class OtherConfigUiState(
@@ -36,9 +39,40 @@ data class OtherConfigUiState(
     val directDownloadUrlRule: String = "",
     val directSummary: String = "",
     val directCompress: Boolean = false,
+    val directRulePresets: ImmutableList<DirectLinkRuleUi> = persistentListOf(),
     val directTestResult: String? = null,
     val activeOverlay: OtherConfigOverlay? = null,
+    val pendingMessages: ImmutableList<OtherConfigMessage> = persistentListOf(),
 )
+
+@Stable
+data class DirectLinkRuleUi(
+    val uploadUrl: String,
+    val downloadUrlRule: String,
+    val summary: String,
+    val compress: Boolean,
+) {
+    override fun toString(): String = summary
+}
+
+@Stable
+data class OtherConfigMessage(
+    val id: Long,
+    @StringRes val resId: Int?,
+    val text: String?,
+) {
+    init {
+        require((resId == null) != (text == null))
+    }
+
+    companion object {
+        fun resource(id: Long, @StringRes resId: Int) =
+            OtherConfigMessage(id = id, resId = resId, text = null)
+
+        fun text(id: Long, text: String) =
+            OtherConfigMessage(id = id, resId = null, text = text)
+    }
+}
 
 sealed interface OtherConfigOverlay {
     data object FilePicker : OtherConfigOverlay
@@ -97,6 +131,8 @@ sealed interface OtherConfigIntent {
     data object RequestBatteryPermission : OtherConfigIntent
     data object RequestSystemDirectory : OtherConfigIntent
     data object ConfirmClearWebViewData : OtherConfigIntent
+    data class SaveLocalPassword(val password: String) : OtherConfigIntent
+    data class MessageShown(val id: Long) : OtherConfigIntent
 }
 
 sealed interface OtherConfigEffect {
@@ -104,6 +140,5 @@ sealed interface OtherConfigEffect {
     data object RequestBatteryPermission : OtherConfigEffect
     data object OpenSystemDirectory : OtherConfigEffect
     data object RestartWebService : OtherConfigEffect
-    data class ShowMessage(val resId: Int) : OtherConfigEffect
-    data class SettingsUpdateFailed(val message: String) : OtherConfigEffect
+    data object RestartApp : OtherConfigEffect
 }

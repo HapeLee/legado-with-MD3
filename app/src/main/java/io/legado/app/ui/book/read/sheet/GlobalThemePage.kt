@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import coil.compose.AsyncImage
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
@@ -87,19 +87,7 @@ fun GlobalThemePage(
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
 
-    val configList = remember(
-        styleConfig.configCount,
-        styleConfig.styleName,
-        styleConfig.bgAlpha,
-        styleConfig.bgType,
-        styleConfig.bgStr,
-        styleConfig.textColor,
-        styleConfig.bgTypeNight,
-        styleConfig.bgStrNight,
-        styleConfig.textColorNight,
-    ) {
-        ReadBookConfig.configList.map { it.copy() }
-    }
+    val configList = styleConfig.styleItems
 
     Column(
         modifier = modifier
@@ -380,32 +368,40 @@ fun GlobalThemePage(
 
 @Composable
 fun StyleCard(
-    config: ReadBookConfig.Config,
+    config: ReadStyleItem,
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val bgType = config.curBgType()
+    val mode = ReadStyleResolver.currentMode()
+    val bgType = when (mode) {
+        ReadStyleResolver.ReadStyleMode.Day -> config.bgType
+        ReadStyleResolver.ReadStyleMode.Night -> config.bgTypeNight
+        ReadStyleResolver.ReadStyleMode.EInk -> config.bgTypeEInk
+    }
+    val bgValue = when (mode) {
+        ReadStyleResolver.ReadStyleMode.Day -> config.bgValue
+        ReadStyleResolver.ReadStyleMode.Night -> config.bgValueNight
+        ReadStyleResolver.ReadStyleMode.EInk -> config.bgValueEInk
+    }
     val bgColor = if (bgType == 0) {
         try {
-            Color(config.curBgStr().toColorInt())
+            Color(bgValue.toColorInt())
         } catch (_: Exception) {
             LegadoTheme.colorScheme.surface
         }
     } else {
         LegadoTheme.colorScheme.surface
     }
-    val textColor = Color(config.curTextColor())
+    val textColor = Color(
+        when (mode) {
+            ReadStyleResolver.ReadStyleMode.Day -> config.textColor
+            ReadStyleResolver.ReadStyleMode.Night -> config.textColorNight
+            ReadStyleResolver.ReadStyleMode.EInk -> config.textColorEInk
+        }
+    )
     val name = config.name.ifBlank { stringResource(R.string.text_bg_style) }
-    val bgPath = if (bgType != 0) {
-        ReadStyleResolver.backgroundPath(config, when {
-            ReadStyleResolver.currentMode() == ReadStyleResolver.ReadStyleMode.Night -> 1
-            ReadStyleResolver.currentMode() == ReadStyleResolver.ReadStyleMode.EInk -> 2
-            else -> 0
-        })
-    } else {
-        null
-    }
+    val bgPath = ReadStyleResolver.backgroundPath(bgType, bgValue)
 
     NormalCard(
         modifier = Modifier

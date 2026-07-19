@@ -1036,6 +1036,9 @@
     <string name="navigation_order">导航顺序</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
+    <string name="hide_empty_groups">隐藏空分组</string>
+    <string name="bookshelf_section_layout">布局</string>
+    <string name="bookshelf_section_badge">角标与信息</string>
     <string name="export_file_name">导出文件名</string>
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">可用变量：{name} 书名、{author} 作者、{group} 分组、{source} 书源、{remark} 备注。\n\n示例：{name} - {author}\n输出：三体 - 刘慈欣\n\n变量前后可以添加固定文字。</string>

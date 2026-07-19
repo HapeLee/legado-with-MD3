@@ -3,7 +3,6 @@ package io.legado.app.ui.theme
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec as MiuixThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle as MiuixPaletteStyle
@@ -69,7 +68,7 @@ object ThemeResolver {
         return materialPaletteStyles[value] ?: PaletteStyle.TonalSpot
     }
 
-    fun resolveContrastLevel(value: String = ThemeConfig.customContrast): Double {
+    fun resolveContrastLevel(value: String = "Default"): Double {
         return runCatching { Contrast.valueOf(value).value }
             .getOrDefault(Contrast.Default.value)
     }

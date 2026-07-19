@@ -4,6 +4,7 @@ import io.legado.app.domain.model.settings.OtherSettings
 import kotlinx.coroutines.flow.Flow
 
 interface OtherSettingsGateway {
+    val currentSettings: OtherSettings
     val settings: Flow<OtherSettings>
     suspend fun update(update: OtherSettingsUpdate)
 }
@@ -27,4 +28,9 @@ sealed interface OtherSettingsUpdate {
     data class ProcessText(val value: Boolean) : OtherSettingsUpdate
     data class RecordLog(val value: Boolean) : OtherSettingsUpdate
     data class RecordHeapDump(val value: Boolean) : OtherSettingsUpdate
+    data class AudioPlayUseWakeLock(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepName(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepGroup(val value: Boolean) : OtherSettingsUpdate
+    data class ImportKeepEnable(val value: Boolean) : OtherSettingsUpdate
+    data class FontSort(val value: Int) : OtherSettingsUpdate
 }

@@ -3,10 +3,10 @@ package io.legado.app.model.translation
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
+import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.ui.config.translation.TranslationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +20,7 @@ object TranslationManager : KoinComponent {
 
     private val translationCacheGateway: TranslationCacheGateway by inject()
     private val translateChapterUseCase: TranslateChapterUseCase by inject()
+    private val translationSettingsGateway: TranslationSettingsGateway by inject()
 
     /** Per-chapter task state flows: bookUrl+chapterIndex -> StateFlow (only for in-progress tasks) */
     private val _taskStateFlows =
@@ -177,7 +178,7 @@ object TranslationManager : KoinComponent {
     }
 
     private fun currentTargetLanguage(): String {
-        return TranslationConfig.llmTargetLanguage
+        return translationSettingsGateway.currentSettings.targetLanguage
     }
 
 }

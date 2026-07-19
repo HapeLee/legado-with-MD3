@@ -25,10 +25,9 @@ import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.layout.Measured
 import androidx.compose.ui.unit.dp
 import io.legado.app.domain.model.settings.customColors
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
-import io.legado.app.ui.theme.LocalThemeSettings
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
@@ -46,16 +45,17 @@ fun AppNavigationBar(
     content: @Composable RowScope.() -> Unit
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val configuration = LocalAppUiConfiguration.current
+    val themeSettings = configuration.theme
     val miuixMode = when {
         !showLabel -> NavigationBarDisplayMode.IconOnly
         alwaysShowLabel -> NavigationBarDisplayMode.IconAndText
         else -> NavigationBarDisplayMode.IconWithSelectedLabel
     }
-    val themeSettings = LocalThemeSettings.current
     val opacity = (themeSettings.bottomBarOpacity.coerceIn(0, 100)) / 100f
     val customSecondaryColor = themeSettings.customColors(LegadoTheme.isDark).secondary
     val hasCustomSecondary = themeSettings.appTheme == "12" &&
-            themeSettings.enableDeepPersonalization && customSecondaryColor != 0
+        themeSettings.enableDeepPersonalization && customSecondaryColor != 0
     val hazeState = LocalHazeState.current
     val hazeModifier = if (hazeState != null) {
         Modifier.regularHazeEffect(hazeState)
@@ -125,7 +125,8 @@ fun RowScope.AppNavigationBarItem(
     useCustomIcon: Boolean = false,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
-    val useCustomIconBox = useCustomIcon && ThemeConfig.useFloatingBottomBar
+    val useCustomIconBox =
+        useCustomIcon && LocalAppUiConfiguration.current.appShell.useFloatingBottomBar
 
     if (useCustomIconBox) {
         Box(

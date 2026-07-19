@@ -61,7 +61,6 @@ import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.BookCover
 import io.legado.app.ui.book.read.page.entities.TextLine
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
@@ -98,12 +97,30 @@ class App : Application(), ImageLoaderFactory {
         // getApplicationLocales() 恒为空，isEmpty 守卫会形同虚设
         val legacyLanguage = if (!LocalConfig.appLocaleMigrated) {
             LocalConfig.appLocaleMigrated = true
-            OtherConfig.language
+            AppConfigStore.getString(PreferKey.language) ?: "auto"
         } else null
         startKoin {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
         }
+        AppConfig.initialize(
+            shellGateway = get(),
+            themeGateway = get(),
+            bookshelfGateway = get(),
+            otherGateway = get(),
+            backupGateway = get(),
+            cacheGateway = get(),
+            coverGateway = get(),
+            readGateway = get(),
+            aloudGateway = get(),
+            importBookGateway = get(),
+            exportGateway = get(),
+        )
+        ReadBookConfig.initialize(
+            readStyleRepository = get(),
+            readSettingsGateway = get(),
+        )
+        ReadBookConfig.attachGateway(get())
         if (legacyLanguage != null) {
             get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
         }

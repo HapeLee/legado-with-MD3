@@ -14,15 +14,20 @@ import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsValue
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 
 typealias ReadPreferences = ReadSettings
 
 class ReadSettingsRepository(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val preferencesFlow: StateFlow<Preferences> = AppConfigStore.preferencesFlow,
 ) : ReadSettingsGateway {
 
-    override val settings: Flow<ReadSettings> = AppConfigStore.preferencesFlow
+    override val currentSettings: ReadSettings
+        get() = preferencesFlow.value.toReadSettings()
+
+    override val settings: Flow<ReadSettings> = preferencesFlow
         .map { preferences ->
             preferences.toReadSettings()
         }
@@ -46,6 +51,8 @@ class ReadSettingsRepository(
             is ReadSettingsUpdate.UseZhLayout -> setUseZhLayout(update.value)
             is ReadSettingsUpdate.ShowBrightnessView -> setShowBrightnessView(update.value)
             is ReadSettingsUpdate.BrightnessVwPos -> setBrightnessVwPos(update.value)
+            is ReadSettingsUpdate.Brightness -> setReadBrightness(update.value)
+            is ReadSettingsUpdate.BrightnessAuto -> setBrightnessAuto(update.value)
             is ReadSettingsUpdate.UseUnderline -> setUseUnderline(update.value)
             is ReadSettingsUpdate.ReadSliderMode -> setReadSliderMode(update.value)
             is ReadSettingsUpdate.DoubleHorizontalPage -> setDoubleHorizontalPage(update.value)
@@ -65,9 +72,14 @@ class ReadSettingsRepository(
             is ReadSettingsUpdate.OptimizeRender -> setOptimizeRender(update.value)
             is ReadSettingsUpdate.DisableReturnKey -> setDisableReturnKey(update.value)
             is ReadSettingsUpdate.ShowReadTitleAddition -> setShowReadTitleAddition(update.value)
+            is ReadSettingsUpdate.TextSelectMenuConfig -> settingsRepository.putString(PreferKey.textSelectMenuConfig, update.value)
+            is ReadSettingsUpdate.ReadUrlInBrowser -> settingsRepository.putBoolean(PreferKey.readUrlOpenInBrowser, update.value)
             is ReadSettingsUpdate.ShowMenuIcon -> setShowMenuIcon(update.value)
+            is ReadSettingsUpdate.TitleBarCompact -> setTitleBarCompact(update.value)
             is ReadSettingsUpdate.PageKeys -> setPageKeys(update.previous, update.next)
             is ReadSettingsUpdate.FontFolder -> setFontFolder(update.value)
+            is ReadSettingsUpdate.SystemTypefaces -> setSystemTypefaces(update.value)
+            is ReadSettingsUpdate.PreDownloadNum -> setPreDownloadNum(update.value)
         }
     }
 
@@ -187,6 +199,12 @@ class ReadSettingsRepository(
 
     suspend fun setAutoReadSpeed(value: Int) =
         settingsRepository.putInt(PreferKey.autoReadSpeed, value)
+
+    suspend fun setSystemTypefaces(value: Int) =
+        settingsRepository.putInt(PreferKey.systemTypefaces, value)
+
+    suspend fun setPreDownloadNum(value: Int) =
+        settingsRepository.putInt(PreferKey.preDownloadNum, value)
 
     suspend fun setPageKeys(prevKeys: String, nextKeys: String) {
         settingsRepository.putStrings(
@@ -349,7 +367,7 @@ class ReadSettingsRepository(
         }
     }
 
-    private fun Preferences.toReadSettings(): ReadSettings {
+    internal fun Preferences.toReadSettings(): ReadSettings {
         val readStyleSelect = compatDsValue(Keys.ReadStyleSelect, 0)
         return ReadSettings(
             screenOrientation = compatDsValue(Keys.ScreenOrientation, "0"),
@@ -389,12 +407,16 @@ class ReadSettingsRepository(
             disableReturnKey = compatDsValue(Keys.DisableReturnKey, false),
             expandTextMenu = compatDsValue(Keys.ExpandTextMenu, false),
             showSelectMenuIcon = compatDsValue(Keys.ShowSelectMenuIcon, true),
+            textSelectMenuConfig = compatDsValue(Keys.TextSelectMenuConfig, ""),
             showReadTitleAddition = compatDsValue(Keys.ShowReadTitleAddition, true),
             autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
+            systemTypefaces = compatDsValue(Keys.SystemTypefaces, 0),
+            preDownloadNum = compatDsValue(Keys.PreDownloadNum, 10),
             prevKeys = compatDsValue(Keys.PrevKeys, ""),
             nextKeys = compatDsValue(Keys.NextKeys, ""),
             tocUiUseReplace = compatDsValue(Keys.TocUiUseReplace, false),
             tocCountWords = compatDsValue(Keys.TocCountWords, true),
+            readUrlInBrowser = compatDsValue(Keys.ReadUrlInBrowser, false),
             readStyleSelect = readStyleSelect,
             comicStyleSelect = compatDsValue(Keys.ComicStyleSelect, readStyleSelect),
             shareLayout = compatDsValue(Keys.ShareLayout, false),
@@ -493,12 +515,16 @@ class ReadSettingsRepository(
         val DisableReturnKey = booleanPreferencesKey(PreferKey.disableReturnKey)
         val ExpandTextMenu = booleanPreferencesKey(PreferKey.expandTextMenu)
         val ShowSelectMenuIcon = booleanPreferencesKey(PreferKey.showSelectMenuIcon)
+        val TextSelectMenuConfig = stringPreferencesKey(PreferKey.textSelectMenuConfig)
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
+        val SystemTypefaces = intPreferencesKey(PreferKey.systemTypefaces)
+        val PreDownloadNum = intPreferencesKey(PreferKey.preDownloadNum)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)
         val NextKeys = stringPreferencesKey(PreferKey.nextKeys)
         val TocUiUseReplace = booleanPreferencesKey(PreferKey.tocUiUseReplace)
         val TocCountWords = booleanPreferencesKey(PreferKey.tocCountWords)
+        val ReadUrlInBrowser = booleanPreferencesKey(PreferKey.readUrlOpenInBrowser)
         val ReadStyleSelect = intPreferencesKey(PreferKey.readStyleSelect)
         val ComicStyleSelect = intPreferencesKey(PreferKey.comicStyleSelect)
         val ShareLayout = booleanPreferencesKey(PreferKey.shareLayout)

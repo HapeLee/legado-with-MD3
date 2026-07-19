@@ -30,6 +30,9 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
+import io.legado.app.domain.model.settings.CoverSettings
+import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
@@ -79,12 +82,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -106,45 +111,32 @@ class BookInfoViewModel(
 
     val allGroups = bookGroupRepository.flowSelect().map { it.toImmutableList() }
 
-    private val _uiState = MutableStateFlow(BookInfoUiState())
-    val uiState = _uiState.asStateFlow()
+    // 仅保存“每本书/屏幕”状态；外观与其他设置不在此存储，避免整体重置时被抹掉。
+    private val _screenState = MutableStateFlow(BookInfoUiState())
+
+    // 设置类字段始终从各自 gateway（唯一 SSOT）派生叠加，重置屏幕状态无法影响它们。
+    val uiState: StateFlow<BookInfoUiState> = combine(
+        _screenState,
+        themeSettingsGateway.settings,
+        coverSettingsGateway.settings,
+        otherSettingsGateway.settings,
+    ) { screen, theme, cover, other ->
+        screen.withSettings(theme, cover, other)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = BookInfoUiState().withSettings(
+            themeSettingsGateway.currentSettings,
+            coverSettingsGateway.currentSettings,
+            otherSettingsGateway.currentSettings,
+        ),
+    )
 
     private val _effects = MutableSharedFlow<BookInfoEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
     init {
         collectEventBus()
-        collectAppearanceSettings()
-        collectOtherSettings()
-    }
-
-    private fun collectAppearanceSettings() {
-        viewModelScope.launch {
-            combine(
-                themeSettingsGateway.settings,
-                coverSettingsGateway.settings,
-            ) { theme, cover -> theme to cover }
-                .collectLatest { (theme, cover) ->
-                    _uiState.update {
-                        it.copy(
-                            bookInfoFollowCoverColor = theme.bookInfoFollowCoverColor,
-                            bookInfoNetworkCoverBackground = theme.bookInfoNetworkCoverBackground,
-                            bookInfoDefaultCoverBackground = theme.bookInfoDefaultCoverBackground,
-                            loadCoverOnlyOnWifi = cover.loadOnlyOnWifi,
-                            defaultCover = cover.defaultCover,
-                            defaultCoverDark = cover.defaultCoverDark,
-                        )
-                    }
-                }
-        }
-    }
-
-    private fun collectOtherSettings() {
-        viewModelScope.launch {
-            otherSettingsGateway.settings.collectLatest { settings ->
-                _uiState.update { it.copy(showMangaUi = settings.showMangaUi) }
-            }
-        }
     }
 
     private fun collectEventBus() {
@@ -220,7 +212,6 @@ class BookInfoViewModel(
     ) {
         val current = currentBook
         if (current != null) return
-        _uiState.value = BookInfoUiState() // 立即重置 UI 状态
         currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
             Book(
                 bookUrl = bookUrl,
@@ -234,16 +225,6 @@ class BookInfoViewModel(
         } else {
             null
         }
-        currentChapterList = emptyList()
-        currentWebFiles = emptyList()
-        currentRelatedBooks = emptyList()
-        currentCharacters = emptyList()
-        currentKindLabels = emptyList()
-        currentGroupNames = null
-        currentHasCustomGroup = false
-        inBookshelf = false
-        bookSource = null
-        chapterChanged = false
         clearReadRecordObserve()
         relatedBooksLoadJob?.cancel()
         characterLoadJob?.cancel()
@@ -288,7 +269,7 @@ class BookInfoViewModel(
             is BookInfoIntent.BookNameClick -> onBookNameClick(intent.longClick)
             BookInfoIntent.OriginClick -> onOriginClick()
             BookInfoIntent.DismissAppLogSheet -> {
-                _uiState.update { it.copy(showAppLogSheet = false) }
+                _screenState.update { it.copy(showAppLogSheet = false) }
             }
 
             BookInfoIntent.ReadClick -> onReadClick()
@@ -390,7 +371,7 @@ class BookInfoViewModel(
     }
 
     fun showAppLog() {
-        _uiState.update { it.copy(showAppLogSheet = true) }
+        _screenState.update { it.copy(showAppLogSheet = true) }
     }
 
     fun refreshCurrentBook() {
@@ -1117,7 +1098,7 @@ class BookInfoViewModel(
     private fun deleteBook(deleteOriginal: Boolean) {
         currentBook?.let { book ->
             LocalConfig.deleteBookOriginal = deleteOriginal
-            _uiState.update { it.copy(deleteOriginal = deleteOriginal) }
+            _screenState.update { it.copy(deleteOriginal = deleteOriginal) }
             SourceCallBack.callBackBook(SourceCallBack.DEL_BOOK_SHELF, bookSource, book)
             delBook(deleteOriginal) {
                 emitEffect(BookInfoEffect.Finish(resultCode = RESULT_OK))
@@ -1391,7 +1372,7 @@ class BookInfoViewModel(
             }.collectLatest { (totalTime, timelineDays) ->
                 currentReadRecordTotalTime = totalTime
                 currentReadRecordTimelineDays = timelineDays
-                _uiState.update {
+                _screenState.update {
                     it.copy(
                         readRecordTotalTime = currentReadRecordTotalTime,
                         readRecordTimelineDays = currentReadRecordTimelineDays
@@ -1414,7 +1395,7 @@ class BookInfoViewModel(
     }
 
     private fun setSheet(sheet: BookInfoSheet) {
-        _uiState.update { it.copy(sheet = sheet) }
+        _screenState.update { it.copy(sheet = sheet) }
     }
 
     private fun dismissDialog() {
@@ -1422,15 +1403,15 @@ class BookInfoViewModel(
     }
 
     private fun showDialog(dialog: BookInfoDialog?) {
-        _uiState.update { it.copy(dialog = dialog) }
+        _screenState.update { it.copy(dialog = dialog) }
     }
 
     private fun setBusy(isBusy: Boolean) {
-        _uiState.update { it.copy(isBusy = isBusy) }
+        _screenState.update { it.copy(isBusy = isBusy) }
     }
 
-    private fun syncUiState(isTocLoading: Boolean = _uiState.value.isTocLoading) {
-        _uiState.update {
+    private fun syncUiState(isTocLoading: Boolean = _screenState.value.isTocLoading) {
+        _screenState.update {
             it.copy(
                 book = currentBook?.toBookInfoBookUi(),
                 hasChapters = currentChapterList.isNotEmpty(),
@@ -1537,7 +1518,7 @@ class BookInfoViewModel(
             }
             if (currentBook?.bookUrl != bookUrl) return@launch
             currentCharacters = characters
-            _uiState.update {
+            _screenState.update {
                 it.copy(characters = currentCharacters.toImmutableList())
             }
         }
@@ -1564,7 +1545,7 @@ class BookInfoViewModel(
             }
             if (currentBook?.bookUrl != bookUrl) return@launch
             currentKnowledgeEntries = entries
-            _uiState.update {
+            _screenState.update {
                 it.copy(knowledgeEntries = currentKnowledgeEntries.toImmutableList())
             }
         }
@@ -1602,7 +1583,7 @@ class BookInfoViewModel(
                     characterName = nameMap[event.characterId].orEmpty(),
                 )
             }
-            _uiState.update {
+            _screenState.update {
                 it.copy(recentEvents = currentRecentEvents.toImmutableList())
             }
         }
@@ -1748,6 +1729,24 @@ class BookInfoViewModel(
         }
     }
 }
+
+/**
+ * 把三类设置（各自的 SSOT）叠加到屏幕状态上，得到完整的 UI 状态。
+ * 纯函数：设置字段只来自参数，与屏幕状态如何重置无关。
+ */
+internal fun BookInfoUiState.withSettings(
+    theme: ThemeSettings,
+    cover: CoverSettings,
+    other: OtherSettings,
+): BookInfoUiState = copy(
+    bookInfoFollowCoverColor = theme.bookInfoFollowCoverColor,
+    bookInfoNetworkCoverBackground = theme.bookInfoNetworkCoverBackground,
+    bookInfoDefaultCoverBackground = theme.bookInfoDefaultCoverBackground,
+    loadCoverOnlyOnWifi = cover.loadOnlyOnWifi,
+    defaultCover = cover.defaultCover,
+    defaultCoverDark = cover.defaultCoverDark,
+    showMangaUi = other.showMangaUi,
+)
 
 private val BookInfoWebFile.suffix: String
     get() = UrlUtil.getSuffix(name)

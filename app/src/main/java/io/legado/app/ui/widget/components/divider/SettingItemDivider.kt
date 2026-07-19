@@ -13,18 +13,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 
 @Composable
 fun SettingItemDivider(
     modifier: Modifier = Modifier
 ) {
-    if (!ThemeConfig.enableItemDivider) return
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    if (!themeSettings.enableItemDivider) return
 
-    val thickness = ThemeConfig.itemDividerWidth.dp
-    val lengthPercent = ThemeConfig.itemDividerLength / 100f
-    val dividerColor = if (ThemeConfig.itemDividerColor != 0) {
-        Color(ThemeConfig.itemDividerColor)
+    val thickness = themeSettings.itemDividerWidth.dp
+    val lengthPercent = themeSettings.itemDividerLength / 100f
+    val dividerColor = if (themeSettings.itemDividerColor != 0) {
+        Color(themeSettings.itemDividerColor)
     } else {
         Color.Gray.copy(alpha = 0.3f)
     }

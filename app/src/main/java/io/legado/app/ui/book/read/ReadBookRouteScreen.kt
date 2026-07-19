@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -60,6 +61,7 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -131,6 +133,7 @@ fun ReadBookRouteScreen(
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isDarkTheme = LocalAppUiConfiguration.current.isDarkTheme
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -140,6 +143,12 @@ fun ReadBookRouteScreen(
                     !state.menuConfig.readMenuFloatingBottomBar &&
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
+
+    DisposableEffect(controller) {
+        onDispose {
+            controller.clearAppThemeOverride()
+        }
+    }
 
     LaunchedEffect(state.menuVisible) {
         controller.onMenuVisibilityChanged(state.menuVisible)
@@ -409,7 +418,7 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.OpenReadStyleExport -> {
-                                readStyleExportPicker.launch("readConfig.zip")
+                                readStyleExportPicker.launch(effect.fileName)
                             }
                             is ReadBookEffect.OpenMenuCustomIconPicker -> {
                                 pendingMenuCustomIconId = effect.id
@@ -517,11 +526,14 @@ fun ReadBookRouteScreen(
                 onCursorTouch = controller,
                 readViewCallBack = controller,
                 contentTextViewCallBack = controller,
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = controller::onAppThemeChanged,
             )
         }
         ReadBookColorTheme(
             styleConfig = state.styleConfig,
             preferences = readPreferences,
+            isDarkTheme = isDarkTheme,
         ) {
             ReadBookMenuBar(
                 state = state,
@@ -610,10 +622,13 @@ private fun ReadBookViewLayer(
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
     contentTextViewCallBack: ContentTextView.CallBack,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
 ) {
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
+            onThemeChanged(isDarkTheme)
             FrameLayout(context).apply {
                 val readView = ReadView(
                     context = context,
@@ -678,6 +693,9 @@ private fun ReadBookViewLayer(
                     )
                 )
             }
+        },
+        update = {
+            onThemeChanged(isDarkTheme)
         },
     )
 }

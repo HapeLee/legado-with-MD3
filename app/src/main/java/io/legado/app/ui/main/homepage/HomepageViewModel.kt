@@ -10,6 +10,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.gateway.HomepageSettingsGateway
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.CustomSetItem
 import io.legado.app.domain.model.HomepageModuleType
@@ -50,6 +51,7 @@ class HomepageViewModel(
     application: Application,
     private val bookSourceRepository: BookSourceRepository,
     private val gateway: HomepageModulesGateway,
+    private val homepageSettingsGateway: HomepageSettingsGateway,
     private val searchRepository: SearchRepository,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
@@ -114,6 +116,10 @@ class HomepageViewModel(
         gateway.flowAll().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val customSetsFlow = gateway.flowCustomSets()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val customSetsWithSettingsFlow = combine(
+        customSetsFlow,
+        homepageSettingsGateway.settings,
+    ) { customSets, settings -> customSets to settings }
 
     // 3. 业务加工流
     private val orderedModuleDefsFlow = combine(localModulesFlow, _configVersion) { modules, _ ->
@@ -123,10 +129,10 @@ class HomepageViewModel(
     val setsFlow = combine(
         localModulesFlow,
         allModulesCache,
-        customSetsFlow,
+        customSetsWithSettingsFlow,
         _configVersion
-    ) { _, allModules, customSets, _ ->
-        val hiddenSourceUrls = GSON.fromJsonArray<String>(HomepageConfig.homepageSourceHidden)
+    ) { _, allModules, (customSets, settings), _ ->
+        val hiddenSourceUrls = GSON.fromJsonArray<String>(settings.hiddenSourceUrlsJson)
             .getOrDefault(emptyList()).toSet()
         val moduleCountsBySet =
             allModules.mapNotNull { it.customSetId }.groupBy { it }.mapValues { it.value.size }
@@ -648,11 +654,15 @@ class HomepageViewModel(
     }
 
     fun toggleSourceFilter(sourceUrl: String, isEnabled: Boolean) {
-        val hidden = GSON.fromJsonArray<String>(HomepageConfig.homepageSourceHidden)
+        val hidden = GSON.fromJsonArray<String>(
+            homepageSettingsGateway.currentSettings.hiddenSourceUrlsJson
+        )
             .getOrDefault(emptyList()).toMutableSet()
         if (isEnabled) hidden.remove(sourceUrl) else hidden.add(sourceUrl)
-        HomepageConfig.homepageSourceHidden = GSON.toJson(hidden.toList())
-        notifyConfigChanged()
+        viewModelScope.launch {
+            homepageSettingsGateway.setHiddenSourceUrlsJson(GSON.toJson(hidden.toList()))
+            notifyConfigChanged()
+        }
     }
 
     private suspend fun ensureSetForSource(sourceUrl: String, sourceName: String): String {

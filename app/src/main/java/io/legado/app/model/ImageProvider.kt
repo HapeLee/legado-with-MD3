@@ -41,10 +41,9 @@ object ImageProvider {
     private const val M = 1024 * 1024
     val cacheSize: Int
         get() {
-            if (AppConfig.bitmapCacheSize !in 1..<2048) {
-                AppConfig.bitmapCacheSize = 50
-            }
-            return AppConfig.bitmapCacheSize * M
+            return AppConfig.bitmapCacheSize.takeIf { it in 1..<2048 }
+                ?.times(M)
+                ?: (50 * M)
         }
 
     val bitmapLruCache = BitmapLruCache()
@@ -185,7 +184,7 @@ object ImageProvider {
         height: Int? = null
     ): Bitmap {
         //src为空白时 可能被净化替换掉了 或者规则失效
-        if (book.getUseReplaceRule() && src.isBlank()) {
+        if (book.getUseReplaceRule(AppConfig.replaceEnableDefault) && src.isBlank()) {
             book.setUseReplaceRule(false)
             appCtx.toastOnUi(R.string.error_image_url_empty)
         }

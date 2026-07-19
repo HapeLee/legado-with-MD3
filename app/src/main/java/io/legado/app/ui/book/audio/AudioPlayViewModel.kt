@@ -5,6 +5,9 @@ import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import org.koin.core.context.GlobalContext
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
@@ -21,6 +24,8 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 
 class AudioPlayViewModel(application: Application) : BaseViewModel(application) {
+    private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
+    private val readSettingsGateway get() = GlobalContext.get().get<ReadSettingsGateway>()
     val titleData = MutableLiveData<String>()
     val coverData = MutableLiveData<String>()
 
@@ -94,7 +99,12 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
 
     fun changeTo(source: BookSource, book: Book, toc: List<BookChapter>) {
         execute {
-            AudioPlay.book?.migrateTo(book, toc)
+            AudioPlay.book?.migrateTo(
+                book,
+                toc,
+                otherSettingsGateway.currentSettings.replaceEnableDefault,
+                readSettingsGateway.currentSettings.chineseConverterType,
+            )
             book.removeType(BookType.updateError)
             AudioPlay.book?.delete()
             appDb.bookDao.insert(book)

@@ -15,12 +15,12 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.bookmark.BookmarkExporter
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
@@ -151,7 +151,9 @@ private data class TocUiConfig(
     val collapsedVolumes: Set<Int>,
     val useReplace: Boolean,
     val showWordCount: Boolean,
-    val isReverse: Boolean
+    val isReverse: Boolean,
+    val defaultReplaceEnabled: Boolean,
+    val chineseConverterType: Int,
 )
 
 private data class TocPreferences(
@@ -205,7 +207,8 @@ class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
-    private val readSettingsRepository: ReadSettingsRepository
+    private val readSettingsRepository: ReadSettingsRepository,
+    private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
@@ -342,9 +345,18 @@ class TocViewModel(
     private val uiConfigFlow = combine(
         _collapsedVolumes,
         tocPreferences,
-        reverseFlow
-    ) { collapsed, tocPreferences, isReverse ->
-        TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, isReverse)
+        reverseFlow,
+        otherSettingsGateway.settings,
+        readSettingsRepository.settings,
+    ) { collapsed, tocPreferences, isReverse, otherSettings, readSettings ->
+        TocUiConfig(
+            collapsedVolumes = collapsed,
+            useReplace = tocPreferences.useReplace,
+            showWordCount = tocPreferences.showWordCount,
+            isReverse = isReverse,
+            defaultReplaceEnabled = otherSettings.replaceEnableDefault,
+            chineseConverterType = readSettings.chineseConverterType,
+        )
     }
 
     private val titleReplaceState = MutableStateFlow(TitleReplaceState())
@@ -366,7 +378,9 @@ class TocViewModel(
             originalChapters
         }
 
-        val replaceRules = if (config.useReplace && book.getUseReplaceRule()) {
+        val replaceRules = if (
+            config.useReplace && book.getUseReplaceRule(config.defaultReplaceEnabled)
+        ) {
             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules()
         } else emptyList()
 
@@ -374,12 +388,17 @@ class TocViewModel(
             book = book,
             chapters = processedChapters,
             replaceRules = replaceRules,
-            useReplace = config.useReplace
+            useReplace = config.useReplace,
+            defaultReplaceEnabled = config.defaultReplaceEnabled,
+            chineseConverterType = config.chineseConverterType,
         )
 
         if (book.isLocal) {
             return@combine processedChapters.map { chapter ->
-                val baseTitle = chapter.getDisplayTitle(useReplace = false)
+                val baseTitle = chapter.getDisplayTitle(
+                    useReplace = false,
+                    chineseConverterType = config.chineseConverterType,
+                )
                 TocDomainItem(
                     chapter = chapter,
                     displayTitle = titleState.titles[chapter.index] ?: baseTitle,
@@ -400,7 +419,10 @@ class TocViewModel(
                 else -> DownloadState.NONE
             }
 
-            val baseTitle = chapter.getDisplayTitle(useReplace = false)
+            val baseTitle = chapter.getDisplayTitle(
+                useReplace = false,
+                chineseConverterType = config.chineseConverterType,
+            )
             TocDomainItem(
                 chapter,
                 titleState.titles[chapter.index] ?: baseTitle,
@@ -752,9 +774,13 @@ class TocViewModel(
         book: Book,
         chapters: List<BookChapter>,
         replaceRules: List<ReplaceRule>,
-        useReplace: Boolean
+        useReplace: Boolean,
+        defaultReplaceEnabled: Boolean,
+        chineseConverterType: Int,
     ) {
-        val shouldUseReplace = useReplace && book.getUseReplaceRule() && replaceRules.isNotEmpty()
+        val shouldUseReplace = useReplace &&
+                book.getUseReplaceRule(defaultReplaceEnabled) &&
+                replaceRules.isNotEmpty()
         if (!shouldUseReplace) {
             titleCacheJob?.cancel()
             titleCacheJob = null
@@ -779,7 +805,7 @@ class TocViewModel(
             bookUrl = book.bookUrl,
             useReplace = true,
             rulesFingerprint = rulesFingerprint,
-            chineseConverterType = AppConfig.chineseConverterType,
+            chineseConverterType = chineseConverterType,
             chapterCount = chapters.size,
             chaptersFingerprint = chapters.fold(0L) { fingerprint, chapter ->
                 fingerprint + 31L * chapter.index + chapter.title.hashCode()
@@ -835,7 +861,13 @@ class TocViewModel(
             chapters.asFlow()
                 .flatMapMerge(concurrency = workerCount) { chapter ->
                     flow {
-                        emit(chapter.index to chapter.getDisplayTitle(replaceRules, true))
+                        emit(
+                            chapter.index to chapter.getDisplayTitle(
+                                replaceRules,
+                                true,
+                                chineseConverterType = chineseConverterType,
+                            )
+                        )
                     }
                 }
                 .collect { (chapterIndex, displayTitle) ->

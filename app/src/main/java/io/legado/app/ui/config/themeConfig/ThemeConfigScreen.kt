@@ -711,7 +711,6 @@ fun ThemeConfigScreen(
                                 value = theme.bottomBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                steps = 99,
                                 onValueChange = {
                                     updateTheme(ThemeIntSetting.BottomBarOpacity, it.toInt())
                                 }

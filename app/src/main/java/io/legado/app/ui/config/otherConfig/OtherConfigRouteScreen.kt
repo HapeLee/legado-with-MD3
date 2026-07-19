@@ -24,7 +24,9 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.utils.SystemUtils
+import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
@@ -69,14 +71,23 @@ fun OtherConfigRouteScreen(
                         WebService.start(context)
                     }
                 }
-                is OtherConfigEffect.ShowMessage -> {
-                    Toast.makeText(context, effect.resId, Toast.LENGTH_SHORT).show()
-                }
-                is OtherConfigEffect.SettingsUpdateFailed -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                OtherConfigEffect.RestartApp -> {
+                    delay(RESTART_DELAY_MILLIS)
+                    context.restart()
                 }
             }
         }
+    }
+
+    val pendingMessage = state.pendingMessages.firstOrNull()
+    LaunchedEffect(pendingMessage?.id, context) {
+        val message = pendingMessage ?: return@LaunchedEffect
+        if (message.resId != null) {
+            Toast.makeText(context, message.resId, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, message.text.orEmpty(), Toast.LENGTH_SHORT).show()
+        }
+        viewModel.onIntent(OtherConfigIntent.MessageShown(message.id))
     }
 
     OtherConfigScreen(
@@ -132,10 +143,11 @@ fun OtherConfigRouteScreen(
         },
         confirmText = stringResource(R.string.ok),
         onConfirm = {
-            viewModel.setLocalPassword(password)
-            viewModel.onIntent(OtherConfigIntent.DismissOverlay)
+            viewModel.onIntent(OtherConfigIntent.SaveLocalPassword(password))
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { viewModel.onIntent(OtherConfigIntent.DismissOverlay) },
     )
 }
+
+private const val RESTART_DELAY_MILLIS = 3_000L

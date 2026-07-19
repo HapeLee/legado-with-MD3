@@ -1,17 +1,26 @@
 package io.legado.app.ui.book.group
 
 import android.app.Application
+import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
+import io.legado.app.domain.gateway.BookGroupMutationGateway
+import io.legado.app.domain.model.BookGroupUpdate
+import io.legado.app.domain.model.NewBookGroup
+import io.legado.app.domain.model.TagGroupRuleUpdate
 import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 
 class GroupViewModel(
     application: Application,
     private val bookGroupRepository: BookGroupRepository,
-    private val removeBookGroupAssignmentUseCase: RemoveBookGroupAssignmentUseCase
+    private val removeBookGroupAssignmentUseCase: RemoveBookGroupAssignmentUseCase,
+    private val bookGroupMutationGateway: BookGroupMutationGateway,
 ) : BaseViewModel(application) {
 
     private val tagGroupRuleRepository = TagGroupRuleRepository()
@@ -31,31 +40,48 @@ class GroupViewModel(
         isPrivate: Boolean,
         cover: String?,
         pattern: String? = null,
-        finally: () -> Unit
+        onError: ((Throwable) -> Unit)? = null,
+        onSuccess: () -> Unit
     ) {
-        execute {
-            val groupId = bookGroupRepository.getUnusedId()
-            val bookGroup = BookGroup(
-                groupId = groupId,
-                groupName = groupName,
-                cover = cover,
-                bookSort = bookSort,
-                enableRefresh = enableRefresh,
-                isPrivate = isPrivate,
-                order = bookGroupRepository.getMaxOrder().plus(1)
-            )
-            bookGroupRepository.getByID(groupId) ?: removeBookGroupAssignmentUseCase.execute(groupId)
-            bookGroupRepository.insert(bookGroup)
-            if (!pattern.isNullOrBlank()) {
-                val tagRule = TagGroupRule(
-                    groupName = groupName,
-                    pattern = pattern,
-                    order = tagGroupRuleRepository.getMaxOrder()
+        viewModelScope.launch {
+            try {
+                bookGroupMutationGateway.addGroup(
+                    NewBookGroup(
+                        groupName = groupName,
+                        bookSort = bookSort,
+                        enableRefresh = enableRefresh,
+                        isPrivate = isPrivate,
+                        cover = cover,
+                        pattern = pattern,
+                    )
                 )
-                tagGroupRuleRepository.insert(tagRule)
+                onSuccess()
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                onError?.invoke(error)
             }
-        }.onFinally {
-            finally()
+        }
+    }
+
+    fun saveGroup(
+        bookGroup: BookGroup,
+        ruleToSave: TagGroupRule?,
+        ruleToDelete: TagGroupRule?,
+        onSuccess: () -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                bookGroupMutationGateway.saveGroup(
+                    bookGroup = bookGroup.toUpdate(),
+                    ruleToSave = ruleToSave?.toUpdate(),
+                    ruleIdToDelete = ruleToDelete?.id,
+                )
+                onSuccess()
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                onError(error)
+            }
         }
     }
 
@@ -82,12 +108,7 @@ class GroupViewModel(
 
     fun saveTagGroupRule(rule: TagGroupRule, finally: (() -> Unit)? = null) {
         execute {
-            val existing = tagGroupRuleRepository.getByGroupName(rule.groupName)
-            if (existing != null) {
-                tagGroupRuleRepository.update(rule.copy(id = existing.id))
-            } else {
-                tagGroupRuleRepository.insert(rule)
-            }
+            bookGroupMutationGateway.saveTagGroupRule(rule.toUpdate())
         }.onFinally {
             finally?.invoke()
         }
@@ -95,10 +116,28 @@ class GroupViewModel(
 
     fun deleteTagGroupRule(rule: TagGroupRule, finally: (() -> Unit)? = null) {
         execute {
-            tagGroupRuleRepository.delete(rule)
+            bookGroupMutationGateway.deleteTagGroupRule(rule.id)
         }.onFinally {
             finally?.invoke()
         }
     }
+
+    private fun BookGroup.toUpdate() = BookGroupUpdate(
+        groupId = groupId,
+        groupName = groupName,
+        cover = cover,
+        order = order,
+        enableRefresh = enableRefresh,
+        show = show,
+        bookSort = bookSort,
+        isPrivate = isPrivate,
+    )
+
+    private fun TagGroupRule.toUpdate() = TagGroupRuleUpdate(
+        id = id,
+        pattern = pattern,
+        groupName = groupName,
+        order = order,
+    )
 
 }

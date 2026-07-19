@@ -13,7 +13,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.utils.findCenterViewPosition
 
 class WebtoonFrame : FrameLayout {
@@ -62,11 +62,12 @@ class WebtoonFrame : FrameLayout {
         get() = getChildAt(0) as? WebtoonRecyclerView
 
     var actionHandler: ClickActionHandler? = null
+    var settingsProvider: () -> MangaSettings = { MangaSettings() }
 
     private val gestureDetector =
         GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onLongPress(e: MotionEvent) {
-                if (ReadMangaConfig.mangaLongClick)
+                if (settingsProvider().longClick)
                 {
                     recycler?.let {
                         val centerPos = it.findCenterViewPosition()
@@ -88,16 +89,17 @@ class WebtoonFrame : FrameLayout {
             val key =
                 regionRects.entries.find { it.value.contains(x, y) }?.key ?: return@tapListener
 
+            val settings = settingsProvider()
             val action = when (key) {
-                "TL" -> ReadMangaConfig.mangaClickActionTL
-                "TC" -> ReadMangaConfig.mangaClickActionTC
-                "TR" -> ReadMangaConfig.mangaClickActionTR
-                "ML" -> ReadMangaConfig.mangaClickActionML
-                "MC" -> ReadMangaConfig.mangaClickActionMC
-                "MR" -> ReadMangaConfig.mangaClickActionMR
-                "BL" -> ReadMangaConfig.mangaClickActionBL
-                "BC" -> ReadMangaConfig.mangaClickActionBC
-                "BR" -> ReadMangaConfig.mangaClickActionBR
+                "TL" -> settings.clickActionTL
+                "TC" -> settings.clickActionTC
+                "TR" -> settings.clickActionTR
+                "ML" -> settings.clickActionML
+                "MC" -> settings.clickActionMC
+                "MR" -> settings.clickActionMR
+                "BL" -> settings.clickActionBL
+                "BC" -> settings.clickActionBC
+                "BR" -> settings.clickActionBR
                 else -> -1
             }
 

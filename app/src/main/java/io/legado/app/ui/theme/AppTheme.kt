@@ -1,38 +1,35 @@
 package io.legado.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Density
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.materialkolor.PaletteStyle
-import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.customColors
 import io.legado.app.utils.sysConfiguration
-import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    configuration: AppUiConfiguration,
+    darkTheme: Boolean = configuration.isDarkTheme,
     content: @Composable () -> Unit
 ) {
-    if (LocalInspectionMode.current) {
-        AppThemePreview(darkTheme, content)
-    } else {
-        AppThemeActual(darkTheme, content)
+    CompositionLocalProvider(LocalAppUiConfiguration provides configuration) {
+        if (LocalInspectionMode.current) {
+            AppThemePreview(darkTheme, content)
+        } else {
+            AppThemeActual(configuration, darkTheme, content)
+        }
     }
 }
 
@@ -54,7 +51,6 @@ private fun AppThemePreview(
     )
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
-        LocalThemeSettings provides ThemeSettings(),
     ) {
         MaterialThemeWrapper(
             themeColors = themeColors,
@@ -67,31 +63,17 @@ private fun AppThemePreview(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppThemeActual(
+    configuration: AppUiConfiguration,
     darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
-    val appShellSettingsGateway = koinInject<AppShellSettingsGateway>()
-    val themeSettingsGateway = koinInject<ThemeSettingsGateway>()
-    val initialAppShellSettings = remember(appShellSettingsGateway) {
-        appShellSettingsGateway.currentSettings
-    }
-    val initialThemeSettings = remember(themeSettingsGateway) {
-        themeSettingsGateway.currentSettings
-    }
-    val appShellSettings by appShellSettingsGateway.settings
-        .collectAsStateWithLifecycle(initialAppShellSettings)
-    val themeSettings by themeSettingsGateway.settings
-        .collectAsStateWithLifecycle(initialThemeSettings)
+    val appShellSettings = configuration.appShell
+    val themeSettings = configuration.theme
     val context = LocalContext.current
     
     // 1. 获取基础配置
     val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
-    val themeModeValue = appShellSettings.themeMode
-    val effectiveDarkTheme = when (themeModeValue) {
-        "1" -> false
-        "2" -> true
-        else -> darkTheme
-    }
+    val effectiveDarkTheme = darkTheme
     val isPureBlack = themeSettings.isPureBlack
     val paletteStyleValue = themeSettings.paletteStyle
     val materialVersion = themeSettings.materialVersion
@@ -186,13 +168,11 @@ private fun AppThemeActual(
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
-        LocalThemeSettings provides themeSettings,
         LocalDensity provides appDensity,
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {
             MiuixThemeWrapper(
                 themeColors = themeColors,
-                themeSettings = themeSettings,
                 customFontFamily = customFontFamily,
                 content = content
             )

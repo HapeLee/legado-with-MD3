@@ -15,6 +15,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -93,6 +94,7 @@ data class ReadBookStyleConfig(
     val shareLayout: Boolean = false,
     // Config list for style selector
     val configCount: Int = 1,
+    val styleItems: ImmutableList<ReadStyleItem> = persistentListOf(),
 ) {
     // Computed properties for background mode
     val isDayBgImage: Boolean get() = bgType != 0
@@ -897,7 +899,7 @@ sealed interface ReadBookEffect {
     data object OpenReadStyleImagePicker : ReadBookEffect
     data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
-    data object OpenReadStyleExport : ReadBookEffect
+    data class OpenReadStyleExport(val fileName: String) : ReadBookEffect
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect
@@ -1010,7 +1012,7 @@ sealed interface ConfigUpdateAction {
 }
 
 /**
- * Typed config mutations — replaces direct `ReadBookConfig.xxx = value` + `postEvent(UP_CONFIG, ...)`.
+ * Typed config mutations replace direct writes to the legacy ReadBookConfig facade.
  * Each variant carries [actions] that describe which UI updates are needed.
  */
 @Immutable

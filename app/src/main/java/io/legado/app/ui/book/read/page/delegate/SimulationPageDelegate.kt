@@ -13,6 +13,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.MotionEvent
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.utils.screenshot
@@ -322,7 +323,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mMatrix.setValues(mMatrixArray)
         mMatrix.preTranslate(-mBezierControl1.x, -mBezierControl1.y)
         mMatrix.postTranslate(mBezierControl1.x, mBezierControl1.y)
-        canvas.drawColor(ReadBookConfig.bgMeanColor)
+        canvas.drawColor(ReadSessionState.backgroundMeanColor)
         canvas.drawBitmap(bitmap, mMatrix, mPaint)
         mPaint.colorFilter = null
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)

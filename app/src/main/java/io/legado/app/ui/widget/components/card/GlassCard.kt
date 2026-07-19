@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -41,19 +41,20 @@ private fun BaseCard(
     val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.surfaceContainer)
         .let { it.copy(alpha = it.alpha * alpha) }
     val isTransparent = containerColor == Color.Transparent
-    val resolvedCornerRadius = if (ThemeConfig.overrideBaseCardCornerRadius) {
-        ThemeConfig.baseCardCornerRadius.dp
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val resolvedCornerRadius = if (themeSettings.overrideBaseCardCornerRadius) {
+        themeSettings.baseCardCornerRadius.dp
     } else {
         cornerRadius
     }
-    val resolvedBorder = if (ThemeConfig.overrideBaseCardBorder) {
+    val resolvedBorder = if (themeSettings.overrideBaseCardBorder) {
         val configuredColor = if (LegadoTheme.isDark) {
-            ThemeConfig.baseCardBorderColorNight
+            themeSettings.baseCardBorderColorNight
         } else {
-            ThemeConfig.baseCardBorderColor
+            themeSettings.baseCardBorderColor
         }
         BorderStroke(
-            ThemeConfig.baseCardBorderWidth.dp,
+            themeSettings.baseCardBorderWidth.dp,
             configuredColor.takeIf { it != 0 }?.let(::Color)
                 ?: LegadoTheme.colorScheme.outlineVariant
         )
@@ -62,7 +63,7 @@ private fun BaseCard(
     }
     val resolvedShape = RoundedCornerShape(resolvedCornerRadius)
     val decoratedModifier = modifier.then(
-        if (ThemeConfig.overrideBaseCardBorder && resolvedBorder != null) {
+        if (themeSettings.overrideBaseCardBorder && resolvedBorder != null) {
             Modifier.border(resolvedBorder, resolvedShape)
         } else {
             Modifier
@@ -164,7 +165,7 @@ fun GlassCard(
         contentColor = contentColor,
         elevation = elevation,
         border = border,
-        alpha = ThemeConfig.containerOpacity / 100f,
+        alpha = LocalAppUiConfiguration.current.theme.containerOpacity / 100f,
         content = content
     )
 }
