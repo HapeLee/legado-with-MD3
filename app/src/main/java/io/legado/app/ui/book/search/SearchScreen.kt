@@ -45,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -148,6 +150,8 @@ fun SearchScreen(
     val listState = rememberLazyListState()
     val groupedListState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
     var keepResultsPinnedToTop by rememberSaveable { mutableStateOf(true) }
@@ -316,6 +320,8 @@ fun SearchScreen(
                         TopBarAnimatedActionButton(
                             checked = isSourceGroupedMode || state.selectedSourceTypes.isNotEmpty(),
                             onCheckedChange = {
+                                focusManager.clearFocus(force = true)
+                                keyboardController?.hide()
                                 onIntent(SearchIntent.SetSettingsSheetVisible(true))
                             },
                             iconChecked = AppIcons.Settings,
@@ -337,6 +343,8 @@ fun SearchScreen(
                         TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
                             onCheckedChange = {
+                                focusManager.clearFocus(force = true)
+                                keyboardController?.hide()
                                 onIntent(SearchIntent.SetScopeSheetVisible(true))
                             },
                             iconChecked = AppIcons.Filter,

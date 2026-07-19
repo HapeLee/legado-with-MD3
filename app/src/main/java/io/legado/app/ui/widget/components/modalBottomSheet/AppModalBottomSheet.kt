@@ -20,7 +20,6 @@ import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.material3.rememberBottomSheetState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -107,7 +106,7 @@ fun AppModalBottomSheet(
     } else {
         if (show) {
             val sheetState = rememberBottomSheetState(
-                initialValue = Expanded,
+                initialValue = Hidden,
                 enabledValues = setOf(Hidden, Expanded)
             )
             val density = LocalDensity.current
