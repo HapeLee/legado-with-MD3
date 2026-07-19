@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.import.remote
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.app.Application
 import androidx.core.net.toUri
 import androidx.compose.runtime.Immutable
@@ -14,12 +13,14 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
 import io.legado.app.data.repository.RemoteBookRepository
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
-import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -68,7 +69,7 @@ data class RemoteBookUiState(
     val sortKey: RemoteBookSort = RemoteBookSort.Default,
     val sortAscending: Boolean = false,
     val servers: List<Server> = emptyList(),
-    val selectedServerId: Long = ImportBookConfig.remoteServerId
+    val selectedServerId: Long = AppConst.DEFAULT_WEBDAV_ID
 ) : ListUiState<RemoteBookItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
@@ -112,7 +113,9 @@ class RemoteBookViewModel(
     application: Application,
     @Suppress("UNUSED_PARAMETER")
     private val savedStateHandle: SavedStateHandle,
-    private val repository: RemoteBookRepository
+    private val repository: RemoteBookRepository,
+    private val importBookSettingsGateway: ImportBookSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseViewModel(application) {
 
     private data class InternalState(
@@ -125,10 +128,14 @@ class RemoteBookViewModel(
         val selectedIds: Set<String> = emptySet(),
         val remoteBookWebDav: RemoteBookWebDav? = null,
         val isDefaultWebdav: Boolean = false,
-        val selectedServerId: Long = ImportBookConfig.remoteServerId
+        val selectedServerId: Long = AppConst.DEFAULT_WEBDAV_ID
     )
 
-    private val _state = MutableStateFlow(InternalState())
+    private val _state = MutableStateFlow(
+        InternalState(
+            selectedServerId = importBookSettingsGateway.currentSettings.remoteServerId,
+        )
+    )
     private val _effects = MutableSharedFlow<RemoteBookEffect>(extraBufferCapacity = 1)
     val effects = _effects.asSharedFlow()
 
@@ -167,7 +174,9 @@ class RemoteBookViewModel(
     private fun onBookFolderPicked(uri: android.net.Uri?) {
         uri ?: return
         uri.takePersistablePermissionSafely(context)
-        OtherConfig.defaultBookTreeUri = uri.toString()
+        viewModelScope.launch {
+            otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(uri.toString()))
+        }
     }
 
     val uiState: StateFlow<RemoteBookUiState> = combine(
@@ -218,13 +227,14 @@ class RemoteBookViewModel(
     fun initData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                val webDav = repository.createWebDav(ImportBookConfig.remoteServerId)
+                val selectedServerId = importBookSettingsGateway.currentSettings.remoteServerId
+                val webDav = repository.createWebDav(selectedServerId)
                 if (webDav != null) {
                     _state.update {
                         it.copy(
                             remoteBookWebDav = webDav,
                             isDefaultWebdav = false,
-                            selectedServerId = ImportBookConfig.remoteServerId
+                            selectedServerId = selectedServerId
                         )
                     }
                     onSuccess()
@@ -501,7 +511,7 @@ class RemoteBookViewModel(
     }
 
     private fun defaultBookTreeUri(): android.net.Uri? {
-        return OtherConfig.defaultBookTreeUri
+        return otherSettingsGateway.currentSettings.defaultBookTreeUri
             ?.takeIf { it.isUri() }
             ?.toUri()
     }
@@ -510,7 +520,7 @@ class RemoteBookViewModel(
         execute {
             repository.saveServer(server)
         }.onSuccess {
-            if (ImportBookConfig.remoteServerId == server.id) {
+            if (importBookSettingsGateway.currentSettings.remoteServerId == server.id) {
                 initData { loadRemoteBookList() }
             }
         }
@@ -523,8 +533,10 @@ class RemoteBookViewModel(
     }
 
     fun selectServer(serverId: Long) {
-        ImportBookConfig.remoteServerId = serverId
-        _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
-        initData { loadRemoteBookList() }
+        viewModelScope.launch {
+            importBookSettingsGateway.update { it.copy(remoteServerId = serverId) }
+            _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
+            initData { loadRemoteBookList() }
+        }
     }
 }

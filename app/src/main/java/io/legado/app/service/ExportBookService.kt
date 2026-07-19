@@ -17,16 +17,19 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
+import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.TranslationSettingsGateway
+import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isLocalModified
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -93,7 +96,11 @@ class ExportBookService : BaseService(), KoinComponent {
         val path: String,
         val type: String,
         val epubSize: Int = 1,
-        val epubScope: String? = null
+        val epubScope: String? = null,
+        val settings: BookExportSettings,
+        val targetLanguage: String,
+        val defaultReplaceEnabled: Boolean,
+        val chineseConverterType: Int,
     )
 
     /**
@@ -105,10 +112,18 @@ class ExportBookService : BaseService(), KoinComponent {
     }
 
     private val translationCacheRepository: TranslationCacheGateway by inject()
+    private val bookExportSettingsGateway: BookExportSettingsGateway by inject()
+    private val translationSettingsGateway: TranslationSettingsGateway by inject()
+    private val otherSettingsGateway: OtherSettingsGateway by inject()
+    private val readSettingsGateway: ReadSettingsGateway by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
     private var exportJob: Job? = null
+    private var currentExportSettings = BookExportSettings()
+    private var currentTargetLanguage = "zh"
+    private var currentDefaultReplaceEnabled = true
+    private var currentChineseConverterType = 0
     private var notificationContentText = appCtx.getString(R.string.service_starting)
 
 
@@ -121,7 +136,13 @@ class ExportBookService : BaseService(), KoinComponent {
                         path = intent.getStringExtra("exportPath")!!,
                         type = intent.getStringExtra("exportType")!!,
                         epubSize = intent.getIntExtra("epubSize", 1),
-                        epubScope = intent.getStringExtra("epubScope")
+                        epubScope = intent.getStringExtra("epubScope"),
+                        settings = bookExportSettingsGateway.currentSettings,
+                        targetLanguage = translationSettingsGateway.currentSettings.targetLanguage,
+                        defaultReplaceEnabled =
+                            otherSettingsGateway.currentSettings.replaceEnableDefault,
+                        chineseConverterType =
+                            readSettingsGateway.currentSettings.chineseConverterType,
                     )
                     waitExportBooks[bookUrl] = exportConfig
                     exportMsg[bookUrl] = getString(R.string.export_wait)
@@ -200,6 +221,10 @@ class ExportBookService : BaseService(), KoinComponent {
                 }
                 exportProgress[bookUrl] = 0
                 waitExportBooks.remove(bookUrl)
+                currentExportSettings = exportConfig.settings
+                currentTargetLanguage = exportConfig.targetLanguage
+                currentDefaultReplaceEnabled = exportConfig.defaultReplaceEnabled
+                currentChineseConverterType = exportConfig.chineseConverterType
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
                     book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
@@ -214,7 +239,7 @@ class ExportBookService : BaseService(), KoinComponent {
                         if (exportConfig.epubScope.isNullOrBlank()) {
                             exportEpub(exportConfig.path, book)
                             // Also export translation if cache exists
-                            if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                            if (hasAnyTranslatedChapter(book, exportConfig.targetLanguage)) {
                                 exportEpub(exportConfig.path, book, ContentSource.Translation)
                             }
                         } else {
@@ -226,7 +251,7 @@ class ExportBookService : BaseService(), KoinComponent {
                     } else {
                         exportTxt(exportConfig.path, book)
                         // Also export translation if cache exists
-                        if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                        if (hasAnyTranslatedChapter(book, exportConfig.targetLanguage)) {
                             val fileDoc = FileDoc.fromDir(exportConfig.path)
                             exportTxt(fileDoc, book, ContentSource.Translation)
                         }
@@ -272,15 +297,18 @@ class ExportBookService : BaseService(), KoinComponent {
     }
 
     private suspend fun exportTxt(fileDoc: FileDoc, book: Book, source: ContentSource) {
-        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val targetLanguage = currentTargetLanguage
         val filename = when (source) {
-            ContentSource.Original -> book.getExportFileName("txt")
-            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("txt"), targetLanguage)
+            ContentSource.Original -> book.getExportFileName("txt", currentExportSettings.bookExportFileName)
+            ContentSource.Translation -> getTranslatedFileName(
+                book.getExportFileName("txt", currentExportSettings.bookExportFileName),
+                targetLanguage,
+            )
         }
         fileDoc.find(filename)?.delete()
 
         val bookDoc = fileDoc.createFileIfNotExist(filename)
-        val charset = Charset.forName(AppConfig.exportCharset)
+        val charset = Charset.forName(currentExportSettings.exportCharset)
         bookDoc.openOutputStream().getOrThrow().bufferedWriter(charset).use { bw ->
             getAllContents(book, source) { text, srcList ->
                 bw.write(text)
@@ -302,7 +330,7 @@ class ExportBookService : BaseService(), KoinComponent {
                 }
             }
         }
-        if (AppConfig.exportToWebDav) {
+        if (currentExportSettings.exportToWebDav) {
             // 导出到webdav
             AppWebDav.exportWebDav(bookDoc.uri, filename)
         }
@@ -336,7 +364,8 @@ class ExportBookService : BaseService(), KoinComponent {
         source: ContentSource,
         append: (text: String, srcList: ArrayList<SrcData>?) -> Unit
     ) = coroutineScope {
-        val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
+        val useReplace = currentExportSettings.exportUseReplace &&
+                book.getUseReplaceRule(currentDefaultReplaceEnabled)
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
         val qy = "${book.name}\n${
             getString(R.string.author_show, book.getRealAuthor())
@@ -347,7 +376,7 @@ class ExportBookService : BaseService(), KoinComponent {
             )
         }"
         append(qy, null)
-        val threads = if (AppConfig.parallelExportBook) {
+        val threads = if (currentExportSettings.parallelExportBook) {
             AppConst.MAX_THREAD
         } else {
             1
@@ -378,7 +407,7 @@ class ExportBookService : BaseService(), KoinComponent {
         useReplace: Boolean,
         source: ContentSource
     ): Pair<String, ArrayList<SrcData>?> {
-        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val targetLanguage = currentTargetLanguage
         val content = when (source) {
             ContentSource.Original -> BookHelp.getContent(book, chapter)
             ContentSource.Translation -> translationCacheRepository.readTranslation(book, chapter, targetLanguage)
@@ -389,12 +418,12 @@ class ExportBookService : BaseService(), KoinComponent {
                 // 不导出vip标识
                 chapter.apply { isVip = false },
                 content ?: if (chapter.isVolume) "" else "null",
-                includeTitle = !AppConfig.exportNoChapterName,
+                includeTitle = !currentExportSettings.exportNoChapterName,
                 useReplace = useReplace,
                 chineseConvert = false,
                 reSegment = false
             ).toString()
-        if (AppConfig.exportPictureFile && source == ContentSource.Original) {
+        if (currentExportSettings.exportPictureFile && source == ContentSource.Original) {
             //txt导出图片文件 - only for original source
             val srcList = arrayListOf<SrcData>()
             content?.split("\n")?.forEachIndexed { index, text ->
@@ -430,10 +459,13 @@ class ExportBookService : BaseService(), KoinComponent {
     }
 
     private suspend fun exportEpub(fileDoc: FileDoc, book: Book, source: ContentSource) {
-        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val targetLanguage = currentTargetLanguage
         val filename = when (source) {
-            ContentSource.Original -> book.getExportFileName("epub")
-            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("epub"), targetLanguage)
+            ContentSource.Original -> book.getExportFileName("epub", currentExportSettings.bookExportFileName)
+            ContentSource.Translation -> getTranslatedFileName(
+                book.getExportFileName("epub", currentExportSettings.bookExportFileName),
+                targetLanguage,
+            )
         }
         fileDoc.find(filename)?.delete()
 
@@ -454,7 +486,7 @@ class ExportBookService : BaseService(), KoinComponent {
             EpubWriter().write(epubBook, bookOs)
         }
 
-        if (AppConfig.exportToWebDav) {
+        if (currentExportSettings.exportToWebDav) {
             // 导出到webdav
             AppWebDav.exportWebDav(bookDoc.uri, filename)
         }
@@ -607,14 +639,15 @@ class ExportBookService : BaseService(), KoinComponent {
         source: ContentSource = ContentSource.Original
     ) = coroutineScope {
         //正文
-        val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
+        val useReplace = currentExportSettings.exportUseReplace &&
+                book.getUseReplaceRule(currentDefaultReplaceEnabled)
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
-        val threads = if (AppConfig.parallelExportBook) {
+        val threads = if (currentExportSettings.parallelExportBook) {
             AppConst.MAX_THREAD
         } else {
             1
         }
-        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val targetLanguage = currentTargetLanguage
         var parentSection: TOCReference? = null
         flow {
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
@@ -652,7 +685,8 @@ class ExportBookService : BaseService(), KoinComponent {
                 isVip = false
                 getDisplayTitle(
                     contentProcessor.getTitleReplaceRules(),
-                    useReplace = useReplace
+                    useReplace = useReplace,
+                    chineseConverterType = currentChineseConverterType,
                 )
             }
             val chapterResource = ResourceUtil.createChapterResource(
@@ -802,7 +836,8 @@ class ExportBookService : BaseService(), KoinComponent {
             updateProgress: (chapterList: MutableList<BookChapter>, index: Int) -> Unit
         ) {
             //正文
-            val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
+            val useReplace = currentExportSettings.exportUseReplace &&
+                    book.getUseReplaceRule(currentDefaultReplaceEnabled)
             val contentProcessor = ContentProcessor.get(book.name, book.origin)
             var chapterList: MutableList<BookChapter> = ArrayList()
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEachIndexed { index, chapter ->
@@ -846,7 +881,8 @@ class ExportBookService : BaseService(), KoinComponent {
                         isVip = false
                         getDisplayTitle(
                             contentProcessor.getTitleReplaceRules(),
-                            useReplace = useReplace
+                            useReplace = useReplace,
+                            chineseConverterType = currentChineseConverterType,
                         )
                     }
                     epubBook.addSection(
@@ -879,7 +915,11 @@ class ExportBookService : BaseService(), KoinComponent {
             val result: MutableList<Pair<String, EpubBook>> = ArrayList(paresNumOfEpub)
             var contentModel = ""
             for (i in 1..paresNumOfEpub) {
-                val filename = book.getExportFileName("epub", i)
+                val filename = book.getExportFileName(
+                    "epub",
+                    i,
+                    currentExportSettings.episodeExportFileName,
+                )
                 fileDoc.find(filename)?.delete()
 
                 val epubBook = EpubBook()
@@ -917,7 +957,7 @@ class ExportBookService : BaseService(), KoinComponent {
                     .write(epubBook, bookOs)
             }
 
-            if (AppConfig.exportToWebDav) {
+            if (currentExportSettings.exportToWebDav) {
                 // 导出到webdav
                 AppWebDav.exportWebDav(bookDoc.uri, filename)
             }

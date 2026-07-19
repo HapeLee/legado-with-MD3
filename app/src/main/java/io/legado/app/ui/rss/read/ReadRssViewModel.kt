@@ -10,6 +10,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
+import io.legado.app.help.config.AppConfig
 import io.legado.app.data.entities.RssStar
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -93,7 +94,7 @@ class ReadRssViewModel(
         execute {
             rssSource = appDb.rssSourceDao.getByKey(args.origin)
             headerMap = runScriptWithContext {
-                rssSource?.getHeaderMap() ?: emptyMap()
+                rssSource?.getHeaderMap(AppConfig.userAgent) ?: emptyMap()
             }
             isStartPage = args.startPage
             if (isStartPage) {

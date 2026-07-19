@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.coverConfig
 
 import androidx.compose.runtime.Stable
-import io.legado.app.domain.gateway.CoverSettingsUpdate
 import io.legado.app.domain.model.settings.CoverSettings
 
 @Stable
@@ -33,7 +32,21 @@ enum class CoverColorField {
 }
 
 sealed interface CoverConfigIntent {
-    data class UpdateSetting(val update: CoverSettingsUpdate) : CoverConfigIntent
+    data class SetLoadOnlyOnWifi(val value: Boolean) : CoverConfigIntent
+    data class SetUseDefaultCover(val value: Boolean) : CoverConfigIntent
+    data class SetShowShadow(val value: Boolean) : CoverConfigIntent
+    data class SetShowStroke(val value: Boolean) : CoverConfigIntent
+    data class SetUseDefaultColor(val value: Boolean) : CoverConfigIntent
+    data class SetInfoOrientation(val value: String) : CoverConfigIntent
+    data class SetExploreFilterState(val value: Int) : CoverConfigIntent
+    data class SetShowName(val value: Boolean) : CoverConfigIntent
+    data class SetShowAuthor(val value: Boolean) : CoverConfigIntent
+    data class SetShowNameDark(val value: Boolean) : CoverConfigIntent
+    data class SetShowAuthorDark(val value: Boolean) : CoverConfigIntent
+    data class SetTextColor(val value: Int) : CoverConfigIntent
+    data class SetShadowColor(val value: Int) : CoverConfigIntent
+    data class SetTextColorDark(val value: Int) : CoverConfigIntent
+    data class SetShadowColorDark(val value: Int) : CoverConfigIntent
     data class ShowSheet(val sheet: CoverConfigSheet) : CoverConfigIntent
     data object DismissSheet : CoverConfigIntent
     data class SelectAlbum(val id: String?) : CoverConfigIntent

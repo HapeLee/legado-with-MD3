@@ -3,7 +3,7 @@ package io.legado.app.ui.config.downloadCacheConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
+import io.legado.app.domain.model.settings.DownloadCacheSettings
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.help.http.HttpCacheType
@@ -25,7 +25,9 @@ class DownloadCacheConfigViewModel(
     private val settingsGateway: DownloadCacheSettingsGateway,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DownloadCacheConfigUiState())
+    private val _uiState = MutableStateFlow(
+        DownloadCacheConfigUiState(settings = settingsGateway.currentSettings)
+    )
     val uiState = _uiState.asStateFlow()
 
     init {
@@ -39,34 +41,26 @@ class DownloadCacheConfigViewModel(
 
     fun onIntent(intent: DownloadCacheConfigIntent) {
         when (intent) {
-            is DownloadCacheConfigIntent.SetThreadCount -> update(
-                DownloadCacheSettingsUpdate.ThreadCount(intent.value)
-            )
-            is DownloadCacheConfigIntent.SetCacheBookThreadCount -> update(
-                DownloadCacheSettingsUpdate.CacheBookThreadCount(
-                    intent.value.coerceIn(1, CacheBook.maxDownloadConcurrency)
-                )
-            )
-            is DownloadCacheConfigIntent.SetPreDownloadNum -> update(
-                DownloadCacheSettingsUpdate.PreDownloadNum(intent.value)
-            )
+            is DownloadCacheConfigIntent.SetThreadCount ->
+                update { it.copy(threadCount = intent.value) }
+            is DownloadCacheConfigIntent.SetCacheBookThreadCount -> {
+                val value = intent.value.coerceIn(1, CacheBook.maxDownloadConcurrency)
+                update { it.copy(cacheBookThreadCount = value) }
+            }
+            is DownloadCacheConfigIntent.SetPreDownloadNum ->
+                update { it.copy(preDownloadNum = intent.value) }
             is DownloadCacheConfigIntent.SetBitmapCacheSize -> {
                 viewModelScope.launch {
-                    settingsGateway.update(
-                        DownloadCacheSettingsUpdate.BitmapCacheSize(intent.value)
-                    )
+                    settingsGateway.update { it.copy(bitmapCacheSize = intent.value) }
                     ImageProvider.bitmapLruCache.resize(ImageProvider.cacheSize)
                 }
             }
-            is DownloadCacheConfigIntent.SetImageRetainNum -> update(
-                DownloadCacheSettingsUpdate.ImageRetainNum(intent.value)
-            )
-            is DownloadCacheConfigIntent.SetUserAgent -> update(
-                DownloadCacheSettingsUpdate.UserAgent(intent.value)
-            )
-            is DownloadCacheConfigIntent.SetCronetEnabled -> update(
-                DownloadCacheSettingsUpdate.CronetEnabled(intent.value)
-            )
+            is DownloadCacheConfigIntent.SetImageRetainNum ->
+                update { it.copy(imageRetainNum = intent.value) }
+            is DownloadCacheConfigIntent.SetUserAgent ->
+                update { it.copy(userAgent = intent.value) }
+            is DownloadCacheConfigIntent.SetCronetEnabled ->
+                update { it.copy(cronetEnabled = intent.value) }
             is DownloadCacheConfigIntent.ShowDialog ->
                 _uiState.update { it.copy(dialog = intent.dialog) }
             DownloadCacheConfigIntent.DismissDialog ->
@@ -75,8 +69,8 @@ class DownloadCacheConfigViewModel(
         }
     }
 
-    private fun update(update: DownloadCacheSettingsUpdate) {
-        viewModelScope.launch { settingsGateway.update(update) }
+    private fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) {
+        viewModelScope.launch { settingsGateway.update(transform) }
     }
 
     private fun loadCacheSizes() {

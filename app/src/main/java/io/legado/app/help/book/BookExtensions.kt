@@ -11,10 +11,14 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
+import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
@@ -408,7 +412,23 @@ fun parseHighlightedTags(
 
 fun applyTagGroupRules(
     books: List<Book>,
-    rules: List<io.legado.app.data.entities.TagGroupRule>,
+    rules: List<TagGroupRule>,
+) {
+    appDb.runInTransaction {
+        applyTagGroupRules(
+            books = books,
+            rules = rules,
+            groupDao = appDb.bookGroupDao,
+            bookDao = appDb.bookDao,
+        )
+    }
+}
+
+fun applyTagGroupRules(
+    books: List<Book>,
+    rules: List<TagGroupRule>,
+    groupDao: BookGroupDao,
+    bookDao: BookDao,
 ) {
     if (rules.isEmpty()) return
 
@@ -422,9 +442,6 @@ fun applyTagGroupRules(
     }
     if (compiledRules.isEmpty()) return
 
-    val groupDao = appDb.bookGroupDao
-    val bookDao = appDb.bookDao
-
     // Resolve groupName -> groupId (find or create BookGroup)
     val groupCache = mutableMapOf<String, Long>()
     for ((rule, _) in compiledRules) {
@@ -433,7 +450,7 @@ fun applyTagGroupRules(
             val groupId = existing?.groupId ?: run {
                 val newId = groupDao.getUnusedId()
                 groupDao.insert(
-                    io.legado.app.data.entities.BookGroup(
+                    BookGroup(
                         groupId = newId,
                         groupName = rule.groupName,
                     )
@@ -466,9 +483,7 @@ fun applyTagGroupRules(
     }
 
     if (updatedBooks.isNotEmpty()) {
-        appDb.runInTransaction {
-            bookDao.update(*updatedBooks.toTypedArray())
-        }
+        bookDao.update(*updatedBooks.toTypedArray())
     }
 }
 
@@ -528,7 +543,11 @@ fun Book.sync(oldBook: Book) {
         durChapterIndex = curBook.durChapterIndex
         val replaceRules = ContentProcessor.get(this).getTitleReplaceRules()
         appDb.bookChapterDao.getChapter(bookUrl, durChapterIndex)?.let {
-            durChapterTitle = it.getDisplayTitle(replaceRules, getUseReplaceRule())
+            durChapterTitle = it.getDisplayTitle(
+                replaceRules,
+                getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
+            )
         }
     }
     canUpdate = curBook.canUpdate
@@ -601,8 +620,10 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
     return false
 }
 
-fun Book.getExportFileName(suffix: String): String {
-    val template = AppConfig.bookExportFileName
+fun Book.getExportFileName(
+    suffix: String,
+    template: String? = AppConfig.bookExportFileName,
+): String {
     if (template.isNullOrBlank()) {
         return "$name 作者：${getRealAuthor()}.$suffix"
     }

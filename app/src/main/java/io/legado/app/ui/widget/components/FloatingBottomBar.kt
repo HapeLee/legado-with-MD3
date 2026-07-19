@@ -65,8 +65,9 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.capsule.ContinuousCapsule
 import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.animation.InteractiveHighlight
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.customColors
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -116,16 +117,21 @@ fun FloatingBottomBar(
     content: @Composable RowScope.() -> Unit
 ) {
     val isInLightTheme = !LegadoTheme.isDark
-    val customColors = ThemeConfig.customThemeColors(LegadoTheme.isDark)
-    val accentColor = if (ThemeConfig.isDeepPersonalizationActive && customColors.primary != 0) {
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val customColors = themeSettings.customColors(LegadoTheme.isDark)
+    val accentColor = if (themeSettings.enableDeepPersonalization && customColors.primary != 0) {
         Color(customColors.primary)
     } else {
         LegadoTheme.colorScheme.primary
     }
-    val containerColor = if (ThemeConfig.isDeepPersonalizationActive && customColors.secondary != 0) {
-        Color(customColors.secondary).copy(alpha = if (isBlurEnabled) ThemeConfig.bottomBarBlurAlpha / 100f else 1f)
+    val containerColor = if (themeSettings.enableDeepPersonalization && customColors.secondary != 0) {
+        Color(customColors.secondary).copy(
+            alpha = if (isBlurEnabled) themeSettings.bottomBarBlurAlpha / 100f else 1f
+        )
     } else if (isBlurEnabled) {
-        LegadoTheme.colorScheme.surfaceContainer.copy(alpha = ThemeConfig.bottomBarBlurAlpha / 100f)
+        LegadoTheme.colorScheme.surfaceContainer.copy(
+            alpha = themeSettings.bottomBarBlurAlpha / 100f
+        )
     } else {
         LegadoTheme.colorScheme.surfaceContainer
     }
@@ -262,10 +268,10 @@ fun FloatingBottomBar(
                     effects = {
                         if (isBlurEnabled) {
                             vibrancy()
-                            blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
+                            blur(themeSettings.bottomBarBlurRadius.toFloat().dp.toPx())
                             lens(
-                                ThemeConfig.bottomBarLensRadius.dp.toPx(),
-                                ThemeConfig.bottomBarLensRadius.dp.toPx()
+                                themeSettings.bottomBarLensRadius.dp.toPx(),
+                                themeSettings.bottomBarLensRadius.dp.toPx()
                             )
                         }
                     },
@@ -322,10 +328,10 @@ fun FloatingBottomBar(
                             if (isBlurEnabled) {
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
-                                blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
+                                blur(themeSettings.bottomBarBlurRadius.toFloat().dp.toPx())
                                 lens(
-                                    ThemeConfig.bottomBarLensRadius.dp.toPx() * progress,
-                                    ThemeConfig.bottomBarLensRadius.dp.toPx() * progress
+                                    themeSettings.bottomBarLensRadius.dp.toPx() * progress,
+                                    themeSettings.bottomBarLensRadius.dp.toPx() * progress
                                 )
                             }
                         },

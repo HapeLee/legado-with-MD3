@@ -1,92 +1,26 @@
 package io.legado.app.ui.config.coverConfig
 
-import io.legado.app.constant.PreferKey
-import io.legado.app.ui.config.prefDelegate
+import io.legado.app.domain.gateway.CoverSettingsGateway
+import org.koin.core.context.GlobalContext
 
+@Deprecated("使用 CoverSettingsGateway.currentSettings")
 object CoverConfig {
-
-    var loadCoverOnlyWifi by prefDelegate(
-        PreferKey.loadCoverOnlyWifi,
-        false
-    )
-
-    var useDefaultCover by prefDelegate(
-        PreferKey.useDefaultCover,
-        false
-    )
-
-    var coverShowShadow by prefDelegate(
-        PreferKey.coverShowShadow,
-        false
-    )
-
-    var coverShowStroke by prefDelegate(
-        PreferKey.coverShowStroke,
-        true
-    )
-
-    var coverDefaultColor by prefDelegate(
-        PreferKey.coverDefaultColor,
-        true
-    )
-
-    var defaultCover by prefDelegate(
-        PreferKey.defaultCover,
-        ""
-    )
-
-    var coverTextColor by prefDelegate(
-        PreferKey.coverTextColor,
-        -16777216 // This might need a better default or a color resource lookup
-    )
-
-    var coverShadowColor by prefDelegate(
-        PreferKey.coverShadowColor,
-        -16777216
-    )
-
-    var coverShowName by prefDelegate(
-        PreferKey.coverShowName,
-        true
-    )
-
-    var coverShowAuthor by prefDelegate(
-        PreferKey.coverShowAuthor,
-        true
-    )
-
-    var defaultCoverDark by prefDelegate(
-        PreferKey.defaultCoverDark,
-        ""
-    )
-
-    var coverTextColorN by prefDelegate(
-        PreferKey.coverTextColorN,
-        -1
-    )
-
-    var coverShadowColorN by prefDelegate(
-        PreferKey.coverShadowColorN,
-        -1
-    )
-
-    var coverShowNameN by prefDelegate(
-        PreferKey.coverShowNameN,
-        true
-    )
-
-    var coverShowAuthorN by prefDelegate(
-        PreferKey.coverShowAuthorN,
-        true
-    )
-
-    var coverInfoOrientation by prefDelegate(
-        PreferKey.coverInfoOrientation,
-        "0" // 0: vertical, 1: horizontal
-    )
-
-    var exploreFilterState by prefDelegate(
-        PreferKey.exploreFilterState,
-        0
-    )
+    private val settings get() = GlobalContext.get().get<CoverSettingsGateway>().currentSettings
+    val loadCoverOnlyWifi get() = settings.loadOnlyOnWifi
+    val useDefaultCover get() = settings.useDefaultCover
+    val coverShowShadow get() = settings.showShadow
+    val coverShowStroke get() = settings.showStroke
+    val coverDefaultColor get() = settings.useDefaultColor
+    val defaultCover get() = settings.defaultCover
+    val coverTextColor get() = settings.textColor
+    val coverShadowColor get() = settings.shadowColor
+    val coverShowName get() = settings.showName
+    val coverShowAuthor get() = settings.showAuthor
+    val defaultCoverDark get() = settings.defaultCoverDark
+    val coverTextColorN get() = settings.textColorDark
+    val coverShadowColorN get() = settings.shadowColorDark
+    val coverShowNameN get() = settings.showNameDark
+    val coverShowAuthorN get() = settings.showAuthorDark
+    val coverInfoOrientation get() = settings.infoOrientation
+    val exploreFilterState get() = settings.exploreFilterState
 }

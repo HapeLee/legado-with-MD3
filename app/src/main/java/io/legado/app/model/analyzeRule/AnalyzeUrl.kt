@@ -131,7 +131,7 @@ class AnalyzeUrl(
         val urlMatcher = paramPattern.matcher(baseUrl)
         if (urlMatcher.find()) baseUrl = baseUrl.substring(0, urlMatcher.start())
         (headerMapF ?: runScriptWithContext(coroutineContext) {
-            source?.getHeaderMap(hasLoginHeader)
+            source?.getHeaderMap(AppConfig.userAgent, hasLoginHeader)
         })?.let {
             headerMap.putAll(it)
             if (it.containsKey("proxy")) {

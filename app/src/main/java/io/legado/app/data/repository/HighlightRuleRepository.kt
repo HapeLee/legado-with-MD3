@@ -29,11 +29,15 @@ class HighlightRuleRepository(
     )
 
     fun load(configName: String): List<HighlightRule> {
-        return dao.getAll().filter { it.matchesConfig(configName) }
+        return clearUnreadableReferences(
+            dao.getAll().filter { it.matchesConfig(configName) }
+        )
     }
 
     fun loadEnabled(configName: String): List<HighlightRule> {
-        return dao.getEnabled().filter { it.matchesConfig(configName) }
+        return clearUnreadableReferences(
+            dao.getEnabled().filter { it.matchesConfig(configName) }
+        )
     }
 
     /**
@@ -171,6 +175,18 @@ class HighlightRuleRepository(
             configName = runCatching { rule.configName }.getOrNull()?.takeIf { it.isNotBlank() },
             fontPath = runCatching { rule.fontPath }.getOrNull()?.takeIf { it.isNotBlank() },
         )
+    }
+
+    private fun clearUnreadableReferences(rules: List<HighlightRule>): List<HighlightRule> {
+        val cleaned = HighlightRuleAssetTransfer.clearUnreadableReferences(
+            rules = rules,
+            isReadableBackgroundReference = context::isReadableHighlightBackground,
+            isReadableFontReference = context::isReadableHighlightFont,
+        )
+        rules.zip(cleaned).forEach { (original, updated) ->
+            if (original != updated) dao.update(updated)
+        }
+        return cleaned
     }
 
     private fun normalizeTargetScope(value: Int, fallback: Int = HighlightRule.TARGET_ALL): Int {

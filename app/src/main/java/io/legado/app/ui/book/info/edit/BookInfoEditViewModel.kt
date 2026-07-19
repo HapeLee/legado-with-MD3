@@ -11,6 +11,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
@@ -140,6 +141,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
                 book.customTag = currentState.kindList.joinToString(",").ifBlank { null }
+                applyTagGroupRulesForBook(book)
                 BookHelp.updateCacheFolder(oldBook, book)
 
                 if (ReadBook.book?.bookUrl == book.bookUrl) {

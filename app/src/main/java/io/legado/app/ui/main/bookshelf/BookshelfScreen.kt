@@ -287,7 +287,8 @@ fun BookshelfScreen(
         }
     }
 
-    val pagerState = key(uiState.groups.isEmpty()) {
+    val groupOrderKey = remember(uiState.groups) { uiState.groups.map { it.groupId } }
+    val pagerState = key(groupOrderKey) {
         rememberPagerState(
             initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
             pageCount = { uiState.groups.size }

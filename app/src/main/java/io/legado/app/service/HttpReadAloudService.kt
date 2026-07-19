@@ -32,6 +32,9 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
@@ -39,6 +42,9 @@ import io.legado.app.domain.model.readaloud.SpeechEngineRoute
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
+import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ReadAloudSettings
+import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -56,7 +62,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
@@ -71,12 +76,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Response
 import org.mozilla.javascript.WrappedException
+import org.koin.core.context.GlobalContext
 import org.koin.java.KoinJavaComponent.get
 import splitties.init.appCtx
 import java.io.File
@@ -91,6 +98,16 @@ import java.net.SocketTimeoutException
 class HttpReadAloudService : BaseReadAloudService(),
     Player.Listener {
     override val useSpeechPlaybackQueue: Boolean = true
+
+    private val readAloudSettingsGateway = GlobalContext.get().get<ReadAloudSettingsGateway>()
+    private val readSettingsGateway = GlobalContext.get().get<ReadSettingsGateway>()
+    private val otherSettingsGateway = GlobalContext.get().get<OtherSettingsGateway>()
+    private var readAloudSettings: ReadAloudSettings = readAloudSettingsGateway.currentSettings
+    private var readSettings: ReadSettings = readSettingsGateway.currentSettings
+    private var otherSettings: OtherSettings = otherSettingsGateway.currentSettings
+
+    private val speechRatePlay: Int
+        get() = if (readAloudSettings.ttsFollowSys) 5 else readAloudSettings.ttsSpeechRate
 
     private data class PreDownloadChapter(
         val textChapter: TextChapter,
@@ -123,7 +140,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private val loadErrorHandlingPolicy by lazy {
         CustomLoadErrorHandlingPolicy()
     }
-    private var speechRate: Int = ReadConfig.speechRatePlay + 5
+    private var speechRate: Int = speechRatePlay + 5
     private var downloadTask: Coroutine<*>? = null
     private var playIndexJob: Job? = null
     private var downloadErrorNo: Int = 0
@@ -137,6 +154,15 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun onCreate() {
         super.onCreate()
         exoPlayer.addListener(this)
+        lifecycleScope.launch {
+            readAloudSettingsGateway.settings.collectLatest { readAloudSettings = it }
+        }
+        lifecycleScope.launch {
+            readSettingsGateway.settings.collectLatest { readSettings = it }
+        }
+        lifecycleScope.launch {
+            otherSettingsGateway.settings.collectLatest { otherSettings = it }
+        }
     }
 
     override fun onDestroy() {
@@ -159,7 +185,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             ReadBook.readAloud()
         } else {
             super.play()
-            if (ReadConfig.streamReadAloudAudio && !hasFileSynthesisCue()) {
+            if (readAloudSettings.streamReadAloudAudio && !hasFileSynthesisCue()) {
                 downloadAndPlayAudiosStream()
             } else {
                 downloadAndPlayAudios()
@@ -239,10 +265,10 @@ class HttpReadAloudService : BaseReadAloudService(),
                                         SystemTtsVoiceConfig::class.java,
                                     )
                                 }.getOrNull() ?: SystemTtsVoiceConfig()
-                                val globalRate = if (ReadConfig.ttsFollowSys) {
+                                val globalRate = if (readAloudSettings.ttsFollowSys) {
                                     1f
                                 } else {
-                                    (ReadConfig.ttsSpeechRate + 5) / 10f
+                                    (readAloudSettings.ttsSpeechRate + 5) / 10f
                                 }
                                 if (!systemTtsFileSynthesizer.synthesize(
                                         routedVoice.engineId,
@@ -287,7 +313,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val file = getSpeakFileAsMd5(fileName)
                     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
                     launch(Main) {
-                        if (ReadConfig.ttsParagraphInterval > 0) {
+                        if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
                                 exoPlayer.setMediaItem(mediaItem)
                                 if (!pause) {
@@ -321,7 +347,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
         val displayTitle = chapter.getDisplayTitle(
             contentProcessor.getTitleReplaceRules(),
-            book.getUseReplaceRule(),
+            book.getUseReplaceRule(otherSettings.replaceEnableDefault),
+            chineseConverterType = readSettings.chineseConverterType,
         )
         val processedContent = contentProcessor.getContent(
             book,
@@ -350,7 +377,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = if (!queue.isEmpty) {
             queue.cues.map { it.text }
         } else {
-            textChapter.getNeedReadAloud(0, ReadConfig.readAloudByPage, 0)
+            textChapter.getNeedReadAloud(0, readAloudSettings.readAloudByPage, 0)
                 .split("\n")
                 .filter { it.isNotEmpty() }
         }
@@ -360,7 +387,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = ReadConfig.audioPreDownloadNum
+        val limit = readAloudSettings.audioPreDownloadNum
         
         try {
             for (i in 1..limit) {
@@ -436,7 +463,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     downloaderChannel.send(downloader)
                     val mediaSource = createMediaSource(dataSourceFactory, fileName)
                     launch(Main) {
-                        if (ReadConfig.ttsParagraphInterval > 0) {
+                        if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
                                 exoPlayer.setMediaSource(mediaSource)
                                 if (!pause) {
@@ -468,7 +495,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     ) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = ReadConfig.audioPreDownloadNum
+        val limit = readAloudSettings.audioPreDownloadNum
         
         try {
             for (i in 1..limit) {
@@ -727,7 +754,7 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 如果时间设置为0，则不再保护当前章节，退出即全删。
      */
     private fun removeCacheFile() {
-        val keepTime = ReadConfig.audioCacheCleanTime
+        val keepTime = readAloudSettings.audioCacheCleanTime * 60 * 1000L
         // 只有当时间大于0时，才需要保护当前章节。如果为0，说明用户想彻底不留缓存。
         val protectCurrentChapter = keepTime > 0
         val titleMd5 = if (protectCurrentChapter) MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "") else ""
@@ -807,8 +834,8 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun upSpeechRate(reset: Boolean) {
         downloadTask?.cancel()
         exoPlayer.stop()
-        speechRate = ReadConfig.speechRatePlay + 5
-        if (ReadConfig.streamReadAloudAudio) {
+        speechRate = speechRatePlay + 5
+        if (readAloudSettings.streamReadAloudAudio) {
             downloadAndPlayAudiosStream()
         } else {
             downloadAndPlayAudios()
@@ -836,7 +863,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             Player.STATE_ENDED -> {
                 // 结束
                 playErrorNo = 0
-                val interval = ReadConfig.ttsParagraphInterval.toLong()
+                val interval = readAloudSettings.ttsParagraphInterval.toLong()
                 if (interval > 0) {
                     val isLastParagraph = nowSpeak >= contentList.lastIndex
                     updateNextPos()
@@ -908,7 +935,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun deleteCurrentSpeakFile() {
-        if (ReadConfig.streamReadAloudAudio) {
+        if (readAloudSettings.streamReadAloudAudio) {
             return
         }
         val mediaItem = exoPlayer.currentMediaItem ?: return

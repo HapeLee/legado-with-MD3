@@ -4,7 +4,16 @@ data class AppUiConfiguration(
     val language: String = "auto",
     val appShell: AppShellSettings = AppShellSettings(),
     val theme: ThemeSettings = ThemeSettings(),
-)
+    val cover: CoverSettings = CoverSettings(),
+    val isSystemDarkTheme: Boolean = false,
+) {
+    val isDarkTheme: Boolean
+        get() = when (appShell.themeMode) {
+            "1" -> false
+            "2" -> true
+            else -> isSystemDarkTheme
+        }
+}
 
 data class AppUiConfigurationDiff(
     val localeChanged: Boolean = false,
@@ -23,6 +32,7 @@ fun AppUiConfiguration.diffFrom(previous: AppUiConfiguration): AppUiConfiguratio
     AppUiConfigurationDiff(
         localeChanged = language != previous.language,
         themeChanged = appShell.themeMode != previous.appShell.themeMode ||
+            (appShell.themeMode == "0" && isSystemDarkTheme != previous.isSystemDarkTheme) ||
             theme.requiresLegacyThemeRefresh(previous.theme),
         fontScaleChanged = appShell.fontScale != previous.appShell.fontScale,
         windowChanged = appShell.showStatusBar != previous.appShell.showStatusBar ||

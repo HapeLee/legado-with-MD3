@@ -7,6 +7,7 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import io.legado.app.help.book.isUpError
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.sync
@@ -41,6 +42,7 @@ class RefreshTocUseCase(
         val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
         book.sync(oldBook)
         book.removeType(BookType.updateError)
+        applyTagGroupRulesForBook(book)
         if (book.bookUrl == bookUrl) {
             bookRepository.update(book)
         } else {

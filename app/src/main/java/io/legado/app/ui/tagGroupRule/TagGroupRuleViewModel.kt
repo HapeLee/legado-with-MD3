@@ -151,6 +151,7 @@ class TagGroupRuleViewModel(
                 .filter { it.isSelected }
                 .map { it.data }
             repository.insert(*rulesToSave.toTypedArray())
+            autoApplyRules()
             withContext(Dispatchers.Main) {
                 _importState.value = BaseImportUiState.Idle
             }
@@ -168,6 +169,7 @@ class TagGroupRuleViewModel(
     fun delSelectionByIds(ids: Set<Long>) {
         viewModelScope.launch {
             repository.deleteByIds(ids)
+            autoApplyRules()
             _selectedIds.update { it - ids }
         }
     }

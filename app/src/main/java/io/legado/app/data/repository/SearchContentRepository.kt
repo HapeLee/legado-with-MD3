@@ -5,10 +5,11 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.dao.SearchContentHistoryDao
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.utils.ChineseUtils
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.flowOn
 class SearchContentRepository(
     private val titleModeProvider: () -> Int = { 0 },
     private val historyDao: SearchContentHistoryDao? = null,
+    private val readSettingsGateway: ReadSettingsGateway? = null,
+    private val otherSettingsGateway: OtherSettingsGateway? = null,
 ) {
 
     private val effectiveHistoryDao: SearchContentHistoryDao
@@ -97,6 +100,8 @@ class SearchContentRepository(
         val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
         val totalChapters = chapters.size
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
+        val chineseConverterType = readSettingsGateway?.currentSettings?.chineseConverterType ?: 0
+        val defaultReplaceEnabled = otherSettingsGateway?.currentSettings?.replaceEnableDefault ?: true
         val cacheChapterNames = BookHelp.getChapterFiles(book).toHashSet()
 
         val allResults = mutableListOf<SearchResult>()
@@ -112,7 +117,9 @@ class SearchContentRepository(
                     bookChapter,
                     contentProcessor,
                     replaceEnabled,
-                    regexReplace
+                    regexReplace,
+                    chineseConverterType,
+                    defaultReplaceEnabled,
                 ).map {
                     if (totalChapters > 0) {
                         it.copy(progressPercent = (bookChapter.index + 1).toFloat() / totalChapters * 100f)
@@ -166,12 +173,14 @@ class SearchContentRepository(
         chapter: BookChapter,
         contentProcessor: ContentProcessor,
         replaceEnabled: Boolean,
-        regexReplace: Boolean
+        regexReplace: Boolean,
+        chineseConverterType: Int,
+        defaultReplaceEnabled: Boolean,
     ): List<SearchResult> {
         val searchResultsWithinChapter: MutableList<SearchResult> = mutableListOf()
         val chapterContent = BookHelp.getContent(book, chapter) ?: return searchResultsWithinChapter
 
-        chapter.title = when (AppConfig.chineseConverterType) {
+        chapter.title = when (chineseConverterType) {
             1 -> ChineseUtils.t2s(chapter.title)
             2 -> ChineseUtils.s2t(chapter.title)
             else -> chapter.title
@@ -190,7 +199,8 @@ class SearchContentRepository(
         val mContent = if (includeTitle) {
             val title = chapter.getDisplayTitle(
                 contentProcessor.getTitleReplaceRules(),
-                useReplace = replaceEnabled && book.getUseReplaceRule()
+                useReplace = replaceEnabled && book.getUseReplaceRule(defaultReplaceEnabled),
+                chineseConverterType = chineseConverterType,
             )
             listOf(title).plus(bodyContent.textList).joinToString("\n")
         } else {

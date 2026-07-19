@@ -7,11 +7,8 @@ import io.legado.app.help.config.AppConfig
 
 object FirebaseManager {
 
-    var isEnabled: Boolean
+    val isEnabled: Boolean
         get() = AppConfig.firebaseEnable
-        private set(value) {
-            AppConfig.firebaseEnable = value
-        }
 
     fun init(context: Context) {
         applyState(context, isEnabled)
@@ -37,6 +34,5 @@ object FirebaseManager {
                 // 忽略异常
             }
         }
-        isEnabled = enabled
     }
 }

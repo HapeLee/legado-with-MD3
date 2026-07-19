@@ -10,6 +10,7 @@ import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.ResourceLoadFailureCache
 import io.legado.app.utils.isContentScheme
 import splitties.init.appCtx
 import java.io.File
@@ -116,12 +117,16 @@ data class TextColumn(
     }
 
     companion object {
-        private val typefaceCache = HashMap<String, Typeface?>()
+        private val typefaceCache = HashMap<String, Typeface>()
+        private val failedTypefaceLoads = ResourceLoadFailureCache<String>()
 
         internal fun getTypeface(fontPath: String): Typeface? {
             if (fontPath.isEmpty()) return null
-            return typefaceCache.getOrPut(fontPath) {
-                loadTypeface(fontPath)
+            typefaceCache[fontPath]?.let { return it }
+            return failedTypefaceLoads.load(fontPath) {
+                loadTypeface(fontPath)?.also { typeface ->
+                    typefaceCache[fontPath] = typeface
+                }
             }
         }
 

@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
-import io.legado.app.help.config.ThemeExportData
+import io.legado.app.domain.model.settings.ThemeExportData
 import io.legado.app.help.config.ThemePackageManager
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

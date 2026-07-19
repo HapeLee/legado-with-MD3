@@ -10,8 +10,8 @@ import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.compatDsString
 import io.legado.app.help.config.compatDsValue
-import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -32,6 +32,9 @@ class ReadAloudSettingsRepository(
 
     override suspend fun update(update: ReadAloudSettingsUpdate) {
         when (update) {
+            is ReadAloudSettingsUpdate.TtsEngine -> setTtsEngine(update.value)
+            is ReadAloudSettingsUpdate.ParagraphInterval -> setTtsParagraphInterval(update.value)
+            is ReadAloudSettingsUpdate.AudioCacheCleanTime -> setAudioCacheCleanTime(update.value)
             is ReadAloudSettingsUpdate.IgnoreAudioFocus -> setIgnoreAudioFocus(update.value)
             is ReadAloudSettingsUpdate.MediaButtonOnExit -> setMediaButtonOnExit(update.value)
             is ReadAloudSettingsUpdate.ReadAloudByMediaButton -> setReadAloudByMediaButton(update.value)
@@ -45,11 +48,27 @@ class ReadAloudSettingsRepository(
             is ReadAloudSettingsUpdate.Timer -> setTtsTimer(update.value)
             is ReadAloudSettingsUpdate.FollowSystem -> setTtsFollowSys(update.value)
             is ReadAloudSettingsUpdate.SpeechRate -> setTtsSpeechRate(update.value)
+            is ReadAloudSettingsUpdate.ContentSelectSpeakMode ->
+                settingsRepository.putInt(PreferKey.contentSelectSpeakMod, update.value)
+            is ReadAloudSettingsUpdate.AudioPreDownloadNum ->
+                settingsRepository.putInt(PreferKey.audioPreDownloadNum, update.value)
         }
     }
 
+    suspend fun setTtsEngine(value: String?) {
+        AppConfigStore.putString(PreferKey.ttsEngine, value)
+    }
+
+    suspend fun setTtsParagraphInterval(value: Int) {
+        settingsRepository.putInt(PreferKey.ttsParagraphInterval, value)
+    }
+
+    suspend fun setAudioCacheCleanTime(value: Int) {
+        settingsRepository.putInt(PreferKey.audioCacheCleanTime, value)
+    }
+
     suspend fun setIgnoreAudioFocus(value: Boolean) {
-        ReadConfig.ignoreAudioFocus = value
+        settingsRepository.putBoolean(PreferKey.ignoreAudioFocus, value)
     }
 
     suspend fun setMediaButtonOnExit(value: Boolean) {
@@ -61,15 +80,15 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setPauseReadAloudWhilePhoneCalls(value: Boolean) {
-        ReadConfig.pauseReadAloudWhilePhoneCalls = value
+        settingsRepository.putBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, value)
     }
 
     suspend fun setReadAloudWakeLock(value: Boolean) {
-        ReadConfig.readAloudWakeLock = value
+        settingsRepository.putBoolean(PreferKey.readAloudWakeLock, value)
     }
 
     suspend fun setShowReadAloudCapsule(value: Boolean) {
-        ReadConfig.showReadAloudCapsule = value
+        settingsRepository.putBoolean(PreferKey.showReadAloudCapsule, value)
     }
 
     suspend fun setCapsulePosition(x: Float, y: Float) {
@@ -80,40 +99,40 @@ class ReadAloudSettingsRepository(
     suspend fun resetCapsulePosition() = setCapsulePosition(0f, 0f)
 
     suspend fun setMediaButtonPerNext(value: Boolean) {
-        ReadConfig.mediaButtonPerNext = value
+        settingsRepository.putBoolean(KEY_MEDIA_BUTTON_PER_NEXT, value)
     }
 
     suspend fun setReadAloudByPage(value: Boolean) {
-        ReadConfig.readAloudByPage = value
+        settingsRepository.putBoolean(PreferKey.readAloudByPage, value)
     }
 
     suspend fun setSystemMediaControlCompatibilityChange(value: Boolean) {
-        ReadConfig.systemMediaControlCompatibilityChange = value
+        settingsRepository.putBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
     }
 
     suspend fun setStreamReadAloudAudio(value: Boolean) {
-        ReadConfig.streamReadAloudAudio = value
+        settingsRepository.putBoolean(PreferKey.streamReadAloudAudio, value)
     }
 
     suspend fun setTtsTimer(value: Int) {
         val timer = PlaybackTimer.normalize(value)
-        ReadConfig.ttsTimer = timer
+        settingsRepository.putInt(PreferKey.ttsTimer, timer)
     }
 
     suspend fun setTtsFollowSys(value: Boolean) {
-        ReadConfig.ttsFollowSys = value
+        settingsRepository.putBoolean(PreferKey.ttsFollowSys, value)
     }
 
     suspend fun setTtsSpeechRate(value: Int) {
-        ReadConfig.ttsSpeechRate = value.coerceIn(0, 80)
+        settingsRepository.putInt(PreferKey.ttsSpeechRate, value.coerceIn(0, 80))
     }
 
     suspend fun setSpeechAnalysisMode(value: String) {
-        ReadConfig.speechAnalysisMode = value
+        settingsRepository.putString(PreferKey.speechAnalysisMode, value)
     }
 
     suspend fun setUseMultiSpeaker(value: Boolean) {
-        ReadConfig.useMultiSpeaker = value
+        settingsRepository.putBoolean(PreferKey.useMultiSpeaker, value)
     }
 
     suspend fun setDefaultInterface(value: String) {
@@ -125,6 +144,9 @@ class ReadAloudSettingsRepository(
 
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
         return ReadAloudPreferences(
+            ttsEngine = compatDsString(PreferKey.ttsEngine),
+            ttsParagraphInterval = compatDsValue(Keys.TtsParagraphInterval, 0),
+            audioCacheCleanTime = compatDsValue(Keys.AudioCacheCleanTime, 10),
             ignoreAudioFocus = compatDsValue(Keys.IgnoreAudioFocus, false),
             mediaButtonOnExit = compatDsValue(Keys.MediaButtonOnExit, true),
             readAloudByMediaButton = compatDsValue(Keys.ReadAloudByMediaButton, false),
@@ -144,10 +166,18 @@ class ReadAloudSettingsRepository(
             speechAnalysisMode = compatDsValue(Keys.SpeechAnalysisMode, "rule"),
             useMultiSpeaker = compatDsValue(Keys.UseMultiSpeaker, true),
             defaultInterface = compatDsValue(Keys.DefaultInterface, DEFAULT_INTERFACE_CLASSIC),
+            contentSelectSpeakMode = compatDsValue(Keys.ContentSelectSpeakMode, 0),
+            audioPreDownloadNum = compatDsValue(Keys.AudioPreDownloadNum, 10),
         )
     }
 
     private object Keys {
+        val TtsParagraphInterval = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.ttsParagraphInterval
+        )
+        val AudioCacheCleanTime = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.audioCacheCleanTime
+        )
         val IgnoreAudioFocus = booleanPreferencesKey(PreferKey.ignoreAudioFocus)
         val MediaButtonOnExit = booleanPreferencesKey(PreferKey.mediaButtonOnExit)
         val ReadAloudByMediaButton = booleanPreferencesKey(PreferKey.readAloudByMediaButton)
@@ -170,6 +200,12 @@ class ReadAloudSettingsRepository(
         val SpeechAnalysisMode = stringPreferencesKey(PreferKey.speechAnalysisMode)
         val UseMultiSpeaker = booleanPreferencesKey(PreferKey.useMultiSpeaker)
         val DefaultInterface = stringPreferencesKey(PreferKey.defaultReadAloudInterface)
+        val ContentSelectSpeakMode = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.contentSelectSpeakMod
+        )
+        val AudioPreDownloadNum = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.audioPreDownloadNum
+        )
     }
 
     companion object {

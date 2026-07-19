@@ -35,6 +35,7 @@ enum class BookshelfBooleanSetting {
     CoverShadow,
     SearchActionDirectToSearch,
     AutoRefresh,
+    HideEmptyGroups,
 }
 
 enum class BookshelfIntSetting {

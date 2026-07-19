@@ -25,7 +25,10 @@ class BackupConfigViewModel(
     private val backupRestoreUseCase: BackupRestoreUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
-        BackupConfigUiState(ignoreItems = loadIgnoreItems())
+        BackupConfigUiState(
+            settings = settingsGateway.currentSettings,
+            ignoreItems = loadIgnoreItems(),
+        )
     )
     val uiState = _uiState.asStateFlow()
 

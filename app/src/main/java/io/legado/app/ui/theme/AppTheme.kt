@@ -1,6 +1,5 @@
 package io.legado.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -13,25 +12,24 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import com.materialkolor.PaletteStyle
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.customColors
 import io.legado.app.utils.sysConfiguration
 import androidx.compose.ui.unit.Density
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    configuration: AppUiConfiguration,
+    darkTheme: Boolean = configuration.isDarkTheme,
     content: @Composable () -> Unit
 ) {
-    if (LocalInspectionMode.current) {
-        AppThemePreview(darkTheme, content)
-    } else {
-        AppThemeActual(darkTheme, content)
+    CompositionLocalProvider(LocalAppUiConfiguration provides configuration) {
+        if (LocalInspectionMode.current) {
+            AppThemePreview(darkTheme, content)
+        } else {
+            AppThemeActual(configuration, darkTheme, content)
+        }
     }
 }
 
@@ -65,31 +63,17 @@ private fun AppThemePreview(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppThemeActual(
+    configuration: AppUiConfiguration,
     darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
-    val appShellSettingsGateway = koinInject<AppShellSettingsGateway>()
-    val themeSettingsGateway = koinInject<ThemeSettingsGateway>()
-    val initialAppShellSettings = remember(appShellSettingsGateway) {
-        appShellSettingsGateway.currentSettings
-    }
-    val initialThemeSettings = remember(themeSettingsGateway) {
-        themeSettingsGateway.currentSettings
-    }
-    val appShellSettings by appShellSettingsGateway.settings
-        .collectAsStateWithLifecycle(initialAppShellSettings)
-    val themeSettings by themeSettingsGateway.settings
-        .collectAsStateWithLifecycle(initialThemeSettings)
+    val appShellSettings = configuration.appShell
+    val themeSettings = configuration.theme
     val context = LocalContext.current
     
     // 1. 获取基础配置
     val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
-    val themeModeValue = appShellSettings.themeMode
-    val effectiveDarkTheme = when (themeModeValue) {
-        "1" -> false
-        "2" -> true
-        else -> darkTheme
-    }
+    val effectiveDarkTheme = darkTheme
     val isPureBlack = themeSettings.isPureBlack
     val paletteStyleValue = themeSettings.paletteStyle
     val materialVersion = themeSettings.materialVersion

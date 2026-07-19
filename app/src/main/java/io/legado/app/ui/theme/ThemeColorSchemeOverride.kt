@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -21,7 +20,8 @@ fun ColorScheme.toLegadoColorScheme(
     customBgColor: Color = background,
     customFontColor: Color = onSurface,
     customTopBarColor: Color = surface,
-    customNavBarColor: Color = surface
+    customNavBarColor: Color = surface,
+    surfaceInput: Color = Color.Unspecified,
 ): LegadoColorScheme {
     return LegadoColorScheme(
         primary = primary,
@@ -76,11 +76,7 @@ fun ColorScheme.toLegadoColorScheme(
         onCardContainer = primary,
         onSheetContent = surface,
         cardPrimaryContainer = primaryContainer,
-        surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
-            Color(ThemeConfig.bookInfoInputColor)
-        } else {
-            Color.Unspecified
-        }
+        surfaceInput = surfaceInput
     )
 }
 
@@ -100,8 +96,15 @@ fun ProvideColorSchemeOverride(
     overrideIsDark: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
+    val themeSettings = LocalAppUiConfiguration.current.theme
     val baseThemeMode = LocalLegadoThemeColors.current
-    val legadoColorScheme = remember(colorScheme) { colorScheme.toLegadoColorScheme() }
+    val surfaceInput = themeSettings.bookInfoInputColor
+        .takeIf { it != 0 }
+        ?.let(::Color)
+        ?: Color.Unspecified
+    val legadoColorScheme = remember(colorScheme, surfaceInput) {
+        colorScheme.toLegadoColorScheme(surfaceInput = surfaceInput)
+    }
     val resolvedIsDark = overrideIsDark ?: baseThemeMode.isDark
     val overrideThemeMode = remember(baseThemeMode, colorScheme, seedColor, resolvedIsDark) {
         baseThemeMode.copy(
@@ -114,11 +117,14 @@ fun ProvideColorSchemeOverride(
     val miuixColorSchemeMode = remember(overrideThemeMode.themeMode) {
         overrideThemeMode.themeMode.toMiuixMonetMode()
     }
-    val miuixPaletteStyle = remember(ThemeConfig.paletteStyle) {
-        ThemeResolver.resolveMiuixPaletteStyle(ThemeConfig.paletteStyle)
+    val miuixPaletteStyle = remember(themeSettings.paletteStyle) {
+        ThemeResolver.resolveMiuixPaletteStyle(themeSettings.paletteStyle)
     }
-    val miuixColorSpec = remember(ThemeConfig.materialVersion, ThemeConfig.paletteStyle) {
-        ThemeResolver.resolveMiuixColorSpec(ThemeConfig.materialVersion, ThemeConfig.paletteStyle)
+    val miuixColorSpec = remember(themeSettings.materialVersion, themeSettings.paletteStyle) {
+        ThemeResolver.resolveMiuixColorSpec(
+            themeSettings.materialVersion,
+            themeSettings.paletteStyle,
+        )
     }
     val miuixController = remember(
         isMiuixEngine,

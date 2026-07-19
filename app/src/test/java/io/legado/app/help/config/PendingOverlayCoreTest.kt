@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -229,5 +231,27 @@ class PendingOverlayCoreTest {
         // 第二个成功落盘，读取为 3（overlay 待回灌确认后清空）
         assertEquals(3, core.preferencesFlow.value.compatDsInt("k"))
         assertEquals(3, dsState.compatDsInt("k"))
+    }
+
+    @Test
+    fun `等待批量写入时落盘异常会回滚并传给调用方`() = runBlocking {
+        val initial = mutablePreferencesOf(intPreferencesKey("k") to 1)
+        val writeQueue = ArrayDeque<suspend () -> Unit>()
+        val core = PendingOverlayCore(
+            initial = initial,
+            launchWrite = { writeQueue += it },
+            persist = { _, _ -> error("unused") },
+            persistAll = { throw java.io.IOException("disk full") },
+        )
+
+        val result = async(start = CoroutineStart.UNDISPATCHED) {
+            runCatching { core.putAllAndAwait(mapOf("k" to 2)) }
+        }
+        assertEquals(2, core.preferencesFlow.value.compatDsInt("k"))
+
+        writeQueue.removeFirst().invoke()
+
+        assertEquals("disk full", result.await().exceptionOrNull()?.message)
+        assertEquals(1, core.preferencesFlow.value.compatDsInt("k"))
     }
 }

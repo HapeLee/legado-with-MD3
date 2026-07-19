@@ -33,6 +33,7 @@ import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadSessionState
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -51,6 +52,7 @@ import io.legado.app.ui.widget.PopupAction
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.Debounce
 import io.legado.app.utils.GSON
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
@@ -141,6 +143,7 @@ class ReadBookController(
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
     private var pendingSearchResultMark: IntArray? = null
+    private var appliedDarkTheme: Boolean? = null
     private val originalRequestedOrientation = activity.requestedOrientation
     private val originalScreenBrightness = activity.window.attributes.screenBrightness
     private val originalKeepScreenOn =
@@ -210,6 +213,29 @@ class ReadBookController(
         } else {
             autoPager.resume()
         }
+    }
+
+    fun onAppThemeChanged(isDarkTheme: Boolean) {
+        if (
+            appliedDarkTheme == isDarkTheme &&
+            ReadSessionState.isDarkThemeOverride == isDarkTheme
+        ) return
+        val startedAt = System.nanoTime()
+        val previous = ReadSessionState.isDarkThemeOverride
+        appliedDarkTheme = isDarkTheme
+        ReadSessionState.isDarkThemeOverride = isDarkTheme
+        refs?.readView?.applyThemeColors()
+        upSystemUiVisibility()
+        LogUtils.d(
+            "ReadBookTheme",
+            "apply dark=$isDarkTheme previous=$previous refsReady=${refs != null} " +
+                "durationMs=${(System.nanoTime() - startedAt) / 1_000_000}"
+        )
+    }
+
+    fun clearAppThemeOverride() {
+        appliedDarkTheme = null
+        ReadSessionState.isDarkThemeOverride = null
     }
 
     fun onRouteInitialized() {
@@ -754,7 +780,7 @@ class ReadBookController(
                 showState = item.showState
             )
         }
-        ReadConfig.textSelectMenuConfig = GSON.toJson(configs)
+        viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
         refreshActionMenuItems()
     }
 

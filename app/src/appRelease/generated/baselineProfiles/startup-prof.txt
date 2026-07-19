@@ -22726,12 +22726,6 @@ Lio/legado/app/ui/book/toc/TocViewModel;
 Lio/legado/app/ui/book/toc/rule/TxtTocRuleViewModel;
 Lio/legado/app/ui/config/PrefDelegate;
 Lio/legado/app/ui/config/PrefDelegateKt;
-HSPLio/legado/app/ui/config/PrefDelegateKt;->prefDelegate$default(Ljava/lang/String;Ljava/lang/Object;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/legado/app/ui/config/PrefDelegate;
-HSPLio/legado/app/ui/config/PrefDelegateKt;->prefDelegate(Ljava/lang/String;Ljava/lang/Object;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function1;)Lio/legado/app/ui/config/PrefDelegate;
-Lio/legado/app/ui/config/PrefDelegateKt$prefDelegate$1;
-HSPLio/legado/app/ui/config/PrefDelegateKt$prefDelegate$1;-><init>(Landroidx/lifecycle/LifecycleOwner;Ljava/lang/Object;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
-HSPLio/legado/app/ui/config/PrefDelegateKt$prefDelegate$1;->getValue(Ljava/lang/Object;Lkotlin/reflect/KProperty;)Ljava/lang/Object;
-HSPLio/legado/app/ui/config/PrefDelegateKt$prefDelegate$1;->readInitialValue()Ljava/lang/Object;
 Lio/legado/app/ui/config/backupConfig/BackupConfigViewModel;
 Lio/legado/app/ui/config/bookshelfConfig/BookshelfConfig;
 HSPLio/legado/app/ui/config/bookshelfConfig/BookshelfConfig;-><clinit>()V

@@ -904,6 +904,33 @@ object ChapterProvider {
         upLayout()
     }
 
+    /** 主题切换只更新绘制颜色，不触发字体加载或正文重排。 */
+    fun upThemeColors() {
+        val textColor = ReadBookConfig.textColor
+        titlePaint.color = textColor
+        contentPaint.color = textColor
+        linePaint.color = textColor
+        reviewPaint.color = textColor
+        if (ReadBookConfig.textShadow) {
+            val shadowColor = ReadBookConfig.textShadowColor
+            titlePaint.setShadowLayer(
+                ReadBookConfig.shadowRadius,
+                ReadBookConfig.shadowDx,
+                ReadBookConfig.shadowDy,
+                shadowColor,
+            )
+            contentPaint.setShadowLayer(
+                ReadBookConfig.shadowRadius,
+                ReadBookConfig.shadowDx,
+                ReadBookConfig.shadowDy,
+                shadowColor,
+            )
+        } else {
+            titlePaint.clearShadowLayer()
+            contentPaint.clearShadowLayer()
+        }
+    }
+
     private fun getTypeface(fontPath: String): Typeface? {
         return kotlin.runCatching {
             when {
@@ -928,8 +955,7 @@ object ChapterProvider {
                 }
             }
         }.getOrElse {
-            ReadBookConfig.textFont = ""
-            ReadBookConfig.save()
+            ReadBookConfig.clearMissingTextFont()
             Typeface.SANS_SERIF
         } ?: Typeface.DEFAULT
     }

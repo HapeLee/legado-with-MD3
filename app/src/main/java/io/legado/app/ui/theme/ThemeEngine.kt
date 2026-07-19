@@ -7,7 +7,6 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.ThemeResolver.resolvePaletteStyle
 import io.legado.app.ui.theme.colorScheme.AugustColorScheme
 import io.legado.app.ui.theme.colorScheme.CarlottaColorScheme
@@ -125,7 +124,7 @@ object ThemeEngine {
             style = style,
             colorSpec = colorSpec,
             contrastLevel = ThemeResolver.resolveContrastLevel(
-                customContrast ?: ThemeConfig.customContrast
+                customContrast ?: "Default"
             ),
         ).getColorScheme(darkTheme)
     }

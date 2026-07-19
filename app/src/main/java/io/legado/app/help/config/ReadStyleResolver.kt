@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import com.google.android.material.color.MaterialColors
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
@@ -28,15 +29,16 @@ object ReadStyleResolver {
     )
 
     fun currentMode(): ReadStyleMode {
-        return when {
-            ReadConfig.isEInkMode -> ReadStyleMode.EInk
-            ReadConfig.isNightTheme -> ReadStyleMode.Night
-            else -> ReadStyleMode.Day
-        }
+        val isNightTheme = ReadSessionState.isDarkThemeOverride ?: ReadConfig.isNightTheme
+        return resolveReadStyleMode(ReadConfig.isEInkMode, isNightTheme)
+    }
+
+    fun currentMode(isNightTheme: Boolean): ReadStyleMode {
+        return resolveReadStyleMode(ReadConfig.isEInkMode, isNightTheme)
     }
 
     fun isNightTheme(): Boolean {
-        return ReadConfig.isNightTheme
+        return ReadSessionState.isDarkThemeOverride ?: ReadConfig.isNightTheme
     }
 
     fun setCurrentBackground(
@@ -63,7 +65,21 @@ object ReadStyleResolver {
     }
 
     fun currentBackground(config: ReadBookConfig.Config): ReadBackground {
-        return when (currentMode()) {
+        return currentBackground(config, currentMode())
+    }
+
+    fun currentBackground(
+        config: ReadBookConfig.Config,
+        isNightTheme: Boolean
+    ): ReadBackground {
+        return currentBackground(config, currentMode(isNightTheme))
+    }
+
+    private fun currentBackground(
+        config: ReadBookConfig.Config,
+        mode: ReadStyleMode
+    ): ReadBackground {
+        return when (mode) {
             ReadStyleMode.EInk -> ReadBackground(config.bgTypeEInk, config.bgStrEInk)
             ReadStyleMode.Night -> ReadBackground(config.bgTypeNight, config.bgStrNight)
             ReadStyleMode.Day -> ReadBackground(config.bgType, config.bgStr)
@@ -77,14 +93,18 @@ object ReadStyleResolver {
             2 -> config.bgTypeEInk
             else -> error("unknown bgIndex: $bgIndex")
         }
-        if (bgType != 2) {
-            return null
-        }
         val bgStr = when (bgIndex) {
             0 -> config.bgStr
             1 -> config.bgStrNight
             2 -> config.bgStrEInk
             else -> error("unknown bgIndex: $bgIndex")
+        }
+        return backgroundPath(bgType, bgStr)
+    }
+
+    fun backgroundPath(bgType: Int, bgStr: String): String? {
+        if (bgType != 2) {
+            return null
         }
         return if (bgStr.contains(File.separator)) {
             bgStr
@@ -98,13 +118,31 @@ object ReadStyleResolver {
         width: Int,
         height: Int
     ): Drawable {
+        return currentBackgroundDrawable(config, width, height, currentMode())
+    }
+
+    fun currentBackgroundDrawable(
+        config: ReadBookConfig.Config,
+        width: Int,
+        height: Int,
+        isNightTheme: Boolean
+    ): Drawable {
+        return currentBackgroundDrawable(config, width, height, currentMode(isNightTheme))
+    }
+
+    private fun currentBackgroundDrawable(
+        config: ReadBookConfig.Config,
+        width: Int,
+        height: Int,
+        mode: ReadStyleMode
+    ): Drawable {
         if (width == 0 || height == 0) {
             return fallbackBackground()
         }
 
         var bgDrawable: Drawable? = null
         val resources = appCtx.resources
-        val background = currentBackground(config)
+        val background = currentBackground(config, mode)
         try {
             bgDrawable = when (background.type) {
                 0 -> background.value.toColorInt().toDrawable()
@@ -138,5 +176,16 @@ object ReadStyleResolver {
             Color.WHITE
         )
         return fallbackColor.toDrawable()
+    }
+}
+
+internal fun resolveReadStyleMode(
+    isEInkMode: Boolean,
+    isNightTheme: Boolean
+): ReadStyleResolver.ReadStyleMode {
+    return when {
+        isEInkMode -> ReadStyleResolver.ReadStyleMode.EInk
+        isNightTheme -> ReadStyleResolver.ReadStyleMode.Night
+        else -> ReadStyleResolver.ReadStyleMode.Day
     }
 }

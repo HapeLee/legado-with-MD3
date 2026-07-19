@@ -11,7 +11,6 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.help.RuleBigDataHelp
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleDataInterface
 import io.legado.app.utils.ChineseUtils
@@ -102,10 +101,11 @@ data class BookChapter(
         replaceRules: List<ReplaceRule>? = null,
         useReplace: Boolean = true,
         chineseConvert: Boolean = true,
+        chineseConverterType: Int,
     ): String {
         var displayTitle = title.replace(AppPattern.rnRegex, "")
         if (chineseConvert) {
-            when (AppConfig.chineseConverterType) {
+            when (chineseConverterType) {
                 1 -> displayTitle = ChineseUtils.t2s(displayTitle)
                 2 -> displayTitle = ChineseUtils.s2t(displayTitle)
             }
@@ -174,4 +174,3 @@ data class BookChapter(
         return String.format("%05d-%s.ttf", index, titleMD5)
     }
 }
-
