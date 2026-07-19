@@ -210,9 +210,9 @@ object ReadBookConfig {
     var hideStatusBar by prefDelegate(PreferKey.hideStatusBar, false)
     var hideNavigationBar by prefDelegate(PreferKey.hideNavigationBar, false)
     var useZhLayout by prefDelegate(PreferKey.useZhLayout, false)
-    var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, true)
-    var showMenuIcon by prefDelegate(PreferKey.showMenuIcon, true)
-    var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, false)
+    var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, false)
+    var showMenuIcon by prefDelegate(PreferKey.showMenuIcon, false)
+    var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, true)
     var readMenuTopBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuTopBarLiquidGlassButtons, false)
     var readMenuTopBarTitleCapsule by prefDelegate(PreferKey.readMenuTopBarTitleCapsule, false)
     var readMenuBottomBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuBottomBarLiquidGlassButtons, false)
@@ -222,7 +222,7 @@ object ReadBookConfig {
     var readMenuTextColorNight by prefDelegate(PreferKey.readMenuTextColorNight, 0)
     var showTitleBarIcons by prefDelegate(PreferKey.showTitleBarIcons, true)
     var readSliderMode by prefDelegate(PreferKey.readSliderMode, "0")
-    var showBrightnessView by prefDelegate(PreferKey.showBrightnessView, "1")
+    var showBrightnessView by prefDelegate(PreferKey.showBrightnessView, "0")
     var brightnessVwPos by prefDelegate(PreferKey.brightnessVwPos, "1")
     var readBrightness by prefDelegate(PreferKey.brightness, 100)
     var brightnessAuto by prefDelegate(PreferKey.brightnessAuto, false)
@@ -245,16 +245,20 @@ object ReadBookConfig {
     var readMenuBottomCornerRadius by clampedPrefDelegate(PreferKey.readMenuBottomCornerRadius, 0, 0..32)
     var readMenuTopBarBlurMode by clampedPrefDelegate(PreferKey.readMenuTopBarBlurMode, ReadMenuBlurMode.None, 0..2)
     var readMenuBottomBarBlurMode by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurMode, ReadMenuBlurMode.None, 0..2)
-    var readMenuTopBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuTopBarBlurStyle, ReadMenuBlurStyle.Progressive, 0..1)
+    var readMenuTopBarBlurStyle by clampedPrefDelegate(
+        PreferKey.readMenuTopBarBlurStyle,
+        ReadMenuBlurStyle.Solid,
+        0..1
+    )
     var readMenuBottomBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurStyle, ReadMenuBlurStyle.Solid, 0..1)
     var readMenuBlurRadius by clampedPrefDelegate(PreferKey.readMenuBlurRadius, 24, 0..32)
-    var readMenuBlurAlpha by clampedPrefDelegate(PreferKey.readMenuBlurAlpha, 60, 0..100)
+    var readMenuBlurAlpha by clampedPrefDelegate(PreferKey.readMenuBlurAlpha, 100, 0..100)
     var readMenuBlurColor by prefDelegate(PreferKey.readMenuBlurColor, 0)
     var readMenuBlurColorNight by prefDelegate(PreferKey.readMenuBlurColorNight, 0)
     var readMenuPaletteStyle: String = ""
     var readMenuLensRadius by clampedPrefDelegate(PreferKey.readMenuLensRadius, 24f, 0f..48f)
-    var readMenuBorderWidth by clampedPrefDelegate(PreferKey.readMenuBorderWidth, 0, 0..4)
-    var titleBarIconPosition by clampedPrefDelegate(PreferKey.titleBarIconPosition, 0, 0..3)
+    var readMenuBorderWidth by clampedPrefDelegate(PreferKey.readMenuBorderWidth, 1, 0..4)
+    var titleBarIconPosition by clampedPrefDelegate(PreferKey.titleBarIconPosition, 3, 0..3)
 
     // endregion
 

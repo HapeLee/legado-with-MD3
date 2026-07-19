@@ -27,7 +27,7 @@ object ReadMenuConfig {
 
     var readBarStyle by prefDelegate(
         PreferKey.readBarStyle,
-        0
+        1
     )
 
     var progressBarBehavior by prefDelegate(
@@ -57,7 +57,7 @@ object ReadMenuConfig {
 
     var showMenuIcon by prefDelegate(
         PreferKey.showMenuIcon,
-        true
+        false
     )
 
     // --- 点击区域配置 ---

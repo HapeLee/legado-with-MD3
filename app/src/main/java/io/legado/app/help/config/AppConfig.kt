@@ -542,7 +542,7 @@ object AppConfig {
         }
 
     var readBarStyle: Int
-        get() = appCtx.getPrefInt(PreferKey.readBarStyle, 0)
+        get() = appCtx.getPrefInt(PreferKey.readBarStyle, 1)
         set(value) {
             appCtx.putPrefInt(PreferKey.readBarStyle, value.coerceIn(0, 2))
         }

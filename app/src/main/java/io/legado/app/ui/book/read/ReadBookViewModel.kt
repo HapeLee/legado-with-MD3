@@ -19,7 +19,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
-import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.Book
@@ -30,23 +29,24 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
-import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.ReplaceRuleRepository
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
-import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiProfileGateway
-import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.gateway.AiPromptPresetGateway
+import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
@@ -137,7 +137,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
-import org.json.JSONObject
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
@@ -6294,8 +6293,8 @@ private const val AI_REWRITE_REFERENCE_MAX_EXCERPTS = 6
 private const val AI_REWRITE_REFERENCE_EXCERPT_CHARS = 600
 private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "search",
-    "auto_page",
     "catalog",
+    "addBookmark",
     "read_aloud",
     "setting",
 )
