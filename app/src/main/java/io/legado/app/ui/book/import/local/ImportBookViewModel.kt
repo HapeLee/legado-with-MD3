@@ -19,6 +19,8 @@ import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.model.settings.ImportBookSettings
+import io.legado.app.help.book.BookHelp
+import io.legado.app.help.book.canSafelyRebindTo
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -605,11 +607,17 @@ class ImportBookViewModel(
         if (!ArchiveUtils.isArchive(fileDoc.name)) {
             appDb.bookDao.getBookByFileName(fileDoc.name)?.let { book ->
                 val filePath = fileDoc.toString()
-                if (book.bookUrl != filePath) {
-                    book.bookUrl = filePath
-                    appDb.bookDao.insert(book)
+                val bookToOpen = if (book.bookUrl != filePath && book.canSafelyRebindTo(filePath)) {
+                    val reboundBook = book.copy(bookUrl = filePath)
+                    appDb.runInTransaction {
+                        appDb.bookDao.replace(book, reboundBook)
+                        BookHelp.updateCacheFolder(book, reboundBook)
+                    }
+                    reboundBook
+                } else {
+                    book
                 }
-                _effects.tryEmit(ImportBookEffect.OpenBook(book))
+                _effects.tryEmit(ImportBookEffect.OpenBook(bookToOpen))
             }
             return
         }

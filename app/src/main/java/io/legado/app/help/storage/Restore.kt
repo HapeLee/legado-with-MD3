@@ -3,6 +3,8 @@ package io.legado.app.help.storage
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
+import android.os.Environment
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.BuildConfig
 import io.legado.app.R
@@ -53,6 +55,7 @@ import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.isUri
 import io.legado.app.utils.openInputStream
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.Main
@@ -116,28 +119,25 @@ object Restore : KoinComponent {
             it.forEach { book ->
                 book.upType()
             }
-            it.filter { book -> book.isLocal }
-                .forEach { book ->
-                    book.coverUrl = LocalBook.getCoverPath(book)
+            val restorePlan = planBookRestore(
+                restoredBooks = it,
+                existingBooks = appDb.bookDao.all,
+                ignoreLocalBook = BackupConfig.ignoreLocalBook,
+                locationStatus = ::localBookLocationStatus,
+            )
+            restorePlan.booksToUpsert
+                .filter { book -> book.isLocal }
+                .forEach { book -> book.coverUrl = LocalBook.getCoverPath(book) }
+            appDb.runInTransaction {
+                if (restorePlan.booksToDelete.isNotEmpty()) {
+                    appDb.bookDao.delete(*restorePlan.booksToDelete.toTypedArray())
                 }
-            val newBooks = arrayListOf<Book>()
-            val ignoreLocalBook = BackupConfig.ignoreLocalBook
-            it.forEach { book ->
-                if (ignoreLocalBook && book.isLocal) {
-                    return@forEach
+                if (restorePlan.booksToUpdate.isNotEmpty()) {
+                    appDb.bookDao.update(*restorePlan.booksToUpdate.toTypedArray())
                 }
-                if (appDb.bookDao.has(book.bookUrl)) {
-                    try {
-                        appDb.bookDao.update(book)
-                    } catch (_: SQLiteConstraintException) {
-                        appDb.bookDao.insert(book)
-                    }
-                } else {
-                    newBooks.add(book)
+                if (restorePlan.booksToInsert.isNotEmpty()) {
+                    appDb.bookDao.insert(*restorePlan.booksToInsert.toTypedArray())
                 }
-            }
-            if (newBooks.isNotEmpty()) {
-                appDb.bookDao.insert(*newBooks.toTypedArray())
             }
         }
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
@@ -340,6 +340,31 @@ object Restore : KoinComponent {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }
             ThemeConfigStore.applyDayNight(appCtx)
+        }
+    }
+
+    private fun localBookLocationStatus(bookUrl: String): LocalBookLocationStatus {
+        val uri = bookUrl.takeIf { it.isUri() }?.toUri()
+        if (uri?.isContentScheme() == true) {
+            // Provider 离线、临时权限问题与文件确实删除无法可靠区分，失败时保守保留记录。
+            return kotlin.runCatching {
+                if (appCtx.contentResolver.openInputStream(uri)?.use { true } == true) {
+                    LocalBookLocationStatus.Available
+                } else {
+                    LocalBookLocationStatus.Unknown
+                }
+            }.getOrDefault(LocalBookLocationStatus.Unknown)
+        }
+
+        val file = File(uri?.path ?: bookUrl)
+        if (file.isFile) return LocalBookLocationStatus.Available
+        return when (runCatching { Environment.getExternalStorageState(file) }.getOrNull()) {
+            Environment.MEDIA_MOUNTED,
+            Environment.MEDIA_MOUNTED_READ_ONLY -> LocalBookLocationStatus.Missing
+
+            Environment.MEDIA_UNKNOWN -> LocalBookLocationStatus.Unknown
+            null -> LocalBookLocationStatus.Unknown
+            else -> LocalBookLocationStatus.Unknown
         }
     }
 
