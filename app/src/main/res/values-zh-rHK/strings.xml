@@ -198,7 +198,8 @@
     <string name="import_book_source">導入書源</string>
     <string name="import_local">本地導入</string>
     <string name="import_on_line">網絡導入</string>
-    <string name="replace_rule_title">替換淨化</string>
+    <string name="replace_rule_enabled">啟用替換淨化</string>
+    <string name="replace_rule_title">替換規則</string>
     <string name="replace_rule_edit">替換規則編輯</string>
     <string name="replace_rule">替換規則</string>
     <string name="replace_to">替換為</string>
@@ -321,6 +322,7 @@
     <string name="fonts_folder">請將字體文件放到 SD 根目錄 Fonts 文件夾下重新選擇</string>
     <string name="default_font">默認字體</string>
     <string name="select_font">選擇字體</string>
+    <string name="font">字體</string>
     <string name="text_size">字號</string>
     <string name="line_size">行距</string>
     <string name="paragraph_size">段距</string>
@@ -838,9 +840,9 @@
     <string name="next_page">下一頁</string>
     <string name="prev_page">上一頁</string>
     <string name="non_action">無操作</string>
-    <string name="body_title">正文標題</string>
+    <string name="body_title">標題</string>
     <string name="show_hide">顯示/隱藏</string>
-    <string name="header_footer">頁眉<![CDATA[&]]>頁腳</string>
+    <string name="header_footer">排版</string>
     <string name="rule_subscription">規則訂閱</string>
     <string name="rule_sub_empty_msg">添加大佬們提供的規則匯入地址 添加後點擊可匯入規則</string>
     <string name="get_book_progress">拉取雲端進度</string>
@@ -1315,9 +1317,6 @@
     <string name="dashed_border">虚线</string>
     <string name="header_color">页眉</string>
     <string name="footer_color">页脚</string>
-    <string name="header_font">设置字体</string>
-    <string name="footer_font">页脚字体</string>
-    <string name="header_font_size">设置字号</string>
     <string name="source_tab_start">启动</string>
     <string name="r_startHtml">启动页html文本</string>
     <string name="r_startStyle">启动页style文本</string>
@@ -1921,6 +1920,12 @@
     <string name="read_config_body_padding_desc">調整正文上下左右邊距</string>
     <string name="read_config_body_spacing">正文間距</string>
     <string name="read_config_divider_line">分隔線</string>
+    <string name="read_config_display">顯示</string>
+    <string name="read_config_spacing">間距</string>
+    <string name="read_config_content">內容</string>
+    <string name="read_config_image">圖片</string>
+    <string name="header_font_size">頁眉字號</string>
+    <string name="apply_header_style">應用頁眉字體樣式設定</string>
     <string name="read_config_effects">效果</string>
     <string name="read_config_global_theme">全局與主題</string>
     <string name="read_config_header_footer_desc">配置頁眉/頁腳模組、可見性和顏色</string>
@@ -2144,7 +2149,7 @@
     <string name="text_shadow_set">陰影設定</string>
     <string name="text_shadow_x">X 偏移</string>
     <string name="text_shadow_y">Y 偏移</string>
-    <string name="text_typeface">字體樣式</string>
+    <string name="text_typeface">字體</string>
     <string name="theme_config_add_nav_icon">添加 %1$s 圖標</string>
     <string name="theme_config_blur_radius_performance_summary">較高模糊半徑可能降低效能</string>
     <string name="theme_config_bottom_bar_lens_radius">底部欄模糊強度</string>
@@ -2230,7 +2235,7 @@
     <string name="title_bar_icons">標題欄圖標</string>
     <string name="title_bar_layout">標題欄佈局</string>
     <string name="title_bar_mode">選單中的標題模式</string>
-    <string name="title_color">標題顏色</string>
+    <string name="title_color">顏色</string>
     <string name="reset_to_body_color">重置為正文顏色</string>
     <string name="toc_disabled_format">%1$s 目錄已禁用</string>
     <string name="toc_rule_update_failed">章節規則更新失敗：%1$s</string>

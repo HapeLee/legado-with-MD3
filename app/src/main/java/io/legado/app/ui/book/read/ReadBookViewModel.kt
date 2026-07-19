@@ -695,6 +695,10 @@ class ReadBookViewModel(
                 closeReadMenu()
                 _effects.tryEmit(ReadBookEffect.MenuSettingReplace)
             }
+            is ReadBookIntent.MenuHighlightRule -> {
+                closeReadMenu()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig))
+            }
             is ReadBookIntent.MenuTocRegex -> {
                 closeReadMenu()
                 val book = ReadBook.book
@@ -4741,6 +4745,9 @@ class ReadBookViewModel(
             is ConfigUpdate.CustomTipFooterRight -> ReadBookConfig.customTipFooterRight = update.value
             is ConfigUpdate.HeaderFont -> ReadBookConfig.headerFont = update.path
             is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
+            is ConfigUpdate.FooterFont -> ReadBookConfig.footerFont = update.path
+            is ConfigUpdate.FooterFontSize -> ReadBookConfig.footerFontSize = update.value
+            is ConfigUpdate.ApplyHeaderStyle -> ReadBookConfig.applyHeaderStyle = update.value
             is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color
             is ConfigUpdate.TipHeaderColorNight -> ReadBookConfig.tipHeaderColorNight = update.color
             is ConfigUpdate.TipFooterColor -> ReadBookConfig.tipFooterColor = update.color

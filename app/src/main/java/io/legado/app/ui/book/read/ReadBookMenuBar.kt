@@ -73,7 +73,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Rule
+import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -158,12 +158,10 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.book.read.sheet.AutoReadContent
-import io.legado.app.ui.book.read.sheet.HeaderFooterPage
-import io.legado.app.ui.book.read.sheet.PaddingConfigContent
+import io.legado.app.ui.book.read.sheet.TypographyPage
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
-import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
@@ -209,15 +207,14 @@ fun ReadBookMenuBar(
     } else {
         ReadBookMenuContent.Route(currentRoute)
     }
-    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.PaddingConfig || currentRoute == ReadBookMenuRoute.HeaderFooterConfig
+    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.TypographyConfig
     var readStylePage by remember { mutableIntStateOf(0) }
     LaunchedEffect(currentRoute) {
         if (currentRoute != ReadBookMenuRoute.ReadStyle) {
             readStylePage = 0
         }
     }
-    val hideTopBar = dialogLikeRoute ||
-            currentRoute == ReadBookMenuRoute.TextTitle
+    val hideTopBar = dialogLikeRoute
     val menuColors = readMenuColors(preferences.readBarStyle)
 
     Box(Modifier.fillMaxSize()) {
@@ -429,7 +426,7 @@ private fun ReadBookMenuSurface(
         is ReadBookMenuContent.Route -> contentTarget.route
     }
     val expanded = route != ReadBookMenuRoute.Main
-    val dialogLikeRoute = route == ReadBookMenuRoute.PaddingConfig || route == ReadBookMenuRoute.HeaderFooterConfig
+    val dialogLikeRoute = route == ReadBookMenuRoute.TypographyConfig
     val density = LocalDensity.current
     val windowSize = LocalWindowInfo.current.containerSize
     var surfaceHeightPx by remember { mutableIntStateOf(0) }
@@ -692,20 +689,14 @@ private fun ReadBookMenuSurface(
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleContent(
-                                onOpenPaddingConfig = {
-                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.PaddingConfig))
-                                },
-                                onOpenHeaderFooterConfig = {
-                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.HeaderFooterConfig))
+                                onOpenTypographyConfig = {
+                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TypographyConfig))
                                 },
                                 onOpenMoreConfig = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreConfig))
                                 },
                                 onOpenBgTextConfig = { index ->
                                     onIntent(ReadBookIntent.OpenBgTextConfig(index))
-                                },
-                                onOpenTextTitle = {
-                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
                                 },
                                 onOpenFontSelect = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
@@ -723,24 +714,7 @@ private fun ReadBookMenuSurface(
                         }
                     }
 
-                    ReadBookMenuRoute.PaddingConfig -> {
-                        ReadBookMenuRoutePage(
-                            title = stringResource(R.string.padding),
-                            maxHeight = maxHeight,
-                            scrollContent = false,
-                            animateSize = false,
-                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
-                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
-                        ) {
-                            PaddingConfigContent(
-                                config = state.sheetConfig,
-                                onIntent = onIntent,
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-                        }
-                    }
-
-                    ReadBookMenuRoute.HeaderFooterConfig -> {
+                    ReadBookMenuRoute.TypographyConfig -> {
                         ReadBookMenuRoutePage(
                             title = stringResource(R.string.header_footer),
                             maxHeight = maxHeight,
@@ -749,37 +723,8 @@ private fun ReadBookMenuSurface(
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
-                            HeaderFooterPage(
-                                onIntent = onIntent,
-                            )
-                        }
-                    }
-
-                    ReadBookMenuRoute.TextTitle -> {
-                        ReadBookMenuRoutePage(
-                            title = stringResource(R.string.read_config_text_effects),
-                            maxHeight = maxHeight,
-                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
-                            animateSize = false,
-                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
-                        ) {
-                            ReadStyleTextTitleContent(
+                            TypographyPage(
                                 config = state.sheetConfig,
-                                onOpenShadowSet = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ShadowSet))
-                                },
-                                onOpenUnderlineConfig = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.UnderlineConfig))
-                                },
-                                onOpenHighlightRule = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig))
-                                },
-                                onOpenFontSelect = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
-                                },
-                                onOpenTitleFontSelect = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleFontSelect))
-                                },
                                 onIntent = onIntent,
                             )
                         }
@@ -1457,6 +1402,7 @@ private fun RowScope.TitleCapsuleGlassLayout(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
+@Suppress("DEPRECATION")
 @Composable
 private fun MenuTitleBarMergedGlassButton(
     state: ReadBookUiState,
@@ -1867,6 +1813,7 @@ private fun DownloadActionButton(
     )
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun TxtTocRuleActionButton(
     state: ReadBookUiState,
@@ -1976,6 +1923,7 @@ private fun FloatingIconRow(
     }
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun OverflowDropdownMenu(
     state: ReadBookUiState,
@@ -1996,8 +1944,6 @@ private fun OverflowDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
     ) { dismiss ->
-        var imageStyleExpanded by remember { mutableStateOf(false) }
-
         // Source actions
         if (!state.isLocalBook) {
             RoundDropdownMenuItem(
@@ -2024,11 +1970,6 @@ private fun OverflowDropdownMenu(
             },
         )
         RoundDropdownMenuItem(
-            text = stringResource(R.string.update_toc),
-            leadingIcon = menuIcon(Icons.Default.Replay),
-            onClick = { dismiss(); onIntent(ReadBookIntent.MenuUpdateToc) },
-        )
-        RoundDropdownMenuItem(
             text = stringResource(R.string.simulated_reading),
             leadingIcon = menuIcon(Icons.Default.AutoStories),
             onClick = {
@@ -2047,30 +1988,13 @@ private fun OverflowDropdownMenu(
         // Checkable items
         RoundDropdownMenuItem(
             text = stringResource(R.string.replace_rule_title),
-            leadingIcon = menuIcon(Icons.Default.FindReplace),
-            isSelected = state.useReplaceRule,
-            onClick = { onIntent(ReadBookIntent.MenuEnableReplace) },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.replace_rule_title_setting),
             leadingIcon = menuIcon(Icons.Default.Settings),
             onClick = { dismiss(); onIntent(ReadBookIntent.MenuSettingReplace) },
         )
         RoundDropdownMenuItem(
-            text = stringResource(R.string.effective_replaces),
-            leadingIcon = menuIcon(Icons.Default.Rule),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EffectiveReplaces))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.content_processes),
-            leadingIcon = menuIcon(Icons.Default.Edit),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
-            },
+            text = stringResource(R.string.highlight_rule_config),
+            leadingIcon = menuIcon(Icons.AutoMirrored.Filled.Rule),
+            onClick = { dismiss(); onIntent(ReadBookIntent.MenuHighlightRule) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.same_title_removed),
@@ -2104,46 +2028,6 @@ private fun OverflowDropdownMenu(
         PillDivider()
 
         // Config
-        Box {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.image_style),
-                leadingIcon = menuIcon(Icons.Default.Image),
-                onClick = { imageStyleExpanded = true },
-            )
-            RoundDropdownMenu(
-                expanded = imageStyleExpanded,
-                onDismissRequest = { imageStyleExpanded = false },
-            ) { subDismiss ->
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.btn_default_s),
-                    onClick = {
-                        subDismiss()
-                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleDefault))
-                    },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.image_style_full),
-                    onClick = {
-                        subDismiss()
-                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleFull))
-                    },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.image_style_text),
-                    onClick = {
-                        subDismiss()
-                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleText))
-                    },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.image_style_single),
-                    onClick = {
-                        subDismiss()
-                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleSingle))
-                    },
-                )
-            }
-        }
         RoundDropdownMenuItem(
             text = stringResource(R.string.book_page_anim),
             leadingIcon = menuIcon(Icons.Default.Animation),

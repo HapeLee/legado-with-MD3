@@ -14,16 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FormatItalic
-import androidx.compose.material.icons.filled.FormatUnderlined
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -45,6 +42,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
@@ -211,6 +209,7 @@ internal fun ReadStyleTextTitleContent(
 internal fun LayoutSpacingPage(
     config: ReadSheetConfigUiState,
     modifier: Modifier = Modifier,
+    noScroll: Boolean = false,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var letterSpacing by remember { mutableFloatStateOf(config.letterSpacing) }
@@ -218,11 +217,14 @@ internal fun LayoutSpacingPage(
     var paragraphSpacing by remember { mutableFloatStateOf(config.paragraphSpacing.toFloat()) }
     var indentCount by remember { mutableIntStateOf(config.paragraphIndentCount) }
 
+    val scrollModifier = if (noScroll) {
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())
+    }
+
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = modifier.then(scrollModifier),
     ) {
         SectionTitle(stringResource(R.string.read_config_body_spacing))
         TinySliderSettingItem(
@@ -281,6 +283,7 @@ internal fun TextEffectsPage(
     onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     modifier: Modifier = Modifier,
+    noScroll: Boolean = false,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var textItalic by remember { mutableStateOf(config.textItalic) }
@@ -290,17 +293,38 @@ internal fun TextEffectsPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
 
+    val scrollModifier = if (noScroll) {
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())
+    }
+
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = modifier.then(scrollModifier),
     ) {
+        // 字体
         SectionTitle(stringResource(R.string.text_typeface))
+        val bodyFontName = remember(ReadBookConfig.textFont) {
+            if (ReadBookConfig.textFont.isEmpty()) {
+                ""
+            } else {
+                runCatching {
+                    java.io.File(java.net.URLDecoder.decode(ReadBookConfig.textFont, "UTF-8")).nameWithoutExtension
+                }.getOrElse {
+                    ReadBookConfig.textFont.substringAfterLast('/')
+                }
+            }
+        }.ifEmpty {
+            stringResource(R.string.select_font)
+        }
+        TinyClickableSettingItem(
+            title = stringResource(R.string.font),
+            description = bodyFontName,
+            onClick = onOpenFontSelect,
+        )
         TinySwitchSettingItem(
             title = stringResource(R.string.read_config_italic),
             checked = textItalic,
-            imageVector = Icons.Default.FormatItalic,
             onCheckedChange = {
                 textItalic = it
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextItalic(it)))
@@ -313,13 +337,6 @@ internal fun TextEffectsPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextBold(value)))
             },
         )
-
-        TinyClickableSettingItem(
-            title = stringResource(R.string.select_font),
-            imageVector = Icons.Default.TextFields,
-            onClick = onOpenFontSelect,
-        )
-
         val chineseConvertEntries = stringArrayResource(R.array.chinese_mode)
         val chineseConvertValues = remember { arrayOf("0", "1", "2") }
         TinyDropdownSettingItem(
@@ -332,7 +349,7 @@ internal fun TextEffectsPage(
             },
         )
 
-        // Colors
+        // 颜色
         SectionTitle(stringResource(R.string.read_color))
         TinyColorSettingItem(
             title = stringResource(R.string.text_color),
@@ -353,23 +370,21 @@ internal fun TextEffectsPage(
             },
         )
 
+        // 效果
         SectionTitle(stringResource(R.string.read_config_effects))
         TinyClickableSettingItem(
             title = stringResource(R.string.text_shadow_set),
             description = stringResource(R.string.read_config_shadow_desc),
-            imageVector = Icons.Default.Layers,
             onClick = onOpenShadowSet,
         )
         TinyClickableSettingItem(
             title = stringResource(R.string.text_underline),
             description = stringResource(R.string.read_config_underline_desc),
-            imageVector = Icons.Default.FormatUnderlined,
             onClick = onOpenUnderlineConfig,
         )
         TinyClickableSettingItem(
             title = stringResource(R.string.highlight_rule_config),
             description = stringResource(R.string.read_config_regex_desc),
-            imageVector = Icons.Default.Tune,
             onClick = onOpenHighlightRule,
         )
 
@@ -421,12 +436,28 @@ internal fun TitleSettingsPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
 
+    val titleFontName = remember(ReadBookConfig.titleFont) {
+        if (ReadBookConfig.titleFont.isEmpty()) {
+            ""
+        } else {
+            runCatching {
+                java.io.File(java.net.URLDecoder.decode(ReadBookConfig.titleFont, "UTF-8")).nameWithoutExtension
+            }.getOrElse {
+                ReadBookConfig.titleFont.substringAfterLast('/')
+            }
+        }
+    }.ifEmpty {
+        stringResource(R.string.select_font)
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
+        // 显示
+        SectionTitle(stringResource(R.string.read_config_display))
         TinyDropdownSettingItem(
             title = stringResource(R.string.body_title),
             selectedValue = titleMode.toString(),
@@ -482,14 +513,26 @@ internal fun TitleSettingsPage(
             },
         )
 
-        // Title font
+        // 字体
+        SectionTitle(stringResource(R.string.text_typeface))
         TinyClickableSettingItem(
-            title = stringResource(R.string.read_config_title_settings),
-            imageVector = Icons.Default.TextFields,
+            title = stringResource(R.string.font),
+            description = titleFontName,
             onClick = onOpenTitleFontSelect,
         )
 
-        // Title segmentation
+        TinySliderSettingItem(
+            title = stringResource(R.string.title_font_size),
+            value = titleSize.toFloat(),
+            valueRange = 8f..60f,
+            onValueChange = { value ->
+                titleSize = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSize(titleSize)))
+            },
+        )
+
+        // 分割
+        SectionTitle(stringResource(R.string.split_title_mode))
         TinyDropdownSettingItem(
             title = stringResource(R.string.split_title_mode),
             selectedValue = titleSegType.toString(),
@@ -550,7 +593,8 @@ internal fun TitleSettingsPage(
             )
         }
 
-        // Title spacing sliders
+        // 间距
+        SectionTitle(stringResource(R.string.read_config_spacing))
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
             value = titleSegScaling,
@@ -581,15 +625,8 @@ internal fun TitleSettingsPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(titleLineSpacingSub)))
             },
         )
-        TinySliderSettingItem(
-            title = stringResource(R.string.title_font_size),
-            value = titleSize.toFloat(),
-            valueRange = 0f..20f,
-            onValueChange = { value ->
-                titleSize = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSize(titleSize)))
-            },
-        )
+
+        // 边距
         TinySliderSettingItem(
             title = stringResource(R.string.title_margin_top),
             value = titleTopSpacing.toFloat(),
@@ -608,7 +645,6 @@ internal fun TitleSettingsPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBottomSpacing(titleBottomSpacing)))
             },
         )
-
     }
 
     // Color picker

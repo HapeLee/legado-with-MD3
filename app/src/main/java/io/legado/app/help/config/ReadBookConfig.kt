@@ -411,6 +411,12 @@ object ReadBookConfig {
             config.footerFontSize = value
         }
 
+    var applyHeaderStyle: Boolean
+        get() = config.applyHeaderStyle
+        set(value) {
+            config.applyHeaderStyle = value
+        }
+
     var textBold: Int
         get() = config.textBold
         set(value) {
@@ -982,6 +988,7 @@ object ReadBookConfig {
         var footerFont: String = "",//页脚字体
         var headerFontSize: Int = 12,//页眉字号
         var footerFontSize: Int = 12,//页脚字号
+        var applyHeaderStyle: Boolean = true,//应用页眉字体样式设置
         var textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
         var textSize: Int = 20,//文字大小
         var textItalic: Boolean = false,// 是否启用斜体

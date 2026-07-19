@@ -73,8 +73,6 @@ import io.legado.app.ui.widget.components.text.AppText
 fun GlobalThemePage(
     onToggleDayNight: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenTextTitle: () -> Unit,
-    onOpenPaddingConfig: () -> Unit,
     onShareLayoutChange: (Boolean) -> Unit,
     onStyleSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -106,40 +104,16 @@ fun GlobalThemePage(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        Row(
+        TinySliderSettingItem(
+            title = stringResource(R.string.text_size),
+            value = textSize.toFloat(),
+            valueRange = 5f..50f,
+            steps = 44,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TinySliderSettingItem(
-                title = stringResource(R.string.text_size),
-                value = textSize.toFloat(),
-                valueRange = 5f..50f,
-                steps = 44,
-                modifier = Modifier.weight(1f),
-                onValueChange = { value ->
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSize(value.toInt())))
-                },
-            )
-            NormalCard(
-                onClick = onOpenTextTitle,
-                modifier = Modifier
-                    .height(56.dp)
-                    .aspectRatio(1f),
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                cornerRadius = 12.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.TextFields,
-                        contentDescription = stringResource(R.string.read_config_text_effects),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
+            onValueChange = { value ->
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSize(value.toInt())))
+            },
+        )
 
         Spacer(Modifier.height(4.dp))
 
@@ -317,58 +291,34 @@ fun GlobalThemePage(
         val currentPageAnimDisplay =
             pageAnimEntries.getOrNull(pageAnimEntryValues.indexOf(pageAnim.toString())) ?: ""
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                TinySettingItem(
-                    title = stringResource(R.string.page_anim),
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingContent = {
-                        TextCard(
-                            cornerRadius = 8.dp,
-                            horizontalPadding = 8.dp,
-                            verticalPadding = 4.dp,
-                            text = currentPageAnimDisplay,
-                            backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                            contentColor = LegadoTheme.colorScheme.onSurface,
-                        )
-                    },
-                    onClick = { showPageAnimMenu = true },
-                )
-                RoundDropdownMenu(
-                    expanded = showPageAnimMenu,
-                    onDismissRequest = { showPageAnimMenu = false },
-                ) { dismiss ->
-                    pageAnimEntries.forEachIndexed { index, display ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            onClick = {
-                                ReadBook.book?.setPageAnim(-1)
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
-                                dismiss()
-                            },
-                        )
-                    }
-                }
-            }
-            NormalCard(
-                onClick = onOpenPaddingConfig,
-                modifier = Modifier
-                    .height(56.dp)
-                    .aspectRatio(1f),
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                cornerRadius = 12.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SpaceBar,
-                        contentDescription = stringResource(R.string.padding),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+        Box(modifier = Modifier.fillMaxWidth()) {
+            TinySettingItem(
+                title = stringResource(R.string.page_anim),
+                modifier = Modifier.fillMaxWidth(),
+                trailingContent = {
+                    TextCard(
+                        cornerRadius = 8.dp,
+                        horizontalPadding = 8.dp,
+                        verticalPadding = 4.dp,
+                        text = currentPageAnimDisplay,
+                        backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                        contentColor = LegadoTheme.colorScheme.onSurface,
+                    )
+                },
+                onClick = { showPageAnimMenu = true },
+            )
+            RoundDropdownMenu(
+                expanded = showPageAnimMenu,
+                onDismissRequest = { showPageAnimMenu = false },
+            ) { dismiss ->
+                pageAnimEntries.forEachIndexed { index, display ->
+                    RoundDropdownMenuItem(
+                        text = display,
+                        onClick = {
+                            ReadBook.book?.setPageAnim(-1)
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
+                            dismiss()
+                        },
                     )
                 }
             }

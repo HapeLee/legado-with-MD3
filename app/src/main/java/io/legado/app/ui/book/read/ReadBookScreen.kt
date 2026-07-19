@@ -186,7 +186,7 @@ fun ReadBookScreen(
         onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
         onNavigateToTextEffects = {
             onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TypographyConfig))
         },
         onOpenContentProcesses = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))

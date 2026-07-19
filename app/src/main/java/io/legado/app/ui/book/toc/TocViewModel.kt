@@ -130,6 +130,7 @@ sealed interface TocIntent {
     data object ToggleSplitLongChapter : TocIntent
     data object ExpandAllVolumes : TocIntent
     data object CollapseAllVolumes : TocIntent
+    data object UpdateToc : TocIntent
 }
 
 sealed interface TocEffect {
@@ -520,6 +521,7 @@ class TocViewModel(
             TocIntent.ToggleSplitLongChapter -> toggleSplitLongChapter()
             TocIntent.ExpandAllVolumes -> expandAllVolumes()
             TocIntent.CollapseAllVolumes -> collapseAllVolumes()
+            TocIntent.UpdateToc -> updateToc()
         }
     }
 
@@ -631,6 +633,11 @@ class TocViewModel(
             _isUploading.value = false
             complete.invoke(it)
         }
+    }
+
+    fun updateToc() {
+        showMessage(R.string.toc_updateing)
+        ReadBook.upToc()
     }
 
     fun exportCurrentBookBookmarks(fileUri: Uri, isMd: Boolean) = viewModelScope.launch {

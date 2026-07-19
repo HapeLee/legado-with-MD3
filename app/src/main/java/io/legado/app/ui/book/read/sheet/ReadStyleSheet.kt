@@ -38,11 +38,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ReadStyleContent(
-    onOpenPaddingConfig: () -> Unit,
-    onOpenHeaderFooterConfig: () -> Unit,
+    onOpenTypographyConfig: () -> Unit,
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenTextTitle: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     onPageChanged: (Int) -> Unit = {},
@@ -95,8 +93,6 @@ fun ReadStyleContent(
                     0 -> GlobalThemePage(
                         onToggleDayNight = onToggleDayNight,
                         onOpenBgTextConfig = onOpenBgTextConfig,
-                        onOpenTextTitle = onOpenTextTitle,
-                        onOpenPaddingConfig = onOpenPaddingConfig,
                         onShareLayoutChange = { shareLayout ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
                         },
@@ -137,7 +133,7 @@ fun ReadStyleContent(
                             )
                         }
                     }
-                    2 -> onOpenHeaderFooterConfig()
+                    2 -> onOpenTypographyConfig()
                     3 -> onOpenMoreConfig()
                 }
             },

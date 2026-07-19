@@ -55,11 +55,9 @@ data class ReadBookMenuState(
 sealed interface ReadBookMenuRoute {
     data object Main : ReadBookMenuRoute
     data object ReadStyle : ReadBookMenuRoute
-    data object TextTitle : ReadBookMenuRoute
     data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
-    data object PaddingConfig : ReadBookMenuRoute
-    data object HeaderFooterConfig : ReadBookMenuRoute
+    data object TypographyConfig : ReadBookMenuRoute
 }
 
 @Stable
@@ -568,6 +566,7 @@ sealed interface ReadBookIntent {
     data object MenuBookChangeSource : ReadBookIntent
     data object MenuChapterChangeSource : ReadBookIntent
     data object MenuSettingReplace : ReadBookIntent
+    data object MenuHighlightRule : ReadBookIntent
     data object MenuTocRegex : ReadBookIntent
     data class TocRegexResult(val tocRegex: String) : ReadBookIntent
     data object MenuRefreshDur : ReadBookIntent
@@ -1136,6 +1135,15 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class HeaderFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFont(val path: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class ApplyHeaderStyle(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipHeaderColor(val color: Int) : ConfigUpdate {

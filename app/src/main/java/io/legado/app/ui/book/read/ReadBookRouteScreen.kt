@@ -172,8 +172,16 @@ fun ReadBookRouteScreen(
     val replaceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
+        when (result.resultCode) {
+            ReplaceRuleActivity.RESULT_EFFECTIVE_REPLACES -> {
+                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EffectiveReplaces))
+            }
+            ReplaceRuleActivity.RESULT_CONTENT_PROCESSES -> {
+                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
+            }
+            android.app.Activity.RESULT_OK -> {
+                viewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
+            }
         }
     }
 

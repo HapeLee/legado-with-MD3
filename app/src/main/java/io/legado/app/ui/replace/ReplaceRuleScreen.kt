@@ -62,6 +62,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.showHelp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -293,6 +294,7 @@ fun ReplaceRuleScreen(
         onSearchToggle = { onIntent(ReplaceRuleIntent.SetSearchMode(!state.isSearch)) },
         onSearchQueryChange = { onIntent(ReplaceRuleIntent.UpdateSearchQuery(it)) },
         searchPlaceholder = stringResource(R.string.replace_purify_search),
+        topBarActions = {},
         onClearSelection = { onIntent(ReplaceRuleIntent.ClearSelection) },
         onSelectAll = { onIntent(ReplaceRuleIntent.SelectAll) },
         onSelectInvert = { onIntent(ReplaceRuleIntent.InvertSelection) },
@@ -359,9 +361,43 @@ fun ReplaceRuleScreen(
                 text = stringResource(R.string.group_management),
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
+            PillDivider()
+            val book = io.legado.app.model.ReadBook.book
+            var enableReplace by remember(book?.getUseReplaceRule()) { mutableStateOf(book?.getUseReplaceRule() ?: true) }
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.replace_rule_enabled),
+                isSelected = enableReplace,
+                onClick = {
+                    enableReplace = !enableReplace
+                    book?.let {
+                        it.setUseReplaceRule(enableReplace)
+                        io.legado.app.model.ReadBook.saveRead()
+                    }
+                },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.effective_replaces),
+                onClick = {
+                    dismiss()
+                    (context as? android.app.Activity)?.setResult(ReplaceRuleActivity.RESULT_EFFECTIVE_REPLACES)
+                    onBackClick()
+                },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.content_processes),
+                onClick = {
+                    dismiss()
+                    (context as? android.app.Activity)?.setResult(ReplaceRuleActivity.RESULT_CONTENT_PROCESSES)
+                    onBackClick()
+                },
+            )
+            PillDivider()
             RoundDropdownMenuItem(
                 text = stringResource(R.string.help),
-                onClick = { /*TODO*/ dismiss() }
+                onClick = {
+                    dismiss()
+                    (context as? androidx.appcompat.app.AppCompatActivity)?.showHelp("replaceRuleHelp")
+                }
             )
             PillDivider()
             RoundDropdownMenuItem(

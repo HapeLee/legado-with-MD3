@@ -59,7 +59,7 @@
     <string name="delete_all">Delete all</string>
     <string name="custom_export_section">Custom export chapter of epub</string>
     <string name="replace">Replace</string>
-    <string name="replace_purify">Replacement Rules</string>
+    <string name="replace_purify">Replace Purify</string>
     <string name="replace_purify_desc">Configure replacement rules</string>
     <string name="not_available">Not available now</string>
     <string name="enable">Enable</string>
@@ -269,7 +269,8 @@
     <string name="import_book_source">Import book sources</string>
     <string name="import_local">Import local</string>
     <string name="import_on_line">Import online</string>
-    <string name="replace_rule_title">Replacement</string>
+    <string name="replace_rule_enabled">Enable Replace Purify</string>
+    <string name="replace_rule_title">Replace Rules</string>
     <string name="replace_rule_edit">Edit replacement rule</string>
     <string name="replace_rule">Pattern</string>
     <string name="replace_to">Replacement</string>
@@ -396,6 +397,7 @@
     <string name="fonts_folder">Please put the font files in the Fonts folder of the storage root directory and reselect</string>
     <string name="default_font">Default font</string>
     <string name="select_font">Select fonts</string>
+    <string name="font">Font</string>
     <string name="text_size">Text size</string>
     <string name="line_size">Line spacing</string>
     <string name="paragraph_size">Paragraph spacing</string>
@@ -684,9 +686,6 @@
     <string name="text_color">Text Color</string>
     <string name="header_color">Header</string>
     <string name="footer_color">Footer</string>
-    <string name="header_font">Header Font</string>
-    <string name="footer_font">Footer Font</string>
-    <string name="header_font_size">Header Font Size</string>
     <string name="footer_font_size">Footer Font Size</string>
     <string name="select_image">Select a picture</string>
     <string name="group_manage">Group Management</string>
@@ -927,6 +926,12 @@
     <string name="read_config_header_footer_desc">Configure header/footer modules, visibility, and colors</string>
     <string name="read_config_header_footer_padding_desc">Adjust header and footer top, bottom, left, and right margins</string>
     <string name="read_config_divider_line">Divider Line</string>
+    <string name="read_config_display">Display</string>
+    <string name="read_config_spacing">Spacing</string>
+    <string name="read_config_content">Content</string>
+    <string name="read_config_image">Image</string>
+    <string name="header_font_size">Header Font Size</string>
+    <string name="apply_header_style">Apply header font style to footer</string>
     <string name="group_name">Group name</string>
     <string name="note_content">Remarks section</string>
     <string name="replace_enable_default_t">Enable Replace Rules by Default</string>
@@ -990,7 +995,7 @@
     <string name="non_action">None</string>
     <string name="body_title">Title</string>
     <string name="show_hide">Show/Hide</string>
-    <string name="header_footer">Footer <![CDATA[&]]> Header</string>
+    <string name="header_footer">Typography</string>
     <string name="rule_subscription">Rule Subscription</string>
     <string name="rule_sub_empty_msg">Add the rule import address provided by the bosses\nClick to import rules after adding</string>
     <string name="get_book_progress">Pull the cloud  progress</string>
@@ -1049,7 +1054,7 @@
     <string name="content_src">Content source code</string>
     <string name="list_src">List source code</string>
     <string name="title_font_size">Font Size</string>
-    <string name="title_color">Title Color</string>
+    <string name="title_color">Color</string>
     <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>
     <string name="title_margin_bottom">Margin Bottom</string>
@@ -1734,7 +1739,7 @@
     <string name="expand_volume">Expand All Volumes</string>
     <string name="custom">Custom</string>
     <string name="global_setting">Global Settings</string>
-    <string name="text_typeface">Font Style</string>
+    <string name="text_typeface">Font</string>
     <string name="shadow_typeface">Shadow Style</string>
     <string name="long_click_to_custom">Long Tap to Customize</string>
     <string name="disable_manga_scroll_animation">Disable Page Turn Animation</string>

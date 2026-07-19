@@ -32,6 +32,8 @@ class ReplaceRuleActivity : BaseComposeActivity() {
 
     companion object {
         const val EXTRA_START_ROUTE = "start_route"
+        const val RESULT_EFFECTIVE_REPLACES = 2001
+        const val RESULT_CONTENT_PROCESSES = 2002
         fun startIntent(
             context: Context,
             editRoute: ReplaceEditRoute? = null

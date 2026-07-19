@@ -28,6 +28,7 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.sheet.CustomTipTarget
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
+import io.legado.app.ui.widget.components.dialog.CustomTipDialog
 import androidx.core.view.updateLayoutParams
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyStatusBarPadding
@@ -102,7 +103,6 @@ class PageView(
             if (isImeVisible) {
                 return@setOnApplyWindowInsetsListenerCompat windowInsets
             }
-            //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
             val navHeight = windowInsets.navigationBarHeight
             if (navHeight > 0) {
                 ReadBookConfig.lastNavigationBarHeight = navHeight
@@ -263,6 +263,16 @@ class PageView(
         }
         val tipTypeface = loadTypeface(ReadBookConfig.headerFont) ?: ChapterProvider.typeface
         val tipTextSize = ReadBookConfig.headerFontSize.toFloat()
+        val footerTypeface = if (ReadBookConfig.applyHeaderStyle) {
+            tipTypeface
+        } else {
+            loadTypeface(ReadBookConfig.footerFont) ?: ChapterProvider.typeface
+        }
+        val footerTextSize = if (ReadBookConfig.applyHeaderStyle) {
+            tipTextSize
+        } else {
+            ReadBookConfig.footerFontSize.toFloat()
+        }
         tvTitle = getTipView(ReadBookConfig.tipChapterTitle)?.apply {
             tag = ReadBookConfig.tipChapterTitle
             typeface = tipTypeface
@@ -364,15 +374,14 @@ class PageView(
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        // 自定义页眉/页脚模板：6 个位置共享同一段配置逻辑
-        val customTypeface = tipTypeface
-        val customTextSize = tipTextSize
+        // 自定义页眉/页脚模板：6 个位置分别使用页眉/页脚的字体和字号
         for (target in CUSTOM_TIP_TARGETS) {
             if (target.tipValue != ReadBookConfig.tipCustom) continue
             val view = customTipViewFor(target)
             view.tag = ReadBookConfig.tipCustom
-            view.typeface = customTypeface
-            view.textSize = customTextSize
+            val isHeader = target.name.startsWith("HEADER")
+            view.typeface = if (isHeader) tipTypeface else footerTypeface
+            view.textSize = if (isHeader) tipTextSize else footerTextSize
             view.batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
     }
@@ -742,7 +751,7 @@ class PageView(
          * 缓存枚举数组，避免每次调用 `values()` 触发 Kotlin 内部数组克隆。
          * 模板渲染在 `upCustomTip` / `upTime` / `upBattery` 等热路径上会反复触发。
          */
-        private val CUSTOM_TIP_TARGETS: Array<CustomTipTarget> = CustomTipTarget.values()
-        private val CUSTOM_TIP_PLACEHOLDERS: Array<CustomTipPlaceholder> = CustomTipPlaceholder.values()
+        private val CUSTOM_TIP_TARGETS: Array<CustomTipTarget> = CustomTipTarget.entries.toTypedArray()
+        private val CUSTOM_TIP_PLACEHOLDERS: Array<CustomTipPlaceholder> = CustomTipPlaceholder.entries.toTypedArray()
     }
 }
