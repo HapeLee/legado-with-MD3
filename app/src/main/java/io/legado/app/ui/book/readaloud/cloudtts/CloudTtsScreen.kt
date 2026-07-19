@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -33,19 +34,19 @@ import io.legado.app.R
 import io.legado.app.domain.model.readaloud.CloudTtsProviderType
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.profile
-import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -88,12 +89,13 @@ fun CloudTtsScreen(
     }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     AppScaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-        GlassMediumFlexibleTopAppBar(
-            title = stringResource(R.string.read_aloud_engines_and_voices),
-            navigationIcon = { TopBarNavigationButton(onClick = onBack) },
-            scrollBehavior = scrollBehavior,
-        )
+            GlassMediumFlexibleTopAppBar(
+                title = stringResource(R.string.read_aloud_engines_and_voices),
+                navigationIcon = { TopBarNavigationButton(onClick = onBack) },
+                scrollBehavior = scrollBehavior,
+            )
         },
         floatingActionButton = {
             AppFloatingActionButton(
@@ -112,7 +114,13 @@ fun CloudTtsScreen(
             )
         },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = padding.calculateTopPadding() + 8.dp,
+                bottom = padding.calculateBottomPadding() + 96.dp,
+            ),
+        ) {
             item {
                 AppTabRow(
                     tabTitles = listOf(
@@ -409,7 +417,9 @@ private fun TtsVoicePresetEditorContent(
                             onQueryChange = { voiceQuery = it },
                             placeholder = stringResource(R.string.cloud_tts_search_voice),
                             autoFocus = false,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         )
                     }
                     if (state.discovering) {
