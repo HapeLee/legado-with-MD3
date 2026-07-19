@@ -2155,10 +2155,11 @@
     <string name="read_menu_custom_icons">自定义图标</string>
     <string name="read_menu_custom_icons_none">使用默认图标</string>
     <string name="read_menu_custom_icons_count">已自定义 %1$d 个图标</string>
-    <string name="title_bar_icons">顶栏图标</string>
+    <string name="title_bar_icons">浮动图标</string>
     <string name="title_bar_layout">顶栏布局</string>
     <string name="show_title_bar_icons">显示浮动图标</string>
-    <string name="title_bar_icon_position">顶栏图标位置</string>
+    <string name="title_bar_compact">精简顶部按钮</string>
+    <string name="title_bar_icon_position">浮动图标位置</string>
     <string name="position_top_start">左上</string>
     <string name="position_top_end">右上</string>
     <string name="position_bottom_start">左下</string>

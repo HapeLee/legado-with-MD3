@@ -61,11 +61,11 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
@@ -1000,7 +1000,6 @@ private fun MenuTitleBar(
             )
     ) {
         val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
-                && topBarVisualState.isProgressiveBlur
         val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
 
         // Title row: left group (back + capsule/title) + right group (actions)
@@ -1025,7 +1024,7 @@ private fun MenuTitleBar(
                     backdrop = backdrop,
                 )
 
-                if (useTitleCapsule) {
+                if (useTitleCapsule && titleBarMode != "1" && titleBarMode != "3") {
                     TitleCapsuleGlassLayout(
                         state = state,
                         colors = colors,
@@ -1063,12 +1062,13 @@ private fun MenuTitleBar(
                     backdrop = backdrop,
                 )
             } else {
+                val compact = state.menuConfig.titleBarCompact
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!state.isLocalBook) {
-                        if (state.bookSource?.customButton == true) {
+                        if (!compact && state.bookSource?.customButton == true) {
                             SourceCustomActionButton(
                                 state = state,
                                 colors = colors,
@@ -1076,25 +1076,27 @@ private fun MenuTitleBar(
                                 backdrop = backdrop,
                             )
                         }
-                        SourceActionButton(
-                            state = state,
-                            colors = colors,
-                            onIntent = onIntent,
-                            backdrop = backdrop,
-                        )
-                        RefreshActionButton(
-                            state = state,
-                            colors = colors,
-                            onIntent = onIntent,
-                            backdrop = backdrop,
-                        )
-                        DownloadActionButton(
-                            state = state,
-                            colors = colors,
-                            onIntent = onIntent,
-                            backdrop = backdrop,
-                        )
-                    } else {
+                        if (!compact) {
+                            SourceActionButton(
+                                state = state,
+                                colors = colors,
+                                onIntent = onIntent,
+                                backdrop = backdrop,
+                            )
+                            RefreshActionButton(
+                                state = state,
+                                colors = colors,
+                                onIntent = onIntent,
+                                backdrop = backdrop,
+                            )
+                            DownloadActionButton(
+                                state = state,
+                                colors = colors,
+                                onIntent = onIntent,
+                                backdrop = backdrop,
+                            )
+                        }
+                    } else if (state.isLocalBook && !compact) {
                         if (state.isLocalTxt) {
                             TxtTocRuleActionButton(
                                 state = state,
@@ -1400,20 +1402,44 @@ private fun RowScope.TitleCapsuleGlassLayout(
     titleTextColor: Color,
 ) {
     val pillShape = RoundedCornerShape(50)
+    val glassEnabled = readerMenuLiquidGlassAvailable(backdrop)
+            && state.menuConfig.readMenuTopBarLiquidGlassButtons
+    val iconStyle = state.menuConfig.titleBarIconStyle
 
     Row(
         modifier = Modifier
             .weight(1f)
             .padding(start = 12.dp)
             .height(40.dp)
-            .readMenuLiquidGlass(
-                backdrop = backdrop,
-                colors = colors,
-                shape = pillShape,
-                useTopBarStyle = true,
-                useLens = false,
-                blurRadius = 32.dp,
-                menuConfig = state.menuConfig,
+            .then(
+                if (glassEnabled) {
+                    Modifier.readMenuLiquidGlass(
+                        backdrop = backdrop,
+                        colors = colors,
+                        shape = pillShape,
+                        useTopBarStyle = true,
+                        useLens = false,
+                        blurRadius = 32.dp,
+                        menuConfig = state.menuConfig,
+                    )
+                } else {
+                    val containerColor = when (iconStyle) {
+                        1 -> LegadoTheme.colorScheme.surfaceContainerLow
+                        else -> Color.Transparent
+                    }
+                    val border = when (iconStyle) {
+                        2 -> BorderStroke(
+                            1.dp,
+                            LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                        )
+
+                        else -> null
+                    }
+                    Modifier
+                        .clip(pillShape)
+                        .background(containerColor, pillShape)
+                        .then(if (border != null) Modifier.border(border, pillShape) else Modifier)
+                }
             )
             .then(
                 if (!state.isLocalBook) {
@@ -1470,6 +1496,7 @@ private fun MenuTitleBarMergedGlassButton(
 
     val pillShape = RoundedCornerShape(50)
     val tint = LegadoTheme.colorScheme.onSurfaceVariant
+    val compact = state.menuConfig.titleBarCompact
 
     Box {
         Row(
@@ -1484,12 +1511,11 @@ private fun MenuTitleBarMergedGlassButton(
                     blurRadius = 32.dp,
                     interactive = true,
                     menuConfig = state.menuConfig,
-                )
-                .padding(horizontal = 4.dp),
+                ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             // SwapHoriz - change source
-            if (!state.isLocalBook) {
+            if (!state.isLocalBook && !compact) {
                 if (state.bookSource?.customButton == true) {
                     val customButtonDescription = stringResource(R.string.custom_button)
                     Box(
@@ -1509,7 +1535,7 @@ private fun MenuTitleBarMergedGlassButton(
                             },
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Build,
+                            imageVector = Icons.Default.Extension,
                             contentDescription = null,
                             tint = tint,
                             modifier = Modifier.size(20.dp),
@@ -1624,7 +1650,7 @@ private fun MenuTitleBarMergedGlassButton(
                         .background(tint.copy(alpha = 0.15f))
                         .clearAndSetSemantics { }
                 )
-            } else {
+            } else if (state.isLocalBook && !compact) {
                 // TXT directory rule
                 if (state.isLocalTxt) {
                     val tocRuleDescription = stringResource(R.string.txt_toc_rule)
@@ -1770,7 +1796,7 @@ private fun SourceCustomActionButton(
     MenuTitleGlassButton(
         onClick = { onIntent(ReadBookIntent.SourceCustomButton(false)) },
         onLongClick = { onIntent(ReadBookIntent.SourceCustomButton(true)) },
-        icon = Icons.Default.Build,
+        icon = Icons.Default.Extension,
         contentDescription = stringResource(R.string.custom_button),
         state = state,
         colors = colors,
@@ -1998,6 +2024,41 @@ private fun OverflowDropdownMenu(
     ) { dismiss ->
         var imageStyleExpanded by remember { mutableStateOf(false) }
 
+        // Compact mode: moved from top bar buttons
+        if (state.menuConfig.titleBarCompact) {
+            if (!state.isLocalBook) {
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.change_origin),
+                    leadingIcon = menuIcon(Icons.Default.SwapHoriz),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.menu_refresh_after),
+                    leadingIcon = menuIcon(Icons.Default.Refresh),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAfter) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.offline_cache),
+                    leadingIcon = menuIcon(Icons.Default.CloudDownload),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
+                )
+            } else {
+                if (state.isLocalTxt) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.txt_toc_rule),
+                        leadingIcon = menuIcon(Icons.Default.Toc),
+                        onClick = { dismiss(); onIntent(ReadBookIntent.MenuTocRegex) },
+                    )
+                }
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.set_charset),
+                    leadingIcon = menuIcon(Icons.Default.Translate),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) },
+                )
+            }
+            PillDivider()
+        }
+
         // Source actions
         if (!state.isLocalBook) {
             RoundDropdownMenuItem(
@@ -2154,7 +2215,7 @@ private fun OverflowDropdownMenu(
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.config_btn),
-            leadingIcon = menuIcon(Icons.Default.Build),
+            leadingIcon = menuIcon(Icons.Default.Extension),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
@@ -3094,9 +3155,7 @@ private fun readMenuTopBarTitleCapsuleEnabled(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
-    return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
-            menuConfig.readMenuTopBarTitleCapsule &&
-            readerMenuLiquidGlassAvailable(backdrop)
+    return menuConfig.readMenuTopBarTitleCapsule
 }
 
 private fun readMenuBottomBarButtonLiquidGlassEnabled(

@@ -399,6 +399,7 @@ data class ReadMenuConfig(
     val readBrightness: Int = 100,
     val brightnessAuto: Boolean = false,
     val showMenuIcon: Boolean = false,
+    val titleBarCompact: Boolean = false,
 )
 
 @Immutable
@@ -1413,6 +1414,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ShowTitleBarIcons(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class TitleBarCompact(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
 

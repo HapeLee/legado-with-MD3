@@ -2340,6 +2340,7 @@ class ReadBookViewModel(
                 readBrightness = ReadBookConfig.readBrightness,
                 brightnessAuto = ReadBookConfig.brightnessAuto,
                 showMenuIcon = ReadBookConfig.showMenuIcon,
+                titleBarCompact = ReadBookConfig.titleBarCompact,
             ),
         )
     }
@@ -5160,6 +5161,13 @@ class ReadBookViewModel(
                     readSettingsRepository.setShowTitleBarIcons(update.value)
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(showTitleBarIcons = update.value)) }
+            }
+            is ConfigUpdate.TitleBarCompact -> {
+                ReadBookConfig.titleBarCompact = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setTitleBarCompact(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarCompact = update.value)) }
             }
 
             // --- System UI (also persists to DataStore) ---

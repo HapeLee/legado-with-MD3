@@ -335,6 +335,9 @@ class ReadSettingsRepository(
     suspend fun setShowMenuIcon(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.showMenuIcon, value)
 
+    suspend fun setTitleBarCompact(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.titleBarCompact, value)
+
     suspend fun setChineseConverterType(value: Int) =
         settingsRepository.putInt(PreferKey.chineseConverterType, value)
 
@@ -448,6 +451,7 @@ class ReadSettingsRepository(
             showTitleBarIcons = compatDsValue(Keys.ShowTitleBarIcons, false),
             chineseConverterType = compatDsValue(Keys.ChineseConverterType, 0),
             showMenuIcon = compatDsValue(Keys.ShowMenuIcon, false),
+            titleBarCompact = compatDsValue(Keys.TitleBarCompact, false),
         )
     }
 
@@ -551,5 +555,6 @@ class ReadSettingsRepository(
         val ShowTitleBarIcons = booleanPreferencesKey(PreferKey.showTitleBarIcons)
         val ChineseConverterType = intPreferencesKey(PreferKey.chineseConverterType)
         val ShowMenuIcon = booleanPreferencesKey(PreferKey.showMenuIcon)
+        val TitleBarCompact = booleanPreferencesKey(PreferKey.titleBarCompact)
     }
 }

@@ -381,31 +381,6 @@ private fun GlobalMenuTab(
             }
         }
 
-        TinyDropdownSettingItem(
-            title = stringResource(R.string.title_bar_icon_position),
-            selectedValue = preferences.titleBarIconPosition.toString(),
-            displayEntries = arrayOf(
-                stringResource(R.string.position_top_start),
-                stringResource(R.string.position_top_end),
-                stringResource(R.string.position_bottom_start),
-                stringResource(R.string.position_bottom_end),
-            ),
-            entryValues = arrayOf("0", "1", "2", "3"),
-            onValueChange = {
-                onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.TitleBarIconPosition(it.toInt())
-                    )
-                )
-            },
-        )
-        TinySwitchSettingItem(
-            title = stringResource(R.string.show_title_bar_icons),
-            checked = preferences.showTitleBarIcons,
-            onCheckedChange = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowTitleBarIcons(it)))
-            },
-        )
 
         SectionTitle(stringResource(R.string.show_brightness_view))
 
@@ -522,6 +497,52 @@ private fun GlobalMenuTab(
                 }
             },
         )
+
+        // --- Floating icon settings (at bottom) ---
+        SectionTitle(stringResource(R.string.show_title_bar_icons))
+
+        TinySwitchSettingItem(
+            title = stringResource(R.string.show_title_bar_icons),
+            checked = preferences.showTitleBarIcons,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowTitleBarIcons(it)))
+            },
+        )
+        AnimatedVisibility(visible = preferences.showTitleBarIcons) {
+            Column {
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.title_bar_icon_position),
+                    selectedValue = preferences.titleBarIconPosition.toString(),
+                    displayEntries = arrayOf(
+                        stringResource(R.string.position_top_start),
+                        stringResource(R.string.position_top_end),
+                        stringResource(R.string.position_bottom_start),
+                        stringResource(R.string.position_bottom_end),
+                    ),
+                    entryValues = arrayOf("0", "1", "2", "3"),
+                    onValueChange = {
+                        onIntent(
+                            ReadBookIntent.UpdateConfig(
+                                ConfigUpdate.TitleBarIconPosition(it.toInt())
+                            )
+                        )
+                    },
+                )
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.read_menu_icon_container_style),
+                    selectedValue = preferences.titleBarIconStyle.toString(),
+                    displayEntries = arrayOf(
+                        stringResource(R.string.read_menu_icon_style_plain),
+                        stringResource(R.string.read_menu_icon_style_tonal),
+                        stringResource(R.string.read_menu_icon_style_outlined),
+                    ),
+                    entryValues = arrayOf("0", "1", "2"),
+                    onValueChange = {
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconStyle(it.toInt())))
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -732,13 +753,35 @@ private fun TopBarTab(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
-        TinyDropdownSettingItem(
-            title = stringResource(R.string.title_bar_mode),
-            selectedValue = preferences.titleBarMode,
-            displayEntries = titleBarModeEntries,
-            entryValues = titleBarModeValues,
-            onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarMode(value)))
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_top_bar_title_capsule),
+            checked = preferences.readMenuTopBarTitleCapsule,
+            onCheckedChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarTitleCapsule(
+                            it
+                        )
+                    )
+                )
+            },
+        )
+        AnimatedVisibility(visible = !preferences.readMenuTopBarTitleCapsule) {
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.title_bar_mode),
+                selectedValue = preferences.titleBarMode,
+                displayEntries = titleBarModeEntries,
+                entryValues = titleBarModeValues,
+                onValueChange = { value ->
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarMode(value)))
+                },
+            )
+        }
+        TinySwitchSettingItem(
+            title = stringResource(R.string.title_bar_compact),
+            checked = preferences.titleBarCompact,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCompact(it)))
             },
         )
         TinyClickableSettingItem(
@@ -818,21 +861,6 @@ private fun TopBarTab(
                 },
             )
         }
-        AnimatedVisibility(visible = topBarBlurEnabled) {
-            TinySwitchSettingItem(
-                title = stringResource(R.string.read_menu_top_bar_title_capsule),
-                checked = preferences.readMenuTopBarTitleCapsule,
-                onCheckedChange = {
-                    onIntent(
-                        ReadBookIntent.UpdateConfig(
-                            ConfigUpdate.MenuTopBarTitleCapsule(
-                                it
-                            )
-                        )
-                    )
-                },
-            )
-        }
     }
 }
 
@@ -863,7 +891,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("prev_chapter", Icons.Default.SkipPrevious, context.getString(R.string.previous_chapter)),
     ReadMenuButtonInfo("next_chapter", Icons.Default.SkipNext, context.getString(R.string.next_chapter)),
     ReadMenuButtonInfo("replace", Icons.Default.FindReplace, context.getString(R.string.replace_purify)),
-    ReadMenuButtonInfo("replace_badge", Icons.Default.AutoAwesome, context.getString(R.string.replace_purify_badge)),
+    ReadMenuButtonInfo(
+        "replace_badge",
+        Icons.Default.FindReplace,
+        context.getString(R.string.replace_purify_badge)
+    ),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
     ReadMenuButtonInfo(
         "ai_summary",

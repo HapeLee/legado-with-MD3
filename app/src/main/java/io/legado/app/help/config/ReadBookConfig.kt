@@ -212,6 +212,7 @@ object ReadBookConfig {
     var useZhLayout by prefDelegate(PreferKey.useZhLayout, false)
     var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, false)
     var showMenuIcon by prefDelegate(PreferKey.showMenuIcon, false)
+    var titleBarCompact by prefDelegate(PreferKey.titleBarCompact, false)
     var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, true)
     var readMenuTopBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuTopBarLiquidGlassButtons, false)
     var readMenuTopBarTitleCapsule by prefDelegate(PreferKey.readMenuTopBarTitleCapsule, false)

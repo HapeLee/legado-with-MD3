@@ -100,5 +100,6 @@ data class ReadSettings(
     val showTitleBarIcons: Boolean = true,
     val chineseConverterType: Int = 0,
     val showMenuIcon: Boolean = false,
+    val titleBarCompact: Boolean = false,
 )
 

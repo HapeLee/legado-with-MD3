@@ -2176,10 +2176,11 @@
     <string name="read_menu_custom_icons">Custom icons</string>
     <string name="read_menu_custom_icons_none">Use default icons</string>
     <string name="read_menu_custom_icons_count">%1$d custom icons</string>
-    <string name="title_bar_icons">Title Bar Icons</string>
+    <string name="title_bar_icons">Floating icons</string>
     <string name="title_bar_layout">Title Bar Layout</string>
     <string name="show_title_bar_icons">Show floating icons</string>
-    <string name="title_bar_icon_position">Title bar icon position</string>
+    <string name="title_bar_compact">Compact top bar buttons</string>
+    <string name="title_bar_icon_position">Floating icon position</string>
     <string name="position_top_start">Top left</string>
     <string name="position_top_end">Top right</string>
     <string name="position_bottom_start">Bottom left</string>
