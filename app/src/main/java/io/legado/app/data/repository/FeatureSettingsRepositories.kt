@@ -8,7 +8,6 @@ import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AppShellStringSetting
 import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BackupSettingsUpdate
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
@@ -255,35 +254,8 @@ class BackupSettingsRepository : BackupSettingsGateway {
         .map { it.toBackupSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: BackupSettingsUpdate) = updateAll(listOf(update))
-
-    override suspend fun updateAll(updates: List<BackupSettingsUpdate>) {
-        val values = buildMap {
-            updates.forEach { update ->
-                when (update) {
-                    is BackupSettingsUpdate.WebDavUrl -> put(PreferKey.webDavUrl, update.value)
-                    is BackupSettingsUpdate.WebDavCredentials -> {
-                        put(PreferKey.webDavAccount, update.account)
-                        put(PreferKey.webDavPassword, update.password)
-                    }
-                    is BackupSettingsUpdate.WebDavDir -> put(PreferKey.webDavDir, update.value)
-                    is BackupSettingsUpdate.WebDavDeviceName ->
-                        put(PreferKey.webDavDeviceName, update.value)
-                    is BackupSettingsUpdate.SyncBookProgress ->
-                        put(PreferKey.syncBookProgress, update.value)
-                    is BackupSettingsUpdate.SyncBookProgressPlus ->
-                        put(PreferKey.syncBookProgressPlus, update.value)
-                    is BackupSettingsUpdate.AutoCheckNewBackup ->
-                        put(PreferKey.autoCheckNewBackup, update.value)
-                    is BackupSettingsUpdate.OnlyLatestBackup ->
-                        put(PreferKey.onlyLatestBackup, update.value)
-                    is BackupSettingsUpdate.BackupSyncMode ->
-                        put(PreferKey.backupSyncMode, update.value)
-                    is BackupSettingsUpdate.BackupPath -> put(PreferKey.backupPath, update.value)
-                }
-            }
-        }
-        AppConfigStore.putAll(values)
+    override suspend fun update(transform: (BackupSettings) -> BackupSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, BackupSettings::toPrefMap))
     }
 }
 
@@ -400,6 +372,20 @@ internal fun Preferences.toBackupSettings(): BackupSettings = BackupSettings(
     onlyLatestBackup = compatDsBoolean(PreferKey.onlyLatestBackup) ?: true,
     backupSyncMode = compatDsString(PreferKey.backupSyncMode) ?: "both",
     backupPath = compatDsString(PreferKey.backupPath),
+)
+
+internal fun BackupSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.webDavUrl to webDavUrl,
+    PreferKey.webDavAccount to webDavAccount,
+    PreferKey.webDavPassword to webDavPassword,
+    PreferKey.webDavDir to webDavDir,
+    PreferKey.webDavDeviceName to webDavDeviceName,
+    PreferKey.syncBookProgress to syncBookProgress,
+    PreferKey.syncBookProgressPlus to syncBookProgressPlus,
+    PreferKey.autoCheckNewBackup to autoCheckNewBackup,
+    PreferKey.onlyLatestBackup to onlyLatestBackup,
+    PreferKey.backupSyncMode to backupSyncMode,
+    PreferKey.backupPath to backupPath,
 )
 
 internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
