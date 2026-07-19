@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import io.legado.app.constant.AppLog
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
@@ -14,6 +15,7 @@ import io.legado.app.utils.externalFiles
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getFile
+import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import splitties.init.appCtx
 import java.io.File
@@ -129,6 +131,14 @@ class ReadStyleRepository(
         addBackgroundFile(exportDir, exportConfig, 2, exportFiles)
         exportConfig.textFont = addAssetFile(exportDir, exportConfig.textFont, exportFiles)
         exportConfig.titleFont = addAssetFile(exportDir, exportConfig.titleFont, exportFiles)
+        HighlightRuleAssetTransfer.prepareExport(
+            rules = exportConfig.highlightRules,
+            exportDir = exportDir,
+            copyAsset = ::copyRuleAsset,
+        ).let { result ->
+            exportConfig.highlightRules = ArrayList(result.rules)
+            exportFiles.addAll(result.files)
+        }
 
         val configFile = exportDir.getFile(ReadBookConfig.configFileName)
         configFile.writeText(GSON.toJson(exportConfig))
@@ -201,6 +211,16 @@ class ReadStyleRepository(
         config.curTextAccentColor()
         config.curTextShadowColor()
         if (config.highlightRules.isNotEmpty()) {
+            config.highlightRules = ArrayList(
+                HighlightRuleAssetTransfer.restoreImport(
+                    rules = config.highlightRules,
+                    importDir = configDir,
+                    backgroundDir = File(appCtx.filesDir, "bg_images"),
+                    fontDir = appCtx.externalFiles.getFile("font"),
+                    isReadableBackgroundReference = appCtx::isReadableHighlightBackground,
+                    isReadableFontReference = appCtx::isReadableHighlightFont,
+                )
+            )
             val targetConfigName = config.name.ifBlank { null }
             val highlightRules = config.highlightRules.map { rule ->
                 if (targetConfigName.isNullOrBlank()) {
@@ -251,6 +271,22 @@ class ReadStyleRepository(
             exportFiles.add(target)
         }
         return target.name
+    }
+
+    private fun copyRuleAsset(sourcePath: String, target: File): Boolean {
+        return runCatching {
+            target.parentFile?.mkdirs()
+            if (sourcePath.isContentScheme()) {
+                appCtx.contentResolver.openInputStream(sourcePath.toUri())?.use { input ->
+                    target.outputStream().use(input::copyTo)
+                } ?: return@runCatching false
+            } else {
+                val source = File(sourcePath)
+                if (!source.isFile) return@runCatching false
+                source.copyTo(target, overwrite = true)
+            }
+            true
+        }.getOrDefault(false)
     }
 
     private fun importFont(configDir: File, fontName: String): String {

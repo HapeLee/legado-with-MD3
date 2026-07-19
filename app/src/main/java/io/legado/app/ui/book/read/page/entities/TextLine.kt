@@ -15,6 +15,7 @@ import io.legado.app.help.book.isImage
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.ContentTextView
+import io.legado.app.ui.book.read.page.ResourceLoadFailureCache
 import io.legado.app.ui.book.read.page.entities.TextPage.Companion.emptyTextPage
 import io.legado.app.ui.book.read.page.entities.column.BaseColumn
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
@@ -721,6 +722,7 @@ data class TextLine(
         private val doubleLineGap = 3.dpToPx().toFloat()
         private val bgBitmapCache = android.util.LruCache<String, Bitmap>(16 * 1024 * 1024)
         private val bgScaledBitmapCache = android.util.LruCache<String, Bitmap>(8 * 1024 * 1024)
+        private val failedBgBitmapLoads = ResourceLoadFailureCache<String>()
 
         /**
          * Trims bitmap caches to free memory under pressure.
@@ -768,9 +770,11 @@ data class TextLine(
         fun getBgBitmap(path: String): Bitmap? {
             if (path.isBlank()) return null
             bgBitmapCache.get(path)?.let { return it }
-            val bitmap = loadBgBitmap(path) ?: return null
-            bgBitmapCache.put(path, bitmap)
-            return bitmap
+            return failedBgBitmapLoads.load(path) {
+                loadBgBitmap(path)?.also { bitmap ->
+                    bgBitmapCache.put(path, bitmap)
+                }
+            }
         }
 
         private fun getScaledBitmap(path: String, source: Bitmap, width: Int, height: Int): Bitmap {
