@@ -51,6 +51,28 @@ class AppUiConfigurationRepositoryTest {
         }
     }
 
+    @Test
+    fun `系统主题变化进入同一份根配置`() {
+        val locale = FakeAppLocaleGateway()
+        val preferences = MutableStateFlow<Preferences>(mutablePreferencesOf())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repository = AppUiConfigurationRepository(
+            appLocaleGateway = locale,
+            preferencesFlow = preferences,
+            processScope = scope,
+            initialSystemDarkTheme = false,
+        )
+
+        try {
+            repository.synchronizeSystemDarkTheme(true)
+
+            assertEquals(true, repository.currentConfiguration.isSystemDarkTheme)
+            assertEquals(true, repository.currentConfiguration.isDarkTheme)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private class FakeAppLocaleGateway : AppLocaleGateway {
         private val state = MutableStateFlow("auto")
         override val language = state.asStateFlow()

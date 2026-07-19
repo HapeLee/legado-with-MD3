@@ -6,4 +6,6 @@ import kotlinx.coroutines.flow.StateFlow
 interface AppUiConfigurationGateway {
     val currentConfiguration: AppUiConfiguration
     val configuration: StateFlow<AppUiConfiguration>
+
+    fun synchronizeSystemDarkTheme(isDarkTheme: Boolean)
 }

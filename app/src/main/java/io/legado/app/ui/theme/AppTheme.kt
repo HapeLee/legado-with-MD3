@@ -1,6 +1,5 @@
 package io.legado.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -22,7 +21,7 @@ import androidx.compose.ui.unit.Density
 @Composable
 fun AppTheme(
     configuration: AppUiConfiguration,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = configuration.isDarkTheme,
     content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(LocalAppUiConfiguration provides configuration) {
@@ -74,12 +73,7 @@ private fun AppThemeActual(
     
     // 1. 获取基础配置
     val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
-    val themeModeValue = appShellSettings.themeMode
-    val effectiveDarkTheme = when (themeModeValue) {
-        "1" -> false
-        "2" -> true
-        else -> darkTheme
-    }
+    val effectiveDarkTheme = darkTheme
     val isPureBlack = themeSettings.isPureBlack
     val paletteStyleValue = themeSettings.paletteStyle
     val materialVersion = themeSettings.materialVersion

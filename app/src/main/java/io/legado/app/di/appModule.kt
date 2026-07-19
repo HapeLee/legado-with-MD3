@@ -257,6 +257,8 @@ import io.legado.app.ui.rss.read.ReadRssViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
+import io.legado.app.utils.isNightMode
+import io.legado.app.utils.sysConfiguration
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -297,7 +299,10 @@ val appModule = module {
     single<ThemeSettingsGateway> { ThemeSettingsRepository() }
     single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
     single<AppUiConfigurationGateway> {
-        AppUiConfigurationRepository(get())
+        AppUiConfigurationRepository(
+            appLocaleGateway = get(),
+            initialSystemDarkTheme = sysConfiguration.isNightMode,
+        )
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
     single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository(get()) }
@@ -580,6 +585,7 @@ val appModule = module {
             replaceRuleRepository = get(),
             changeSourceSettingsGateway = get(),
             appShellSettingsGateway = get(),
+            appUiConfigurationGateway = get(),
             otherSettingsGateway = get(),
             downloadCacheSettingsGateway = get(),
             backupSettingsGateway = get(),

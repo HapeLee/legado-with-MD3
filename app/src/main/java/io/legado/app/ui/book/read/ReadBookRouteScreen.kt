@@ -52,7 +52,6 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
@@ -62,6 +61,7 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -133,8 +133,7 @@ fun ReadBookRouteScreen(
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val appIsDark = LegadoTheme.isDark
-    var readerIsDark by remember(controller) { mutableStateOf(appIsDark) }
+    val isDarkTheme = LocalAppUiConfiguration.current.isDarkTheme
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -144,11 +143,6 @@ fun ReadBookRouteScreen(
                     !state.menuConfig.readMenuFloatingBottomBar &&
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
-
-    LaunchedEffect(controller, appIsDark) {
-        controller.onAppThemeChanged(appIsDark)
-        readerIsDark = appIsDark
-    }
 
     DisposableEffect(controller) {
         onDispose {
@@ -532,12 +526,14 @@ fun ReadBookRouteScreen(
                 onCursorTouch = controller,
                 readViewCallBack = controller,
                 contentTextViewCallBack = controller,
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = controller::onAppThemeChanged,
             )
         }
         ReadBookColorTheme(
             styleConfig = state.styleConfig,
             preferences = readPreferences,
-            isDarkTheme = readerIsDark,
+            isDarkTheme = isDarkTheme,
         ) {
             ReadBookMenuBar(
                 state = state,
@@ -626,10 +622,13 @@ private fun ReadBookViewLayer(
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
     contentTextViewCallBack: ContentTextView.CallBack,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
 ) {
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
+            onThemeChanged(isDarkTheme)
             FrameLayout(context).apply {
                 val readView = ReadView(
                     context = context,
@@ -694,6 +693,9 @@ private fun ReadBookViewLayer(
                     )
                 )
             }
+        },
+        update = {
+            onThemeChanged(isDarkTheme)
         },
     )
 }

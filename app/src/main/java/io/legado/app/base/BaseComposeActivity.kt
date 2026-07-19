@@ -28,9 +28,10 @@ import io.legado.app.domain.model.settings.diffFrom
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
-import io.legado.app.utils.LogUtils
+import io.legado.app.utils.isNightMode
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
@@ -87,6 +88,7 @@ abstract class BaseComposeActivity(
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
+        appUiConfigurationGateway.synchronizeSystemDarkTheme(newConfig.isNightMode)
         super.onConfigurationChanged(newConfig)
         // manifest 声明 locale/layoutDirection/screenLayout/uiMode configChanges 后，Compose 主壳
         // 可直接响应语言与深浅色变化，无需销毁 Activity。AppCompat 手动回调本方法时

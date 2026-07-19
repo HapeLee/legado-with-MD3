@@ -48,4 +48,32 @@ class AppUiConfigurationTest {
 
         assertFalse(diff.hasChanges)
     }
+
+    @Test
+    fun resolvedTheme_followsSystemOnlyInAutoMode() {
+        val systemDark = AppUiConfiguration(isSystemDarkTheme = true)
+
+        assertTrue(systemDark.isDarkTheme)
+        assertFalse(
+            systemDark.copy(appShell = systemDark.appShell.copy(themeMode = "1")).isDarkTheme
+        )
+        assertTrue(
+            systemDark.copy(
+                appShell = systemDark.appShell.copy(themeMode = "2"),
+                isSystemDarkTheme = false,
+            ).isDarkTheme
+        )
+    }
+
+    @Test
+    fun diff_reportsSystemThemeChangeOnlyInAutoMode() {
+        val autoLight = AppUiConfiguration(isSystemDarkTheme = false)
+        val autoDark = autoLight.copy(isSystemDarkTheme = true)
+        val fixedLight = autoLight.copy(appShell = autoLight.appShell.copy(themeMode = "1"))
+
+        assertTrue(autoDark.diffFrom(autoLight).themeChanged)
+        assertFalse(
+            fixedLight.copy(isSystemDarkTheme = true).diffFrom(fixedLight).themeChanged
+        )
+    }
 }

@@ -143,6 +143,7 @@ class ReadBookController(
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
     private var pendingSearchResultMark: IntArray? = null
+    private var appliedDarkTheme: Boolean? = null
     private val originalRequestedOrientation = activity.requestedOrientation
     private val originalScreenBrightness = activity.window.attributes.screenBrightness
     private val originalKeepScreenOn =
@@ -215,20 +216,25 @@ class ReadBookController(
     }
 
     fun onAppThemeChanged(isDarkTheme: Boolean) {
+        if (
+            appliedDarkTheme == isDarkTheme &&
+            ReadSessionState.isDarkThemeOverride == isDarkTheme
+        ) return
+        val startedAt = System.nanoTime()
         val previous = ReadSessionState.isDarkThemeOverride
+        appliedDarkTheme = isDarkTheme
         ReadSessionState.isDarkThemeOverride = isDarkTheme
-        refs?.readView?.run {
-            upBg()
-            upStyle()
-        }
+        refs?.readView?.applyThemeColors()
         upSystemUiVisibility()
         LogUtils.d(
             "ReadBookTheme",
-            "apply dark=$isDarkTheme previous=$previous refsReady=${refs != null}"
+            "apply dark=$isDarkTheme previous=$previous refsReady=${refs != null} " +
+                "durationMs=${(System.nanoTime() - startedAt) / 1_000_000}"
         )
     }
 
     fun clearAppThemeOverride() {
+        appliedDarkTheme = null
         ReadSessionState.isDarkThemeOverride = null
     }
 

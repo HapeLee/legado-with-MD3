@@ -8,6 +8,7 @@ import io.legado.app.help.config.AppConfigStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -17,10 +18,14 @@ class AppUiConfigurationRepository internal constructor(
     private val appLocaleGateway: AppLocaleGateway,
     preferencesFlow: StateFlow<Preferences> = AppConfigStore.preferencesFlow,
     processScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    initialSystemDarkTheme: Boolean = false,
 ) : AppUiConfigurationGateway {
+
+    private val systemDarkTheme = MutableStateFlow(initialSystemDarkTheme)
 
     private val initialConfiguration = preferencesFlow.value.toAppUiConfiguration(
         language = appLocaleGateway.currentLanguage,
+        isSystemDarkTheme = initialSystemDarkTheme,
     )
 
     override val currentConfiguration: AppUiConfiguration
@@ -29,19 +34,28 @@ class AppUiConfigurationRepository internal constructor(
     override val configuration: StateFlow<AppUiConfiguration> = combine(
         appLocaleGateway.language,
         preferencesFlow,
-    ) { language, preferences ->
-        preferences.toAppUiConfiguration(language)
+        systemDarkTheme,
+    ) { language, preferences, isSystemDarkTheme ->
+        preferences.toAppUiConfiguration(language, isSystemDarkTheme)
     }.stateIn(
         scope = processScope,
         started = SharingStarted.Eagerly,
         initialValue = initialConfiguration,
     )
+
+    override fun synchronizeSystemDarkTheme(isDarkTheme: Boolean) {
+        systemDarkTheme.value = isDarkTheme
+    }
 }
 
-internal fun Preferences.toAppUiConfiguration(language: String): AppUiConfiguration =
+internal fun Preferences.toAppUiConfiguration(
+    language: String,
+    isSystemDarkTheme: Boolean,
+): AppUiConfiguration =
     AppUiConfiguration(
         language = language,
         appShell = toAppShellSettings(),
         theme = toThemeSettings(),
         cover = toCoverSettings(),
+        isSystemDarkTheme = isSystemDarkTheme,
     )

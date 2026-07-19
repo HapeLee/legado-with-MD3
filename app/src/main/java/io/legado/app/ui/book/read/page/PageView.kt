@@ -167,6 +167,33 @@ class PageView(
         upBattery(battery)
     }
 
+    /** 仅更新日夜模式相关颜色，避免主题切换时重新加载字体和重排正文。 */
+    fun upThemeColors() = binding.run {
+        val textColor = ReadBookConfig.textColor
+        val headerColor = with(ReadBookConfig) {
+            if (resolvedTipHeaderColor == 0) textColor else resolvedTipHeaderColor
+        }
+        val footerColor = with(ReadBookConfig) {
+            if (resolvedTipFooterColor == 0) textColor else resolvedTipFooterColor
+        }
+        val tipDividerColor = with(ReadBookConfig) {
+            when (tipDividerColor) {
+                -1 -> ContextCompat.getColor(context, R.color.divider)
+                0 -> textColor
+                else -> tipDividerColor
+            }
+        }
+        tvHeaderLeft.setColor(headerColor)
+        tvHeaderMiddle.setColor(headerColor)
+        tvHeaderRight.setColor(headerColor)
+        tvFooterLeft.setColor(footerColor)
+        tvFooterMiddle.setColor(footerColor)
+        tvFooterRight.setColor(footerColor)
+        vwTopDivider.backgroundColor = tipDividerColor
+        vwBottomDivider.backgroundColor = tipDividerColor
+        contentTextView.invalidate()
+    }
+
     private fun loadTypeface(fontPath: String): Typeface? {
         return runCatching {
             when {
