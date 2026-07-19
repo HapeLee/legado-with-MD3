@@ -212,8 +212,6 @@ class BookInfoViewModel(
     ) {
         val current = currentBook
         if (current != null) return
-        // 只重置屏幕状态；设置字段由 uiState 的 combine 从 gateway 派生，不受影响。
-        _screenState.value = BookInfoUiState()
         currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
             Book(
                 bookUrl = bookUrl,
@@ -227,16 +225,6 @@ class BookInfoViewModel(
         } else {
             null
         }
-        currentChapterList = emptyList()
-        currentWebFiles = emptyList()
-        currentRelatedBooks = emptyList()
-        currentCharacters = emptyList()
-        currentKindLabels = emptyList()
-        currentGroupNames = null
-        currentHasCustomGroup = false
-        inBookshelf = false
-        bookSource = null
-        chapterChanged = false
         clearReadRecordObserve()
         relatedBooksLoadJob?.cancel()
         characterLoadJob?.cancel()
