@@ -1,12 +1,18 @@
 package io.legado.app.ui.book.group
 
 import android.app.Application
+import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class GroupViewModel(
     application: Application,
@@ -31,31 +37,61 @@ class GroupViewModel(
         isPrivate: Boolean,
         cover: String?,
         pattern: String? = null,
-        finally: () -> Unit
+        onError: ((Throwable) -> Unit)? = null,
+        onSuccess: () -> Unit
     ) {
-        execute {
-            val groupId = bookGroupRepository.getUnusedId()
-            val bookGroup = BookGroup(
-                groupId = groupId,
-                groupName = groupName,
-                cover = cover,
-                bookSort = bookSort,
-                enableRefresh = enableRefresh,
-                isPrivate = isPrivate,
-                order = bookGroupRepository.getMaxOrder().plus(1)
-            )
-            bookGroupRepository.getByID(groupId) ?: removeBookGroupAssignmentUseCase.execute(groupId)
-            bookGroupRepository.insert(bookGroup)
-            if (!pattern.isNullOrBlank()) {
-                val tagRule = TagGroupRule(
-                    groupName = groupName,
-                    pattern = pattern,
-                    order = tagGroupRuleRepository.getMaxOrder()
-                )
-                tagGroupRuleRepository.insert(tagRule)
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val groupId = bookGroupRepository.getUnusedId()
+                    val bookGroup = BookGroup(
+                        groupId = groupId,
+                        groupName = groupName,
+                        cover = cover,
+                        bookSort = bookSort,
+                        enableRefresh = enableRefresh,
+                        isPrivate = isPrivate,
+                        order = bookGroupRepository.getMaxOrder().plus(1)
+                    )
+                    bookGroupRepository.getByID(groupId)
+                        ?: removeBookGroupAssignmentUseCase.execute(groupId)
+                    bookGroupRepository.insert(bookGroup)
+                    if (!pattern.isNullOrBlank()) {
+                        val tagRule = TagGroupRule(
+                            groupName = groupName,
+                            pattern = pattern,
+                            order = tagGroupRuleRepository.getMaxOrder()
+                        )
+                        tagGroupRuleRepository.insert(tagRule)
+                    }
+                }
+                onSuccess()
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                onError?.invoke(error)
             }
-        }.onFinally {
-            finally()
+        }
+    }
+
+    fun saveGroup(
+        bookGroup: BookGroup,
+        ruleToSave: TagGroupRule?,
+        ruleToDelete: TagGroupRule?,
+        onSuccess: () -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    bookGroupRepository.update(bookGroup)
+                    ruleToSave?.let { saveTagGroupRuleAwait(it) }
+                    ruleToDelete?.let { tagGroupRuleRepository.delete(it) }
+                }
+                onSuccess()
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                onError(error)
+            }
         }
     }
 
@@ -82,12 +118,7 @@ class GroupViewModel(
 
     fun saveTagGroupRule(rule: TagGroupRule, finally: (() -> Unit)? = null) {
         execute {
-            val existing = tagGroupRuleRepository.getByGroupName(rule.groupName)
-            if (existing != null) {
-                tagGroupRuleRepository.update(rule.copy(id = existing.id))
-            } else {
-                tagGroupRuleRepository.insert(rule)
-            }
+            saveTagGroupRuleAwait(rule)
         }.onFinally {
             finally?.invoke()
         }
@@ -98,6 +129,15 @@ class GroupViewModel(
             tagGroupRuleRepository.delete(rule)
         }.onFinally {
             finally?.invoke()
+        }
+    }
+
+    private suspend fun saveTagGroupRuleAwait(rule: TagGroupRule) {
+        val existing = tagGroupRuleRepository.getByGroupName(rule.groupName)
+        if (existing != null) {
+            tagGroupRuleRepository.update(rule.copy(id = existing.id))
+        } else {
+            tagGroupRuleRepository.insert(rule)
         }
     }
 

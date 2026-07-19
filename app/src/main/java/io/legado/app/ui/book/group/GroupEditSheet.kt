@@ -110,6 +110,7 @@ fun GroupEditContent(
     var selectedSortIndex by remember(group) { mutableIntStateOf(group?.bookSort ?: -1) }
     var pattern by remember(tagGroupRule) { mutableStateOf(tagGroupRule?.pattern ?: "") }
     var showPattern by remember(tagGroupRule) { mutableStateOf(tagGroupRule != null || pattern.isNotBlank()) }
+    var isSaving by remember(group) { mutableStateOf(false) }
 
     val sortOptions = stringArrayResource(R.array.book_sort)
     val sortEntryValues = remember(sortOptions) {
@@ -123,7 +124,8 @@ fun GroupEditContent(
                 val inputStream = context.contentResolver.openInputStream(uri)
                     ?: return@rememberLauncherForActivityResult
                 inputStream.use { input ->
-                    val fileName = MD5Utils.md5Encode(input) + ".png"
+                    val extension = groupCoverFileExtension(context.contentResolver.getType(uri))
+                    val fileName = MD5Utils.md5Encode(input) + ".$extension"
                     val file =
                         FileUtils.createFileIfNotExist(context.externalFiles, "covers", fileName)
                     FileOutputStream(file).use { output ->
@@ -245,37 +247,31 @@ fun GroupEditContent(
                 if (groupName.isEmpty()) {
                     appCtx.toastOnUi("分组名称不能为空")
                 } else {
+                    isSaving = true
                     if (group != null) {
-                        viewModel.upGroup(
-                            group.copy(
+                        val ruleToSave = if (showPattern && pattern.isNotBlank()) {
+                            tagGroupRule?.copy(groupName = groupName, pattern = pattern)
+                                ?: TagGroupRule(groupName = groupName, pattern = pattern)
+                        } else {
+                            null
+                        }
+                        val ruleToDelete = tagGroupRule.takeIf { ruleToSave == null }
+                        viewModel.saveGroup(
+                            bookGroup = group.copy(
                                 groupName = groupName,
                                 cover = coverPath,
                                 bookSort = selectedSortIndex,
                                 enableRefresh = enableRefresh,
                                 isPrivate = isPrivate
-                            )
-                        )
-                        if (showPattern && pattern.isNotBlank()) {
-                            val existingRule = tagGroupRule
-                            if (existingRule != null) {
-                                viewModel.saveTagGroupRule(
-                                    existingRule.copy(
-                                        groupName = groupName,
-                                        pattern = pattern
-                                    )
-                                )
-                            } else {
-                                viewModel.saveTagGroupRule(
-                                    TagGroupRule(
-                                        groupName = groupName,
-                                        pattern = pattern
-                                    )
-                                )
+                            ),
+                            ruleToSave = ruleToSave,
+                            ruleToDelete = ruleToDelete,
+                            onSuccess = onDismissRequest,
+                            onError = { error ->
+                                isSaving = false
+                                appCtx.toastOnUi(error.localizedMessage ?: "分组保存失败")
                             }
-                        } else if (!showPattern && tagGroupRule != null) {
-                            viewModel.deleteTagGroupRule(tagGroupRule)
-                        }
-                        onDismissRequest()
+                        )
                     } else {
                         viewModel.addGroup(
                             groupName,
@@ -283,7 +279,11 @@ fun GroupEditContent(
                             enableRefresh,
                             isPrivate,
                             coverPath,
-                            pattern = pattern.takeIf { showPattern && it.isNotBlank() }
+                            pattern = pattern.takeIf { showPattern && it.isNotBlank() },
+                            onError = { error ->
+                                isSaving = false
+                                appCtx.toastOnUi(error.localizedMessage ?: "分组保存失败")
+                            }
                         ) {
                             onDismissRequest()
                         }
@@ -291,7 +291,9 @@ fun GroupEditContent(
                 }
             },
             dismissText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.ok)
+            confirmText = stringResource(R.string.ok),
+            dismissEnabled = !isSaving,
+            confirmEnabled = !isSaving
         )
     }
 
@@ -308,6 +310,22 @@ fun GroupEditContent(
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { showDisablePrivateDialog = false }
     )
+}
+
+internal fun groupCoverFileExtension(mimeType: String?): String {
+    val subtype = mimeType
+        ?.substringAfter('/', missingDelimiterValue = "")
+        ?.substringBefore(';')
+        ?.lowercase()
+        ?.takeIf { it.isNotBlank() }
+        ?: return "jpg"
+    return when (subtype) {
+        "jpeg", "jpg", "pjpeg" -> "jpg"
+        "svg+xml" -> "svg"
+        else -> subtype.substringBefore('+').takeIf {
+            it.length in 1..10 && it.all(Char::isLetterOrDigit)
+        } ?: "jpg"
+    }
 }
 
 @Composable
