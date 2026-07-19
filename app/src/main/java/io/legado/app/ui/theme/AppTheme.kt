@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.materialkolor.PaletteStyle
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.customColors
 import io.legado.app.utils.sysConfiguration
 import org.koin.compose.koinInject

@@ -445,6 +445,7 @@
     <string name="fattening_book">养肥书籍</string>
     <string name="finish_book">完结书籍</string>
     <string name="local_book">本地书籍</string>
+    <string name="manga_config">漫画设置</string>
     <string name="status_bar_immersion">状态栏颜色透明</string>
     <string name="imm_navigation_bar">沉浸式导航栏</string>
     <string name="imm_navigation_bar_s">导航栏颜色透明</string>
@@ -885,6 +886,8 @@
     <string name="default_cover">默认封面</string>
     <string name="restore_ignore">恢复忽略列表</string>
     <string name="restore_ignore_summary">选择恢复忽略内容</string>
+    <string name="backup_ignore">备份忽略列表</string>
+    <string name="backup_ignore_summary">选择备份忽略内容</string>
     <string name="read_config">阅读界面</string>
     <string name="read_config_global_theme">全局</string>
     <string name="read_config_layout_spacing">正文间距</string>
@@ -1289,6 +1292,15 @@
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>
+    <string name="config_ignore">配置忽略</string>
+    <string name="database_ignore">数据库忽略</string>
+    <string name="database_ignore_summary">选择忽略的数据库表</string>
+    <string name="source_sub">书源订阅</string>
+    <string name="book_group">书架分组</string>
+    <string name="rss_star">RSS 收藏</string>
+    <string name="search_history">搜索历史</string>
+    <string name="keyboard_assists">键盘辅助</string>
+    <string name="homepage_custom_sets">首页自定义</string>
     <string name="sure_upload">远程 WebDav 链接已存在，是否继续</string>
     <string name="unsupport_archivefile_entry">压缩文件内没有支持的文件</string>
     <string name="no_books_dir">没有设置书籍保存位置!</string>

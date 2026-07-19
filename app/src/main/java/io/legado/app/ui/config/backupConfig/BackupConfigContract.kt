@@ -13,6 +13,9 @@ data class BackupConfigUiState(
     val activeDialog: BackupConfigDialog? = null,
     val backupNames: ImmutableList<String> = persistentListOf(),
     val ignoreItems: ImmutableList<BackupIgnoreItem> = persistentListOf(),
+    val backupIgnoreItems: ImmutableList<BackupIgnoreItem> = persistentListOf(),
+    val dbIgnoreItems: ImmutableList<BackupIgnoreItem> = persistentListOf(),
+    val backupDbIgnoreItems: ImmutableList<BackupIgnoreItem> = persistentListOf(),
 )
 
 @Stable
@@ -28,6 +31,8 @@ sealed interface BackupConfigSheet {
     data object BackupOptions : BackupConfigSheet
     data object RestoreOptions : BackupConfigSheet
     data object RestoreFiles : BackupConfigSheet
+    data object IgnoreRestoreItems : BackupConfigSheet
+    data object IgnoreBackupItems : BackupConfigSheet
 }
 
 sealed interface BackupConfigDialog {
@@ -37,7 +42,6 @@ sealed interface BackupConfigDialog {
         val passwordVisible: Boolean = false,
     ) : BackupConfigDialog
 
-    data object IgnoreRestoreItems : BackupConfigDialog
     data class ConfirmLocalRestoreFallback(val error: String?) : BackupConfigDialog
     data class Loading(@StringRes val titleRes: Int) : BackupConfigDialog
 }
@@ -62,6 +66,13 @@ sealed interface BackupConfigIntent {
     data object OpenIgnoreDialog : BackupConfigIntent
     data class ToggleIgnoreItem(val key: String, val value: Boolean) : BackupConfigIntent
     data object SaveIgnoreItems : BackupConfigIntent
+    data object OpenBackupIgnoreDialog : BackupConfigIntent
+    data class ToggleBackupIgnoreItem(val key: String, val value: Boolean) : BackupConfigIntent
+    data object SaveBackupIgnoreItems : BackupConfigIntent
+    data class ToggleDbIgnoreItem(val key: String, val value: Boolean) : BackupConfigIntent
+    data object SaveDbIgnoreItems : BackupConfigIntent
+    data class ToggleBackupDbIgnoreItem(val key: String, val value: Boolean) : BackupConfigIntent
+    data object SaveBackupDbIgnoreItems : BackupConfigIntent
     data object DismissDialog : BackupConfigIntent
     data object SelectBackupDirectory : BackupConfigIntent
     data object SelectBackupAndRunDirectory : BackupConfigIntent

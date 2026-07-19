@@ -25,7 +25,12 @@ class BackupConfigViewModel(
     private val backupRestoreUseCase: BackupRestoreUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
-        BackupConfigUiState(ignoreItems = loadIgnoreItems())
+        BackupConfigUiState(
+            ignoreItems = loadIgnoreItems(),
+            backupIgnoreItems = loadBackupIgnoreItems(),
+            dbIgnoreItems = loadDbIgnoreItems(),
+            backupDbIgnoreItems = loadBackupDbIgnoreItems()
+        )
     )
     val uiState = _uiState.asStateFlow()
 
@@ -65,9 +70,26 @@ class BackupConfigViewModel(
             BackupConfigIntent.SaveWebDavAuth -> saveWebDavAuth()
             BackupConfigIntent.TestWebDav -> testWebDav()
             BackupConfigIntent.OpenIgnoreDialog ->
-                _uiState.update { it.copy(activeDialog = BackupConfigDialog.IgnoreRestoreItems) }
+                _uiState.update { it.copy(activeSheet = BackupConfigSheet.IgnoreRestoreItems) }
             is BackupConfigIntent.ToggleIgnoreItem -> toggleIgnoreItem(intent.key, intent.value)
             BackupConfigIntent.SaveIgnoreItems -> saveIgnoreItems()
+            BackupConfigIntent.OpenBackupIgnoreDialog ->
+                _uiState.update { it.copy(activeSheet = BackupConfigSheet.IgnoreBackupItems) }
+
+            is BackupConfigIntent.ToggleBackupIgnoreItem -> toggleBackupIgnoreItem(
+                intent.key,
+                intent.value
+            )
+
+            BackupConfigIntent.SaveBackupIgnoreItems -> saveBackupIgnoreItems()
+            is BackupConfigIntent.ToggleDbIgnoreItem -> toggleDbIgnoreItem(intent.key, intent.value)
+            BackupConfigIntent.SaveDbIgnoreItems -> saveDbIgnoreItems()
+            is BackupConfigIntent.ToggleBackupDbIgnoreItem -> toggleBackupDbIgnoreItem(
+                intent.key,
+                intent.value
+            )
+
+            BackupConfigIntent.SaveBackupDbIgnoreItems -> saveBackupDbIgnoreItems()
             BackupConfigIntent.DismissDialog -> _uiState.update { it.copy(activeDialog = null) }
             BackupConfigIntent.SelectBackupDirectory -> launchDirectoryPicker(runBackup = false)
             BackupConfigIntent.SelectBackupAndRunDirectory -> launchDirectoryPicker(runBackup = true)
@@ -156,8 +178,68 @@ class BackupConfigViewModel(
         _uiState.value.ignoreItems.forEach { item ->
             io.legado.app.help.storage.BackupConfig.ignoreConfig[item.key] = item.checked
         }
+        _uiState.value.dbIgnoreItems.forEach { item ->
+            io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[item.key] = item.checked
+        }
         io.legado.app.help.storage.BackupConfig.saveIgnoreConfig()
-        _uiState.update { it.copy(activeDialog = null) }
+        io.legado.app.help.storage.BackupConfig.saveDbIgnoreConfig()
+        _uiState.update { it.copy(activeSheet = null) }
+    }
+
+    private fun toggleBackupIgnoreItem(key: String, value: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                backupIgnoreItems = state.backupIgnoreItems.map { item ->
+                    if (item.key == key) item.copy(checked = value) else item
+                }.toImmutableList()
+            )
+        }
+    }
+
+    private fun saveBackupIgnoreItems() {
+        _uiState.value.backupIgnoreItems.forEach { item ->
+            io.legado.app.help.storage.BackupConfig.backupIgnoreConfig[item.key] = item.checked
+        }
+        _uiState.value.backupDbIgnoreItems.forEach { item ->
+            io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[item.key] = item.checked
+        }
+        io.legado.app.help.storage.BackupConfig.saveBackupIgnoreConfig()
+        io.legado.app.help.storage.BackupConfig.saveBackupDbIgnoreConfig()
+        _uiState.update { it.copy(activeSheet = null) }
+    }
+
+    private fun toggleDbIgnoreItem(key: String, value: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                dbIgnoreItems = state.dbIgnoreItems.map { item ->
+                    if (item.key == key) item.copy(checked = value) else item
+                }.toImmutableList()
+            )
+        }
+    }
+
+    private fun saveDbIgnoreItems() {
+        _uiState.value.dbIgnoreItems.forEach { item ->
+            io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[item.key] = item.checked
+        }
+        io.legado.app.help.storage.BackupConfig.saveDbIgnoreConfig()
+    }
+
+    private fun toggleBackupDbIgnoreItem(key: String, value: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                backupDbIgnoreItems = state.backupDbIgnoreItems.map { item ->
+                    if (item.key == key) item.copy(checked = value) else item
+                }.toImmutableList()
+            )
+        }
+    }
+
+    private fun saveBackupDbIgnoreItems() {
+        _uiState.value.backupDbIgnoreItems.forEach { item ->
+            io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[item.key] = item.checked
+        }
+        io.legado.app.help.storage.BackupConfig.saveBackupDbIgnoreConfig()
     }
 
     private fun launchDirectoryPicker(runBackup: Boolean) {
@@ -290,6 +372,38 @@ class BackupConfigViewModel(
                     key = key,
                     title = io.legado.app.help.storage.BackupConfig.ignoreTitle[index],
                     checked = io.legado.app.help.storage.BackupConfig.ignoreConfig[key] ?: false,
+                )
+            }
+            .toImmutableList()
+
+        fun loadBackupIgnoreItems() = io.legado.app.help.storage.BackupConfig.backupIgnoreKeys
+            .mapIndexed { index, key ->
+                BackupIgnoreItem(
+                    key = key,
+                    title = io.legado.app.help.storage.BackupConfig.backupIgnoreTitle[index],
+                    checked = io.legado.app.help.storage.BackupConfig.backupIgnoreConfig[key]
+                        ?: false,
+                )
+            }
+            .toImmutableList()
+
+        fun loadDbIgnoreItems() = io.legado.app.help.storage.BackupConfig.dbIgnoreKeys
+            .mapIndexed { index, key ->
+                BackupIgnoreItem(
+                    key = key,
+                    title = io.legado.app.help.storage.BackupConfig.dbIgnoreTitle[index],
+                    checked = io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[key] ?: false,
+                )
+            }
+            .toImmutableList()
+
+        fun loadBackupDbIgnoreItems() = io.legado.app.help.storage.BackupConfig.backupDbIgnoreKeys
+            .mapIndexed { index, key ->
+                BackupIgnoreItem(
+                    key = key,
+                    title = io.legado.app.help.storage.BackupConfig.backupDbIgnoreTitle[index],
+                    checked = io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[key]
+                        ?: false,
                 )
             }
             .toImmutableList()

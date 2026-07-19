@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,7 +25,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +49,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -50,12 +57,14 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.takePersistablePermissionSafely
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
@@ -248,6 +257,11 @@ fun BackupConfigScreen(
                         onClick = { onIntent(BackupConfigIntent.OpenIgnoreDialog) },
                     )
                     ClickableSettingItem(
+                        title = stringResource(R.string.backup_ignore),
+                        description = stringResource(R.string.backup_ignore_summary),
+                        onClick = { onIntent(BackupConfigIntent.OpenBackupIgnoreDialog) },
+                    )
+                    ClickableSettingItem(
                         title = stringResource(R.string.menu_import_old_version),
                         description = stringResource(R.string.import_old_summary),
                         onClick = { onIntent(BackupConfigIntent.RequestImportOldData) },
@@ -301,7 +315,9 @@ private fun BackupConfigSheets(
         title = stringResource(R.string.select_restore_file),
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(state.backupNames, key = { it }) { name ->
@@ -311,6 +327,125 @@ private fun BackupConfigSheets(
                     onToggleSelection = { onIntent(BackupConfigIntent.RestoreNetwork(name)) },
                 )
             }
+        }
+    }
+    IgnoreItemsSheet(
+        show = state.activeSheet == BackupConfigSheet.IgnoreRestoreItems,
+        title = stringResource(R.string.restore_ignore),
+        ignoreItems = state.ignoreItems,
+        dbIgnoreItems = state.dbIgnoreItems,
+        onToggleIgnoreItem = { key, value ->
+            onIntent(
+                BackupConfigIntent.ToggleIgnoreItem(
+                    key,
+                    value
+                )
+            )
+        },
+        onToggleDbIgnoreItem = { key, value ->
+            onIntent(
+                BackupConfigIntent.ToggleDbIgnoreItem(
+                    key,
+                    value
+                )
+            )
+        },
+        onConfirm = { onIntent(BackupConfigIntent.SaveIgnoreItems) },
+        onDismissRequest = { onIntent(BackupConfigIntent.SaveIgnoreItems) },
+    )
+    IgnoreItemsSheet(
+        show = state.activeSheet == BackupConfigSheet.IgnoreBackupItems,
+        title = stringResource(R.string.backup_ignore),
+        ignoreItems = state.backupIgnoreItems,
+        dbIgnoreItems = state.backupDbIgnoreItems,
+        onToggleIgnoreItem = { key, value ->
+            onIntent(
+                BackupConfigIntent.ToggleBackupIgnoreItem(
+                    key,
+                    value
+                )
+            )
+        },
+        onToggleDbIgnoreItem = { key, value ->
+            onIntent(
+                BackupConfigIntent.ToggleBackupDbIgnoreItem(
+                    key,
+                    value
+                )
+            )
+        },
+        onConfirm = { onIntent(BackupConfigIntent.SaveBackupIgnoreItems) },
+        onDismissRequest = { onIntent(BackupConfigIntent.SaveBackupIgnoreItems) },
+    )
+}
+
+@Composable
+private fun IgnoreItemsSheet(
+    show: Boolean,
+    title: String,
+    ignoreItems: ImmutableList<BackupIgnoreItem>,
+    dbIgnoreItems: ImmutableList<BackupIgnoreItem>,
+    onToggleIgnoreItem: (String, Boolean) -> Unit,
+    onToggleDbIgnoreItem: (String, Boolean) -> Unit,
+    onConfirm: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    var configExpanded by remember { mutableStateOf(true) }
+    var dbExpanded by remember { mutableStateOf(false) }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = title,
+        endAction = {
+            MediumTonalButton(
+                onClick = onConfirm,
+                icon = Icons.Default.Save
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SettingItem(
+                title = stringResource(R.string.config_ignore),
+                description = stringResource(R.string.restore_ignore_summary),
+                expanded = configExpanded,
+                onExpandChange = { configExpanded = it },
+                expandContent = {
+                    ignoreItems.forEach { item: BackupIgnoreItem ->
+                        CheckboxItem(
+                            title = item.title,
+                            checked = item.checked,
+                            onCheckedChange = { onToggleIgnoreItem(item.key, it) },
+                        )
+                        Spacer(
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                },
+            )
+            SettingItem(
+                title = stringResource(R.string.database_ignore),
+                description = stringResource(R.string.database_ignore_summary),
+                expanded = dbExpanded,
+                onExpandChange = { dbExpanded = it },
+                expandContent = {
+                    dbIgnoreItems.forEach { item: BackupIgnoreItem ->
+                        CheckboxItem(
+                            title = item.title,
+                            checked = item.checked,
+                            onCheckedChange = { onToggleDbIgnoreItem(item.key, it) },
+                        )
+                        Spacer(
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                },
+            )
         }
     }
 }
@@ -376,29 +511,6 @@ private fun BackupConfigDialogs(
         onConfirm = { onIntent(BackupConfigIntent.SaveWebDavAuth) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(BackupConfigIntent.DismissDialog) },
-    )
-
-    AppAlertDialog(
-        show = dialog == BackupConfigDialog.IgnoreRestoreItems,
-        onDismissRequest = { onIntent(BackupConfigIntent.SaveIgnoreItems) },
-        title = stringResource(R.string.restore_ignore),
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                state.ignoreItems.forEach { item ->
-                    CheckboxItem(
-                        title = item.title,
-                        checked = item.checked,
-                        onCheckedChange = {
-                            onIntent(BackupConfigIntent.ToggleIgnoreItem(item.key, it))
-                        },
-                    )
-                }
-            }
-        },
-        confirmText = stringResource(R.string.ok),
-        onConfirm = { onIntent(BackupConfigIntent.SaveIgnoreItems) },
-        dismissText = stringResource(R.string.cancel),
-        onDismiss = { onIntent(BackupConfigIntent.SaveIgnoreItems) },
     )
 
     val fallback = dialog as? BackupConfigDialog.ConfirmLocalRestoreFallback

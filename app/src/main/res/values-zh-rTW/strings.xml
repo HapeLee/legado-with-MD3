@@ -390,6 +390,7 @@
     <string name="fattening_book">養肥書籍</string>
     <string name="finish_book">完結書籍</string>
     <string name="local_book">本機書籍</string>
+    <string name="manga_config">漫畫設定</string>
     <string name="status_bar_immersion">狀態欄顏色透明</string>
     <string name="imm_navigation_bar">沉浸式導航欄</string>
     <string name="imm_navigation_bar_s">導航欄顏色透明</string>
@@ -786,6 +787,8 @@
     <string name="default_cover">預設封面</string>
     <string name="restore_ignore">復原忽略列表</string>
     <string name="restore_ignore_summary">復原時忽略一些內容不復原，方便不同手機配置不同</string>
+    <string name="backup_ignore">備份忽略列表</string>
+    <string name="backup_ignore_summary">備份時忽略一些內容不備份</string>
     <string name="read_config">閱讀介面設定</string>
     <string name="group_name">分組名稱</string>
     <string name="note_content">備註內容</string>
@@ -1136,6 +1139,15 @@
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>
+    <string name="config_ignore">設定忽略</string>
+    <string name="database_ignore">資料庫忽略</string>
+    <string name="database_ignore_summary">選擇忽略的資料庫表</string>
+    <string name="source_sub">書源訂閱</string>
+    <string name="book_group">書架分組</string>
+    <string name="rss_star">RSS 收藏</string>
+    <string name="search_history">搜尋歷史</string>
+    <string name="keyboard_assists">鍵盤輔助</string>
+    <string name="homepage_custom_sets">首頁自定義</string>
     <string name="sure_upload">远程webDav链接已存在，是否继续</string>
     <string name="unsupport_archivefile_entry">压缩文件内没有支持的文件</string>
     <string name="no_books_dir">没有设置书籍保存位置!</string>

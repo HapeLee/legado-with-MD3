@@ -8,7 +8,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
@@ -32,18 +31,19 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.SettingsWriter
 import io.legado.app.help.config.ThemeConfigStore
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ACache
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
@@ -140,135 +140,173 @@ object Restore : KoinComponent {
                 appDb.bookDao.insert(*newBooks.toTypedArray())
             }
         }
-        fileToListT<Bookmark>(path, "bookmark.json")?.let {
-            try {
-                appDb.bookmarkDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<BookGroup>(path, "bookGroup.json")?.let {
-            appDb.bookGroupDao.replaceAll(it)
-        }
-        fileToListT<BookSource>(path, "bookSource.json")?.let {
-            try {
-                appDb.bookSourceDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        } ?: run {
-            val bookSourceFile = File(path, "bookSource.json")
-            if (bookSourceFile.exists()) {
-                val json = bookSourceFile.readText()
-                ImportOldData.importOldSource(json)
-            }
-        }
-        fileToListT<RssSource>(path, "rssSources.json")?.let {
-            try {
-                appDb.rssSourceDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<RssStar>(path, "rssStar.json")?.let {
-            try {
-                appDb.rssStarDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<ReplaceRule>(path, "replaceRule.json")?.let {
-            try {
-                appDb.replaceRuleDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<SearchKeyword>(path, "searchHistory.json")?.let {
-            try {
-                appDb.searchKeywordDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<RuleSub>(path, "sourceSub.json")?.let {
-            try {
-                appDb.ruleSubDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<TxtTocRule>(path, "txtTocRule.json")?.let {
-            try {
-                appDb.txtTocRuleDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<HttpTTS>(path, "httpTTS.json")?.let {
-            try {
-                appDb.httpTTSDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<DictRule>(path, "dictRule.json")?.let {
-            try {
-                appDb.dictRuleDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<KeyboardAssist>(path, "keyboardAssists.json")?.let {
-            try {
-                appDb.keyboardAssistsDao.insert(*it.toTypedArray())
-            } catch (_: SQLiteConstraintException) {
-            }
-        }
-        fileToListT<HomepageModule>(path, "homepageModules.json")?.let {
-            appDb.homepageModuleDao.replaceAll(it)
-        }
-        fileToListT<HomepageCustomSet>(path, "homepageCustomSets.json")?.let {
-            appDb.homepageCustomSetDao.replaceAll(it)
-        }
-        fileToListT<HighlightRule>(path, "highlightRule.json")?.let {
-            appDb.highlightRuleDao.replaceAll(it)
-        }
-        fileToListT<HighlightTagRule>(path, "highlightTagRule.json")?.let {
-            appDb.highlightTagRuleDao.replaceAll(it)
-        }
-        fileToListT<TagGroupRule>(path, "tagGroupRule.json")?.let {
-            appDb.tagGroupRuleDao.replaceAll(it)
-        }
-        fileToListT<ReadRecord>(path, "readRecord.json")?.let {
-            it.forEach { readRecord ->
+        if (BackupConfig.dbIsNotIgnored("bookmark")) {
+            fileToListT<Bookmark>(path, "bookmark.json")?.let {
                 try {
-                    restoreReadRecord(readRecord)
+                    appDb.bookmarkDao.insert(*it.toTypedArray())
                 } catch (_: SQLiteConstraintException) {
                 }
             }
         }
-        fileToListT<ReadRecordDetail>(path, "readRecordDetail.json")?.let {
-            it.forEach { detail ->
+        if (BackupConfig.dbIsNotIgnored("bookGroup")) {
+            fileToListT<BookGroup>(path, "bookGroup.json")?.let {
+                appDb.bookGroupDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("bookSource")) {
+            fileToListT<BookSource>(path, "bookSource.json")?.let {
                 try {
-                    restoreReadRecordDetail(detail)
+                    appDb.bookSourceDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            } ?: run {
+                val bookSourceFile = File(path, "bookSource.json")
+                if (bookSourceFile.exists()) {
+                    val json = bookSourceFile.readText()
+                    ImportOldData.importOldSource(json)
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("rssSource")) {
+            fileToListT<RssSource>(path, "rssSources.json")?.let {
+                try {
+                    appDb.rssSourceDao.insert(*it.toTypedArray())
                 } catch (_: SQLiteConstraintException) {
                 }
             }
         }
-        fileToListT<ReadRecordSession>(path, "readRecordSession.json")?.let {
-            it.forEach { session ->
+        if (BackupConfig.dbIsNotIgnored("rssStar")) {
+            fileToListT<RssStar>(path, "rssStar.json")?.let {
                 try {
-                    restoreReadRecordSession(session)
+                    appDb.rssStarDao.insert(*it.toTypedArray())
                 } catch (_: SQLiteConstraintException) {
                 }
             }
         }
-        File(path, "servers.json").takeIf {
-            it.exists()
-        }?.runCatching {
-            var json = readText()
-            if (!json.isJsonArray()) {
-                json = aes.decryptStr(json)
-            }
-            GSON.fromJsonArray<Server>(json).getOrNull()?.let {
+        if (BackupConfig.dbIsNotIgnored("replaceRule")) {
+            fileToListT<ReplaceRule>(path, "replaceRule.json")?.let {
                 try {
-                    appDb.serverDao.insert(*it.toTypedArray())
+                    appDb.replaceRuleDao.insert(*it.toTypedArray())
                 } catch (_: SQLiteConstraintException) {
                 }
             }
-        }?.onFailure {
-            AppLog.put("恢复服务器配置出错\n${it.localizedMessage}", it)
+        }
+        if (BackupConfig.dbIsNotIgnored("searchHistory")) {
+            fileToListT<SearchKeyword>(path, "searchHistory.json")?.let {
+                try {
+                    appDb.searchKeywordDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("sourceSub")) {
+            fileToListT<RuleSub>(path, "sourceSub.json")?.let {
+                try {
+                    appDb.ruleSubDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("txtTocRule")) {
+            fileToListT<TxtTocRule>(path, "txtTocRule.json")?.let {
+                try {
+                    appDb.txtTocRuleDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("httpTTS")) {
+            fileToListT<HttpTTS>(path, "httpTTS.json")?.let {
+                try {
+                    appDb.httpTTSDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("dictRule")) {
+            fileToListT<DictRule>(path, "dictRule.json")?.let {
+                try {
+                    appDb.dictRuleDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("keyboardAssists")) {
+            fileToListT<KeyboardAssist>(path, "keyboardAssists.json")?.let {
+                try {
+                    appDb.keyboardAssistsDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("homepageModules")) {
+            fileToListT<HomepageModule>(path, "homepageModules.json")?.let {
+                appDb.homepageModuleDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("homepageCustomSets")) {
+            fileToListT<HomepageCustomSet>(path, "homepageCustomSets.json")?.let {
+                appDb.homepageCustomSetDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("highlightRule")) {
+            fileToListT<HighlightRule>(path, "highlightRule.json")?.let {
+                appDb.highlightRuleDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("highlightTagRule")) {
+            fileToListT<HighlightTagRule>(path, "highlightTagRule.json")?.let {
+                appDb.highlightTagRuleDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("tagGroupRule")) {
+            fileToListT<TagGroupRule>(path, "tagGroupRule.json")?.let {
+                appDb.tagGroupRuleDao.replaceAll(it)
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("readRecord")) {
+            fileToListT<ReadRecord>(path, "readRecord.json")?.let {
+                it.forEach { readRecord ->
+                    try {
+                        restoreReadRecord(readRecord)
+                    } catch (_: SQLiteConstraintException) {
+                    }
+                }
+            }
+            fileToListT<ReadRecordDetail>(path, "readRecordDetail.json")?.let {
+                it.forEach { detail ->
+                    try {
+                        restoreReadRecordDetail(detail)
+                    } catch (_: SQLiteConstraintException) {
+                    }
+                }
+            }
+            fileToListT<ReadRecordSession>(path, "readRecordSession.json")?.let {
+                it.forEach { session ->
+                    try {
+                        restoreReadRecordSession(session)
+                    } catch (_: SQLiteConstraintException) {
+                    }
+                }
+            }
+        }
+        if (BackupConfig.dbIsNotIgnored("server")) {
+            File(path, "servers.json").takeIf {
+                it.exists()
+            }?.runCatching {
+                var json = readText()
+                if (!json.isJsonArray()) {
+                    json = aes.decryptStr(json)
+                }
+                GSON.fromJsonArray<Server>(json).getOrNull()?.let {
+                    try {
+                        appDb.serverDao.insert(*it.toTypedArray())
+                    } catch (_: SQLiteConstraintException) {
+                    }
+                }
+            }?.onFailure {
+                AppLog.put("恢复服务器配置出错\n${it.localizedMessage}", it)
+            }
         }
         File(path, DirectLinkUpload.ruleFileName).takeIf {
             it.exists()

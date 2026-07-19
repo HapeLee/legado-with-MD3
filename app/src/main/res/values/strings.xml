@@ -466,6 +466,7 @@
     <string name="fattening_book">Awaiting more chapters books</string>
     <string name="finish_book">Finished books</string>
     <string name="local_book">Local Books</string>
+    <string name="manga_config">Manga Settings</string>
     <string name="status_bar_immersion">The status bar color becomes transparent</string>
     <string name="imm_navigation_bar">immersion navigation bar</string>
     <string name="imm_navigation_bar_s">The navigation bar becomes transparent</string>
@@ -910,6 +911,8 @@
     <string name="default_cover">Default Cover</string>
     <string name="restore_ignore">Bypass List</string>
     <string name="restore_ignore_summary">Ignore some contents while restoring</string>
+    <string name="backup_ignore">Backup Bypass List</string>
+    <string name="backup_ignore_summary">Ignore some contents while backing up</string>
     <string name="read_config">Reading Interface Settings</string>
     <string name="show_menu_icon">Show Menu Item Icons</string>
     <string name="read_config_global_theme">Global &amp; Theme</string>
@@ -1342,6 +1345,15 @@
     <string name="import_dict_rule">Import dict rule</string>
     <string name="keep_group">Keep group</string>
     <string name="server_config">Server Configuration</string>
+    <string name="config_ignore">Config Ignore</string>
+    <string name="database_ignore">Database Ignore</string>
+    <string name="database_ignore_summary">Select database tables to ignore</string>
+    <string name="source_sub">Source Subscriptions</string>
+    <string name="book_group">Book Groups</string>
+    <string name="rss_star">RSS Favorites</string>
+    <string name="search_history">Search History</string>
+    <string name="keyboard_assists">Keyboard Assists</string>
+    <string name="homepage_custom_sets">Homepage Custom Sets</string>
     <string name="sure_upload">Remote WebDAV URL exists, Continue?</string>
     <string name="unsupport_archivefile_entry">Cannot find supported files in archive</string>
     <string name="no_books_dir">There is no book save location set!</string>
