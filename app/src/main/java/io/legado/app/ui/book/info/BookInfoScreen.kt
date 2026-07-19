@@ -230,7 +230,6 @@ private fun BookInfoScreenContent(
         M3GlassScrollBehavior(TopAppBarDefaults.exitUntilCollapsedScrollBehavior())
     }
     val listState = rememberLazyListState()
-    var showMenu by rememberSaveable { mutableStateOf(false) }
 
     AppScaffold(
         modifier = Modifier
@@ -239,8 +238,6 @@ private fun BookInfoScreenContent(
         topBar = {
             BookInfoTransparentTopAppBar(
                 state = state,
-                showMenu = showMenu,
-                onShowMenuChange = { showMenu = it },
                 onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
                 onBackPressed = onBack,
                 scrollBehavior = scrollBehavior,
@@ -489,8 +486,6 @@ private fun BookInfoColorTheme(
 @Composable
 private fun BookInfoTransparentTopAppBar(
     state: BookInfoUiState,
-    showMenu: Boolean,
-    onShowMenuChange: (Boolean) -> Unit,
     onMenuAction: (BookInfoMenuAction) -> Unit,
     onBackPressed: () -> Unit,
     scrollBehavior: GlassTopAppBarScrollBehavior,
@@ -520,8 +515,6 @@ private fun BookInfoTransparentTopAppBar(
             actions = {
                 BookInfoTopBarActions(
                     state = state,
-                    showMenu = showMenu,
-                    onShowMenuChange = onShowMenuChange,
                     onMenuAction = onMenuAction,
                 )
             },
@@ -542,8 +535,6 @@ private fun BookInfoTransparentTopAppBar(
                     ) {
                         BookInfoTopBarActions(
                             state = state,
-                            showMenu = showMenu,
-                            onShowMenuChange = onShowMenuChange,
                             onMenuAction = onMenuAction,
                         )
                     }
@@ -629,8 +620,6 @@ private fun resolveBookInfoBackdropStyle(
 @Composable
 private fun BookInfoTopBarActions(
     state: BookInfoUiState,
-    showMenu: Boolean,
-    onShowMenuChange: (Boolean) -> Unit,
     onMenuAction: (BookInfoMenuAction) -> Unit,
 ) {
     if (state.inBookshelf) {
@@ -645,20 +634,35 @@ private fun BookInfoTopBarActions(
         imageVector = Icons.Default.Share,
         contentDescription = stringResource(R.string.share)
     )
-    TopBarActionButton(
-        onClick = { onShowMenuChange(true) },
-        imageVector = Icons.Default.MoreVert,
-        contentDescription = stringResource(R.string.more_actions)
-    )
-    BookInfoOverflowMenu(
-        expanded = showMenu,
-        onDismissRequest = { onShowMenuChange(false) },
+    BookInfoOverflowAction(
         state = state,
-        onMenuAction = {
-            onShowMenuChange(false)
-            onMenuAction(it)
-        }
+        onMenuAction = onMenuAction,
     )
+}
+
+@Composable
+private fun BookInfoOverflowAction(
+    state: BookInfoUiState,
+    onMenuAction: (BookInfoMenuAction) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        TopBarActionButton(
+            onClick = { expanded = true },
+            imageVector = Icons.Default.MoreVert,
+            contentDescription = stringResource(R.string.more_actions),
+        )
+        BookInfoOverflowMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            state = state,
+            onMenuAction = {
+                expanded = false
+                onMenuAction(it)
+            },
+        )
+    }
 }
 
 @Composable
