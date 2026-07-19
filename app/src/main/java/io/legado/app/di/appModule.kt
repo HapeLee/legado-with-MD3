@@ -24,6 +24,7 @@ import io.legado.app.data.repository.BookExportSettingsRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.data.repository.BookGroupMutationRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
 import io.legado.app.data.repository.ChapterSpeechRepository
 import io.legado.app.data.repository.BookRepository
@@ -73,6 +74,7 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.ThemeSettingsRepository
+import io.legado.app.data.repository.TagGroupRuleApplier
 import io.legado.app.data.repository.ThemePackageSettingsRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
@@ -98,6 +100,7 @@ import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
@@ -280,6 +283,8 @@ val appModule = module {
     single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
     singleOf(::BookRepository)
     singleOf(::BookGroupRepository)
+    singleOf(::TagGroupRuleApplier)
+    single<BookGroupMutationGateway> { BookGroupMutationRepository(get(), get()) }
     singleOf(::BookSourceRepository)
     singleOf(::BookshelfRepository)
     singleOf(::DictRuleRepository)
