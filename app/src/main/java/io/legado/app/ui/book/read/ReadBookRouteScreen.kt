@@ -409,7 +409,7 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.OpenReadStyleExport -> {
-                                readStyleExportPicker.launch("readConfig.zip")
+                                readStyleExportPicker.launch(effect.fileName)
                             }
                             is ReadBookEffect.OpenMenuCustomIconPicker -> {
                                 pendingMenuCustomIconId = effect.id

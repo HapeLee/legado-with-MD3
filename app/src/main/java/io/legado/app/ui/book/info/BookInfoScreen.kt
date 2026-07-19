@@ -674,12 +674,14 @@ private fun BookInfoBackdrop(
         book.coverPath,
         book.origin,
         usesDefaultCover,
+        style,
     ) {
         BookInfoBackdropState(
             name = book.name,
             author = book.author,
             coverPath = if (usesDefaultCover) null else book.coverPath,
             sourceOrigin = if (usesDefaultCover) null else book.origin,
+            style = style,
         )
     }
     val seedOverlay = lerp(
@@ -692,12 +694,12 @@ private fun BookInfoBackdrop(
             .fillMaxSize()
             .clearAndSetSemantics { }
     ) {
-        if (style.showCover) {
-            Crossfade(
-                targetState = backdropState,
-                animationSpec = tween(800),
-                label = "BackdropCrossfade"
-            ) { currentBook ->
+        Crossfade(
+            targetState = backdropState,
+            animationSpec = tween(800),
+            label = "BackdropCrossfade"
+        ) { currentBook ->
+            if (currentBook.style.showCover) {
                 BookCoverImage(
                     name = currentBook.name,
                     author = currentBook.author,
@@ -708,7 +710,7 @@ private fun BookInfoBackdrop(
                         .fillMaxWidth()
                         .height(480.dp)
                         .then(
-                            if (style.blurCover) {
+                            if (currentBook.style.blurCover) {
                                 Modifier.blur(24.dp)
                             } else {
                                 Modifier
@@ -762,6 +764,7 @@ private data class BookInfoBackdropState(
     val author: String,
     val coverPath: String?,
     val sourceOrigin: String?,
+    val style: BookInfoBackdropStyle,
 )
 
 @Composable

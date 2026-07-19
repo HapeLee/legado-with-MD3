@@ -898,7 +898,7 @@ sealed interface ReadBookEffect {
     data object OpenReadStyleImagePicker : ReadBookEffect
     data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
-    data object OpenReadStyleExport : ReadBookEffect
+    data class OpenReadStyleExport(val fileName: String) : ReadBookEffect
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect

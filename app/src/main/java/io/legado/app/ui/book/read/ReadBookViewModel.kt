@@ -1363,7 +1363,11 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.OpenReadStyleImport)
             }
             is ReadBookIntent.OpenReadStyleExport -> {
-                _effects.tryEmit(ReadBookEffect.OpenReadStyleExport)
+                _effects.tryEmit(
+                    ReadBookEffect.OpenReadStyleExport(
+                        readStyleExportFileName(_uiState.value.styleConfig.styleName)
+                    )
+                )
             }
             is ReadBookIntent.ReadStyleImageSelected -> {
                 applyReadStyleBackgroundImage(intent.uri)
@@ -5871,6 +5875,8 @@ class ReadBookViewModel(
                 ConfigUpdateAction.UpdateBackground,
                 ConfigUpdateAction.UpdateStyle,
                 ConfigUpdateAction.UpdateContent,
+                ConfigUpdateAction.InvalidateTextPage,
+                ConfigUpdateAction.SubmitRenderTask,
                 ConfigUpdateAction.UpdateSystemUi
             )
         ))
@@ -6404,6 +6410,15 @@ class ReadBookViewModel(
             }
         }
     }
+}
+
+internal fun readStyleExportFileName(styleName: String): String {
+    val safeName = styleName
+        .trim()
+        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        .trim('.')
+        .ifBlank { "readConfig" }
+    return "$safeName.zip"
 }
 
 private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"

@@ -12,7 +12,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -119,6 +118,7 @@ import org.koin.core.parameter.parametersOf
 fun MainActivity.mainEntryProvider(
     backStack: MutableList<NavKey>,
     configuration: AppUiConfiguration,
+    showMangaUi: Boolean,
     useRail: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     onNavigateToRoute: (NavKey) -> Unit,
@@ -157,6 +157,13 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToBookCacheManage = {
                 onNavigateToRoute(MainRouteBookCacheManage)
+            },
+            onOpenBookshelfBook = { book ->
+                if (book.isAudio || (!book.isLocal && book.isImage && showMangaUi)) {
+                    this@mainEntryProvider.startActivityForBook(book)
+                } else {
+                    onNavigateToRoute(MainRouteReadBook(bookUrl = book.bookUrl))
+                }
             },
             onNavigateToBackupSettings = {
                 onNavigateToRoute(MainRouteSettingsBackup)
