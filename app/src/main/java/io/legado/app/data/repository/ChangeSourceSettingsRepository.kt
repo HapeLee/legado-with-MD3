@@ -21,7 +21,11 @@ class ChangeSourceSettingsRepository : ChangeSourceSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (ChangeSourceSettings) -> ChangeSourceSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, ChangeSourceSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toChangeSourceSettings,
+            toPrefMap = ChangeSourceSettings::toPrefMap,
+            transform = transform,
+        )
     }
 
     override suspend fun setMigrationOptions(options: ChangeSourceMigrationOptions) {

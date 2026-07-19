@@ -1,21 +1,31 @@
 package io.legado.app.help.config
 
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * 覆盖 PR-1 合入门禁要求的 pending overlay 三个竞态时序：
  * 1. 写入后立即读；2. 写入中 collector 回灌旧值；3. 落盘完成后回灌新值。
  */
 class PendingOverlayCoreTest {
+
+    private data class CoupledSettings(
+        val eInk: Boolean = false,
+        val gray: Boolean = false,
+    )
 
     /** 模拟的 DataStore 落盘状态 + 可手动执行的写队列 */
     private class Harness(initial: Preferences) {
@@ -254,4 +264,112 @@ class PendingOverlayCoreTest {
         assertEquals("disk full", result.await().exceptionOrNull()?.message)
         assertEquals(1, core.preferencesFlow.value.compatDsInt("k"))
     }
+
+    @Test
+    fun `原子 transform 串行读取 overlay 并保持跨字段不变式`() {
+        val core = PendingOverlayCore(
+            initial = CoupledSettings().toPreferences(),
+            launchWrite = {},
+            persist = { _, _ -> error("不会执行落盘") },
+            persistAll = { error("不会执行落盘") },
+        )
+        val firstEntered = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val first = thread {
+            core.atomicUpdate(
+                read = { it.toCoupledSettings() },
+                toPrefMap = { it.toPrefMap() },
+            ) {
+                firstEntered.countDown()
+                releaseFirst.await()
+                it.copy(eInk = true, gray = false)
+            }
+        }
+        firstEntered.await()
+
+        val secondStarted = CountDownLatch(1)
+        val secondEntered = CountDownLatch(1)
+        val second = thread {
+            secondStarted.countDown()
+            core.atomicUpdate(
+                read = { it.toCoupledSettings() },
+                toPrefMap = { it.toPrefMap() },
+            ) {
+                secondEntered.countDown()
+                it.copy(eInk = false, gray = true)
+            }
+        }
+        secondStarted.await()
+        val secondRacedWithFirst = secondEntered.await(200, TimeUnit.MILLISECONDS)
+        releaseFirst.countDown()
+        first.join()
+        second.join()
+
+        assertFalse(secondRacedWithFirst)
+        assertEquals(
+            CoupledSettings(eInk = false, gray = true),
+            core.preferencesFlow.value.toCoupledSettings(),
+        )
+    }
+
+    @Test
+    fun `等待原子 transform 落盘失败会回滚并传给调用方`() = runBlocking {
+        val initial = mutablePreferencesOf(intPreferencesKey("k") to 1)
+        val writeQueue = ArrayDeque<suspend () -> Unit>()
+        val core = PendingOverlayCore(
+            initial = initial,
+            launchWrite = { writeQueue += it },
+            persist = { _, _ -> error("unused") },
+            persistAll = { throw java.io.IOException("atomic disk full") },
+        )
+
+        val result = async(start = CoroutineStart.UNDISPATCHED) {
+            runCatching {
+                core.atomicUpdateAndAwait<Int>(
+                    read = { preferences -> preferences.compatDsInt("k") ?: 0 },
+                    toPrefMap = { value -> mapOf("k" to value) },
+                    transform = { it + 1 },
+                )
+            }
+        }
+        assertEquals(2, core.preferencesFlow.value.compatDsInt("k"))
+
+        writeQueue.removeFirst().invoke()
+
+        assertEquals("atomic disk full", result.await().exceptionOrNull()?.message)
+        assertEquals(1, core.preferencesFlow.value.compatDsInt("k"))
+    }
+
+    @Test
+    fun `等待原子 transform 无差量时不入队并立即返回`() = runBlocking {
+        val core = PendingOverlayCore(
+            initial = mutablePreferencesOf(intPreferencesKey("k") to 1),
+            launchWrite = { error("无差量不应入队") },
+            persist = { _, _ -> error("unused") },
+            persistAll = { error("unused") },
+        )
+
+        core.atomicUpdateAndAwait(
+            read = { preferences -> preferences.compatDsInt("k") ?: 0 },
+            toPrefMap = { value -> mapOf("k" to value) },
+            transform = { it },
+        )
+
+        assertEquals(1, core.preferencesFlow.value.compatDsInt("k"))
+    }
+
+    private fun Preferences.toCoupledSettings(): CoupledSettings = CoupledSettings(
+        eInk = compatDsBoolean("eInk") ?: false,
+        gray = compatDsBoolean("gray") ?: false,
+    )
+
+    private fun CoupledSettings.toPrefMap(): Map<String, Any?> = mapOf(
+        "eInk" to eInk,
+        "gray" to gray,
+    )
+
+    private fun CoupledSettings.toPreferences(): Preferences = mutablePreferencesOf(
+        booleanPreferencesKey("eInk") to eInk,
+        booleanPreferencesKey("gray") to gray,
+    )
 }

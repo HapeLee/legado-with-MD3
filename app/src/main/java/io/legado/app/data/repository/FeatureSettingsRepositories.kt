@@ -201,8 +201,10 @@ class DownloadCacheSettingsRepository : DownloadCacheSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) {
-        AppConfigStore.putAllAndAwait(
-            currentSettings.diffPrefMap(transform, DownloadCacheSettings::toPrefMap)
+        AppConfigStore.atomicUpdateAndAwait(
+            read = Preferences::toDownloadCacheSettings,
+            toPrefMap = DownloadCacheSettings::toPrefMap,
+            transform = transform,
         )
     }
 }
@@ -216,7 +218,11 @@ class CoverSettingsRepository : CoverSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (CoverSettings) -> CoverSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, CoverSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toCoverSettings,
+            toPrefMap = CoverSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
@@ -229,7 +235,11 @@ class LabSettingsRepository : LabSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (LabSettings) -> LabSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, LabSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toLabSettings,
+            toPrefMap = LabSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
@@ -242,7 +252,11 @@ class TranslationSettingsRepository : TranslationSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (TranslationSettings) -> TranslationSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, TranslationSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toTranslationSettings,
+            toPrefMap = TranslationSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
@@ -255,7 +269,11 @@ class BackupSettingsRepository : BackupSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (BackupSettings) -> BackupSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, BackupSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toBackupSettings,
+            toPrefMap = BackupSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 

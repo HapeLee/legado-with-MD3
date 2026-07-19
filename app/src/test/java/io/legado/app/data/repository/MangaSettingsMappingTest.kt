@@ -8,18 +8,17 @@ import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.help.config.PendingOverlayCore
 import io.legado.app.help.config.setPrefValue
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 class MangaSettingsMappingTest {
 
@@ -102,7 +101,7 @@ class MangaSettingsMappingTest {
     }
 
     @Test
-    fun `并发启用墨水屏与灰度时完整 transform 串行且保持互斥`() = runBlocking {
+    fun `并发启用墨水屏与灰度时完整 transform 串行且保持互斥`() {
         val initial = MangaSettings()
         val core = PendingOverlayCore(
             initial = initial.expectedPrefMap().toPreferences(),
@@ -110,38 +109,42 @@ class MangaSettingsMappingTest {
             persist = { _, _ -> error("不会执行落盘") },
             persistAll = { error("不会执行落盘") },
         )
-        val repository = MangaSettingsRepository(
-            preferences = { core.preferencesFlow.value },
-            preferencesFlow = core.preferencesFlow,
-            putAll = core::putAll,
-        )
-        val firstEntered = CompletableDeferred<Unit>()
-        val releaseFirst = CompletableDeferred<Unit>()
-        val first = launch(Dispatchers.Default) {
-            repository.update {
-                firstEntered.complete(Unit)
-                runBlocking { releaseFirst.await() }
+        val firstEntered = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val first = thread {
+            core.atomicUpdate(
+                read = Preferences::toMangaSettings,
+                toPrefMap = MangaSettings::toPrefMap,
+            ) {
+                firstEntered.countDown()
+                releaseFirst.await()
                 it.copy(enableEInk = true, enableGray = false)
             }
         }
         firstEntered.await()
 
-        val secondEntered = CompletableDeferred<Unit>()
-        val second = launch(start = CoroutineStart.UNDISPATCHED) {
-            repository.update {
-                secondEntered.complete(Unit)
+        val secondStarted = CountDownLatch(1)
+        val secondEntered = CountDownLatch(1)
+        val second = thread {
+            secondStarted.countDown()
+            core.atomicUpdate(
+                read = Preferences::toMangaSettings,
+                toPrefMap = MangaSettings::toPrefMap,
+            ) {
+                secondEntered.countDown()
                 it.copy(enableEInk = false, enableGray = true)
             }
         }
-        val secondRacedWithFirst = secondEntered.isCompleted
-        releaseFirst.complete(Unit)
+        secondStarted.await()
+        val secondRacedWithFirst = secondEntered.await(200, TimeUnit.MILLISECONDS)
+        releaseFirst.countDown()
         first.join()
         second.join()
 
         assertFalse(secondRacedWithFirst)
         assertEquals(
             MangaSettings(enableEInk = false, enableGray = true),
-            repository.currentSettings,
+            core.preferencesFlow.value.toMangaSettings(),
         )
     }
 

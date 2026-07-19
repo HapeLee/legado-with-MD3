@@ -11,33 +11,22 @@ import io.legado.app.help.config.compatDsString
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
-class MangaSettingsRepository internal constructor(
-    private val preferences: () -> Preferences,
-    preferencesFlow: Flow<Preferences>,
-    private val putAll: (Map<String, Any?>) -> Unit,
-) : MangaSettingsGateway {
-    constructor() : this(
-        preferences = { AppConfigStore.preferences },
-        preferencesFlow = AppConfigStore.preferencesFlow,
-        putAll = AppConfigStore::putAll,
-    )
-
-    private val updateMutex = Mutex()
+class MangaSettingsRepository : MangaSettingsGateway {
 
     override val currentSettings: MangaSettings
-        get() = preferences().toMangaSettings()
+        get() = AppConfigStore.preferences.toMangaSettings()
 
-    override val settings: Flow<MangaSettings> = preferencesFlow
+    override val settings: Flow<MangaSettings> = AppConfigStore.preferencesFlow
         .map { it.toMangaSettings() }
         .distinctUntilChanged()
 
     override suspend fun update(transform: (MangaSettings) -> MangaSettings) {
-        updateMutex.withLock {
-            putAll(currentSettings.diffPrefMap(transform, MangaSettings::toPrefMap))
-        }
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toMangaSettings,
+            toPrefMap = MangaSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
