@@ -11,7 +11,6 @@ import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.DirectLinkRule
 import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
 import io.legado.app.domain.gateway.LocalPasswordGateway
 import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -286,7 +285,7 @@ class OtherConfigViewModel(
     fun saveUserAgent(input: String) {
         viewModelScope.launch {
             runCatching {
-                downloadCacheSettingsGateway.update(DownloadCacheSettingsUpdate.UserAgent(input))
+                downloadCacheSettingsGateway.update { it.copy(userAgent = input) }
             }.onFailure { showMessage(it.localizedMessage ?: "设置失败") }
         }
     }

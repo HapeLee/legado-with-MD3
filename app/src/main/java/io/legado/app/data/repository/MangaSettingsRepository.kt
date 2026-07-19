@@ -84,6 +84,37 @@ internal fun List<MangaSettingsUpdate>.toMangaPreferenceValues(): Map<String, An
         }
     }
 
+internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.showMangaUi to showMangaUi,
+    PreferKey.disableMangaScale to disableMangaScale,
+    PreferKey.disableMangaScrollAnimation to disableMangaScrollAnimation,
+    PreferKey.disableMangaCrossFade to disableMangaCrossFade,
+    PreferKey.mangaScrollMode to scrollMode,
+    PreferKey.mangaPreDownloadNum to preDownloadNum,
+    PreferKey.mangaAutoPageSpeed to autoPageSpeed,
+    PreferKey.mangaFooterConfig to footerConfig,
+    PreferKey.disableClickScroll to disableClickScroll,
+    PreferKey.mangaLongClick to longClick,
+    PreferKey.mangaBackground to background,
+    PreferKey.mangaColorFilter to colorFilter,
+    PreferKey.hideMangaTitle to hideTitle,
+    PreferKey.enableMangaEInk to enableEInk,
+    PreferKey.mangaEInkThreshold to eInkThreshold,
+    PreferKey.enableMangaGray to enableGray,
+    PreferKey.webtoonSidePaddingDp to webtoonSidePaddingDp,
+    PreferKey.mangaVolumeKeyPage to volumeKeyPage,
+    PreferKey.reverseVolumeKeyPage to reverseVolumeKeyPage,
+    PreferKey.mangaClickActionTL to clickActionTL,
+    PreferKey.mangaClickActionTC to clickActionTC,
+    PreferKey.mangaClickActionTR to clickActionTR,
+    PreferKey.mangaClickActionML to clickActionML,
+    PreferKey.mangaClickActionMC to clickActionMC,
+    PreferKey.mangaClickActionMR to clickActionMR,
+    PreferKey.mangaClickActionBL to clickActionBL,
+    PreferKey.mangaClickActionBC to clickActionBC,
+    PreferKey.mangaClickActionBR to clickActionBR,
+)
+
 internal fun Preferences.toMangaSettings(): MangaSettings = MangaSettings(
     showMangaUi = compatDsBoolean(PreferKey.showMangaUi) ?: true,
     disableMangaScale = compatDsBoolean(PreferKey.disableMangaScale) ?: true,

@@ -7,7 +7,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
-import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
+import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.usecase.ChangeSourceSearchEvent
 import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
 import io.legado.app.domain.usecase.GetChapterContentUseCase
@@ -189,23 +189,23 @@ class ChangeChapterSourceViewModel(
             }
             // Options
             is ChangeChapterSourceIntent.SetCheckAuthor -> {
-                updateSetting(ChangeSourceSettingsUpdate.CheckAuthor(intent.enabled))
+                updateSetting { it.copy(checkAuthor = intent.enabled) }
                 _uiState.update { it.copy(checkAuthor = intent.enabled) }
                 refreshResults()
             }
 
             is ChangeChapterSourceIntent.SetLoadInfo -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadInfo(intent.enabled))
+                updateSetting { it.copy(loadInfo = intent.enabled) }
                 _uiState.update { it.copy(loadInfo = intent.enabled) }
             }
 
             is ChangeChapterSourceIntent.SetLoadToc -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadToc(intent.enabled))
+                updateSetting { it.copy(loadToc = intent.enabled) }
                 _uiState.update { it.copy(loadToc = intent.enabled) }
             }
 
             is ChangeChapterSourceIntent.SetLoadWordCount -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadWordCount(intent.enabled))
+                updateSetting { it.copy(loadWordCount = intent.enabled) }
                 _uiState.update { it.copy(loadWordCount = intent.enabled) }
                 if (intent.enabled) {
                     startSearch()
@@ -287,7 +287,8 @@ class ChangeChapterSourceViewModel(
             }
 
             is ChangeChapterSourceIntent.ApplyScope -> {
-                updateSetting(ChangeSourceSettingsUpdate.SearchScope(searchScope.toString()))
+                val value = searchScope.toString()
+                updateSetting { it.copy(searchScope = value) }
                 refreshResults()
             }
         }
@@ -490,9 +491,9 @@ class ChangeChapterSourceViewModel(
         }
     }
 
-    private fun updateSetting(update: ChangeSourceSettingsUpdate) {
+    private fun updateSetting(transform: (ChangeSourceSettings) -> ChangeSourceSettings) {
         viewModelScope.launch {
-            changeSourceSettingsGateway.update(update)
+            changeSourceSettingsGateway.update(transform)
         }
     }
 

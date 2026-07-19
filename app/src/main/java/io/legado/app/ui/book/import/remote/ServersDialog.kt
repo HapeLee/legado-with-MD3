@@ -17,7 +17,6 @@ import io.legado.app.constant.AppConst.DEFAULT_WEBDAV_ID
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Server
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
-import io.legado.app.domain.gateway.ImportBookSettingsUpdate
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemServerSelectBinding
 import io.legado.app.lib.dialogs.alert
@@ -96,7 +95,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private fun saveSelectedServer(serverId: Long) {
         lifecycleScope.launch {
-            importBookSettingsGateway.update(ImportBookSettingsUpdate.RemoteServerId(serverId))
+            importBookSettingsGateway.update { it.copy(remoteServerId = serverId) }
             dismissAllowingStateLoss()
         }
     }

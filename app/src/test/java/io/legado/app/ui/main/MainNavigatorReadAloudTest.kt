@@ -7,25 +7,24 @@ import org.junit.Test
 class MainNavigatorReadAloudTest {
 
     @Test
-    fun `opens read aloud player on top of reader`() {
+    fun `opens cloud TTS manager on top of reader`() {
         val reader = MainRouteReadBook(bookUrl = "book")
         val backStack = mutableListOf<NavKey>(MainRouteHome, reader)
 
-        MainNavigator.navigateToRoute(backStack, MainRouteReadAloudPlayer)
+        MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines)
 
-        assertEquals(listOf(MainRouteHome, reader, MainRouteReadAloudPlayer), backStack)
+        assertEquals(listOf(MainRouteHome, reader, MainRouteCloudTtsEngines), backStack)
     }
 
     @Test
-    fun `opens cloud TTS manager on top of player`() {
+    fun `resets to home before cloud TTS manager from unrelated route`() {
         val backStack = mutableListOf<NavKey>(
             MainRouteHome,
-            MainRouteReadBook(bookUrl = "book"),
-            MainRouteReadAloudPlayer,
+            MainRouteSettings,
         )
 
         MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines)
 
-        assertEquals(MainRouteCloudTtsEngines, backStack.last())
+        assertEquals(listOf(MainRouteHome, MainRouteCloudTtsEngines), backStack)
     }
 }

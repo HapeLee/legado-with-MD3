@@ -3,7 +3,6 @@ package io.legado.app.ui.config.labConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.LabSettingsGateway
-import io.legado.app.domain.gateway.LabSettingsUpdate
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,11 +30,14 @@ class LabConfigViewModel(
     }
 
     fun onIntent(intent: LabConfigIntent) {
-        val update = when (intent) {
-            is LabConfigIntent.SetEnabled -> LabSettingsUpdate.Enabled(intent.value)
-            is LabConfigIntent.SetEInkDisplay -> LabSettingsUpdate.EInkDisplay(intent.value)
-            is LabConfigIntent.SetEyeProtection -> LabSettingsUpdate.EyeProtection(intent.value)
+        viewModelScope.launch {
+            settingsGateway.update { settings ->
+                when (intent) {
+                    is LabConfigIntent.SetEnabled -> settings.copy(enabled = intent.value)
+                    is LabConfigIntent.SetEInkDisplay -> settings.copy(eInkDisplay = intent.value)
+                    is LabConfigIntent.SetEyeProtection -> settings.copy(eyeProtection = intent.value)
+                }
+            }
         }
-        viewModelScope.launch { settingsGateway.update(update) }
     }
 }

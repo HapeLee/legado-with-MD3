@@ -5,12 +5,53 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.MangaClickArea
 import io.legado.app.domain.gateway.MangaSettingsUpdate
+import io.legado.app.domain.model.settings.MangaSettings
+import io.legado.app.help.config.setPrefValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MangaSettingsMappingTest {
+
+    @Test
+    fun `漫画设置写读映射往返恒等`() {
+        val expected = MangaSettings(
+            showMangaUi = false,
+            disableMangaScale = false,
+            disableMangaScrollAnimation = true,
+            disableMangaCrossFade = true,
+            scrollMode = 2,
+            preDownloadNum = 22,
+            autoPageSpeed = 8,
+            footerConfig = "footer",
+            disableClickScroll = true,
+            longClick = false,
+            background = 0xFF123456.toInt(),
+            colorFilter = "filter",
+            hideTitle = true,
+            enableEInk = true,
+            eInkThreshold = 188,
+            enableGray = true,
+            webtoonSidePaddingDp = 12,
+            volumeKeyPage = true,
+            reverseVolumeKeyPage = true,
+            clickActionTL = 0,
+            clickActionTC = 1,
+            clickActionTR = 2,
+            clickActionML = 3,
+            clickActionMC = 4,
+            clickActionMR = 5,
+            clickActionBL = 6,
+            clickActionBC = 7,
+            clickActionBR = 8,
+        )
+        val preferences = mutablePreferencesOf().apply {
+            expected.toPrefMap().forEach { (key, value) -> setPrefValue(key, value) }
+        }
+
+        assertEquals(expected, preferences.toMangaSettings())
+    }
 
     @Test
     fun `历史字符串类型按原键恢复漫画设置`() {

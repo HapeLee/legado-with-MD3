@@ -32,7 +32,6 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.platform.LocalContext
-import io.legado.app.domain.gateway.CoverSettingsUpdate
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -72,8 +71,6 @@ fun CoverConfigScreen(
     val albumState = state.albumSelection
     val selectedAlbum = albumState.albums
         .firstOrNull { it.id == albumState.selectedAlbumId }
-    fun update(update: CoverSettingsUpdate) =
-        onIntent(CoverConfigIntent.UpdateSetting(update))
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -100,7 +97,9 @@ fun CoverConfigScreen(
                     title = stringResource(R.string.only_wifi),
                     description = stringResource(R.string.only_wifi_summary),
                     checked = settings.loadOnlyOnWifi,
-                    onCheckedChange = { update(CoverSettingsUpdate.LoadOnlyOnWifi(it)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetLoadOnlyOnWifi(value))
+                    }
                 )
 
                 ClickableSettingItem(
@@ -113,7 +112,9 @@ fun CoverConfigScreen(
                     title = stringResource(R.string.use_default_cover),
                     description = stringResource(R.string.use_default_cover_s),
                     checked = settings.useDefaultCover,
-                    onCheckedChange = { update(CoverSettingsUpdate.UseDefaultCover(it)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetUseDefaultCover(value))
+                    }
                 )
 
                 ClickableSettingItem(
@@ -133,24 +134,24 @@ fun CoverConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.cover_show_shadow),
                     checked = settings.showShadow,
-                    onCheckedChange = {
-                        update(CoverSettingsUpdate.ShowShadow(it))
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowShadow(value))
                     }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.cover_show_stroke),
                     checked = settings.showStroke,
-                    onCheckedChange = {
-                        update(CoverSettingsUpdate.ShowStroke(it))
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowStroke(value))
                     }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.default_color),
                     checked = settings.useDefaultColor,
-                    onCheckedChange = {
-                        update(CoverSettingsUpdate.UseDefaultColor(it))
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetUseDefaultColor(value))
                     }
                 )
             }
@@ -164,8 +165,8 @@ fun CoverConfigScreen(
                         stringResource(R.string.screen_landscape)
                     ),
                     entryValues = arrayOf("0", "1"),
-                    onValueChange = {
-                        update(CoverSettingsUpdate.InfoOrientation(it))
+                    onValueChange = { value ->
+                        onIntent(CoverConfigIntent.SetInfoOrientation(value))
                     }
                 )
             }
@@ -181,8 +182,8 @@ fun CoverConfigScreen(
                         stringResource(R.string.filter_show_not_in_shelf_only)
                     ),
                     entryValues = arrayOf("0", "1", "2", "3"),
-                    onValueChange = {
-                        update(CoverSettingsUpdate.ExploreFilterState(it.toInt()))
+                    onValueChange = { value ->
+                        onIntent(CoverConfigIntent.SetExploreFilterState(value.toInt()))
                     }
                 )
             }
@@ -234,7 +235,9 @@ fun CoverConfigScreen(
                     title = stringResource(R.string.cover_show_name),
                     description = stringResource(R.string.cover_show_name_summary),
                     checked = settings.showName,
-                    onCheckedChange = { update(CoverSettingsUpdate.ShowName(it, false)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowName(value))
+                    }
                 )
 
                 SwitchSettingItem(
@@ -242,7 +245,9 @@ fun CoverConfigScreen(
                     description = stringResource(R.string.cover_show_author_summary),
                     checked = settings.showAuthor,
                     enabled = settings.showName,
-                    onCheckedChange = { update(CoverSettingsUpdate.ShowAuthor(it, false)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowAuthor(value))
+                    }
                 )
             }
 
@@ -293,7 +298,9 @@ fun CoverConfigScreen(
                     title = stringResource(R.string.cover_show_name),
                     description = stringResource(R.string.cover_show_name_summary),
                     checked = settings.showNameDark,
-                    onCheckedChange = { update(CoverSettingsUpdate.ShowName(it, true)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowNameDark(value))
+                    }
                 )
 
                 SwitchSettingItem(
@@ -301,7 +308,9 @@ fun CoverConfigScreen(
                     description = stringResource(R.string.cover_show_author_summary),
                     checked = settings.showAuthorDark,
                     enabled = settings.showNameDark,
-                    onCheckedChange = { update(CoverSettingsUpdate.ShowAuthor(it, true)) }
+                    onCheckedChange = { value ->
+                        onIntent(CoverConfigIntent.SetShowAuthorDark(value))
+                    }
                 )
                 }
             }
@@ -342,10 +351,11 @@ fun CoverConfigScreen(
             onDismissRequest = { onIntent(CoverConfigIntent.DismissSheet) },
             onColorSelected = { color ->
                 when (field) {
-                    CoverColorField.Text -> update(CoverSettingsUpdate.TextColor(color, false))
-                    CoverColorField.Shadow -> update(CoverSettingsUpdate.ShadowColor(color, false))
-                    CoverColorField.TextDark -> update(CoverSettingsUpdate.TextColor(color, true))
-                    CoverColorField.ShadowDark -> update(CoverSettingsUpdate.ShadowColor(color, true))
+                    CoverColorField.Text -> onIntent(CoverConfigIntent.SetTextColor(color))
+                    CoverColorField.Shadow -> onIntent(CoverConfigIntent.SetShadowColor(color))
+                    CoverColorField.TextDark -> onIntent(CoverConfigIntent.SetTextColorDark(color))
+                    CoverColorField.ShadowDark ->
+                        onIntent(CoverConfigIntent.SetShadowColorDark(color))
                 }
                 onIntent(CoverConfigIntent.DismissSheet)
             }

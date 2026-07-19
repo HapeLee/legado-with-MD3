@@ -17,17 +17,13 @@ import io.legado.app.domain.gateway.ThemeStringSetting
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
 import io.legado.app.domain.model.settings.DownloadCacheSettings
 import io.legado.app.domain.gateway.CoverSettingsGateway
-import io.legado.app.domain.gateway.CoverSettingsUpdate
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.gateway.LabSettingsGateway
-import io.legado.app.domain.gateway.LabSettingsUpdate
 import io.legado.app.domain.gateway.TranslationSettingsGateway
-import io.legado.app.domain.gateway.TranslationSettingsUpdate
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.settings.LabSettings
 import io.legado.app.domain.model.settings.TranslationSettings
@@ -192,18 +188,10 @@ class DownloadCacheSettingsRepository : DownloadCacheSettingsGateway {
         .map { it.toDownloadCacheSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: DownloadCacheSettingsUpdate) {
-        val (key, value) = when (update) {
-            is DownloadCacheSettingsUpdate.BitmapCacheSize -> PreferKey.bitmapCacheSize to update.value
-            is DownloadCacheSettingsUpdate.ImageRetainNum -> PreferKey.imageRetainNum to update.value
-            is DownloadCacheSettingsUpdate.PreDownloadNum -> PreferKey.preDownloadNum to update.value
-            is DownloadCacheSettingsUpdate.ThreadCount -> PreferKey.threadCount to update.value
-            is DownloadCacheSettingsUpdate.CacheBookThreadCount ->
-                PreferKey.cacheBookThreadCount to update.value
-            is DownloadCacheSettingsUpdate.UserAgent -> PreferKey.userAgent to update.value
-            is DownloadCacheSettingsUpdate.CronetEnabled -> PreferKey.cronet to update.value
-        }
-        AppConfigStore.putAllAndAwait(mapOf(key to value))
+    override suspend fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) {
+        AppConfigStore.putAllAndAwait(
+            currentSettings.diffPrefMap(transform, DownloadCacheSettings::toPrefMap)
+        )
     }
 }
 
@@ -215,25 +203,8 @@ class CoverSettingsRepository : CoverSettingsGateway {
         .map { it.toCoverSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: CoverSettingsUpdate) {
-        val (key, value) = when (update) {
-            is CoverSettingsUpdate.LoadOnlyOnWifi -> PreferKey.loadCoverOnlyWifi to update.value
-            is CoverSettingsUpdate.UseDefaultCover -> PreferKey.useDefaultCover to update.value
-            is CoverSettingsUpdate.ShowShadow -> PreferKey.coverShowShadow to update.value
-            is CoverSettingsUpdate.ShowStroke -> PreferKey.coverShowStroke to update.value
-            is CoverSettingsUpdate.UseDefaultColor -> PreferKey.coverDefaultColor to update.value
-            is CoverSettingsUpdate.TextColor ->
-                (if (update.dark) PreferKey.coverTextColorN else PreferKey.coverTextColor) to update.value
-            is CoverSettingsUpdate.ShadowColor ->
-                (if (update.dark) PreferKey.coverShadowColorN else PreferKey.coverShadowColor) to update.value
-            is CoverSettingsUpdate.ShowName ->
-                (if (update.dark) PreferKey.coverShowNameN else PreferKey.coverShowName) to update.value
-            is CoverSettingsUpdate.ShowAuthor ->
-                (if (update.dark) PreferKey.coverShowAuthorN else PreferKey.coverShowAuthor) to update.value
-            is CoverSettingsUpdate.InfoOrientation -> PreferKey.coverInfoOrientation to update.value
-            is CoverSettingsUpdate.ExploreFilterState -> PreferKey.exploreFilterState to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (CoverSettings) -> CoverSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, CoverSettings::toPrefMap))
     }
 }
 
@@ -245,13 +216,8 @@ class LabSettingsRepository : LabSettingsGateway {
         .map { it.toLabSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: LabSettingsUpdate) {
-        val (key, value) = when (update) {
-            is LabSettingsUpdate.Enabled -> PreferKey.labEnabled to update.value
-            is LabSettingsUpdate.EInkDisplay -> PreferKey.labEInkDisplay to update.value
-            is LabSettingsUpdate.EyeProtection -> PreferKey.labEyeProtection to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (LabSettings) -> LabSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, LabSettings::toPrefMap))
     }
 }
 
@@ -263,15 +229,8 @@ class TranslationSettingsRepository : TranslationSettingsGateway {
         .map { it.toTranslationSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: TranslationSettingsUpdate) {
-        val (key, value) = when (update) {
-            is TranslationSettingsUpdate.Provider -> PreferKey.llmProvider to update.value
-            is TranslationSettingsUpdate.TargetLanguage -> PreferKey.llmTargetLanguage to update.value
-            is TranslationSettingsUpdate.MaxCharsPerChunk -> PreferKey.llmMaxCharsPerChunk to update.value
-            is TranslationSettingsUpdate.ConcurrentChunks -> PreferKey.llmConcurrentChunks to update.value
-            is TranslationSettingsUpdate.RetryCount -> PreferKey.llmRetryCount to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (TranslationSettings) -> TranslationSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, TranslationSettings::toPrefMap))
     }
 }
 
@@ -330,6 +289,16 @@ internal fun Preferences.toDownloadCacheSettings(): DownloadCacheSettings =
         cronetEnabled = compatDsBoolean(PreferKey.cronet) ?: false,
     )
 
+internal fun DownloadCacheSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.bitmapCacheSize to bitmapCacheSize,
+    PreferKey.imageRetainNum to imageRetainNum,
+    PreferKey.preDownloadNum to preDownloadNum,
+    PreferKey.threadCount to threadCount,
+    PreferKey.cacheBookThreadCount to cacheBookThreadCount,
+    PreferKey.userAgent to userAgent,
+    PreferKey.cronet to cronetEnabled,
+)
+
 internal fun Preferences.toCoverSettings(): CoverSettings = CoverSettings(
     loadOnlyOnWifi = compatDsBoolean(PreferKey.loadCoverOnlyWifi) ?: false,
     useDefaultCover = compatDsBoolean(PreferKey.useDefaultCover) ?: false,
@@ -350,10 +319,36 @@ internal fun Preferences.toCoverSettings(): CoverSettings = CoverSettings(
     defaultCoverDark = compatDsString(PreferKey.defaultCoverDark).orEmpty(),
 )
 
+internal fun CoverSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.loadCoverOnlyWifi to loadOnlyOnWifi,
+    PreferKey.useDefaultCover to useDefaultCover,
+    PreferKey.coverShowShadow to showShadow,
+    PreferKey.coverShowStroke to showStroke,
+    PreferKey.coverDefaultColor to useDefaultColor,
+    PreferKey.coverTextColor to textColor,
+    PreferKey.coverShadowColor to shadowColor,
+    PreferKey.coverShowName to showName,
+    PreferKey.coverShowAuthor to showAuthor,
+    PreferKey.coverTextColorN to textColorDark,
+    PreferKey.coverShadowColorN to shadowColorDark,
+    PreferKey.coverShowNameN to showNameDark,
+    PreferKey.coverShowAuthorN to showAuthorDark,
+    PreferKey.coverInfoOrientation to infoOrientation,
+    PreferKey.exploreFilterState to exploreFilterState,
+    PreferKey.defaultCover to defaultCover,
+    PreferKey.defaultCoverDark to defaultCoverDark,
+)
+
 internal fun Preferences.toLabSettings(): LabSettings = LabSettings(
     enabled = compatDsBoolean(PreferKey.labEnabled) ?: false,
     eInkDisplay = compatDsBoolean(PreferKey.labEInkDisplay) ?: false,
     eyeProtection = compatDsBoolean(PreferKey.labEyeProtection) ?: false,
+)
+
+internal fun LabSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.labEnabled to enabled,
+    PreferKey.labEInkDisplay to eInkDisplay,
+    PreferKey.labEyeProtection to eyeProtection,
 )
 
 internal fun Preferences.toTranslationSettings(): TranslationSettings {
@@ -371,6 +366,14 @@ internal fun Preferences.toTranslationSettings(): TranslationSettings {
         retryCount = compatDsInt(PreferKey.llmRetryCount) ?: 2,
     )
 }
+
+internal fun TranslationSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.llmProvider to provider,
+    PreferKey.llmTargetLanguage to targetLanguage,
+    PreferKey.llmMaxCharsPerChunk to maxCharsPerChunk,
+    PreferKey.llmConcurrentChunks to concurrentChunks,
+    PreferKey.llmRetryCount to retryCount,
+)
 
 internal fun Preferences.toBackupSettings(): BackupSettings = BackupSettings(
     webDavUrl = compatDsString(PreferKey.webDavUrl).orEmpty(),

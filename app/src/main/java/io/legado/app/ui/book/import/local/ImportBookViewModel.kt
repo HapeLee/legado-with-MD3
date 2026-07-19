@@ -16,9 +16,9 @@ import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
-import io.legado.app.domain.gateway.ImportBookSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
+import io.legado.app.domain.model.settings.ImportBookSettings
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -182,7 +182,7 @@ class ImportBookViewModel(
                 intent.fileName
             )
             is ImportBookIntent.SetFileNameRule -> {
-                updateImportBookSetting(ImportBookSettingsUpdate.BookImportFileName(intent.value))
+                updateImportBookSetting { it.copy(bookImportFileName = intent.value) }
             }
         }
     }
@@ -261,7 +261,7 @@ class ImportBookViewModel(
         }
         val importPath = importBookSettingsGateway.currentSettings.importBookPath
         if (importPath.isNullOrBlank() || !importPath.isUri()) {
-            updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(effectiveDefaultPath))
+            updateImportBookSetting { it.copy(importBookPath = effectiveDefaultPath) }
         }
         initRootDoc(changedFolder = true)
         startAutoSync()
@@ -274,12 +274,12 @@ class ImportBookViewModel(
             ImportFolderPickTarget.DEFAULT_BOOK -> {
                 updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
                 if (importBookSettingsGateway.currentSettings.importBookPath.isNullOrBlank()) {
-                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(pickedUri.toString()))
+                    updateImportBookSetting { it.copy(importBookPath = pickedUri.toString()) }
                 }
             }
 
             ImportFolderPickTarget.IMPORT_FOLDER -> {
-                updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(pickedUri.toString()))
+                updateImportBookSetting { it.copy(importBookPath = pickedUri.toString()) }
                 if (otherSettingsGateway.currentSettings.defaultBookTreeUri.isNullOrBlank()) {
                     updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
                 }
@@ -327,7 +327,7 @@ class ImportBookViewModel(
             firstPersistedTreeUri()?.toString()?.let { persistedPath ->
                 if (trySetRootDoc(persistedPath)) {
                     updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
-                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
+                    updateImportBookSetting { it.copy(importBookPath = persistedPath) }
                     return
                 }
             }
@@ -340,7 +340,7 @@ class ImportBookViewModel(
         for (path in candidates) {
             if (trySetRootDoc(path)) {
                 if (importBookSettingsGateway.currentSettings.importBookPath != path) {
-                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(path))
+                    updateImportBookSetting { it.copy(importBookPath = path) }
                 }
                 return
             }
@@ -350,7 +350,7 @@ class ImportBookViewModel(
             if (persistedUri != null) {
                 val persistedPath = persistedUri.toString()
                 if (trySetRootDoc(persistedPath)) {
-                    updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
+                    updateImportBookSetting { it.copy(importBookPath = persistedPath) }
                     return
                 }
             }
@@ -359,7 +359,7 @@ class ImportBookViewModel(
         firstPersistedTreeUri()?.toString()?.let { persistedPath ->
             if (trySetRootDoc(persistedPath)) {
                 updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
-                updateImportBookSetting(ImportBookSettingsUpdate.ImportBookPath(persistedPath))
+                updateImportBookSetting { it.copy(importBookPath = persistedPath) }
                 return
             }
         }
@@ -494,7 +494,7 @@ class ImportBookViewModel(
 
     fun setSort(sort: Int) {
         _state.update { it.copy(sort = sort) }
-        updateImportBookSetting(ImportBookSettingsUpdate.LocalBookImportSort(sort))
+        updateImportBookSetting { it.copy(localBookImportSort = sort) }
     }
 
     fun setSearchMode(isSearch: Boolean) {
@@ -830,9 +830,9 @@ class ImportBookViewModel(
         return docs
     }
 
-    private fun updateImportBookSetting(update: ImportBookSettingsUpdate) {
+    private fun updateImportBookSetting(transform: (ImportBookSettings) -> ImportBookSettings) {
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            importBookSettingsGateway.update(update)
+            importBookSettingsGateway.update(transform)
         }
     }
 

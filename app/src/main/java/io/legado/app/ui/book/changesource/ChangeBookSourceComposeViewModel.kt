@@ -14,7 +14,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
-import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
+import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.usecase.ChangeSourceSearchEvent
 import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
@@ -400,23 +400,23 @@ class ChangeBookSourceComposeViewModel(
     // Options
     fun onCheckAuthorChange(enabled: Boolean) {
         if (settings.value.checkAuthor == enabled) return
-        updateSetting(ChangeSourceSettingsUpdate.CheckAuthor(enabled))
+        updateSetting { it.copy(checkAuthor = enabled) }
         refresh()
     }
 
     fun onLoadInfoChange(enabled: Boolean) {
         if (settings.value.loadInfo == enabled) return
-        updateSetting(ChangeSourceSettingsUpdate.LoadInfo(enabled))
+        updateSetting { it.copy(loadInfo = enabled) }
     }
 
     fun onLoadTocChange(enabled: Boolean) {
         if (settings.value.loadToc == enabled) return
-        updateSetting(ChangeSourceSettingsUpdate.LoadToc(enabled))
+        updateSetting { it.copy(loadToc = enabled) }
     }
 
     fun onLoadWordCountChange(enabled: Boolean) {
         if (settings.value.loadWordCount == enabled) return
-        updateSetting(ChangeSourceSettingsUpdate.LoadWordCount(enabled))
+        updateSetting { it.copy(loadWordCount = enabled) }
         if (enabled) {
             refreshMissingWordCounts()
         } else {
@@ -599,7 +599,8 @@ class ChangeBookSourceComposeViewModel(
     }
 
     private fun updateScopeState() {
-        updateSetting(ChangeSourceSettingsUpdate.SearchScope(searchScope.toString()))
+        val value = searchScope.toString()
+        updateSetting { it.copy(searchScope = value) }
         _scopeUiState.value = ScopeUiState(
             isAll = searchScope.isAll(),
             isSource = searchScope.isSource(),
@@ -614,9 +615,9 @@ class ChangeBookSourceComposeViewModel(
         }
     }
 
-    private fun updateSetting(update: ChangeSourceSettingsUpdate) {
+    private fun updateSetting(transform: (ChangeSourceSettings) -> ChangeSourceSettings) {
         viewModelScope.launch {
-            changeSourceSettingsGateway.update(update)
+            changeSourceSettingsGateway.update(transform)
         }
     }
 

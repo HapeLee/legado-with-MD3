@@ -3,7 +3,6 @@ package io.legado.app.data.repository
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.BookExportSettingsGateway
-import io.legado.app.domain.gateway.BookExportSettingsUpdate
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
@@ -21,20 +20,8 @@ class BookExportSettingsRepository : BookExportSettingsGateway {
         .map { it.toBookExportSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: BookExportSettingsUpdate) {
-        val (key, value) = when (update) {
-            is BookExportSettingsUpdate.BookExportFileName -> PreferKey.bookExportFileName to update.value
-            is BookExportSettingsUpdate.EpisodeExportFileName -> PreferKey.episodeExportFileName to update.value
-            is BookExportSettingsUpdate.ExportCharset -> PreferKey.exportCharset to update.value
-            is BookExportSettingsUpdate.ExportUseReplace -> PreferKey.exportUseReplace to update.value
-            is BookExportSettingsUpdate.ExportToWebDav -> PreferKey.exportToWebDav to update.value
-            is BookExportSettingsUpdate.ExportNoChapterName -> PreferKey.exportNoChapterName to update.value
-            is BookExportSettingsUpdate.EnableCustomExport -> PreferKey.enableCustomExport to update.value
-            is BookExportSettingsUpdate.ExportType -> PreferKey.exportType to update.value
-            is BookExportSettingsUpdate.ExportPictureFile -> PreferKey.exportPictureFile to update.value
-            is BookExportSettingsUpdate.ParallelExportBook -> PreferKey.parallelExportBook to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (BookExportSettings) -> BookExportSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, BookExportSettings::toPrefMap))
     }
 }
 
@@ -49,4 +36,17 @@ internal fun Preferences.toBookExportSettings() = BookExportSettings(
     exportType = compatDsInt(PreferKey.exportType) ?: 0,
     exportPictureFile = compatDsBoolean(PreferKey.exportPictureFile) ?: false,
     parallelExportBook = compatDsBoolean(PreferKey.parallelExportBook) ?: false,
+)
+
+internal fun BookExportSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.bookExportFileName to bookExportFileName,
+    PreferKey.episodeExportFileName to episodeExportFileName,
+    PreferKey.exportCharset to exportCharset,
+    PreferKey.exportUseReplace to exportUseReplace,
+    PreferKey.exportToWebDav to exportToWebDav,
+    PreferKey.exportNoChapterName to exportNoChapterName,
+    PreferKey.enableCustomExport to enableCustomExport,
+    PreferKey.exportType to exportType,
+    PreferKey.exportPictureFile to exportPictureFile,
+    PreferKey.parallelExportBook to parallelExportBook,
 )

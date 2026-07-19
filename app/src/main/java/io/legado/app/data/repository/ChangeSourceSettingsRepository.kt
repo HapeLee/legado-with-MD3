@@ -3,7 +3,6 @@ package io.legado.app.data.repository
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
-import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
 import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.help.config.AppConfigStore
@@ -21,20 +20,8 @@ class ChangeSourceSettingsRepository : ChangeSourceSettingsGateway {
         .map(Preferences::toChangeSourceSettings)
         .distinctUntilChanged()
 
-    override suspend fun update(update: ChangeSourceSettingsUpdate) {
-        val (key, value) = when (update) {
-            is ChangeSourceSettingsUpdate.SearchScope ->
-                LocalPreferencesKeys.CHANGE_SOURCE_SEARCH_SCOPE.name to update.value
-            is ChangeSourceSettingsUpdate.CheckAuthor ->
-                LocalPreferencesKeys.CHANGE_SOURCE_CHECK_AUTHOR.name to update.value
-            is ChangeSourceSettingsUpdate.LoadInfo ->
-                LocalPreferencesKeys.CHANGE_SOURCE_LOAD_INFO.name to update.value
-            is ChangeSourceSettingsUpdate.LoadToc ->
-                LocalPreferencesKeys.CHANGE_SOURCE_LOAD_TOC.name to update.value
-            is ChangeSourceSettingsUpdate.LoadWordCount ->
-                LocalPreferencesKeys.CHANGE_SOURCE_LOAD_WORD_COUNT.name to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (ChangeSourceSettings) -> ChangeSourceSettings) {
+        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, ChangeSourceSettings::toPrefMap))
     }
 
     override suspend fun setMigrationOptions(options: ChangeSourceMigrationOptions) {
@@ -67,6 +54,22 @@ internal fun Preferences.toChangeSourceSettings() = ChangeSourceSettings(
     migrateRemark = compatDsBoolean(KEY_MIGRATE_REMARK) ?: true,
     migrateReadConfig = compatDsBoolean(KEY_MIGRATE_READ_CONFIG) ?: true,
     deleteDownloadedChapters = compatDsBoolean(KEY_DELETE_DOWNLOADED_CHAPTERS) ?: false,
+)
+
+internal fun ChangeSourceSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    LocalPreferencesKeys.CHANGE_SOURCE_SEARCH_SCOPE.name to searchScope,
+    LocalPreferencesKeys.CHANGE_SOURCE_CHECK_AUTHOR.name to checkAuthor,
+    LocalPreferencesKeys.CHANGE_SOURCE_LOAD_INFO.name to loadInfo,
+    LocalPreferencesKeys.CHANGE_SOURCE_LOAD_TOC.name to loadToc,
+    LocalPreferencesKeys.CHANGE_SOURCE_LOAD_WORD_COUNT.name to loadWordCount,
+    KEY_MIGRATE_CHAPTERS to migrateChapters,
+    KEY_MIGRATE_READING_PROGRESS to migrateReadingProgress,
+    KEY_MIGRATE_GROUP to migrateGroup,
+    KEY_MIGRATE_COVER to migrateCover,
+    KEY_MIGRATE_CATEGORY to migrateCategory,
+    KEY_MIGRATE_REMARK to migrateRemark,
+    KEY_MIGRATE_READ_CONFIG to migrateReadConfig,
+    KEY_DELETE_DOWNLOADED_CHAPTERS to deleteDownloadedChapters,
 )
 
 private const val KEY_MIGRATE_CHAPTERS = "migrateChapters"

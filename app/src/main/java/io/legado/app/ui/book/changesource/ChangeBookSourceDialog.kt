@@ -29,7 +29,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
-import io.legado.app.domain.gateway.ChangeSourceSettingsUpdate
+import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.databinding.DialogBookChangeSourceBinding
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
@@ -95,7 +95,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                         setMessage("${group}分组搜索结果为空,是否切换到全部分组")
                         cancelButton()
                         okButton {
-                            updateSetting(ChangeSourceSettingsUpdate.SearchScope("")) {
+                            updateSetting({ it.copy(searchScope = "") }) {
                                 upGroupMenuName()
                                 viewModel.startSearch()
                             }
@@ -321,24 +321,28 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
             R.id.menu_check_author -> {
-                updateSetting(ChangeSourceSettingsUpdate.CheckAuthor(!item.isChecked))
-                item.isChecked = !item.isChecked
+                val enabled = !item.isChecked
+                updateSetting({ it.copy(checkAuthor = enabled) })
+                item.isChecked = enabled
                 viewModel.refresh()
             }
 
             R.id.menu_load_info -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadInfo(!item.isChecked))
-                item.isChecked = !item.isChecked
+                val enabled = !item.isChecked
+                updateSetting({ it.copy(loadInfo = enabled) })
+                item.isChecked = enabled
             }
 
             R.id.menu_load_toc -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadToc(!item.isChecked))
-                item.isChecked = !item.isChecked
+                val enabled = !item.isChecked
+                updateSetting({ it.copy(loadToc = enabled) })
+                item.isChecked = enabled
             }
 
             R.id.menu_load_word_count -> {
-                updateSetting(ChangeSourceSettingsUpdate.LoadWordCount(!item.isChecked))
-                item.isChecked = !item.isChecked
+                val enabled = !item.isChecked
+                updateSetting({ it.copy(loadWordCount = enabled) })
+                item.isChecked = enabled
                 viewModel.onLoadWordCountChecked(item.isChecked)
             }
 
@@ -353,7 +357,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                 } else {
                     item.title.toString()
                 }
-                updateSetting(ChangeSourceSettingsUpdate.SearchScope(scope)) {
+                updateSetting({ it.copy(searchScope = scope) }) {
                     upGroupMenuName()
                     lifecycleScope.launch(IO) {
                         viewModel.stopSearch()
@@ -544,11 +548,11 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     }
 
     private fun updateSetting(
-        update: ChangeSourceSettingsUpdate,
+        transform: (ChangeSourceSettings) -> ChangeSourceSettings,
         afterUpdate: (() -> Unit)? = null,
     ) {
         lifecycleScope.launch {
-            changeSourceSettingsGateway.update(update)
+            changeSourceSettingsGateway.update(transform)
             afterUpdate?.invoke()
         }
     }

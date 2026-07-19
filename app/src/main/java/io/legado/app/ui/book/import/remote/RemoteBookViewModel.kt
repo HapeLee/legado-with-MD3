@@ -14,7 +14,6 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
-import io.legado.app.domain.gateway.ImportBookSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.exception.NoStackTraceException
@@ -535,7 +534,7 @@ class RemoteBookViewModel(
 
     fun selectServer(serverId: Long) {
         viewModelScope.launch {
-            importBookSettingsGateway.update(ImportBookSettingsUpdate.RemoteServerId(serverId))
+            importBookSettingsGateway.update { it.copy(remoteServerId = serverId) }
             _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
             initData { loadRemoteBookList() }
         }

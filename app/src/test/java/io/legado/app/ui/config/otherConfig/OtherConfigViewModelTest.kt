@@ -9,7 +9,6 @@ import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.DirectLinkRule
 import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
 import io.legado.app.domain.gateway.LocalPasswordGateway
 import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -223,7 +222,11 @@ class OtherConfigViewModelTest {
             get() = state.value
         override val settings: Flow<DownloadCacheSettings> = state
 
-        override suspend fun update(update: DownloadCacheSettingsUpdate) = Unit
+        override suspend fun update(
+            transform: (DownloadCacheSettings) -> DownloadCacheSettings,
+        ) {
+            state.value = transform(state.value)
+        }
     }
 
     private class FakeCheckSourceSettingsGateway : CheckSourceSettingsGateway {

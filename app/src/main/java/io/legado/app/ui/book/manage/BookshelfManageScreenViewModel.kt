@@ -14,7 +14,6 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.BookExportSettingsGateway
-import io.legado.app.domain.gateway.BookExportSettingsUpdate
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.BatchChangeSourceCandidate
@@ -274,45 +273,45 @@ class BookshelfManageScreenViewModel(
             }
 
             is BookshelfManageScreenIntent.SetExportUseReplace -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportUseReplace(intent.enabled))
+                updateExportSetting { it.copy(exportUseReplace = intent.enabled) }
                 val msg = if (intent.enabled) "替换净化功能已开启" else "替换净化功能已关闭"
                 _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage(msg))
             }
 
             is BookshelfManageScreenIntent.SetEnableCustomExport -> {
-                updateExportSetting(BookExportSettingsUpdate.EnableCustomExport(intent.enabled))
+                updateExportSetting { it.copy(enableCustomExport = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportNoChapterName -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportNoChapterName(intent.enabled))
+                updateExportSetting { it.copy(exportNoChapterName = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportToWebDav -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportToWebDav(intent.enabled))
+                updateExportSetting { it.copy(exportToWebDav = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportPictureFile -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportPictureFile(intent.enabled))
+                updateExportSetting { it.copy(exportPictureFile = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetParallelExportBook -> {
-                updateExportSetting(BookExportSettingsUpdate.ParallelExportBook(intent.enabled))
+                updateExportSetting { it.copy(parallelExportBook = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportType -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportType(intent.type))
+                updateExportSetting { it.copy(exportType = intent.type) }
             }
 
             is BookshelfManageScreenIntent.SetExportCharset -> {
-                updateExportSetting(BookExportSettingsUpdate.ExportCharset(intent.charset))
+                updateExportSetting { it.copy(exportCharset = intent.charset) }
             }
 
             is BookshelfManageScreenIntent.SetBookExportFileName -> {
-                updateExportSetting(BookExportSettingsUpdate.BookExportFileName(intent.fileName))
+                updateExportSetting { it.copy(bookExportFileName = intent.fileName) }
             }
 
             is BookshelfManageScreenIntent.SetEpisodeExportFileName -> {
-                updateExportSetting(BookExportSettingsUpdate.EpisodeExportFileName(intent.fileName))
+                updateExportSetting { it.copy(episodeExportFileName = intent.fileName) }
             }
         }
     }
@@ -481,9 +480,9 @@ class BookshelfManageScreenViewModel(
         }
     }
 
-    private fun updateExportSetting(update: BookExportSettingsUpdate) {
+    private fun updateExportSetting(transform: (BookExportSettings) -> BookExportSettings) {
         viewModelScope.launch {
-            bookExportSettingsGateway.update(update)
+            bookExportSettingsGateway.update(transform)
         }
     }
 
