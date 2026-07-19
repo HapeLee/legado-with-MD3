@@ -165,6 +165,65 @@ class BookshelfViewModel(
     val allGroupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val hideEmptyGroupsFlow: StateFlow<Boolean> = bookshelfSettings
+        .map { it.hideEmptyGroups }
+        .distinctUntilChanged()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            initialSettings.hideEmptyGroups
+        )
+
+    /**
+     * 开启「隐藏空分组」时，返回当前书数为 0、应从分组列表中隐藏的 groupId 集合；
+     * 关闭时始终为空集。「全部」分组永不隐藏，避免书架清空后无标签页可显示。
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val hiddenGroupIdsFlow: SharedFlow<Set<Long>> = hideEmptyGroupsFlow
+        .flatMapLatest { hide ->
+            if (!hide) {
+                flowOf(emptySet())
+            } else {
+                combine(
+                    groupsFlow,
+                    bookRepository.flowSystemGroupCounts()
+                ) { groups, systemCounts ->
+                    groups to systemCounts.associate { it.groupId to it.count }
+                }.flatMapLatest { (groups, systemCountsMap) ->
+                    val userGroups = groups.filter { it.groupId > 0 }
+                    if (userGroups.isEmpty()) {
+                        flowOf(computeHiddenGroupIds(groups, systemCountsMap, emptyMap()))
+                    } else {
+                        combine(
+                            userGroups.map { group ->
+                                bookRepository.flowUserGroupBookCount(group.groupId)
+                                    .map { group.groupId to it }
+                            }
+                        ) { pairs ->
+                            computeHiddenGroupIds(groups, systemCountsMap, pairs.toMap())
+                        }
+                    }
+                }
+            }
+        }
+        .distinctUntilChanged()
+        .flowOn(Dispatchers.Default)
+        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+
+    private fun computeHiddenGroupIds(
+        groups: List<BookGroup>,
+        systemCounts: Map<Long, Int>,
+        userCounts: Map<Long, Int>
+    ): Set<Long> = groups.mapNotNullTo(hashSetOf()) { group ->
+        if (group.groupId == BookGroup.IdAll) return@mapNotNullTo null
+        val count = if (group.groupId > 0) {
+            userCounts[group.groupId] ?: 0
+        } else {
+            systemCounts[group.groupId] ?: 0
+        }
+        if (count == 0) group.groupId else null
+    }
+
     private data class GroupPreviewState(
         val previews: ImmutableMap<Long, ImmutableList<BookUiItem>>,
         val counts: ImmutableMap<Long, Int>,
@@ -180,11 +239,13 @@ class BookshelfViewModel(
 
     val groupSelectorState: StateFlow<BookshelfGroupSelectorState> = combine(
         groupsFlow,
-        groupIdFlow
-    ) { groups, selectedGroupId ->
+        groupIdFlow,
+        hiddenGroupIdsFlow
+    ) { groups, selectedGroupId, hiddenIds ->
+        val visibleGroups = groups.filter { it.groupId !in hiddenIds }
         BookshelfGroupSelectorState(
-            groups = groups.map { it.toBookGroupUi() }.toImmutableList(),
-            selectedGroupIndex = groups.indexOfFirst { it.groupId == selectedGroupId }
+            groups = visibleGroups.map { it.toBookGroupUi() }.toImmutableList(),
+            selectedGroupIndex = visibleGroups.indexOfFirst { it.groupId == selectedGroupId }
                 .coerceAtLeast(0),
             selectedGroupId = selectedGroupId
         )
@@ -450,10 +511,11 @@ class BookshelfViewModel(
     private val contentUiState: Flow<BookshelfUiState> = combine(
         dataStateFlow,
         interactionStateFlow,
-        isInitialLoadingFlow
-    ) { data, interaction, isInitialLoading ->
+        isInitialLoadingFlow,
+        hiddenGroupIdsFlow
+    ) { data, interaction, isInitialLoading, hiddenIds ->
         val selectedBooks = data.selectedBooks
-        val groups = data.groups
+        val groups = data.groups.filter { it.groupId !in hiddenIds }
         val allGroups = data.allGroups
         val previews = data.previews
         val internal = data.internal

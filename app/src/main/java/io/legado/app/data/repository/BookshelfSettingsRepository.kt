@@ -47,6 +47,7 @@ class BookshelfSettingsRepository : BookshelfSettingsGateway {
                 BookshelfBooleanSetting.CoverShadow -> PreferKey.bookshelfCoverShadow
                 BookshelfBooleanSetting.SearchActionDirectToSearch -> PreferKey.bookshelfSearchActionDirectToSearch
                 BookshelfBooleanSetting.AutoRefresh -> PreferKey.autoRefresh
+                BookshelfBooleanSetting.HideEmptyGroups -> PreferKey.hideEmptyGroups
             } to update.value
             is BookshelfSettingsUpdate.IntValue -> when (update.setting) {
                 BookshelfIntSetting.BookGroupStyle -> PreferKey.bookGroupStyle
@@ -82,6 +83,7 @@ class BookshelfSettingsRepository : BookshelfSettingsGateway {
 
 private fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookGroupStyle = compatDsInt(PreferKey.bookGroupStyle) ?: 0,
+    hideEmptyGroups = compatDsBoolean(PreferKey.hideEmptyGroups) ?: false,
     bookshelfSort = compatDsInt(PreferKey.bookshelfSort) ?: 0,
     bookshelfSortOrder = compatDsInt(PreferKey.bookshelfSortOrder) ?: 1,
     showUnread = compatDsBoolean(PreferKey.showUnread) ?: true,

@@ -87,6 +87,13 @@ fun BookshelfConfigSheet(
                 onValueChange = { onUpdate(BookshelfSettingsUpdate.IntValue(BookshelfIntSetting.BookGroupStyle, it.toInt())) }
             )
 
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.hide_empty_groups),
+                checked = settings.hideEmptyGroups,
+                color = LegadoTheme.colorScheme.surface,
+                onCheckedChange = { onUpdate(BookshelfSettingsUpdate.BooleanValue(BookshelfBooleanSetting.HideEmptyGroups, it)) }
+            )
+
             // Sort
             CompactDropdownSettingItem(
                 title = stringResource(R.string.sort),
