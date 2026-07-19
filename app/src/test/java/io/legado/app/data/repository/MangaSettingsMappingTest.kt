@@ -7,7 +7,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.help.config.PendingOverlayCore
-import io.legado.app.help.config.setPrefValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +31,7 @@ class MangaSettingsMappingTest {
     @Test
     fun `漫画设置 28 键读映射逐字段对应`() {
         mangaMappingSamples().forEach { expected ->
-            assertEquals(expected, expected.expectedPrefMap().toPreferences().toMangaSettings())
+            assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toMangaSettings())
         }
     }
 
@@ -53,11 +52,13 @@ class MangaSettingsMappingTest {
 
     @Test
     fun `墨水屏更新一次产生启用关闭灰度和阈值三项差量`() {
-        val diff = MangaSettings(enableGray = true).diffPrefMap(
+        val diff = captureAtomicUpdateValues(
+            current = MangaSettings(enableGray = true),
+            read = Preferences::toMangaSettings,
+            toPrefMap = MangaSettings::toPrefMap,
             transform = {
                 it.copy(enableEInk = true, enableGray = false, eInkThreshold = 188)
             },
-            toPrefMap = MangaSettings::toPrefMap,
         )
 
         assertEquals(
@@ -72,9 +73,11 @@ class MangaSettingsMappingTest {
 
     @Test
     fun `灰度更新一次产生启用灰度和关闭墨水屏两项差量`() {
-        val diff = MangaSettings(enableEInk = true).diffPrefMap(
-            transform = { it.copy(enableEInk = false, enableGray = true) },
+        val diff = captureAtomicUpdateValues(
+            current = MangaSettings(enableEInk = true),
+            read = Preferences::toMangaSettings,
             toPrefMap = MangaSettings::toPrefMap,
+            transform = { it.copy(enableEInk = false, enableGray = true) },
         )
 
         assertEquals(
@@ -104,7 +107,7 @@ class MangaSettingsMappingTest {
     fun `并发启用墨水屏与灰度时完整 transform 串行且保持互斥`() {
         val initial = MangaSettings()
         val core = PendingOverlayCore(
-            initial = initial.expectedPrefMap().toPreferences(),
+            initial = initial.expectedPrefMap().toTestPreferences(),
             launchWrite = {},
             persist = { _, _ -> error("不会执行落盘") },
             persistAll = { error("不会执行落盘") },
@@ -235,9 +238,3 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mangaClickActionBC to clickActionBC,
     PreferKey.mangaClickActionBR to clickActionBR,
 )
-
-private fun Map<String, Any?>.toPreferences(): Preferences {
-    val preferences = mutablePreferencesOf()
-    forEach { (key, value) -> preferences.setPrefValue(key, value) }
-    return preferences
-}

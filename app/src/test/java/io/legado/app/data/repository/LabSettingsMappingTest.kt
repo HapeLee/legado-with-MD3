@@ -1,11 +1,9 @@
 package io.legado.app.data.repository
 
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.LabSettings
 import io.legado.app.help.config.PendingOverlayCore
-import io.legado.app.help.config.setPrefValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,24 +21,28 @@ class LabSettingsMappingTest {
         )
 
         samples.forEach { expected ->
-            assertEquals(expected, expected.toPrefMap().toPreferences().toLabSettings())
+            assertEquals(expected, expected.toPrefMap().toTestPreferences().toLabSettings())
         }
     }
 
     @Test
-    fun `update transform 只返回发生变化的键`() {
+    fun `原子 update 只入队发生变化的键`() {
         val current = LabSettings(enabled = true)
 
-        val diff = current.diffPrefMap(
-            transform = { it.copy(eyeProtection = true) },
+        val diff = captureAtomicUpdateValues(
+            current = current,
+            read = Preferences::toLabSettings,
             toPrefMap = LabSettings::toPrefMap,
+            transform = { it.copy(eyeProtection = true) },
         )
 
         assertEquals(mapOf(PreferKey.labEyeProtection to true), diff)
         assertTrue(
-            current.diffPrefMap(
-                transform = { it.copy() },
+            captureAtomicUpdateValues(
+                current = current,
+                read = Preferences::toLabSettings,
                 toPrefMap = LabSettings::toPrefMap,
+                transform = { it.copy() },
             ).isEmpty()
         )
     }
@@ -48,25 +50,25 @@ class LabSettingsMappingTest {
     @Test
     fun `基于同一快照并发更新不同字段不丢更新`() {
         val current = LabSettings()
-        val enabledDiff = current.diffPrefMap(
-            transform = { it.copy(enabled = true) },
-            toPrefMap = LabSettings::toPrefMap,
-        )
-        val eyeProtectionDiff = current.diffPrefMap(
-            transform = { it.copy(eyeProtection = true) },
-            toPrefMap = LabSettings::toPrefMap,
+        val transforms: List<(LabSettings) -> LabSettings> = listOf(
+            { it.copy(enabled = true) },
+            { it.copy(eyeProtection = true) },
         )
         val core = PendingOverlayCore(
-            initial = current.toPrefMap().toPreferences(),
+            initial = current.toPrefMap().toTestPreferences(),
             launchWrite = {},
             persist = { _, _ -> error("不会执行落盘") },
             persistAll = { error("不会执行落盘") },
         )
         val start = CountDownLatch(1)
-        val writers = listOf(enabledDiff, eyeProtectionDiff).map { diff ->
+        val writers = transforms.map { transform ->
             thread(start = true) {
                 start.await()
-                core.putAll(diff)
+                core.atomicUpdate(
+                    read = Preferences::toLabSettings,
+                    toPrefMap = LabSettings::toPrefMap,
+                    transform = transform,
+                )
             }
         }
 
@@ -78,10 +80,4 @@ class LabSettingsMappingTest {
             core.preferencesFlow.value.toLabSettings(),
         )
     }
-}
-
-private fun Map<String, Any?>.toPreferences(): Preferences {
-    val preferences = mutablePreferencesOf()
-    forEach { (key, value) -> preferences.setPrefValue(key, value) }
-    return preferences
 }

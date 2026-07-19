@@ -1,10 +1,8 @@
 package io.legado.app.data.repository
 
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.BackupSettings
-import io.legado.app.help.config.setPrefValue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -30,7 +28,7 @@ class BackupSettingsMappingTest {
         )
 
         samples.forEach { expected ->
-            assertEquals(expected, expected.toPrefMap().toPreferences().toBackupSettings())
+            assertEquals(expected, expected.toPrefMap().toTestPreferences().toBackupSettings())
         }
     }
 
@@ -44,7 +42,10 @@ class BackupSettingsMappingTest {
             backupPath = "content://old/path",
         )
 
-        val diff = current.diffPrefMap(
+        val diff = captureAtomicUpdateValues(
+            current = current,
+            read = Preferences::toBackupSettings,
+            toPrefMap = BackupSettings::toPrefMap,
             transform = {
                 it.copy(
                     webDavAccount = "new-account",
@@ -54,7 +55,6 @@ class BackupSettingsMappingTest {
                     backupPath = null,
                 )
             },
-            toPrefMap = BackupSettings::toPrefMap,
         )
 
         assertEquals(
@@ -68,10 +68,4 @@ class BackupSettingsMappingTest {
             diff,
         )
     }
-}
-
-private fun Map<String, Any?>.toPreferences(): Preferences {
-    val preferences = mutablePreferencesOf()
-    forEach { (key, value) -> preferences.setPrefValue(key, value) }
-    return preferences
 }
