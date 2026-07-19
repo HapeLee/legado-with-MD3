@@ -1065,6 +1065,8 @@
     <string name="style">Style</string>
     <string name="group_style">Group style</string>
     <string name="hide_empty_groups">Hide empty groups</string>
+    <string name="bookshelf_section_layout">Layout</string>
+    <string name="bookshelf_section_badge">Badges &amp; info</string>
     <string name="export_file_name">Export file name</string>
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">Available variables: {name} title, {author} author, {group} group, {source} source, {remark} remark.\n\nExample: {name} - {author}\nResult: The Three-Body Problem - Liu Cixin\n\nYou can add fixed text before or after variables.</string>
