@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
@@ -42,18 +41,44 @@ private fun BaseCard(
     val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.surfaceContainer)
         .let { it.copy(alpha = it.alpha * alpha) }
     val isTransparent = containerColor == Color.Transparent
-    val shape = RoundedCornerShape(cornerRadius)
+    val resolvedCornerRadius = if (ThemeConfig.overrideBaseCardCornerRadius) {
+        ThemeConfig.baseCardCornerRadius.dp
+    } else {
+        cornerRadius
+    }
+    val resolvedBorder = if (ThemeConfig.overrideBaseCardBorder) {
+        val configuredColor = if (LegadoTheme.isDark) {
+            ThemeConfig.baseCardBorderColorNight
+        } else {
+            ThemeConfig.baseCardBorderColor
+        }
+        BorderStroke(
+            ThemeConfig.baseCardBorderWidth.dp,
+            configuredColor.takeIf { it != 0 }?.let(::Color)
+                ?: LegadoTheme.colorScheme.outlineVariant
+        )
+    } else {
+        border
+    }
+    val resolvedShape = RoundedCornerShape(resolvedCornerRadius)
+    val decoratedModifier = modifier.then(
+        if (ThemeConfig.overrideBaseCardBorder && resolvedBorder != null) {
+            Modifier.border(resolvedBorder, resolvedShape)
+        } else {
+            Modifier
+        }
+    )
 
     if (isTransparent) {
         val clickableModifier = if (onClick != null || onLongClick != null) {
-            modifier
-                .clip(shape)
+            decoratedModifier
+                .clip(resolvedShape)
                 .combinedClickable(
                     onClick = { onClick?.invoke() },
                     onLongClick = onLongClick
                 )
         } else {
-            modifier.clip(shape)
+            decoratedModifier.clip(resolvedShape)
         }
         Box(
             modifier = clickableModifier
@@ -67,8 +92,8 @@ private fun BaseCard(
         )
         if (onClick != null) {
             MiuixCard(
-                modifier = modifier,
-                cornerRadius = cornerRadius,
+                modifier = decoratedModifier,
+                cornerRadius = resolvedCornerRadius,
                 pressFeedbackType = pressFeedbackType,
                 showIndication = true,
                 onClick = onClick,
@@ -78,8 +103,8 @@ private fun BaseCard(
             )
         } else {
             MiuixCard(
-                modifier = modifier,
-                cornerRadius = cornerRadius,
+                modifier = decoratedModifier,
+                cornerRadius = resolvedCornerRadius,
                 content = content,
                 colors = colors
             )
@@ -93,7 +118,7 @@ private fun BaseCard(
         )
         val clickableModifier = if (onClick != null || onLongClick != null) {
             modifier
-                .clip(RoundedCornerShape(cornerRadius))
+                .clip(resolvedShape)
                 .combinedClickable(
                     onClick = { onClick?.invoke() },
                     onLongClick = onLongClick
@@ -103,12 +128,12 @@ private fun BaseCard(
         }
         Surface(
             modifier = clickableModifier,
-            shape = RoundedCornerShape(cornerRadius),
+            shape = resolvedShape,
             color = colors.containerColor,
             contentColor = colors.contentColor,
             tonalElevation = 0.dp,
             shadowElevation = elevation,
-            border = border
+            border = resolvedBorder
         ) {
             Column(content = content)
         }

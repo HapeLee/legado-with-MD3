@@ -46,6 +46,9 @@ enum class ThemeBooleanSetting {
     UseFlexibleTopAppBar,
     BookInfoFollowCoverColor,
     EnableItemDivider,
+    OverrideBaseCardCornerRadius,
+    OverrideBaseCardBorder,
+    DisableSplicedColumnGroupCornerRadius,
     EyeProtectionEnabled,
     EyeProtectionSchedule,
     ShowRefactorTip,
@@ -63,6 +66,8 @@ enum class ThemeIntSetting {
     BackgroundImageBlurring,
     BackgroundImageDarkBlurring,
     ItemDividerColor,
+    BaseCardBorderColor,
+    BaseCardBorderColorNight,
     ColorTemperature,
 }
 
@@ -70,6 +75,8 @@ enum class ThemeFloatSetting {
     BottomBarLensRadius,
     ItemDividerWidth,
     ItemDividerLength,
+    BaseCardCornerRadius,
+    BaseCardBorderWidth,
 }
 
 enum class ThemeStringSetting {

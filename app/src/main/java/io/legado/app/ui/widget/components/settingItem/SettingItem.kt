@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -51,7 +50,7 @@ fun SettingItem(
     painter: Painter? = null,
     imageVector: ImageVector? = null,
     color: Color? = null,
-    shape: Shape = MaterialTheme.shapes.extraSmall,
+    cornerRadius: androidx.compose.ui.unit.Dp = 4.dp,
     title: String,
     description: String? = null,
     option: String? = null,
@@ -74,7 +73,7 @@ fun SettingItem(
     SettingCard(
         modifier = modifier
             .fillMaxWidth(),
-        shape = shape,
+        cornerRadius = cornerRadius,
         colors = CardDefaults.cardColors(
             containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
@@ -122,12 +121,6 @@ fun SettingItem(
                         }
                     }
                 } else null,
-                headlineContent = {
-                    AppText(
-                        text = title,
-                        style = LegadoTheme.typography.titleMedium
-                    )
-                },
                 supportingContent = if (description != null || option != null) {
                     {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -174,7 +167,12 @@ fun SettingItem(
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleMedium
+                )
+            }
 
             if (isExpandable) {
                 AnimatedVisibility(

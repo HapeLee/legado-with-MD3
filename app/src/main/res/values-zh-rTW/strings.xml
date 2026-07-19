@@ -1325,6 +1325,15 @@
     <string name="nav_bar_color">导航栏颜色</string>
     <string name="border_setting">边框设置</string>
     <string name="show_container_border">显示容器边框</string>
+    <string name="base_card_corner_radius_override">覆寫卡片圓角</string>
+    <string name="base_card_corner_radius">卡片圓角</string>
+    <string name="base_card_border_override">覆寫卡片邊框</string>
+    <string name="base_card_border_color_day">日間卡片邊框顏色</string>
+    <string name="base_card_border_color_night">夜間卡片邊框顏色</string>
+    <string name="base_card_border_color_default">主題預設顏色</string>
+    <string name="base_card_override_summary">關閉時保留各卡片的預設值</string>
+    <string name="disable_spliced_group_corner_radius">關閉設定群組圓角</string>
+    <string name="disable_spliced_group_corner_radius_summary">讓 SplicedColumnGroup 使用直角外框</string>
     <string name="border_width">边框粗细</string>
     <string name="border_style">边框样式</string>
     <string name="solid_border">实线</string>

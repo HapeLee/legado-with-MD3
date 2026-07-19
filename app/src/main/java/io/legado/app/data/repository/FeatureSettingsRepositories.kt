@@ -1,45 +1,45 @@
 package io.legado.app.data.repository
 
-import io.legado.app.constant.PreferKey
+import androidx.datastore.preferences.core.Preferences
 import io.legado.app.BuildConfig
-import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppShellBooleanSetting
-import io.legado.app.domain.gateway.AppShellStringSetting
+import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppShellSettingsUpdate
+import io.legado.app.domain.gateway.AppShellStringSetting
+import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.BackupSettingsUpdate
+import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.gateway.CoverSettingsUpdate
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
+import io.legado.app.domain.gateway.LabSettingsGateway
+import io.legado.app.domain.gateway.LabSettingsUpdate
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
-import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ThemeBooleanSetting
 import io.legado.app.domain.gateway.ThemeColorSlot
 import io.legado.app.domain.gateway.ThemeFloatSetting
 import io.legado.app.domain.gateway.ThemeIntSetting
-import io.legado.app.domain.gateway.ThemeStringSetting
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
-import io.legado.app.domain.model.settings.AppShellSettings
-import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsUpdate
-import io.legado.app.domain.model.settings.DownloadCacheSettings
-import io.legado.app.domain.gateway.CoverSettingsGateway
-import io.legado.app.domain.gateway.CoverSettingsUpdate
-import io.legado.app.domain.model.settings.CoverSettings
-import io.legado.app.domain.model.settings.OtherSettings
-import io.legado.app.domain.model.settings.ThemeSettings
-import io.legado.app.domain.gateway.LabSettingsGateway
-import io.legado.app.domain.gateway.LabSettingsUpdate
+import io.legado.app.domain.gateway.ThemeStringSetting
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.gateway.TranslationSettingsUpdate
 import io.legado.app.domain.model.TranslationConstants
-import io.legado.app.domain.model.settings.LabSettings
-import io.legado.app.domain.model.settings.TranslationSettings
-import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BackupSettingsUpdate
+import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.BackupSettings
+import io.legado.app.domain.model.settings.CoverSettings
+import io.legado.app.domain.model.settings.DownloadCacheSettings
+import io.legado.app.domain.model.settings.LabSettings
+import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.TranslationSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
 import io.legado.app.help.config.compatDsFloat
 import io.legado.app.help.config.compatDsInt
 import io.legado.app.help.config.compatDsString
-import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -142,6 +142,14 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
                 ThemeBooleanSetting.UseFlexibleTopAppBar -> PreferKey.useFlexibleTopAppBar to update.value
                 ThemeBooleanSetting.BookInfoFollowCoverColor -> PreferKey.bookInfoFollowCoverColor to update.value
                 ThemeBooleanSetting.EnableItemDivider -> PreferKey.enableItemDivider to update.value
+                ThemeBooleanSetting.OverrideBaseCardCornerRadius ->
+                    PreferKey.overrideBaseCardCornerRadius to update.value
+
+                ThemeBooleanSetting.OverrideBaseCardBorder ->
+                    PreferKey.overrideBaseCardBorder to update.value
+
+                ThemeBooleanSetting.DisableSplicedColumnGroupCornerRadius ->
+                    PreferKey.disableSplicedColumnGroupCornerRadius to update.value
                 ThemeBooleanSetting.EyeProtectionEnabled -> PreferKey.eyeProtectionEnabled to update.value
                 ThemeBooleanSetting.EyeProtectionSchedule -> PreferKey.eyeProtectionSchedule to update.value
                 ThemeBooleanSetting.ShowRefactorTip ->
@@ -159,12 +167,17 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
                 ThemeIntSetting.BackgroundImageBlurring -> PreferKey.bgImageBlurring to update.value
                 ThemeIntSetting.BackgroundImageDarkBlurring -> PreferKey.bgImageNBlurring to update.value
                 ThemeIntSetting.ItemDividerColor -> PreferKey.itemDividerColor to update.value
+                ThemeIntSetting.BaseCardBorderColor -> PreferKey.baseCardBorderColor to update.value
+                ThemeIntSetting.BaseCardBorderColorNight ->
+                    PreferKey.baseCardBorderColorNight to update.value
                 ThemeIntSetting.ColorTemperature -> PreferKey.colorTemperature to update.value
             }
             is ThemeSettingsUpdate.FloatValue -> when (update.setting) {
                 ThemeFloatSetting.BottomBarLensRadius -> PreferKey.bottomBarLensRadius to update.value
                 ThemeFloatSetting.ItemDividerWidth -> PreferKey.itemDividerWidth to update.value
                 ThemeFloatSetting.ItemDividerLength -> PreferKey.itemDividerLength to update.value
+                ThemeFloatSetting.BaseCardCornerRadius -> PreferKey.baseCardCornerRadius to update.value
+                ThemeFloatSetting.BaseCardBorderWidth -> PreferKey.baseCardBorderWidth to update.value
             }
             is ThemeSettingsUpdate.StringValue -> when (update.setting) {
                 ThemeStringSetting.BookInfoNetworkCoverBackground ->
@@ -420,6 +433,15 @@ private fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     themeBackgroundColorNight = compatDsInt(PreferKey.themeBackgroundColorNight) ?: 0,
     labelContainerColorNight = compatDsInt(PreferKey.labelContainerColorNight) ?: 0,
     containerOpacity = compatDsInt(PreferKey.containerOpacity) ?: 100,
+    overrideBaseCardCornerRadius =
+        compatDsBoolean(PreferKey.overrideBaseCardCornerRadius) ?: false,
+    baseCardCornerRadius = compatDsFloat(PreferKey.baseCardCornerRadius) ?: 16f,
+    overrideBaseCardBorder = compatDsBoolean(PreferKey.overrideBaseCardBorder) ?: false,
+    baseCardBorderWidth = compatDsFloat(PreferKey.baseCardBorderWidth) ?: 1f,
+    baseCardBorderColor = compatDsInt(PreferKey.baseCardBorderColor) ?: 0,
+    baseCardBorderColorNight = compatDsInt(PreferKey.baseCardBorderColorNight) ?: 0,
+    disableSplicedColumnGroupCornerRadius =
+        compatDsBoolean(PreferKey.disableSplicedColumnGroupCornerRadius) ?: false,
     topBarOpacity = compatDsInt(PreferKey.topBarOpacity) ?: 100,
     bottomBarOpacity = compatDsInt(PreferKey.bottomBarOpacity) ?: 100,
     enableBlur = compatDsBoolean(PreferKey.enableBlur) ?: false,

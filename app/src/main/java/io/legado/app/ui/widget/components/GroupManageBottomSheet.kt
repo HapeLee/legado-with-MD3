@@ -76,7 +76,7 @@ private fun GroupItem(
     SettingItem(
         title = group,
         expanded = expanded,
-        shape = MaterialTheme.shapes.medium,
+        cornerRadius = 12.dp,
         color = MaterialTheme.colorScheme.surface,
         onExpandChange = { expanded = it },
         trailingContent = {

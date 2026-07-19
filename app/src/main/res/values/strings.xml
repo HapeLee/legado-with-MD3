@@ -109,6 +109,15 @@
     <string name="background_color">Background Color</string>
     <string name="border_setting">Border Settings</string>
     <string name="show_container_border">Show Container Border</string>
+    <string name="base_card_corner_radius_override">Override card corner radius</string>
+    <string name="base_card_corner_radius">Card corner radius</string>
+    <string name="base_card_border_override">Override card border</string>
+    <string name="base_card_border_color_day">Day card border color</string>
+    <string name="base_card_border_color_night">Night card border color</string>
+    <string name="base_card_border_color_default">Theme default</string>
+    <string name="base_card_override_summary">When disabled, each card keeps its default value</string>
+    <string name="disable_spliced_group_corner_radius">Disable setting group corner radius</string>
+    <string name="disable_spliced_group_corner_radius_summary">Use square outer corners for SplicedColumnGroup</string>
     <string name="border_width">Border Width</string>
     <string name="border_style">Border Style</string>
     <string name="solid_border">Solid</string>

@@ -1820,6 +1820,15 @@
     <string name="nav_bar_color">导航栏颜色</string>
     <string name="border_setting">边框设置</string>
     <string name="show_container_border">显示容器边框</string>
+    <string name="base_card_corner_radius_override">覆盖卡片圆角</string>
+    <string name="base_card_corner_radius">卡片圆角</string>
+    <string name="base_card_border_override">覆盖卡片边框</string>
+    <string name="base_card_border_color_day">日间卡片边框颜色</string>
+    <string name="base_card_border_color_night">夜间卡片边框颜色</string>
+    <string name="base_card_border_color_default">主题默认颜色</string>
+    <string name="base_card_override_summary">关闭时保留各卡片的默认值</string>
+    <string name="disable_spliced_group_corner_radius">关闭设置分组圆角</string>
+    <string name="disable_spliced_group_corner_radius_summary">让 SplicedColumnGroup 使用直角外轮廓</string>
     <string name="border_width">边框粗细</string>
     <string name="border_style">边框样式</string>
     <string name="solid_border">实线</string>

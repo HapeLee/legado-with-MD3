@@ -40,6 +40,22 @@ object ThemeConfig {
 
     var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
 
+    var overrideBaseCardCornerRadius by prefDelegate(
+        PreferKey.overrideBaseCardCornerRadius,
+        false
+    )
+    var baseCardCornerRadius by prefDelegate(PreferKey.baseCardCornerRadius, 16f)
+
+    var overrideBaseCardBorder by prefDelegate(PreferKey.overrideBaseCardBorder, false)
+    var baseCardBorderWidth by prefDelegate(PreferKey.baseCardBorderWidth, 1f)
+    var baseCardBorderColor by prefDelegate(PreferKey.baseCardBorderColor, 0)
+    var baseCardBorderColorNight by prefDelegate(PreferKey.baseCardBorderColorNight, 0)
+
+    var disableSplicedColumnGroupCornerRadius by prefDelegate(
+        PreferKey.disableSplicedColumnGroupCornerRadius,
+        false
+    )
+
     var topBarOpacity by prefDelegate(PreferKey.topBarOpacity, 100)
 
     var bottomBarOpacity by prefDelegate(PreferKey.bottomBarOpacity, 100)

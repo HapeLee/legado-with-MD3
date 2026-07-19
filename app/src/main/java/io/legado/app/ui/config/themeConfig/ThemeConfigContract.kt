@@ -22,6 +22,7 @@ sealed interface ThemeConfigSheet {
     data object MainNavigation : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
+    data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet
     data object Font : ThemeConfigSheet
 }
 

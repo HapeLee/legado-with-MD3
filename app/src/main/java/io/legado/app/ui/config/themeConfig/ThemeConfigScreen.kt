@@ -791,6 +791,85 @@ fun ThemeConfigScreen(
             item {
                 SplicedColumnGroup(title = stringResource(R.string.theme_manage_section_container)) {
                     SwitchSettingItem(
+                        title = stringResource(R.string.disable_spliced_group_corner_radius),
+                        description = stringResource(R.string.disable_spliced_group_corner_radius_summary),
+                        checked = theme.disableSplicedColumnGroupCornerRadius,
+                        onCheckedChange = {
+                            updateTheme(
+                                ThemeBooleanSetting.DisableSplicedColumnGroupCornerRadius,
+                                it
+                            )
+                        }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.base_card_corner_radius_override),
+                        description = stringResource(R.string.base_card_override_summary),
+                        checked = theme.overrideBaseCardCornerRadius,
+                        onCheckedChange = {
+                            updateTheme(ThemeBooleanSetting.OverrideBaseCardCornerRadius, it)
+                        }
+                    )
+                    AnimatedVisibility(visible = theme.overrideBaseCardCornerRadius) {
+                        SliderSettingItem(
+                            title = stringResource(R.string.base_card_corner_radius),
+                            description = "${theme.baseCardCornerRadius}dp",
+                            value = theme.baseCardCornerRadius,
+                            defaultValue = 16f,
+                            valueRange = 0f..40f,
+                            steps = 79,
+                            decimal = true,
+                            onValueChange = {
+                                updateTheme(ThemeFloatSetting.BaseCardCornerRadius, it)
+                            }
+                        )
+                    }
+                    SwitchSettingItem(
+                        title = stringResource(R.string.base_card_border_override),
+                        description = stringResource(R.string.base_card_override_summary),
+                        checked = theme.overrideBaseCardBorder,
+                        onCheckedChange = {
+                            updateTheme(ThemeBooleanSetting.OverrideBaseCardBorder, it)
+                        }
+                    )
+                    AnimatedVisibility(visible = theme.overrideBaseCardBorder) {
+                        Column {
+                            SliderSettingItem(
+                                title = stringResource(R.string.border_width),
+                                description = "${theme.baseCardBorderWidth}dp",
+                                value = theme.baseCardBorderWidth,
+                                defaultValue = 1f,
+                                valueRange = 0f..5f,
+                                steps = 49,
+                                decimal = true,
+                                onValueChange = {
+                                    updateTheme(ThemeFloatSetting.BaseCardBorderWidth, it)
+                                }
+                            )
+                            BaseCardBorderColorSettingItem(
+                                title = stringResource(R.string.base_card_border_color_day),
+                                color = theme.baseCardBorderColor,
+                                onClick = {
+                                    onIntent(
+                                        ThemeConfigIntent.ShowSheet(
+                                            ThemeConfigSheet.BaseCardBorderColor(false)
+                                        )
+                                    )
+                                }
+                            )
+                            BaseCardBorderColorSettingItem(
+                                title = stringResource(R.string.base_card_border_color_night),
+                                color = theme.baseCardBorderColorNight,
+                                onClick = {
+                                    onIntent(
+                                        ThemeConfigIntent.ShowSheet(
+                                            ThemeConfigSheet.BaseCardBorderColor(true)
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                    SwitchSettingItem(
                         title = stringResource(R.string.show_divider_line),
                         checked = theme.enableItemDivider,
                         onCheckedChange = {
@@ -924,6 +1003,28 @@ fun ThemeConfigScreen(
         }
     )
 
+    val baseCardBorderColorSheet = state.activeSheet as? ThemeConfigSheet.BaseCardBorderColor
+    ColorPickerSheet(
+        show = baseCardBorderColorSheet != null,
+        initialColor = if (baseCardBorderColorSheet?.dark == true) {
+            theme.baseCardBorderColorNight
+        } else {
+            theme.baseCardBorderColor
+        },
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onColorSelected = {
+            updateTheme(
+                if (baseCardBorderColorSheet?.dark == true) {
+                    ThemeIntSetting.BaseCardBorderColorNight
+                } else {
+                    ThemeIntSetting.BaseCardBorderColor
+                },
+                it
+            )
+            onIntent(ThemeConfigIntent.DismissSheet)
+        }
+    )
+
     FontSelectSheet(
         show = state.activeSheet == ThemeConfigSheet.Font,
         title = stringResource(R.string.font_setting),
@@ -947,6 +1048,35 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
+}
+
+@Composable
+private fun BaseCardBorderColorSettingItem(
+    title: String,
+    color: Int,
+    onClick: () -> Unit,
+) {
+    ClickableSettingItem(
+        title = title,
+        option = if (color != 0) {
+            "#${Integer.toHexString(color).uppercase()}"
+        } else {
+            stringResource(R.string.base_card_border_color_default)
+        },
+        onClick = onClick,
+        trailingContent = {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(
+                        color.takeIf { it != 0 }?.let(::Color)
+                            ?: LegadoTheme.colorScheme.outlineVariant
+                    )
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            )
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
