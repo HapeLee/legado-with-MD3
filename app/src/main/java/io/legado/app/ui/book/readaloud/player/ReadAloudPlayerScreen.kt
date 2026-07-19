@@ -11,8 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -38,7 +37,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -50,13 +48,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Slider
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SheetValue
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
-import androidx.compose.material3.SheetValue.PartiallyExpanded
+import androidx.compose.material3.Slider
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -76,23 +72,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
@@ -105,7 +100,6 @@ import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
@@ -125,7 +119,7 @@ fun ReadAloudPlayerSheet(
     onIntent: (ReadAloudPlayerIntent) -> Unit,
 ) {
     val sheetState = rememberBottomSheetState(
-        initialValue = Expanded,
+        initialValue = Hidden,
         enabledValues = setOf(Hidden, Expanded)
     )
     LaunchedEffect(show) {
@@ -192,13 +186,16 @@ fun ReadAloudPlayerScreenContent(
                     )
                 }
             Box(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .clip(RectangleShape)
                     .then(hazeModifier)
                     .windowInsetsPadding(WindowInsets.statusBars),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
@@ -247,7 +244,8 @@ fun ReadAloudPlayerScreenContent(
                         )
                     }
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .clip(RectangleShape)
                         .then(hazeModifier)
                         .windowInsetsPadding(WindowInsets.navigationBars)
@@ -269,7 +267,9 @@ fun ReadAloudPlayerScreenContent(
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -295,7 +295,9 @@ fun ReadAloudPlayerScreenContent(
                         )
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         SmallPlainButton(
@@ -334,7 +336,9 @@ fun ReadAloudPlayerScreenContent(
                             },
                             valueRange = 5f..20f,
                             steps = 14,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Timer) {
@@ -346,14 +350,18 @@ fun ReadAloudPlayerScreenContent(
                             },
                             valueRange = 0f..180f,
                             steps = 17,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         )
                     }
                 }
             }
         },
     ) {
-        Box(Modifier.fillMaxSize().hazeSource(pagerHazeState)) {
+        Box(Modifier
+            .fillMaxSize()
+            .hazeSource(pagerHazeState)) {
             CoverBlurBackdrop(state.bookName, state.author, state.coverPath, state.sourceOrigin)
             HorizontalPager(
                 state = pagerState,
@@ -475,7 +483,10 @@ private fun CoverPage(
     contentPadding: PaddingValues,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -487,7 +498,10 @@ private fun CoverPage(
                 author = state.author,
                 path = state.coverPath,
                 sourceOrigin = state.sourceOrigin,
-                modifier = Modifier.fillMaxWidth(0.52f).aspectRatio(5f / 7f).clip(RoundedCornerShape(8.dp))
+                modifier = Modifier
+                    .fillMaxWidth(0.52f)
+                    .aspectRatio(5f / 7f)
+                    .clip(RoundedCornerShape(8.dp))
             )
         }
         AnimatedContent(
@@ -627,19 +641,25 @@ private fun ChapterTextPage(
         }
     }
     Box(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
     ) {
         if (state.textLines.isEmpty()) {
             AppText(
                 text = stringResource(R.string.read_aloud_preparing_content),
-                modifier = Modifier.align(Alignment.Center).padding(contentPadding),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(contentPadding),
                 style = LegadoTheme.typography.bodyLarge,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().nestedScroll(userScrollConnection),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(userScrollConnection),
                 contentPadding = PaddingValues(
                     top = contentPadding.calculateTopPadding(),
                     bottom = contentPadding.calculateBottomPadding(),
@@ -659,7 +679,8 @@ private fun ChapterTextPage(
                     )
                     AppText(
                         text = line.text,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .clickable { onIntent(ReadAloudPlayerIntent.SeekTo(line.chapterPosition)) }
                             .background(backgroundColor)
