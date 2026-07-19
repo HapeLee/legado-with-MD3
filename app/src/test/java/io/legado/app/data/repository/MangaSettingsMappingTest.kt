@@ -1,12 +1,21 @@
 package io.legado.app.data.repository
 
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.MangaClickArea
-import io.legado.app.domain.gateway.MangaSettingsUpdate
+import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
+import io.legado.app.help.config.PendingOverlayCore
 import io.legado.app.help.config.setPrefValue
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,42 +24,17 @@ import org.junit.Test
 class MangaSettingsMappingTest {
 
     @Test
-    fun `漫画设置写读映射往返恒等`() {
-        val expected = MangaSettings(
-            showMangaUi = false,
-            disableMangaScale = false,
-            disableMangaScrollAnimation = true,
-            disableMangaCrossFade = true,
-            scrollMode = 2,
-            preDownloadNum = 22,
-            autoPageSpeed = 8,
-            footerConfig = "footer",
-            disableClickScroll = true,
-            longClick = false,
-            background = 0xFF123456.toInt(),
-            colorFilter = "filter",
-            hideTitle = true,
-            enableEInk = true,
-            eInkThreshold = 188,
-            enableGray = true,
-            webtoonSidePaddingDp = 12,
-            volumeKeyPage = true,
-            reverseVolumeKeyPage = true,
-            clickActionTL = 0,
-            clickActionTC = 1,
-            clickActionTR = 2,
-            clickActionML = 3,
-            clickActionMC = 4,
-            clickActionMR = 5,
-            clickActionBL = 6,
-            clickActionBC = 7,
-            clickActionBR = 8,
-        )
-        val preferences = mutablePreferencesOf().apply {
-            expected.toPrefMap().forEach { (key, value) -> setPrefValue(key, value) }
+    fun `漫画设置 28 键写映射逐字段对应`() {
+        mangaMappingSamples().forEach { settings ->
+            assertEquals(settings.expectedPrefMap(), settings.toPrefMap())
         }
+    }
 
-        assertEquals(expected, preferences.toMangaSettings())
+    @Test
+    fun `漫画设置 28 键读映射逐字段对应`() {
+        mangaMappingSamples().forEach { expected ->
+            assertEquals(expected, expected.expectedPrefMap().toPreferences().toMangaSettings())
+        }
     }
 
     @Test
@@ -69,16 +53,96 @@ class MangaSettingsMappingTest {
     }
 
     @Test
-    fun `墨水屏与点击区域更新映射为同一批键值`() {
-        val values = listOf(
-            MangaSettingsUpdate.EInk(enabled = true, threshold = 188),
-            MangaSettingsUpdate.ClickAction(MangaClickArea.MC, 0),
-        ).toMangaPreferenceValues()
+    fun `墨水屏更新一次产生启用关闭灰度和阈值三项差量`() {
+        val diff = MangaSettings(enableGray = true).diffPrefMap(
+            transform = {
+                it.copy(enableEInk = true, enableGray = false, eInkThreshold = 188)
+            },
+            toPrefMap = MangaSettings::toPrefMap,
+        )
 
-        assertEquals(true, values[PreferKey.enableMangaEInk])
-        assertEquals(false, values[PreferKey.enableMangaGray])
-        assertEquals(188, values[PreferKey.mangaEInkThreshold])
-        assertEquals(0, values[PreferKey.mangaClickActionMC])
+        assertEquals(
+            mapOf(
+                PreferKey.enableMangaEInk to true,
+                PreferKey.mangaEInkThreshold to 188,
+                PreferKey.enableMangaGray to false,
+            ),
+            diff,
+        )
+    }
+
+    @Test
+    fun `灰度更新一次产生启用灰度和关闭墨水屏两项差量`() {
+        val diff = MangaSettings(enableEInk = true).diffPrefMap(
+            transform = { it.copy(enableEInk = false, enableGray = true) },
+            toPrefMap = MangaSettings::toPrefMap,
+        )
+
+        assertEquals(
+            mapOf(
+                PreferKey.enableMangaEInk to false,
+                PreferKey.enableMangaGray to true,
+            ),
+            diff,
+        )
+    }
+
+    @Test
+    fun `gateway 通过不可变快照 transform 更新设置`() = runBlocking {
+        val gateway = FakeMangaSettingsGateway(MangaSettings(enableGray = true))
+
+        gateway.update {
+            it.copy(enableEInk = true, enableGray = false, eInkThreshold = 188)
+        }
+
+        assertEquals(
+            MangaSettings(enableEInk = true, enableGray = false, eInkThreshold = 188),
+            gateway.currentSettings,
+        )
+    }
+
+    @Test
+    fun `并发启用墨水屏与灰度时完整 transform 串行且保持互斥`() = runBlocking {
+        val initial = MangaSettings()
+        val core = PendingOverlayCore(
+            initial = initial.expectedPrefMap().toPreferences(),
+            launchWrite = {},
+            persist = { _, _ -> error("不会执行落盘") },
+            persistAll = { error("不会执行落盘") },
+        )
+        val repository = MangaSettingsRepository(
+            preferences = { core.preferencesFlow.value },
+            preferencesFlow = core.preferencesFlow,
+            putAll = core::putAll,
+        )
+        val firstEntered = CompletableDeferred<Unit>()
+        val releaseFirst = CompletableDeferred<Unit>()
+        val first = launch(Dispatchers.Default) {
+            repository.update {
+                firstEntered.complete(Unit)
+                runBlocking { releaseFirst.await() }
+                it.copy(enableEInk = true, enableGray = false)
+            }
+        }
+        firstEntered.await()
+
+        val secondEntered = CompletableDeferred<Unit>()
+        val second = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.update {
+                secondEntered.complete(Unit)
+                it.copy(enableEInk = false, enableGray = true)
+            }
+        }
+        val secondRacedWithFirst = secondEntered.isCompleted
+        releaseFirst.complete(Unit)
+        first.join()
+        second.join()
+
+        assertFalse(secondRacedWithFirst)
+        assertEquals(
+            MangaSettings(enableEInk = false, enableGray = true),
+            repository.currentSettings,
+        )
     }
 
     @Test
@@ -88,4 +152,89 @@ class MangaSettingsMappingTest {
         assertTrue(settings.hasMenuClickArea())
         assertFalse(settings.enableGray)
     }
+
+    private class FakeMangaSettingsGateway(initial: MangaSettings) : MangaSettingsGateway {
+        private val state = MutableStateFlow(initial)
+
+        override val currentSettings: MangaSettings
+            get() = state.value
+        override val settings: Flow<MangaSettings> = state.asStateFlow()
+
+        override suspend fun update(transform: (MangaSettings) -> MangaSettings) {
+            state.value = transform(state.value)
+        }
+    }
+}
+
+private fun mangaMappingSamples(): List<MangaSettings> {
+    val base = MangaSettings(
+        scrollMode = 11,
+        preDownloadNum = 22,
+        autoPageSpeed = 33,
+        footerConfig = "manga-footer",
+        background = 0xFF123456.toInt(),
+        colorFilter = "manga-filter",
+        eInkThreshold = 44,
+        webtoonSidePaddingDp = 55,
+        clickActionTL = 101,
+        clickActionTC = 102,
+        clickActionTR = 103,
+        clickActionML = 104,
+        clickActionMC = 105,
+        clickActionMR = 106,
+        clickActionBL = 107,
+        clickActionBC = 108,
+        clickActionBR = 109,
+    )
+    return listOf(
+        base,
+        base.copy(showMangaUi = false),
+        base.copy(disableMangaScale = false),
+        base.copy(disableMangaScrollAnimation = true),
+        base.copy(disableMangaCrossFade = true),
+        base.copy(disableClickScroll = true),
+        base.copy(longClick = false),
+        base.copy(hideTitle = true),
+        base.copy(enableEInk = true),
+        base.copy(enableGray = true),
+        base.copy(volumeKeyPage = true),
+        base.copy(reverseVolumeKeyPage = true),
+    )
+}
+
+private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.showMangaUi to showMangaUi,
+    PreferKey.disableMangaScale to disableMangaScale,
+    PreferKey.disableMangaScrollAnimation to disableMangaScrollAnimation,
+    PreferKey.disableMangaCrossFade to disableMangaCrossFade,
+    PreferKey.mangaScrollMode to scrollMode,
+    PreferKey.mangaPreDownloadNum to preDownloadNum,
+    PreferKey.mangaAutoPageSpeed to autoPageSpeed,
+    PreferKey.mangaFooterConfig to footerConfig,
+    PreferKey.disableClickScroll to disableClickScroll,
+    PreferKey.mangaLongClick to longClick,
+    PreferKey.mangaBackground to background,
+    PreferKey.mangaColorFilter to colorFilter,
+    PreferKey.hideMangaTitle to hideTitle,
+    PreferKey.enableMangaEInk to enableEInk,
+    PreferKey.mangaEInkThreshold to eInkThreshold,
+    PreferKey.enableMangaGray to enableGray,
+    PreferKey.webtoonSidePaddingDp to webtoonSidePaddingDp,
+    PreferKey.mangaVolumeKeyPage to volumeKeyPage,
+    PreferKey.reverseVolumeKeyPage to reverseVolumeKeyPage,
+    PreferKey.mangaClickActionTL to clickActionTL,
+    PreferKey.mangaClickActionTC to clickActionTC,
+    PreferKey.mangaClickActionTR to clickActionTR,
+    PreferKey.mangaClickActionML to clickActionML,
+    PreferKey.mangaClickActionMC to clickActionMC,
+    PreferKey.mangaClickActionMR to clickActionMR,
+    PreferKey.mangaClickActionBL to clickActionBL,
+    PreferKey.mangaClickActionBC to clickActionBC,
+    PreferKey.mangaClickActionBR to clickActionBR,
+)
+
+private fun Map<String, Any?>.toPreferences(): Preferences {
+    val preferences = mutablePreferencesOf()
+    forEach { (key, value) -> preferences.setPrefValue(key, value) }
+    return preferences
 }
