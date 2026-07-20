@@ -5,10 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.AppShellBooleanSetting
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
-import io.legado.app.domain.gateway.AppShellStringSetting
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeBooleanSetting
 import io.legado.app.domain.gateway.ThemeIntSetting
@@ -16,6 +13,7 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.gateway.ThemeStringSetting
 import io.legado.app.domain.gateway.LabSettingsGateway
+import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -79,26 +77,57 @@ class ThemeConfigViewModel(
 
     fun onIntent(intent: ThemeConfigIntent) {
         when (intent) {
-            is ThemeConfigIntent.UpdateAppShell -> updateAppShell(intent.update)
             is ThemeConfigIntent.UpdateTheme -> updateTheme(intent.update)
             is ThemeConfigIntent.ShowSheet ->
                 _uiState.update { it.copy(activeSheet = intent.sheet) }
             ThemeConfigIntent.DismissSheet ->
                 _uiState.update { it.copy(activeSheet = null) }
             is ThemeConfigIntent.SelectTheme -> selectTheme(intent.value)
+            is ThemeConfigIntent.SetThemeMode -> updateAppShell(
+                transform = { it.copy(themeMode = intent.value) },
+                effect = ThemeConfigEffect.ApplyDayNight,
+            )
+            is ThemeConfigIntent.SetComposeEngine -> updateAppShell {
+                it.copy(composeEngine = intent.value)
+            }
+            is ThemeConfigIntent.SetPredictiveBackEnabled -> updateAppShell {
+                it.copy(predictiveBackEnabled = intent.enabled)
+            }
+            is ThemeConfigIntent.SetFontScale -> updateAppShell {
+                it.copy(fontScale = intent.value)
+            }
+            is ThemeConfigIntent.SetShowStatusBar -> updateAppShell(
+                transform = { it.copy(showStatusBar = intent.visible) },
+                effect = ThemeConfigEffect.NotifyMain,
+            )
+            is ThemeConfigIntent.SetSwipeAnimation -> updateAppShell {
+                it.copy(swipeAnimation = intent.enabled)
+            }
+            is ThemeConfigIntent.SetShowBottomView -> updateAppShell {
+                it.copy(showBottomView = intent.visible)
+            }
+            is ThemeConfigIntent.SetUseFloatingBottomBar -> updateAppShell {
+                it.copy(useFloatingBottomBar = intent.enabled)
+            }
+            is ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass -> updateAppShell {
+                it.copy(useFloatingBottomBarLiquidGlass = intent.enabled)
+            }
+            is ThemeConfigIntent.SetTabletInterface -> updateAppShell {
+                it.copy(tabletInterface = intent.value)
+            }
+            is ThemeConfigIntent.SetLabelVisibilityMode -> updateAppShell {
+                it.copy(labelVisibilityMode = intent.value)
+            }
             is ThemeConfigIntent.SetMiuixMonet -> setMiuixMonet(intent.enabled)
             is ThemeConfigIntent.SetDynamicColors -> setDynamicColors(intent.enabled)
             is ThemeConfigIntent.SetBlurEnabled -> setBlurEnabled(intent.enabled)
             is ThemeConfigIntent.SetMainDestinationVisible -> setMainDestinationVisible(intent)
-            is ThemeConfigIntent.SetMainNavigationOrder -> updateAppShell(
-                AppShellSettingsUpdate.MainNavigationOrder(intent.routes)
-            )
-            is ThemeConfigIntent.SetDefaultHomePage -> updateAppShell(
-                AppShellSettingsUpdate.StringValue(
-                    AppShellStringSetting.DefaultHomePage,
-                    intent.route,
-                )
-            )
+            is ThemeConfigIntent.SetMainNavigationOrder -> updateAppShell {
+                it.copy(mainNavigationOrder = intent.routes)
+            }
+            is ThemeConfigIntent.SetDefaultHomePage -> updateAppShell {
+                it.copy(defaultHomePage = intent.route)
+            }
             is ThemeConfigIntent.SelectLauncherIcon -> selectLauncherIcon(intent.value)
             is ThemeConfigIntent.SelectNavigationIcon -> selectNavigationIcon(intent)
             is ThemeConfigIntent.RequestNavigationIcon -> _effects.tryEmit(
@@ -125,19 +154,13 @@ class ThemeConfigViewModel(
         }
     }
 
-    private fun updateAppShell(update: AppShellSettingsUpdate) {
+    private fun updateAppShell(
+        effect: ThemeConfigEffect? = null,
+        transform: (AppShellSettings) -> AppShellSettings,
+    ) {
         viewModelScope.launch {
-            appShellSettingsGateway.update(update)
-            when (update) {
-                is AppShellSettingsUpdate.ThemeMode ->
-                    _effects.tryEmit(ThemeConfigEffect.ApplyDayNight)
-                is AppShellSettingsUpdate.BooleanValue -> if (
-                    update.setting == AppShellBooleanSetting.ShowStatusBar
-                ) {
-                    _effects.tryEmit(ThemeConfigEffect.NotifyMain)
-                }
-                else -> Unit
-            }
+            appShellSettingsGateway.update(transform)
+            effect?.let(_effects::tryEmit)
         }
     }
 
@@ -212,48 +235,65 @@ class ThemeConfigViewModel(
     }
 
     private fun setMainDestinationVisible(intent: ThemeConfigIntent.SetMainDestinationVisible) {
-        val setting = when (intent.route) {
-            MainDestination.Home.route -> AppShellBooleanSetting.ShowHome
-            MainDestination.Explore.route -> AppShellBooleanSetting.ShowDiscovery
-            MainDestination.Rss.route -> AppShellBooleanSetting.ShowRss
+        val transform: (AppShellSettings) -> AppShellSettings = when (intent.route) {
+            MainDestination.Home.route -> { current ->
+                current.copy(
+                    showHome = intent.visible,
+                    defaultHomePage = current.fallbackHomePage(intent),
+                )
+            }
+            MainDestination.Explore.route -> { current ->
+                current.copy(
+                    showDiscovery = intent.visible,
+                    defaultHomePage = current.fallbackHomePage(intent),
+                )
+            }
+            MainDestination.Rss.route -> { current ->
+                current.copy(
+                    showRss = intent.visible,
+                    defaultHomePage = current.fallbackHomePage(intent),
+                )
+            }
             else -> return
         }
-        viewModelScope.launch {
-            appShellSettingsGateway.updateAll(
-                buildList {
-                    add(AppShellSettingsUpdate.BooleanValue(setting, intent.visible))
-                    if (!intent.visible && _uiState.value.appShell.defaultHomePage == intent.route) {
-                        add(
-                            AppShellSettingsUpdate.StringValue(
-                                AppShellStringSetting.DefaultHomePage,
-                                MainDestination.Bookshelf.route,
-                            )
-                        )
-                    }
-                }
-            )
-        }
+        updateAppShell(transform = transform)
+    }
+
+    private fun AppShellSettings.fallbackHomePage(
+        intent: ThemeConfigIntent.SetMainDestinationVisible,
+    ): String = if (!intent.visible && defaultHomePage == intent.route) {
+        MainDestination.Bookshelf.route
+    } else {
+        defaultHomePage
     }
 
     private fun selectLauncherIcon(value: String) {
         viewModelScope.launch {
-            appShellSettingsGateway.update(
-                AppShellSettingsUpdate.StringValue(AppShellStringSetting.LauncherIcon, value)
-            )
+            appShellSettingsGateway.update { it.copy(launcherIcon = value) }
             _effects.tryEmit(ThemeConfigEffect.ChangeLauncherIcon(value))
         }
     }
 
     private fun selectNavigationIcon(intent: ThemeConfigIntent.SelectNavigationIcon) {
-        val setting = when (intent.destination) {
-            MainDestination.Home.route -> AppShellStringSetting.NavIconHome
-            MainDestination.Bookshelf.route -> AppShellStringSetting.NavIconBookshelf
-            MainDestination.Explore.route -> AppShellStringSetting.NavIconExplore
-            MainDestination.Rss.route -> AppShellStringSetting.NavIconRss
-            MainDestination.My.route -> AppShellStringSetting.NavIconMy
+        val transform: (AppShellSettings) -> AppShellSettings = when (intent.destination) {
+            MainDestination.Home.route -> { settings ->
+                settings.copy(navIconHome = intent.path)
+            }
+            MainDestination.Bookshelf.route -> { settings ->
+                settings.copy(navIconBookshelf = intent.path)
+            }
+            MainDestination.Explore.route -> { settings ->
+                settings.copy(navIconExplore = intent.path)
+            }
+            MainDestination.Rss.route -> { settings ->
+                settings.copy(navIconRss = intent.path)
+            }
+            MainDestination.My.route -> { settings ->
+                settings.copy(navIconMy = intent.path)
+            }
             else -> return
         }
-        updateAppShell(AppShellSettingsUpdate.StringValue(setting, intent.path))
+        updateAppShell(transform = transform)
     }
 
     private fun setTime(field: ThemeTimeField, value: String) {

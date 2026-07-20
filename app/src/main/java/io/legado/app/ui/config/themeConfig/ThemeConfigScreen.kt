@@ -60,9 +60,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
-import io.legado.app.domain.gateway.AppShellBooleanSetting
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
-import io.legado.app.domain.gateway.AppShellStringSetting
 import io.legado.app.domain.gateway.ThemeBooleanSetting
 import io.legado.app.domain.gateway.ThemeFloatSetting
 import io.legado.app.domain.gateway.ThemeIntSetting
@@ -201,9 +198,7 @@ fun ThemeConfigScreen(
                             entryValues = stringArrayResource(R.array.theme_mode_v),
                             onValueChange = { mode ->
                                 onIntent(
-                                    ThemeConfigIntent.UpdateAppShell(
-                                        AppShellSettingsUpdate.ThemeMode(mode)
-                                    )
+                                    ThemeConfigIntent.SetThemeMode(mode)
                                 )
                             }
                         )
@@ -232,9 +227,7 @@ fun ThemeConfigScreen(
                             selectedMode = appShell.themeMode,
                             onModeSelected = { mode ->
                                 onIntent(
-                                    ThemeConfigIntent.UpdateAppShell(
-                                        AppShellSettingsUpdate.ThemeMode(mode)
-                                    )
+                                    ThemeConfigIntent.SetThemeMode(mode)
                                 )
                             }
                         )
@@ -280,9 +273,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.composeEngine_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.ComposeEngine(it)
-                                )
+                                ThemeConfigIntent.SetComposeEngine(it)
                             )
                         }
                     )
@@ -299,12 +290,7 @@ fun ThemeConfigScreen(
                         checked = appShell.predictiveBackEnabled,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.PredictiveBack,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetPredictiveBackEnabled(it)
                             )
                         }
                     )
@@ -319,9 +305,7 @@ fun ThemeConfigScreen(
                         steps = 7,
                         onValueChange = { value ->
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.FontScale(value.toInt())
-                                )
+                                ThemeConfigIntent.SetFontScale(value.toInt())
                             )
                         }
                     )
@@ -345,12 +329,7 @@ fun ThemeConfigScreen(
                         checked = appShell.showStatusBar,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.ShowStatusBar,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetShowStatusBar(it)
                             )
                         }
                     )
@@ -360,12 +339,7 @@ fun ThemeConfigScreen(
                         checked = appShell.swipeAnimation,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.SwipeAnimation,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetSwipeAnimation(it)
                             )
                         }
                     )
@@ -375,12 +349,7 @@ fun ThemeConfigScreen(
                         checked = appShell.showBottomView,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.ShowBottomView,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetShowBottomView(it)
                             )
                         }
                     )
@@ -390,12 +359,7 @@ fun ThemeConfigScreen(
                         checked = appShell.useFloatingBottomBar,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.UseFloatingBottomBar,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetUseFloatingBottomBar(it)
                             )
                         }
                     )
@@ -409,12 +373,7 @@ fun ThemeConfigScreen(
                                 checked = appShell.useFloatingBottomBarLiquidGlass,
                                 onCheckedChange = {
                                     onIntent(
-                                        ThemeConfigIntent.UpdateAppShell(
-                                            AppShellSettingsUpdate.BooleanValue(
-                                                AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass,
-                                                it,
-                                            )
-                                        )
+                                        ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it)
                                     )
                                 }
                             )
@@ -445,12 +404,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.tabletInterface_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.StringValue(
-                                        AppShellStringSetting.TabletInterface,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetTabletInterface(it)
                             )
                         }
                     )
@@ -461,12 +415,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.label_vis_mode_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.StringValue(
-                                        AppShellStringSetting.LabelVisibilityMode,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetLabelVisibilityMode(it)
                             )
                         }
                     )

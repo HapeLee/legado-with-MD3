@@ -40,7 +40,6 @@ import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
@@ -5935,7 +5934,7 @@ class ReadBookViewModel(
         hasDismissedLightReminder = false
         val nextMode = if (isNightTheme()) "1" else "2"
         viewModelScope.launch {
-            appShellSettingsGateway.update(AppShellSettingsUpdate.ThemeMode(nextMode))
+            appShellSettingsGateway.update { it.copy(themeMode = nextMode) }
         }
         _uiState.update {
             val newActiveReminder = if (it.activeReminder?.type is ReminderType.DayNightReminder) {

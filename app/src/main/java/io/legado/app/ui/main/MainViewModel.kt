@@ -3,9 +3,7 @@ package io.legado.app.ui.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.EventBus
-import io.legado.app.domain.gateway.AppShellBooleanSetting
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.ThemeSettings
@@ -74,12 +72,7 @@ class MainViewModel(
     private fun setNavExtended(expanded: Boolean) {
         if (_uiState.value.navExtended == expanded) return
         viewModelScope.launch {
-            appShellSettingsGateway.update(
-                AppShellSettingsUpdate.BooleanValue(
-                    AppShellBooleanSetting.NavExtended,
-                    expanded,
-                )
-            )
+            appShellSettingsGateway.update { it.copy(navExtended = expanded) }
         }
     }
 

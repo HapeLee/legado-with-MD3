@@ -3,10 +3,7 @@ package io.legado.app.data.repository
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.AppShellBooleanSetting
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
-import io.legado.app.domain.gateway.AppShellStringSetting
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -46,49 +43,12 @@ class AppShellSettingsRepository : AppShellSettingsGateway {
         .map(Preferences::toAppShellSettings)
         .distinctUntilChanged()
 
-    override suspend fun update(update: AppShellSettingsUpdate) = updateAll(listOf(update))
-
-    override suspend fun updateAll(updates: List<AppShellSettingsUpdate>) {
-        val values = updates.associate { update ->
-            val (key, value) = when (update) {
-                is AppShellSettingsUpdate.ThemeMode -> PreferKey.themeMode to update.value
-                is AppShellSettingsUpdate.FontScale -> PreferKey.fontScale to update.value
-                is AppShellSettingsUpdate.ComposeEngine -> PreferKey.composeEngine to update.value
-                is AppShellSettingsUpdate.MainNavigationOrder ->
-                    PreferKey.mainNavigationOrder to update.value
-                is AppShellSettingsUpdate.BooleanValue -> when (update.setting) {
-                    AppShellBooleanSetting.ShowHome -> PreferKey.showHome to update.value
-                    AppShellBooleanSetting.ShowDiscovery -> PreferKey.showDiscovery to update.value
-                    AppShellBooleanSetting.ShowRss -> PreferKey.showRss to update.value
-                    AppShellBooleanSetting.ShowStatusBar -> PreferKey.showStatusBar to update.value
-                    AppShellBooleanSetting.SwipeAnimation -> PreferKey.swipeAnimation to update.value
-                    AppShellBooleanSetting.PredictiveBack ->
-                        PreferKey.isPredictiveBackEnabled to update.value
-                    AppShellBooleanSetting.ShowBottomView -> PreferKey.showBottomView to update.value
-                    AppShellBooleanSetting.UseFloatingBottomBar ->
-                        PreferKey.useFloatingBottomBar to update.value
-                    AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass ->
-                        PreferKey.useFloatingBottomBarLiquidGlass to update.value
-                    AppShellBooleanSetting.NavExtended -> PreferKey.navExtended to update.value
-                }
-                is AppShellSettingsUpdate.StringValue -> when (update.setting) {
-                    AppShellStringSetting.TabletInterface ->
-                        PreferKey.tabletInterface to update.value
-                    AppShellStringSetting.LabelVisibilityMode ->
-                        PreferKey.labelVisibilityMode to update.value
-                    AppShellStringSetting.DefaultHomePage ->
-                        PreferKey.defaultHomePage to update.value
-                    AppShellStringSetting.NavIconHome -> PreferKey.navIconHome to update.value
-                    AppShellStringSetting.NavIconBookshelf -> PreferKey.navIconBookshelf to update.value
-                    AppShellStringSetting.NavIconExplore -> PreferKey.navIconExplore to update.value
-                    AppShellStringSetting.NavIconRss -> PreferKey.navIconRss to update.value
-                    AppShellStringSetting.NavIconMy -> PreferKey.navIconMy to update.value
-                    AppShellStringSetting.LauncherIcon -> PreferKey.launcherIcon to update.value
-                }
-            }
-            key to value
-        }
-        AppConfigStore.putAll(values)
+    override suspend fun update(transform: (AppShellSettings) -> AppShellSettings) {
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toAppShellSettings,
+            toPrefMap = AppShellSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
@@ -431,6 +391,32 @@ internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettin
     navIconRss = compatDsString(PreferKey.navIconRss) ?: "",
     navIconMy = compatDsString(PreferKey.navIconMy) ?: "",
     launcherIcon = compatDsString(PreferKey.launcherIcon) ?: "ic_launcher",
+)
+
+internal fun AppShellSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.themeMode to themeMode,
+    PreferKey.fontScale to fontScale,
+    PreferKey.composeEngine to composeEngine,
+    PreferKey.showHome to showHome,
+    PreferKey.showDiscovery to showDiscovery,
+    PreferKey.showRss to showRss,
+    PreferKey.showStatusBar to showStatusBar,
+    PreferKey.swipeAnimation to swipeAnimation,
+    PreferKey.isPredictiveBackEnabled to predictiveBackEnabled,
+    PreferKey.showBottomView to showBottomView,
+    PreferKey.useFloatingBottomBar to useFloatingBottomBar,
+    PreferKey.useFloatingBottomBarLiquidGlass to useFloatingBottomBarLiquidGlass,
+    PreferKey.tabletInterface to tabletInterface,
+    PreferKey.labelVisibilityMode to labelVisibilityMode,
+    PreferKey.defaultHomePage to defaultHomePage,
+    PreferKey.mainNavigationOrder to mainNavigationOrder,
+    PreferKey.navExtended to navExtended,
+    PreferKey.navIconHome to navIconHome,
+    PreferKey.navIconBookshelf to navIconBookshelf,
+    PreferKey.navIconExplore to navIconExplore,
+    PreferKey.navIconRss to navIconRss,
+    PreferKey.navIconMy to navIconMy,
+    PreferKey.launcherIcon to launcherIcon,
 )
 
 internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
