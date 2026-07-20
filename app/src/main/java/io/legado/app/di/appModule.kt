@@ -214,6 +214,7 @@ import io.legado.app.ui.book.import.local.ImportBookViewModel
 import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.import.remote.ServerConfigViewModel
 import io.legado.app.ui.book.import.remote.ServersViewModel
+import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.info.edit.BookInfoEditViewModel
 import io.legado.app.ui.login.SourceLoginViewModel
@@ -566,6 +567,12 @@ val appModule = module {
     }
     viewModel {
         BookInfoEditViewModel(
+            application = get(),
+            bookRepository = get(),
+        )
+    }
+    viewModel {
+        AudioPlayViewModel(
             application = get(),
             bookRepository = get(),
         )

@@ -148,6 +148,12 @@ class BookRepository(
         }
     }
 
+    suspend fun delete(vararg book: Book) {
+        withContext(Dispatchers.IO) {
+            bookDao.delete(*book)
+        }
+    }
+
     suspend fun deleteChaptersByBook(bookUrl: String) {
         withContext(Dispatchers.IO) {
             bookChapterDao.delByBook(bookUrl)

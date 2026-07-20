@@ -16,7 +16,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.addCallback
-import androidx.activity.viewModels
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -52,6 +51,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.model.AudioPlay
 import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import io.legado.app.model.BookCover
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.AudioPlayService
@@ -97,7 +97,7 @@ class AudioPlayActivity :
     private val readAloudSettingsGateway by inject<ReadAloudSettingsGateway>()
 
     override val binding by viewBinding(ActivityAudioPlayBinding::inflate)
-    override val viewModel by viewModels<AudioPlayViewModel>()
+    override val viewModel by viewModel<AudioPlayViewModel>()
     private var adjustProgress = false
     private var playMode = AudioPlay.PlayMode.LIST_END_STOP
     private var playSpeed = 1f
