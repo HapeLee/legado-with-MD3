@@ -3,7 +3,6 @@ package io.legado.app.ui.main.bookshelf
 import androidx.compose.runtime.Stable
 import android.net.Uri
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -64,7 +63,7 @@ sealed interface BookshelfIntent {
     data class UpdateSetting(
         val transform: (BookshelfSettings) -> BookshelfSettings,
     ) : BookshelfIntent
-    data class UpdateThemeSetting(val update: ThemeSettingsUpdate) : BookshelfIntent
+    data class SetCustomTagColorsEnabled(val enabled: Boolean) : BookshelfIntent
     data class SetCustomTagColors(val colors: List<TagColorPair>) : BookshelfIntent
     data object UploadResultConsumed : BookshelfIntent
 }

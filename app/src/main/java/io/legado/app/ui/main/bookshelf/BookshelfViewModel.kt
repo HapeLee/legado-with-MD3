@@ -697,16 +697,15 @@ class BookshelfViewModel(
             is BookshelfIntent.UpdateSetting -> viewModelScope.launch {
                 bookshelfSettingsGateway.update(intent.transform)
             }
-            is BookshelfIntent.UpdateThemeSetting -> viewModelScope.launch {
-                themeSettingsGateway.update(intent.update)
+            is BookshelfIntent.SetCustomTagColorsEnabled -> viewModelScope.launch {
+                themeSettingsGateway.update {
+                    it.copy(enableCustomTagColors = intent.enabled)
+                }
             }
             is BookshelfIntent.SetCustomTagColors -> viewModelScope.launch {
-                themeSettingsGateway.update(
-                    io.legado.app.domain.gateway.ThemeSettingsUpdate.StringValue(
-                        io.legado.app.domain.gateway.ThemeStringSetting.CustomTagColorsJson,
-                        GSON.toJson(intent.colors),
-                    )
-                )
+                themeSettingsGateway.update {
+                    it.copy(customTagColorsJson = GSON.toJson(intent.colors))
+                }
             }
             BookshelfIntent.UploadResultConsumed -> pendingUploadUrlFlow.value = null
         }

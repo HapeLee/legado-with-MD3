@@ -7,13 +7,10 @@ import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ThemeBooleanSetting
-import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
-import io.legado.app.domain.gateway.ThemeStringSetting
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -77,7 +74,7 @@ class ThemeConfigViewModel(
 
     fun onIntent(intent: ThemeConfigIntent) {
         when (intent) {
-            is ThemeConfigIntent.UpdateTheme -> updateTheme(intent.update)
+            is ThemeConfigIntent.UpdateTheme -> updateTheme(intent.transform)
             is ThemeConfigIntent.ShowSheet ->
                 _uiState.update { it.copy(activeSheet = intent.sheet) }
             ThemeConfigIntent.DismissSheet ->
@@ -139,7 +136,7 @@ class ThemeConfigViewModel(
             is ThemeConfigIntent.SelectBackground -> setBackground(intent.uri, intent.dark)
             is ThemeConfigIntent.RemoveBackground -> removeBackground(intent.dark)
             is ThemeConfigIntent.SelectAppFont -> setAppFont(intent.file)
-            ThemeConfigIntent.ClearAppFont -> updateTheme(ThemeSettingsUpdate.AppFontPath(null))
+            ThemeConfigIntent.ClearAppFont -> updateTheme { it.copy(appFontPath = null) }
             is ThemeConfigIntent.SetFontFolder -> viewModelScope.launch {
                 readSettingsGateway.update { it.copy(fontFolder = intent.path) }
             }
@@ -148,9 +145,9 @@ class ThemeConfigViewModel(
                 ThemeConfigEffect.OpenTimePicker(intent.field, intent.currentValue)
             )
             is ThemeConfigIntent.SetTime -> setTime(intent.field, intent.value)
-            ThemeConfigIntent.DismissRefactorTip -> updateTheme(
-                ThemeSettingsUpdate.BooleanValue(ThemeBooleanSetting.ShowRefactorTip, false)
-            )
+            ThemeConfigIntent.DismissRefactorTip -> updateTheme {
+                it.copy(showRefactorTip = false)
+            }
         }
     }
 
@@ -164,8 +161,8 @@ class ThemeConfigViewModel(
         }
     }
 
-    private fun updateTheme(update: ThemeSettingsUpdate) {
-        viewModelScope.launch { themeSettingsGateway.update(update) }
+    private fun updateTheme(transform: (ThemeSettings) -> ThemeSettings) {
+        viewModelScope.launch { themeSettingsGateway.update(transform) }
     }
 
     private fun selectTheme(value: String) {
@@ -177,32 +174,27 @@ class ThemeConfigViewModel(
             return
         }
         viewModelScope.launch {
-            val updates = buildList {
-                if (value == "13") {
-                    add(ThemeSettingsUpdate.IntValue(ThemeIntSetting.ContainerOpacity, 0))
-                }
-                add(ThemeSettingsUpdate.AppTheme(value))
+            themeSettingsGateway.update {
+                it.copy(
+                    appTheme = value,
+                    containerOpacity = if (value == "13") 0 else it.containerOpacity,
+                )
             }
-            themeSettingsGateway.updateAll(updates)
         }
     }
 
     private fun setMiuixMonet(enabled: Boolean) {
         viewModelScope.launch {
-            val currentTheme = _uiState.value.theme.appTheme
-            themeSettingsGateway.updateAll(
-                buildList {
-                    add(
-                        ThemeSettingsUpdate.BooleanValue(
-                            ThemeBooleanSetting.UseMiuixMonet,
-                            enabled,
-                        )
-                    )
-                    if (enabled && currentTheme != "0" && currentTheme != "12") {
-                        add(ThemeSettingsUpdate.AppTheme("0"))
-                    }
-                }
-            )
+            themeSettingsGateway.update {
+                it.copy(
+                    useMiuixMonet = enabled,
+                    appTheme = if (enabled && it.appTheme != "0" && it.appTheme != "12") {
+                        "0"
+                    } else {
+                        it.appTheme
+                    },
+                )
+            }
         }
     }
 
@@ -213,24 +205,16 @@ class ThemeConfigViewModel(
 
     private fun setBlurEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            themeSettingsGateway.updateAll(
-                buildList {
-                    add(
-                        ThemeSettingsUpdate.BooleanValue(
-                            ThemeBooleanSetting.EnableBlur,
-                            enabled,
-                        )
-                    )
-                    if (!enabled) {
-                        add(
-                            ThemeSettingsUpdate.BooleanValue(
-                                ThemeBooleanSetting.EnableProgressiveBlur,
-                                false,
-                            )
-                        )
-                    }
-                }
-            )
+            themeSettingsGateway.update {
+                it.copy(
+                    enableBlur = enabled,
+                    enableProgressiveBlur = if (enabled) {
+                        it.enableProgressiveBlur
+                    } else {
+                        false
+                    },
+                )
+            }
         }
     }
 
@@ -297,11 +281,12 @@ class ThemeConfigViewModel(
     }
 
     private fun setTime(field: ThemeTimeField, value: String) {
-        val setting = when (field) {
-            ThemeTimeField.EyeProtectionStart -> ThemeStringSetting.EyeProtectionStartTime
-            ThemeTimeField.EyeProtectionEnd -> ThemeStringSetting.EyeProtectionEndTime
+        updateTheme {
+            when (field) {
+                ThemeTimeField.EyeProtectionStart -> it.copy(eyeProtectionStartTime = value)
+                ThemeTimeField.EyeProtectionEnd -> it.copy(eyeProtectionEndTime = value)
+            }
         }
-        updateTheme(ThemeSettingsUpdate.StringValue(setting, value))
     }
 
     private fun setBackground(uriString: String, dark: Boolean) {
@@ -340,13 +325,10 @@ class ThemeConfigViewModel(
                 .takeIf { it.absolutePath.contains(appCtx.externalFiles.absolutePath) }
                 ?.delete()
         }
-        themeSettingsGateway.update(
-            ThemeSettingsUpdate.StringValue(
-                if (dark) ThemeStringSetting.BackgroundImageDark
-                else ThemeStringSetting.BackgroundImageLight,
-                newPath,
-            )
-        )
+        themeSettingsGateway.update {
+            if (dark) it.copy(backgroundImageDark = newPath)
+            else it.copy(backgroundImageLight = newPath)
+        }
     }
 
     private fun setAppFont(fileDoc: FileDoc) {
@@ -367,7 +349,7 @@ class ThemeConfigViewModel(
                     temp.copyTo(target, overwrite = true)
                     temp.delete()
                 }
-                themeSettingsGateway.update(ThemeSettingsUpdate.AppFontPath(target.absolutePath))
+                themeSettingsGateway.update { it.copy(appFontPath = target.absolutePath) }
             }.onFailure(Throwable::printStackTrace)
         }
     }

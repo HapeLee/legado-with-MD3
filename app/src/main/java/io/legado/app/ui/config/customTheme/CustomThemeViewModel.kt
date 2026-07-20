@@ -3,7 +3,6 @@ package io.legado.app.ui.config.customTheme
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.model.settings.ThemeSettings
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,13 +31,13 @@ class CustomThemeViewModel(
     fun onIntent(intent: CustomThemeIntent) {
         when (intent) {
             is CustomThemeIntent.DeepPersonalizationChanged ->
-                update(ThemeSettingsUpdate.DeepPersonalization(intent.value))
+                update { it.copy(enableDeepPersonalization = intent.value) }
             is CustomThemeIntent.PaletteStyleChanged ->
-                update(ThemeSettingsUpdate.PaletteStyle(intent.value))
+                update { it.copy(paletteStyle = intent.value) }
             is CustomThemeIntent.CustomContrastChanged ->
-                update(ThemeSettingsUpdate.CustomContrast(intent.value))
+                update { it.copy(customContrast = intent.value) }
             is CustomThemeIntent.MaterialVersionChanged ->
-                update(ThemeSettingsUpdate.MaterialVersion(intent.value))
+                update { it.copy(materialVersion = intent.value) }
             is CustomThemeIntent.OpenPicker ->
                 _uiState.update { it.copy(activePicker = intent.picker) }
             CustomThemeIntent.DismissPicker ->
@@ -49,21 +48,42 @@ class CustomThemeViewModel(
 
     private fun selectColor(color: Int) {
         when (val picker = _uiState.value.activePicker) {
-            is CustomThemePicker.DeepColor ->
-                update(ThemeSettingsUpdate.CustomColor(picker.slot, color))
+            is CustomThemePicker.DeepColor -> update { settings ->
+                when (picker.slot) {
+                    CustomThemeColorSlot.Primary -> settings.copy(themeColor = color)
+                    CustomThemeColorSlot.Secondary -> settings.copy(secondaryThemeColor = color)
+                    CustomThemeColorSlot.PrimaryText -> settings.copy(primaryTextColor = color)
+                    CustomThemeColorSlot.SecondaryText ->
+                        settings.copy(secondaryTextColor = color)
+                    CustomThemeColorSlot.Background -> settings.copy(themeBackgroundColor = color)
+                    CustomThemeColorSlot.LabelContainer ->
+                        settings.copy(labelContainerColor = color)
+                    CustomThemeColorSlot.PrimaryNight -> settings.copy(themeColorNight = color)
+                    CustomThemeColorSlot.SecondaryNight ->
+                        settings.copy(secondaryThemeColorNight = color)
+                    CustomThemeColorSlot.PrimaryTextNight ->
+                        settings.copy(primaryTextColorNight = color)
+                    CustomThemeColorSlot.SecondaryTextNight ->
+                        settings.copy(secondaryTextColorNight = color)
+                    CustomThemeColorSlot.BackgroundNight ->
+                        settings.copy(themeBackgroundColorNight = color)
+                    CustomThemeColorSlot.LabelContainerNight ->
+                        settings.copy(labelContainerColorNight = color)
+                }
+            }
             CustomThemePicker.DaySeed -> {
-                update(ThemeSettingsUpdate.CustomPrimary(color))
+                update { it.copy(customPrimary = color) }
                 _effects.tryEmit(CustomThemeEffect.ApplyLegacyPrimarySeed(color))
             }
-            CustomThemePicker.NightSeed -> update(ThemeSettingsUpdate.CustomNightPrimary(color))
+            CustomThemePicker.NightSeed -> update { it.copy(customNightPrimary = color) }
             null -> return
         }
         _uiState.update { it.copy(activePicker = null) }
     }
 
-    private fun update(update: ThemeSettingsUpdate) {
+    private fun update(transform: (ThemeSettings) -> ThemeSettings) {
         viewModelScope.launch {
-            runCatching { themeSettingsGateway.update(update) }
+            runCatching { themeSettingsGateway.update(transform) }
                 .onFailure { error ->
                     _effects.tryEmit(
                         CustomThemeEffect.SettingsUpdateFailed(

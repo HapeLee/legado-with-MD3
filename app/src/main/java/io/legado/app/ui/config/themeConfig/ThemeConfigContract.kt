@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.themeConfig
 
 import androidx.compose.runtime.Stable
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.utils.FileDoc
@@ -31,7 +30,9 @@ enum class ThemeTimeField {
 }
 
 sealed interface ThemeConfigIntent {
-    data class UpdateTheme(val update: ThemeSettingsUpdate) : ThemeConfigIntent
+    data class UpdateTheme(
+        val transform: (ThemeSettings) -> ThemeSettings,
+    ) : ThemeConfigIntent
     data class ShowSheet(val sheet: ThemeConfigSheet) : ThemeConfigIntent
     data object DismissSheet : ThemeConfigIntent
     data class SelectTheme(val value: String) : ThemeConfigIntent

@@ -31,8 +31,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.domain.gateway.ThemeBooleanSetting
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
 import io.legado.app.ui.config.themeConfig.TagColorPair
@@ -55,7 +53,7 @@ fun BookshelfConfigSheet(
     enableCustomTagColors: Boolean,
     customTagColors: List<TagColorPair>,
     themeColor: Int,
-    onThemeUpdate: (ThemeSettingsUpdate) -> Unit,
+    onCustomTagColorsEnabledChange: (Boolean) -> Unit,
     onCustomTagColorsChange: (List<TagColorPair>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -482,14 +480,7 @@ fun BookshelfConfigSheet(
                                         title = stringResource(R.string.custom_tag_colors),
                                         checked = enableCustomTagColors,
                                         color = LegadoTheme.colorScheme.surface,
-                                        onCheckedChange = {
-                                            onThemeUpdate(
-                                                ThemeSettingsUpdate.BooleanValue(
-                                                    ThemeBooleanSetting.EnableCustomTagColors,
-                                                    it,
-                                                )
-                                            )
-                                        }
+                                        onCheckedChange = onCustomTagColorsEnabledChange
                                     )
                                     AnimatedVisibility(visible = enableCustomTagColors) {
                                         CompactClickableSettingItem(

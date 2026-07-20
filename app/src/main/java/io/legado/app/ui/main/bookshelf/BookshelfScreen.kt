@@ -1193,7 +1193,9 @@ private fun BookshelfOverlays(
         enableCustomTagColors = uiState.enableCustomTagColors,
         customTagColors = uiState.customTagColors,
         themeColor = uiState.themeColor,
-        onThemeUpdate = { onIntent(BookshelfIntent.UpdateThemeSetting(it)) },
+        onCustomTagColorsEnabledChange = {
+            onIntent(BookshelfIntent.SetCustomTagColorsEnabled(it))
+        },
         onCustomTagColorsChange = {
             onIntent(BookshelfIntent.SetCustomTagColors(it))
         },

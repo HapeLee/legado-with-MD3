@@ -9,13 +9,7 @@ import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.ThemeBooleanSetting
-import io.legado.app.domain.gateway.ThemeColorSlot
-import io.legado.app.domain.gateway.ThemeFloatSetting
-import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
-import io.legado.app.domain.gateway.ThemeStringSetting
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.settings.AppShellSettings
@@ -60,94 +54,12 @@ class ThemeSettingsRepository : ThemeSettingsGateway {
         .map(Preferences::toThemeSettings)
         .distinctUntilChanged()
 
-    override suspend fun update(update: ThemeSettingsUpdate) = updateAll(listOf(update))
-
-    override suspend fun updateAll(updates: List<ThemeSettingsUpdate>) {
-        val values = updates.associate { update ->
-            val (key, value) = when (update) {
-            is ThemeSettingsUpdate.AppTheme -> PreferKey.appTheme to update.value
-            is ThemeSettingsUpdate.PureBlack -> PreferKey.pureBlack to update.value
-            is ThemeSettingsUpdate.PaletteStyle -> PreferKey.paletteStyle to update.value
-            is ThemeSettingsUpdate.MaterialVersion -> PreferKey.materialVersion to update.value
-            is ThemeSettingsUpdate.CustomContrast -> PreferKey.customContrast to update.value
-            is ThemeSettingsUpdate.DeepPersonalization ->
-                PreferKey.enableDeepPersonalization to update.value
-            is ThemeSettingsUpdate.CustomColor -> when (update.slot) {
-                ThemeColorSlot.Primary -> PreferKey.themeColor to update.value
-                ThemeColorSlot.Secondary -> PreferKey.secondaryThemeColor to update.value
-                ThemeColorSlot.PrimaryText -> PreferKey.primaryTextColor to update.value
-                ThemeColorSlot.SecondaryText -> PreferKey.secondaryTextColor to update.value
-                ThemeColorSlot.Background -> PreferKey.themeBackgroundColor to update.value
-                ThemeColorSlot.LabelContainer -> PreferKey.labelContainerColor to update.value
-                ThemeColorSlot.PrimaryNight -> PreferKey.themeColorNight to update.value
-                ThemeColorSlot.SecondaryNight -> PreferKey.secondaryThemeColorNight to update.value
-                ThemeColorSlot.PrimaryTextNight -> PreferKey.primaryTextColorNight to update.value
-                ThemeColorSlot.SecondaryTextNight -> PreferKey.secondaryTextColorNight to update.value
-                ThemeColorSlot.BackgroundNight -> PreferKey.themeBackgroundColorNight to update.value
-                ThemeColorSlot.LabelContainerNight -> PreferKey.labelContainerColorNight to update.value
-            }
-            is ThemeSettingsUpdate.AppFontPath -> PreferKey.appFontPath to update.value
-            is ThemeSettingsUpdate.CustomPrimary -> PreferKey.cPrimary to update.value
-            is ThemeSettingsUpdate.CustomNightPrimary -> PreferKey.cNPrimary to update.value
-            is ThemeSettingsUpdate.BooleanValue -> when (update.setting) {
-                ThemeBooleanSetting.UseMiuixMonet -> PreferKey.useMiuixMonet to update.value
-                ThemeBooleanSetting.EnableBlur -> PreferKey.enableBlur to update.value
-                ThemeBooleanSetting.EnableProgressiveBlur -> PreferKey.enableProgressiveBlur to update.value
-                ThemeBooleanSetting.UseFlexibleTopAppBar -> PreferKey.useFlexibleTopAppBar to update.value
-                ThemeBooleanSetting.BookInfoFollowCoverColor -> PreferKey.bookInfoFollowCoverColor to update.value
-                ThemeBooleanSetting.EnableItemDivider -> PreferKey.enableItemDivider to update.value
-                ThemeBooleanSetting.OverrideBaseCardCornerRadius ->
-                    PreferKey.overrideBaseCardCornerRadius to update.value
-
-                ThemeBooleanSetting.OverrideBaseCardBorder ->
-                    PreferKey.overrideBaseCardBorder to update.value
-
-                ThemeBooleanSetting.DisableSplicedColumnGroupCornerRadius ->
-                    PreferKey.disableSplicedColumnGroupCornerRadius to update.value
-                ThemeBooleanSetting.EyeProtectionEnabled -> PreferKey.eyeProtectionEnabled to update.value
-                ThemeBooleanSetting.EyeProtectionSchedule -> PreferKey.eyeProtectionSchedule to update.value
-                ThemeBooleanSetting.ShowRefactorTip ->
-                    io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name to update.value
-                ThemeBooleanSetting.EnableCustomTagColors -> PreferKey.enableCustomTagColors to update.value
-            }
-            is ThemeSettingsUpdate.IntValue -> when (update.setting) {
-                ThemeIntSetting.ContainerOpacity -> PreferKey.containerOpacity to update.value
-                ThemeIntSetting.TopBarOpacity -> PreferKey.topBarOpacity to update.value
-                ThemeIntSetting.BottomBarOpacity -> PreferKey.bottomBarOpacity to update.value
-                ThemeIntSetting.TopBarBlurRadius -> PreferKey.topBarBlurRadius to update.value
-                ThemeIntSetting.BottomBarBlurRadius -> PreferKey.bottomBarBlurRadius to update.value
-                ThemeIntSetting.TopBarBlurAlpha -> PreferKey.topBarBlurAlpha to update.value
-                ThemeIntSetting.BottomBarBlurAlpha -> PreferKey.bottomBarBlurAlpha to update.value
-                ThemeIntSetting.BackgroundImageBlurring -> PreferKey.bgImageBlurring to update.value
-                ThemeIntSetting.BackgroundImageDarkBlurring -> PreferKey.bgImageNBlurring to update.value
-                ThemeIntSetting.ItemDividerColor -> PreferKey.itemDividerColor to update.value
-                ThemeIntSetting.BaseCardBorderColor -> PreferKey.baseCardBorderColor to update.value
-                ThemeIntSetting.BaseCardBorderColorNight ->
-                    PreferKey.baseCardBorderColorNight to update.value
-                ThemeIntSetting.ColorTemperature -> PreferKey.colorTemperature to update.value
-            }
-            is ThemeSettingsUpdate.FloatValue -> when (update.setting) {
-                ThemeFloatSetting.BottomBarLensRadius -> PreferKey.bottomBarLensRadius to update.value
-                ThemeFloatSetting.ItemDividerWidth -> PreferKey.itemDividerWidth to update.value
-                ThemeFloatSetting.ItemDividerLength -> PreferKey.itemDividerLength to update.value
-                ThemeFloatSetting.BaseCardCornerRadius -> PreferKey.baseCardCornerRadius to update.value
-                ThemeFloatSetting.BaseCardBorderWidth -> PreferKey.baseCardBorderWidth to update.value
-            }
-            is ThemeSettingsUpdate.StringValue -> when (update.setting) {
-                ThemeStringSetting.BookInfoNetworkCoverBackground ->
-                    PreferKey.bookInfoNetworkCoverBackground to update.value
-                ThemeStringSetting.BookInfoDefaultCoverBackground ->
-                    PreferKey.bookInfoDefaultCoverBackground to update.value
-                ThemeStringSetting.BackgroundImageLight -> PreferKey.bgImage to update.value
-                ThemeStringSetting.BackgroundImageDark -> PreferKey.bgImageN to update.value
-                ThemeStringSetting.EyeProtectionStartTime -> PreferKey.eyeProtectionStartTime to update.value
-                ThemeStringSetting.EyeProtectionEndTime -> PreferKey.eyeProtectionEndTime to update.value
-                ThemeStringSetting.CustomTagColorsJson -> PreferKey.customTagColors to update.value
-            }
-            }
-            key to value
-        }
-        AppConfigStore.putAll(values)
+    override suspend fun update(transform: (ThemeSettings) -> ThemeSettings) {
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toThemeSettings,
+            toPrefMap = ThemeSettings::toGatewayPrefMap,
+            transform = transform,
+        )
     }
 }
 
@@ -487,6 +399,73 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     ) ?: true,
     enableCustomTagColors = compatDsBoolean(PreferKey.enableCustomTagColors) ?: false,
     customTagColorsJson = compatDsString(PreferKey.customTagColors),
+)
+
+/**
+ * Theme gateway 的 59 键写入边界。主题包专用的 [ThemeSettings.customMode] 与
+ * [ThemeSettings.bookInfoInputColor] 由 ThemePackageSettingsGateway 的事务路径持久化。
+ */
+internal fun ThemeSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.appTheme to appTheme,
+    PreferKey.useMiuixMonet to useMiuixMonet,
+    PreferKey.pureBlack to isPureBlack,
+    PreferKey.paletteStyle to paletteStyle,
+    PreferKey.materialVersion to materialVersion,
+    PreferKey.customContrast to customContrast,
+    PreferKey.appFontPath to appFontPath,
+    PreferKey.cPrimary to customPrimary,
+    PreferKey.cNPrimary to customNightPrimary,
+    PreferKey.enableDeepPersonalization to enableDeepPersonalization,
+    PreferKey.themeColor to themeColor,
+    PreferKey.secondaryThemeColor to secondaryThemeColor,
+    PreferKey.primaryTextColor to primaryTextColor,
+    PreferKey.secondaryTextColor to secondaryTextColor,
+    PreferKey.themeBackgroundColor to themeBackgroundColor,
+    PreferKey.labelContainerColor to labelContainerColor,
+    PreferKey.themeColorNight to themeColorNight,
+    PreferKey.secondaryThemeColorNight to secondaryThemeColorNight,
+    PreferKey.primaryTextColorNight to primaryTextColorNight,
+    PreferKey.secondaryTextColorNight to secondaryTextColorNight,
+    PreferKey.themeBackgroundColorNight to themeBackgroundColorNight,
+    PreferKey.labelContainerColorNight to labelContainerColorNight,
+    PreferKey.containerOpacity to containerOpacity,
+    PreferKey.overrideBaseCardCornerRadius to overrideBaseCardCornerRadius,
+    PreferKey.baseCardCornerRadius to baseCardCornerRadius,
+    PreferKey.overrideBaseCardBorder to overrideBaseCardBorder,
+    PreferKey.baseCardBorderWidth to baseCardBorderWidth,
+    PreferKey.baseCardBorderColor to baseCardBorderColor,
+    PreferKey.baseCardBorderColorNight to baseCardBorderColorNight,
+    PreferKey.disableSplicedColumnGroupCornerRadius to disableSplicedColumnGroupCornerRadius,
+    PreferKey.topBarOpacity to topBarOpacity,
+    PreferKey.bottomBarOpacity to bottomBarOpacity,
+    PreferKey.enableBlur to enableBlur,
+    PreferKey.enableProgressiveBlur to enableProgressiveBlur,
+    PreferKey.topBarBlurRadius to topBarBlurRadius,
+    PreferKey.bottomBarBlurRadius to bottomBarBlurRadius,
+    PreferKey.topBarBlurAlpha to topBarBlurAlpha,
+    PreferKey.bottomBarBlurAlpha to bottomBarBlurAlpha,
+    PreferKey.bottomBarLensRadius to bottomBarLensRadius,
+    PreferKey.useFlexibleTopAppBar to useFlexibleTopAppBar,
+    PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
+    PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
+    PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,
+    PreferKey.bgImage to backgroundImageLight,
+    PreferKey.bgImageN to backgroundImageDark,
+    PreferKey.bgImageBlurring to backgroundImageBlurring,
+    PreferKey.bgImageNBlurring to backgroundImageDarkBlurring,
+    PreferKey.enableItemDivider to enableItemDivider,
+    PreferKey.itemDividerWidth to itemDividerWidth,
+    PreferKey.itemDividerLength to itemDividerLength,
+    PreferKey.itemDividerColor to itemDividerColor,
+    PreferKey.eyeProtectionEnabled to eyeProtectionEnabled,
+    PreferKey.colorTemperature to colorTemperature,
+    PreferKey.eyeProtectionSchedule to eyeProtectionSchedule,
+    PreferKey.eyeProtectionStartTime to eyeProtectionStartTime,
+    PreferKey.eyeProtectionEndTime to eyeProtectionEndTime,
+    io.legado.app.data.local.preferences.LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name to
+        showRefactorTip,
+    PreferKey.enableCustomTagColors to enableCustomTagColors,
+    PreferKey.customTagColors to customTagColorsJson,
 )
 
 internal fun Preferences.toOtherSettings(): OtherSettings {
