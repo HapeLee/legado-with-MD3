@@ -50,6 +50,10 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         return bookSourceDao.getBookSource(sourceUrl)
     }
 
+    fun has(bookSourceUrl: String): Boolean {
+        return bookSourceDao.has(bookSourceUrl)
+    }
+
     suspend fun getBookSourceAddBook(baseUrl: String): BookSource? {
         return withContext(Dispatchers.IO) {
             bookSourceDao.getBookSourceAddBook(baseUrl)

@@ -50,6 +50,7 @@ import io.legado.app.data.repository.DownloadCacheSettingsRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HighlightRuleRepository
+import io.legado.app.data.repository.HighlightTagRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.HomepageSettingsRepository
@@ -360,6 +361,7 @@ val appModule = module {
     singleOf(::HttpTtsRepository)
     singleOf(::ApplyReadSettingUseCase)
     singleOf(::HighlightRuleRepository)
+    singleOf(::HighlightTagRuleRepository)
     singleOf(::ReadStyleRepository)
     singleOf(::ReadBookStyleConfigRepository)
     single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
