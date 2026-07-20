@@ -3,9 +3,8 @@ package io.legado.app.ui.main.bookshelf
 import androidx.compose.runtime.Stable
 import android.net.Uri
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.domain.model.settings.BookshelfSettings
-import io.legado.app.domain.gateway.BookshelfSettingsUpdate
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
+import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList
@@ -62,7 +61,9 @@ sealed interface BookshelfIntent {
     data class ExportToUri(val uri: Uri, val books: List<BookUiItem>) : BookshelfIntent
     data class UploadBookshelf(val books: List<BookUiItem>) : BookshelfIntent
     data class ImportFromUri(val uri: Uri, val groupId: Long) : BookshelfIntent
-    data class UpdateSetting(val update: BookshelfSettingsUpdate) : BookshelfIntent
+    data class UpdateSetting(
+        val transform: (BookshelfSettings) -> BookshelfSettings,
+    ) : BookshelfIntent
     data class UpdateThemeSetting(val update: ThemeSettingsUpdate) : BookshelfIntent
     data class SetCustomTagColors(val colors: List<TagColorPair>) : BookshelfIntent
     data object UploadResultConsumed : BookshelfIntent
