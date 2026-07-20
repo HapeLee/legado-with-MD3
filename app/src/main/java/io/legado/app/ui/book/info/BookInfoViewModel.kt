@@ -675,8 +675,8 @@ class BookInfoViewModel(
                 book.durChapterTitle = it.durChapterTitle
             }
             book.save()
-            if (ReadBook.book?.isSameNameAuthor(book) == true) {
-                ReadBook.book = book
+            if (ReadBook.isCurrentBook(book)) {
+                ReadBook.replaceCurrentBook(book)
             } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
                 AudioPlay.book = book
             }
@@ -710,8 +710,8 @@ class BookInfoViewModel(
                 book.durChapterPos = it.durChapterPos
                 book.durChapterTitle = it.durChapterTitle
             }
-            if (ReadBook.book?.isSameNameAuthor(book) == true) {
-                ReadBook.book = book
+            if (ReadBook.isCurrentBook(book)) {
+                ReadBook.replaceCurrentBook(book)
             } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
                 AudioPlay.book = book
             }

@@ -1122,7 +1122,7 @@ class ReadBookController(
                                 ReadBook.readAloud(startPos = line.pagePosition)
                             }
                         } else {
-                            ReadBook.durChapterPos = line.chapterPosition
+                            ReadBook.updateReadingPosition(line.chapterPosition)
                             ReadBook.readAloud(startPos = line.pagePosition)
                         }
                     } else {
@@ -1146,7 +1146,7 @@ class ReadBookController(
                                 ReadBook.readAloud(startPos = line.pagePosition)
                             }
                         } else {
-                            ReadBook.durChapterPos = line.chapterPosition
+                            ReadBook.updateReadingPosition(line.chapterPosition)
                             ReadBook.readAloud(startPos = line.pagePosition)
                         }
                     } else {

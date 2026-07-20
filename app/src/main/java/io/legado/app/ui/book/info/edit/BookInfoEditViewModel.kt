@@ -147,8 +147,8 @@ class BookInfoEditViewModel(
                 applyTagGroupRulesForBook(book)
                 BookHelp.updateCacheFolder(oldBook, book)
 
-                if (ReadBook.book?.bookUrl == book.bookUrl) {
-                    ReadBook.book = book
+                if (ReadBook.isCurrentBook(book.bookUrl)) {
+                    ReadBook.replaceCurrentBook(book)
                 }
                 bookRepository.update(book)
             }

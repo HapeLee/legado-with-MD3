@@ -402,8 +402,8 @@ data class Book(
     }
 
     fun delete() {
-        if (ReadBook.book?.bookUrl == bookUrl) {
-            ReadBook.book = null
+        if (ReadBook.isCurrentBook(bookUrl)) {
+            ReadBook.clearCurrentBook()
         }
         appDb.bookChapterDao.delByBook(bookUrl)
         appDb.bookDao.delete(this)

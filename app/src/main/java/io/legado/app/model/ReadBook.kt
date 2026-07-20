@@ -85,12 +85,15 @@ import kotlin.math.min
 @Suppress("MemberVisibilityCanBePrivate")
 object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var book: Book? = null
+        private set
     var callBack: CallBack? = null
     var inBookshelf = false
     var chapterSize = 0
     var simulatedChapterSize = 0
     var durChapterIndex = 0
+        private set
     var durChapterPos = 0
+        private set
     var isLocalBook = true
     var chapterChanged = false
     @Volatile
@@ -155,6 +158,32 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private const val AUTO_SAVE_INTERVAL = 120 * 1000L
 
     private const val MIN_READ_DURATION = 10 * 1000L
+
+    // region 会话所有权：外部只能通过下列语义化命令改写会话字段（book/durChapterIndex/durChapterPos
+    // 已 private set）。判定用意图化谓词替代裸实体比较，避免调用方直接持有可变 Book。
+
+    /** 当前会话是否正指向该 URL 的书。 */
+    fun isCurrentBook(bookUrl: String): Boolean = book?.bookUrl == bookUrl
+
+    /** 当前会话是否正指向与 [other] 同名同作者的书。 */
+    fun isCurrentBook(other: Book): Boolean = book?.isSameNameAuthor(other) == true
+
+    /** 用同一本书的新实例替换当前会话持有的 Book（仅替换引用，不重置章节/进度）。 */
+    fun replaceCurrentBook(book: Book) {
+        this.book = book
+    }
+
+    /** 清空当前会话持有的 Book（仅置空引用，不动章节/进度状态）。 */
+    fun clearCurrentBook() {
+        book = null
+    }
+
+    /** 更新当前章节内的阅读位置。 */
+    fun updateReadingPosition(position: Int) {
+        durChapterPos = position
+    }
+
+    // endregion
 
     fun resetData(book: Book) {
         wholeBookPageCoordinator.clear()
