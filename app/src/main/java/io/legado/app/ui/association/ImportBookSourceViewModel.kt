@@ -9,9 +9,9 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.config.AppConfig
@@ -30,7 +30,10 @@ import io.legado.app.utils.isUri
 import io.legado.app.utils.splitNotBlank
 
 
-class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
+class ImportBookSourceViewModel(
+    app: Application,
+    private val repository: BookSourceRepository,
+) : BaseViewModel(app) {
     var isAddGroup = false
     var groupName: String? = null
     val errorLiveData = MutableLiveData<String>()
@@ -208,7 +211,7 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
     private fun comparisonSource() {
         execute {
             allSources.forEach {
-                val source = appDb.bookSourceDao.getBookSourcePart(it.bookSourceUrl)
+                val source = repository.getBookSourcePart(it.bookSourceUrl)
                 checkSources.add(source)
                 selectStatus.add(source == null || source.lastUpdateTime < it.lastUpdateTime)
                 newSourceStatus.add(source == null)

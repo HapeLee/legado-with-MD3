@@ -199,12 +199,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     )
     legacyDaoInjectionBaseline.set(
         mapOf(
-            "io/legado/app/ui/association/ImportBookSourceViewModel.kt" to 1,
-            "io/legado/app/ui/association/ImportDictRuleViewModel.kt" to 2,
-            "io/legado/app/ui/association/ImportHttpTtsViewModel.kt" to 2,
-            "io/legado/app/ui/association/ImportReplaceRuleViewModel.kt" to 2,
-            "io/legado/app/ui/association/ImportRssSourceViewModel.kt" to 1,
-            "io/legado/app/ui/association/ImportTxtTocRuleViewModel.kt" to 2,
             "io/legado/app/ui/book/audio/AudioPlayViewModel.kt" to 11,
             "io/legado/app/ui/book/changecover/ChangeCoverViewModel.kt" to 3,
             "io/legado/app/ui/book/changesource/ChangeBookSourceViewModel.kt" to 20,

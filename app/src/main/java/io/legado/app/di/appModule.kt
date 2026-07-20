@@ -53,6 +53,7 @@ import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.HomepageSettingsRepository
 import io.legado.app.data.repository.HttpTtsEngineRepository
+import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.repository.ImportBookSettingsRepository
 import io.legado.app.data.repository.LabSettingsRepository
 import io.legado.app.data.repository.LocalBookRepository
@@ -191,6 +192,12 @@ import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatViewModel
+import io.legado.app.ui.association.ImportBookSourceViewModel
+import io.legado.app.ui.association.ImportDictRuleViewModel
+import io.legado.app.ui.association.ImportHttpTtsViewModel
+import io.legado.app.ui.association.ImportReplaceRuleViewModel
+import io.legado.app.ui.association.ImportRssSourceViewModel
+import io.legado.app.ui.association.ImportTxtTocRuleViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
@@ -341,6 +348,7 @@ val appModule = module {
     singleOf(::ReadAloudSessionStore)
     single<HttpTtsEngineGateway> { HttpTtsEngineRepository(get()) }
     single<ReadAloudSettingsGateway> { get<ReadAloudSettingsRepository>() }
+    singleOf(::HttpTtsRepository)
     singleOf(::ApplyReadSettingUseCase)
     singleOf(::HighlightRuleRepository)
     singleOf(::ReadStyleRepository)
@@ -452,6 +460,12 @@ val appModule = module {
     }
 
     viewModelOf(::DictRuleViewModel)
+    viewModelOf(::ImportBookSourceViewModel)
+    viewModelOf(::ImportDictRuleViewModel)
+    viewModelOf(::ImportHttpTtsViewModel)
+    viewModelOf(::ImportReplaceRuleViewModel)
+    viewModelOf(::ImportRssSourceViewModel)
+    viewModelOf(::ImportTxtTocRuleViewModel)
     viewModelOf(::HighlightTagRuleViewModel)
     viewModelOf(::TagGroupRuleViewModel)
     viewModelOf(::DictViewModel)

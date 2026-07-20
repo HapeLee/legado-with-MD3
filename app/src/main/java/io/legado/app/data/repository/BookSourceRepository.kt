@@ -35,6 +35,12 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         }
     }
 
+    suspend fun getBookSourcePart(sourceUrl: String): BookSourcePart? {
+        return withContext(Dispatchers.IO) {
+            bookSourceDao.getBookSourcePart(sourceUrl)
+        }
+    }
+
     fun getBookSourceSync(sourceUrl: String): BookSource? {
         return bookSourceDao.getBookSource(sourceUrl)
     }

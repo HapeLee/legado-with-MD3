@@ -3,7 +3,9 @@ package io.legado.app.data.repository
 import io.legado.app.data.dao.RssSourceDao
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.SourceHelp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 class RssRepository(
     private val dao: RssSourceDao
@@ -25,6 +27,10 @@ class RssRepository(
     }
 
     fun getEnabledGroups(): Flow<List<String>> = dao.flowEnabledGroups()
+
+    suspend fun getByKey(sourceUrl: String): RssSource? = withContext(Dispatchers.IO) {
+        dao.getByKey(sourceUrl)
+    }
 
     suspend fun updateSources(vararg sources: RssSource) {
         dao.update(*sources)

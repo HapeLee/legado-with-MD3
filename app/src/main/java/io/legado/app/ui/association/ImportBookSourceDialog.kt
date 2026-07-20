@@ -8,7 +8,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
@@ -32,6 +31,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import splitties.views.onClick
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
 /**
@@ -49,7 +49,7 @@ class ImportBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_r
     }
 
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
-    private val viewModel by viewModels<ImportBookSourceViewModel>()
+    private val viewModel by viewModel<ImportBookSourceViewModel>()
     private val otherSettingsGateway by inject<OtherSettingsGateway>()
     private val adapter by lazy { SourcesAdapter(requireContext()) }
 
