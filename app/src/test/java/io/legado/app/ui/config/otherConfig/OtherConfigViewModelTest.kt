@@ -12,7 +12,6 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.LocalPasswordGateway
 import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
@@ -191,16 +190,15 @@ class OtherConfigViewModelTest {
 
     private class FakeOtherSettingsGateway : OtherSettingsGateway {
         private val state = MutableStateFlow(OtherSettings())
-        val updates = mutableListOf<OtherSettingsUpdate>()
         var failure: Throwable? = null
 
         override val currentSettings: OtherSettings
             get() = state.value
         override val settings: Flow<OtherSettings> = state
 
-        override suspend fun update(update: OtherSettingsUpdate) {
+        override suspend fun update(transform: (OtherSettings) -> OtherSettings) {
             failure?.let { throw it }
-            updates += update
+            state.value = transform(state.value)
         }
     }
 

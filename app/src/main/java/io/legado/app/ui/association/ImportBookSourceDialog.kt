@@ -22,7 +22,7 @@ import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemSourceImportBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
+import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.lib.dialogs.alert
 //import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.dialog.CodeDialog
@@ -178,24 +178,24 @@ class ImportBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_r
 
             R.id.menu_keep_original_name -> {
                 item.isChecked = !item.isChecked
-                updateImportSetting(OtherSettingsUpdate.ImportKeepName(item.isChecked))
+                updateImportSetting { it.copy(importKeepName = item.isChecked) }
             }
 
             R.id.menu_keep_group -> {
                 item.isChecked = !item.isChecked
-                updateImportSetting(OtherSettingsUpdate.ImportKeepGroup(item.isChecked))
+                updateImportSetting { it.copy(importKeepGroup = item.isChecked) }
             }
 
             R.id.menu_keep_enable -> {
                 item.isChecked = !item.isChecked
-                updateImportSetting(OtherSettingsUpdate.ImportKeepEnable(item.isChecked))
+                updateImportSetting { it.copy(importKeepEnable = item.isChecked) }
             }
         }
         return false
     }
 
-    private fun updateImportSetting(update: OtherSettingsUpdate) {
-        lifecycleScope.launch { otherSettingsGateway.update(update) }
+    private fun updateImportSetting(transform: (OtherSettings) -> OtherSettings) {
+        lifecycleScope.launch { otherSettingsGateway.update(transform) }
     }
 
     private fun alertCustomGroup(item: MenuItem) {

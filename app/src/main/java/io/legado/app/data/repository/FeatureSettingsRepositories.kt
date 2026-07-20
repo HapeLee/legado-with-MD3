@@ -12,7 +12,6 @@ import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ThemeBooleanSetting
 import io.legado.app.domain.gateway.ThemeColorSlot
 import io.legado.app.domain.gateway.ThemeFloatSetting
@@ -535,6 +534,34 @@ internal fun Preferences.toOtherSettings(): OtherSettings {
     )
 }
 
+internal fun OtherSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.updateToVariant to updateToVariant,
+    PreferKey.autoCheckUpdateOnStart to autoCheckUpdateOnStart,
+    PreferKey.webServiceAutoStart to webServiceAutoStart,
+    PreferKey.autoRefresh to autoRefresh,
+    PreferKey.defaultToRead to defaultToRead,
+    PreferKey.notificationsPost to notificationsPost,
+    PreferKey.ignoreBatteryPermission to ignoreBatteryPermission,
+    PreferKey.firebaseEnable to firebaseEnable,
+    PreferKey.defaultBookTreeUri to defaultBookTreeUri,
+    PreferKey.antiAlias to antiAlias,
+    PreferKey.replaceEnableDefault to replaceEnableDefault,
+    PreferKey.autoClearExpired to autoClearExpired,
+    PreferKey.showAddToShelfAlert to showAddToShelfAlert,
+    PreferKey.showMangaUi to showMangaUi,
+    PreferKey.webServiceWakeLock to webServiceWakeLock,
+    PreferKey.sourceEditMaxLine to sourceEditMaxLine,
+    PreferKey.webPort to webPort,
+    PreferKey.processText to processText,
+    PreferKey.recordLog to recordLog,
+    PreferKey.recordHeapDump to recordHeapDump,
+    PreferKey.audioPlayWakeLock to audioPlayUseWakeLock,
+    PreferKey.importKeepName to importKeepName,
+    PreferKey.importKeepGroup to importKeepGroup,
+    PreferKey.importKeepEnable to importKeepEnable,
+    PreferKey.fontSort to fontSort,
+)
+
 class OtherSettingsRepository : OtherSettingsGateway {
     override val currentSettings: OtherSettings
         get() = AppConfigStore.preferences.toOtherSettings()
@@ -543,32 +570,11 @@ class OtherSettingsRepository : OtherSettingsGateway {
         .map { it.toOtherSettings() }
         .distinctUntilChanged()
 
-    override suspend fun update(update: OtherSettingsUpdate) {
-        val (key, value) = when (update) {
-            is OtherSettingsUpdate.UpdateToVariant -> PreferKey.updateToVariant to update.value
-            is OtherSettingsUpdate.AutoCheckUpdateOnStart -> PreferKey.autoCheckUpdateOnStart to update.value
-            is OtherSettingsUpdate.WebServiceAutoStart -> PreferKey.webServiceAutoStart to update.value
-            is OtherSettingsUpdate.AutoRefresh -> PreferKey.autoRefresh to update.value
-            is OtherSettingsUpdate.DefaultToRead -> PreferKey.defaultToRead to update.value
-            is OtherSettingsUpdate.FirebaseEnable -> PreferKey.firebaseEnable to update.value
-            is OtherSettingsUpdate.DefaultBookTreeUri -> PreferKey.defaultBookTreeUri to update.value
-            is OtherSettingsUpdate.AntiAlias -> PreferKey.antiAlias to update.value
-            is OtherSettingsUpdate.ReplaceEnableDefault -> PreferKey.replaceEnableDefault to update.value
-            is OtherSettingsUpdate.AutoClearExpired -> PreferKey.autoClearExpired to update.value
-            is OtherSettingsUpdate.ShowAddToShelfAlert -> PreferKey.showAddToShelfAlert to update.value
-            is OtherSettingsUpdate.ShowMangaUi -> PreferKey.showMangaUi to update.value
-            is OtherSettingsUpdate.WebServiceWakeLock -> PreferKey.webServiceWakeLock to update.value
-            is OtherSettingsUpdate.SourceEditMaxLine -> PreferKey.sourceEditMaxLine to update.value
-            is OtherSettingsUpdate.WebPort -> PreferKey.webPort to update.value
-            is OtherSettingsUpdate.ProcessText -> PreferKey.processText to update.value
-            is OtherSettingsUpdate.RecordLog -> PreferKey.recordLog to update.value
-            is OtherSettingsUpdate.RecordHeapDump -> PreferKey.recordHeapDump to update.value
-            is OtherSettingsUpdate.AudioPlayUseWakeLock -> PreferKey.audioPlayWakeLock to update.value
-            is OtherSettingsUpdate.ImportKeepName -> PreferKey.importKeepName to update.value
-            is OtherSettingsUpdate.ImportKeepGroup -> PreferKey.importKeepGroup to update.value
-            is OtherSettingsUpdate.ImportKeepEnable -> PreferKey.importKeepEnable to update.value
-            is OtherSettingsUpdate.FontSort -> PreferKey.fontSort to update.value
-        }
-        AppConfigStore.putAllAndAwait(mapOf(key to value))
+    override suspend fun update(transform: (OtherSettings) -> OtherSettings) {
+        AppConfigStore.atomicUpdateAndAwait(
+            read = Preferences::toOtherSettings,
+            toPrefMap = OtherSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }

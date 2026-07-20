@@ -6,7 +6,6 @@ import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.databinding.FragmentBookFolderBinding
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import androidx.lifecycle.lifecycleScope
@@ -21,7 +20,7 @@ class BookFolderFragment : BaseFragment(R.layout.fragment_book_folder) {
     private val selectBookFolder = registerForActivityResult(HandleFileContract()) { result ->
         result.uri?.let { treeUri ->
             lifecycleScope.launch {
-                otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(treeUri.toString()))
+                otherSettingsGateway.update { it.copy(defaultBookTreeUri = treeUri.toString()) }
                 updatePathText()
             }
         }

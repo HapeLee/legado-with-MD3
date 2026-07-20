@@ -6,31 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface OtherSettingsGateway {
     val currentSettings: OtherSettings
     val settings: Flow<OtherSettings>
-    suspend fun update(update: OtherSettingsUpdate)
-}
-
-sealed interface OtherSettingsUpdate {
-    data class UpdateToVariant(val value: String) : OtherSettingsUpdate
-    data class AutoCheckUpdateOnStart(val value: Boolean) : OtherSettingsUpdate
-    data class WebServiceAutoStart(val value: Boolean) : OtherSettingsUpdate
-    data class AutoRefresh(val value: Boolean) : OtherSettingsUpdate
-    data class DefaultToRead(val value: Boolean) : OtherSettingsUpdate
-    data class FirebaseEnable(val value: Boolean) : OtherSettingsUpdate
-    data class DefaultBookTreeUri(val value: String?) : OtherSettingsUpdate
-    data class AntiAlias(val value: Boolean) : OtherSettingsUpdate
-    data class ReplaceEnableDefault(val value: Boolean) : OtherSettingsUpdate
-    data class AutoClearExpired(val value: Boolean) : OtherSettingsUpdate
-    data class ShowAddToShelfAlert(val value: Boolean) : OtherSettingsUpdate
-    data class ShowMangaUi(val value: Boolean) : OtherSettingsUpdate
-    data class WebServiceWakeLock(val value: Boolean) : OtherSettingsUpdate
-    data class SourceEditMaxLine(val value: Int) : OtherSettingsUpdate
-    data class WebPort(val value: Int) : OtherSettingsUpdate
-    data class ProcessText(val value: Boolean) : OtherSettingsUpdate
-    data class RecordLog(val value: Boolean) : OtherSettingsUpdate
-    data class RecordHeapDump(val value: Boolean) : OtherSettingsUpdate
-    data class AudioPlayUseWakeLock(val value: Boolean) : OtherSettingsUpdate
-    data class ImportKeepName(val value: Boolean) : OtherSettingsUpdate
-    data class ImportKeepGroup(val value: Boolean) : OtherSettingsUpdate
-    data class ImportKeepEnable(val value: Boolean) : OtherSettingsUpdate
-    data class FontSort(val value: Int) : OtherSettingsUpdate
+    suspend fun update(transform: (OtherSettings) -> OtherSettings)
 }

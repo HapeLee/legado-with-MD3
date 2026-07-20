@@ -47,7 +47,6 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
@@ -6327,7 +6326,7 @@ class ReadBookViewModel(
 
     private fun onBooksDirSelected(uri: Uri) {
         viewModelScope.launch {
-            otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(uri.toString()))
+            otherSettingsGateway.update { it.copy(defaultBookTreeUri = uri.toString()) }
         }
         val reloadChapterList = pendingBooksDirReloadChapterList
         pendingBooksDirReloadChapterList = false

@@ -17,8 +17,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.model.settings.ImportBookSettings
+import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.canSafelyRebindTo
 import io.legado.app.model.localBook.LocalBook
@@ -259,7 +259,7 @@ class ImportBookViewModel(
             return
         }
         if (otherSettingsGateway.currentSettings.defaultBookTreeUri != effectiveDefaultPath) {
-            updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(effectiveDefaultPath))
+            updateOtherSetting { it.copy(defaultBookTreeUri = effectiveDefaultPath) }
         }
         val importPath = importBookSettingsGateway.currentSettings.importBookPath
         if (importPath.isNullOrBlank() || !importPath.isUri()) {
@@ -274,7 +274,7 @@ class ImportBookViewModel(
         val pickedUri = persistFolderPermission(uri)
         when (target) {
             ImportFolderPickTarget.DEFAULT_BOOK -> {
-                updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
+                updateOtherSetting { it.copy(defaultBookTreeUri = pickedUri.toString()) }
                 if (importBookSettingsGateway.currentSettings.importBookPath.isNullOrBlank()) {
                     updateImportBookSetting { it.copy(importBookPath = pickedUri.toString()) }
                 }
@@ -283,7 +283,7 @@ class ImportBookViewModel(
             ImportFolderPickTarget.IMPORT_FOLDER -> {
                 updateImportBookSetting { it.copy(importBookPath = pickedUri.toString()) }
                 if (otherSettingsGateway.currentSettings.defaultBookTreeUri.isNullOrBlank()) {
-                    updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(pickedUri.toString()))
+                    updateOtherSetting { it.copy(defaultBookTreeUri = pickedUri.toString()) }
                 }
             }
         }
@@ -328,7 +328,7 @@ class ImportBookViewModel(
         if (candidates.isEmpty()) {
             firstPersistedTreeUri()?.toString()?.let { persistedPath ->
                 if (trySetRootDoc(persistedPath)) {
-                    updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
+                    updateOtherSetting { it.copy(defaultBookTreeUri = persistedPath) }
                     updateImportBookSetting { it.copy(importBookPath = persistedPath) }
                     return
                 }
@@ -360,7 +360,7 @@ class ImportBookViewModel(
 
         firstPersistedTreeUri()?.toString()?.let { persistedPath ->
             if (trySetRootDoc(persistedPath)) {
-                updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(persistedPath))
+                updateOtherSetting { it.copy(defaultBookTreeUri = persistedPath) }
                 updateImportBookSetting { it.copy(importBookPath = persistedPath) }
                 return
             }
@@ -844,9 +844,9 @@ class ImportBookViewModel(
         }
     }
 
-    private fun updateOtherSetting(update: OtherSettingsUpdate) {
+    private fun updateOtherSetting(transform: (OtherSettings) -> OtherSettings) {
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            otherSettingsGateway.update(update)
+            otherSettingsGateway.update(transform)
         }
     }
 
