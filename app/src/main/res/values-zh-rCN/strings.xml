@@ -2826,4 +2826,7 @@
     <string name="tts_cache_unknown_text">未知文本</string>
     <string name="capsule_auto_collapse">自动收缩胶囊</string>
     <string name="capsule_auto_collapse_summary">3秒无操作后收缩为迷你胶囊</string>
+    <string name="read_aloud_bg_solid">纯色</string>
+    <string name="read_aloud_bg_blur">模糊</string>
+    <string name="read_aloud_bg_flowing_light">流光</string>
 </resources>

@@ -386,7 +386,7 @@ class ReadSettingsRepository(
             showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "0"),
             brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
             readBrightness = compatDsValue(Keys.ReadBrightness, 100),
-            brightnessAuto = compatDsValue(Keys.BrightnessAuto, false),
+            brightnessAuto = compatDsValue(Keys.BrightnessAuto, true),
             useUnderline = compatDsValue(Keys.UseUnderline, false),
             readSliderMode = compatDsValue(Keys.ReadSliderMode, "0"),
             doubleHorizontalPage = compatDsValue(Keys.DoubleHorizontalPage, "0"),

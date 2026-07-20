@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -260,7 +259,6 @@ private fun HighlightRuleItem(
                 TinySwitch(
                     checked = rule.enabled,
                     onCheckedChange = onToggle,
-                    modifier = Modifier.size(36.dp),
                 )
                 SmallTonalButton(
                     onClick = onEditClick,

@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue.Expanded
@@ -95,20 +96,31 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.R
+import io.legado.app.constant.ReadAloudBgMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
+import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.effect.BgEffectBackground
+import io.legado.app.ui.widget.components.effect.BgEffectConfig
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurBlendMode
+import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.textureBlur
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.BlendMode as ComposeBlendMode
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,6 +173,19 @@ fun ReadAloudPlayerScreenContent(
     }
     var isTextPageUserScrolling by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
+    val textBackdrop = rememberBlurBackdrop()
+    val flowingLightActive = state.bgMode == ReadAloudBgMode.FlowingLight
+    val flowingTextModifier = if (flowingLightActive && textBackdrop != null) {
+        Modifier.textureBlur(
+            backdrop = textBackdrop,
+            shape = RoundedCornerShape(4.dp),
+            blurRadius = 150f,
+            colors = BlurColors(blendColors = flowingTextBlend()),
+            contentBlendMode = ComposeBlendMode.DstIn,
+        )
+    } else {
+        Modifier
+    }
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != 1) isTextPageUserScrolling = false
     }
@@ -311,6 +336,12 @@ fun ReadAloudPlayerScreenContent(
                             contentDescription = stringResource(R.string.switch_to_classic_read_aloud),
                         )
                         SmallPlainButton(
+                            onClick = { onIntent(ReadAloudPlayerIntent.CycleBgMode) },
+                            icon = Icons.Default.WbTwilight,
+                            contentDescription = bgModeLabel(state.bgMode),
+                            selected = state.bgMode == ReadAloudBgMode.FlowingLight,
+                        )
+                        SmallPlainButton(
                             onClick = {
                                 activeAdjustment = activeAdjustment.toggle(PlayerAdjustment.Speed)
                             },
@@ -362,18 +393,26 @@ fun ReadAloudPlayerScreenContent(
         Box(Modifier
             .fillMaxSize()
             .hazeSource(pagerHazeState)) {
-            CoverBlurBackdrop(state.bookName, state.author, state.coverPath, state.sourceOrigin)
+            ReadAloudBackground(
+                state = state,
+                modifier = if (flowingLightActive && textBackdrop != null) {
+                    Modifier.layerBackdrop(textBackdrop)
+                } else {
+                    Modifier
+                },
+            )
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) { page ->
                 if (page == 0) {
-                    CoverPage(state, pageContentPadding)
+                    CoverPage(state, pageContentPadding, flowingTextModifier)
                 } else {
                     ChapterTextPage(
                         state = state,
                         contentPadding = pageContentPadding,
+                        flowingTextModifier = flowingTextModifier,
                         onIntent = onIntent,
                         onUserScrollChanged = { isTextPageUserScrolling = it },
                     )
@@ -481,6 +520,7 @@ private fun PlayerProgressSlider(
 private fun CoverPage(
     state: ReadAloudPlayerUiState,
     contentPadding: PaddingValues,
+    flowingTextModifier: Modifier,
 ) {
     Column(
         modifier = Modifier
@@ -531,7 +571,9 @@ private fun CoverPage(
                     text = current.ifBlank {
                         stringResource(R.string.read_aloud_preparing_content)
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(flowingTextModifier),
                     style = LegadoTheme.typography.bodyLargeEmphasized,
                     color = LegadoTheme.colorScheme.onSurface,
                     minLines = 1,
@@ -545,7 +587,8 @@ private fun CoverPage(
                         text = next,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp),
+                            .padding(top = 8.dp)
+                            .then(flowingTextModifier),
                         style = LegadoTheme.typography.bodyMedium,
                         color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         minLines = 1,
@@ -571,6 +614,7 @@ private fun CoverPage(
 private fun ChapterTextPage(
     state: ReadAloudPlayerUiState,
     contentPadding: PaddingValues,
+    flowingTextModifier: Modifier,
     onIntent: (ReadAloudPlayerIntent) -> Unit,
     onUserScrollChanged: (Boolean) -> Unit,
 ) {
@@ -684,7 +728,8 @@ private fun ChapterTextPage(
                             .clip(RoundedCornerShape(16.dp))
                             .clickable { onIntent(ReadAloudPlayerIntent.SeekTo(line.chapterPosition)) }
                             .background(backgroundColor)
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
+                            .then(flowingTextModifier),
                         style = if (active) LegadoTheme.typography.bodyLargeEmphasized else LegadoTheme.typography.bodyLarge,
                         color = if (active) LegadoTheme.colorScheme.onPrimaryContainer
                         else LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
@@ -709,3 +754,131 @@ private const val BOTTOM_BAR_RESTORE_DELAY_MILLIS = 650L
 
 private fun PlayerAdjustment?.toggle(value: PlayerAdjustment): PlayerAdjustment? =
     if (this == value) null else value
+
+@Composable
+private fun ReadAloudBackground(
+    state: ReadAloudPlayerUiState,
+    modifier: Modifier = Modifier,
+) {
+    when (state.bgMode) {
+        ReadAloudBgMode.Blur -> {
+            CoverBlurBackdrop(
+                state.bookName, state.author, state.coverPath, state.sourceOrigin,
+                modifier = modifier,
+            )
+        }
+
+        ReadAloudBgMode.FlowingLight -> {
+            val shaderSupported = remember { isRuntimeShaderSupported() }
+            if (shaderSupported) {
+                val coverPreset = rememberCoverDerivedPreset()
+                Box(modifier.fillMaxSize()) {
+                    CoverBlurBackdrop(
+                        state.bookName, state.author, state.coverPath, state.sourceOrigin,
+                        blurRadius = 64.dp,
+                    )
+                    BgEffectBackground(
+                        dynamicBackground = true,
+                        isOs3Effect = true,
+                        isFullSize = true,
+                        drawSurface = false,
+                        customPreset = coverPreset,
+                        modifier = Modifier.fillMaxSize(),
+                        alpha = { 0.5f },
+                    ) {
+                        Box(Modifier.fillMaxSize())
+                    }
+                }
+            } else {
+                CoverBlurBackdrop(
+                    state.bookName, state.author, state.coverPath, state.sourceOrigin,
+                    modifier = modifier,
+                )
+            }
+        }
+
+        else -> {
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(LegadoTheme.colorScheme.surface),
+            )
+        }
+    }
+}
+
+@Composable
+private fun rememberCoverDerivedPreset(): BgEffectConfig.Config {
+    val primary = LegadoTheme.colorScheme.primary
+    val surface = LegadoTheme.colorScheme.surfaceContainerLowest
+    val tertiary = LegadoTheme.colorScheme.secondary
+    val isDark = LegadoTheme.isDark
+
+    return remember(primary, surface, tertiary) {
+        val p = primary.toShaderColor()
+        val s = surface.toShaderColor()
+        val t = tertiary.toShaderColor()
+
+        val m = floatArrayOf(
+            (p[0] + t[0]) / 2f,
+            (p[1] + t[1]) / 2f,
+            (p[2] + t[2]) / 2f,
+            1.0f,
+        )
+
+        fun stage(a: FloatArray, b: FloatArray, c: FloatArray, d: FloatArray): FloatArray =
+            floatArrayOf(
+                a[0], a[1], a[2], a[3],
+                b[0], b[1], b[2], b[3],
+                c[0], c[1], c[2], c[3],
+                d[0], d[1], d[2], d[3],
+            )
+
+        BgEffectConfig.Config(
+            points = floatArrayOf(
+                0.8f, 0.2f, 1.0f,
+                0.8f, 0.9f, 1.0f,
+                0.2f, 0.9f, 1.0f,
+                0.2f, 0.2f, 1.0f,
+            ),
+            colors1 = stage(p, t, s, m),
+            colors2 = stage(t, s, m, p),
+            colors3 = stage(s, m, p, t),
+            colorInterpPeriod = 96.0f,
+            lightOffset = if (isDark) 0.0f else 0.1f,
+            saturateOffset = if (isDark) 0.17f else 0.2f,
+            pointOffset = if (isDark) 0.4f else 0.2f,
+        )
+    }
+}
+
+private fun Color.toShaderColor(): FloatArray =
+    floatArrayOf(red, green, blue, alpha)
+
+@Composable
+private fun flowingTextBlend(): List<BlendColorEntry> {
+    val isDark = LegadoTheme.isDark
+    return remember(isDark) {
+        if (isDark) {
+            listOf(
+                BlendColorEntry(Color(0xe6a1a1a1), BlurBlendMode.ColorDodge),
+                BlendColorEntry(Color(0x4de6e6e6), BlurBlendMode.LinearLight),
+                BlendColorEntry(Color(0xff1af500), BlurBlendMode.Lab),
+            )
+        } else {
+            listOf(
+                BlendColorEntry(Color(0xcc4a4a4a), BlurBlendMode.ColorBurn),
+                BlendColorEntry(Color(0xff4f4f4f), BlurBlendMode.LinearLight),
+                BlendColorEntry(Color(0xff1af200), BlurBlendMode.Lab),
+            )
+        }
+    }
+}
+
+@Composable
+private fun bgModeLabel(mode: Int): String = when (mode) {
+    ReadAloudBgMode.Solid -> stringResource(R.string.read_aloud_bg_solid)
+    ReadAloudBgMode.Blur -> stringResource(R.string.read_aloud_bg_blur)
+    ReadAloudBgMode.FlowingLight -> stringResource(R.string.read_aloud_bg_flowing_light)
+    else -> stringResource(R.string.read_aloud_bg_blur)
+}

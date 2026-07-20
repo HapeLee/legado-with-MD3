@@ -401,7 +401,7 @@ data class ReadMenuConfig(
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
     val readBrightness: Int = 100,
-    val brightnessAuto: Boolean = false,
+    val brightnessAuto: Boolean = true,
     val showMenuIcon: Boolean = false,
     val titleBarCompact: Boolean = false,
 )

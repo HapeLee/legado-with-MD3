@@ -15,7 +15,6 @@ import io.legado.app.ui.util.shouldShowSplitPane
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.floor
 
 @Composable
@@ -24,8 +23,10 @@ fun BgEffectBackground(
     modifier: Modifier = Modifier,
     bgModifier: Modifier = Modifier,
     isFullSize: Boolean = false,
+    drawSurface: Boolean = true,
     effectBackground: Boolean = true,
     isOs3Effect: Boolean = true,
+    customPreset: BgEffectConfig.Config? = null,
     alpha: () -> Float = { 1f },
     content: @Composable (BoxScope.() -> Unit),
 ) {
@@ -37,14 +38,15 @@ fun BgEffectBackground(
     Box(
         modifier = modifier,
     ) {
-        val surface = MiuixTheme.colorScheme.surface
+        val surface = LegadoTheme.colorScheme.surface
         val deviceType = if (shouldShowSplitPane()) DeviceType.PAD else DeviceType.PHONE
         val isDarkTheme = LegadoTheme.isDark
         val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }
 
-        val preset = remember(deviceType, isDarkTheme, isOs3Effect) {
+        val defaultPreset = remember(deviceType, isDarkTheme, isOs3Effect) {
             BgEffectConfig.get(deviceType, isDarkTheme, isOs3Effect)
         }
+        val preset = customPreset ?: defaultPreset
 
         val colorStage = remember { Animatable(0f) }
 
@@ -72,9 +74,8 @@ fun BgEffectBackground(
                 .bgEffectDraw(
                     painter = painter,
                     preset = preset,
-                    deviceType = deviceType,
-                    isDarkTheme = isDarkTheme,
                     surface = surface,
+                    drawSurface = drawSurface,
                     effectBackground = effectBackground,
                     isFullSize = isFullSize,
                     playing = dynamicBackground,

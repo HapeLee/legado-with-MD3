@@ -1,8 +1,8 @@
 package io.legado.app.ui.widget.components.effect
 
-internal object BgEffectConfig {
+object BgEffectConfig {
 
-    internal class Config(
+    class Config(
         val points: FloatArray,
         val colors1: FloatArray,
         val colors2: FloatArray,

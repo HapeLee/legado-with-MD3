@@ -163,6 +163,7 @@ object PreferKey {
     const val showReadAloudCapsule = "showReadAloudCapsule"
     const val capsuleAutoCollapse = "capsuleAutoCollapse"
     const val defaultReadAloudInterface = "defaultReadAloudInterface"
+    const val readAloudPlayerBgMode = "readAloudPlayerBgMode"
     const val showLastUpdateTime = "showLastUpdateTime"
     const val showWaitUpCount = "showWaitUpCount"
     const val clearWebViewData = "clearWebViewData"
@@ -424,4 +425,10 @@ object ReadMenuBlurMode {
 object ReadMenuBlurStyle {
     const val Solid = 0
     const val Progressive = 1
+}
+
+object ReadAloudBgMode {
+    const val Solid = 0
+    const val Blur = 1
+    const val FlowingLight = 2
 }

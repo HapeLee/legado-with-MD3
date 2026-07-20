@@ -19,7 +19,7 @@ data class ReadConfigUiState(
     val useZhLayout: Boolean = false,
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
-    val brightnessAuto: Boolean = false,
+    val brightnessAuto: Boolean = true,
     val useUnderline: Boolean = false,
     val readSliderMode: String = "0",
     val doubleHorizontalPage: String = "0",

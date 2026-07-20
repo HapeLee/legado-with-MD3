@@ -2831,4 +2831,7 @@
     <string name="tts_cache_unknown_text">Unknown text</string>
     <string name="capsule_auto_collapse">Auto-collapse capsule</string>
     <string name="capsule_auto_collapse_summary">Collapse to mini capsule after 3 seconds of inactivity</string>
+    <string name="read_aloud_bg_solid">Solid</string>
+    <string name="read_aloud_bg_blur">Blur</string>
+    <string name="read_aloud_bg_flowing_light">Flowing light</string>
 </resources>
