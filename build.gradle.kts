@@ -18,6 +18,9 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
     @get:Input
     abstract val legacyPreferenceCallBaseline: MapProperty<String, Int>
 
+    @get:Input
+    abstract val legacyDaoInjectionBaseline: MapProperty<String, Int>
+
     @TaskAction
     fun verify() {
         val sourceRootDir = sourceRoot.get().asFile
@@ -25,12 +28,20 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             .filter { it.isFile && it.extension == "kt" }
             .toList()
         val preferenceBaseline = legacyPreferenceCallBaseline.get()
+        val daoInjectionBaseline = legacyDaoInjectionBaseline.get()
         val violations = mutableListOf<String>()
         val forbiddenConfigImport = Regex(
             """^import io\.legado\.app\.(?:help\.config\.AppConfig|ui\.config\..*Config)$""",
             RegexOption.MULTILINE,
         )
         val preferenceCall = Regex("""\b(?:getPref|putPref)[A-Za-z0-9_]*\s*\(""")
+        val daoImport = Regex(
+            """^import io\.legado\.app\.data\.dao\.[A-Za-z0-9_*]+$""",
+            RegexOption.MULTILINE,
+        )
+        val appDbDaoAccess = Regex(
+            """(?:\bappDb|io\.legado\.app\.data\.appDb)\.[A-Za-z0-9_]*Dao\b"""
+        )
         val readBookConfigWrite = Regex(
             """\bReadBookConfig\.[a-z_][A-Za-z0-9_]*(?:\.[a-z_][A-Za-z0-9_]*)?\s*="""
         )
@@ -100,6 +111,26 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             if (preferenceCalls > allowedCalls) {
                 violations += "$displayPath: 新增了 ${preferenceCalls - allowedCalls} 个旧偏好调用"
             }
+
+            if (relativePath.startsWith("io/legado/app/ui/") &&
+                file.name.contains("ViewModel")
+            ) {
+                val daoDependencies = daoImport.findAll(text).count() +
+                    appDbDaoAccess.findAll(text).count()
+                val allowedDaoDependencies = daoInjectionBaseline[relativePath] ?: 0
+                if (daoDependencies > allowedDaoDependencies) {
+                    violations += "$displayPath: ViewModel 新增了 ${daoDependencies - allowedDaoDependencies} 个 DAO 直连"
+                } else if (daoDependencies < allowedDaoDependencies) {
+                    violations += "$displayPath: 已减少 DAO 直连，请将基线从 $allowedDaoDependencies 下调到 $daoDependencies"
+                }
+            }
+        }
+
+        val sourcePaths = kotlinFiles.mapTo(hashSetOf()) {
+            it.relativeTo(sourceRootDir).invariantSeparatorsPath
+        }
+        (daoInjectionBaseline.keys - sourcePaths).forEach { relativePath ->
+            violations += "app/src/main/java/$relativePath: 文件已移除，请删除 DAO 直连基线"
         }
 
         check(violations.isEmpty()) {
@@ -137,7 +168,7 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     "verifyConfigArchitecture"
 ) {
     group = "verification"
-    description = "禁止配置 Snapshot 桥、SettingsUpdate 分发、跨层全局 Config 直读和新增旧偏好调用"
+    description = "禁止配置架构回退、ViewModel 新增 DAO 直连和新增旧偏好调用"
     sourceRoot.set(layout.projectDirectory.dir("app/src/main/java"))
     legacyPreferenceCallBaseline.set(
         mapOf(
@@ -164,6 +195,38 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/replace/ReplaceRuleViewModel.kt" to 2,
             "io/legado/app/utils/ContextExtensions.kt" to 12,
             "io/legado/app/web/socket/BookSearchWebSocket.kt" to 2,
+        )
+    )
+    legacyDaoInjectionBaseline.set(
+        mapOf(
+            "io/legado/app/ui/association/ImportBookSourceViewModel.kt" to 1,
+            "io/legado/app/ui/association/ImportDictRuleViewModel.kt" to 2,
+            "io/legado/app/ui/association/ImportHttpTtsViewModel.kt" to 2,
+            "io/legado/app/ui/association/ImportReplaceRuleViewModel.kt" to 2,
+            "io/legado/app/ui/association/ImportRssSourceViewModel.kt" to 1,
+            "io/legado/app/ui/association/ImportTxtTocRuleViewModel.kt" to 2,
+            "io/legado/app/ui/book/audio/AudioPlayViewModel.kt" to 11,
+            "io/legado/app/ui/book/changecover/ChangeCoverViewModel.kt" to 3,
+            "io/legado/app/ui/book/changesource/ChangeBookSourceViewModel.kt" to 20,
+            "io/legado/app/ui/book/changesource/ChangeChapterSourceViewModel.kt" to 5,
+            "io/legado/app/ui/book/import/local/ImportBookViewModel.kt" to 4,
+            "io/legado/app/ui/book/import/remote/RemoteBookViewModel.kt" to 2,
+            "io/legado/app/ui/book/info/BookInfoViewModel.kt" to 34,
+            "io/legado/app/ui/book/info/edit/BookInfoEditViewModel.kt" to 2,
+            "io/legado/app/ui/book/manga/ReadMangaViewModel.kt" to 17,
+            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
+            "io/legado/app/ui/book/source/edit/BookSourceEditViewModel.kt" to 3,
+            "io/legado/app/ui/book/source/manage/BookSourceViewModel.kt" to 29,
+            "io/legado/app/ui/book/toc/TocViewModel.kt" to 13,
+            "io/legado/app/ui/book/toc/rule/preview/TxtTocRulePreviewViewModel.kt" to 2,
+            "io/legado/app/ui/browser/WebViewModel.kt" to 1,
+            "io/legado/app/ui/login/SourceLoginViewModel.kt" to 6,
+            "io/legado/app/ui/rss/article/RssArticlesViewModel.kt" to 5,
+            "io/legado/app/ui/rss/article/RssSortViewModel.kt" to 8,
+            "io/legado/app/ui/rss/read/ReadRssViewModel.kt" to 9,
+            "io/legado/app/ui/rss/source/edit/RssSourceEditViewModel.kt" to 6,
+            "io/legado/app/ui/rss/source/manage/RssSourceViewModel.kt" to 1,
+            "io/legado/app/ui/tagGroupRule/TagGroupRuleViewModel.kt" to 4,
         )
     )
 }

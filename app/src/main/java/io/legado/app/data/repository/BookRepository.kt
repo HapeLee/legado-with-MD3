@@ -46,6 +46,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getShelfBookConflict(name: String, author: String): Book? {
+        return withContext(Dispatchers.IO) {
+            bookDao.getShelfBookConflict(name, author)
+        }
+    }
+
     fun flowBookShelfByGroup(groupId: Long): Flow<List<BookShelfItem>> {
         return bookDao.flowBookShelfByGroup(groupId)
     }

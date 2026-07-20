@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
@@ -27,6 +28,10 @@ interface SearchRepository {
     suspend fun clearSearchKeywords()
     suspend fun saveSearchBooks(books: List<SearchBook>)
     suspend fun saveSearchBook(book: SearchBook)
+    suspend fun findChangeSourceBooks(name: String, author: String): List<SearchBook>
+    suspend fun deleteSearchBooks(books: List<SearchBook>)
+    suspend fun getBookSourcePart(sourceUrl: String): BookSourcePart?
+    suspend fun getBookSource(sourceUrl: String): BookSource?
 }
 
 class SearchRepositoryImpl(
@@ -115,4 +120,24 @@ class SearchRepositoryImpl(
     override suspend fun saveSearchBook(book: SearchBook): Unit = withContext(Dispatchers.IO) {
         appDb.searchBookDao.insert(book)
     }
+
+    override suspend fun findChangeSourceBooks(
+        name: String,
+        author: String,
+    ): List<SearchBook> = withContext(Dispatchers.IO) {
+        appDb.searchBookDao.changeSourceByGroup(name, author, "")
+    }
+
+    override suspend fun deleteSearchBooks(books: List<SearchBook>): Unit =
+        withContext(Dispatchers.IO) {
+            if (books.isNotEmpty()) {
+                appDb.searchBookDao.delete(*books.toTypedArray())
+            }
+        }
+
+    override suspend fun getBookSourcePart(sourceUrl: String): BookSourcePart? =
+        withContext(Dispatchers.IO) {
+            appDb.bookSourceDao.getBookSourcePart(sourceUrl)
+        }
+
 }

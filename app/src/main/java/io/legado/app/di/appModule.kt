@@ -19,7 +19,9 @@ import io.legado.app.data.repository.AppStartupRepository
 import io.legado.app.data.repository.AppUiConfigurationRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
+import io.legado.app.data.repository.BookCacheManageRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookExportSettingsRepository
@@ -291,6 +293,8 @@ val appModule = module {
     single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
     singleOf(::BookRepository)
     singleOf(::BookGroupRepository)
+    singleOf(::BookmarkRepository)
+    singleOf(::BookCacheManageRepository)
     singleOf(::TagGroupRuleApplier)
     single<BookGroupMutationGateway> { BookGroupMutationRepository(get(), get()) }
     singleOf(::BookSourceRepository)
@@ -643,7 +647,7 @@ val appModule = module {
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(
             app = get(),
-            replaceRuleDao = get(),
+            replaceRuleRepository = get(),
             route = route
         )
     }

@@ -6,7 +6,6 @@ import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadSettingsRepository
@@ -54,12 +53,12 @@ class ReplaceRuleViewModel(
     uploadRepository: UploadRepository,
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val readSettingsRepository: ReadSettingsRepository,
+    private val repository: ReplaceRuleRepository,
 ) : BaseRuleViewModel<ReplaceRuleItemUi, ReplaceRule, Long, ReplaceRuleUiState>(
     application,
     ReplaceRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = ReplaceRuleRepository()
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     val sortMode = _sortMode.asStateFlow()
     private val _group = MutableStateFlow<String?>(null)
@@ -302,7 +301,7 @@ class ReplaceRuleViewModel(
     }
 
     override suspend fun findOldRule(newRule: ReplaceRule): ReplaceRule? {
-        return appDb.replaceRuleDao.findById(newRule.id)
+        return repository.findById(newRule.id)
     }
 
     override fun saveImportedRules() {

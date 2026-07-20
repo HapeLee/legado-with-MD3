@@ -3,13 +3,11 @@ package io.legado.app.ui.book.cache.manage
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.dao.BookChapterDao
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.model.BookChapterCacheInfo
+import io.legado.app.data.repository.BookCacheManageRepository
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.help.book.BookHelp
@@ -108,9 +106,7 @@ sealed interface BookCacheManageEffect {
 
 class BookCacheManageViewModel(
     application: Application,
-    private val bookDao: BookDao,
-    private val bookChapterDao: BookChapterDao,
-    private val bookGroupDao: BookGroupDao,
+    private val repository: BookCacheManageRepository,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
 ) : BaseViewModel(application) {
@@ -164,12 +160,12 @@ class BookCacheManageViewModel(
     private fun initialize() {
         if (observeJob != null) return
         observeJob = viewModelScope.launch {
-            bookDao.flowAll().collect { books ->
+            repository.flowBooks().collect { books ->
                 reloadAll(books = books, forceDatabase = false)
             }
         }
         viewModelScope.launch {
-            bookGroupDao.flowSelect().collect { groups ->
+            repository.flowSelectableGroups().collect { groups ->
                 _uiState.update { state ->
                     state.copy(
                         groups = groups.filter { it.groupId > 0L }
@@ -238,7 +234,11 @@ class BookCacheManageViewModel(
         fullReloadJob = viewModelScope.launch {
             val expandedBookUrls = uiState.value.expandedBookUrls
             val result = withContext(Dispatchers.IO) {
-                val sourceBooks = if (forceDatabase) bookDao.all else books ?: bookDao.all
+                val sourceBooks = if (forceDatabase) {
+                    repository.getAllBooks()
+                } else {
+                    books ?: repository.getAllBooks()
+                }
                 val items = sortItems(
                     sourceBooks
                         .filterNot { it.isLocal || it.isAudio }
@@ -393,7 +393,7 @@ class BookCacheManageViewModel(
     private suspend fun reloadBook(bookUrl: String) {
         val expanded = uiState.value.expandedBookUrls.contains(bookUrl)
         val result = withContext(Dispatchers.IO) {
-            val book = bookDao.getBook(bookUrl)
+            val book = repository.getBook(bookUrl)
             val item = book
                 ?.takeUnless { it.isLocal || it.isAudio }
                 ?.let { buildBookItem(it) }
@@ -434,7 +434,7 @@ class BookCacheManageViewModel(
         }
     }
 
-    private fun buildBookItem(book: Book): BookCacheBookItem? {
+    private suspend fun buildBookItem(book: Book): BookCacheBookItem? {
         val cacheFiles = BookHelp.getChapterFiles(book)
         val bookState = CacheBook.downloadStateFlow.value.books[book.bookUrl]
         val model = CacheBook.cacheBookMap[book.bookUrl]
@@ -451,7 +451,7 @@ class BookCacheManageViewModel(
         val waitingCount = if (isBookPaused) 0 else rawWaitingCount
         val downloadingCount = if (isBookPaused) 0 else rawDownloadingCount
         val errorIndices = errorIndices(book.bookUrl)
-        val totalCount = bookChapterDao.getChapterCount(book.bookUrl)
+        val totalCount = repository.getChapterCount(book.bookUrl)
         val cachedFileCount = cacheFiles.count { it.endsWith(".nb") }
         val cachedCount = min(BookHelp.countCachedChapters(book), totalCount)
         if (totalCount == 0 && cacheFiles.isEmpty() && waitingCount == 0 && downloadingCount == 0 && pausedCount == 0 && !book.isNotShelf) {
@@ -477,9 +477,9 @@ class BookCacheManageViewModel(
         return item.cachedFileCount > 0 || item.hasDownloadTask || item.errorCount > 0
     }
 
-    private fun buildChapterItems(bookUrl: String): List<BookCacheChapterItem> {
-        val book = bookDao.getBook(bookUrl) ?: return emptyList()
-        val chapters = bookChapterDao.getChapterCacheInfoList(bookUrl)
+    private suspend fun buildChapterItems(bookUrl: String): List<BookCacheChapterItem> {
+        val book = repository.getBook(bookUrl) ?: return emptyList()
+        val chapters = repository.getChapterCacheInfo(bookUrl)
         val model = CacheBook.cacheBookMap[bookUrl]
         val bookState = CacheBook.downloadStateFlow.value.books[bookUrl]
         val errorIndices = errorIndices(bookUrl)
@@ -664,31 +664,34 @@ class BookCacheManageViewModel(
         }
     }
 
-    private fun downloadableChapterIndexBatches(
+    private suspend fun downloadableChapterIndexBatches(
         bookUrl: String,
         batchSize: Int = DOWNLOAD_BATCH_SIZE,
-    ): Sequence<List<Int>> = sequence {
-        val book = bookDao.getBook(bookUrl) ?: return@sequence
-        val model = CacheBook.cacheBookMap[bookUrl]
-        var batch = ArrayList<Int>(batchSize)
-        for (chapter in bookChapterDao.getChapterCacheInfoList(bookUrl)) {
-            if (
-                chapter.isVolume ||
-                    isChapterFullyCached(book, chapter) ||
-                    model?.isPaused(chapter.index) == true ||
-                    model?.isWaiting(chapter.index) == true ||
-                    model?.isDownloading(chapter.index) == true
-            ) {
-                continue
+    ): Sequence<List<Int>> {
+        val book = repository.getBook(bookUrl) ?: return emptySequence()
+        val chapters = repository.getChapterCacheInfo(bookUrl)
+        return sequence {
+            val model = CacheBook.cacheBookMap[bookUrl]
+            var batch = ArrayList<Int>(batchSize)
+            for (chapter in chapters) {
+                if (
+                    chapter.isVolume ||
+                        isChapterFullyCached(book, chapter) ||
+                        model?.isPaused(chapter.index) == true ||
+                        model?.isWaiting(chapter.index) == true ||
+                        model?.isDownloading(chapter.index) == true
+                ) {
+                    continue
+                }
+                batch.add(chapter.index)
+                if (batch.size == batchSize) {
+                    yield(batch)
+                    batch = ArrayList(batchSize)
+                }
             }
-            batch.add(chapter.index)
-            if (batch.size == batchSize) {
+            if (batch.isNotEmpty()) {
                 yield(batch)
-                batch = ArrayList(batchSize)
             }
-        }
-        if (batch.isNotEmpty()) {
-            yield(batch)
         }
     }
 
@@ -834,7 +837,7 @@ class BookCacheManageViewModel(
         chapterIndex: Int,
     ) {
         execute {
-            val book = bookDao.getBook(bookUrl) ?: return@execute false
+            val book = repository.getBook(bookUrl) ?: return@execute false
             val chapter = BookChapter(
                 url = chapterUrl,
                 title = chapterTitle,

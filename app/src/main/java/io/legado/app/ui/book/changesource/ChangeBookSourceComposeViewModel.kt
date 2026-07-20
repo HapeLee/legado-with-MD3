@@ -6,13 +6,13 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.usecase.ChangeSourceSearchEvent
@@ -48,13 +48,17 @@ class ChangeBookSourceComposeViewModel(
     private val changeSourceSearchUseCase: ChangeSourceSearchUseCase,
     private val getChapterContentUseCase: GetChapterContentUseCase,
     private val searchRepository: SearchRepository,
-    private val bookDao: BookDao,
+    private val bookRepository: BookRepository,
     private val changeSourceSettingsGateway: ChangeSourceSettingsGateway,
 ) : ViewModel() {
 
     // Public state for the sheet
     val enabledGroups = searchRepository.enabledGroups
-    val enabledSources = searchRepository.enabledSources
+    val enabledSources = searchRepository.enabledSources.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList(),
+    )
 
     val settings = changeSourceSettingsGateway.settings.stateIn(
         viewModelScope,
@@ -104,7 +108,7 @@ class ChangeBookSourceComposeViewModel(
 
     fun findShelfConflict(book: Book, onResult: (Book?) -> Unit) {
         viewModelScope.launch(IO) {
-            val conflict = bookDao.getShelfBookConflict(book.name, book.author)
+            val conflict = bookRepository.getShelfBookConflict(book.name, book.author)
             onMain { onResult(conflict) }
         }
     }
@@ -151,12 +155,10 @@ class ChangeBookSourceComposeViewModel(
         }
     }
 
-    private fun getDbSearchBooks(): List<SearchBook> {
+    private suspend fun getDbSearchBooks(): List<SearchBook> {
         val scope = SearchScope(settings.value.searchScope)
         val author = if (checkAuthor) bookAuthor else ""
-        val dbBooks = io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
-            bookName, author, ""
-        )
+        val dbBooks = searchRepository.findChangeSourceBooks(bookName, author)
         if (scope.isAll()) return dbBooks
 
         val allowedOrigins = scope.getBookSourceParts()
@@ -173,8 +175,7 @@ class ChangeBookSourceComposeViewModel(
 
     fun startSearch(origin: String) {
         viewModelScope.launch(IO) {
-            val source = io.legado.app.data.appDb.bookSourceDao
-                .getBookSourcePart(origin) ?: return@launch
+            val source = searchRepository.getBookSourcePart(origin) ?: return@launch
             startSearch(listOf(source))
         }
     }
@@ -216,7 +217,7 @@ class ChangeBookSourceComposeViewModel(
         searchJob = viewModelScope.launch(IO) {
             try {
                 if (removedResults.isNotEmpty()) {
-                    io.legado.app.data.appDb.searchBookDao.delete(*removedResults.toTypedArray())
+                    searchRepository.deleteSearchBooks(removedResults)
                 }
                 collectSearchEvents(
                     events = changeSourceSearchUseCase.search(
@@ -374,16 +375,14 @@ class ChangeBookSourceComposeViewModel(
             try {
                 val cachedToc = tocMap[book.primaryStr()]
                 if (cachedToc != null) {
-                    val source =
-                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = searchRepository.getBookSource(book.origin)
                     if (source != null) {
                         onMain { onSuccess(cachedToc, source) }
                         return@launch
                     }
                 }
                 if (book.isWebFile) {
-                    val source =
-                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = searchRepository.getBookSource(book.origin)
                         ?: throw io.legado.app.exception.NoStackTraceException("书源不存在")
                     onMain { onSuccess(emptyList(), source) }
                     return@launch
@@ -568,7 +567,7 @@ class ChangeBookSourceComposeViewModel(
         if (selectedUrls.isEmpty()) {
             searchScope.update("")
         } else {
-            val selectedSources = io.legado.app.data.appDb.bookSourceDao.allEnabledPart.filter {
+            val selectedSources = enabledSources.value.filter {
                 selectedUrls.contains(it.bookSourceUrl)
             }
             searchScope.updateSources(selectedSources)
