@@ -2834,4 +2834,5 @@
     <string name="read_aloud_bg_solid">Solid</string>
     <string name="read_aloud_bg_blur">Blur</string>
     <string name="read_aloud_bg_flowing_light">Flowing light</string>
+    <string name="read_aloud_bg_transparent">Transparent</string>
 </resources>

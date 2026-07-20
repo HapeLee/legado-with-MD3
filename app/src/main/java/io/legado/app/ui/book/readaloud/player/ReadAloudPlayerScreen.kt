@@ -173,6 +173,8 @@ fun ReadAloudPlayerScreenContent(
     }
     var isTextPageUserScrolling by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
+    val hazeEnabled =
+        state.bgMode != ReadAloudBgMode.Solid && state.bgMode != ReadAloudBgMode.Transparent
     val textBackdrop = rememberBlurBackdrop()
     val flowingLightActive = state.bgMode == ReadAloudBgMode.FlowingLight
     val flowingTextModifier = if (flowingLightActive && textBackdrop != null) {
@@ -203,13 +205,16 @@ fun ReadAloudPlayerScreenContent(
         disableHazeSource = true,
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            val hazeModifier =
+            val hazeModifier = if (hazeEnabled) {
                 Modifier.hazeEffect(state = pagerHazeState, style = overlayHazeStyle) {
                     progressive = HazeProgressive.verticalGradient(
                         startIntensity = 1f,
                         endIntensity = 0f,
                     )
                 }
+            } else {
+                Modifier
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -261,13 +266,16 @@ fun ReadAloudPlayerScreenContent(
                     targetOffsetY = { it / 5 },
                 ),
             ) {
-                val hazeModifier =
+                val hazeModifier = if (hazeEnabled) {
                     Modifier.hazeEffect(state = pagerHazeState, style = overlayHazeStyle) {
                         progressive = HazeProgressive.verticalGradient(
                             startIntensity = 0f,
                             endIntensity = 1f,
                         )
                     }
+                } else {
+                    Modifier
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -392,7 +400,8 @@ fun ReadAloudPlayerScreenContent(
     ) {
         Box(Modifier
             .fillMaxSize()
-            .hazeSource(pagerHazeState)) {
+            .then(if (hazeEnabled) Modifier.hazeSource(pagerHazeState) else Modifier)
+        ) {
             ReadAloudBackground(
                 state = state,
                 modifier = if (flowingLightActive && textBackdrop != null) {
@@ -797,6 +806,10 @@ private fun ReadAloudBackground(
             }
         }
 
+        ReadAloudBgMode.Transparent -> {
+            Box(modifier = modifier.fillMaxSize())
+        }
+
         else -> {
             Box(
                 modifier = modifier
@@ -880,5 +893,6 @@ private fun bgModeLabel(mode: Int): String = when (mode) {
     ReadAloudBgMode.Solid -> stringResource(R.string.read_aloud_bg_solid)
     ReadAloudBgMode.Blur -> stringResource(R.string.read_aloud_bg_blur)
     ReadAloudBgMode.FlowingLight -> stringResource(R.string.read_aloud_bg_flowing_light)
+    ReadAloudBgMode.Transparent -> stringResource(R.string.read_aloud_bg_transparent)
     else -> stringResource(R.string.read_aloud_bg_blur)
 }

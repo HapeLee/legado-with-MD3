@@ -431,4 +431,5 @@ object ReadAloudBgMode {
     const val Solid = 0
     const val Blur = 1
     const val FlowingLight = 2
+    const val Transparent = 3
 }

@@ -2829,4 +2829,5 @@
     <string name="read_aloud_bg_solid">纯色</string>
     <string name="read_aloud_bg_blur">模糊</string>
     <string name="read_aloud_bg_flowing_light">流光</string>
+    <string name="read_aloud_bg_transparent">透明</string>
 </resources>

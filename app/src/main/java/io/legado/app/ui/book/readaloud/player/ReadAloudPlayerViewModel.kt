@@ -59,6 +59,7 @@ class ReadAloudPlayerViewModel(
         val next = when (current) {
             ReadAloudBgMode.Solid -> ReadAloudBgMode.Blur
             ReadAloudBgMode.Blur -> ReadAloudBgMode.FlowingLight
+            ReadAloudBgMode.FlowingLight -> ReadAloudBgMode.Transparent
             else -> ReadAloudBgMode.Solid
         }
         AppConfigStore.putInt(PreferKey.readAloudPlayerBgMode, next)
