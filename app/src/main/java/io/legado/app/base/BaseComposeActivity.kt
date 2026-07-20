@@ -1,8 +1,8 @@
 package io.legado.app.base
 
 import android.content.res.Configuration
-import android.os.Bundle
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -11,38 +11,36 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.toDrawable
-import androidx.core.view.WindowCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.BuildConfig
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
-import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.diffFrom
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.disableAutoFill
-import io.legado.app.utils.fullScreen
 import io.legado.app.utils.isNightMode
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.windowSize
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import org.koin.android.ext.android.inject
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 abstract class BaseComposeActivity(
-    val fullScreen: Boolean = true,
     private val toolBarTheme: Theme = Theme.Auto,
     private val transparent: Boolean = false,
     private val imageBg: Boolean = true
@@ -111,12 +109,9 @@ abstract class BaseComposeActivity(
     open fun setupSystemBar() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        if (fullScreen) fullScreen()
-
         setStatusBarColorAuto(
             themeColor(com.google.android.material.R.attr.colorSurface),
-            true,
-            fullScreen
+            true
         )
 
         toggleSystemBar(appUiConfigurationGateway.currentConfiguration.appShell.showStatusBar)
