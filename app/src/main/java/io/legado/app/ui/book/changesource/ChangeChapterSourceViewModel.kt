@@ -125,7 +125,7 @@ class ChangeChapterSourceViewModel(
         }
     }
 
-    private fun getDbSearchBooks(): List<SearchBook> {
+    private suspend fun getDbSearchBooks(): List<SearchBook> {
         val name = oldBook?.name ?: return emptyList()
         val author = oldBook?.author ?: return emptyList()
         val settings = changeSourceSettingsGateway.currentSettings
@@ -138,15 +138,7 @@ class ChangeChapterSourceViewModel(
             }
         }
         val bookAuthor = if (settings.checkAuthor) author else ""
-        return if (screenKey.isEmpty()) {
-            io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
-                name, bookAuthor, group
-            )
-        } else {
-            io.legado.app.data.appDb.searchBookDao.changeSourceSearch(
-                name, bookAuthor, screenKey, group
-            )
-        }
+        return searchRepository.findChangeSourceBooks(name, bookAuthor, screenKey, group)
     }
 
     fun onIntent(intent: ChangeChapterSourceIntent) {
@@ -277,10 +269,9 @@ class ChangeChapterSourceViewModel(
                 if (selectedUrls.isEmpty()) {
                     searchScope.update("")
                 } else {
-                    val selectedSources =
-                        io.legado.app.data.appDb.bookSourceDao.allEnabledPart.filter {
-                            selectedUrls.contains(it.bookSourceUrl)
-                        }
+                    val selectedSources = _uiState.value.enabledSources.filter {
+                        selectedUrls.contains(it.bookSourceUrl)
+                    }
                     searchScope.updateSources(selectedSources)
                 }
                 updateScopeState()
@@ -297,9 +288,7 @@ class ChangeChapterSourceViewModel(
     private fun startSearch() {
         val book = oldBook ?: return
         stopSearch()
-        if (searchResults.isNotEmpty()) {
-            io.legado.app.data.appDb.searchBookDao.delete(*searchResults.toTypedArray())
-        }
+        val removedResults = searchResults.toList()
         searchResults.clear()
         bookMap.clear()
         val scope = SearchScope(changeSourceSettingsGateway.currentSettings.searchScope)
@@ -312,6 +301,9 @@ class ChangeChapterSourceViewModel(
         filterResults()
 
         searchJob = viewModelScope.launch {
+            if (removedResults.isNotEmpty()) {
+                searchRepository.deleteSearchBooks(removedResults)
+            }
             changeSourceSearchUseCase.search(
                 name = book.name,
                 author = book.author,
@@ -336,7 +328,7 @@ class ChangeChapterSourceViewModel(
                     is ChangeSourceSearchEvent.Result -> {
                         searchResults.add(event.searchBook)
                         bookMap[event.searchBook.primaryStr()] = event.searchBook
-                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
+                        searchRepository.saveSearchBook(event.searchBook)
                         filterResults()
                     }
 

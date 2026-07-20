@@ -107,6 +107,31 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         SourceHelp.deleteBookSourceParts(sources)
     }
 
+    suspend fun deleteSource(sourceUrl: String) = withContext(Dispatchers.IO) {
+        SourceHelp.deleteBookSource(sourceUrl)
+    }
+
+    suspend fun disableSource(sourceUrl: String) = withContext(Dispatchers.IO) {
+        bookSourceDao.getBookSource(sourceUrl)?.let { source ->
+            source.enabled = false
+            bookSourceDao.update(source)
+        }
+    }
+
+    suspend fun moveSourceToTop(sourceUrl: String): Int? = withContext(Dispatchers.IO) {
+        val source = bookSourceDao.getBookSource(sourceUrl) ?: return@withContext null
+        source.customOrder = bookSourceDao.minOrder - 1
+        bookSourceDao.update(source)
+        source.customOrder
+    }
+
+    suspend fun moveSourceToBottom(sourceUrl: String): Int? = withContext(Dispatchers.IO) {
+        val source = bookSourceDao.getBookSource(sourceUrl) ?: return@withContext null
+        source.customOrder = bookSourceDao.maxOrder + 1
+        bookSourceDao.update(source)
+        source.customOrder
+    }
+
     suspend fun updateSources(vararg sources: BookSource) = withContext(Dispatchers.IO) {
         bookSourceDao.update(*sources)
     }

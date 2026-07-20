@@ -9,11 +9,13 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
@@ -216,6 +218,9 @@ class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
+    private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
+    private val bookmarkRepository: BookmarkRepository,
     private val readSettingsRepository: ReadSettingsRepository,
     private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
@@ -227,7 +232,7 @@ class TocViewModel(
     val bookState = bookUrlFlow
         .filterNotNull()
         .flatMapLatest { url ->
-            appDb.bookDao.flowGetBook(url)
+            bookRepository.flowBook(url)
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -276,7 +281,7 @@ class TocViewModel(
             book to query
         }
             .flatMapLatest { (book, query) ->
-                appDb.bookmarkDao
+                bookmarkRepository
                     .flowByBook(book.name, book.author)
                     .map { list ->
                         list
@@ -375,7 +380,7 @@ class TocViewModel(
 
     override val rawDataFlow: Flow<List<TocDomainItem>> = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged()
-            .flatMapLatest { appDb.bookChapterDao.getChapterListFlow(it) },
+            .flatMapLatest { bookRepository.flowChapters(it) },
         downloadContextFlow,
         uiConfigFlow,
         titleReplaceState
@@ -559,7 +564,7 @@ class TocViewModel(
         val currentConfig = currentBook.readConfig ?: Book.ReadConfig()
         val newConfig = currentConfig.copy(reverseToc = !currentConfig.reverseToc)
         val newBook = currentBook.copy(readConfig = newConfig)
-        appDb.bookDao.update(newBook)
+        bookRepository.update(newBook)
         //bookState.value = newBook
     }
 
@@ -575,28 +580,26 @@ class TocViewModel(
             }
             kotlin.runCatching {
                 LocalBook.getChapterList(book).let {
-                    appDb.bookChapterDao.delByBook(book.bookUrl)
-                    appDb.bookChapterDao.insert(*it.toTypedArray())
-                    appDb.bookDao.update(book)
+                    bookRepository.replaceChaptersAndUpdateBook(book, it)
                 }
             }.onFailure {
                 AppLog.put("LoadTocError:${it.localizedMessage}", it)
                 _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
             }
         } else {
-            val source = appDb.bookSourceDao.getBookSource(book.origin)
+            val source = bookSourceRepository.getBookSource(book.origin)
             source?.let {
                 val oldBook = book.copy()
                 WebBook.getChapterListAwait(it, book, true)
                     .onSuccess { cList ->
                         if (oldBook.bookUrl == book.bookUrl) {
-                            appDb.bookDao.update(book)
+                            bookRepository.update(book)
                         } else {
-                            appDb.bookDao.replace(oldBook, book)
+                            bookRepository.replace(oldBook, book)
                             BookHelp.updateCacheFolder(oldBook, book)
                         }
-                        appDb.bookChapterDao.delByBook(oldBook.bookUrl)
-                        appDb.bookChapterDao.insert(*cList.toTypedArray())
+                        bookRepository.deleteChaptersByBook(oldBook.bookUrl)
+                        bookRepository.insertChapters(*cList.toTypedArray())
                     }.onFailure {
                         AppLog.put("LoadTocError:${it.localizedMessage}", it)
                         _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
@@ -630,7 +633,7 @@ class TocViewModel(
     fun collapseAllVolumes() = execute {
         val bookUrl = bookState.value?.bookUrl ?: return@execute
         val volumes =
-            appDb.bookChapterDao.getChapterList(bookUrl).filter { it.isVolume }.map { it.index }
+            bookRepository.getChapters(bookUrl).filter { it.isVolume }.map { it.index }
                 .toSet()
         _collapsedVolumes.value = volumes
     }
@@ -689,11 +692,9 @@ class TocViewModel(
     private fun upBookTocRule(book: Book, complete: (Throwable?) -> Unit) {
         _isUploading.value = true
         execute {
-            appDb.bookDao.update(book)
+            bookRepository.update(book)
             LocalBook.getChapterList(book).let { chapters ->
-                appDb.bookChapterDao.delByBook(book.bookUrl)
-                appDb.bookChapterDao.insert(*chapters.toTypedArray())
-                appDb.bookDao.update(book)
+                bookRepository.replaceChaptersAndUpdateBook(book, chapters)
                 ReadBook.onChapterListUpdated(book)
                 //bookState.value = book
             }
@@ -709,7 +710,7 @@ class TocViewModel(
     fun exportCurrentBookBookmarks(fileUri: Uri, isMd: Boolean) = viewModelScope.launch {
         try {
             val book = bookState.value ?: return@launch
-            val bookmarks = appDb.bookmarkDao.getByBook(book.name, book.author)
+            val bookmarks = bookmarkRepository.getByBook(book.name, book.author)
             if (bookmarks.isEmpty()) {
                 showMessage(R.string.no_bookmarks_to_export)
                 return@launch
@@ -725,10 +726,10 @@ class TocViewModel(
     }
 
     fun updateBookmark(bookmark: Bookmark) =
-        viewModelScope.launch(Dispatchers.IO) { appDb.bookmarkDao.insert(bookmark) }
+        viewModelScope.launch(Dispatchers.IO) { bookmarkRepository.save(bookmark) }
 
     fun deleteBookmark(bookmark: Bookmark) =
-        viewModelScope.launch(Dispatchers.IO) { appDb.bookmarkDao.delete(bookmark) }
+        viewModelScope.launch(Dispatchers.IO) { bookmarkRepository.delete(bookmark) }
 
     fun addBookmarksForSelected() = viewModelScope.launch(Dispatchers.IO) {
         val book = bookState.value ?: return@launch
@@ -755,7 +756,7 @@ class TocViewModel(
             )
         }
 
-        appDb.bookmarkDao.insert(*bookmarks.toTypedArray())
+        bookmarkRepository.saveAll(bookmarks)
         showMessage(context.getString(R.string.bookmarks_added_count, bookmarks.size))
         withContext(Dispatchers.Main) {
             clearSelection()

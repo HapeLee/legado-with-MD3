@@ -501,7 +501,13 @@ val appModule = module {
     viewModelOf(::ReplaceRuleViewModel)
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
-    viewModel { TxtTocRulePreviewViewModel(app = get(), repository = get()) }
+    viewModel {
+        TxtTocRulePreviewViewModel(
+            app = get(),
+            bookRepository = get(),
+            repository = get(),
+        )
+    }
     viewModel {
         OtherConfigViewModel(
             appLocaleGateway = get(),

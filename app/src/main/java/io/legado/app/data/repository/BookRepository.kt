@@ -14,6 +14,14 @@ class BookRepository(
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao
 ) {
+    fun flowBook(bookUrl: String): Flow<Book?> {
+        return bookDao.flowGetBook(bookUrl)
+    }
+
+    fun flowChapters(bookUrl: String): Flow<List<BookChapter>> {
+        return bookChapterDao.getChapterListFlow(bookUrl)
+    }
+
     fun getAllBooks(): Flow<List<Book>> {
         return bookDao.flowAll()
     }
@@ -84,6 +92,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getChapters(bookUrl: String): List<BookChapter> {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapterList(bookUrl)
+        }
+    }
+
     suspend fun update(vararg book: Book) {
         withContext(Dispatchers.IO) {
             bookDao.update(*book)
@@ -123,6 +137,14 @@ class BookRepository(
     suspend fun deleteChaptersByBook(bookUrl: String) {
         withContext(Dispatchers.IO) {
             bookChapterDao.delByBook(bookUrl)
+        }
+    }
+
+    suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
+        withContext(Dispatchers.IO) {
+            bookChapterDao.delByBook(book.bookUrl)
+            bookChapterDao.insert(*chapters.toTypedArray())
+            bookDao.update(book)
         }
     }
 

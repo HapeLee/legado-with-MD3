@@ -3,9 +3,9 @@ package io.legado.app.ui.book.toc.rule.preview
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.model.localBook.LocalBook
@@ -27,6 +27,7 @@ import java.util.regex.PatternSyntaxException
 
 class TxtTocRulePreviewViewModel(
     private val app: Application,
+    private val bookRepository: BookRepository,
     private val repository: TxtTocRuleRepository,
 ) : ViewModel() {
 
@@ -98,7 +99,7 @@ class TxtTocRulePreviewViewModel(
     private suspend fun loadRules(bookUrl: String, currentTocRegex: String?) {
         _uiState.update { it.copy(loading = true) }
 
-        val book = runCatching { appDb.bookDao.getBook(bookUrl) }.getOrNull()
+        val book = runCatching { bookRepository.getBook(bookUrl) }.getOrNull()
         this.book = book
         val currentRule = currentTocRegex ?: book?.tocUrl ?: ""
 
@@ -176,7 +177,7 @@ class TxtTocRulePreviewViewModel(
         }
 
         // Save to DB
-        val existing = runCatching { appDb.txtTocRuleDao.getByIds(setOf(updatedRule.id)) }.getOrNull()?.firstOrNull()
+        val existing = runCatching { repository.findById(updatedRule.id) }.getOrNull()
         if (existing != null) {
             repository.update(updatedRule)
         } else {
