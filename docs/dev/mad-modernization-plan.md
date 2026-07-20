@@ -33,7 +33,7 @@
 
 **③ F1 收尾**：仍缺一个**显式跑 `testAppDebugUnitTest` + `lintAppDebug` 的 CI job**——这是 F1 唯一没关上的门（当前单测失败/新增 lint 违规不会让 CI 红）。
 
-**④ Track A / B / C**：均未开始。
+**④ Track A**：**A1–A3 已落地**（会话写入收敛）。`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`；外部 6 处写入（BookInfo×2 / BookInfoEdit / `Book.delete` / ReadBookController×2）改走 `replaceCurrentBook` / `clearCurrentBook` / `updateReadingPosition` 命令 + `isCurrentBook` 谓词；编译器已证明外部写入点为 0。**A4/A5 明确暂缓**——理由见 Track A 小节末尾。**Track B / C**：均未开始。
 
 ### 未提交
 
@@ -158,9 +158,11 @@ class ReplaceRuleRepository(private val dao: ReplaceRuleDao) {
 
 ### Track A —— 所有权与业务状态（现在做，最高优先级）
 
+> **进度**：A1–A3 已完成并提交；A4/A5 暂缓（见本节末「A4/A5 暂缓说明」）。
+
 目标：**阅读状态有唯一写入入口，Snapshot 可信**。不受 View/Compose 进度影响。
 
-**A1. 编译器冻结写入**。把 `ReadBook` 的会话字段改为 `private set`：
+**A1. 编译器冻结写入** ✅。把 `ReadBook` 的会话字段改为 `private set`：
 ```kotlin
 var book: Book? = null
     private set
@@ -171,20 +173,21 @@ var durChapterPos = 0
 ```
 > 用 `private set` 而非 `internal set`——单体 `:app` 内 `internal` 几乎不设防。
 
-**A2. 为约 7 个外部写入点提供语义化命令**：
+**A2. 为外部写入点提供语义化命令** ✅。核实后外部写入面只有 **6 处**（不是估的 7）：BookInfoViewModel×2、BookInfoEditViewModel×1、`Book.delete`×1（置空 book）、ReadBookController×2（章内位置）。**实际落地的命令集**（忠实最小实现，命令体只做原代码做的事，不做计划示例里那种「顺手重置 index/pos」的行为漂移）：
 ```kotlin
-fun replaceCurrentBook(book: Book)
-fun moveToChapter(index: Int, position: Int)
+fun replaceCurrentBook(book: Book)   // 仅替换引用，不重置章节/进度
+fun clearCurrentBook()               // 仅置空 book
 fun updateReadingPosition(position: Int)
-fun clearCurrentSession()
 ```
-把外部散落的字段赋值改为调用这些命令。编译器强制，重构工具可跟踪，无法用换行/别名绕过。
+> 计划原稿的 `moveToChapter` / `clearCurrentSession` **没有实现**——现有外部写入点没有这两种语义；章节跳转本就走 `ReadBook.openChapter`/`setProgress` 等内部方法，不是外部裸赋值。避免造未使用的命令。
 
-**A3. 停止向外递出可变实体**。绝大多数外部读取只是身份比较，用意图化 API 替代裸实体：
+**A3. 意图化谓词替代裸实体身份比较** ✅（部分）。已落地：
 ```kotlin
 fun isCurrentBook(bookUrl: String): Boolean = book?.bookUrl == bookUrl
+fun isCurrentBook(other: Book): Boolean = book?.isSameNameAuthor(other) == true
 ```
-这同时堵住"引用逃逸写入"（`ReadBook.book?.durChapterIndex = x`）未来复发的可能——当前近 0，但接口不再暴露就永久免疫。
+6 处写入点的身份判定已改走谓词。
+> A3 的完整形态（「绝不向外递出可变 `Book`」）**未做**——`ReadBook.book` 仍在 ~44 个文件被读取，是 Track B/C 与 VM 拆分的范畴，不在本轮。已核实当前「引用逃逸写入」（`ReadBook.book?.durChapterIndex = x`）为 **0**（grep 无命中），`private set` 也堵住了其经由 `ReadBook.*` 字段复发的路径。
 
 **A4. 权威不可变快照**。仅在写入受控后引入：
 ```kotlin
@@ -230,6 +233,17 @@ interface ReaderSession {
 首个实现仍可 `LegacyReaderSession → ReadBook`，但必须保证：所有 mutation 经过它；state 投影真实遗留状态、不维护竞争副本；调用方拿不到可变领域对象。
 
 **验收**：`ReadBook` 会话字段全部 `private set`；外部写入点为 0（全部走命令）；`snapshot`/`state` 在任何路径的状态变更后都能正确发射；VM 可从 `ReaderSession.state` 取业务状态。
+> 当前状态：前两条（`private set` + 外部写入点为 0）**已达成并由编译器保证**；后两条属 A4/A5，暂缓。
+
+#### A4/A5 暂缓说明（本轮结论）
+
+A1–A3 是 Track A 里编译器强制、可静态验证的高价值地基，已完成。A4/A5 本轮**有意不做**，理由：
+
+1. **无消费者的基础设施**：A4 的 `snapshot` / A5 的 `ReaderSession.state` 目前没有任何读取方（VM 仍走 `CallBack`）。引入后其正确性只能靠「编译 + 单测」验证，而这两者都覆盖不到「阅读器实时状态是否在每条变更路径正确发射」——真正的验证要等一个真实消费者接上（A5 的验收「VM 可从 state 取业务状态」）。
+2. **潜在正确性陷阱**：会话字段已 `private set`，内部写入点约 **15 处**（`resetData`/`upData`/`setProgress`/翻页 4 处/换章 3 处/`setPageIndex`/`openChapter`/`changeTo`/`loadChapterList` 等，散在 6000+ 行）。要满足「任何路径变更后都发射」需在每个原子转移末尾 `publishSnapshot()`；漏一处即「权威快照」静默陈旧。在没有消费者做端到端校验前落这层，是把一个隐性正确性债提前引入。
+3. **字段来源不干净**：计划示例里的 `isLoading` / `isReadingAloud` 在 `ReadBook` 里没有干净的自有来源——`isReadingAloud` 实际取自 `BaseReadAloudService.isRun`（独立服务，ReadBook 变更不会触发其重发），`isLoading` 只有 `msg` / `loadingChapters` 间接信号。硬塞进 ReadBook 发布的快照会得到静默陈旧字段。真做 A4 时要么让这些来源方也参与发布，要么把它们排除。
+
+**建议**：A4/A5 放到一个能**同时接入首个真实消费者**（VM 读一小块业务状态自 `state`）的专门回合做，用消费者做端到端校验，避免落一层测不到、没人用的状态。届时快照按「高频 viewport（position）/ 低频结构」分开，`publishSnapshot()` 在 ~15 个内部原子转移末尾各调一次（过发无害、漏发才是 bug）。
 
 ---
 
@@ -332,7 +346,7 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 
 | 约束 | 机制 | 强度 |
 |---|---|---|
-| `ReadBook` 会话字段不可外部写 | Kotlin `private set` | 编译期，不可绕过 |
+| `ReadBook` 会话字段不可外部写 | Kotlin `private set`（`book`/`durChapterIndex`/`durChapterPos`） | 编译期，不可绕过 ✅ |
 | ViewModel 不新增 DAO 直连 | `VerifyConfigArchitectureTask` + `legacyDaoInjectionBaseline` | CI，双向棘轮 ✅ |
 | 非 VM UI 层不新增 DAO 直连 | 同上 + `legacyUiDaoAccessBaseline` | CI，双向棘轮 ✅ |
 | 不新增旧偏好直读 | 现有 `legacyPreferenceCallBaseline` | CI（已存在） |
