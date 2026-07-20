@@ -4,9 +4,8 @@ import android.app.Application
 import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.help.source.SourceHelp
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.toImmutableList
@@ -21,7 +20,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class BookSourceViewModel(application: Application) : ViewModel() {
+class BookSourceViewModel(
+    application: Application,
+    private val repository: BookSourceRepository,
+) : ViewModel() {
     companion object {
         const val FILTER_ENABLED = "@enabled"
         const val FILTER_DISABLED = "@disabled"
@@ -32,7 +34,6 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         const val PREFIX_GROUP = "group:"
     }
 
-    private val dao = appDb.bookSourceDao
     private val searchKey = MutableStateFlow("")
     private val isSearchMode = MutableStateFlow(false)
     private val filter = MutableStateFlow<String?>(null)
@@ -44,8 +45,8 @@ class BookSourceViewModel(application: Application) : ViewModel() {
     private val enabledOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
     val uiState = combine(
-        dao.flowAll(),
-        dao.flowGroups(),
+        repository.flowAll(),
+        repository.flowGroups(),
         searchKey,
         isSearchMode,
         filter,
@@ -130,14 +131,14 @@ class BookSourceViewModel(application: Application) : ViewModel() {
 
             is BookSourceIntent.SetEnabled -> setEnabled(intent.id, intent.enabled)
             is BookSourceIntent.SetEnabledForSelection -> launch {
-                dao.enable(
+                repository.setEnabled(
                     intent.enabled,
                     parts(intent.ids)
                 )
             }
 
             is BookSourceIntent.SetExploreEnabled -> updateExplore(intent.ids, intent.enabled)
-            is BookSourceIntent.Delete -> launch { SourceHelp.deleteBookSourceParts(parts(intent.ids)); selectedIds.update { it - intent.ids } }
+            is BookSourceIntent.Delete -> launch { repository.deleteSourceParts(parts(intent.ids)); selectedIds.update { it - intent.ids } }
             is BookSourceIntent.MoveToEdge -> moveToEdge(intent.ids, intent.toTop)
             is BookSourceIntent.MoveItem -> moveItem(intent.from, intent.to)
             BookSourceIntent.SaveSortOrder -> saveSortOrder()
@@ -157,8 +158,8 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         enabledOverrides.update { it + (id to enabled) }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                dao.enable(id, enabled)
-                dao.flowAll().first { sources ->
+                repository.setEnabled(id, enabled)
+                repository.flowAll().first { sources ->
                     sources.firstOrNull { it.bookSourceUrl == id }?.enabled == enabled
                 }
             }
@@ -166,31 +167,30 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         }
     }
 
-    private fun parts(ids: Set<String>) = dao.allPart.filter { it.bookSourceUrl in ids }
+    private suspend fun parts(ids: Set<String>) =
+        repository.getAllPart().filter { it.bookSourceUrl in ids }
     private fun updateExplore(ids: Set<String>, enabled: Boolean) =
-        launch { dao.enableExplore(enabled, parts(ids)) }
+        launch { repository.setExploreEnabled(enabled, parts(ids)) }
 
     private fun updateGroups(ids: Set<String>, group: String, add: Boolean) = launch {
         val changed = parts(ids).map { part ->
             part.copy().apply { if (add) addGroup(group) else removeGroup(group) }
         }
-        dao.upGroup(changed)
+        repository.updateGroups(changed)
     }
 
     private fun updateGroup(old: String, new: String) = launch {
-        val sources = dao.getByGroup(old)
+        val sources = repository.getByGroup(old)
         sources.forEach { source ->
             source.bookSourceGroup?.splitNotBlank(",")?.toHashSet()
                 ?.apply { remove(old); if (new.isNotBlank()) add(new) }
                 ?.let { source.bookSourceGroup = TextUtils.join(",", it) }
         }
-        dao.update(*sources.toTypedArray())
+        repository.updateSources(*sources.toTypedArray())
     }
 
     private fun moveToEdge(ids: Set<String>, toTop: Boolean) = launch {
-        val selected = parts(ids).sortedBy { it.customOrder }
-        val start = if (toTop) dao.minOrder - selected.size else dao.maxOrder + 1
-        dao.upOrder(selected.mapIndexed { index, part -> part.copy(customOrder = start + index) })
+        repository.moveToEdge(parts(ids), toTop)
     }
 
     private fun moveItem(from: Int, to: Int) {
@@ -205,13 +205,13 @@ class BookSourceViewModel(application: Application) : ViewModel() {
     private fun saveSortOrder() {
         val items = localItems.value ?: return
         launch {
-            dao.upOrder(items.mapIndexed { index, item -> item.copy(customOrder = index + 1) }); localItems.value =
+            repository.updateOrder(items.mapIndexed { index, item -> item.copy(customOrder = index + 1) }); localItems.value =
             null
         }
     }
 
     private fun commitSortOrder(ids: List<String>, ascending: Boolean) = launch {
-        val sourcesById = dao.allPart.associateBy { it.bookSourceUrl }
+        val sourcesById = repository.getAllPart().associateBy { it.bookSourceUrl }
         val orderSlots = ids.mapNotNull { sourcesById[it]?.customOrder }
             .let { if (ascending) it.sorted() else it.sortedDescending() }
         val ordered = ids.mapIndexedNotNull { index, id ->
@@ -219,7 +219,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
                 customOrder = orderSlots.getOrNull(index) ?: return@mapIndexedNotNull null
             )
         }
-        dao.upOrder(ordered)
+        repository.updateOrder(ordered)
     }
 
     private fun checkInterval(ids: Set<String>) {

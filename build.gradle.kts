@@ -207,8 +207,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/book/info/edit/BookInfoEditViewModel.kt" to 2,
             "io/legado/app/ui/book/manga/ReadMangaViewModel.kt" to 17,
             "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
-            "io/legado/app/ui/book/source/edit/BookSourceEditViewModel.kt" to 3,
-            "io/legado/app/ui/book/source/manage/BookSourceViewModel.kt" to 29,
             "io/legado/app/ui/book/toc/TocViewModel.kt" to 13,
             "io/legado/app/ui/book/toc/rule/preview/TxtTocRulePreviewViewModel.kt" to 2,
             "io/legado/app/ui/browser/WebViewModel.kt" to 1,
