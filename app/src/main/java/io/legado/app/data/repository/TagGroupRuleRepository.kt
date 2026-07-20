@@ -14,6 +14,10 @@ class TagGroupRuleRepository {
         return dao.flowAll()
     }
 
+    suspend fun getAll(): List<TagGroupRule> = withContext(Dispatchers.IO) {
+        dao.getAll()
+    }
+
     suspend fun insert(vararg rule: TagGroupRule) {
         withContext(Dispatchers.IO) {
             dao.insert(*rule)

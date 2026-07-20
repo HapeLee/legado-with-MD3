@@ -224,7 +224,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/book/manga/ReadMangaViewModel.kt" to 17,
             "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
             "io/legado/app/ui/login/SourceLoginViewModel.kt" to 6,
-            "io/legado/app/ui/tagGroupRule/TagGroupRuleViewModel.kt" to 4,
         )
     )
     // 非 ViewModel 的 UI 层文件直连 DAO 的历史债，只冻结不修复；

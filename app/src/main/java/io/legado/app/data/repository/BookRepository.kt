@@ -130,6 +130,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getAll(): List<Book> {
+        return withContext(Dispatchers.IO) {
+            bookDao.getAll()
+        }
+    }
+
     suspend fun replace(oldBook: Book, newBook: Book) {
         withContext(Dispatchers.IO) {
             bookDao.replace(oldBook, newBook)
