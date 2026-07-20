@@ -543,6 +543,10 @@ class ReadSettingsRepository(
     }
 }
 
+/**
+ * ReadSettings 是 101 字段的读取超集；gateway update 当前只承诺持久化以下 45 个键。
+ * 扩展此边界时必须同步更新 ReadSettingsMappingTest 的显式键集契约。
+ */
 internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.screenOrientation to screenOrientation,
     PreferKey.keepLight to keepLight,

@@ -13,6 +13,15 @@ import org.junit.Test
 class ReadSettingsMappingTest {
 
     @Test
+    fun `gateway 持久化边界固定为显式声明的 45 键`() {
+        val actualKeys = ReadSettings().toGatewayPrefMap().keys
+        val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
+
+        assertEquals(45, actualKeys.size)
+        assertEquals(expectedKeys, actualKeys)
+    }
+
+    @Test
     fun `阅读设置 gateway 45 键写读映射逐字段对应`() {
         val repository = ReadSettingsRepository(
             settingsRepository = SettingsRepository(),
