@@ -22,7 +22,6 @@ import io.legado.app.model.ReadManga
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
@@ -282,7 +281,7 @@ class MangaMenu @JvmOverloads constructor(
 
     private fun updateReadUrlInBrowser(enabled: Boolean) {
         activity?.lifecycleScope?.launch {
-            readSettingsGateway.update(ReadSettingsUpdate.ReadUrlInBrowser(enabled))
+            readSettingsGateway.update { it.copy(readUrlInBrowser = enabled) }
         }
     }
 

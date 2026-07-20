@@ -9,7 +9,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsValue
@@ -34,53 +33,12 @@ class ReadSettingsRepository(
 
     val preferences: Flow<ReadPreferences> = settings
 
-    override suspend fun update(update: ReadSettingsUpdate) {
-        when (update) {
-            is ReadSettingsUpdate.ScreenOrientation -> setScreenOrientation(update.value)
-            is ReadSettingsUpdate.KeepLight -> setKeepLight(update.value)
-            is ReadSettingsUpdate.HideStatusBar -> setHideStatusBar(update.value)
-            is ReadSettingsUpdate.HideNavigationBar -> setHideNavigationBar(update.value)
-            is ReadSettingsUpdate.PaddingDisplayCutouts -> setPaddingDisplayCutouts(update.value)
-            is ReadSettingsUpdate.TitleBarMode -> setTitleBarMode(update.value)
-            is ReadSettingsUpdate.ReadMenuBlurAlpha -> setReadMenuBlurAlpha(update.value)
-            is ReadSettingsUpdate.ReadBodyToLh -> setReadBodyToLh(update.value)
-            is ReadSettingsUpdate.DefaultSourceChangeAll -> setDefaultSourceChangeAll(update.value)
-            is ReadSettingsUpdate.TextFullJustify -> setTextFullJustify(update.value)
-            is ReadSettingsUpdate.TextBottomJustify -> setTextBottomJustify(update.value)
-            is ReadSettingsUpdate.AdaptSpecialStyle -> setAdaptSpecialStyle(update.value)
-            is ReadSettingsUpdate.UseZhLayout -> setUseZhLayout(update.value)
-            is ReadSettingsUpdate.ShowBrightnessView -> setShowBrightnessView(update.value)
-            is ReadSettingsUpdate.BrightnessVwPos -> setBrightnessVwPos(update.value)
-            is ReadSettingsUpdate.Brightness -> setReadBrightness(update.value)
-            is ReadSettingsUpdate.BrightnessAuto -> setBrightnessAuto(update.value)
-            is ReadSettingsUpdate.UseUnderline -> setUseUnderline(update.value)
-            is ReadSettingsUpdate.ReadSliderMode -> setReadSliderMode(update.value)
-            is ReadSettingsUpdate.DoubleHorizontalPage -> setDoubleHorizontalPage(update.value)
-            is ReadSettingsUpdate.ProgressBarBehavior -> setProgressBarBehavior(update.value)
-            is ReadSettingsUpdate.MouseWheelPage -> setMouseWheelPage(update.value)
-            is ReadSettingsUpdate.VolumeKeyPage -> setVolumeKeyPage(update.value)
-            is ReadSettingsUpdate.VolumeKeyPageOnPlay -> setVolumeKeyPageOnPlay(update.value)
-            is ReadSettingsUpdate.KeyPageOnLongPress -> setKeyPageOnLongPress(update.value)
-            is ReadSettingsUpdate.PageTouchSlop -> setPageTouchSlop(update.value)
-            is ReadSettingsUpdate.SliderVibrator -> setSliderVibrator(update.value)
-            is ReadSettingsUpdate.SelectVibrator -> setSelectVibrator(update.value)
-            is ReadSettingsUpdate.AutoChangeSource -> setAutoChangeSource(update.value)
-            is ReadSettingsUpdate.AutoSuggestDayNight -> setAutoSuggestDayNight(update.value)
-            is ReadSettingsUpdate.SelectText -> setSelectText(update.value)
-            is ReadSettingsUpdate.NoAnimScrollPage -> setNoAnimScrollPage(update.value)
-            is ReadSettingsUpdate.ClickImgWay -> setClickImgWay(update.value)
-            is ReadSettingsUpdate.OptimizeRender -> setOptimizeRender(update.value)
-            is ReadSettingsUpdate.DisableReturnKey -> setDisableReturnKey(update.value)
-            is ReadSettingsUpdate.ShowReadTitleAddition -> setShowReadTitleAddition(update.value)
-            is ReadSettingsUpdate.TextSelectMenuConfig -> settingsRepository.putString(PreferKey.textSelectMenuConfig, update.value)
-            is ReadSettingsUpdate.ReadUrlInBrowser -> settingsRepository.putBoolean(PreferKey.readUrlOpenInBrowser, update.value)
-            is ReadSettingsUpdate.ShowMenuIcon -> setShowMenuIcon(update.value)
-            is ReadSettingsUpdate.TitleBarCompact -> setTitleBarCompact(update.value)
-            is ReadSettingsUpdate.PageKeys -> setPageKeys(update.previous, update.next)
-            is ReadSettingsUpdate.FontFolder -> setFontFolder(update.value)
-            is ReadSettingsUpdate.SystemTypefaces -> setSystemTypefaces(update.value)
-            is ReadSettingsUpdate.PreDownloadNum -> setPreDownloadNum(update.value)
-        }
+    override suspend fun update(transform: (ReadSettings) -> ReadSettings) {
+        AppConfigStore.atomicUpdate(
+            read = { it.toReadSettings() },
+            toPrefMap = ReadSettings::toGatewayPrefMap,
+            transform = transform,
+        )
     }
 
     suspend fun setScreenOrientation(value: String) =
@@ -584,3 +542,51 @@ class ReadSettingsRepository(
         val TitleBarCompact = booleanPreferencesKey(PreferKey.titleBarCompact)
     }
 }
+
+internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.screenOrientation to screenOrientation,
+    PreferKey.keepLight to keepLight,
+    PreferKey.hideStatusBar to hideStatusBar,
+    PreferKey.hideNavigationBar to hideNavigationBar,
+    PreferKey.paddingDisplayCutouts to paddingDisplayCutouts,
+    PreferKey.titleBarMode to titleBarMode,
+    PreferKey.readMenuBlurAlpha to readMenuBlurAlpha,
+    PreferKey.readBodyToLh to readBodyToLh,
+    PreferKey.defaultSourceChangeAll to defaultSourceChangeAll,
+    PreferKey.textFullJustify to textFullJustify,
+    PreferKey.textBottomJustify to textBottomJustify,
+    PreferKey.adaptSpecialStyle to adaptSpecialStyle,
+    PreferKey.useZhLayout to useZhLayout,
+    PreferKey.showBrightnessView to showBrightnessView,
+    PreferKey.brightnessVwPos to brightnessVwPos,
+    PreferKey.brightness to readBrightness,
+    PreferKey.brightnessAuto to brightnessAuto,
+    PreferKey.useUnderline to useUnderline,
+    PreferKey.readSliderMode to readSliderMode,
+    PreferKey.doublePageHorizontal to doubleHorizontalPage,
+    PreferKey.progressBarBehavior to progressBarBehavior,
+    PreferKey.mouseWheelPage to mouseWheelPage,
+    PreferKey.volumeKeyPage to volumeKeyPage,
+    PreferKey.volumeKeyPageOnPlay to volumeKeyPageOnPlay,
+    PreferKey.keyPageOnLongPress to keyPageOnLongPress,
+    PreferKey.pageTouchSlop to pageTouchSlop,
+    PreferKey.sliderVibrator to sliderVibrator,
+    PreferKey.selectVibrator to selectVibrator,
+    PreferKey.autoChangeSource to autoChangeSource,
+    PreferKey.autoSuggestDayNight to autoSuggestDayNight,
+    PreferKey.selectText to selectText,
+    PreferKey.noAnimScrollPage to noAnimScrollPage,
+    PreferKey.clickImgWay to clickImgWay,
+    PreferKey.optimizeRender to optimizeRender,
+    PreferKey.disableReturnKey to disableReturnKey,
+    PreferKey.showReadTitleAddition to showReadTitleAddition,
+    PreferKey.textSelectMenuConfig to textSelectMenuConfig,
+    PreferKey.readUrlOpenInBrowser to readUrlInBrowser,
+    PreferKey.showMenuIcon to showMenuIcon,
+    PreferKey.titleBarCompact to titleBarCompact,
+    PreferKey.prevKeys to prevKeys,
+    PreferKey.nextKeys to nextKeys,
+    PreferKey.fontFolder to fontFolder,
+    PreferKey.systemTypefaces to systemTypefaces,
+    PreferKey.preDownloadNum to preDownloadNum,
+)

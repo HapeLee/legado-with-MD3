@@ -47,7 +47,6 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
 import io.legado.app.domain.gateway.ReadStyleFloatKey
@@ -256,7 +255,7 @@ class ReadBookViewModel(
 
     fun setTextSelectMenuConfig(value: String) {
         viewModelScope.launch {
-            readSettingsRepository.update(ReadSettingsUpdate.TextSelectMenuConfig(value))
+            readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
         }
     }
 
@@ -5255,7 +5254,7 @@ class ReadBookViewModel(
             }
             is ConfigUpdate.TitleBarCompact -> {
                 viewModelScope.launch {
-                    readSettingsRepository.update(ReadSettingsUpdate.TitleBarCompact(update.value))
+                    readSettingsRepository.update { it.copy(titleBarCompact = update.value) }
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarCompact = update.value)) }
             }

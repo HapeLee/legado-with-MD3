@@ -10,7 +10,6 @@ import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AppShellStringSetting
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ThemeBooleanSetting
 import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
@@ -113,7 +112,7 @@ class ThemeConfigViewModel(
             is ThemeConfigIntent.SelectAppFont -> setAppFont(intent.file)
             ThemeConfigIntent.ClearAppFont -> updateTheme(ThemeSettingsUpdate.AppFontPath(null))
             is ThemeConfigIntent.SetFontFolder -> viewModelScope.launch {
-                readSettingsGateway.update(ReadSettingsUpdate.FontFolder(intent.path))
+                readSettingsGateway.update { it.copy(fontFolder = intent.path) }
             }
             ThemeConfigIntent.RequestFontFolder -> _effects.tryEmit(ThemeConfigEffect.OpenFontFolder)
             is ThemeConfigIntent.RequestTimePicker -> _effects.tryEmit(
