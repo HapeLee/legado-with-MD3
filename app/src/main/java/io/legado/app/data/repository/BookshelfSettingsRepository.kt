@@ -83,7 +83,7 @@ class BookshelfSettingsRepository : BookshelfSettingsGateway {
 
 private fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookGroupStyle = compatDsInt(PreferKey.bookGroupStyle) ?: 0,
-    hideEmptyGroups = compatDsBoolean(PreferKey.hideEmptyGroups) ?: false,
+    hideEmptyGroups = compatDsBoolean(PreferKey.hideEmptyGroups) ?: true,
     bookshelfSort = compatDsInt(PreferKey.bookshelfSort) ?: 0,
     bookshelfSortOrder = compatDsInt(PreferKey.bookshelfSortOrder) ?: 1,
     showUnread = compatDsBoolean(PreferKey.showUnread) ?: true,

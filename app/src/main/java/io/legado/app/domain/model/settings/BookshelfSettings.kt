@@ -4,7 +4,7 @@ import io.legado.app.data.entities.BookGroup
 
 data class BookshelfSettings(
     val bookGroupStyle: Int = 0,
-    val hideEmptyGroups: Boolean = false,
+    val hideEmptyGroups: Boolean = true,
     val bookshelfSort: Int = 0,
     val bookshelfSortOrder: Int = 1,
     val showUnread: Boolean = true,
