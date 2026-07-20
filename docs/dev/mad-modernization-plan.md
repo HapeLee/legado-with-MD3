@@ -4,6 +4,47 @@
 >
 > 范围：阅读器核心（`ReadBook` 全局单例、`ReadBookViewModel`、`ReadBook.CallBack` 渲染协议）以及全应用范围内的 UI→DAO 直连问题。**不包含**外围已完成 MAD 化的 Compose 屏幕。
 
+## 进度快照（2026-07-21 · 为新窗口交接）
+
+> 本节是给新开窗口的接续点，描述**当前 HEAD 的真实状态**。F1/F2 已推进过半，Track A/B/C 尚未开始。下方数字均已核实。
+
+### 已完成
+
+- **F2 冻结机制**：双基线 + 双向棘轮（新增报红、减少了不下调也报红）+ 陈旧条目检测，已 `dependsOn` assemble/compile 在 CI 生效（`build.gradle.kts`）。
+  - `legacyDaoInjectionBaseline` —— ViewModel 主线
+  - `legacyUiDaoAccessBaseline` —— 非 ViewModel 的 UI 层文件（第二条线）
+- **F1 部分**：`app/lint-baseline.xml` 已建并接入 `lint {}`；`verifyConfigArchitecture` 已在 CI 传递触发；单测 **272 全绿**。
+- **F2 清零（已提交 5 批）**：关联导入 → RSS → 书籍导入 → 书源管理 → 换源+目录（提交 `77d38b8`…`04161fa`）。主线基线从 ~247 降到 **130**。
+- **数据层事务加固**：目录替换（`replaceChaptersAndUpdateBook`）、换序 move（`BookSourceDao.moveToTop/Bottom`）已改原子事务。
+
+### 待续（新窗口从这里接）
+
+**① F2 主线还剩 130，集中在 9 个 VM**（按体量，`build.gradle.kts` 的 `legacyDaoInjectionBaseline`）：
+
+| VM | 直连数 | 备注 |
+|---|---:|---|
+| `ReadBookViewModel` | 52 | **不要手工硬清**，与 Track A 交叠，见下 |
+| `BookInfoViewModel` | 34 | 书籍详情，纠缠较深 |
+| `ReadMangaViewModel` | 17 | 漫画阅读 |
+| `AudioPlayViewModel` | 11 | 音频播放 |
+| `SourceLoginViewModel` | 6 | |
+| `TagGroupRuleViewModel` | 4 | |
+| `ChangeCoverViewModel` | 3 | |
+| `BookInfoEditViewModel` | 2 | |
+| `WebViewModel` | 1 | 最轻，适合当热身 |
+
+> `ReadBookViewModel(52)` 里 book/chapter 类访问会被 Track A（`ReaderSession` 接管阅读状态）**溶解**，因此只清它与阅读状态无关的部分（httpTTS/bookSource），其余留给 Track A，别在 6484 行里硬拆。
+
+**② F2 第二条线（非 VM UI 层）**：`legacyUiDaoAccessBaseline` 已冻结 **26 文件 / 62 处**，**只冻不修**。等主线清完、仓库齐备、部分 Activity 随 Compose 迁移消失后再回头清（大头 `BookSourceActivity=10`、`RssJsExtensions=8`、`KeyboardAssistsConfig=7`）。
+
+**③ F1 收尾**：仍缺一个**显式跑 `testAppDebugUnitTest` + `lintAppDebug` 的 CI job**——这是 F1 唯一没关上的门（当前单测失败/新增 lint 违规不会让 CI 红）。
+
+**④ Track A / B / C**：均未开始。
+
+### 未提交
+
+数据层事务加固（3 个文件：`BookSourceDao.kt`、`BookRepository.kt`、`BookSourceRepository.kt`）尚在工作区，建议单独一提：`refactor: 目录替换与换源移序改为原子事务`。
+
 ## 0. 框架与判定口径
 
 用两个维度描述现状，而不是一个小数分：
@@ -26,9 +67,9 @@
 | `upContentAwait` 是 `suspend`，模型反向等待视图 | `model/ReadBook.kt`（CallBack 定义内） |
 | VM 是 `CallBack` 唯一实现者 | 全仓仅 `ReadBookViewModel` 声明 `: ReadBook.CallBack` |
 | Effect 通道带订阅握手 | `_effects.subscriptionCount.first { it > 0 }`（`ReadBookViewModel.kt:210-223`） |
-| UI→DAO 直连是系统性模式 | 约 33 个 ViewModel 构造函数注入 DAO（如 `ReplaceEditViewModel(app, replaceRuleDao)`，`ui/replace/edit/ReplaceEditViewModel.kt:23`） |
-| CI 无测试/lint 门禁 | `.github/workflows/*` 仅执行 `assemble*` |
-| 已有架构护栏 + 基线机制 | `VerifyConfigArchitectureTask` + `legacyPreferenceCallBaseline`（`build.gradle.kts:136`），已 `dependsOn` assemble/compile |
+| UI→DAO 直连是系统性模式 | 计划撰写时约 33 个 VM 构造注入 DAO；**现已冻结并清零 5 批，主线余 130**（见进度快照） |
+| CI 门禁 | lint 基线与架构护栏已就位；**仍缺显式 CI test/lint job**（见进度快照 ③） |
+| 已有架构护栏 + 基线机制 | `VerifyConfigArchitectureTask` + 三条基线（`legacyPreferenceCallBaseline` / `legacyDaoInjectionBaseline` / `legacyUiDaoAccessBaseline`），已 `dependsOn` assemble/compile |
 
 ## 2. 反目标（明确不做）
 
@@ -59,10 +100,12 @@ Track C  声明式渲染 / Compose —— 长期，依赖 A、B 的产出
 
 没有它，后续拆 DAO、拆单例、拆 VM 都没有安全网。
 
+> **当前状态**：单测 272 全绿；`app/lint-baseline.xml` 已建并接入 `lint {}`；`verifyConfigArchitecture` 已在 CI 传递生效。**唯一未做 = 下面的第 3 步（显式 CI test/lint job）**。
+
 **任务**
-1. 反复运行现有单元测试，识别确定性失败与 flaky 套件，先修或隔离。
-2. 生成 lint 基线：`./gradlew lintAppDebug` 后提交 `app/lint-baseline.xml`，把历史债务冻结。
-3. CI 增加一个 `verify` job（与现有 `assembleAppDebug` 并列或前置）：
+1. ~~反复运行现有单元测试，识别确定性失败与 flaky 套件~~ ✅ 当前 272 tests / 0 failures。
+2. ~~生成 lint 基线并提交 `app/lint-baseline.xml`~~ ✅ 已建并接入。
+3. **（待做）** CI 增加一个 `verify` job（与现有 `assembleAppDebug` 并列或前置）：
    ```bash
    ./gradlew testAppDebugUnitTest
    ./gradlew lintAppDebug          # 仅新增违规会 fail（基线已冻结历史债）
@@ -83,15 +126,15 @@ Track C  声明式渲染 / Compose —— 长期，依赖 A、B 的产出
 
 ### F2 —— 冻结并逐步清除 UI→DAO 直连（全应用）
 
-系统性问题，约 33 个 VM。按功能逐批，不预造大仓库。
+系统性问题。按功能逐批，不预造大仓库。
 
-**先冻结（扩展现有护栏）**：在 `VerifyConfigArchitectureTask` 中新增规则——
-```
-ui/**/*ViewModel*.kt 禁止 import io.legado.app.data.dao.*
-```
-配一个 `legacyDaoInjectionBaseline`（照搬 `legacyPreferenceCallBaseline` 的 file→count 模式），冻结现有 ~33 处，只挡新增。
+**冻结已落地** ✅：`VerifyConfigArchitectureTask` 里实际统计 `daoImport + appDbDaoAccess` 两种形式，双向棘轮 + 陈旧检测，覆盖两条线：
+- `legacyDaoInjectionBaseline` —— `ui/**` 里**含 `ViewModel`** 的文件（主线，当前 **130**）
+- `legacyUiDaoAccessBaseline` —— `ui/**` 里**非 `ViewModel`** 的文件（第二线，当前 **26 文件 / 62 处**，只冻不修）
 
-**再逐批清零**：每批一个功能，DAO → 薄 Repository → VM。仓库刻意无聊：
+> 第二条线是后加的：清 VM 时发现护栏只看 `*ViewModel*`，而 `BookSourceActivity` 这类兄弟文件里还有直连 DAO。故把范围扩到整个 `ui/**`、给非 VM 文件建了第二基线，防止"清了半个 UI 层还以为清干净了"。
+
+**逐批清零**：每批一个功能，DAO → 薄 Repository → VM。仓库刻意无聊：
 ```kotlin
 class ReplaceRuleRepository(private val dao: ReplaceRuleDao) {
     fun observeAll() = dao.flowAll()
@@ -101,7 +144,21 @@ class ReplaceRuleRepository(private val dao: ReplaceRuleDao) {
 ```
 它的价值是**边界**，不是业务：VM 不再认识 Room、测试可替身、实体不再向上泄漏、依赖方向可强制。清一批，就从基线里删一批条目。
 
-**验收**：`legacyDaoInjectionBaseline` 单调递减；新增 DAO 注入编译期/CI 失败。
+**逐批操作手册（已跑通 5 批，新窗口照此做）**：
+1. VM 里的 `appDb.xxxDao` / `import data.dao.*` → 注入 `XxxRepository`（优先复用已有：`BookRepository` / `BookSourceRepository` / `SearchRepository` / `BookmarkRepository` 等）。
+2. 仓库方法保持无聊：`suspend fun … = withContext(Dispatchers.IO) { dao.… }`；VM 原本非 suspend 暴露的同步读就**保持同步**，别硬加 `withContext` 改签名。
+3. VM 有了非空构造参数后，宿主 Activity/Dialog 的 `by viewModels()` / `by activityViewModels()` **必须**改成 Koin `by viewModel()` / `by activityViewModel()`——否则运行时崩，**compile 不报**。
+4. 仓库若 `singleOf(::Xxx)` 注册，新增构造参数自动解析；否则要在 `appModule` 补 `get()`。
+5. 从 `legacyDaoInjectionBaseline` 删该 VM 条目（清到 0 删行；部分清就下调数字——护栏强制"减少了必须下调"）。
+6. 验证三连：`verifyConfigArchitecture` + `:app:compileAppDebugKotlin` + `testAppDebugUnitTest`，全绿。
+
+**已踩过的坑**：
+- **忠实第一，零行为漂移**：这是护栏驱动的机械清零。别顺手把 `isEmpty()` 改 `isBlank()`、别改条件、别重排逻辑（换源那批出现过一次，已改回）。
+- **compound 操作要原子**：多 DAO 的"删+插+改""读序号+改"要包 `runInTransaction`（Kotlin 直调），或做成 DAO 的 `@Transaction` 方法。**验证事务真生成**：查 `app/build/generated/ksp/appDebug/java/.../Xxx_Impl.java` 里是否 `performBlocking(…, inTransaction=true, …)`。
+- **别把 DAO 挪进非 VM 文件规避护栏**：它们现在被第二基线盯着。
+- **compile/test 证明不了 DI 与事务**：新增构造参数能否被 Koin 解析、`@Transaction` 是否真生成事务，要分别查 `appModule` 注册方式和生成的 `*_Impl.java`。
+
+**验收**：两条基线均单调递减；`ui/**` 任意文件（VM 或非 VM）新增 DAO 直连，CI 红。
 
 ---
 
@@ -282,10 +339,11 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 | 约束 | 机制 | 强度 |
 |---|---|---|
 | `ReadBook` 会话字段不可外部写 | Kotlin `private set` | 编译期，不可绕过 |
-| UI/VM 不新增 DAO 注入 | `VerifyConfigArchitectureTask` + `legacyDaoInjectionBaseline` | CI，冻结历史挡新增 |
+| ViewModel 不新增 DAO 直连 | `VerifyConfigArchitectureTask` + `legacyDaoInjectionBaseline` | CI，双向棘轮 ✅ |
+| 非 VM UI 层不新增 DAO 直连 | 同上 + `legacyUiDaoAccessBaseline` | CI，双向棘轮 ✅ |
 | 不新增旧偏好直读 | 现有 `legacyPreferenceCallBaseline` | CI（已存在） |
 | `ReadBook` 读取收敛 | lint/Detekt（读取难以编码约束，且低风险，用扫描器足够） | CI 提示 |
-| 单测/新增 lint 违规 | `testAppDebugUnitTest` / `lintAppDebug` + 基线 | CI 门禁 |
+| 单测/新增 lint 违规 | `testAppDebugUnitTest` / `lintAppDebug` + 基线 | **待接入 CI job（F1 ③）** |
 
 原则：能路由的**写入**用可见性（语言级）约束；难封装的**读取**用扫描器（工具级）约束。
 
