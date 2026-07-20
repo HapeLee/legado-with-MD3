@@ -119,17 +119,11 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
     }
 
     suspend fun moveSourceToTop(sourceUrl: String): Int? = withContext(Dispatchers.IO) {
-        val source = bookSourceDao.getBookSource(sourceUrl) ?: return@withContext null
-        source.customOrder = bookSourceDao.minOrder - 1
-        bookSourceDao.update(source)
-        source.customOrder
+        bookSourceDao.moveToTop(sourceUrl)
     }
 
     suspend fun moveSourceToBottom(sourceUrl: String): Int? = withContext(Dispatchers.IO) {
-        val source = bookSourceDao.getBookSource(sourceUrl) ?: return@withContext null
-        source.customOrder = bookSourceDao.maxOrder + 1
-        bookSourceDao.update(source)
-        source.customOrder
+        bookSourceDao.moveToBottom(sourceUrl)
     }
 
     suspend fun updateSources(vararg sources: BookSource) = withContext(Dispatchers.IO) {

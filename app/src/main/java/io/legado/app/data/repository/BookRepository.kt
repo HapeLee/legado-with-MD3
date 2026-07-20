@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.GroupBookCount
@@ -12,7 +13,8 @@ import kotlinx.coroutines.withContext
 
 class BookRepository(
     private val bookDao: BookDao,
-    private val bookChapterDao: BookChapterDao
+    private val bookChapterDao: BookChapterDao,
+    private val appDb: AppDatabase,
 ) {
     fun flowBook(bookUrl: String): Flow<Book?> {
         return bookDao.flowGetBook(bookUrl)
@@ -142,9 +144,11 @@ class BookRepository(
 
     suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
         withContext(Dispatchers.IO) {
-            bookChapterDao.delByBook(book.bookUrl)
-            bookChapterDao.insert(*chapters.toTypedArray())
-            bookDao.update(book)
+            appDb.runInTransaction {
+                bookChapterDao.delByBook(book.bookUrl)
+                bookChapterDao.insert(*chapters.toTypedArray())
+                bookDao.update(book)
+            }
         }
     }
 
