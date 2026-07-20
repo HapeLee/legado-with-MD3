@@ -400,7 +400,8 @@ private fun IgnoreItemsSheet(
         endAction = {
             MediumTonalButton(
                 onClick = onConfirm,
-                icon = Icons.Default.Save
+                icon = Icons.Default.Save,
+                contentDescription = stringResource(R.string.save),
             )
         },
     ) {
