@@ -21,6 +21,9 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
     @get:Input
     abstract val legacyDaoInjectionBaseline: MapProperty<String, Int>
 
+    @get:Input
+    abstract val legacyUiDaoAccessBaseline: MapProperty<String, Int>
+
     @TaskAction
     fun verify() {
         val sourceRootDir = sourceRoot.get().asFile
@@ -29,6 +32,7 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             .toList()
         val preferenceBaseline = legacyPreferenceCallBaseline.get()
         val daoInjectionBaseline = legacyDaoInjectionBaseline.get()
+        val uiDaoAccessBaseline = legacyUiDaoAccessBaseline.get()
         val violations = mutableListOf<String>()
         val forbiddenConfigImport = Regex(
             """^import io\.legado\.app\.(?:help\.config\.AppConfig|ui\.config\..*Config)$""",
@@ -124,6 +128,19 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
                     violations += "$displayPath: 已减少 DAO 直连，请将基线从 $allowedDaoDependencies 下调到 $daoDependencies"
                 }
             }
+
+            if (relativePath.startsWith("io/legado/app/ui/") &&
+                !file.name.contains("ViewModel")
+            ) {
+                val daoDependencies = daoImport.findAll(text).count() +
+                    appDbDaoAccess.findAll(text).count()
+                val allowedDaoDependencies = uiDaoAccessBaseline[relativePath] ?: 0
+                if (daoDependencies > allowedDaoDependencies) {
+                    violations += "$displayPath: UI 层新增了 ${daoDependencies - allowedDaoDependencies} 个 DAO 直连"
+                } else if (daoDependencies < allowedDaoDependencies) {
+                    violations += "$displayPath: 已减少 DAO 直连，请将基线从 $allowedDaoDependencies 下调到 $daoDependencies"
+                }
+            }
         }
 
         val sourcePaths = kotlinFiles.mapTo(hashSetOf()) {
@@ -131,6 +148,9 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
         }
         (daoInjectionBaseline.keys - sourcePaths).forEach { relativePath ->
             violations += "app/src/main/java/$relativePath: 文件已移除，请删除 DAO 直连基线"
+        }
+        (uiDaoAccessBaseline.keys - sourcePaths).forEach { relativePath ->
+            violations += "app/src/main/java/$relativePath: 文件已移除，请删除 UI DAO 直连基线"
         }
 
         check(violations.isEmpty()) {
@@ -168,7 +188,7 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     "verifyConfigArchitecture"
 ) {
     group = "verification"
-    description = "禁止配置架构回退、ViewModel 新增 DAO 直连和新增旧偏好调用"
+    description = "禁止配置架构回退、UI 层(ViewModel 及其它)新增 DAO 直连和新增旧偏好调用"
     sourceRoot.set(layout.projectDirectory.dir("app/src/main/java"))
     legacyPreferenceCallBaseline.set(
         mapOf(
@@ -212,6 +232,38 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/browser/WebViewModel.kt" to 1,
             "io/legado/app/ui/login/SourceLoginViewModel.kt" to 6,
             "io/legado/app/ui/tagGroupRule/TagGroupRuleViewModel.kt" to 4,
+        )
+    )
+    // 非 ViewModel 的 UI 层文件直连 DAO 的历史债，只冻结不修复；
+    // 清理时逐条下调/删除。护栏会自动要求"减少了就下调基线"，防止回退。
+    legacyUiDaoAccessBaseline.set(
+        mapOf(
+            "io/legado/app/ui/association/AddToBookshelfDialog.kt" to 5,
+            "io/legado/app/ui/association/ImportBookSourceDialog.kt" to 1,
+            "io/legado/app/ui/association/ImportReplaceRuleDialog.kt" to 1,
+            "io/legado/app/ui/association/ImportRssSourceDialog.kt" to 1,
+            "io/legado/app/ui/book/audio/AudioPlayActivity.kt" to 1,
+            "io/legado/app/ui/book/bookmark/BookmarkDialog.kt" to 2,
+            "io/legado/app/ui/book/changesource/ChangeBookSourceDialog.kt" to 1,
+            "io/legado/app/ui/book/group/GroupManageDialog.kt" to 2,
+            "io/legado/app/ui/book/group/GroupSelectDialog.kt" to 1,
+            "io/legado/app/ui/book/manga/ReadMangaActivity.kt" to 1,
+            "io/legado/app/ui/book/read/ReadBookController.kt" to 3,
+            "io/legado/app/ui/book/read/page/provider/TextChapterLayout.kt" to 1,
+            "io/legado/app/ui/book/search/SearchScope.kt" to 4,
+            "io/legado/app/ui/book/search/SearchScopeDialog.kt" to 3,
+            "io/legado/app/ui/book/source/debug/BookSourceDebugModel.kt" to 1,
+            "io/legado/app/ui/book/source/edit/BookSourceEditActivity.kt" to 1,
+            "io/legado/app/ui/book/source/manage/BookSourceActivity.kt" to 10,
+            "io/legado/app/ui/book/source/manage/GroupManageDialog.kt" to 1,
+            "io/legado/app/ui/config/bookshelfConfig/BookshelfManageScreenConfig.kt" to 1,
+            "io/legado/app/ui/main/MainNavGraph.kt" to 2,
+            "io/legado/app/ui/rss/article/RssArticlesCompose.kt" to 1,
+            "io/legado/app/ui/rss/read/RssJsExtensions.kt" to 8,
+            "io/legado/app/ui/rss/source/debug/RssSourceDebugModel.kt" to 1,
+            "io/legado/app/ui/widget/dialog/BottomWebViewDialog.kt" to 1,
+            "io/legado/app/ui/widget/keyboard/KeyboardAssistsConfig.kt" to 7,
+            "io/legado/app/ui/widget/keyboard/KeyboardToolPop.kt" to 1,
         )
     )
 }
