@@ -222,7 +222,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/book/audio/AudioPlayViewModel.kt" to 11,
             "io/legado/app/ui/book/changecover/ChangeCoverViewModel.kt" to 3,
             "io/legado/app/ui/book/info/BookInfoViewModel.kt" to 34,
-            "io/legado/app/ui/book/info/edit/BookInfoEditViewModel.kt" to 2,
             "io/legado/app/ui/book/manga/ReadMangaViewModel.kt" to 17,
             "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
             "io/legado/app/ui/login/SourceLoginViewModel.kt" to 6,

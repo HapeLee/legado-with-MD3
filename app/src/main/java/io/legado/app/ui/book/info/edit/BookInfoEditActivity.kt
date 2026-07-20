@@ -1,7 +1,7 @@
 package io.legado.app.ui.book.info.edit
 
 import android.os.Bundle
-import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
@@ -9,7 +9,7 @@ import io.legado.app.ui.main.MainActivity
 
 class BookInfoEditActivity : BaseComposeActivity(), ChangeCoverDialog.CallBack {
 
-    private val viewModel by viewModels<BookInfoEditViewModel>()
+    private val viewModel by viewModel<BookInfoEditViewModel>()
 
     @Composable
     override fun Content() {
