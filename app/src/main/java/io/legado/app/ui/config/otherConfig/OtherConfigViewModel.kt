@@ -16,8 +16,8 @@ import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ReadAloudSettings
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -113,11 +113,11 @@ class OtherConfigViewModel(
             is OtherConfigIntent.ReplaceEnableDefaultChanged ->
                 updateOtherSetting(OtherSettingsUpdate.ReplaceEnableDefault(intent.value))
             is OtherConfigIntent.MediaButtonOnExitChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.MediaButtonOnExit(intent.value))
+                updateReadAloudSetting { it.copy(mediaButtonOnExit = intent.value) }
             is OtherConfigIntent.ReadAloudByMediaButtonChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.ReadAloudByMediaButton(intent.value))
+                updateReadAloudSetting { it.copy(readAloudByMediaButton = intent.value) }
             is OtherConfigIntent.IgnoreAudioFocusChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.IgnoreAudioFocus(intent.value))
+                updateReadAloudSetting { it.copy(ignoreAudioFocus = intent.value) }
             is OtherConfigIntent.AutoClearExpiredChanged ->
                 updateOtherSetting(OtherSettingsUpdate.AutoClearExpired(intent.value))
             is OtherConfigIntent.ShowAddToShelfAlertChanged ->
@@ -236,9 +236,11 @@ class OtherConfigViewModel(
         }
     }
 
-    private fun updateReadAloudSetting(update: ReadAloudSettingsUpdate) {
+    private fun updateReadAloudSetting(
+        transform: (ReadAloudSettings) -> ReadAloudSettings,
+    ) {
         viewModelScope.launch {
-            runCatching { readAloudSettingsGateway.update(update) }
+            runCatching { readAloudSettingsGateway.update(transform) }
                 .onFailure { showMessage(it.localizedMessage ?: "设置失败") }
         }
     }

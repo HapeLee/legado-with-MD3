@@ -5,7 +5,6 @@ import androidx.lifecycle.Observer
 import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -128,7 +127,7 @@ class ReadAloudPlayerCoordinator(
     fun nextChapter() = ReadBook.moveToNextChapter(true)
 
     suspend fun setSpeed(value: Int) {
-        readAloudSettingsGateway.update(ReadAloudSettingsUpdate.SpeechRate(value))
+        readAloudSettingsGateway.update { it.copy(ttsSpeechRate = value.coerceIn(0, 80)) }
         ReadAloud.upTtsSpeechRate(application)
     }
 

@@ -14,7 +14,6 @@ import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.settings.DownloadCacheSettings
@@ -212,7 +211,11 @@ class OtherConfigViewModelTest {
             get() = state.value
         override val settings: Flow<ReadAloudSettings> = state
 
-        override suspend fun update(update: ReadAloudSettingsUpdate) = Unit
+        override suspend fun update(
+            transform: (ReadAloudSettings) -> ReadAloudSettings,
+        ) {
+            state.value = transform(state.value)
+        }
     }
 
     private class FakeDownloadCacheSettingsGateway : DownloadCacheSettingsGateway {

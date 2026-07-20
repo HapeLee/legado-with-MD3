@@ -47,7 +47,6 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -208,11 +207,12 @@ class AudioPlayActivity :
                 }
             }
             R.id.menu_media_control -> lifecycleScope.launch {
-                readAloudSettingsGateway.update(
-                    ReadAloudSettingsUpdate.SystemMediaControlCompatibility(
-                        !readAloudSettingsGateway.currentSettings.systemMediaControlCompatibilityChange
+                readAloudSettingsGateway.update {
+                    it.copy(
+                        systemMediaControlCompatibilityChange =
+                            !it.systemMediaControlCompatibilityChange
                     )
-                )
+                }
             }
             R.id.menu_wake_lock -> lifecycleScope.launch {
                 otherSettingsGateway.update(
