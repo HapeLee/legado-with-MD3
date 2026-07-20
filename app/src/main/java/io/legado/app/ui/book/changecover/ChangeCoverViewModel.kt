@@ -7,10 +7,11 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.SearchRepository
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.mapParallelSafe
@@ -33,7 +34,11 @@ import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import java.util.concurrent.Executors
 
-class ChangeCoverViewModel(application: Application) : BaseViewModel(application) {
+class ChangeCoverViewModel(
+    application: Application,
+    private val searchRepository: SearchRepository,
+    private val bookSourceRepository: BookSourceRepository,
+) : BaseViewModel(application) {
     private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var searchSuccess: ((SearchBook) -> Unit)? = null
@@ -69,7 +74,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
             trySend(defaultCover + searchBooks.sortedBy { it.originOrder })
         }
 
-        appDb.searchBookDao.getEnableHasCover(name, author).let {
+        searchRepository.getEnableHasCover(name, author).let {
             searchBooks.addAll(it)
             trySend(defaultCover + searchBooks.toList())
         }
@@ -112,7 +117,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
             searchBooks.clear()
             upAdapter?.invoke()
             bookSourceParts.clear()
-            bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
+            bookSourceParts.addAll(bookSourceRepository.getAllEnabledPart())
             initSearchPool()
             search()
         }
@@ -152,7 +157,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         if (searchBook.name == name && searchBook.author == author
             && !searchBook.coverUrl.isNullOrEmpty()
         ) {
-            appDb.searchBookDao.insert(searchBook)
+            searchRepository.saveSearchBook(searchBook)
             searchSuccess?.invoke(searchBook)
         }
     }
