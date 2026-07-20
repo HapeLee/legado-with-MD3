@@ -142,6 +142,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getLastReadBook(): Book? {
+        return withContext(Dispatchers.IO) {
+            bookDao.lastReadBook
+        }
+    }
+
     suspend fun replace(oldBook: Book, newBook: Book) {
         withContext(Dispatchers.IO) {
             bookDao.replace(oldBook, newBook)

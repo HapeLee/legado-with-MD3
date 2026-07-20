@@ -10,11 +10,12 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -59,6 +60,8 @@ class ReadMangaViewModel(
     private val mangaSettingsGateway: MangaSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val readSettingsGateway: ReadSettingsGateway,
+    private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
 ) : BaseViewModel(application) {
 
     private val _mangaSettings = MutableStateFlow(mangaSettingsGateway.currentSettings)
@@ -85,8 +88,8 @@ class ReadMangaViewModel(
             ReadManga.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
             val bookUrl = intent.getStringExtra("bookUrl")
             val book = when {
-                bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
-                else -> appDb.bookDao.getBook(bookUrl)
+                bookUrl.isNullOrEmpty() -> bookRepository.getLastReadBook()
+                else -> bookRepository.getBook(bookUrl)
             } ?: ReadManga.book
             when {
                 book != null -> initManga(book)
@@ -150,7 +153,7 @@ class ReadMangaViewModel(
     fun upBookSource(success: (() -> Unit)?) {
         execute {
             ReadManga.book?.let { book ->
-                ReadManga.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
+                ReadManga.bookSource = bookSourceRepository.getBookSource(book.origin)
             }
         }.onSuccess {
             success?.invoke()
@@ -167,7 +170,7 @@ class ReadMangaViewModel(
         execute {
             ReadManga.bookSource?.let {
                 it.enabled = false
-                appDb.bookSourceDao.update(it)
+                bookSourceRepository.updateSources(it)
             }
         }
     }
@@ -177,13 +180,13 @@ class ReadMangaViewModel(
             val oldBook = book.copy()
             WebBook.getChapterListAwait(it, book, true).onSuccess { cList ->
                 if (oldBook.bookUrl == book.bookUrl) {
-                    appDb.bookDao.update(book)
+                    bookRepository.update(book)
                 } else {
-                    appDb.bookDao.replace(oldBook, book)
+                    bookRepository.replace(oldBook, book)
                     BookHelp.updateCacheFolder(oldBook, book)
                 }
-                appDb.bookChapterDao.delByBook(oldBook.bookUrl)
-                appDb.bookChapterDao.insert(*cList.toTypedArray())
+                bookRepository.deleteChaptersByBook(oldBook.bookUrl)
+                bookRepository.insertChapters(*cList.toTypedArray())
                 ReadManga.onChapterListUpdated(book)
                 return true
             }.onFailure {
@@ -217,7 +220,7 @@ class ReadMangaViewModel(
     private fun autoChangeSource(name: String, author: String) {
         if (!GlobalReadConfig.autoChangeSource) return
         execute {
-            val sources = appDb.bookSourceDao.allTextEnabledPart
+            val sources = bookSourceRepository.getAllTextEnabledPart()
             flow {
                 for (source in sources) {
                     source.getBookSource()?.let {
@@ -309,8 +312,8 @@ class ReadMangaViewModel(
             )
             book.removeType(BookType.updateError)
             ReadManga.book?.delete()
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            bookRepository.insert(book)
+            bookRepository.insertChapters(*toc.toTypedArray())
             ReadManga.resetData(book)
             ReadManga.loadContent()
         }.onError {
@@ -411,7 +414,7 @@ class ReadMangaViewModel(
         book.readConfig = config
 
         execute {
-            appDb.bookDao.update(book)
+            bookRepository.update(book)
         }.onError {
             AppLog.put("更新阅读配置失败\n${it.localizedMessage}", it)
         }
@@ -424,7 +427,7 @@ class ReadMangaViewModel(
 
     fun refreshContentDur(book: Book) {
         execute {
-            appDb.bookChapterDao.getChapter(book.bookUrl, ReadManga.durChapterIndex)
+            bookRepository.getChapter(book.bookUrl, ReadManga.durChapterIndex)
                 ?.let { chapter ->
                     BookHelp.delContent(book, chapter)
                     openChapter(ReadManga.durChapterIndex, ReadManga.durChapterPos)
@@ -438,7 +441,7 @@ class ReadMangaViewModel(
     ) {
         val book = ReadManga.book ?: return onFailure()
         execute {
-            val toc = appDb.bookChapterDao.getChapterList(book.bookUrl)
+            val toc = bookRepository.getChapters(book.bookUrl)
             persistOnBookshelf(book, toc)
             ReadManga.inBookshelf = true
         }.onSuccess {
@@ -464,9 +467,9 @@ class ReadMangaViewModel(
     private suspend fun persistOnBookshelf(book: Book, toc: List<BookChapter>) {
         book.removeType(BookType.notShelf)
         if (book.order == 0) {
-            book.order = appDb.bookDao.minOrder - 1
+            book.order = bookRepository.getMinOrder() - 1
         }
-        appDb.bookDao.insert(book)
-        appDb.bookChapterDao.insert(*toc.toTypedArray())
+        bookRepository.insert(book)
+        bookRepository.insertChapters(*toc.toTypedArray())
     }
 }

@@ -220,7 +220,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     legacyDaoInjectionBaseline.set(
         mapOf(
             "io/legado/app/ui/book/info/BookInfoViewModel.kt" to 34,
-            "io/legado/app/ui/book/manga/ReadMangaViewModel.kt" to 17,
             "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
         )
     )
