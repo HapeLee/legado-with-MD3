@@ -2815,4 +2815,20 @@
     <string name="apply">Apply</string>
     <string name="source_categories">Source categories</string>
     <string name="my_tags">My tags</string>
+    <string name="tts_cache_manage">TTS Cache</string>
+    <string name="tts_cache_total">Total Cache</string>
+    <string name="tts_cache_file_count">%d files</string>
+    <string name="tts_cache_empty">No cached audio</string>
+    <string name="tts_cache_empty_summary">TTS audio will be cached here during playback</string>
+    <string name="clear_all_tts_cache">Clear All TTS Cache</string>
+    <string name="tts_cache_manage_summary">View and manage cached TTS audio files</string>
+    <string name="tts_pre_synthesis_concurrency">Pre-synthesis threads</string>
+    <string name="tts_pre_synthesis_concurrency_summary">%d threads</string>
+    <string name="tts_cache_tab_files">Cached Files</string>
+    <string name="tts_cache_tab_logs">Logs</string>
+    <string name="tts_cache_logs_empty">No TTS logs</string>
+    <string name="tts_cache_logs_empty_summary">TTS synthesis and pre-download logs will appear here</string>
+    <string name="tts_cache_unknown_text">Unknown text</string>
+    <string name="capsule_auto_collapse">Auto-collapse capsule</string>
+    <string name="capsule_auto_collapse_summary">Collapse to mini capsule after 3 seconds of inactivity</string>
 </resources>

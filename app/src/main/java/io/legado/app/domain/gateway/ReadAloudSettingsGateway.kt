@@ -27,4 +27,6 @@ sealed interface ReadAloudSettingsUpdate {
     data class SpeechRate(val value: Int) : ReadAloudSettingsUpdate
     data class ContentSelectSpeakMode(val value: Int) : ReadAloudSettingsUpdate
     data class AudioPreDownloadNum(val value: Int) : ReadAloudSettingsUpdate
+    data class PreSynthesisConcurrency(val value: Int) : ReadAloudSettingsUpdate
+    data class CapsuleAutoCollapse(val value: Boolean) : ReadAloudSettingsUpdate
 }

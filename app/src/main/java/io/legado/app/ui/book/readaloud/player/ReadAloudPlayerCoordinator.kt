@@ -147,6 +147,8 @@ class ReadAloudPlayerCoordinator(
             EventBus.UP_CONFIG,
             EventBus.UPDATE_READ_ACTION_BAR,
             EventBus.SOURCE_CHANGED,
+            EventBus.ALOUD_STATE,
+            EventBus.TTS_PROGRESS,
         )
     }
 

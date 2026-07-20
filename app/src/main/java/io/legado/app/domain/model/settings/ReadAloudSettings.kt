@@ -10,6 +10,7 @@ data class ReadAloudSettings(
     val pauseReadAloudWhilePhoneCalls: Boolean = false,
     val readAloudWakeLock: Boolean = false,
     val showReadAloudCapsule: Boolean = true,
+    val capsuleAutoCollapse: Boolean = true,
     val capsuleOffsetX: Float = 0f,
     val capsuleOffsetY: Float = 0f,
     val mediaButtonPerNext: Boolean = false,
@@ -24,4 +25,5 @@ data class ReadAloudSettings(
     val defaultInterface: String = "classic",
     val contentSelectSpeakMode: Int = 0,
     val audioPreDownloadNum: Int = 10,
+    val ttsPreSynthesisConcurrency: Int = 3,
 )

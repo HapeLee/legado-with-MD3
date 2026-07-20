@@ -127,6 +127,7 @@ object MainNavigator {
             is MainRouteBookCharacterList,
             is MainRouteBookVoiceCasting,
             MainRouteCloudTtsEngines,
+            MainRouteTtsCache,
             is MainRouteBookKnowledgeList,
             is MainRouteBookKnowledgeDetail,
             is MainRouteBookEventList,
@@ -138,6 +139,7 @@ object MainNavigator {
                     currentRoute is MainRouteBookCharacterList ||
                     currentRoute is MainRouteBookVoiceCasting ||
                     currentRoute == MainRouteCloudTtsEngines ||
+                    currentRoute == MainRouteTtsCache ||
                     currentRoute is MainRouteBookKnowledgeList ||
                     currentRoute is MainRouteBookKnowledgeDetail ||
                     currentRoute is MainRouteBookEventList ||

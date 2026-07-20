@@ -2810,4 +2810,20 @@
     <string name="apply">应用</string>
     <string name="source_categories">书源分类</string>
     <string name="my_tags">我的标签</string>
+    <string name="tts_cache_manage">朗读缓存</string>
+    <string name="tts_cache_total">缓存总量</string>
+    <string name="tts_cache_file_count">%d 个文件</string>
+    <string name="tts_cache_empty">暂无缓存音频</string>
+    <string name="tts_cache_empty_summary">朗读过程中会自动缓存音频到这里</string>
+    <string name="clear_all_tts_cache">清除全部朗读缓存</string>
+    <string name="tts_cache_manage_summary">查看和管理朗读音频缓存文件</string>
+    <string name="tts_pre_synthesis_concurrency">预合成线程数</string>
+    <string name="tts_pre_synthesis_concurrency_summary">%d 线程</string>
+    <string name="tts_cache_tab_files">缓存文件</string>
+    <string name="tts_cache_tab_logs">操作日志</string>
+    <string name="tts_cache_logs_empty">暂无朗读日志</string>
+    <string name="tts_cache_logs_empty_summary">朗读合成和预下载的日志会显示在这里</string>
+    <string name="tts_cache_unknown_text">未知文本</string>
+    <string name="capsule_auto_collapse">自动收缩胶囊</string>
+    <string name="capsule_auto_collapse_summary">3秒无操作后收缩为迷你胶囊</string>
 </resources>

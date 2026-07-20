@@ -1,11 +1,5 @@
 package io.legado.app.ui.book.read
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
@@ -19,6 +13,12 @@ import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -127,6 +127,7 @@ fun ReadBookRouteScreen(
     onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
+    onOpenTtsCache: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -371,6 +372,7 @@ fun ReadBookRouteScreen(
                                 onOpenVoiceCasting(effect.bookUrl)
                             }
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
+                            ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
                             is ReadBookEffect.MenuSettingReplace -> {
                                 replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
                             }
@@ -547,7 +549,7 @@ fun ReadBookRouteScreen(
             AnimatedVisibility(
                 visible = state.isReadAloudRunning &&
                     state.showReadAloudCapsule &&
-                    state.menuVisible,
+                        !state.menuVisible,
                 enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),
                 exit = fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 0.88f),
             ) {
@@ -558,6 +560,7 @@ fun ReadBookRouteScreen(
                     offsetYDp = state.readAloudCapsuleOffsetY,
                     progress = state.readAloudChapterPosition.toFloat() /
                         state.readAloudChapterLength.coerceAtLeast(1),
+                    autoCollapse = state.capsuleAutoCollapse,
                     onPositionChanged = { x, y ->
                         viewModel.onIntent(ReadBookIntent.SetReadAloudCapsulePosition(x, y))
                     },
@@ -565,6 +568,7 @@ fun ReadBookRouteScreen(
                         viewModel.onIntent(ReadBookIntent.ReadAloudTogglePause)
                     },
                     onStop = { viewModel.onIntent(ReadBookIntent.ReadAloudStop) },
+                    onOpenPlayer = { viewModel.onIntent(ReadBookIntent.OpenReadAloudPlayer) },
                 )
             }
             ReadBookScreen(

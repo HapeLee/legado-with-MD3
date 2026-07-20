@@ -95,6 +95,17 @@ fun CloudTtsScreen(
                 title = stringResource(R.string.read_aloud_engines_and_voices),
                 navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                 scrollBehavior = scrollBehavior,
+                bottomContent = {
+                    AppTabRow(
+                        tabTitles = listOf(
+                            stringResource(R.string.cloud_tts_voices_tab),
+                            stringResource(R.string.cloud_tts_engines_tab),
+                        ),
+                        selectedTabIndex = state.selectedTab.ordinal,
+                        onTabSelected = { onIntent(CloudTtsIntent.SelectTab(CloudTtsTab.entries[it])) },
+                        isScrollable = false,
+                    )
+                }
             )
         },
         floatingActionButton = {
@@ -121,18 +132,6 @@ fun CloudTtsScreen(
                 bottom = padding.calculateBottomPadding() + 96.dp,
             ),
         ) {
-            item {
-                AppTabRow(
-                    tabTitles = listOf(
-                        stringResource(R.string.cloud_tts_voices_tab),
-                        stringResource(R.string.cloud_tts_engines_tab),
-                    ),
-                    selectedTabIndex = state.selectedTab.ordinal,
-                    onTabSelected = { onIntent(CloudTtsIntent.SelectTab(CloudTtsTab.entries[it])) },
-                    isScrollable = false,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
             if (state.selectedTab == CloudTtsTab.Voices) {
                 if (state.voices.isEmpty() && !state.loading) {
                     item { AppText(stringResource(R.string.cloud_tts_no_saved_voices), Modifier.padding(24.dp)) }

@@ -118,6 +118,16 @@ fun ReadAloudConfigSheet(
                     onIntent(ReadBookIntent.SetShowReadAloudCapsule(it))
                 },
             )
+                if (state.showReadAloudCapsule) {
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.capsule_auto_collapse),
+                        description = stringResource(R.string.capsule_auto_collapse_summary),
+                        checked = state.capsuleAutoCollapse,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetCapsuleAutoCollapse(it))
+                        },
+                    )
+                }
             TinySwitchSettingItem(
                 title = stringResource(R.string.ignore_audio_focus_title),
                 description = stringResource(R.string.ignore_audio_focus_summary),
@@ -194,6 +204,11 @@ fun ReadAloudConfigSheet(
                 description = stringResource(R.string.read_aloud_engines_and_voices_summary),
                 onClick = { onIntent(ReadBookIntent.OpenTtsEnginesAndVoices) },
             )
+                TinyClickableSettingItem(
+                    title = stringResource(R.string.tts_cache_manage),
+                    description = stringResource(R.string.tts_cache_manage_summary),
+                    onClick = { onIntent(ReadBookIntent.OpenTtsCache) },
+                )
             TinyClickableSettingItem(
                 title = stringResource(R.string.read_aloud_character_casting),
                 description = stringResource(R.string.book_voice_casting_entry_summary),
@@ -231,6 +246,10 @@ fun ReadAloudConfigSheet(
                 title = stringResource(R.string.read_aloud_preload),
                 onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
             )
+                TinyClickableSettingItem(
+                    title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                    onClick = { onIntent(ReadBookIntent.OpenPreSynthesisConcurrencyPicker) },
+                )
             TinyClickableSettingItem(
                 title = stringResource(R.string.tts_paragraph_interval),
                 onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },

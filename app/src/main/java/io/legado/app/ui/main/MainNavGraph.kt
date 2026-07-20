@@ -10,8 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,21 +43,21 @@ import io.legado.app.ui.book.import.remote.RemoteBookRouteScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterDetailScreen
-import io.legado.app.ui.book.knowledge.CharacterDetailIntent
-import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
 import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
-import io.legado.app.ui.book.knowledge.BookCharacterNetworkScreen
-import io.legado.app.ui.book.knowledge.BookCharacterNetworkViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterListScreen
 import io.legado.app.ui.book.knowledge.BookCharacterListViewModel
-import io.legado.app.ui.book.knowledge.BookKnowledgeDetailScreen
-import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
-import io.legado.app.ui.book.knowledge.BookKnowledgeListScreen
-import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
+import io.legado.app.ui.book.knowledge.BookCharacterNetworkScreen
+import io.legado.app.ui.book.knowledge.BookCharacterNetworkViewModel
 import io.legado.app.ui.book.knowledge.BookEventDetailScreen
 import io.legado.app.ui.book.knowledge.BookEventDetailViewModel
 import io.legado.app.ui.book.knowledge.BookEventListScreen
 import io.legado.app.ui.book.knowledge.BookEventListViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeDetailScreen
+import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
+import io.legado.app.ui.book.knowledge.BookKnowledgeListScreen
+import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
+import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
+import io.legado.app.ui.book.knowledge.CharacterDetailIntent
 import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
@@ -65,12 +65,13 @@ import io.legado.app.ui.book.read.ReadBookController
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
+import io.legado.app.ui.book.readRecord.ReadRecordOverviewRouteScreen
+import io.legado.app.ui.book.readRecord.ReadRecordRouteScreen
+import io.legado.app.ui.book.readaloud.cache.TtsCacheRouteScreen
 import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingScreen
 import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingViewModel
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
-import io.legado.app.ui.book.readRecord.ReadRecordOverviewRouteScreen
-import io.legado.app.ui.book.readRecord.ReadRecordRouteScreen
 import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchRouteScreen
 import io.legado.app.ui.book.search.SearchViewModel
@@ -81,8 +82,8 @@ import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
-import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.ai.prompt.AiPromptConfigRouteScreen
+import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
@@ -452,6 +453,9 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenTtsEnginesAndVoices = {
                 onNavigateToRoute(MainRouteCloudTtsEngines)
+            },
+            onOpenTtsCache = {
+                onNavigateToRoute(MainRouteTtsCache)
             },
         )
 
@@ -861,6 +865,12 @@ fun MainActivity.mainEntryProvider(
             onIntent = viewModel::onIntent,
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteTtsCache> {
+        TtsCacheRouteScreen(
+            onBackClick = { onNavigateBack() },
         )
     }
 

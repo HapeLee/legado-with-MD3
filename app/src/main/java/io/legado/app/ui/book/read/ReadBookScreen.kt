@@ -11,8 +11,10 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.ImageLoader
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
 import io.legado.app.ui.book.read.sheet.AiTextRewriteSheet
@@ -43,23 +45,21 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.dict.DictSheet
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.rememberImageSeedColor
+import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.utils.toastOnUi
-import coil.ImageLoader
-import io.legado.app.domain.gateway.CoverSettingsGateway
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ProvideThemeOverride
-import io.legado.app.ui.theme.rememberImageSeedColor
-import io.legado.app.ui.theme.rememberThemeOverride
-import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
-import io.legado.app.model.BookCover as BookCoverModel
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.koinInject
+import io.legado.app.model.BookCover as BookCoverModel
 
 /**
  * Stateless ReadBook screen — renders BackHandler + dialogs + sheets.
@@ -328,6 +328,20 @@ fun ReadBookScreen(
         defaultValue = 10,
         valueRange = 0f..100f,
         onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
+    ReadAloudNumberConfigSheet(
+        show = state.activeSheet is ReadBookSheet.PreSynthesisConcurrencyConfig,
+        title = stringResource(R.string.tts_pre_synthesis_concurrency),
+        description = stringResource(
+            R.string.tts_pre_synthesis_concurrency_summary, state.preSynthesisConcurrency,
+        ),
+        value = state.preSynthesisConcurrency,
+        defaultValue = 3,
+        valueRange = 1f..8f,
+        onValueChange = { onIntent(ReadBookIntent.ApplyPreSynthesisConcurrency(it)) },
         onDismissRequest = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
         },

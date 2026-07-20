@@ -5,9 +5,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsString
@@ -52,6 +52,11 @@ class ReadAloudSettingsRepository(
                 settingsRepository.putInt(PreferKey.contentSelectSpeakMod, update.value)
             is ReadAloudSettingsUpdate.AudioPreDownloadNum ->
                 settingsRepository.putInt(PreferKey.audioPreDownloadNum, update.value)
+            is ReadAloudSettingsUpdate.PreSynthesisConcurrency ->
+                settingsRepository.putInt(PreferKey.ttsPreSynthesisConcurrency, update.value)
+
+            is ReadAloudSettingsUpdate.CapsuleAutoCollapse ->
+                settingsRepository.putBoolean(PreferKey.capsuleAutoCollapse, update.value)
         }
     }
 
@@ -142,6 +147,14 @@ class ReadAloudSettingsRepository(
         )
     }
 
+    suspend fun setPreSynthesisConcurrency(value: Int) {
+        settingsRepository.putInt(PreferKey.ttsPreSynthesisConcurrency, value.coerceIn(1, 8))
+    }
+
+    suspend fun setCapsuleAutoCollapse(value: Boolean) {
+        settingsRepository.putBoolean(PreferKey.capsuleAutoCollapse, value)
+    }
+
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
         return ReadAloudPreferences(
             ttsEngine = compatDsString(PreferKey.ttsEngine),
@@ -153,6 +166,7 @@ class ReadAloudSettingsRepository(
             pauseReadAloudWhilePhoneCalls = compatDsValue(Keys.PauseReadAloudWhilePhoneCalls, false),
             readAloudWakeLock = compatDsValue(Keys.ReadAloudWakeLock, false),
             showReadAloudCapsule = compatDsValue(Keys.ShowReadAloudCapsule, true),
+            capsuleAutoCollapse = compatDsValue(Keys.CapsuleAutoCollapse, true),
             capsuleOffsetX = compatDsValue(Keys.CapsuleOffsetX, 0f),
             capsuleOffsetY = compatDsValue(Keys.CapsuleOffsetY, 0f),
             mediaButtonPerNext = compatDsValue(Keys.MediaButtonPerNext, false),
@@ -168,6 +182,7 @@ class ReadAloudSettingsRepository(
             defaultInterface = compatDsValue(Keys.DefaultInterface, DEFAULT_INTERFACE_CLASSIC),
             contentSelectSpeakMode = compatDsValue(Keys.ContentSelectSpeakMode, 0),
             audioPreDownloadNum = compatDsValue(Keys.AudioPreDownloadNum, 10),
+            ttsPreSynthesisConcurrency = compatDsValue(Keys.PreSynthesisConcurrency, 3),
         )
     }
 
@@ -185,6 +200,7 @@ class ReadAloudSettingsRepository(
             booleanPreferencesKey(PreferKey.pauseReadAloudWhilePhoneCalls)
         val ReadAloudWakeLock = booleanPreferencesKey(PreferKey.readAloudWakeLock)
         val ShowReadAloudCapsule = booleanPreferencesKey(PreferKey.showReadAloudCapsule)
+        val CapsuleAutoCollapse = booleanPreferencesKey(PreferKey.capsuleAutoCollapse)
         val CapsuleOffsetX = floatPreferencesKey("read_aloud_capsule_offset_x")
         val CapsuleOffsetY = floatPreferencesKey("read_aloud_capsule_offset_y")
         val MediaButtonPerNext = booleanPreferencesKey(KEY_MEDIA_BUTTON_PER_NEXT)
@@ -205,6 +221,9 @@ class ReadAloudSettingsRepository(
         )
         val AudioPreDownloadNum = androidx.datastore.preferences.core.intPreferencesKey(
             PreferKey.audioPreDownloadNum
+        )
+        val PreSynthesisConcurrency = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.ttsPreSynthesisConcurrency
         )
     }
 

@@ -298,12 +298,14 @@ data class ReadBookUiState(
     val editingHttpTts: HttpTTS? = null,
     val httpTtsImportState: BaseImportUiState<HttpTTS> = BaseImportUiState.Idle,
     val preDownloadNum: Int = 10,
+    val preSynthesisConcurrency: Int = 3,
     val audioCacheCleanTime: Int = 10,
     // Read aloud config
     val readAloudIgnoreAudioFocus: Boolean = false,
     val readAloudPauseOnPhoneCall: Boolean = false,
     val readAloudWakeLock: Boolean = false,
     val showReadAloudCapsule: Boolean = true,
+    val capsuleAutoCollapse: Boolean = true,
     val readAloudCapsuleOffsetX: Float = 0f,
     val readAloudCapsuleOffsetY: Float = 0f,
     val readAloudMediaButtonPerNext: Boolean = false,
@@ -715,10 +717,12 @@ sealed interface ReadBookIntent {
     data object ShowReadAloudConfig : ReadBookIntent
     data object SelectSpeakEngine : ReadBookIntent
     data object OpenPreDownloadNumPicker : ReadBookIntent
+    data object OpenPreSynthesisConcurrencyPicker : ReadBookIntent
     data object OpenParagraphIntervalPicker : ReadBookIntent
     data object OpenCacheCleanTimePicker : ReadBookIntent
     data class ApplySpeakEngine(val value: String?) : ReadBookIntent
     data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
+    data class ApplyPreSynthesisConcurrency(val value: Int) : ReadBookIntent
     data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
     data class ApplyParagraphInterval(val value: Int) : ReadBookIntent
     data class EditHttpTts(val engineId: Long? = null) : ReadBookIntent
@@ -742,6 +746,7 @@ sealed interface ReadBookIntent {
     data class SetReadAloudPauseOnPhoneCall(val value: Boolean) : ReadBookIntent
     data class SetReadAloudWakeLock(val value: Boolean) : ReadBookIntent
     data class SetShowReadAloudCapsule(val value: Boolean) : ReadBookIntent
+    data class SetCapsuleAutoCollapse(val value: Boolean) : ReadBookIntent
     data object ResetReadAloudCapsulePosition : ReadBookIntent
     data class SetReadAloudCapsulePosition(val x: Float, val y: Float) : ReadBookIntent
     data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
@@ -763,6 +768,7 @@ sealed interface ReadBookIntent {
     data object OpenSystemTtsSettings : ReadBookIntent
     data object ClearTtsCache : ReadBookIntent
     data object OpenTtsEnginesAndVoices : ReadBookIntent
+    data object OpenTtsCache : ReadBookIntent
     data object OpenBookVoiceCasting : ReadBookIntent
     data object OpenReadAloudPlayer : ReadBookIntent
     data object OpenClassicReadAloudControls : ReadBookIntent
@@ -907,6 +913,7 @@ sealed interface ReadBookEffect {
     data object OpenHttpTtsExportPicker : ReadBookEffect
     data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
     data object OpenTtsEnginesAndVoices : ReadBookEffect
+    data object OpenTtsCache : ReadBookEffect
     data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
     data object OpenHighlightRuleImportPicker : ReadBookEffect
     data object OpenHighlightRuleExportPicker : ReadBookEffect
@@ -963,6 +970,7 @@ sealed interface ReadBookSheet {
     data object SpeakEngineConfig : ReadBookSheet
     data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet
+    data object PreSynthesisConcurrencyConfig : ReadBookSheet
     data object AudioCacheCleanConfig : ReadBookSheet
     data object ParagraphIntervalConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet

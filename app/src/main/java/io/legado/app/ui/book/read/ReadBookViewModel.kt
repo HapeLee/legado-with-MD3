@@ -48,6 +48,7 @@ import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsUpdate
+import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
 import io.legado.app.domain.gateway.ReadStyleFloatKey
@@ -55,12 +56,11 @@ import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleIntKey
 import io.legado.app.domain.gateway.ReadStyleMutation
 import io.legado.app.domain.gateway.ReadStyleStringKey
-import io.legado.app.domain.gateway.ReadSettingsUpdate
-import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
@@ -966,6 +966,16 @@ class ReadBookViewModel(
                 }
             }
 
+            is ReadBookIntent.OpenPreSynthesisConcurrencyPicker -> {
+                _uiState.update {
+                    it.copy(
+                        preSynthesisConcurrency =
+                            readAloudSettingsRepository.currentSettings.ttsPreSynthesisConcurrency,
+                        activeSheet = ReadBookSheet.PreSynthesisConcurrencyConfig,
+                    )
+                }
+            }
+
             is ReadBookIntent.OpenParagraphIntervalPicker -> {
                 _uiState.update {
                     it.copy(
@@ -1008,6 +1018,18 @@ class ReadBookViewModel(
                 _uiState.update {
                     it.copy(
                         preDownloadNum = intent.value,
+                        activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+            }
+
+            is ReadBookIntent.ApplyPreSynthesisConcurrency -> {
+                viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    readAloudSettingsRepository.setPreSynthesisConcurrency(intent.value)
+                }
+                _uiState.update {
+                    it.copy(
+                        preSynthesisConcurrency = intent.value,
                         activeSheet = ReadBookSheet.ReadAloudConfig,
                     )
                 }
@@ -1183,6 +1205,9 @@ class ReadBookViewModel(
             is ReadBookIntent.SetShowReadAloudCapsule -> {
                 viewModelScope.launch { readAloudSettingsRepository.setShowReadAloudCapsule(intent.value) }
             }
+            is ReadBookIntent.SetCapsuleAutoCollapse -> {
+                viewModelScope.launch { readAloudSettingsRepository.setCapsuleAutoCollapse(intent.value) }
+            }
             ReadBookIntent.ResetReadAloudCapsulePosition -> {
                 _uiState.update { it.copy(
                     readAloudCapsuleOffsetX = 0f,
@@ -1293,6 +1318,10 @@ class ReadBookViewModel(
             ReadBookIntent.OpenTtsEnginesAndVoices -> {
                 _uiState.update { it.copy(activeSheet = null) }
                 _effects.tryEmit(ReadBookEffect.OpenTtsEnginesAndVoices)
+            }
+            ReadBookIntent.OpenTtsCache -> {
+                _uiState.update { it.copy(activeSheet = null) }
+                _effects.tryEmit(ReadBookEffect.OpenTtsCache)
             }
             ReadBookIntent.OpenBookVoiceCasting -> {
                 ReadBook.book?.bookUrl?.let { bookUrl ->
@@ -2170,6 +2199,7 @@ class ReadBookViewModel(
                         readAloudPauseOnPhoneCall = prefs.pauseReadAloudWhilePhoneCalls,
                         readAloudWakeLock = prefs.readAloudWakeLock,
                         showReadAloudCapsule = prefs.showReadAloudCapsule,
+                        capsuleAutoCollapse = prefs.capsuleAutoCollapse,
                         readAloudCapsuleOffsetX = prefs.capsuleOffsetX,
                         readAloudCapsuleOffsetY = prefs.capsuleOffsetY,
                         readAloudMediaButtonPerNext = prefs.mediaButtonPerNext,
