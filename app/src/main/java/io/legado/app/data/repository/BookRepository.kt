@@ -82,6 +82,12 @@ class BookRepository(
         return bookDao.flowGroupPreview(groupId)
     }
 
+    suspend fun getChapter(bookUrl: String, index: Int): BookChapter? {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapter(bookUrl, index)
+        }
+    }
+
     suspend fun getChapterCount(bookUrl: String): Int {
         return withContext(Dispatchers.IO) {
             bookChapterDao.getChapterCount(bookUrl)

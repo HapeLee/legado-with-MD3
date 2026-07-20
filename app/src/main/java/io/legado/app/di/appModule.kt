@@ -216,6 +216,7 @@ import io.legado.app.ui.book.import.remote.ServerConfigViewModel
 import io.legado.app.ui.book.import.remote.ServersViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.info.edit.BookInfoEditViewModel
+import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterListViewModel
@@ -567,6 +568,16 @@ val appModule = module {
         BookInfoEditViewModel(
             application = get(),
             bookRepository = get(),
+        )
+    }
+    viewModel {
+        SourceLoginViewModel(
+            application = get(),
+            bookRepository = get(),
+            bookSourceRepository = get(),
+            rssRepository = get(),
+            httpTtsRepository = get(),
+            searchRepository = get(),
         )
     }
     viewModel { (bookUrl: String, characterId: String?) ->

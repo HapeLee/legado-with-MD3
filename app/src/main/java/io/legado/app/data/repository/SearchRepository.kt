@@ -27,6 +27,7 @@ interface SearchRepository {
     suspend fun deleteSearchKeyword(item: SearchKeyword)
     suspend fun clearSearchKeywords()
     suspend fun getEnableHasCover(name: String, author: String): List<SearchBook>
+    suspend fun getSearchBook(bookUrl: String): SearchBook?
     suspend fun saveSearchBooks(books: List<SearchBook>)
     suspend fun saveSearchBook(book: SearchBook)
     suspend fun updateSearchBook(book: SearchBook)
@@ -120,6 +121,11 @@ class SearchRepositoryImpl(
     override suspend fun getEnableHasCover(name: String, author: String): List<SearchBook> =
         withContext(Dispatchers.IO) {
             appDb.searchBookDao.getEnableHasCover(name, author)
+        }
+
+    override suspend fun getSearchBook(bookUrl: String): SearchBook? =
+        withContext(Dispatchers.IO) {
+            appDb.searchBookDao.getSearchBook(bookUrl)
         }
 
     override suspend fun saveSearchBooks(books: List<SearchBook>): Unit =
