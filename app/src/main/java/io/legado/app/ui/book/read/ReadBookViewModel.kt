@@ -30,7 +30,10 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.HighlightRuleRepository
+import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
@@ -204,6 +207,9 @@ class ReadBookViewModel(
     private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
     private val backupSettingsGateway: BackupSettingsGateway,
     private val themeSettingsGateway: ThemeSettingsGateway,
+    private val httpTtsRepository: HttpTtsRepository,
+    private val bookSourceRepository: BookSourceRepository,
+    private val bookmarkRepository: BookmarkRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -1131,7 +1137,7 @@ class ReadBookViewModel(
                     }
                 } else {
                     execute {
-                        appDb.httpTTSDao.get(intent.engineId)
+                        httpTtsRepository.findById(intent.engineId)
                     }.onSuccess { tts ->
                         _uiState.update {
                             it.copy(
@@ -1145,8 +1151,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.DeleteHttpTts -> {
                 execute {
-                    appDb.httpTTSDao.get(intent.engineId)?.let { tts ->
-                        appDb.httpTTSDao.delete(tts)
+                    httpTtsRepository.findById(intent.engineId)?.let { tts ->
+                        httpTtsRepository.delete(tts)
                     }
                 }.onSuccess {
                     loadTtsEngineItems()
@@ -1161,7 +1167,7 @@ class ReadBookViewModel(
 
             is ReadBookIntent.SaveHttpTts -> {
                 execute {
-                    appDb.httpTTSDao.insert(intent.httpTTS)
+                    httpTtsRepository.insert(intent.httpTTS)
                 }.onSuccess {
                     loadTtsEngineItems()
                     _uiState.update {
@@ -1743,7 +1749,7 @@ class ReadBookViewModel(
     private fun loadTtsEngineItems(onSuccess: (() -> Unit)? = null) {
         execute {
             val systemTtsLabel = context.getString(R.string.system_tts)
-            val httpTtsList = appDb.httpTTSDao.all
+            val httpTtsList = httpTtsRepository.getAll()
             syncConfiguredTtsVoices(systemTtsLabel, httpTtsList)
             buildList {
                 add(ReadBookTtsEngineItem(systemTtsLabel, null))
@@ -1778,7 +1784,7 @@ class ReadBookViewModel(
 
     private suspend fun syncConfiguredTtsVoices(
         systemTtsLabel: String = context.getString(R.string.system_tts),
-        httpTtsList: List<HttpTTS> = appDb.httpTTSDao.all,
+        httpTtsList: List<HttpTTS> = httpTtsRepository.getAllSync(),
     ) {
         syncReadAloudVoicesUseCase(
             entries = buildList {
@@ -1821,7 +1827,7 @@ class ReadBookViewModel(
         execute {
             val list = importHttpTtsSourceAwait(text.trim())
             val items = list.map { httpTTS ->
-                val old = appDb.httpTTSDao.get(httpTTS.id)
+                val old = httpTtsRepository.findById(httpTTS.id)
                 val status = when {
                     old == null -> ImportStatus.New
                     httpTTS.lastUpdateTime > old.lastUpdateTime -> ImportStatus.Update
@@ -1946,7 +1952,7 @@ class ReadBookViewModel(
             .map { it.data }
         if (selected.isEmpty()) return
         execute {
-            appDb.httpTTSDao.insert(*selected.toTypedArray())
+            httpTtsRepository.insert(*selected.toTypedArray())
         }.onSuccess {
             loadTtsEngineItems()
             _uiState.update {
@@ -1969,14 +1975,14 @@ class ReadBookViewModel(
     }
 
     private fun exportHttpTtsJson(): String {
-        return GSON.toJson(appDb.httpTTSDao.all)
+        return GSON.toJson(httpTtsRepository.getAllSync())
     }
 
     private fun computeSpeakEngineName(): String {
         val ttsEngine = ReadAloud.ttsEngine
             ?: return context.getString(R.string.system_tts)
         if (StringUtils.isNumeric(ttsEngine)) {
-            return appDb.httpTTSDao.getName(ttsEngine.toLong())
+            return httpTtsRepository.getNameSync(ttsEngine.toLong())
                 ?: context.getString(R.string.system_tts)
         }
         return GSON.fromJsonObject<SelectItem<String>>(ttsEngine)
@@ -3022,7 +3028,7 @@ class ReadBookViewModel(
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
             ReadBook.upMsg(context.getString(R.string.loading))
-            val source = appDb.bookSourceDao.getBookSource(book.origin)
+            val source = bookSourceRepository.getBookSource(book.origin)
                 ?: throw NoStackTraceException("书源不存在")
             if (book.tocUrl.isEmpty()) {
                 WebBook.getBookInfoAwait(source, book)
@@ -3056,7 +3062,7 @@ class ReadBookViewModel(
     private fun autoChangeSource(name: String, author: String) {
         if (!readSettingsRepository.currentSettings.autoChangeSource) return
         execute {
-            val sources = appDb.bookSourceDao.allTextEnabledPart
+            val sources = bookSourceRepository.getAllTextEnabledPart()
             flow {
                 for (source in sources) {
                     source.getBookSource()?.let {
@@ -3169,7 +3175,7 @@ class ReadBookViewModel(
     fun upBookSource(success: (() -> Unit)? = null) {
         execute {
             ReadBook.book?.let { book ->
-                ReadBook.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
+                ReadBook.bookSource = bookSourceRepository.getBookSource(book.origin)
             }
         }.onSuccess {
             success?.invoke()
@@ -4901,7 +4907,7 @@ class ReadBookViewModel(
 
     private fun saveBookmark(bookmark: Bookmark) {
         viewModelScope.launch(IO) {
-            appDb.bookmarkDao.insert(bookmark)
+            bookmarkRepository.save(bookmark)
             _uiState.update {
                 it.copy(
                     activeSheet = null,
@@ -4913,7 +4919,7 @@ class ReadBookViewModel(
 
     private fun deleteBookmark(bookmark: Bookmark) {
         viewModelScope.launch(IO) {
-            appDb.bookmarkDao.delete(bookmark)
+            bookmarkRepository.delete(bookmark)
             _uiState.update {
                 it.copy(
                     activeSheet = null,
@@ -6360,7 +6366,7 @@ class ReadBookViewModel(
         execute {
             ReadBook.bookSource?.let {
                 it.enabled = false
-                appDb.bookSourceDao.update(it)
+                bookSourceRepository.updateSources(it)
             }
         }
     }

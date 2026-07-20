@@ -219,7 +219,7 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     )
     legacyDaoInjectionBaseline.set(
         mapOf(
-            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 52,
+            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 36,
         )
     )
     // 非 ViewModel 的 UI 层文件直连 DAO 的历史债，只冻结不修复；

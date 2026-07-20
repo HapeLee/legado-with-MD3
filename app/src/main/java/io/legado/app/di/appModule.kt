@@ -678,6 +678,9 @@ val appModule = module {
             downloadCacheSettingsGateway = get(),
             backupSettingsGateway = get(),
             themeSettingsGateway = get(),
+            httpTtsRepository = get(),
+            bookSourceRepository = get(),
+            bookmarkRepository = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)
