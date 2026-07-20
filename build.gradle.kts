@@ -215,11 +215,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/book/toc/rule/preview/TxtTocRulePreviewViewModel.kt" to 2,
             "io/legado/app/ui/browser/WebViewModel.kt" to 1,
             "io/legado/app/ui/login/SourceLoginViewModel.kt" to 6,
-            "io/legado/app/ui/rss/article/RssArticlesViewModel.kt" to 5,
-            "io/legado/app/ui/rss/article/RssSortViewModel.kt" to 8,
-            "io/legado/app/ui/rss/read/ReadRssViewModel.kt" to 9,
-            "io/legado/app/ui/rss/source/edit/RssSourceEditViewModel.kt" to 6,
-            "io/legado/app/ui/rss/source/manage/RssSourceViewModel.kt" to 1,
             "io/legado/app/ui/tagGroupRule/TagGroupRuleViewModel.kt" to 4,
         )
     )

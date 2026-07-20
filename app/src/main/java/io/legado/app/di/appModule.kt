@@ -69,8 +69,11 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
+import io.legado.app.data.repository.RssArticleRepository
 import io.legado.app.data.repository.RssFavoriteRepository
+import io.legado.app.data.repository.RssReadRecordRepository
 import io.legado.app.data.repository.RssRepository
+import io.legado.app.data.repository.RssSourceEditRepository
 import io.legado.app.data.repository.RuleSubscriptionRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.SearchRepository
@@ -422,6 +425,9 @@ val appModule = module {
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
     singleOf(::RssFavoriteRepository)
+    singleOf(::RssArticleRepository)
+    singleOf(::RssReadRecordRepository)
+    singleOf(::RssSourceEditRepository)
     singleOf(::RuleSubscriptionRepository)
     single {
         SearchRepositoryImpl(get())

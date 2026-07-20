@@ -3,10 +3,12 @@ package io.legado.app.ui.rss.article
 import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssArticleRepository
+import io.legado.app.data.repository.RssReadRecordRepository
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.help.source.sortUrls
@@ -23,6 +25,9 @@ import kotlinx.coroutines.flow.stateIn
 class RssSortViewModel(
     application: Application,
     bookshelfSettingsGateway: BookshelfSettingsGateway,
+    private val rssRepository: RssRepository,
+    private val articleRepository: RssArticleRepository,
+    private val readRecordRepository: RssReadRecordRepository,
 ) : BaseViewModel(application) {
     val shouldShowExpandButton = bookshelfSettingsGateway.settings
         .map { it.shouldShowExpandButton }
@@ -34,10 +39,10 @@ class RssSortViewModel(
     val isGridLayout get() = rssSource?.articleStyle == 2
     val isWaterLayout get() = rssSource?.articleStyle == 3
 
-    fun initDataSource(sourceUrl: String?) {
+    suspend fun initDataSource(sourceUrl: String?) {
         url = sourceUrl
         url?.let { src ->
-            rssSource = appDb.rssSourceDao.getByKey(src)
+            rssSource = rssRepository.getByKey(src)
             rssSource?.let {
                 titleLiveData.postValue(it.sourceName)
             } ?: run {
@@ -82,7 +87,7 @@ class RssSortViewModel(
                 it.articleStyle = 0
             }
             execute {
-                appDb.rssSourceDao.update(it)
+                rssRepository.updateSources(it)
             }
         }
     }
@@ -94,14 +99,14 @@ class RssSortViewModel(
                 title = rssArticle.title,
                 readTime = System.currentTimeMillis()
             )
-            appDb.rssReadRecordDao.insertRecord(rssReadRecord)
+            readRecordRepository.insert(rssReadRecord)
         }
     }
 
     fun clearArticles() {
         execute {
             url?.let {
-                appDb.rssArticleDao.delete(it)
+                articleRepository.deleteByOrigin(it)
             }
             order = System.currentTimeMillis()
         }
@@ -116,22 +121,22 @@ class RssSortViewModel(
     }
 
     fun getRecords(): List<RssReadRecord> {
-        return appDb.rssReadRecordDao.getRecords()
+        return readRecordRepository.getAll()
     }
 
     fun countRecords(): Int {
-        return appDb.rssReadRecordDao.countRecords
+        return readRecordRepository.count()
     }
 
     fun deleteAllRecord() {
         execute {
-            appDb.rssReadRecordDao.deleteAllRecord()
+            readRecordRepository.deleteAll()
         }
     }
 
     fun updateRssSourceRedirectPolicy(sourceUrl: String, redirectPolicy: String) {
         execute {
-            appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
+            rssRepository.updateRedirectPolicy(sourceUrl, redirectPolicy)
             rssSource?.redirectPolicy = redirectPolicy
         }.onError {
             appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
