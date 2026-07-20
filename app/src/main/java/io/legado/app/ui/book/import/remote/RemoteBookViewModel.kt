@@ -9,9 +9,9 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
+import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -113,6 +113,7 @@ class RemoteBookViewModel(
     @Suppress("UNUSED_PARAMETER")
     private val savedStateHandle: SavedStateHandle,
     private val repository: RemoteBookRepository,
+    private val bookImportRepository: BookImportRepository,
     private val importBookSettingsGateway: ImportBookSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseViewModel(application) {
@@ -314,9 +315,7 @@ class RemoteBookViewModel(
     }
 
     suspend fun getLocalBook(fileName: String): Book? {
-        return withContext(Dispatchers.IO) {
-            appDb.bookDao.getBookByFileName(fileName)
-        }
+        return bookImportRepository.findByFileName(fileName)
     }
 
     fun navigateToDir(book: RemoteBook) {
@@ -466,10 +465,12 @@ class RemoteBookViewModel(
     }
 
     private fun onArchiveEntrySelected(fileDoc: FileDoc, fileName: String) {
-        appDb.bookDao.getBookByFileName(fileName)?.let { book ->
-            viewModelScope.launch { _effects.emit(RemoteBookEffect.OpenBook(book)) }
-        } ?: viewModelScope.launch {
-            _effects.emit(RemoteBookEffect.ShowImportArchiveDialog(fileDoc, fileName))
+        viewModelScope.launch {
+            val book = bookImportRepository.findByFileName(fileName)
+            _effects.emit(
+                book?.let(RemoteBookEffect::OpenBook)
+                    ?: RemoteBookEffect.ShowImportArchiveDialog(fileDoc, fileName)
+            )
         }
     }
 

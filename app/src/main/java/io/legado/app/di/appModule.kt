@@ -27,6 +27,7 @@ import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookExportSettingsRepository
 import io.legado.app.data.repository.BookGroupMutationRepository
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
@@ -302,6 +303,7 @@ val appModule = module {
     singleOf(::ReadRecordRepository)
     single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
     singleOf(::BookRepository)
+    singleOf(::BookImportRepository)
     singleOf(::BookGroupRepository)
     singleOf(::BookmarkRepository)
     singleOf(::BookCacheManageRepository)
