@@ -19,6 +19,10 @@ class ScenarioValidationTest(unittest.TestCase):
         scenario = runner.load_scenario("reader/page-turn")
         self.assertEqual("long-chapter-v1", scenario["fixture"])
 
+    def test_bookshelf_scenario_is_valid(self):
+        scenario = runner.load_scenario("bookshelf/open-reader-back")
+        self.assertEqual("bookshelf", scenario["entry"]["type"])
+
     def test_rejects_unknown_action(self):
         scenario = {
             "schemaVersion": 1,
@@ -53,6 +57,67 @@ class ScenarioValidationTest(unittest.TestCase):
         }
         with self.assertRaises(runner.ScenarioError):
             runner.validate_fixture_data(fixture, "broken-v1")
+
+
+class CapabilityTest(unittest.TestCase):
+    def test_lists_registered_entries_actions_assertions(self):
+        caps = runner.build_capabilities()
+        self.assertEqual(["turn_page"], caps["entries"]["reader"]["allowedActions"])
+        self.assertEqual(
+            ["open_fixture_book", "press_back"],
+            caps["entries"]["bookshelf"]["allowedActions"],
+        )
+        self.assertIn("turn_page", caps["actions"])
+        self.assertIn("no_fatal_exception", caps["assertions"])
+
+    def test_list_command_returns_zero(self):
+        self.assertEqual(0, runner.main(["list"]))
+
+    def test_parses_skip_build_flag(self):
+        args = runner.parse_args(["run", "reader/page-turn", "--skip-build"])
+        self.assertTrue(args.skip_build)
+
+    def test_run_without_skip_build_defaults_false(self):
+        args = runner.parse_args(["run", "reader/page-turn"])
+        self.assertFalse(args.skip_build)
+
+
+class PreferencesTest(unittest.TestCase):
+    BASE = {
+        "schemaVersion": 1,
+        "name": "bookshelf/miuix-hidden-statusbar",
+        "fixture": "long-chapter-v1",
+        "entry": {"type": "bookshelf"},
+        "readyMarker": "marker",
+        "record": True,
+        "actions": [{"type": "open_fixture_book"}, {"type": "press_back"}],
+        "assertions": ["bookshelf_ready"],
+    }
+
+    def test_repository_miuix_scenario_is_valid(self):
+        scenario = runner.load_scenario("bookshelf/miuix-hidden-statusbar")
+        self.assertTrue(scenario["record"])
+        self.assertEqual("miuix", scenario["preferences"]["composeEngine"])
+        self.assertTrue(scenario["preferences"]["hideStatusBar"])
+
+    def test_accepts_string_and_boolean_preferences(self):
+        scenario = {**self.BASE, "preferences": {"composeEngine": "miuix", "hideStatusBar": True}}
+        runner.validate_scenario(scenario)
+
+    def test_rejects_non_primitive_preference_value(self):
+        scenario = {**self.BASE, "preferences": {"menuAlpha": 50}}
+        with self.assertRaises(runner.ScenarioError):
+            runner.validate_scenario(scenario)
+
+    def test_rejects_invalid_preference_key(self):
+        scenario = {**self.BASE, "preferences": {"bad-key": "x"}}
+        with self.assertRaises(runner.ScenarioError):
+            runner.validate_scenario(scenario)
+
+    def test_rejects_non_boolean_record(self):
+        scenario = {**self.BASE, "record": "yes"}
+        with self.assertRaises(runner.ScenarioError):
+            runner.validate_scenario(scenario)
 
 
 class FailureParsingTest(unittest.TestCase):
@@ -125,22 +190,67 @@ class CommandDecodingTest(unittest.TestCase):
 
 
 class ReaderContentTest(unittest.TestCase):
-    def test_extracts_read_view_content_only(self):
-        dump = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<hierarchy rotation="0">
-  <node class="android.widget.TextView" package="io.legato.kazusa.debug" content-desc="22:30" />
-  <node class="io.legado.app.ui.book.read.page.ReadView" package="io.legato.kazusa.debug" content-desc="LEGADO_DEBUG_LONG_CHAPTER_V1 page body" />
-</hierarchy>
-UI hierarchy dumped to: /dev/tty
-"""
+    def test_extracts_reader_pages_from_logcat(self):
+        logcat = (
+            "07-21 23:52 26863 26863 I LegadoDebug: [session=x] FIXTURE_READY fixture=y entry=reader\n"
+            "07-21 23:52 26863 26863 I LegadoDebug: READER_PAGE LEGADO_DEBUG_LONG_CHAPTER_V1 page one\n"
+            "07-21 23:52 26863 26863 I LegadoDebug: READER_PAGE page two body\n"
+        )
         self.assertEqual(
-            "LEGADO_DEBUG_LONG_CHAPTER_V1 page body",
-            runner.extract_reader_content(dump),
+            ["LEGADO_DEBUG_LONG_CHAPTER_V1 page one", "page two body"],
+            runner.extract_reader_pages(logcat),
         )
 
-    def test_returns_empty_when_read_view_is_absent(self):
-        dump = """<?xml version="1.0"?><hierarchy><node class="android.view.View" /></hierarchy>"""
-        self.assertEqual("", runner.extract_reader_content(dump))
+    def test_returns_empty_when_no_reader_page_logged(self):
+        self.assertEqual([], runner.extract_reader_pages("nothing here\n"))
+
+    @mock.patch.object(runner.time, "sleep")
+    @mock.patch.object(runner, "reader_current_page")
+    def test_waits_until_reader_content_changes(self, reader_current_page, _sleep):
+        reader_current_page.side_effect = ["before", "after"]
+        changed, latest, content = runner.wait_until_reader_content_changed("device", "before", 5)
+        self.assertTrue(changed)
+        self.assertEqual("after", content)
+        self.assertEqual("after", latest)
+        self.assertEqual(2, reader_current_page.call_count)
+
+    def test_finds_clickable_bookshelf_item_and_center(self):
+        dump = """<?xml version="1.0"?><hierarchy>
+<node class="android.view.View" package="io.legato.kazusa.debug" clickable="true"
+ content-desc="调试夹具：长章节, Legado Debug" bounds="[100,200][300,600]" />
+</hierarchy>"""
+        node = runner.find_node_by_content_prefix(dump, "调试夹具：长章节")
+        self.assertIsNotNone(node)
+        self.assertEqual((200, 400), runner.node_center(node))
+
+
+class SessionLogTest(unittest.TestCase):
+    @mock.patch.object(runner, "adb")
+    def test_collects_each_observed_application_pid(self, adb):
+        adb.side_effect = [
+            subprocess.CompletedProcess([], 0, "full log\n[session=s1] ready\n"),
+            subprocess.CompletedProcess([], 0, "pid 10 log\n"),
+            subprocess.CompletedProcess([], 0, "pid 11 log\n"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            runner.collect_logcat("device", Path(directory), ["10", "11", "10"], "s1")
+            session_log = (Path(directory) / "session-logcat.txt").read_text(encoding="utf-8")
+        self.assertIn("--- pid=10 ---", session_log)
+        self.assertIn("--- pid=11 ---", session_log)
+        self.assertIn("[session=s1] ready", session_log)
+        self.assertEqual(3, adb.call_count)
+
+
+class DeviceStateTest(unittest.TestCase):
+    @mock.patch.object(runner, "adb")
+    def test_detects_awake_device(self, adb):
+        adb.return_value = subprocess.CompletedProcess([], 0, "  mWakefulness=Awake\n")
+        self.assertTrue(runner.device_is_awake("device"))
+
+    @mock.patch.object(runner, "adb")
+    def test_detects_visible_keyguard(self, adb):
+        adb.return_value = subprocess.CompletedProcess([], 0, "KeyguardServiceDelegate\n  showing=true\n")
+        self.assertTrue(runner.keyguard_is_showing("device"))
 
 
 if __name__ == "__main__":

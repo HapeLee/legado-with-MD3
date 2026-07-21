@@ -5,6 +5,7 @@
   "entry": { "type": "reader" },
   "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
   "readyTimeoutSeconds": 30,
+  "contentChangeTimeoutSeconds": 5,
   "actions": [
     { "type": "turn_page", "direction": "next", "count": 1 }
   ],

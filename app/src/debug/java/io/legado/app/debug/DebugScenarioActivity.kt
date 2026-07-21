@@ -8,13 +8,17 @@ import androidx.lifecycle.lifecycleScope
 import androidx.room.withTransaction
 import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.utils.GSON
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -25,8 +29,16 @@ class DebugScenarioActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val fixtureId = intent.getStringExtra(EXTRA_FIXTURE)
         val sessionId = intent.getStringExtra(EXTRA_SESSION).orEmpty()
+        val entry = intent.getStringExtra(EXTRA_ENTRY) ?: ENTRY_READER
+        val preferencesJson = intent.getStringExtra(EXTRA_PREFERENCES_B64)?.let {
+            String(android.util.Base64.decode(it, android.util.Base64.DEFAULT), Charsets.UTF_8)
+        }
         if (fixtureId == null || !FIXTURE_ID.matches(fixtureId)) {
             fail(sessionId, "invalid fixture ID")
+            return
+        }
+        if (entry !in SUPPORTED_ENTRIES) {
+            fail(sessionId, "unsupported entry: $entry")
             return
         }
 
@@ -34,10 +46,18 @@ class DebugScenarioActivity : AppCompatActivity() {
             runCatching {
                 withContext(Dispatchers.IO) { installFixture(fixtureId) }
             }.onSuccess { bookUrl ->
-                Log.i(LOG_TAG, "[session=$sessionId] FIXTURE_READY fixture=$fixtureId")
+                applyPreferences(preferencesJson, sessionId)
+                Log.i(LOG_TAG, "[session=$sessionId] FIXTURE_READY fixture=$fixtureId entry=$entry")
+                val targetIntent = when (entry) {
+                    ENTRY_BOOKSHELF -> {
+                        AppConfigStore.putString(PreferKey.defaultHomePage, ENTRY_BOOKSHELF)
+                        AppConfigStore.putLong(PreferKey.saveTabPosition, BookGroup.IdAll)
+                        MainIntent.createHomeIntent(this@DebugScenarioActivity)
+                    }
+                    else -> MainIntent.createReadBookIntent(this@DebugScenarioActivity, bookUrl)
+                }
                 startActivity(
-                    MainIntent.createReadBookIntent(this@DebugScenarioActivity, bookUrl)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    targetIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 )
             }.onFailure { error ->
                 fail(sessionId, "fixture import failed", error)
@@ -114,6 +134,30 @@ class DebugScenarioActivity : AppCompatActivity() {
         return book.bookUrl
     }
 
+    /**
+     * Apply scenario-declared settings before launching the target UI so bug
+     * preconditions (theme engine, reader toggles, ...) are reproduced by
+     * parameter instead of manual UI toggling. Only String/Boolean values are
+     * accepted; they land in the AppConfigStore overlay and are read
+     * synchronously by the relaunched Activity in this process.
+     */
+    private fun applyPreferences(json: String?, sessionId: String) {
+        if (json.isNullOrBlank()) return
+        val type = object : TypeToken<Map<String, Any?>>() {}.type
+        val preferences: Map<String, Any?> = GSON.fromJson(json, type) ?: emptyMap()
+        val applied = HashMap<String, Any>()
+        preferences.forEach { (key, value) ->
+            when (value) {
+                is String, is Boolean -> applied[key] = value
+                else -> error("unsupported preference type for $key")
+            }
+        }
+        if (applied.isNotEmpty()) {
+            AppConfigStore.putAll(applied)
+            Log.i(LOG_TAG, "[session=$sessionId] PREFERENCES_APPLIED ${applied.keys}")
+        }
+    }
+
     private fun fail(sessionId: String, message: String, error: Throwable? = null) {
         Log.e(LOG_TAG, "[session=$sessionId] FIXTURE_ERROR $message", error)
         finishAffinity()
@@ -146,8 +190,13 @@ class DebugScenarioActivity : AppCompatActivity() {
     private companion object {
         const val EXTRA_FIXTURE = "fixture"
         const val EXTRA_SESSION = "session"
+        const val EXTRA_ENTRY = "entry"
+        const val EXTRA_PREFERENCES_B64 = "preferencesB64"
         const val LOG_TAG = "LegadoDebug"
         const val DEBUG_ORIGIN = "legado-debug://fixture-source"
+        const val ENTRY_READER = "reader"
+        const val ENTRY_BOOKSHELF = "bookshelf"
+        val SUPPORTED_ENTRIES = setOf(ENTRY_READER, ENTRY_BOOKSHELF)
         val FIXTURE_ID = Regex("[a-z0-9][a-z0-9-]*")
     }
 }
