@@ -44,6 +44,7 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -89,7 +90,8 @@ class ReadBookController(
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadView.CallBack,
-    ContentTextView.CallBack {
+    ContentTextView.CallBack,
+    ReadBook.ReaderRenderCallback {
 
     var refs: ReadBookViewRefs? = null
 
@@ -160,6 +162,7 @@ class ReadBookController(
     }
 
     fun clearTts() {
+        ReadBook.unregisterRender(this)
         tts?.clearTts()
         tts = null
         dismissTextActionMenu()
@@ -203,6 +206,8 @@ class ReadBookController(
         newRefs.readView.upTime()
         newRefs.readView.upBattery(activity.sysBattery)
         refreshActionMenuItems()
+        // 视图就绪后接管渲染回调；registerRender 会在已有内容时立即同步一次，避免首帧漏渲染
+        ReadBook.registerRender(this)
     }
 
     fun onMenuVisibilityChanged(visible: Boolean) {
@@ -822,6 +827,57 @@ class ReadBookController(
             }
         }
         onMenuActionFinally()
+    }
+
+    // ── ReadBook.ReaderRenderCallback（渲染子集，Track B2 从 ViewModel 下沉）──
+    //
+    // ReadBook 在其 IO 协程内调用这些渲染回调（见 contentLoadFinish 的 Coroutine.async
+    // 默认跑在 Dispatchers.IO），而回调最终会触碰 refs.readView。旧路径靠 VM 的
+    // SharedFlow → 生命周期收集器把渲染派发切回主线程；这里用 [postRender] 保留同样的
+    // 异步-切主线程语义，复用既有的 handleEffect 渲染分支，零渲染逻辑漂移。
+
+    private fun postRender(effect: ReadBookEffect) {
+        handler.post { handleEffect(effect) }
+    }
+
+    override fun upContent(
+        relativePosition: Int,
+        resetPageOffset: Boolean,
+        success: (() -> Unit)?
+    ) {
+        postRender(ReadBookEffect.UpContent(relativePosition, resetPageOffset, success))
+    }
+
+    override suspend fun upContentAwait(
+        relativePosition: Int,
+        resetPageOffset: Boolean,
+        success: (() -> Unit)?
+    ) {
+        withContext(Main.immediate) {
+            handleEffect(ReadBookEffect.UpContent(relativePosition, resetPageOffset, success))
+        }
+    }
+
+    override fun pageChanged() {
+        postRender(ReadBookEffect.PageChanged)
+    }
+
+    override fun contentLoadFinish() {
+        // isInitFinish 是纯业务/UI 标志（决定 ReadView 是否放行前后章排版），不属于渲染
+        viewModel.markInitFinished()
+        postRender(ReadBookEffect.ContentLoadFinish)
+    }
+
+    override fun upPageAnim(upRecorder: Boolean) {
+        postRender(ReadBookEffect.UpPageAnim(upRecorder))
+    }
+
+    override fun cancelSelect() {
+        postRender(ReadBookEffect.CancelSelect)
+    }
+
+    override fun onLayoutPageCompleted(index: Int, page: TextPage) {
+        postRender(ReadBookEffect.LayoutPageCompleted(index, page))
     }
 
     // ── Effect handling ───────────────────────────────────────────────

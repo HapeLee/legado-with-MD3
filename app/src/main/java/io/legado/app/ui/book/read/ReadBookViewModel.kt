@@ -2097,7 +2097,12 @@ class ReadBookViewModel(
         }
     }
 
-    // --- ReadBook.CallBack Implementation ---
+    // --- ReadBook.CallBack Implementation（状态子集）---
+    //
+    // Track B2 起：渲染子集（upContent/upContentAwait/pageChanged/contentLoadFinish/
+    // upPageAnim/cancelSelect/onLayoutPageCompleted）已下沉到 UI 层渲染控制器
+    // （ReadBook.renderCallBack），不再穿过本 ViewModel。业务状态刷新改由
+    // collectReaderSession() 反应式收集 ReadBook.snapshot 驱动。
 
     override fun upMenuView() {
         _uiState.update { syncFromReadBook(it) }
@@ -2106,44 +2111,6 @@ class ReadBookViewModel(
     override fun loadChapterList(book: Book) {
         ReadBook.upMsg(context.getString(R.string.toc_updateing))
         doLoadChapterList(book)
-    }
-
-    override fun upContent(
-        relativePosition: Int,
-        resetPageOffset: Boolean,
-        success: (() -> Unit)?
-    ) {
-        _uiState.update { syncFromReadBook(it) }
-        _effects.tryEmit(
-            ReadBookEffect.UpContent(relativePosition, resetPageOffset, success)
-        )
-    }
-
-    override suspend fun upContentAwait(
-        relativePosition: Int,
-        resetPageOffset: Boolean,
-        success: (() -> Unit)?
-    ) {
-        withContext(Main.immediate) {
-            _uiState.update { syncFromReadBook(it) }
-            _effects.tryEmit(
-                ReadBookEffect.UpContent(relativePosition, resetPageOffset, success)
-            )
-        }
-    }
-
-    override fun pageChanged() {
-        _uiState.update { syncFromReadBook(it) }
-        _effects.tryEmit(ReadBookEffect.PageChanged)
-    }
-
-    override fun contentLoadFinish() {
-        _uiState.update { syncFromReadBook(it).copy(isInitFinish = true) }
-        _effects.tryEmit(ReadBookEffect.ContentLoadFinish)
-    }
-
-    override fun upPageAnim(upRecorder: Boolean) {
-        _effects.tryEmit(ReadBookEffect.UpPageAnim(upRecorder))
     }
 
     override fun notifyBookChanged() {
@@ -2159,22 +2126,14 @@ class ReadBookViewModel(
         }
     }
 
-    override fun cancelSelect() {
-        _effects.tryEmit(ReadBookEffect.CancelSelect)
-    }
-
-    // LayoutProgressListener
-    override fun onLayoutPageCompleted(index: Int, page: TextPage) {
-        _uiState.update { syncFromReadBook(it) }
-        _effects.tryEmit(ReadBookEffect.LayoutPageCompleted(index, page))
-    }
-
-    override fun onLayoutCompleted() {
-        _uiState.update { syncFromReadBook(it) }
-    }
-
-    override fun onLayoutException(e: Throwable) {
-        // no-op: ReadView handles this internally
+    /**
+     * 首次内容渲染完成——由渲染控制器（renderCallBack.contentLoadFinish）幂等调用。
+     * `isInitFinish` 是纯业务/UI 标志，不属于渲染，故留在 VM。
+     */
+    fun markInitFinished() {
+        if (!_uiState.value.isInitFinish) {
+            _uiState.update { it.copy(isInitFinish = true) }
+        }
     }
 
     // --- EventBus Bridge ---

@@ -35,7 +35,7 @@ class ApplyReadSettingUseCase {
                 postEvent(EventBus.UP_CONFIG, arrayListOf(4))
             }
 
-            is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.callBack?.upPageAnim()
+            is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.renderCallBack?.upPageAnim()
             is ReadConfigIntent.OptimizeRenderChanged -> updateStyle()
             else -> Unit
         }
@@ -48,7 +48,7 @@ class ApplyReadSettingUseCase {
 
     private fun updateStyle() {
         ChapterProvider.upStyle()
-        ReadBook.callBack?.upPageAnim(true)
+        ReadBook.renderCallBack?.upPageAnim(true)
         ReadBook.loadContent(false)
     }
 }
