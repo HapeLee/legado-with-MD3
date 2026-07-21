@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.customTheme
 
 import androidx.compose.runtime.Stable
-import io.legado.app.domain.gateway.ThemeColorSlot
 
 @Stable
 data class CustomThemeUiState(
@@ -27,9 +26,24 @@ data class CustomThemeUiState(
 )
 
 sealed interface CustomThemePicker {
-    data class DeepColor(val slot: ThemeColorSlot) : CustomThemePicker
+    data class DeepColor(val slot: CustomThemeColorSlot) : CustomThemePicker
     data object DaySeed : CustomThemePicker
     data object NightSeed : CustomThemePicker
+}
+
+enum class CustomThemeColorSlot {
+    Primary,
+    Secondary,
+    PrimaryText,
+    SecondaryText,
+    Background,
+    LabelContainer,
+    PrimaryNight,
+    SecondaryNight,
+    PrimaryTextNight,
+    SecondaryTextNight,
+    BackgroundNight,
+    LabelContainerNight,
 }
 
 sealed interface CustomThemeIntent {

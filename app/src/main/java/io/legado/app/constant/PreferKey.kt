@@ -406,11 +406,15 @@ object PreferKey {
     // Lab
     const val labEnabled = "labEnabled"
     const val labEInkDisplay = "labEInkDisplay"
+    const val labEyeProtection = "labEyeProtection"
 
     // Eye Protection
     const val eyeProtectionEnabled = "eyeProtectionEnabled"
     const val colorTemperature = "colorTemperature"
     const val eyeProtectionAutoNight = "eyeProtectionAutoNight"
+    const val eyeProtectionSchedule = "eyeProtectionSchedule"
+    const val eyeProtectionStartTime = "eyeProtectionStartTime"
+    const val eyeProtectionEndTime = "eyeProtectionEndTime"
 }
 
 object ReadMenuBlurMode {

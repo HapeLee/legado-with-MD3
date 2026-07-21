@@ -21,7 +21,11 @@ class ImportBookSettingsRepository : ImportBookSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (ImportBookSettings) -> ImportBookSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, ImportBookSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toImportBookSettings,
+            toPrefMap = ImportBookSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 

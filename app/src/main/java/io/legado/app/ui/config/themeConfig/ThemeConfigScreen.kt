@@ -60,14 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
-import io.legado.app.domain.gateway.AppShellBooleanSetting
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
-import io.legado.app.domain.gateway.AppShellStringSetting
-import io.legado.app.domain.gateway.ThemeBooleanSetting
-import io.legado.app.domain.gateway.ThemeFloatSetting
-import io.legado.app.domain.gateway.ThemeIntSetting
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
-import io.legado.app.domain.gateway.ThemeStringSetting
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -102,15 +95,8 @@ fun ThemeConfigScreen(
     val theme = state.theme
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
-    fun updateTheme(setting: ThemeBooleanSetting, value: Boolean) = onIntent(
-        ThemeConfigIntent.UpdateTheme(ThemeSettingsUpdate.BooleanValue(setting, value))
-    )
-    fun updateTheme(setting: ThemeIntSetting, value: Int) = onIntent(
-        ThemeConfigIntent.UpdateTheme(ThemeSettingsUpdate.IntValue(setting, value))
-    )
-    fun updateTheme(setting: ThemeFloatSetting, value: Float) = onIntent(
-        ThemeConfigIntent.UpdateTheme(ThemeSettingsUpdate.FloatValue(setting, value))
-    )
+    fun updateTheme(transform: (ThemeSettings) -> ThemeSettings) =
+        onIntent(ThemeConfigIntent.UpdateTheme(transform))
     val fontFolderState = remember(state.fontFolder) {
         FontFolderState.Loaded(state.fontFolder.takeIf { it.isNotEmpty() }?.let(android.net.Uri::parse))
     }
@@ -201,9 +187,7 @@ fun ThemeConfigScreen(
                             entryValues = stringArrayResource(R.array.theme_mode_v),
                             onValueChange = { mode ->
                                 onIntent(
-                                    ThemeConfigIntent.UpdateAppShell(
-                                        AppShellSettingsUpdate.ThemeMode(mode)
-                                    )
+                                    ThemeConfigIntent.SetThemeMode(mode)
                                 )
                             }
                         )
@@ -232,9 +216,7 @@ fun ThemeConfigScreen(
                             selectedMode = appShell.themeMode,
                             onModeSelected = { mode ->
                                 onIntent(
-                                    ThemeConfigIntent.UpdateAppShell(
-                                        AppShellSettingsUpdate.ThemeMode(mode)
-                                    )
+                                    ThemeConfigIntent.SetThemeMode(mode)
                                 )
                             }
                         )
@@ -280,9 +262,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.composeEngine_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.ComposeEngine(it)
-                                )
+                                ThemeConfigIntent.SetComposeEngine(it)
                             )
                         }
                     )
@@ -299,12 +279,7 @@ fun ThemeConfigScreen(
                         checked = appShell.predictiveBackEnabled,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.PredictiveBack,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetPredictiveBackEnabled(it)
                             )
                         }
                     )
@@ -319,9 +294,7 @@ fun ThemeConfigScreen(
                         steps = 7,
                         onValueChange = { value ->
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.FontScale(value.toInt())
-                                )
+                                ThemeConfigIntent.SetFontScale(value.toInt())
                             )
                         }
                     )
@@ -345,12 +318,7 @@ fun ThemeConfigScreen(
                         checked = appShell.showStatusBar,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.ShowStatusBar,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetShowStatusBar(it)
                             )
                         }
                     )
@@ -360,12 +328,7 @@ fun ThemeConfigScreen(
                         checked = appShell.swipeAnimation,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.SwipeAnimation,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetSwipeAnimation(it)
                             )
                         }
                     )
@@ -375,12 +338,7 @@ fun ThemeConfigScreen(
                         checked = appShell.showBottomView,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.ShowBottomView,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetShowBottomView(it)
                             )
                         }
                     )
@@ -390,12 +348,7 @@ fun ThemeConfigScreen(
                         checked = appShell.useFloatingBottomBar,
                         onCheckedChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.BooleanValue(
-                                        AppShellBooleanSetting.UseFloatingBottomBar,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetUseFloatingBottomBar(it)
                             )
                         }
                     )
@@ -409,12 +362,7 @@ fun ThemeConfigScreen(
                                 checked = appShell.useFloatingBottomBarLiquidGlass,
                                 onCheckedChange = {
                                     onIntent(
-                                        ThemeConfigIntent.UpdateAppShell(
-                                            AppShellSettingsUpdate.BooleanValue(
-                                                AppShellBooleanSetting.UseFloatingBottomBarLiquidGlass,
-                                                it,
-                                            )
-                                        )
+                                        ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it)
                                     )
                                 }
                             )
@@ -424,15 +372,8 @@ fun ThemeConfigScreen(
                                 value = theme.bottomBarLensRadius,
                                 defaultValue = 24f,
                                 valueRange = 0f..50f,
-                                onValueChange = {
-                                    onIntent(
-                                        ThemeConfigIntent.UpdateTheme(
-                                            ThemeSettingsUpdate.FloatValue(
-                                                ThemeFloatSetting.BottomBarLensRadius,
-                                                it,
-                                            )
-                                        )
-                                    )
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(bottomBarLensRadius = value) }
                                 }
                             )
                         }
@@ -445,12 +386,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.tabletInterface_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.StringValue(
-                                        AppShellStringSetting.TabletInterface,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetTabletInterface(it)
                             )
                         }
                     )
@@ -461,12 +397,7 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.label_vis_mode_value),
                         onValueChange = {
                             onIntent(
-                                ThemeConfigIntent.UpdateAppShell(
-                                    AppShellSettingsUpdate.StringValue(
-                                        AppShellStringSetting.LabelVisibilityMode,
-                                        it,
-                                    )
-                                )
+                                ThemeConfigIntent.SetLabelVisibilityMode(it)
                             )
                         }
                     )
@@ -477,15 +408,8 @@ fun ThemeConfigScreen(
                         title = stringResource(R.string.book_info_follow_cover_color),
                         description = stringResource(R.string.book_info_follow_cover_color_summary),
                         checked = theme.bookInfoFollowCoverColor,
-                        onCheckedChange = {
-                            onIntent(
-                                ThemeConfigIntent.UpdateTheme(
-                                    ThemeSettingsUpdate.BooleanValue(
-                                        ThemeBooleanSetting.BookInfoFollowCoverColor,
-                                        it,
-                                    )
-                                )
-                            )
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(bookInfoFollowCoverColor = value) }
                         }
                     )
                     DropdownListSettingItem(
@@ -493,15 +417,8 @@ fun ThemeConfigScreen(
                         selectedValue = theme.bookInfoNetworkCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = {
-                            onIntent(
-                                ThemeConfigIntent.UpdateTheme(
-                                    ThemeSettingsUpdate.StringValue(
-                                        ThemeStringSetting.BookInfoNetworkCoverBackground,
-                                        it,
-                                    )
-                                )
-                            )
+                        onValueChange = { value ->
+                            updateTheme { it.copy(bookInfoNetworkCoverBackground = value) }
                         }
                     )
                     DropdownListSettingItem(
@@ -509,17 +426,77 @@ fun ThemeConfigScreen(
                         selectedValue = theme.bookInfoDefaultCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = {
-                            onIntent(
-                                ThemeConfigIntent.UpdateTheme(
-                                    ThemeSettingsUpdate.StringValue(
-                                        ThemeStringSetting.BookInfoDefaultCoverBackground,
-                                        it,
-                                    )
-                                )
-                            )
+                        onValueChange = { value ->
+                            updateTheme { it.copy(bookInfoDefaultCoverBackground = value) }
                         }
                     )
+                }
+
+                SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_enabled),
+                        description = stringResource(R.string.eye_protection_enabled_summary),
+                        checked = theme.eyeProtectionEnabled,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(eyeProtectionEnabled = value) }
+                        }
+                    )
+
+                    AnimatedVisibility(visible = theme.eyeProtectionEnabled) {
+                        Column {
+                            SliderSettingItem(
+                                title = stringResource(R.string.color_temperature),
+                                description = stringResource(
+                                    R.string.color_temperature_summary,
+                                    theme.colorTemperature
+                                ),
+                                value = theme.colorTemperature.toFloat(),
+                                defaultValue = 50f,
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(colorTemperature = value.toInt()) }
+                                }
+                            )
+
+                            SwitchSettingItem(
+                                title = stringResource(R.string.eye_protection_schedule),
+                                description = stringResource(R.string.eye_protection_schedule_summary),
+                                checked = theme.eyeProtectionSchedule,
+                                onCheckedChange = { value ->
+                                    updateTheme { it.copy(eyeProtectionSchedule = value) }
+                                }
+                            )
+
+                            AnimatedVisibility(visible = theme.eyeProtectionSchedule) {
+                                Column {
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_start_time),
+                                        option = theme.eyeProtectionStartTime,
+                                        onClick = {
+                                            onIntent(
+                                                ThemeConfigIntent.RequestTimePicker(
+                                                    ThemeTimeField.EyeProtectionStart,
+                                                    theme.eyeProtectionStartTime,
+                                                )
+                                            )
+                                        }
+                                    )
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_end_time),
+                                        option = theme.eyeProtectionEndTime,
+                                        onClick = {
+                                            onIntent(
+                                                ThemeConfigIntent.RequestTimePicker(
+                                                    ThemeTimeField.EyeProtectionEnd,
+                                                    theme.eyeProtectionEndTime,
+                                                )
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
@@ -527,19 +504,15 @@ fun ThemeConfigScreen(
                         SwitchSettingItem(
                             title = stringResource(R.string.pure_black),
                             checked = theme.isPureBlack,
-                            onCheckedChange = {
-                                onIntent(
-                                    ThemeConfigIntent.UpdateTheme(
-                                        ThemeSettingsUpdate.PureBlack(it)
-                                    )
-                                )
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(isPureBlack = value) }
                             }
                         )
                         SwitchSettingItem(
                             title = stringResource(R.string.use_flexible_top_bar),
                             checked = theme.useFlexibleTopAppBar,
-                            onCheckedChange = {
-                                updateTheme(ThemeBooleanSetting.UseFlexibleTopAppBar, it)
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(useFlexibleTopAppBar = value) }
                             }
                         )
                     }
@@ -552,8 +525,8 @@ fun ThemeConfigScreen(
                         SwitchSettingItem(
                             title = stringResource(R.string.is_blur_progressive_enable),
                             checked = theme.enableProgressiveBlur,
-                            onCheckedChange = {
-                                updateTheme(ThemeBooleanSetting.EnableProgressiveBlur, it)
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(enableProgressiveBlur = value) }
                             }
                         )
                     }
@@ -564,8 +537,8 @@ fun ThemeConfigScreen(
                             value = theme.topBarBlurRadius.toFloat(),
                             defaultValue = 24f,
                             valueRange = 0f..30f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.TopBarBlurRadius, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(topBarBlurRadius = value.toInt()) }
                             }
                         )
                         SliderSettingItem(
@@ -574,8 +547,8 @@ fun ThemeConfigScreen(
                             value = theme.bottomBarBlurRadius.toFloat(),
                             defaultValue = 8f,
                             valueRange = 0f..10f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.BottomBarBlurRadius, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(bottomBarBlurRadius = value.toInt()) }
                             }
                         )
                         SliderSettingItem(
@@ -583,8 +556,8 @@ fun ThemeConfigScreen(
                             value = theme.topBarBlurAlpha.toFloat(),
                             defaultValue = 73f,
                             valueRange = 0f..100f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.TopBarBlurAlpha, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(topBarBlurAlpha = value.toInt()) }
                             }
                         )
                         SliderSettingItem(
@@ -592,8 +565,8 @@ fun ThemeConfigScreen(
                             value = theme.bottomBarBlurAlpha.toFloat(),
                             defaultValue = 40f,
                             valueRange = 0f..100f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.BottomBarBlurAlpha, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(bottomBarBlurAlpha = value.toInt()) }
                             }
                         )
                     }
@@ -610,8 +583,8 @@ fun ThemeConfigScreen(
                                 value = theme.topBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                onValueChange = {
-                                    updateTheme(ThemeIntSetting.TopBarOpacity, it.toInt())
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(topBarOpacity = value.toInt()) }
                                 }
                             )
                             SliderSettingItem(
@@ -623,8 +596,8 @@ fun ThemeConfigScreen(
                                 value = theme.bottomBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                onValueChange = {
-                                    updateTheme(ThemeIntSetting.BottomBarOpacity, it.toInt())
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(bottomBarOpacity = value.toInt()) }
                                 }
                             )
                         }
@@ -639,8 +612,8 @@ fun ThemeConfigScreen(
                             value = theme.containerOpacity.toFloat(),
                             defaultValue = 100f,
                             valueRange = 0f..100f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.ContainerOpacity, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(containerOpacity = value.toInt()) }
                             }
                         )
                     }
@@ -666,8 +639,8 @@ fun ThemeConfigScreen(
                             value = theme.backgroundImageBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.BackgroundImageBlurring, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(backgroundImageBlurring = value.toInt()) }
                             }
                         )
                     }
@@ -690,8 +663,8 @@ fun ThemeConfigScreen(
                             value = theme.backgroundImageDarkBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            onValueChange = {
-                                updateTheme(ThemeIntSetting.BackgroundImageDarkBlurring, it.toInt())
+                            onValueChange = { value ->
+                                updateTheme { it.copy(backgroundImageDarkBlurring = value.toInt()) }
                             }
                         )
                     }
@@ -705,19 +678,18 @@ fun ThemeConfigScreen(
                         title = stringResource(R.string.disable_spliced_group_corner_radius),
                         description = stringResource(R.string.disable_spliced_group_corner_radius_summary),
                         checked = theme.disableSplicedColumnGroupCornerRadius,
-                        onCheckedChange = {
-                            updateTheme(
-                                ThemeBooleanSetting.DisableSplicedColumnGroupCornerRadius,
-                                it
-                            )
+                        onCheckedChange = { value ->
+                            updateTheme {
+                                it.copy(disableSplicedColumnGroupCornerRadius = value)
+                            }
                         }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.base_card_corner_radius_override),
                         description = stringResource(R.string.base_card_override_summary),
                         checked = theme.overrideBaseCardCornerRadius,
-                        onCheckedChange = {
-                            updateTheme(ThemeBooleanSetting.OverrideBaseCardCornerRadius, it)
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(overrideBaseCardCornerRadius = value) }
                         }
                     )
                     AnimatedVisibility(visible = theme.overrideBaseCardCornerRadius) {
@@ -729,8 +701,8 @@ fun ThemeConfigScreen(
                             valueRange = 0f..40f,
                             steps = 79,
                             decimal = true,
-                            onValueChange = {
-                                updateTheme(ThemeFloatSetting.BaseCardCornerRadius, it)
+                            onValueChange = { value ->
+                                updateTheme { it.copy(baseCardCornerRadius = value) }
                             }
                         )
                     }
@@ -738,8 +710,8 @@ fun ThemeConfigScreen(
                         title = stringResource(R.string.base_card_border_override),
                         description = stringResource(R.string.base_card_override_summary),
                         checked = theme.overrideBaseCardBorder,
-                        onCheckedChange = {
-                            updateTheme(ThemeBooleanSetting.OverrideBaseCardBorder, it)
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(overrideBaseCardBorder = value) }
                         }
                     )
                     AnimatedVisibility(visible = theme.overrideBaseCardBorder) {
@@ -752,8 +724,8 @@ fun ThemeConfigScreen(
                                 valueRange = 0f..5f,
                                 steps = 49,
                                 decimal = true,
-                                onValueChange = {
-                                    updateTheme(ThemeFloatSetting.BaseCardBorderWidth, it)
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(baseCardBorderWidth = value) }
                                 }
                             )
                             BaseCardBorderColorSettingItem(
@@ -783,8 +755,8 @@ fun ThemeConfigScreen(
                     SwitchSettingItem(
                         title = stringResource(R.string.show_divider_line),
                         checked = theme.enableItemDivider,
-                        onCheckedChange = {
-                            updateTheme(ThemeBooleanSetting.EnableItemDivider, it)
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(enableItemDivider = value) }
                         }
                     )
                     if (theme.enableItemDivider) {
@@ -796,8 +768,8 @@ fun ThemeConfigScreen(
                             valueRange = 0f..5f,
                             steps = 49,
                             decimal = true,
-                            onValueChange = {
-                                updateTheme(ThemeFloatSetting.ItemDividerWidth, it)
+                            onValueChange = { value ->
+                                updateTheme { it.copy(itemDividerWidth = value) }
                             }
                         )
                         SliderSettingItem(
@@ -807,8 +779,8 @@ fun ThemeConfigScreen(
                             defaultValue = 80f,
                             valueRange = 30f..100f,
                             steps = 14,
-                            onValueChange = {
-                                updateTheme(ThemeFloatSetting.ItemDividerLength, it)
+                            onValueChange = { value ->
+                                updateTheme { it.copy(itemDividerLength = value) }
                             }
                         )
                         ClickableSettingItem(
@@ -908,8 +880,8 @@ fun ThemeConfigScreen(
         show = state.activeSheet == ThemeConfigSheet.DividerColor,
         initialColor = theme.itemDividerColor,
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onColorSelected = {
-            updateTheme(ThemeIntSetting.ItemDividerColor, it)
+        onColorSelected = { value ->
+            updateTheme { it.copy(itemDividerColor = value) }
             onIntent(ThemeConfigIntent.DismissSheet)
         }
     )
@@ -923,15 +895,14 @@ fun ThemeConfigScreen(
             theme.baseCardBorderColor
         },
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onColorSelected = {
-            updateTheme(
+        onColorSelected = { value ->
+            updateTheme {
                 if (baseCardBorderColorSheet?.dark == true) {
-                    ThemeIntSetting.BaseCardBorderColorNight
+                    it.copy(baseCardBorderColorNight = value)
                 } else {
-                    ThemeIntSetting.BaseCardBorderColor
-                },
-                it
-            )
+                    it.copy(baseCardBorderColor = value)
+                }
+            }
             onIntent(ThemeConfigIntent.DismissSheet)
         }
     )

@@ -23,7 +23,6 @@ import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
-import io.legado.app.domain.gateway.BookshelfSettingsUpdate
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.exception.NoStackTraceException
@@ -696,18 +695,17 @@ class BookshelfViewModel(
             is BookshelfIntent.UploadBookshelf -> uploadBookshelf(intent.books)
             is BookshelfIntent.ImportFromUri -> importBookshelf(intent.uri, intent.groupId)
             is BookshelfIntent.UpdateSetting -> viewModelScope.launch {
-                bookshelfSettingsGateway.update(intent.update)
+                bookshelfSettingsGateway.update(intent.transform)
             }
-            is BookshelfIntent.UpdateThemeSetting -> viewModelScope.launch {
-                themeSettingsGateway.update(intent.update)
+            is BookshelfIntent.SetCustomTagColorsEnabled -> viewModelScope.launch {
+                themeSettingsGateway.update {
+                    it.copy(enableCustomTagColors = intent.enabled)
+                }
             }
             is BookshelfIntent.SetCustomTagColors -> viewModelScope.launch {
-                themeSettingsGateway.update(
-                    io.legado.app.domain.gateway.ThemeSettingsUpdate.StringValue(
-                        io.legado.app.domain.gateway.ThemeStringSetting.CustomTagColorsJson,
-                        GSON.toJson(intent.colors),
-                    )
-                )
+                themeSettingsGateway.update {
+                    it.copy(customTagColorsJson = GSON.toJson(intent.colors))
+                }
             }
             BookshelfIntent.UploadResultConsumed -> pendingUploadUrlFlow.value = null
         }
@@ -757,7 +755,7 @@ class BookshelfViewModel(
         if (groupIdFlow.value != groupId) {
             groupIdFlow.value = groupId
             viewModelScope.launch {
-                bookshelfSettingsGateway.update(BookshelfSettingsUpdate.SaveTabPosition(groupId))
+                bookshelfSettingsGateway.update { it.copy(saveTabPosition = groupId) }
             }
             clearSelection()
             clearDragState()

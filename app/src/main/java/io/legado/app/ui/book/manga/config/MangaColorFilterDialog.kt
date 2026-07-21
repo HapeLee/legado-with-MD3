@@ -10,7 +10,6 @@ import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.databinding.DialogMangaColorFilterBinding
 import io.legado.app.domain.gateway.MangaSettingsGateway
-import io.legado.app.domain.gateway.MangaSettingsUpdate
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
@@ -120,7 +119,7 @@ class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_man
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         lifecycleScope.launch {
-            mangaSettingsGateway.update(MangaSettingsUpdate.ColorFilter(mConfig.toJson()))
+            mangaSettingsGateway.update { it.copy(colorFilter = mConfig.toJson()) }
         }
     }
 

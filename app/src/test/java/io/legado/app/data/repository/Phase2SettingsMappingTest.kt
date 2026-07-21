@@ -1,7 +1,6 @@
 package io.legado.app.data.repository
 
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.settings.BookExportSettings
@@ -10,7 +9,6 @@ import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.DownloadCacheSettings
 import io.legado.app.domain.model.settings.ImportBookSettings
 import io.legado.app.domain.model.settings.TranslationSettings
-import io.legado.app.help.config.setPrefValue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -73,9 +71,11 @@ class Phase2SettingsMappingTest {
 
         assertEquals(
             mapOf(PreferKey.importBookPath to null),
-            settings.diffPrefMap(
-                transform = { it.copy(importBookPath = null) },
+            captureAtomicUpdateValues(
+                current = settings,
+                read = Preferences::toImportBookSettings,
                 toPrefMap = ImportBookSettings::toPrefMap,
+                transform = { it.copy(importBookPath = null) },
             ),
         )
     }
@@ -159,9 +159,7 @@ private fun <T> assertRoundTrips(
     fromPreferences: (Preferences) -> T,
 ) {
     samples.forEach { expected ->
-        val preferences = mutablePreferencesOf().apply {
-            toPrefMap(expected).forEach { (key, value) -> setPrefValue(key, value) }
-        }
+        val preferences = toPrefMap(expected).toTestPreferences()
         assertEquals(expected, fromPreferences(preferences))
     }
 }

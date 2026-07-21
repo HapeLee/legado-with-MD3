@@ -15,7 +15,6 @@ import io.legado.app.constant.AppLog
 import io.legado.app.databinding.FragmentWebdavAuthBinding
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BackupSettingsUpdate
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -132,12 +131,13 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     suspend fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
-        backupSettingsGateway.updateAll(
-            listOf(
-                BackupSettingsUpdate.WebDavUrl(config.url),
-                BackupSettingsUpdate.WebDavCredentials(config.account, config.password),
+        backupSettingsGateway.update {
+            it.copy(
+                webDavUrl = config.url,
+                webDavAccount = config.account,
+                webDavPassword = config.password,
             )
-        )
+        }
         onSaved?.invoke()
     }
 

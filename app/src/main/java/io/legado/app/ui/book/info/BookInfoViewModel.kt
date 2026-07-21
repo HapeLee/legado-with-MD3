@@ -29,7 +29,6 @@ import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ThemeSettings
@@ -359,7 +358,7 @@ class BookInfoViewModel(
             BookInfoIntent.KnowledgeListClick -> openKnowledgeList()
             BookInfoIntent.EventListClick -> openEventList()
             is BookInfoIntent.SetDefaultBookTreeUri -> viewModelScope.launch {
-                otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(intent.value))
+                otherSettingsGateway.update { it.copy(defaultBookTreeUri = intent.value) }
             }
         }
     }

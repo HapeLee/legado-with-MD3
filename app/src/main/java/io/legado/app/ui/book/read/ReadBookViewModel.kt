@@ -40,15 +40,12 @@ import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
 import io.legado.app.domain.gateway.ReadStyleFloatKey
@@ -257,7 +254,7 @@ class ReadBookViewModel(
 
     fun setTextSelectMenuConfig(value: String) {
         viewModelScope.launch {
-            readSettingsRepository.update(ReadSettingsUpdate.TextSelectMenuConfig(value))
+            readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
         }
     }
 
@@ -999,7 +996,7 @@ class ReadBookViewModel(
             is ReadBookIntent.ApplySpeakEngine -> {
                 ReadBook.book?.setTtsEngine(null)
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    readAloudSettingsRepository.setTtsEngine(intent.value)
+                    readAloudSettingsRepository.update { it.copy(ttsEngine = intent.value) }
                     ReadAloud.upReadAloudClass()
                     _uiState.update {
                         it.copy(
@@ -1025,7 +1022,9 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ApplyPreSynthesisConcurrency -> {
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    readAloudSettingsRepository.setPreSynthesisConcurrency(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(ttsPreSynthesisConcurrency = intent.value.coerceIn(1, 8))
+                    }
                 }
                 _uiState.update {
                     it.copy(
@@ -1037,7 +1036,9 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ApplyAudioCacheCleanTime -> {
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    readAloudSettingsRepository.setAudioCacheCleanTime(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(audioCacheCleanTime = intent.value)
+                    }
                 }
                 _uiState.update {
                     it.copy(
@@ -1049,7 +1050,9 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ApplyParagraphInterval -> {
                 viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    readAloudSettingsRepository.setTtsParagraphInterval(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(ttsParagraphInterval = intent.value)
+                    }
                 }
                 _uiState.update {
                     it.copy(
@@ -1089,7 +1092,7 @@ class ReadBookViewModel(
                     loadTtsEngineItems()
                     if (ReadAloud.ttsEngine == intent.engineId.toString()) {
                         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                            readAloudSettingsRepository.setTtsEngine(null)
+                            readAloudSettingsRepository.update { it.copy(ttsEngine = null) }
                             ReadAloud.upReadAloudClass()
                         }
                     }
@@ -1194,19 +1197,31 @@ class ReadBookViewModel(
             ReadBookIntent.SaveImportedHttpTts -> saveImportedHttpTts()
 
             is ReadBookIntent.SetReadAloudIgnoreAudioFocus -> {
-                viewModelScope.launch { readAloudSettingsRepository.setIgnoreAudioFocus(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(ignoreAudioFocus = intent.value) }
+                }
             }
             is ReadBookIntent.SetReadAloudPauseOnPhoneCall -> {
-                viewModelScope.launch { readAloudSettingsRepository.setPauseReadAloudWhilePhoneCalls(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update {
+                        it.copy(pauseReadAloudWhilePhoneCalls = intent.value)
+                    }
+                }
             }
             is ReadBookIntent.SetReadAloudWakeLock -> {
-                viewModelScope.launch { readAloudSettingsRepository.setReadAloudWakeLock(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(readAloudWakeLock = intent.value) }
+                }
             }
             is ReadBookIntent.SetShowReadAloudCapsule -> {
-                viewModelScope.launch { readAloudSettingsRepository.setShowReadAloudCapsule(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(showReadAloudCapsule = intent.value) }
+                }
             }
             is ReadBookIntent.SetCapsuleAutoCollapse -> {
-                viewModelScope.launch { readAloudSettingsRepository.setCapsuleAutoCollapse(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(capsuleAutoCollapse = intent.value) }
+                }
             }
             ReadBookIntent.ResetReadAloudCapsulePosition -> {
                 _uiState.update { it.copy(
@@ -1214,7 +1229,9 @@ class ReadBookViewModel(
                     readAloudCapsuleOffsetY = 0f,
                 ) }
                 viewModelScope.launch {
-                    readAloudSettingsRepository.resetCapsulePosition()
+                    readAloudSettingsRepository.update {
+                        it.copy(capsuleOffsetX = 0f, capsuleOffsetY = 0f)
+                    }
                 }
             }
             is ReadBookIntent.SetReadAloudCapsulePosition -> {
@@ -1223,21 +1240,33 @@ class ReadBookViewModel(
                     readAloudCapsuleOffsetY = intent.y,
                 ) }
                 viewModelScope.launch {
-                    readAloudSettingsRepository.setCapsulePosition(intent.x, intent.y)
+                    readAloudSettingsRepository.update {
+                        it.copy(capsuleOffsetX = intent.x, capsuleOffsetY = intent.y)
+                    }
                 }
             }
             is ReadBookIntent.SetReadAloudMediaButtonPerNext -> {
-                viewModelScope.launch { readAloudSettingsRepository.setMediaButtonPerNext(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(mediaButtonPerNext = intent.value) }
+                }
             }
             is ReadBookIntent.SetReadAloudByPage -> {
-                viewModelScope.launch { readAloudSettingsRepository.setReadAloudByPage(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(readAloudByPage = intent.value) }
+                }
                 if (intent.value) postEvent(EventBus.MEDIA_BUTTON, false)
             }
             is ReadBookIntent.SetReadAloudSystemMediaCompat -> {
-                viewModelScope.launch { readAloudSettingsRepository.setSystemMediaControlCompatibilityChange(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update {
+                        it.copy(systemMediaControlCompatibilityChange = intent.value)
+                    }
+                }
             }
             is ReadBookIntent.SetReadAloudStreamAudio -> {
-                viewModelScope.launch { readAloudSettingsRepository.setStreamReadAloudAudio(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(streamReadAloudAudio = intent.value) }
+                }
                 if (intent.value) postEvent(EventBus.MEDIA_BUTTON, false)
             }
             is ReadBookIntent.ReadAloudPrevParagraph -> ReadAloud.prevParagraph(context)
@@ -1254,7 +1283,9 @@ class ReadBookViewModel(
             is ReadBookIntent.ReadAloudNextChapter -> ReadBook.moveToNextChapter(true)
             is ReadBookIntent.SetReadAloudTtsTimer -> setReadAloudTtsTimer(intent.value)
             is ReadBookIntent.SetReadAloudTtsFollowSys -> {
-                viewModelScope.launch { readAloudSettingsRepository.setTtsFollowSys(intent.value) }
+                viewModelScope.launch {
+                    readAloudSettingsRepository.update { it.copy(ttsFollowSys = intent.value) }
+                }
                 _uiState.update { it.copy(readAloudTtsFollowSys = intent.value) }
             }
             is ReadBookIntent.SetReadAloudTtsSpeechRate -> setReadAloudTtsSpeechRate(intent.value)
@@ -1270,7 +1301,9 @@ class ReadBookViewModel(
                             return@launch
                         }
                     }
-                    readAloudSettingsRepository.setSpeechAnalysisMode(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(speechAnalysisMode = intent.value)
+                    }
                     _uiState.update { it.copy(speechAnalysisMode = intent.value) }
                 }
             }
@@ -1280,7 +1313,9 @@ class ReadBookViewModel(
                     val resumePlaying = shouldRestart && !BaseReadAloudService.pause
                     val chapter = ReadBook.curTextChapter
                     val chapterPosition = readAloudSessionStore.state.value.playback.chapterPosition
-                    readAloudSettingsRepository.setUseMultiSpeaker(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(useMultiSpeaker = intent.value)
+                    }
                     _uiState.update { it.copy(useMultiSpeaker = intent.value) }
                     if (shouldRestart && chapter != null) {
                         val pageIndex = chapter.getPageIndexByCharIndex(chapterPosition)
@@ -1304,7 +1339,13 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.SetDefaultReadAloudInterface -> {
                 viewModelScope.launch {
-                    readAloudSettingsRepository.setDefaultInterface(intent.value)
+                    readAloudSettingsRepository.update {
+                        it.copy(
+                            defaultInterface = intent.value.takeIf { value ->
+                                value in ReadAloudSettingsRepository.AVAILABLE_INTERFACES
+                            } ?: ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC
+                        )
+                    }
                 }
                 _uiState.update { it.copy(defaultReadAloudInterface = intent.value) }
             }
@@ -1457,43 +1498,6 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ToggleDayNight -> toggleDayNight()
-            is ReadBookIntent.ToggleEyeProtection -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update(
-                        ReadSettingsUpdate.EyeProtectionEnabled(
-                            !_readPreferences.value.eyeProtectionEnabled
-                        )
-                    )
-                }
-            }
-            is ReadBookIntent.EyeProtectionEnabledChanged ->
-                updateEyeProtection(ReadSettingsUpdate.EyeProtectionEnabled(intent.value))
-            is ReadBookIntent.EyeProtectionIntensityChanged ->
-                updateEyeProtection(ReadSettingsUpdate.EyeProtectionIntensity(intent.value))
-            is ReadBookIntent.EyeProtectionAutoNightChanged -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update(ReadSettingsUpdate.EyeProtectionAutoNight(intent.value))
-                    if (intent.value) {
-                        EyeProtection.syncEnabledForNight(
-                            isNight = isNightTheme(),
-                            autoNight = true,
-                        )?.let { enabled ->
-                            readSettingsRepository.update(
-                                ReadSettingsUpdate.EyeProtectionEnabled(enabled)
-                            )
-                        }
-                    }
-                }
-            }
-            is ReadBookIntent.SyncEyeProtectionForTheme -> {
-                EyeProtection.syncEnabledForNight(
-                    isNight = intent.isNight,
-                    autoNight = _readPreferences.value.eyeProtectionAutoNight,
-                )?.takeIf { it != _readPreferences.value.eyeProtectionEnabled }
-                    ?.let { enabled ->
-                        updateEyeProtection(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
-                    }
-            }
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
                 when (readAloudSettingsRepository.currentSettings.contentSelectSpeakMode) {
@@ -1580,6 +1584,30 @@ class ReadBookViewModel(
             is ReadBookIntent.CloseReadBook -> closeReadBook(intent.keepReadAloud)
             is ReadBookIntent.OpenBooksDirPicker -> requestBooksDirPicker(reloadChapterList = false)
             is ReadBookIntent.BooksDirSelected -> onBooksDirSelected(intent.uri)
+
+            ReadBookIntent.ToggleEyeProtection -> toggleEyeProtection()
+            is ReadBookIntent.EyeProtectionEnabledChanged -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update { it.copy(eyeProtectionEnabled = intent.value) }
+                }
+            }
+            is ReadBookIntent.EyeProtectionIntensityChanged -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update { it.copy(eyeProtectionIntensity = intent.value) }
+                }
+            }
+            is ReadBookIntent.EyeProtectionAutoNightChanged -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update { it.copy(eyeProtectionAutoNight = intent.value) }
+                }
+            }
+            is ReadBookIntent.SyncEyeProtectionForTheme -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update {
+                        it.copy(eyeProtectionEnabled = false)
+                    }
+                }
+            }
         }
     }
 
@@ -2272,13 +2300,17 @@ class ReadBookViewModel(
     private fun setReadAloudTtsTimer(value: Int) {
         val timer = PlaybackTimer.normalize(value)
         ReadAloud.setTimer(context, timer)
-        viewModelScope.launch { readAloudSettingsRepository.setTtsTimer(timer) }
+        viewModelScope.launch {
+            readAloudSettingsRepository.update { it.copy(ttsTimer = timer) }
+        }
         _uiState.update { it.copy(readAloudTtsTimer = timer) }
     }
 
     private fun setReadAloudTtsSpeechRate(value: Int) {
         viewModelScope.launch {
-            readAloudSettingsRepository.setTtsSpeechRate(value)
+            readAloudSettingsRepository.update {
+                it.copy(ttsSpeechRate = value.coerceIn(0, 80))
+            }
             ReadAloud.upTtsSpeechRate(context)
         }
         _uiState.update { it.copy(readAloudTtsSpeechRate = value) }
@@ -2287,6 +2319,14 @@ class ReadBookViewModel(
     fun setFontFolder(value: String) {
         viewModelScope.launch {
             readSettingsRepository.setFontFolder(value)
+        }
+    }
+
+    private fun toggleEyeProtection() {
+        viewModelScope.launch {
+            readSettingsRepository.update {
+                it.copy(eyeProtectionEnabled = !_readPreferences.value.eyeProtectionEnabled)
+            }
         }
     }
 
@@ -5245,7 +5285,7 @@ class ReadBookViewModel(
             }
             is ConfigUpdate.TitleBarCompact -> {
                 viewModelScope.launch {
-                    readSettingsRepository.update(ReadSettingsUpdate.TitleBarCompact(update.value))
+                    readSettingsRepository.update { it.copy(titleBarCompact = update.value) }
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarCompact = update.value)) }
             }
@@ -5926,13 +5966,7 @@ class ReadBookViewModel(
         hasDismissedLightReminder = false
         val nextMode = if (isNightTheme()) "1" else "2"
         viewModelScope.launch {
-            appShellSettingsGateway.update(AppShellSettingsUpdate.ThemeMode(nextMode))
-            EyeProtection.syncEnabledForNight(
-                isNight = nextMode == "2",
-                autoNight = _readPreferences.value.eyeProtectionAutoNight,
-            )?.let { enabled ->
-                readSettingsRepository.update(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
-            }
+            appShellSettingsGateway.update { it.copy(themeMode = nextMode) }
         }
         _uiState.update {
             val newActiveReminder = if (it.activeReminder?.type is ReminderType.DayNightReminder) {
@@ -5956,10 +5990,6 @@ class ReadBookViewModel(
                 ConfigUpdateAction.UpdateSystemUi
             )
         ))
-    }
-
-    private fun updateEyeProtection(update: ReadSettingsUpdate) {
-        viewModelScope.launch { readSettingsRepository.update(update) }
     }
 
     private fun applyReadStyleBackgroundImage(uri: Uri) {
@@ -6326,7 +6356,7 @@ class ReadBookViewModel(
 
     private fun onBooksDirSelected(uri: Uri) {
         viewModelScope.launch {
-            otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(uri.toString()))
+            otherSettingsGateway.update { it.copy(defaultBookTreeUri = uri.toString()) }
         }
         val reloadChapterList = pendingBooksDirReloadChapterList
         pendingBooksDirReloadChapterList = false
@@ -6517,6 +6547,7 @@ private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "setting",
 )
 private val DEFAULT_AI_TOOL_BUTTON_IDS = setOf("ai_summary", "ai_rewrite")
+
 private const val DARK_LUX_THRESHOLD = 8f
 private const val BRIGHT_LUX_THRESHOLD = 100f
 private const val LIGHT_LUMINANCE_THRESHOLD = 0.35

@@ -15,7 +15,6 @@ import io.legado.app.data.entities.Server
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
@@ -175,7 +174,7 @@ class RemoteBookViewModel(
         uri ?: return
         uri.takePersistablePermissionSafely(context)
         viewModelScope.launch {
-            otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(uri.toString()))
+            otherSettingsGateway.update { it.copy(defaultBookTreeUri = uri.toString()) }
         }
     }
 

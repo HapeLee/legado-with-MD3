@@ -18,9 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.toastOnUi
@@ -105,18 +103,16 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                     currentValue = value
                     callChangeListener(value)
                     holder.itemView.activity?.lifecycleScope?.launch {
-                        val updates = buildList {
-                            add(ThemeSettingsUpdate.AppTheme(value))
-                            if (value == "13") {
-                                add(
-                                    ThemeSettingsUpdate.IntValue(
-                                        ThemeIntSetting.ContainerOpacity,
-                                        0,
-                                    )
-                                )
-                            }
+                        themeSettingsGateway.update {
+                            it.copy(
+                                appTheme = value,
+                                containerOpacity = if (value == "13") {
+                                    0
+                                } else {
+                                    it.containerOpacity
+                                },
+                            )
                         }
-                        themeSettingsGateway.updateAll(updates)
                     }
                     notifyDataSetChanged()
                 }

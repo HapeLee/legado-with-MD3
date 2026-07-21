@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BackupSettingsUpdate
 import io.legado.app.domain.model.HomeDashboardSection
 import io.legado.app.domain.model.HomeReadingBook
 import io.legado.app.domain.model.WebDavBackup
@@ -247,7 +246,7 @@ class HomeViewModel(
             try {
                 runCatching {
                     if (savePath) {
-                        backupSettingsGateway.update(BackupSettingsUpdate.BackupPath(path))
+                        backupSettingsGateway.update { it.copy(backupPath = path) }
                     }
                     if (destination != HomeBackupDestination.Local) {
                         webDavBackupUseCase.refreshConfig()

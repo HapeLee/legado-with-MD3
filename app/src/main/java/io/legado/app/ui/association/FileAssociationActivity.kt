@@ -11,7 +11,6 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ActivityTranslucenceBinding
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.exception.InvalidBooksDirException
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
@@ -48,7 +47,9 @@ class FileAssociationActivity :
         intent.data?.let { uri ->
             it.uri?.let { treeUri ->
                 lifecycleScope.launch {
-                    otherSettingsGateway.update(OtherSettingsUpdate.DefaultBookTreeUri(treeUri.toString()))
+                    otherSettingsGateway.update {
+                        it.copy(defaultBookTreeUri = treeUri.toString())
+                    }
                 }
                 importBook(treeUri, uri)
             } ?: let {

@@ -37,6 +37,10 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
         val readBookConfigMutationCall = Regex(
             """\bReadBookConfig\.durConfig\.set[A-Za-z0-9_]*\s*\("""
         )
+        val settingsUpdateDeclaration = Regex(
+            """\b(?:class|interface|object|typealias)\s+[A-Za-z0-9_]*SettingsUpdate\b"""
+        )
+        val updateAllDeclaration = Regex("""\bfun\s+(?:<[^>\n]+>\s*)?updateAll\s*\(""")
         val injectedConfigFiles = setOf(
             "io/legado/app/help/config/AppConfig.kt",
             "io/legado/app/help/config/ReadBookConfig.kt",
@@ -81,6 +85,15 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             if (relativePath in injectedConfigFiles && "GlobalContext" in text) {
                 violations += "$displayPath: 配置所有者必须显式注入依赖，禁止 GlobalContext"
             }
+            if (settingsUpdateDeclaration.containsMatchIn(text)) {
+                violations += "$displayPath: 设置网关禁止重新引入 *SettingsUpdate 分发类型"
+            }
+            if (relativePath.startsWith("io/legado/app/domain/gateway/") &&
+                file.name.endsWith("SettingsGateway.kt") &&
+                updateAllDeclaration.containsMatchIn(text)
+            ) {
+                violations += "$displayPath: 设置网关批量修改必须使用单次 update { copy(...) }"
+            }
 
             val preferenceCalls = preferenceCall.findAll(text).count()
             val allowedCalls = preferenceBaseline[relativePath] ?: 0
@@ -124,7 +137,7 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     "verifyConfigArchitecture"
 ) {
     group = "verification"
-    description = "禁止配置 Snapshot 桥、跨层全局 Config 直读和新增旧偏好调用"
+    description = "禁止配置 Snapshot 桥、SettingsUpdate 分发、跨层全局 Config 直读和新增旧偏好调用"
     sourceRoot.set(layout.projectDirectory.dir("app/src/main/java"))
     legacyPreferenceCallBaseline.set(
         mapOf(

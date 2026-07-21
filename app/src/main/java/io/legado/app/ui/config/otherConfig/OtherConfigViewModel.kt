@@ -14,10 +14,9 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.LocalPasswordGateway
 import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadAloudSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ReadAloudSettings
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,9 +63,7 @@ class OtherConfigViewModel(
                 _uiState.update { it.copy(language = language) }
             }
         }
-        updateOtherSetting(
-            OtherSettingsUpdate.ProcessText(systemGateway.isProcessTextEnabled())
-        )
+        updateOtherSetting { it.copy(processText = systemGateway.isProcessTextEnabled()) }
         viewModelScope.launch {
             otherSettingsGateway.settings.collect { settings ->
                 _uiState.update { settings.toUiState(it) }
@@ -95,49 +92,51 @@ class OtherConfigViewModel(
         when (intent) {
             is OtherConfigIntent.LanguageChanged -> appLocaleGateway.setLanguage(intent.value)
             is OtherConfigIntent.UpdateToVariantChanged ->
-                updateOtherSetting(OtherSettingsUpdate.UpdateToVariant(intent.value))
+                updateOtherSetting { it.copy(updateToVariant = intent.value) }
             is OtherConfigIntent.AutoCheckUpdateOnStartChanged ->
-                updateOtherSetting(OtherSettingsUpdate.AutoCheckUpdateOnStart(intent.value))
+                updateOtherSetting { it.copy(autoCheckUpdateOnStart = intent.value) }
             is OtherConfigIntent.WebServiceAutoStartChanged ->
-                updateOtherSetting(OtherSettingsUpdate.WebServiceAutoStart(intent.value))
+                updateOtherSetting { it.copy(webServiceAutoStart = intent.value) }
             is OtherConfigIntent.AutoRefreshChanged ->
-                updateOtherSetting(OtherSettingsUpdate.AutoRefresh(intent.value))
+                updateOtherSetting { it.copy(autoRefresh = intent.value) }
             is OtherConfigIntent.DefaultToReadChanged ->
-                updateOtherSetting(OtherSettingsUpdate.DefaultToRead(intent.value))
+                updateOtherSetting { it.copy(defaultToRead = intent.value) }
             is OtherConfigIntent.FirebaseEnableChanged ->
-                updateOtherSetting(OtherSettingsUpdate.FirebaseEnable(intent.value))
+                updateOtherSetting { it.copy(firebaseEnable = intent.value) }
             is OtherConfigIntent.DefaultBookTreeUriChanged ->
-                updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(intent.value))
+                updateOtherSetting { it.copy(defaultBookTreeUri = intent.value) }
             is OtherConfigIntent.AntiAliasChanged ->
-                updateOtherSetting(OtherSettingsUpdate.AntiAlias(intent.value))
+                updateOtherSetting { it.copy(antiAlias = intent.value) }
             is OtherConfigIntent.ReplaceEnableDefaultChanged ->
-                updateOtherSetting(OtherSettingsUpdate.ReplaceEnableDefault(intent.value))
+                updateOtherSetting { it.copy(replaceEnableDefault = intent.value) }
             is OtherConfigIntent.MediaButtonOnExitChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.MediaButtonOnExit(intent.value))
+                updateReadAloudSetting { it.copy(mediaButtonOnExit = intent.value) }
             is OtherConfigIntent.ReadAloudByMediaButtonChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.ReadAloudByMediaButton(intent.value))
+                updateReadAloudSetting { it.copy(readAloudByMediaButton = intent.value) }
             is OtherConfigIntent.IgnoreAudioFocusChanged ->
-                updateReadAloudSetting(ReadAloudSettingsUpdate.IgnoreAudioFocus(intent.value))
+                updateReadAloudSetting { it.copy(ignoreAudioFocus = intent.value) }
             is OtherConfigIntent.AutoClearExpiredChanged ->
-                updateOtherSetting(OtherSettingsUpdate.AutoClearExpired(intent.value))
+                updateOtherSetting { it.copy(autoClearExpired = intent.value) }
             is OtherConfigIntent.ShowAddToShelfAlertChanged ->
-                updateOtherSetting(OtherSettingsUpdate.ShowAddToShelfAlert(intent.value))
+                updateOtherSetting { it.copy(showAddToShelfAlert = intent.value) }
             is OtherConfigIntent.ShowMangaUiChanged ->
-                updateOtherSetting(OtherSettingsUpdate.ShowMangaUi(intent.value))
+                updateOtherSetting { it.copy(showMangaUi = intent.value) }
             is OtherConfigIntent.WebServiceWakeLockChanged ->
-                updateOtherSetting(OtherSettingsUpdate.WebServiceWakeLock(intent.value))
+                updateOtherSetting { it.copy(webServiceWakeLock = intent.value) }
             is OtherConfigIntent.SourceEditMaxLineChanged ->
-                updateOtherSetting(OtherSettingsUpdate.SourceEditMaxLine(intent.value))
+                updateOtherSetting { it.copy(sourceEditMaxLine = intent.value) }
             is OtherConfigIntent.WebPortChanged -> {
-                updateOtherSetting(OtherSettingsUpdate.WebPort(intent.value)) {
-                    _effects.tryEmit(OtherConfigEffect.RestartWebService)
-                }
+                updateOtherSetting(
+                    onSuccess = {
+                        _effects.tryEmit(OtherConfigEffect.RestartWebService)
+                    },
+                ) { it.copy(webPort = intent.value) }
             }
             is OtherConfigIntent.ProcessTextChanged -> setProcessTextEnable(intent.value)
             is OtherConfigIntent.RecordLogChanged ->
-                updateOtherSetting(OtherSettingsUpdate.RecordLog(intent.value))
+                updateOtherSetting { it.copy(recordLog = intent.value) }
             is OtherConfigIntent.RecordHeapDumpChanged ->
-                updateOtherSetting(OtherSettingsUpdate.RecordHeapDump(intent.value))
+                updateOtherSetting { it.copy(recordHeapDump = intent.value) }
             is OtherConfigIntent.CheckSourceTimeoutChanged ->
                 _uiState.update { it.copy(checkSourceTimeoutSeconds = intent.value) }
             is OtherConfigIntent.CheckSearchChanged -> _uiState.update {
@@ -224,11 +223,11 @@ class OtherConfigViewModel(
     }
 
     private fun updateOtherSetting(
-        update: OtherSettingsUpdate,
         onSuccess: () -> Unit = {},
+        transform: (OtherSettings) -> OtherSettings,
     ) {
         viewModelScope.launch {
-            runCatching { otherSettingsGateway.update(update) }
+            runCatching { otherSettingsGateway.update(transform) }
                 .onSuccess { onSuccess() }
                 .onFailure { error ->
                     showMessage(error.message ?: error.javaClass.simpleName)
@@ -236,9 +235,11 @@ class OtherConfigViewModel(
         }
     }
 
-    private fun updateReadAloudSetting(update: ReadAloudSettingsUpdate) {
+    private fun updateReadAloudSetting(
+        transform: (ReadAloudSettings) -> ReadAloudSettings,
+    ) {
         viewModelScope.launch {
-            runCatching { readAloudSettingsGateway.update(update) }
+            runCatching { readAloudSettingsGateway.update(transform) }
                 .onFailure { showMessage(it.localizedMessage ?: "设置失败") }
         }
     }
@@ -248,7 +249,7 @@ class OtherConfigViewModel(
             val previous = systemGateway.isProcessTextEnabled()
             runCatching {
                 systemGateway.setProcessTextEnabled(enable)
-                otherSettingsGateway.update(OtherSettingsUpdate.ProcessText(enable))
+                otherSettingsGateway.update { it.copy(processText = enable) }
             }.onFailure {
                 if (previous != enable) {
                     runCatching { systemGateway.setProcessTextEnabled(previous) }
@@ -291,7 +292,7 @@ class OtherConfigViewModel(
     }
 
     fun updateLocalBookDir(path: String) {
-        updateOtherSetting(OtherSettingsUpdate.DefaultBookTreeUri(path))
+        updateOtherSetting { it.copy(defaultBookTreeUri = path) }
     }
 
     private fun saveCheckSourceConfig() {

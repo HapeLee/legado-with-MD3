@@ -3,10 +3,7 @@ package io.legado.app.data.repository
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.domain.gateway.BookshelfBooleanSetting
-import io.legado.app.domain.gateway.BookshelfIntSetting
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
-import io.legado.app.domain.gateway.BookshelfSettingsUpdate
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
@@ -24,64 +21,16 @@ class BookshelfSettingsRepository : BookshelfSettingsGateway {
         .map(Preferences::toBookshelfSettings)
         .distinctUntilChanged()
 
-    override suspend fun update(update: BookshelfSettingsUpdate) {
-        val (key, value) = when (update) {
-            is BookshelfSettingsUpdate.SaveTabPosition -> PreferKey.saveTabPosition to update.value
-            is BookshelfSettingsUpdate.BooleanValue -> when (update.setting) {
-                BookshelfBooleanSetting.ShowUnread -> PreferKey.showUnread
-                BookshelfBooleanSetting.ShowUnreadNew -> PreferKey.showUnreadNew
-                BookshelfBooleanSetting.ShowTip -> PreferKey.showTip
-                BookshelfBooleanSetting.ShowBookCount -> PreferKey.showBookCount
-                BookshelfBooleanSetting.ShowLastUpdateTime -> PreferKey.showLastUpdateTime
-                BookshelfBooleanSetting.ShowBookIntro -> PreferKey.showBookIntro
-                BookshelfBooleanSetting.ShowIntro -> PreferKey.bookshelfShowIntro
-                BookshelfBooleanSetting.ShowTag -> PreferKey.bookshelfShowTag
-                BookshelfBooleanSetting.ShowLatestChapter -> PreferKey.bookshelfShowLatestChapter
-                BookshelfBooleanSetting.ShowWaitUpCount -> PreferKey.showWaitUpCount
-                BookshelfBooleanSetting.ShowFastScroller -> PreferKey.showBookshelfFastScroller
-                BookshelfBooleanSetting.ShowExpandButton -> PreferKey.shouldShowExpandButton
-                BookshelfBooleanSetting.LayoutCompact -> PreferKey.bookshelfLayoutCompact
-                BookshelfBooleanSetting.ShowDivider -> PreferKey.bookshelfShowDivider
-                BookshelfBooleanSetting.TitleSmallFont -> PreferKey.bookshelfTitleSmallFont
-                BookshelfBooleanSetting.TitleCenter -> PreferKey.bookshelfTitleCenter
-                BookshelfBooleanSetting.CoverShadow -> PreferKey.bookshelfCoverShadow
-                BookshelfBooleanSetting.SearchActionDirectToSearch -> PreferKey.bookshelfSearchActionDirectToSearch
-                BookshelfBooleanSetting.AutoRefresh -> PreferKey.autoRefresh
-                BookshelfBooleanSetting.HideEmptyGroups -> PreferKey.hideEmptyGroups
-            } to update.value
-            is BookshelfSettingsUpdate.IntValue -> when (update.setting) {
-                BookshelfIntSetting.BookGroupStyle -> PreferKey.bookGroupStyle
-                BookshelfIntSetting.Sort -> PreferKey.bookshelfSort
-                BookshelfIntSetting.SortOrder -> PreferKey.bookshelfSortOrder
-                BookshelfIntSetting.IntroMaxLines -> PreferKey.bookshelfIntroMaxLines
-                BookshelfIntSetting.RefreshingLimit -> PreferKey.bookshelfRefreshingLimit
-                BookshelfIntSetting.LayoutModePortrait -> PreferKey.bookshelfLayoutModePortrait
-                BookshelfIntSetting.LayoutGridPortrait -> PreferKey.bookshelfLayoutGridPortrait
-                BookshelfIntSetting.LayoutModeLandscape -> PreferKey.bookshelfLayoutModeLandscape
-                BookshelfIntSetting.LayoutGridLandscape -> PreferKey.bookshelfLayoutGridLandscape
-                BookshelfIntSetting.LayoutListPortrait -> PreferKey.bookshelfLayoutListPortrait
-                BookshelfIntSetting.LayoutListLandscape -> PreferKey.bookshelfLayoutListLandscape
-                BookshelfIntSetting.FolderLayoutModePortrait -> PreferKey.bookshelfFolderLayoutModePortrait
-                BookshelfIntSetting.FolderLayoutGridPortrait -> PreferKey.bookshelfFolderLayoutGridPortrait
-                BookshelfIntSetting.FolderLayoutModeLandscape -> PreferKey.bookshelfFolderLayoutModeLandscape
-                BookshelfIntSetting.FolderLayoutGridLandscape -> PreferKey.bookshelfFolderLayoutGridLandscape
-                BookshelfIntSetting.FolderLayoutListPortrait -> PreferKey.bookshelfFolderLayoutListPortrait
-                BookshelfIntSetting.FolderLayoutListLandscape -> PreferKey.bookshelfFolderLayoutListLandscape
-                BookshelfIntSetting.GridLayout -> PreferKey.bookshelfGridLayout
-                BookshelfIntSetting.TitleMaxLines -> PreferKey.bookshelfTitleMaxLines
-                BookshelfIntSetting.CardColor -> PreferKey.bookshelfCardColor
-                BookshelfIntSetting.CardColorDark -> PreferKey.bookshelfCardColorDark
-                BookshelfIntSetting.GroupListStyle -> PreferKey.bookshelfGroupListStyle
-                BookshelfIntSetting.GroupCoverCount -> PreferKey.bookshelfGroupCoverCount
-                BookshelfIntSetting.ListCoverWidth -> PreferKey.bookshelfListCoverWidth
-                BookshelfIntSetting.GridCoverWidth -> PreferKey.bookshelfGridCoverWidth
-            } to update.value
-        }
-        AppConfigStore.putAll(mapOf(key to value))
+    override suspend fun update(transform: (BookshelfSettings) -> BookshelfSettings) {
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toBookshelfSettings,
+            toPrefMap = BookshelfSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 
-private fun Preferences.toBookshelfSettings() = BookshelfSettings(
+internal fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookGroupStyle = compatDsInt(PreferKey.bookGroupStyle) ?: 0,
     hideEmptyGroups = compatDsBoolean(PreferKey.hideEmptyGroups) ?: true,
     bookshelfSort = compatDsInt(PreferKey.bookshelfSort) ?: 0,
@@ -128,4 +77,53 @@ private fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookshelfSearchActionDirectToSearch = compatDsBoolean(PreferKey.bookshelfSearchActionDirectToSearch) ?: true,
     autoRefreshBook = compatDsBoolean(PreferKey.autoRefresh) ?: false,
     saveTabPosition = compatDsLong(PreferKey.saveTabPosition) ?: BookGroup.IdAll,
+)
+
+internal fun BookshelfSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.bookGroupStyle to bookGroupStyle,
+    PreferKey.hideEmptyGroups to hideEmptyGroups,
+    PreferKey.bookshelfSort to bookshelfSort,
+    PreferKey.bookshelfSortOrder to bookshelfSortOrder,
+    PreferKey.showUnread to showUnread,
+    PreferKey.showUnreadNew to showUnreadNew,
+    PreferKey.showTip to showTip,
+    PreferKey.showBookCount to showBookCount,
+    PreferKey.showLastUpdateTime to showLastUpdateTime,
+    PreferKey.showBookIntro to showBookIntro,
+    PreferKey.bookshelfShowIntro to bookshelfShowIntro,
+    PreferKey.bookshelfShowTag to bookshelfShowTag,
+    PreferKey.bookshelfShowLatestChapter to bookshelfShowLatestChapter,
+    PreferKey.bookshelfIntroMaxLines to bookshelfIntroMaxLines,
+    PreferKey.showWaitUpCount to showWaitUpCount,
+    PreferKey.showBookshelfFastScroller to showBookshelfFastScroller,
+    PreferKey.shouldShowExpandButton to shouldShowExpandButton,
+    PreferKey.bookshelfRefreshingLimit to bookshelfRefreshingLimit,
+    PreferKey.bookshelfLayoutModePortrait to bookshelfLayoutModePortrait,
+    PreferKey.bookshelfLayoutGridPortrait to bookshelfLayoutGridPortrait,
+    PreferKey.bookshelfLayoutModeLandscape to bookshelfLayoutModeLandscape,
+    PreferKey.bookshelfLayoutGridLandscape to bookshelfLayoutGridLandscape,
+    PreferKey.bookshelfLayoutListPortrait to bookshelfLayoutListPortrait,
+    PreferKey.bookshelfLayoutListLandscape to bookshelfLayoutListLandscape,
+    PreferKey.bookshelfFolderLayoutModePortrait to bookshelfFolderLayoutModePortrait,
+    PreferKey.bookshelfFolderLayoutGridPortrait to bookshelfFolderLayoutGridPortrait,
+    PreferKey.bookshelfFolderLayoutModeLandscape to bookshelfFolderLayoutModeLandscape,
+    PreferKey.bookshelfFolderLayoutGridLandscape to bookshelfFolderLayoutGridLandscape,
+    PreferKey.bookshelfFolderLayoutListPortrait to bookshelfFolderLayoutListPortrait,
+    PreferKey.bookshelfFolderLayoutListLandscape to bookshelfFolderLayoutListLandscape,
+    PreferKey.bookshelfGridLayout to bookshelfGridLayout,
+    PreferKey.bookshelfLayoutCompact to bookshelfLayoutCompact,
+    PreferKey.bookshelfShowDivider to bookshelfShowDivider,
+    PreferKey.bookshelfTitleSmallFont to bookshelfTitleSmallFont,
+    PreferKey.bookshelfTitleCenter to bookshelfTitleCenter,
+    PreferKey.bookshelfTitleMaxLines to bookshelfTitleMaxLines,
+    PreferKey.bookshelfCoverShadow to bookshelfCoverShadow,
+    PreferKey.bookshelfCardColor to bookshelfCardColor,
+    PreferKey.bookshelfCardColorDark to bookshelfCardColorDark,
+    PreferKey.bookshelfGroupListStyle to bookshelfGroupListStyle,
+    PreferKey.bookshelfGroupCoverCount to bookshelfGroupCoverCount,
+    PreferKey.bookshelfListCoverWidth to bookshelfListCoverWidth,
+    PreferKey.bookshelfGridCoverWidth to bookshelfGridCoverWidth,
+    PreferKey.bookshelfSearchActionDirectToSearch to bookshelfSearchActionDirectToSearch,
+    PreferKey.autoRefresh to autoRefreshBook,
+    PreferKey.saveTabPosition to saveTabPosition,
 )

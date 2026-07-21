@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BackupSettingsUpdate
+import io.legado.app.domain.model.settings.BackupSettings
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.utils.isContentScheme
@@ -48,19 +48,19 @@ class BackupConfigViewModel(
 
     fun onIntent(intent: BackupConfigIntent) {
         when (intent) {
-            is BackupConfigIntent.SetWebDavUrl -> update(BackupSettingsUpdate.WebDavUrl(intent.value))
-            is BackupConfigIntent.SetWebDavDir -> update(BackupSettingsUpdate.WebDavDir(intent.value))
+            is BackupConfigIntent.SetWebDavUrl -> update { it.copy(webDavUrl = intent.value) }
+            is BackupConfigIntent.SetWebDavDir -> update { it.copy(webDavDir = intent.value) }
             is BackupConfigIntent.SetWebDavDeviceName ->
-                update(BackupSettingsUpdate.WebDavDeviceName(intent.value))
+                update { it.copy(webDavDeviceName = intent.value) }
             is BackupConfigIntent.SetSyncBookProgress -> setSyncBookProgress(intent.value)
             is BackupConfigIntent.SetSyncBookProgressPlus ->
-                update(BackupSettingsUpdate.SyncBookProgressPlus(intent.value))
+                update { it.copy(syncBookProgressPlus = intent.value) }
             is BackupConfigIntent.SetAutoCheckNewBackup ->
-                update(BackupSettingsUpdate.AutoCheckNewBackup(intent.value))
+                update { it.copy(autoCheckNewBackup = intent.value) }
             is BackupConfigIntent.SetOnlyLatestBackup ->
-                update(BackupSettingsUpdate.OnlyLatestBackup(intent.value))
+                update { it.copy(onlyLatestBackup = intent.value) }
             is BackupConfigIntent.SetBackupSyncMode ->
-                update(BackupSettingsUpdate.BackupSyncMode(intent.value))
+                update { it.copy(backupSyncMode = intent.value) }
             is BackupConfigIntent.OpenSheet -> _uiState.update { it.copy(activeSheet = intent.sheet) }
             BackupConfigIntent.DismissSheet -> _uiState.update { it.copy(activeSheet = null) }
             BackupConfigIntent.OpenWebDavAuth -> openWebDavAuth()
@@ -107,17 +107,18 @@ class BackupConfigViewModel(
         }
     }
 
-    private fun update(update: BackupSettingsUpdate) {
-        viewModelScope.launch { settingsGateway.update(update) }
+    private fun update(transform: (BackupSettings) -> BackupSettings) {
+        viewModelScope.launch { settingsGateway.update(transform) }
     }
 
     private fun setSyncBookProgress(value: Boolean) {
         viewModelScope.launch {
-            val updates = buildList {
-                add(BackupSettingsUpdate.SyncBookProgress(value))
-                if (!value) add(BackupSettingsUpdate.SyncBookProgressPlus(false))
+            settingsGateway.update {
+                it.copy(
+                    syncBookProgress = value,
+                    syncBookProgressPlus = it.syncBookProgressPlus && value,
+                )
             }
-            settingsGateway.updateAll(updates)
         }
     }
 
@@ -143,9 +144,9 @@ class BackupConfigViewModel(
     private fun saveWebDavAuth() {
         val dialog = _uiState.value.activeDialog as? BackupConfigDialog.WebDavAuth ?: return
         viewModelScope.launch {
-            settingsGateway.update(
-                BackupSettingsUpdate.WebDavCredentials(dialog.account, dialog.password)
-            )
+            settingsGateway.update {
+                it.copy(webDavAccount = dialog.account, webDavPassword = dialog.password)
+            }
             testWebDav()
         }
     }
@@ -253,7 +254,7 @@ class BackupConfigViewModel(
 
     private fun saveBackupPath(path: String, runBackup: Boolean) {
         viewModelScope.launch {
-            settingsGateway.update(BackupSettingsUpdate.BackupPath(path))
+            settingsGateway.update { it.copy(backupPath = path) }
             if (runBackup && path.isNotEmpty()) requestBackup("both", path)
         }
     }
