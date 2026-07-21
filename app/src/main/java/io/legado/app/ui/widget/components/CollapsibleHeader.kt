@@ -4,8 +4,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -21,7 +24,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -34,12 +36,13 @@ fun CollapsibleHeader(
     onToggle: () -> Unit,
     title: String,
     subtitle: String? = null,
+    leadingContent: (@Composable RowScope.() -> Unit)? = null,
     titleContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
-            .adaptiveHorizontalPadding(vertical = 4.dp),
+            .padding(vertical = 4.dp),
         cornerRadius = 12.dp,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         onClick = onToggle
@@ -49,6 +52,10 @@ fun CollapsibleHeader(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (leadingContent != null) {
+                leadingContent()
+                Spacer(modifier = Modifier.width(12.dp))
+            }
             Column(
                 modifier = Modifier.weight(1f)
             ) {

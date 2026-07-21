@@ -2,6 +2,7 @@ package io.legado.app.data.entities
 
 import android.annotation.SuppressLint
 import android.os.Parcelable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
@@ -42,6 +43,8 @@ data class BookChapter(
     var url: String = "",               // 章节地址
     var title: String = "",             // 章节标题
     var isVolume: Boolean = false,      // 是否是卷名
+    @ColumnInfo(defaultValue = "0")
+    var tocLevel: Int = 0,              // 目录层级，0 为顶层
     var baseUrl: String = "",           // 用来拼接相对url
     var bookUrl: String = "",           // 书籍地址
     var index: Int = 0,                 // 章节序号

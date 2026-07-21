@@ -4,7 +4,6 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
@@ -38,13 +37,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -66,6 +65,7 @@ data class TocItemUi(
     val title: String,
     val tag: String?,
     val isVolume: Boolean,
+    val tocLevel: Int,
     val isVip: Boolean,
     val isPay: Boolean,
     val isDur: Boolean,
@@ -373,7 +373,7 @@ class TocViewModel(
         val book = bookState.value ?: return@combine emptyList()
 
         val processedChapters = if (config.isReverse) {
-            originalChapters.groupAndReverseVolumes()
+            originalChapters.reverseTocHierarchy()
         } else {
             originalChapters
         }
@@ -439,19 +439,9 @@ class TocViewModel(
         val collapsed = _collapsedVolumes.value
         val isSearch = key.isNotBlank()
 
-        return buildList {
-            var isCurrentVolumeCollapsed = false
-            for (item in data) {
-                if (item.chapter.isVolume) {
-                    isCurrentVolumeCollapsed = collapsed.contains(item.chapter.index)
-                } else if (isCurrentVolumeCollapsed && !isSearch) {
-                    continue
-                }
-
-                if (!isSearch || item.displayTitle.contains(key, true) || item.chapter.isVolume) {
-                    add(item)
-                }
-            }
+        val visibleItems = if (isSearch) data else filterCollapsedToc(data, collapsed)
+        return visibleItems.filter {
+            !isSearch || it.displayTitle.contains(key, true) || it.chapter.isVolume
         }
     }
 
@@ -499,6 +489,7 @@ class TocViewModel(
             title = displayTitle,
             tag = chapter.tag,
             isVolume = chapter.isVolume,
+            tocLevel = chapter.tocLevel,
             isVip = chapter.isVip,
             isPay = chapter.isPay,
             isDur = false,
@@ -754,20 +745,6 @@ class TocViewModel(
 
     private fun showMessage(message: String) {
         _effects.tryEmit(TocEffect.ShowMessage(message))
-    }
-
-    private fun List<BookChapter>.groupAndReverseVolumes(): List<BookChapter> {
-        return this.fold(mutableListOf<MutableList<BookChapter>>()) { acc, chapter ->
-            if (chapter.isVolume || acc.isEmpty()) acc.add(mutableListOf(chapter))
-            else acc.last().add(chapter)
-            acc
-        }.asReversed().flatMap { group ->
-            if (group.firstOrNull()?.isVolume == true) {
-                listOf(group.first()) + group.drop(1).asReversed()
-            } else {
-                group.asReversed()
-            }
-        }
     }
 
     private fun updateTitleReplaceCacheIfNeeded(

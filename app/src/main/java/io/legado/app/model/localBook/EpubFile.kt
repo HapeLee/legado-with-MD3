@@ -346,7 +346,7 @@ class EpubFile(var book: Book) {
                 }
             } else {
                 parseFirstPage(chapterList, refs)
-                parseMenu(chapterList, refs, 0)
+                parseMenu(chapterList, refs, 0, emptyList())
                 for (i in chapterList.indices) {
                     chapterList[i].index = i
                 }
@@ -409,23 +409,34 @@ class EpubFile(var book: Book) {
     private fun parseMenu(
         chapterList: ArrayList<BookChapter>,
         refs: List<TOCReference>?,
-        level: Int
+        level: Int,
+        parentPath: List<Int>,
     ) {
-        refs?.forEach { ref ->
-            if (ref.resource != null) {
-                val chapter = BookChapter()
-                chapter.bookUrl = book.bookUrl
-                chapter.title = ref.title
-                chapter.url = ref.completeHref
-                chapter.startFragmentId = ref.fragmentId
-                chapterList.lastOrNull()?.endFragmentId = chapter.startFragmentId
-                chapterList.lastOrNull()?.putVariable("nextUrl", chapter.url)
-                chapterList.add(chapter)
-                durIndex++
+        refs.orEmpty().forEachIndexed { refIndex, ref ->
+            val children = ref.children.orEmpty()
+            val path = parentPath + refIndex
+            val chapter = BookChapter(
+                bookUrl = book.bookUrl,
+                title = ref.title,
+                isVolume = children.isNotEmpty() || ref.resource == null,
+                tocLevel = level,
+                url = ref.resource?.let { ref.completeHref }
+                    ?: "epub-toc://${path.joinToString("/")}",
+                startFragmentId = ref.fragmentId,
+            )
+            if (ref.resource == null) {
+                chapter.putVariable("epubTocContainer", "true")
+            } else {
+                chapterList.lastOrNull { !it.url.startsWith("epub-toc://") }?.apply {
+                    endFragmentId = chapter.startFragmentId
+                    putVariable("nextUrl", chapter.url)
+                }
             }
-            if (ref.children != null && ref.children.isNotEmpty()) {
-                chapterList.lastOrNull()?.isVolume = true
-                parseMenu(chapterList, ref.children, level + 1)
+            chapterList.add(chapter)
+            durIndex++
+
+            if (children.isNotEmpty()) {
+                parseMenu(chapterList, children, level + 1, path)
             }
         }
     }

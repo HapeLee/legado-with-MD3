@@ -19,6 +19,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -77,8 +79,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -247,8 +249,15 @@ fun TocScreen(
             val firstVisibleIndex = listState.firstVisibleItemIndex
             if (firstVisibleIndex !in state.items.indices) return@derivedStateOf null
 
-            val volumeIndex = (firstVisibleIndex downTo 0)
-                .firstOrNull { state.items[it].isVolume } ?: return@derivedStateOf null
+            val firstVisibleItem = state.items[firstVisibleIndex]
+            val volumeIndex = if (firstVisibleItem.isVolume) {
+                firstVisibleIndex
+            } else {
+                (firstVisibleIndex - 1 downTo 0).firstOrNull {
+                    val candidate = state.items[it]
+                    candidate.isVolume && candidate.tocLevel < firstVisibleItem.tocLevel
+                }
+            } ?: return@derivedStateOf null
             val volumeItem = state.items[volumeIndex]
             val isCollapsed = collapsedVolumes.contains(volumeItem.id)
             val shouldStick =
@@ -550,8 +559,9 @@ fun TocScreen(
                                         }
                                     )
 
-                                    val volumeItems =
-                                        remember(state.items) { state.items.filter { it.isVolume } }
+                                    val volumeItems = remember(state.items) {
+                                        state.items.filter { it.isVolume && it.tocLevel == 0 }
+                                    }
                                     if (volumeItems.isNotEmpty()) {
                                         PillHeaderDivider(title = stringResource(R.string.quick_jump))
                                         volumeItems.forEach { uiItem ->
@@ -730,10 +740,23 @@ fun ChapterListContent(
 
                 item(key = "volume-${uiItem.id}") {
                     CollapsibleHeader(
-                        modifier = Modifier.animateItem(),
+                        modifier = Modifier
+                            .animateItem()
+                            .adaptiveHorizontalPadding(),
                         title = uiItem.title,
                         isCollapsed = collapsedVolumes.contains(uiItem.id),
-                        onToggle = { onIntent(TocIntent.ToggleVolume(uiItem.id)) }
+                        onToggle = { onIntent(TocIntent.ToggleVolume(uiItem.id)) },
+                        leadingContent = {
+                            repeat(uiItem.tocLevel.coerceIn(0, 6) + 1) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 2.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(LegadoTheme.colorScheme.secondary),
+                                )
+                            }
+                        },
                     )
                 }
 
@@ -743,7 +766,8 @@ fun ChapterListContent(
                     ChapterItem(
                         modifier = Modifier
                             .animateItem()
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .tocIndent(uiItem.tocLevel),
                         item = uiItem,
                         showWordCount = state.showWordCount,
                         onClick = {
@@ -764,6 +788,10 @@ fun ChapterListContent(
         }
     }
 }
+
+private fun Modifier.tocIndent(level: Int): Modifier = padding(
+    start = (level.coerceIn(0, 6) * 16).dp,
+)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
