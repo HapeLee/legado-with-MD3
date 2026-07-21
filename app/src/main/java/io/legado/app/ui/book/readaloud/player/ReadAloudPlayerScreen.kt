@@ -810,6 +810,13 @@ private fun ReadAloudBackground(
             Box(modifier = modifier.fillMaxSize())
         }
 
+        ReadAloudBgMode.Solid -> {
+            CoverBlurBackdrop(
+                state.bookName, state.author, state.coverPath, state.sourceOrigin,
+                modifier = modifier,
+            )
+        }
+
         else -> {
             Box(
                 modifier = modifier
@@ -823,14 +830,27 @@ private fun ReadAloudBackground(
 @Composable
 private fun rememberCoverDerivedPreset(): BgEffectConfig.Config {
     val primary = LegadoTheme.colorScheme.primary
-    val surface = LegadoTheme.colorScheme.surfaceContainerLowest
+    val surface = LegadoTheme.colorScheme.secondaryContainer
     val tertiary = LegadoTheme.colorScheme.secondary
     val isDark = LegadoTheme.isDark
 
-    return remember(primary, surface, tertiary) {
-        val p = primary.toShaderColor()
-        val s = surface.toShaderColor()
-        val t = tertiary.toShaderColor()
+    return remember(primary, surface, tertiary, isDark) {
+        val darken = if (isDark) 0.68f else 0.88f
+        val p = primary.copy(
+            red = primary.red * darken,
+            green = primary.green * darken,
+            blue = primary.blue * darken,
+        ).toShaderColor()
+        val s = surface.copy(
+            red = surface.red * darken,
+            green = surface.green * darken,
+            blue = surface.blue * darken,
+        ).toShaderColor()
+        val t = tertiary.copy(
+            red = tertiary.red * darken,
+            green = tertiary.green * darken,
+            blue = tertiary.blue * darken,
+        ).toShaderColor()
 
         val m = floatArrayOf(
             (p[0] + t[0]) / 2f,

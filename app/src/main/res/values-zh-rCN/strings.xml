@@ -1533,6 +1533,10 @@
     <string name="theme_config_nav_icons_default">使用默认图标</string>
     <string name="theme_config_add_nav_icon">添加%1$s图标</string>
     <string name="theme_config_no_font_files">没有字体文件</string>
+    <string name="theme_config_reset_defaults">恢复默认主题配置</string>
+    <string name="theme_config_reset_defaults_summary">恢复外观页设置，不影响已保存主题和封面</string>
+    <string name="theme_config_reset_defaults_confirm">将恢复外观页中的主题、界面布局、背景图片、应用字体和导航图标等配置。已保存的主题、封面图集和书籍封面不会被删除。</string>
+    <string name="theme_config_reset_success">已恢复默认主题配置</string>
     <string name="input_value_range">输入数值（%1$d-%2$d）</string>
     <string name="change_icon_success">图标已修改</string>
     <string name="replace_rule_title_setting">配置替换规则</string>

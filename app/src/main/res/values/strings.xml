@@ -1083,6 +1083,10 @@
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">Available variables: {name} title, {author} author, {group} group, {source} source, {remark} remark.\n\nExample: {name} - {author}\nResult: The Three-Body Problem - Liu Cixin\n\nYou can add fixed text before or after variables.</string>
     <string name="reset">Reset</string>
+    <string name="theme_config_reset_defaults">Restore default theme configuration</string>
+    <string name="theme_config_reset_defaults_summary">Reset appearance settings without affecting saved themes or covers</string>
+    <string name="theme_config_reset_defaults_confirm">This will reset theme, layout, background image, app font, and navigation icon settings on the appearance page. Saved themes, cover albums, and book covers will not be deleted.</string>
+    <string name="theme_config_reset_success">Default theme configuration restored</string>
     <string name="null_url">Null URL</string>
     <string name="dict">dict</string>
     <string name="unknown_error">unknown error</string>

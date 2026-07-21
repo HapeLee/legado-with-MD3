@@ -78,7 +78,6 @@ fun ReadBookScreen(
         when {
             state.activeSheet != null -> onIntent(ReadBookIntent.DismissSheet)
             state.isShowingSearchResult -> onIntent(ReadBookIntent.ExitSearch)
-            state.menuVisible -> onIntent(ReadBookIntent.ReadMenuBack)
             state.isAutoPage -> onIntent(ReadBookIntent.StopAutoPage)
             else -> onIntent(ReadBookIntent.CloseReadBook())
         }
