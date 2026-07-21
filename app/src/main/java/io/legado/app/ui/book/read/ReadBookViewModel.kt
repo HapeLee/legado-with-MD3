@@ -6541,8 +6541,8 @@ private const val AI_REWRITE_REFERENCE_MAX_EXCERPTS = 6
 private const val AI_REWRITE_REFERENCE_EXCERPT_CHARS = 600
 private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "search",
+    "auto_page",
     "catalog",
-    "addBookmark",
     "read_aloud",
     "setting",
 )

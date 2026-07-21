@@ -404,7 +404,7 @@ class ReadSettingsRepository(
             titleBarIconStyle = compatDsValue(Keys.TitleBarIconStyle, 0),
             readMenuIconItemsPerRow = compatDsValue(Keys.ReadMenuIconItemsPerRow, 5),
             readMenuIconRowCount = compatDsValue(Keys.ReadMenuIconRowCount, 1),
-            readMenuBottomCornerRadius = compatDsValue(Keys.ReadMenuBottomCornerRadius, 0),
+            readMenuBottomCornerRadius = compatDsValue(Keys.ReadMenuBottomCornerRadius, 32),
             readMenuFloatingBottomBar = compatDsValue(Keys.ReadMenuFloatingBottomBar, true),
             readMenuTopBarBlurMode = compatDsValue(Keys.ReadMenuTopBarBlurMode, ReadMenuBlurMode.None),
             readMenuBottomBarBlurMode = compatDsValue(Keys.ReadMenuBottomBarBlurMode, ReadMenuBlurMode.None),

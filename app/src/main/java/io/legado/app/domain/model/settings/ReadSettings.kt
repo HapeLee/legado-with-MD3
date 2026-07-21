@@ -83,7 +83,7 @@ data class ReadSettings(
     val titleBarIconStyle: Int = 0,
     val readMenuIconItemsPerRow: Int = 5,
     val readMenuIconRowCount: Int = 1,
-    val readMenuBottomCornerRadius: Int = 0,
+    val readMenuBottomCornerRadius: Int = 32,
     val readMenuFloatingBottomBar: Boolean = true,
     val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
