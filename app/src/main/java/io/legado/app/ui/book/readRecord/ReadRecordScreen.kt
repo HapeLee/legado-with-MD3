@@ -3,9 +3,8 @@ package io.legado.app.ui.book.readRecord
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +39,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cn.hutool.core.date.DateUtil
 import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecord
@@ -86,7 +85,6 @@ import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.heatmap.heatmapCalendarTitle
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
@@ -95,6 +93,7 @@ import io.legado.app.ui.widget.components.heatmap.HeatmapMode
 import io.legado.app.ui.widget.components.heatmap.HeatmapWeekColumn
 import io.legado.app.ui.widget.components.heatmap.NoEarlierDataIndicator
 import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
+import io.legado.app.ui.widget.components.heatmap.heatmapCalendarTitle
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
@@ -114,7 +113,6 @@ import io.legado.app.utils.StringUtils.formatFriendlyDate
 import io.legado.app.utils.formatReadDuration
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -1298,6 +1296,7 @@ fun DateHeader(
     dailyTotalTime: Long? = null
 ) {
     CollapsibleHeader(
+        modifier = Modifier.adaptiveHorizontalPadding(),
         showIcon = false,
         isCollapsed = false,
         onToggle = { },

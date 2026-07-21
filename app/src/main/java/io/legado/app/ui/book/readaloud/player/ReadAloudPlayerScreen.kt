@@ -49,12 +49,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WbTwilight
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue.Expanded
-import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.Slider
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -87,7 +82,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeProgressive
@@ -121,42 +115,6 @@ import top.yukonga.miuix.kmp.blur.textureBlur
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.BlendMode as ComposeBlendMode
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-fun ReadAloudPlayerSheet(
-    show: Boolean,
-    onDismissRequest: () -> Unit,
-    state: ReadAloudPlayerUiState,
-    onIntent: (ReadAloudPlayerIntent) -> Unit,
-) {
-    val sheetState = rememberBottomSheetState(
-        initialValue = Hidden,
-        enabledValues = setOf(Hidden, Expanded)
-    )
-    LaunchedEffect(show) {
-        if (show) onIntent(ReadAloudPlayerIntent.Refresh)
-    }
-    if (show) {
-        ModalBottomSheet(
-            onDismissRequest = onDismissRequest,
-            sheetState = sheetState,
-            modifier = Modifier.fillMaxSize(),
-            shape = RectangleShape,
-            sheetMaxWidth = Dp.Unspecified,
-            containerColor = Color.Transparent,
-            contentColor = LegadoTheme.colorScheme.onSurface,
-            contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-            dragHandle = null,
-        ) {
-            ReadAloudPlayerScreenContent(
-                state = state,
-                onIntent = onIntent,
-                onBack = onDismissRequest,
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable

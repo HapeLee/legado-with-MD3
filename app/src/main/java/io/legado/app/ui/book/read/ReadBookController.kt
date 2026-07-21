@@ -319,7 +319,7 @@ class ReadBookController(
         val state = viewModel.uiState.value
         when {
             BaseReadAloudService.isRun -> viewModel.onIntent(
-                ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                ReadBookIntent.ReadAloudAction
             )
 
             isAutoPage -> {

@@ -35,19 +35,18 @@ import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
-import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
+import io.legado.app.ui.book.read.sheet.ReadAloudPage
+import io.legado.app.ui.book.read.sheet.ReadAloudScreen
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
-import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ProvideThemeOverride
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.widget.components.FontFolderState
@@ -308,12 +307,6 @@ fun ReadBookScreen(
         },
         onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
     )
-    ReadAloudConfigSheet(
-        show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
-        state = state,
-        onIntent = onIntent,
-        onDismissRequest = dismissSheet,
-    )
     SpeakEngineConfigSheet(
         show = state.activeSheet is ReadBookSheet.SpeakEngineConfig,
         state = state,
@@ -444,16 +437,37 @@ fun ReadBookScreen(
         }
         rememberThemeOverride(seedColor)
     }
-    ProvideThemeOverride(playerTheme.takeIf { state.activeSheet is ReadBookSheet.ReadAloudPlayer }) {
-        ReadAloudPlayerSheet(
-            show = state.activeSheet is ReadBookSheet.ReadAloudPlayer,
-            onDismissRequest = dismissSheet,
-            state = aloudPlayerState,
-            onIntent = aloudPlayerViewModel::onIntent,
-        )
+    val readAloudPage = when (state.activeSheet) {
+        ReadBookSheet.ReadAloudControls -> ReadAloudPage.Controls
+        ReadBookSheet.ReadAloudConfig -> ReadAloudPage.Config
+        ReadBookSheet.ReadAloudPlayer -> ReadAloudPage.Player
+        else -> null
     }
+    ReadAloudScreen(
+        page = readAloudPage,
+        state = state,
+        playerState = aloudPlayerState,
+        playerTheme = playerTheme,
+        onIntent = onIntent,
+        onPlayerIntent = aloudPlayerViewModel::onIntent,
+        onDismissRequest = dismissSheet,
+        onOpenChapterList = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.OpenChapterList)
+        },
+        onGoToBackground = {
+            onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+        },
+        onOpenMainMenu = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.ShowMenu)
+        },
+    )
     LaunchedEffect(state.activeSheet) {
         if (state.activeSheet is ReadBookSheet.ReadAloudPlayer) {
+            aloudPlayerViewModel.onIntent(
+                io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent.Refresh
+            )
             aloudPlayerViewModel.effects.collectLatest { effect ->
                 when (effect) {
                     ReadAloudPlayerEffect.OpenToc -> onIntent(ReadBookIntent.OpenChapterList)

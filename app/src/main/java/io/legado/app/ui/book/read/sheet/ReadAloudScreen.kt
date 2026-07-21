@@ -1,27 +1,45 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue.Expanded
+import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,17 +47,148 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerScreenContent
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+
+enum class ReadAloudPage {
+    Controls,
+    Config,
+    Player,
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReadAloudScreen(
+    page: ReadAloudPage?,
+    state: ReadBookUiState,
+    playerState: ReadAloudPlayerUiState,
+    playerTheme: ThemeOverrideState?,
+    onIntent: (ReadBookIntent) -> Unit,
+    onPlayerIntent: (ReadAloudPlayerIntent) -> Unit,
+    onDismissRequest: () -> Unit,
+    onOpenChapterList: () -> Unit,
+    onGoToBackground: () -> Unit,
+    onOpenMainMenu: () -> Unit,
+) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = Hidden,
+        enabledValues = setOf(Hidden, Expanded),
+    )
+    val isPlayer = page == ReadAloudPage.Player
+    BackHandler(enabled = page == ReadAloudPage.Config) {
+        onIntent(ReadBookIntent.ShowSheet(io.legado.app.ui.book.read.ReadBookSheet.ReadAloudControls))
+    }
+    if (page != null) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            sheetState = sheetState,
+            modifier = if (isPlayer) Modifier.fillMaxSize() else Modifier,
+            shape = if (isPlayer) RectangleShape else MaterialTheme.shapes.extraLarge,
+            sheetMaxWidth = if (isPlayer) Dp.Unspecified else 640.dp,
+            containerColor = if (isPlayer) {
+                Color.Transparent
+            } else {
+                LegadoTheme.colorScheme.surfaceContainer
+            },
+            contentColor = LegadoTheme.colorScheme.onSurface,
+            contentWindowInsets = {
+                if (isPlayer) WindowInsets(0, 0, 0, 0) else WindowInsets(0)
+            },
+            dragHandle = if (isPlayer) null else {
+                { androidx.compose.material3.BottomSheetDefaults.DragHandle() }
+            },
+        ) {
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    val forward = targetState.ordinal > initialState.ordinal
+                    val enter = slideInHorizontally(
+                        animationSpec = tween(durationMillis = 300),
+                        initialOffsetX = { width -> if (forward) width else -width },
+                    ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                    val exit = slideOutHorizontally(
+                        animationSpec = tween(durationMillis = 300),
+                        targetOffsetX = { width -> if (forward) -width else width },
+                    ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                },
+                label = "ReadAloudPage",
+            ) { targetPage ->
+                when (targetPage) {
+                    ReadAloudPage.Controls -> ReadAloudContent(
+                        state = state,
+                        onIntent = onIntent,
+                        onDismissRequest = onDismissRequest,
+                        onOpenChapterList = onOpenChapterList,
+                        onGoToBackground = onGoToBackground,
+                        onOpenMainMenu = onOpenMainMenu,
+                        onShowReadAloudConfig = {
+                            onIntent(ReadBookIntent.ShowReadAloudConfig)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+
+                    ReadAloudPage.Config -> Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            MediumTonalButton(
+                                onClick = {
+                                    onIntent(
+                                        ReadBookIntent.ShowSheet(
+                                            io.legado.app.ui.book.read.ReadBookSheet.ReadAloudControls
+                                        )
+                                    )
+                                },
+                                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back),
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.aloud_config),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+                        ReadAloudConfigContent(
+                            state = state,
+                            onIntent = onIntent,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+
+                    ReadAloudPage.Player -> ProvideThemeOverride(playerTheme) {
+                        ReadAloudPlayerScreenContent(
+                            state = playerState,
+                            onIntent = onPlayerIntent,
+                            onBack = onDismissRequest,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ReadAloudContent(

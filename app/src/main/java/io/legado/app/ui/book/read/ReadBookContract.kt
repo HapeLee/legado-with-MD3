@@ -57,7 +57,6 @@ sealed interface ReadBookMenuRoute {
     data object Main : ReadBookMenuRoute
     data object ReadStyle : ReadBookMenuRoute
     data object TextTitle : ReadBookMenuRoute
-    data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
     data object HeaderFooterConfig : ReadBookMenuRoute
@@ -974,6 +973,7 @@ sealed interface ReadBookSheet {
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
+    data object ReadAloudControls : ReadBookSheet
     data object ReadAloudPlayer : ReadBookSheet
     data object SpeakEngineConfig : ReadBookSheet
     data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
