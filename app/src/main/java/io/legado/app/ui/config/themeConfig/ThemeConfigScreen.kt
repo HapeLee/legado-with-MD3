@@ -69,6 +69,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -835,8 +836,33 @@ fun ThemeConfigScreen(
                 }
             }
 
+            item {
+                SplicedColumnGroup {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_config_reset_defaults),
+                        description = stringResource(R.string.theme_config_reset_defaults_summary),
+                        onClick = {
+                            onIntent(
+                                ThemeConfigIntent.ShowDialog(ThemeConfigDialog.ResetDefaults)
+                            )
+                        }
+                    )
+                }
+            }
+
         }
     }
+
+    AppAlertDialog(
+        show = state.activeDialog == ThemeConfigDialog.ResetDefaults,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissDialog) },
+        title = stringResource(R.string.theme_config_reset_defaults),
+        text = stringResource(R.string.theme_config_reset_defaults_confirm),
+        confirmText = stringResource(R.string.reset),
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = { onIntent(ThemeConfigIntent.ResetDefaults) },
+        onDismiss = { onIntent(ThemeConfigIntent.DismissDialog) },
+    )
 
 
     BackgroundImageManageSheet(
