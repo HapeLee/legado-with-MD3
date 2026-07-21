@@ -24,7 +24,7 @@ import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.utils.move
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -99,6 +99,7 @@ fun MainNavigationSettingsSheet(
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = onSetDefault,
             )
+            Spacer(modifier = Modifier.padding(bottom = 4.dp))
             val customIconCount = listOf(
                 settings.navIconHome,
                 settings.navIconBookshelf,
@@ -106,7 +107,7 @@ fun MainNavigationSettingsSheet(
                 settings.navIconRss,
                 settings.navIconMy,
             ).count { it.isNotEmpty() }
-            ClickableSettingItem(
+            CompactClickableSettingItem(
                 title = stringResource(R.string.theme_config_nav_icons),
                 description = if (customIconCount > 0) {
                     stringResource(R.string.theme_config_nav_icons_custom_count, customIconCount)
