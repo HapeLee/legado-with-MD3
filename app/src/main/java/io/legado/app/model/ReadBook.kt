@@ -1720,11 +1720,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    interface CallBack : LayoutProgressListener {
-        fun upMenuView()
-
-        fun loadChapterList(book: Book)
-
+    /**
+     * 渲染子集回调（Track B）：指令式渲染协议——重绘、分页、动画、选择取消、
+     * 排版进度。**只应由 UI 层的渲染控制器实现**，不得穿过 ViewModel/业务层。
+     */
+    interface ReaderRenderCallback : LayoutProgressListener {
         fun upContent(
             relativePosition: Int = 0,
             resetPageOffset: Boolean = true,
@@ -1743,11 +1743,24 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
         fun upPageAnim(upRecorder: Boolean = false)
 
+        fun cancelSelect()
+    }
+
+    /**
+     * 业务/UI 状态回调子集：菜单刷新、目录加载、换书通知、进度确认。
+     *
+     * 迁移期仍**组合**渲染子集（`: ReaderRenderCallback`），使单一 `callBack`
+     * 槽位行为不变；Track B2 会把渲染子集拆到独立槽位、由渲染控制器承接，
+     * 届时本接口收敛为纯状态子集。
+     */
+    interface CallBack : ReaderRenderCallback {
+        fun upMenuView()
+
+        fun loadChapterList(book: Book)
+
         fun notifyBookChanged()
 
         fun sureNewProgress(progress: BookProgress)
-
-        fun cancelSelect()
     }
 
 }
