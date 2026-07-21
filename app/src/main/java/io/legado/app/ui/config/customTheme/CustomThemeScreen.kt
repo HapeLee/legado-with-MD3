@@ -18,7 +18,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.domain.gateway.ThemeColorSlot
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -173,43 +172,43 @@ private fun CustomColorSettings(
     background: Int,
     labelContainer: Int,
     keySuffix: String,
-    onSelect: (ThemeColorSlot) -> Unit,
+    onSelect: (CustomThemeColorSlot) -> Unit,
 ) {
     SplicedColumnGroup(title = title) {
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_primary_color),
             colorValue = primary,
-            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.Primary else ThemeColorSlot.PrimaryNight) },
+            onClick = { onSelect(if (keySuffix.isEmpty()) CustomThemeColorSlot.Primary else CustomThemeColorSlot.PrimaryNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_secondary_color),
             colorValue = secondary,
             onClick = {
                 onSelect(
-                    if (keySuffix.isEmpty()) ThemeColorSlot.Secondary
-                    else ThemeColorSlot.SecondaryNight
+                    if (keySuffix.isEmpty()) CustomThemeColorSlot.Secondary
+                    else CustomThemeColorSlot.SecondaryNight
                 )
             },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_primary_text_color),
             colorValue = primaryText,
-            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.PrimaryText else ThemeColorSlot.PrimaryTextNight) },
+            onClick = { onSelect(if (keySuffix.isEmpty()) CustomThemeColorSlot.PrimaryText else CustomThemeColorSlot.PrimaryTextNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_secondary_text_color),
             colorValue = secondaryText,
-            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.SecondaryText else ThemeColorSlot.SecondaryTextNight) },
+            onClick = { onSelect(if (keySuffix.isEmpty()) CustomThemeColorSlot.SecondaryText else CustomThemeColorSlot.SecondaryTextNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_background_color),
             colorValue = background,
-            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.Background else ThemeColorSlot.BackgroundNight) },
+            onClick = { onSelect(if (keySuffix.isEmpty()) CustomThemeColorSlot.Background else CustomThemeColorSlot.BackgroundNight) },
         )
         CustomColorSettingItem(
             title = stringResource(R.string.theme_manage_label_container_color),
             colorValue = labelContainer,
-            onClick = { onSelect(if (keySuffix.isEmpty()) ThemeColorSlot.LabelContainer else ThemeColorSlot.LabelContainerNight) },
+            onClick = { onSelect(if (keySuffix.isEmpty()) CustomThemeColorSlot.LabelContainer else CustomThemeColorSlot.LabelContainerNight) },
         )
     }
 }
@@ -251,18 +250,18 @@ private fun ColorSwatch(colorValue: Int) {
 
 private fun CustomThemeUiState.colorForPicker(): Int = when (val picker = activePicker) {
     is CustomThemePicker.DeepColor -> when (picker.slot) {
-        ThemeColorSlot.Primary -> themeColor
-        ThemeColorSlot.Secondary -> secondaryThemeColor
-        ThemeColorSlot.PrimaryText -> primaryTextColor
-        ThemeColorSlot.SecondaryText -> secondaryTextColor
-        ThemeColorSlot.Background -> themeBackgroundColor
-        ThemeColorSlot.LabelContainer -> labelContainerColor
-        ThemeColorSlot.PrimaryNight -> themeColorNight
-        ThemeColorSlot.SecondaryNight -> secondaryThemeColorNight
-        ThemeColorSlot.PrimaryTextNight -> primaryTextColorNight
-        ThemeColorSlot.SecondaryTextNight -> secondaryTextColorNight
-        ThemeColorSlot.BackgroundNight -> themeBackgroundColorNight
-        ThemeColorSlot.LabelContainerNight -> labelContainerColorNight
+        CustomThemeColorSlot.Primary -> themeColor
+        CustomThemeColorSlot.Secondary -> secondaryThemeColor
+        CustomThemeColorSlot.PrimaryText -> primaryTextColor
+        CustomThemeColorSlot.SecondaryText -> secondaryTextColor
+        CustomThemeColorSlot.Background -> themeBackgroundColor
+        CustomThemeColorSlot.LabelContainer -> labelContainerColor
+        CustomThemeColorSlot.PrimaryNight -> themeColorNight
+        CustomThemeColorSlot.SecondaryNight -> secondaryThemeColorNight
+        CustomThemeColorSlot.PrimaryTextNight -> primaryTextColorNight
+        CustomThemeColorSlot.SecondaryTextNight -> secondaryTextColorNight
+        CustomThemeColorSlot.BackgroundNight -> themeBackgroundColorNight
+        CustomThemeColorSlot.LabelContainerNight -> labelContainerColorNight
     }
     CustomThemePicker.DaySeed -> primarySeedColor
     CustomThemePicker.NightSeed -> nightPrimarySeedColor

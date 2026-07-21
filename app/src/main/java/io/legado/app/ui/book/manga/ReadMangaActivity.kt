@@ -37,7 +37,7 @@ import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityMangaBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
-import io.legado.app.domain.gateway.MangaSettingsUpdate
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
@@ -544,20 +544,18 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     override fun onColorSelected(dialogId: Int, color: Int){
         if (dialogId == MANGA_B)
         {
-            updateMangaSetting(MangaSettingsUpdate.Background(color)) {
-                setBackground()
-            }
+            updateMangaSetting(afterUpdate = ::setBackground) { it.copy(background = color) }
         }
     }
 
     override fun onDialogDismissed(dialogId: Int) = Unit
 
     private fun updateMangaSetting(
-        update: MangaSettingsUpdate,
         afterUpdate: () -> Unit = {},
+        transform: (MangaSettings) -> MangaSettings,
     ) {
         lifecycleScope.launch {
-            viewModel.updateMangaSettings(update)
+            viewModel.updateMangaSettings(transform)
             afterUpdate()
         }
     }
@@ -760,7 +758,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                     getString(R.string.pre_download),
                     viewModel.mangaSettings.value.preDownloadNum
                 ) {
-                    updateMangaSetting(MangaSettingsUpdate.PreDownloadNum(it))
+                    updateMangaSetting { settings -> settings.copy(preDownloadNum = it) }
                     item.title = getString(R.string.pre_download_m, it)
                     setRecyclerViewPreloader(it)
                 }
@@ -814,20 +812,20 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     //点击滑动
     override fun onClickScrollDisabledChanged(disabled: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.DisableClickScroll(disabled))
+        updateMangaSetting { it.copy(disableClickScroll = disabled) }
     }
 
     override fun onScrollAniDisabledChanged(disabled: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.DisableScrollAnimation(disabled))
+        updateMangaSetting { it.copy(disableMangaScrollAnimation = disabled) }
     }
 
     override fun onCrossFadeDisabledChanged(disabled: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.DisableCrossFade(disabled))
+        updateMangaSetting { it.copy(disableMangaCrossFade = disabled) }
     }
 
     //双击缩放
     override fun onMangaScaleDisabledChanged(disabled: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.DisableScale(disabled))
+        updateMangaSetting { it.copy(disableMangaScale = disabled) }
         setDisableMangaScale(disabled)
     }
 
@@ -841,13 +839,15 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     //墨水屏
     override fun updateEpaperMode(enabled: Boolean, threshold: Int) {
-        updateMangaSetting(MangaSettingsUpdate.EInk(enabled, threshold))
+        updateMangaSetting {
+            it.copy(enableEInk = enabled, enableGray = false, eInkThreshold = threshold)
+        }
         mAdapter.enableMangaEInk(enabled, threshold)
     }
 
     //灰度
     override fun updateGrayMode(enabled: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.Gray(enabled))
+        updateMangaSetting { it.copy(enableEInk = false, enableGray = enabled) }
         mAdapter.enableGray(enabled)
     }
 
@@ -865,27 +865,25 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     //自动翻页速度
     override fun onAutoPageSpeedChanged(speed: Int) {
         setAutoReadEnabled(false)
-        updateMangaSetting(MangaSettingsUpdate.AutoPageSpeed(speed))
+        updateMangaSetting { it.copy(autoPageSpeed = speed) }
         mScrollTimer.setSpeed(speed)
         setAutoReadEnabled(enableScroll)
     }
 
     override fun onMangaLongClickChanged(checked: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.LongClick(checked))
+        updateMangaSetting { it.copy(longClick = checked) }
     }
 
     override fun onVolumeKeyPageChanged(enable: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.VolumeKeyPage(enable))
+        updateMangaSetting { it.copy(volumeKeyPage = enable) }
     }
 
     override fun onReverseVolumeKeyPageChanged(enable: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.ReverseVolumeKeyPage(enable))
+        updateMangaSetting { it.copy(reverseVolumeKeyPage = enable) }
     }
 
     override fun onHideMangaTitleChanged(hide: Boolean) {
-        updateMangaSetting(MangaSettingsUpdate.HideTitle(hide)) {
-            ReadManga.loadContent()
-        }
+        updateMangaSetting(afterUpdate = ReadManga::loadContent) { it.copy(hideTitle = hide) }
     }
 
     override fun openBookInfoActivity() {

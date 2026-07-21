@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.readConfig
 
 import io.legado.app.constant.EventBus
-import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.postEvent
@@ -9,35 +8,35 @@ import io.legado.app.utils.postEvent
 /** Applies runtime reader changes after a setting has entered the effective settings snapshot. */
 class ApplyReadSettingUseCase {
 
-    operator fun invoke(update: ReadSettingsUpdate) {
-        when (update) {
-            is ReadSettingsUpdate.HideStatusBar,
-            is ReadSettingsUpdate.HideNavigationBar -> {
+    operator fun invoke(intent: ReadConfigIntent) {
+        when (intent) {
+            is ReadConfigIntent.HideStatusBarChanged,
+            is ReadConfigIntent.HideNavigationBarChanged -> {
                 postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
             }
 
-            is ReadSettingsUpdate.ReadMenuBlurAlpha,
-            is ReadSettingsUpdate.ReadSliderMode,
-            is ReadSettingsUpdate.ShowReadTitleAddition,
-            is ReadSettingsUpdate.ShowMenuIcon -> {
+            is ReadConfigIntent.ReadMenuBlurAlphaChanged,
+            is ReadConfigIntent.ReadSliderModeChanged,
+            is ReadConfigIntent.ShowReadTitleAdditionChanged,
+            is ReadConfigIntent.ShowMenuIconChanged -> {
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
 
-            is ReadSettingsUpdate.TextFullJustify,
-            is ReadSettingsUpdate.TextBottomJustify,
-            is ReadSettingsUpdate.UseZhLayout,
-            is ReadSettingsUpdate.DoubleHorizontalPage -> updateLayout()
+            is ReadConfigIntent.TextFullJustifyChanged,
+            is ReadConfigIntent.TextBottomJustifyChanged,
+            is ReadConfigIntent.UseZhLayoutChanged,
+            is ReadConfigIntent.DoubleHorizontalPageChanged -> updateLayout()
 
-            is ReadSettingsUpdate.ProgressBarBehavior -> {
+            is ReadConfigIntent.ProgressBarBehaviorChanged -> {
                 postEvent(EventBus.UP_SEEK_BAR, true)
             }
 
-            is ReadSettingsUpdate.PageTouchSlop -> {
+            is ReadConfigIntent.PageTouchSlopChanged -> {
                 postEvent(EventBus.UP_CONFIG, arrayListOf(4))
             }
 
-            is ReadSettingsUpdate.NoAnimScrollPage -> ReadBook.callBack?.upPageAnim()
-            is ReadSettingsUpdate.OptimizeRender -> updateStyle()
+            is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.callBack?.upPageAnim()
+            is ReadConfigIntent.OptimizeRenderChanged -> updateStyle()
             else -> Unit
         }
     }

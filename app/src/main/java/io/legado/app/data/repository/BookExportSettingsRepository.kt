@@ -21,7 +21,11 @@ class BookExportSettingsRepository : BookExportSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(transform: (BookExportSettings) -> BookExportSettings) {
-        AppConfigStore.putAll(currentSettings.diffPrefMap(transform, BookExportSettings::toPrefMap))
+        AppConfigStore.atomicUpdate(
+            read = Preferences::toBookExportSettings,
+            toPrefMap = BookExportSettings::toPrefMap,
+            transform = transform,
+        )
     }
 }
 

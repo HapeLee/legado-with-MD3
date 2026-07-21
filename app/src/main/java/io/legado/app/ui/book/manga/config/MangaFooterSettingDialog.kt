@@ -14,7 +14,6 @@ import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogMangaFooterSettingBinding
 import io.legado.app.domain.gateway.MangaSettingsGateway
-import io.legado.app.domain.gateway.MangaSettingsUpdate
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
 import io.legado.app.ui.widget.ReaderInfoBarView
 import io.legado.app.utils.GSON
@@ -66,7 +65,7 @@ class MangaFooterSettingDialog :
                 }
                 setOnLongClickListener {
                     lifecycleScope.launch {
-                        mangaSettingsGateway.update(MangaSettingsUpdate.ScrollMode(mode))
+                        mangaSettingsGateway.update { it.copy(scrollMode = mode) }
                     }
                     toastOnUi("已设置为全局默认模式")
                     true
@@ -263,7 +262,7 @@ class MangaFooterSettingDialog :
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         lifecycleScope.launch {
-            mangaSettingsGateway.update(MangaSettingsUpdate.FooterConfig(GSON.toJson(config)))
+            mangaSettingsGateway.update { it.copy(footerConfig = GSON.toJson(config)) }
         }
     }
 

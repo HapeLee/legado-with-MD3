@@ -2237,6 +2237,12 @@
     <string name="eye_protection_intensity_summary">Current intensity: %1$d</string>
     <string name="eye_protection_auto_night">Enable with dark reading mode</string>
     <string name="eye_protection_auto_night_summary">Automatically follow the reader day/night mode</string>
+    <string name="color_temperature">Color Temperature</string>
+    <string name="color_temperature_summary">Current temperature: %1$d</string>
+    <string name="eye_protection_schedule">Scheduled</string>
+    <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
+    <string name="eye_protection_start_time">Start Time</string>
+    <string name="eye_protection_end_time">End Time</string>
 
     <!-- Tag Rules -->
     <string name="highlight_tag_config">Tag Rules</string>

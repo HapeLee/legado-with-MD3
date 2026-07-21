@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.FileDoc
@@ -172,7 +171,7 @@ fun FontSelectGrid(
                                 text = { Text(stringResource(sort.labelRes)) },
                                 onClick = {
                                     scope.launch {
-                                        otherSettings.update(OtherSettingsUpdate.FontSort(sort.ordinal))
+                                        otherSettings.update { it.copy(fontSort = sort.ordinal) }
                                     }
                                     expanded = false
                                 },

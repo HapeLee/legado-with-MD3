@@ -19,7 +19,7 @@ import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.MangaSettingsUpdate
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
@@ -72,8 +72,8 @@ class ReadMangaViewModel(
         }
     }
 
-    suspend fun updateMangaSettings(update: MangaSettingsUpdate) {
-        mangaSettingsGateway.update(update)
+    suspend fun updateMangaSettings(transform: (MangaSettings) -> MangaSettings) {
+        mangaSettingsGateway.update(transform)
     }
 
     /**

@@ -8,11 +8,9 @@ import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseOverlayDialogFragment
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogClickActionConfigBinding
-import io.legado.app.domain.gateway.MangaClickArea
 import io.legado.app.domain.gateway.MangaSettingsGateway
-import io.legado.app.domain.gateway.MangaSettingsUpdate
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.toastOnUi
@@ -73,83 +71,71 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
 
         binding.tvTopLeft.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionTL, action)
+                setClickAction { it.copy(clickActionTL = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopCenter.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionTC, action)
+                setClickAction { it.copy(clickActionTC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopRight.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionTR, action)
+                setClickAction { it.copy(clickActionTR = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleLeft.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionML, action)
+                setClickAction { it.copy(clickActionML = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleCenter.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionMC, action)
+                setClickAction { it.copy(clickActionMC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleRight.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionMR, action)
+                setClickAction { it.copy(clickActionMR = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomLeft.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionBL, action)
+                setClickAction { it.copy(clickActionBL = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomCenter.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionBC, action)
+                setClickAction { it.copy(clickActionBC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomRight.setOnClickListener {
             selectAction { action ->
-                setClickAction(PreferKey.mangaClickActionBR, action)
+                setClickAction { it.copy(clickActionBR = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
     }
 
-    private fun setClickAction(key: String, action: Int) {
-        val area = when (key) {
-            PreferKey.mangaClickActionTL -> MangaClickArea.TL
-            PreferKey.mangaClickActionTC -> MangaClickArea.TC
-            PreferKey.mangaClickActionTR -> MangaClickArea.TR
-            PreferKey.mangaClickActionML -> MangaClickArea.ML
-            PreferKey.mangaClickActionMC -> MangaClickArea.MC
-            PreferKey.mangaClickActionMR -> MangaClickArea.MR
-            PreferKey.mangaClickActionBL -> MangaClickArea.BL
-            PreferKey.mangaClickActionBC -> MangaClickArea.BC
-            PreferKey.mangaClickActionBR -> MangaClickArea.BR
-            else -> return
-        }
+    private fun setClickAction(transform: (MangaSettings) -> MangaSettings) {
         lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            mangaSettingsGateway.update(MangaSettingsUpdate.ClickAction(area, action))
+            mangaSettingsGateway.update(transform)
         }
     }
 
@@ -165,9 +151,7 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
     override fun onDestroy() {
         if (!hasMenuClickArea()) {
             lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                mangaSettingsGateway.update(
-                    MangaSettingsUpdate.ClickAction(MangaClickArea.MC, 0)
-                )
+                mangaSettingsGateway.update { it.copy(clickActionMC = 0) }
             }
             context?.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
         }

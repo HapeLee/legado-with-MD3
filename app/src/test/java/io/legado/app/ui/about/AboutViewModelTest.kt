@@ -3,7 +3,6 @@ package io.legado.app.ui.about
 import android.app.Application
 import android.os.Looper
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsUpdate
 import io.legado.app.domain.model.settings.OtherSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +50,8 @@ class AboutViewModelTest {
             state.value = state.value.copy(updateToVariant = variant)
         }
 
-        override suspend fun update(update: OtherSettingsUpdate) = Unit
+        override suspend fun update(transform: (OtherSettings) -> OtherSettings) {
+            state.value = transform(state.value)
+        }
     }
 }
