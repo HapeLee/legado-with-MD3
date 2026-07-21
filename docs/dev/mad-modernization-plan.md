@@ -33,7 +33,7 @@
 
 **③ F1 收尾**：仍缺一个**显式跑 `testAppDebugUnitTest` + `lintAppDebug` 的 CI job**——这是 F1 唯一没关上的门（当前单测失败/新增 lint 违规不会让 CI 红）。
 
-**④ Track A**：**A1–A3 已落地**（会话写入收敛）。`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`；外部 6 处写入（BookInfo×2 / BookInfoEdit / `Book.delete` / ReadBookController×2）改走 `replaceCurrentBook` / `clearCurrentBook` / `updateReadingPosition` 命令 + `isCurrentBook` 谓词；编译器已证明外部写入点为 0。**A4/A5 明确暂缓**——理由见 Track A 小节末尾。**Track B / C**：均未开始。
+**④ Track A**：**A1–A5 已全部落地**。A1–A3：`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`，外部 6 处写入改走 `replaceCurrentBook`/`clearCurrentBook`/`updateReadingPosition` + `isCurrentBook` 谓词，编译器证明外部写入点为 0。A4：`LegacyReaderSnapshot` + `ReadBook.snapshot: StateFlow`，`publishSnapshot()` 落在 14 个内部 mutator + 3 个命令的原子末尾。A5：`ReaderSession` 接口 + `LegacyReaderSession` 桥接（`model/ReaderSession.kt`，Koin 注册），`ReadBookViewModel` 已注入并 `collectReaderSession()` 反应式消费。**Track B / C**：均未开始。
 
 ### 未提交
 
@@ -158,7 +158,7 @@ class ReplaceRuleRepository(private val dao: ReplaceRuleDao) {
 
 ### Track A —— 所有权与业务状态（现在做，最高优先级）
 
-> **进度**：A1–A3 已完成并提交；A4/A5 暂缓（见本节末「A4/A5 暂缓说明」）。
+> **进度**：A1–A5 已完成并提交（见本节末「A4/A5 落地说明」）。
 
 目标：**阅读状态有唯一写入入口，Snapshot 可信**。不受 View/Compose 进度影响。
 
@@ -189,7 +189,7 @@ fun isCurrentBook(other: Book): Boolean = book?.isSameNameAuthor(other) == true
 6 处写入点的身份判定已改走谓词。
 > A3 的完整形态（「绝不向外递出可变 `Book`」）**未做**——`ReadBook.book` 仍在 ~44 个文件被读取，是 Track B/C 与 VM 拆分的范畴，不在本轮。已核实当前「引用逃逸写入」（`ReadBook.book?.durChapterIndex = x`）为 **0**（grep 无命中），`private set` 也堵住了其经由 `ReadBook.*` 字段复发的路径。
 
-**A4. 权威不可变快照**。仅在写入受控后引入：
+**A4. 权威不可变快照** ✅。仅在写入受控后引入：
 ```kotlin
 data class LegacyReaderSnapshot(
     val bookId: String?,
@@ -219,7 +219,7 @@ fun replaceCurrentBook(book: Book) {
 
 > **性能红线**：快照区分高频与低频。`chapterPosition`/viewport 随滚动高频变化，`bookId`/`chapterIndex`/结构信息低频变化。**不要**在每个滚动 tick 深拷贝 `TextChapter` 进快照。高频 viewport 状态与低频结构状态应分开，避免把 60fps 热路径挂到 equality-based 快照上。
 
-**A5. `ReaderSession` 面向所有者的 API**（写入全部受控后引入）：
+**A5. `ReaderSession` 面向所有者的 API** ✅（写入全部受控后引入）：
 ```kotlin
 interface ReaderSession {
     val state: StateFlow<ReaderSessionState>
@@ -232,18 +232,22 @@ interface ReaderSession {
 ```
 首个实现仍可 `LegacyReaderSession → ReadBook`，但必须保证：所有 mutation 经过它；state 投影真实遗留状态、不维护竞争副本；调用方拿不到可变领域对象。
 
-**验收**：`ReadBook` 会话字段全部 `private set`；外部写入点为 0（全部走命令）；`snapshot`/`state` 在任何路径的状态变更后都能正确发射；VM 可从 `ReaderSession.state` 取业务状态。
-> 当前状态：前两条（`private set` + 外部写入点为 0）**已达成并由编译器保证**；后两条属 A4/A5，暂缓。
+**验收**：`ReadBook` 会话字段全部 `private set` ✅；外部写入点为 0（全部走命令）✅（编译器保证）；`snapshot`/`state` 在任何路径的状态变更后都能正确发射 ✅（见下「发布覆盖」）；VM 可从 `ReaderSession.state` 取业务状态 ✅（`ReadBookViewModel.collectReaderSession()`）。
 
-#### A4/A5 暂缓说明（本轮结论）
+#### A4/A5 落地说明（本轮结论）
 
-A1–A3 是 Track A 里编译器强制、可静态验证的高价值地基，已完成。A4/A5 本轮**有意不做**，理由：
+**实际实现与计划示例的差异（忠实优先）**：
 
-1. **无消费者的基础设施**：A4 的 `snapshot` / A5 的 `ReaderSession.state` 目前没有任何读取方（VM 仍走 `CallBack`）。引入后其正确性只能靠「编译 + 单测」验证，而这两者都覆盖不到「阅读器实时状态是否在每条变更路径正确发射」——真正的验证要等一个真实消费者接上（A5 的验收「VM 可从 state 取业务状态」）。
-2. **潜在正确性陷阱**：会话字段已 `private set`，内部写入点约 **15 处**（`resetData`/`upData`/`setProgress`/翻页 4 处/换章 3 处/`setPageIndex`/`openChapter`/`changeTo`/`loadChapterList` 等，散在 6000+ 行）。要满足「任何路径变更后都发射」需在每个原子转移末尾 `publishSnapshot()`；漏一处即「权威快照」静默陈旧。在没有消费者做端到端校验前落这层，是把一个隐性正确性债提前引入。
-3. **字段来源不干净**：计划示例里的 `isLoading` / `isReadingAloud` 在 `ReadBook` 里没有干净的自有来源——`isReadingAloud` 实际取自 `BaseReadAloudService.isRun`（独立服务，ReadBook 变更不会触发其重发），`isLoading` 只有 `msg` / `loadingChapters` 间接信号。硬塞进 ReadBook 发布的快照会得到静默陈旧字段。真做 A4 时要么让这些来源方也参与发布，要么把它们排除。
+- **快照字段**：只承载 `ReadBook` **自己拥有、并在受控 mutator 中重新发布**的廉价标量——`bookUrl`/`bookName`/`chapterIndex`/`chapterPos`/`chapterCount`/`simulatedChapterCount`/`isLocalBook`。**刻意排除计划示例里的 `isLoading` / `isReadingAloud`**：`isReadingAloud` 真实来源是 `BaseReadAloudService.isRun`（独立服务，ReadBook 变更不触发其重发），`isLoading` 只有 `msg`/`loadingChapters` 间接信号；塞进 ReadBook 发布的快照会得到静默陈旧字段。要做需让来源方参与发布，另立字段。
+- **命令体忠实**：`replaceCurrentBook` 只替换引用、不像计划示例那样顺手 `clearTextChapter`/重置 index/pos（那是行为漂移）。
+- **发布覆盖**：核实后内部写入落在 **14 个 mutator**（`resetData`/`upData`/`setProgress`/`moveToNextPage`/`moveToPrevPage`/`moveToNextChapter`(+`Await`)/`moveToPrevChapter`/`skipToPage`/`setPageIndex`/`openChapter`/`syncReadAloudPage`/`upToc`/`onChapterListUpdated`）+ 3 个语义命令，每处在**原子转移末尾** `publishSnapshot()`（`grep` 已逐一核对覆盖）。过发无害（StateFlow 对相等值去重），漏发才会陈旧。
+- **消费方式（关键设计决策）**：`ReadBookViewModel` 用**反应式收集** `readerSession.state.collect { syncFromReadBook }` 消费，而**非**让 `syncFromReadBook` 同步读 `snapshot.value`。原因：`upMenuView()`/`pageChanged()` 会在 mutator **方法体内、`publishSnapshot()` 之前**同步调用 `syncFromReadBook`；若那里读 `snapshot.value` 会拿到发布前的旧值（一帧滞后）。反应式收集在 mutator 返回后异步触发，此时 ReadBook 字段已是最终态，`syncFromReadBook` 直读 ReadBook 即新值；该刷新与遗留 CallBack 路径叠加、幂等，无回归、无滞后。
 
-**建议**：A4/A5 放到一个能**同时接入首个真实消费者**（VM 读一小块业务状态自 `state`）的专门回合做，用消费者做端到端校验，避免落一层测不到、没人用的状态。届时快照按「高频 viewport（position）/ 低频结构」分开，`publishSnapshot()` 在 ~15 个内部原子转移末尾各调一次（过发无害、漏发才是 bug）。
+**性能**：快照全是标量、`buildSnapshot()` 为 O(1)，发布频率是用户级（翻页/换章/位置 settle），非 60fps 滚动 tick，未把热路径挂上 equality 快照。`updateReadingPosition` 目前仅 `ReadBookController` 朗读暂停/恢复 2 处调用，非逐帧。
+
+**仍未做（Track A 之外）**：A3 完整形态「绝不外递可变 `Book`」——`ReadBook.book` 仍在 ~44 文件被读，属 Track B/C 与 VM 拆分。快照的「高频 viewport / 低频结构」二流拆分本轮未做（当前单流即够，因无 60fps 发布源）；若将来位置更新变高频再拆。
+
+> **验证边界**：编译 + 272 单测全绿，但都覆盖不到「阅读器实时状态在每条路径正确发射」。需在真机/模拟器验证的路径：翻页/换章时章节号与进度、保存书籍信息时正在读该书、删除正在读的书、朗读中翻页。
 
 ---
 
