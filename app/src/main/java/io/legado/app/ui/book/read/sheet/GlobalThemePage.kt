@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TooltipAnchorPosition
@@ -55,6 +56,7 @@ import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
@@ -72,6 +74,7 @@ import io.legado.app.ui.widget.components.text.AppText
 @Composable
 fun GlobalThemePage(
     onToggleDayNight: () -> Unit,
+    eyeProtectionEnabled: Boolean,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenTextTitle: () -> Unit,
     onOpenPaddingConfig: () -> Unit,
@@ -86,6 +89,7 @@ fun GlobalThemePage(
     val pageAnim = styleConfig.pageAnim
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
+    val isNightTheme = LegadoTheme.isDark
 
     val configList = styleConfig.styleItems
 
@@ -153,7 +157,17 @@ fun GlobalThemePage(
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                val isNightTheme = LegadoTheme.isDark
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.ToggleEyeProtection) },
+                    onLongClick = {
+                        onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EyeProtection))
+                    },
+                    selected = eyeProtectionEnabled,
+                    icon = Icons.Default.Visibility,
+                    contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    contentDescription = stringResource(R.string.eye_protection),
+                )
                 SmallTonalButton(
                     onClick = onToggleDayNight,
                     icon = if (isNightTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
@@ -252,6 +266,7 @@ fun GlobalThemePage(
                         StyleCard(
                             config = config,
                             isSelected = styleSelect == index,
+                            isNightTheme = isNightTheme,
                             onClick = {
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
                                 onStyleSelect(index)
@@ -370,10 +385,11 @@ fun GlobalThemePage(
 fun StyleCard(
     config: ReadStyleItem,
     isSelected: Boolean,
+    isNightTheme: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val mode = ReadStyleResolver.currentMode()
+    val mode = ReadStyleResolver.currentMode(isNightTheme)
     val bgType = when (mode) {
         ReadStyleResolver.ReadStyleMode.Day -> config.bgType
         ReadStyleResolver.ReadStyleMode.Night -> config.bgTypeNight

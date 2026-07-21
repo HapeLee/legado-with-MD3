@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorMatrix as ComposeColorMatrix
 
@@ -29,6 +28,8 @@ object EyeProtection {
     }
 
     fun matrixValuesForIntensity(intensity: Int): FloatArray {
+        if (intensity <= MIN_INTENSITY) return IDENTITY_MATRIX.copyOf()
+
         val cct = temperatureForIntensity(intensity).toFloat()
         val cctSquared = cct * cct
         val red = cctSquared * coefficients[0] + cct * coefficients[1] + coefficients[2]
@@ -44,6 +45,13 @@ object EyeProtection {
 
     fun syncEnabledForNight(isNight: Boolean, autoNight: Boolean): Boolean? =
         if (autoNight) isNight else null
+
+    private val IDENTITY_MATRIX = floatArrayOf(
+        1f, 0f, 0f, 0f, 0f,
+        0f, 1f, 0f, 0f, 0f,
+        0f, 0f, 1f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f,
+    )
 }
 
 @Composable
@@ -63,7 +71,6 @@ fun Modifier.eyeProtectionColorFilter(
     if (cachedColorFilter == null) return this
 
     return graphicsLayer {
-        compositingStrategy = CompositingStrategy.Offscreen
         colorFilter = cachedColorFilter
     }
 }

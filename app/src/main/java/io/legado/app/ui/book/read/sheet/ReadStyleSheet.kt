@@ -94,6 +94,7 @@ fun ReadStyleContent(
                 when (page) {
                     0 -> GlobalThemePage(
                         onToggleDayNight = onToggleDayNight,
+                        eyeProtectionEnabled = preferences.eyeProtectionEnabled,
                         onOpenBgTextConfig = onOpenBgTextConfig,
                         onOpenTextTitle = onOpenTextTitle,
                         onOpenPaddingConfig = onOpenPaddingConfig,

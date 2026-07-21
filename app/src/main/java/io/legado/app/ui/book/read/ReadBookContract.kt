@@ -664,6 +664,7 @@ sealed interface ReadBookIntent {
     data class EyeProtectionEnabledChanged(val value: Boolean) : ReadBookIntent
     data class EyeProtectionIntensityChanged(val value: Int) : ReadBookIntent
     data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadBookIntent
+    data class SyncEyeProtectionForTheme(val isNight: Boolean) : ReadBookIntent
 
     // Default font picker (needs Activity for AlertDialog)
     // Text action menu (moved from Activity)

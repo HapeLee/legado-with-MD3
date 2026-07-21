@@ -1485,6 +1485,15 @@ class ReadBookViewModel(
                     }
                 }
             }
+            is ReadBookIntent.SyncEyeProtectionForTheme -> {
+                EyeProtection.syncEnabledForNight(
+                    isNight = intent.isNight,
+                    autoNight = _readPreferences.value.eyeProtectionAutoNight,
+                )?.takeIf { it != _readPreferences.value.eyeProtectionEnabled }
+                    ?.let { enabled ->
+                        updateEyeProtection(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
+                    }
+            }
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
                 when (readAloudSettingsRepository.currentSettings.contentSelectSpeakMode) {
@@ -5919,7 +5928,7 @@ class ReadBookViewModel(
         viewModelScope.launch {
             appShellSettingsGateway.update(AppShellSettingsUpdate.ThemeMode(nextMode))
             EyeProtection.syncEnabledForNight(
-                isNight = nextMode == "1",
+                isNight = nextMode == "2",
                 autoNight = _readPreferences.value.eyeProtectionAutoNight,
             )?.let { enabled ->
                 readSettingsRepository.update(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
