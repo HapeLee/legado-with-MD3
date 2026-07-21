@@ -24,6 +24,9 @@ sealed interface ReadSettingsUpdate {
     data class TextBottomJustify(val value: Boolean) : ReadSettingsUpdate
     data class AdaptSpecialStyle(val value: Boolean) : ReadSettingsUpdate
     data class UseZhLayout(val value: Boolean) : ReadSettingsUpdate
+    data class EyeProtectionEnabled(val value: Boolean) : ReadSettingsUpdate
+    data class EyeProtectionIntensity(val value: Int) : ReadSettingsUpdate
+    data class EyeProtectionAutoNight(val value: Boolean) : ReadSettingsUpdate
     data class ShowBrightnessView(val value: String) : ReadSettingsUpdate
     data class BrightnessVwPos(val value: String) : ReadSettingsUpdate
     data class Brightness(val value: Int) : ReadSettingsUpdate

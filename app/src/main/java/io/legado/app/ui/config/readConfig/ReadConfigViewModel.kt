@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.model.settings.ReadSettings
+import io.legado.app.ui.book.read.EyeProtection
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -37,6 +38,7 @@ class ReadConfigViewModel(
         when (intent) {
             ReadConfigIntent.OpenPageKeys -> setSheet(ReadConfigSheet.PageKeys)
             ReadConfigIntent.OpenClickActions -> setSheet(ReadConfigSheet.ClickActions)
+            ReadConfigIntent.OpenEyeProtection -> setSheet(ReadConfigSheet.EyeProtection)
             ReadConfigIntent.DismissSheet -> setSheet(null)
             else -> updateSetting(intent.toSettingsUpdate())
         }
@@ -48,7 +50,17 @@ class ReadConfigViewModel(
 
     private fun updateSetting(update: ReadSettingsUpdate) {
         viewModelScope.launch {
-            runCatching { settingsGateway.update(update) }
+            runCatching {
+                settingsGateway.update(update)
+                if (update is ReadSettingsUpdate.EyeProtectionAutoNight && update.value) {
+                    EyeProtection.syncEnabledForNight(
+                        isNight = ReadConfig.isNightTheme,
+                        autoNight = true,
+                    )?.let { enabled ->
+                        settingsGateway.update(ReadSettingsUpdate.EyeProtectionEnabled(enabled))
+                    }
+                }
+            }
                 .onSuccess {
                     applyReadSetting(update)
                     if (update is ReadSettingsUpdate.PageKeys) setSheet(null)
@@ -78,6 +90,10 @@ private fun ReadConfigIntent.toSettingsUpdate(): ReadSettingsUpdate = when (this
     is ReadConfigIntent.TextBottomJustifyChanged -> ReadSettingsUpdate.TextBottomJustify(value)
     is ReadConfigIntent.AdaptSpecialStyleChanged -> ReadSettingsUpdate.AdaptSpecialStyle(value)
     is ReadConfigIntent.UseZhLayoutChanged -> ReadSettingsUpdate.UseZhLayout(value)
+    ReadConfigIntent.OpenEyeProtection -> error("Sheet intents do not update settings")
+    is ReadConfigIntent.EyeProtectionEnabledChanged -> ReadSettingsUpdate.EyeProtectionEnabled(value)
+    is ReadConfigIntent.EyeProtectionIntensityChanged -> ReadSettingsUpdate.EyeProtectionIntensity(value)
+    is ReadConfigIntent.EyeProtectionAutoNightChanged -> ReadSettingsUpdate.EyeProtectionAutoNight(value)
     is ReadConfigIntent.ShowBrightnessViewChanged -> ReadSettingsUpdate.ShowBrightnessView(value)
     is ReadConfigIntent.BrightnessVwPosChanged -> ReadSettingsUpdate.BrightnessVwPos(value)
     is ReadConfigIntent.UseUnderlineChanged -> ReadSettingsUpdate.UseUnderline(value)
@@ -121,6 +137,9 @@ private fun ReadSettings.toUiState(activeSheet: ReadConfigSheet?): ReadConfigUiS
         textBottomJustify = textBottomJustify,
         adaptSpecialStyle = adaptSpecialStyle,
         useZhLayout = useZhLayout,
+        eyeProtectionEnabled = eyeProtectionEnabled,
+        eyeProtectionIntensity = eyeProtectionIntensity,
+        eyeProtectionAutoNight = eyeProtectionAutoNight,
         showBrightnessView = showBrightnessView,
         brightnessVwPos = brightnessVwPos,
         brightnessAuto = brightnessAuto,

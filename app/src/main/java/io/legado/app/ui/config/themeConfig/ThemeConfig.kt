@@ -49,11 +49,6 @@ object ThemeConfig {
     val defaultHomePage get() = shell.defaultHomePage
     val autoRefreshBook get() = other.autoRefresh
     val autoCheckNewBackup get() = backup.autoCheckNewBackup
-    val eyeProtectionEnabled get() = theme.eyeProtectionEnabled
-    val colorTemperature get() = theme.colorTemperature
-    val eyeProtectionSchedule get() = theme.eyeProtectionSchedule
-    val eyeProtectionStartTime get() = theme.eyeProtectionStartTime
-    val eyeProtectionEndTime get() = theme.eyeProtectionEndTime
 
     fun initNightMode() {
         val mode = when (themeMode) {

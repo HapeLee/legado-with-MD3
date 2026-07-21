@@ -70,9 +70,7 @@ import io.legado.app.ui.book.manga.recyclerview.MangaAdapter
 import io.legado.app.ui.book.manga.recyclerview.MangaLayoutManager
 import io.legado.app.ui.book.manga.recyclerview.ScrollTimer
 import io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
-import io.legado.app.ui.book.read.EyeProtectionRefreshScheduler
 import io.legado.app.ui.book.read.MangaMenu
-import io.legado.app.ui.book.read.observeEyeProtectionEvents
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
@@ -145,9 +143,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private var isRestoredFromSavedState = false
     private var syncDialog: AlertDialog? = null
     private val handler by lazy { buildMainHandler() }
-    private val eyeProtectionScheduler by lazy {
-        EyeProtectionRefreshScheduler(handler) { binding.eyeProtectionOverlay.refresh() }
-    }
     private val mScrollTimer by lazy {
         ScrollTimer(this, binding.recyclerView, lifecycleScope).apply {
             setSpeed(viewModel.mangaSettings.value.autoPageSpeed)
@@ -224,7 +219,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             ReadManga.loadOrUpContent()
         }
         binding.flLoading.isVisible = !ReadConfig.isEInkMode
-        binding.eyeProtectionOverlay.refresh()
         mAdapter.addFooterView {
             ViewLoadMoreBinding.bind(loadMoreView)
         }
@@ -300,10 +294,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             val item = mAdapter.getItem(binding.recyclerView.findCenterViewPosition())
             upInfoBar(item)
         }
-        observeEyeProtectionEvents(
-            onRefresh = { binding.eyeProtectionOverlay.refresh() },
-            scheduler = eyeProtectionScheduler
-        )
     }
 
     private fun initRecyclerView() {
@@ -528,13 +518,10 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         ReadManga.initReadTime()
         ReadManga.startAutoSaveSession()
-        binding.eyeProtectionOverlay.refresh()
-        eyeProtectionScheduler.schedule()
     }
 
     override fun onPause() {
         super.onPause()
-        eyeProtectionScheduler.cancel()
         if (ReadManga.inBookshelf) {
             ReadManga.saveRead()
             if (!BuildConfig.DEBUG) {

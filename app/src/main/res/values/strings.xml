@@ -2228,20 +2228,15 @@
     <string name="lab_eink_display_title">E-Ink Display</string>
     <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
     <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
-    <string name="lab_eye_protection_title">Eye Protection</string>
-    <string name="lab_eye_protection_summary">Apply warm color tint to comic and novel readers to reduce eye strain</string>
-    <string name="lab_eye_protection_hint">You can adjust eye protection settings in Theme → Appearance</string>
 
     <!-- Eye Protection -->
     <string name="eye_protection">Eye Protection</string>
     <string name="eye_protection_enabled">Enable Eye Protection</string>
     <string name="eye_protection_enabled_summary">Reduce blue light via warm color tint</string>
-    <string name="color_temperature">Color Temperature</string>
-    <string name="color_temperature_summary">Current temperature: %1$d</string>
-    <string name="eye_protection_schedule">Scheduled</string>
-    <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
-    <string name="eye_protection_start_time">Start Time</string>
-    <string name="eye_protection_end_time">End Time</string>
+    <string name="eye_protection_intensity">Eye protection intensity</string>
+    <string name="eye_protection_intensity_summary">Current intensity: %1$d</string>
+    <string name="eye_protection_auto_night">Enable with dark reading mode</string>
+    <string name="eye_protection_auto_night_summary">Automatically follow the reader day/night mode</string>
 
     <!-- Tag Rules -->
     <string name="highlight_tag_config">Tag Rules</string>

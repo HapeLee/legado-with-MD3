@@ -9,6 +9,7 @@ import io.legado.app.domain.gateway.AppShellBooleanSetting
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppShellSettingsUpdate
 import io.legado.app.domain.gateway.AppShellStringSetting
+import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsUpdate
 import io.legado.app.domain.gateway.ThemeBooleanSetting
@@ -16,7 +17,6 @@ import io.legado.app.domain.gateway.ThemeIntSetting
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsUpdate
 import io.legado.app.domain.gateway.ThemeStringSetting
-import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -24,8 +24,6 @@ import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.openInputStream
-import java.io.File
-import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +32,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
+import java.io.File
+import java.io.FileOutputStream
 
 class ThemeConfigViewModel(
     private val appShellSettingsGateway: AppShellSettingsGateway,
@@ -116,10 +116,6 @@ class ThemeConfigViewModel(
                 readSettingsGateway.update(ReadSettingsUpdate.FontFolder(intent.path))
             }
             ThemeConfigIntent.RequestFontFolder -> _effects.tryEmit(ThemeConfigEffect.OpenFontFolder)
-            is ThemeConfigIntent.RequestTimePicker -> _effects.tryEmit(
-                ThemeConfigEffect.OpenTimePicker(intent.field, intent.currentValue)
-            )
-            is ThemeConfigIntent.SetTime -> setTime(intent.field, intent.value)
             ThemeConfigIntent.DismissRefactorTip -> updateTheme(
                 ThemeSettingsUpdate.BooleanValue(ThemeBooleanSetting.ShowRefactorTip, false)
             )
@@ -255,14 +251,6 @@ class ThemeConfigViewModel(
             else -> return
         }
         updateAppShell(AppShellSettingsUpdate.StringValue(setting, intent.path))
-    }
-
-    private fun setTime(field: ThemeTimeField, value: String) {
-        val setting = when (field) {
-            ThemeTimeField.EyeProtectionStart -> ThemeStringSetting.EyeProtectionStartTime
-            ThemeTimeField.EyeProtectionEnd -> ThemeStringSetting.EyeProtectionEndTime
-        }
-        updateTheme(ThemeSettingsUpdate.StringValue(setting, value))
     }
 
     private fun setBackground(uriString: String, dark: Boolean) {

@@ -1624,8 +1624,6 @@
     <string name="clipboard_empty_or_invalid">剪貼簿為空或格式無效</string>
     <string name="coll_volume">收起全部卷</string>
     <string name="collapse">收起</string>
-    <string name="color_temperature">色溫</string>
-    <string name="color_temperature_summary">目前色溫：%1$d</string>
     <string name="color_value">顏色值</string>
     <string name="compact_details">緊湊詳情</string>
     <string name="compact_grid">緊湊網格</string>
@@ -1730,10 +1728,10 @@
     <string name="eye_protection">護眼模式</string>
     <string name="eye_protection_enabled">啟用護眼模式</string>
     <string name="eye_protection_enabled_summary">透過暖色調減少藍光</string>
-    <string name="eye_protection_end_time">結束時間</string>
-    <string name="eye_protection_schedule">定時啟用</string>
-    <string name="eye_protection_schedule_summary">僅在設定的時間範圍內啟用</string>
-    <string name="eye_protection_start_time">開始時間</string>
+    <string name="eye_protection_intensity">護眼強度</string>
+    <string name="eye_protection_intensity_summary">目前強度：%1$d</string>
+    <string name="eye_protection_auto_night">深色閱讀模式時自動開啟</string>
+    <string name="eye_protection_auto_night_summary">跟隨閱讀介面的深色/淺色模式自動切換</string>
     <string name="filter_hide_in_shelf">隱藏書架中同源書籍</string>
     <string name="filter_hide_same_name_author">隱藏書架中不同源書籍</string>
     <string name="filter_show_all">顯示全部</string>
@@ -1828,9 +1826,6 @@
     <string name="lab_eink_display_title">E-Ink 顯示</string>
     <string name="lab_enabled_summary">開啟以顯示實驗性功能。這些功能可能不穩定。</string>
     <string name="lab_enabled_title">啟用實驗室</string>
-    <string name="lab_eye_protection_hint">可在主題 → 外觀中調整護眼設定</string>
-    <string name="lab_eye_protection_summary">為漫畫和小說閱讀器應用暖色調以減少眼睛疲勞</string>
-    <string name="lab_eye_protection_title">護眼模式</string>
     <string name="lab_setting">實驗室</string>
     <string name="less_count">較少（</string>
     <string name="light_mode">淺色模式</string>

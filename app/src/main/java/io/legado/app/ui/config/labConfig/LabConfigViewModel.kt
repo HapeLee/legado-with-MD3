@@ -35,7 +35,6 @@ class LabConfigViewModel(
                 when (intent) {
                     is LabConfigIntent.SetEnabled -> settings.copy(enabled = intent.value)
                     is LabConfigIntent.SetEInkDisplay -> settings.copy(eInkDisplay = intent.value)
-                    is LabConfigIntent.SetEyeProtection -> settings.copy(eyeProtection = intent.value)
                 }
             }
         }

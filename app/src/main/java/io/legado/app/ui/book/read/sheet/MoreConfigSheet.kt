@@ -17,6 +17,7 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -86,6 +87,9 @@ fun MoreConfigSheet(
                 onUseUnderlineChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseUnderlineGlobal(it)))
                 },
+                onOpenEyeProtectionConfig = {
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EyeProtection))
+                }
             )
 
             // Page control
@@ -174,6 +178,7 @@ private fun ScreenSettings(
     onAdaptSpecialStyleChange: (Boolean) -> Unit,
     onUseZhLayoutChange: (Boolean) -> Unit,
     onUseUnderlineChange: (Boolean) -> Unit,
+    onOpenEyeProtectionConfig:() -> Unit,
 ) {
     val screenDirectionEntries = stringArrayResource(R.array.screen_direction_title)
     val screenDirectionValues = stringArrayResource(R.array.screen_direction_value)
@@ -238,6 +243,10 @@ private fun ScreenSettings(
         title = stringResource(R.string.use_underline),
         checked = preferences.useUnderline,
         onCheckedChange = onUseUnderlineChange,
+    )
+    TinyClickableSettingItem(
+        title = stringResource(R.string.eye_protection),
+        onClick = onOpenEyeProtectionConfig,
     )
 }
 

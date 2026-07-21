@@ -244,7 +244,10 @@ object BackupConfig {
         PreferKey.showTitleBarIcons,
         PreferKey.showMenuIcon,
         PreferKey.titleBarMode,
-        PreferKey.shouldShowExpandButton
+        PreferKey.shouldShowExpandButton,
+        PreferKey.eyeProtectionEnabled,
+        PreferKey.colorTemperature,
+        PreferKey.eyeProtectionAutoNight,
     )
 
     private val themePrefKeys = arrayOf(

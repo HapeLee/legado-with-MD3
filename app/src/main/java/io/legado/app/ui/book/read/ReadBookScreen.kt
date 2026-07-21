@@ -27,6 +27,7 @@ import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.ContentProcessesSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
+import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
@@ -239,6 +240,16 @@ fun ReadBookScreen(
         customIcons = state.menuConfig.readMenuCustomIcons,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
+    )
+    EyeProtectionConfigSheet(
+        show = state.activeSheet is ReadBookSheet.EyeProtection,
+        enabled = preferences.eyeProtectionEnabled,
+        intensity = preferences.eyeProtectionIntensity,
+        autoNight = preferences.eyeProtectionAutoNight,
+        onDismissRequest = dismissSheet,
+        onEnabledChange = { onIntent(ReadBookIntent.EyeProtectionEnabledChanged(it)) },
+        onIntensityChange = { onIntent(ReadBookIntent.EyeProtectionIntensityChanged(it)) },
+        onAutoNightChange = { onIntent(ReadBookIntent.EyeProtectionAutoNightChanged(it)) },
     )
     TitleBarIconSheet(
         show = state.activeSheet is ReadBookSheet.TitleBarIconConfig,

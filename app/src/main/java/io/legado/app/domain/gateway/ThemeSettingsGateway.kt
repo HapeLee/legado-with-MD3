@@ -49,8 +49,6 @@ enum class ThemeBooleanSetting {
     OverrideBaseCardCornerRadius,
     OverrideBaseCardBorder,
     DisableSplicedColumnGroupCornerRadius,
-    EyeProtectionEnabled,
-    EyeProtectionSchedule,
     ShowRefactorTip,
     EnableCustomTagColors,
 }
@@ -84,8 +82,6 @@ enum class ThemeStringSetting {
     BookInfoDefaultCoverBackground,
     BackgroundImageLight,
     BackgroundImageDark,
-    EyeProtectionStartTime,
-    EyeProtectionEndTime,
     CustomTagColorsJson,
 }
 

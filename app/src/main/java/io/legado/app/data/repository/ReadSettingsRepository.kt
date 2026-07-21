@@ -49,6 +49,9 @@ class ReadSettingsRepository(
             is ReadSettingsUpdate.TextBottomJustify -> setTextBottomJustify(update.value)
             is ReadSettingsUpdate.AdaptSpecialStyle -> setAdaptSpecialStyle(update.value)
             is ReadSettingsUpdate.UseZhLayout -> setUseZhLayout(update.value)
+            is ReadSettingsUpdate.EyeProtectionEnabled -> setEyeProtectionEnabled(update.value)
+            is ReadSettingsUpdate.EyeProtectionIntensity -> setEyeProtectionIntensity(update.value)
+            is ReadSettingsUpdate.EyeProtectionAutoNight -> setEyeProtectionAutoNight(update.value)
             is ReadSettingsUpdate.ShowBrightnessView -> setShowBrightnessView(update.value)
             is ReadSettingsUpdate.BrightnessVwPos -> setBrightnessVwPos(update.value)
             is ReadSettingsUpdate.Brightness -> setReadBrightness(update.value)
@@ -100,6 +103,15 @@ class ReadSettingsRepository(
 
     suspend fun setTitleBarMode(value: String) =
         settingsRepository.putString(PreferKey.titleBarMode, value)
+
+    suspend fun setEyeProtectionEnabled(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.eyeProtectionEnabled, value)
+
+    suspend fun setEyeProtectionIntensity(value: Int) =
+        settingsRepository.putInt(PreferKey.colorTemperature, value.coerceIn(0, 100))
+
+    suspend fun setEyeProtectionAutoNight(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.eyeProtectionAutoNight, value)
 
     suspend fun setMenuAlpha(value: Int) =
         settingsRepository.putInt(PreferKey.menuAlpha, value)
@@ -383,6 +395,9 @@ class ReadSettingsRepository(
             textBottomJustify = compatDsValue(Keys.TextBottomJustify, true),
             adaptSpecialStyle = compatDsValue(Keys.AdaptSpecialStyle, true),
             useZhLayout = compatDsValue(Keys.UseZhLayout, false),
+            eyeProtectionEnabled = compatDsValue(Keys.EyeProtectionEnabled, false),
+            eyeProtectionIntensity = compatDsValue(Keys.EyeProtectionIntensity, 50).coerceIn(0, 100),
+            eyeProtectionAutoNight = compatDsValue(Keys.EyeProtectionAutoNight, false),
             showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "0"),
             brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
             readBrightness = compatDsValue(Keys.ReadBrightness, 100),
@@ -491,6 +506,9 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
+        val EyeProtectionEnabled = booleanPreferencesKey(PreferKey.eyeProtectionEnabled)
+        val EyeProtectionIntensity = intPreferencesKey(PreferKey.colorTemperature)
+        val EyeProtectionAutoNight = booleanPreferencesKey(PreferKey.eyeProtectionAutoNight)
         val ShowBrightnessView = stringPreferencesKey(PreferKey.showBrightnessView)
         val BrightnessVwPos = stringPreferencesKey(PreferKey.brightnessVwPos)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)

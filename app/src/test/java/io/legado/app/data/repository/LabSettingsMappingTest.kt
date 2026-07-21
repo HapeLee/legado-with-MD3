@@ -19,7 +19,6 @@ class LabSettingsMappingTest {
         val samples = listOf(
             LabSettings(enabled = true),
             LabSettings(eInkDisplay = true),
-            LabSettings(eyeProtection = true),
         )
 
         samples.forEach { expected ->
@@ -32,11 +31,11 @@ class LabSettingsMappingTest {
         val current = LabSettings(enabled = true)
 
         val diff = current.diffPrefMap(
-            transform = { it.copy(eyeProtection = true) },
+            transform = { it.copy(eInkDisplay = true) },
             toPrefMap = LabSettings::toPrefMap,
         )
 
-        assertEquals(mapOf(PreferKey.labEyeProtection to true), diff)
+        assertEquals(mapOf(PreferKey.labEInkDisplay to true), diff)
         assertTrue(
             current.diffPrefMap(
                 transform = { it.copy() },
@@ -52,8 +51,8 @@ class LabSettingsMappingTest {
             transform = { it.copy(enabled = true) },
             toPrefMap = LabSettings::toPrefMap,
         )
-        val eyeProtectionDiff = current.diffPrefMap(
-            transform = { it.copy(eyeProtection = true) },
+        val eInkDisplayDiff = current.diffPrefMap(
+            transform = { it.copy(eInkDisplay = true) },
             toPrefMap = LabSettings::toPrefMap,
         )
         val core = PendingOverlayCore(
@@ -63,7 +62,7 @@ class LabSettingsMappingTest {
             persistAll = { error("不会执行落盘") },
         )
         val start = CountDownLatch(1)
-        val writers = listOf(enabledDiff, eyeProtectionDiff).map { diff ->
+        val writers = listOf(enabledDiff, eInkDisplayDiff).map { diff ->
             thread(start = true) {
                 start.await()
                 core.putAll(diff)
@@ -74,7 +73,7 @@ class LabSettingsMappingTest {
         writers.forEach(Thread::join)
 
         assertEquals(
-            current.copy(enabled = true, eyeProtection = true),
+            current.copy(enabled = true, eInkDisplay = true),
             core.preferencesFlow.value.toLabSettings(),
         )
     }

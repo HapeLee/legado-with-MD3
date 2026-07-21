@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
+import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -166,6 +167,16 @@ fun ReadConfigScreen(
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.UseZhLayoutChanged(it))
                     }
+                )
+
+                ClickableSettingItem(
+                    title = stringResource(R.string.eye_protection),
+                    option = if (settings.eyeProtectionEnabled) {
+                        stringResource(R.string.enabled)
+                    } else {
+                        stringResource(R.string.disabled)
+                    },
+                    onClick = { onIntent(ReadConfigIntent.OpenEyeProtection) },
                 )
 
                     DropdownListSettingItem(
@@ -400,4 +411,15 @@ fun ReadConfigScreen(
             onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
         )
     }
+
+    EyeProtectionConfigSheet(
+        show = state.activeSheet == ReadConfigSheet.EyeProtection,
+        enabled = settings.eyeProtectionEnabled,
+        intensity = settings.eyeProtectionIntensity,
+        autoNight = settings.eyeProtectionAutoNight,
+        onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
+        onEnabledChange = { onIntent(ReadConfigIntent.EyeProtectionEnabledChanged(it)) },
+        onIntensityChange = { onIntent(ReadConfigIntent.EyeProtectionIntensityChanged(it)) },
+        onAutoNightChange = { onIntent(ReadConfigIntent.EyeProtectionAutoNightChanged(it)) },
+    )
 }
