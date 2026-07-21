@@ -1,7 +1,10 @@
 import importlib.util
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 
 RUNNER_PATH = Path(__file__).parents[1] / "runner.py"
@@ -21,6 +24,7 @@ class ScenarioValidationTest(unittest.TestCase):
             "schemaVersion": 1,
             "name": "reader/page-turn",
             "fixture": "long-chapter-v1",
+            "entry": {"type": "reader"},
             "readyMarker": "marker",
             "actions": [{"type": "tap"}],
             "assertions": ["reader_ready"],
@@ -67,8 +71,19 @@ java.lang.IndexOutOfBoundsException: Index 18 out of bounds
         failure = runner.parse_failure(crash)
         self.assertEqual("uncaught_exception", failure["category"])
         self.assertEqual("IndexOutOfBoundsException", failure["exceptionType"])
-        self.assertEqual("high", failure["suspectedFrame"]["confidence"])
+        self.assertEqual("medium", failure["suspectedFrame"]["confidence"])
         self.assertEqual(418, failure["suspectedFrame"]["line"])
+
+    def test_prefers_deepest_caused_by_as_root_cause_candidate(self):
+        crash = """FATAL EXCEPTION: main
+java.lang.RuntimeException: wrapper
+Caused by: java.lang.IllegalStateException: middle
+Caused by: java.lang.IndexOutOfBoundsException: root
+"""
+        failure = runner.parse_failure(crash)
+        self.assertEqual("IndexOutOfBoundsException", failure["exceptionType"])
+        self.assertEqual("root", failure["message"])
+        self.assertEqual(["fatal_exception"], failure["detectedSignals"])
 
     def test_crash_has_priority_over_assertion_failure(self):
         scenario = runner.load_scenario("reader/page-turn")
@@ -93,6 +108,39 @@ class CommandDecodingTest(unittest.TestCase):
             [sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'log\\xc0tail')"],
         )
         self.assertEqual("log\ufffdtail", result.stdout)
+
+    @mock.patch.object(runner, "cleanup_device")
+    @mock.patch.object(runner, "run_command")
+    def test_install_retries_with_streaming_after_timeout(self, run_command, cleanup_device):
+        run_command.side_effect = [
+            subprocess.TimeoutExpired(["adb", "install"], 120),
+            subprocess.CompletedProcess(["adb", "install"], 0, "Success\n"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            mode = runner.install_apk("device", Path("app.apk"), Path(directory))
+            install_log = (Path(directory) / "install.log").read_text(encoding="utf-8")
+        self.assertEqual("streaming_retry", mode)
+        self.assertIn("timeout=120s", install_log)
+        cleanup_device.assert_called_once_with("device")
+
+
+class ReaderContentTest(unittest.TestCase):
+    def test_extracts_read_view_content_only(self):
+        dump = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<hierarchy rotation="0">
+  <node class="android.widget.TextView" package="io.legato.kazusa.debug" content-desc="22:30" />
+  <node class="io.legado.app.ui.book.read.page.ReadView" package="io.legato.kazusa.debug" content-desc="LEGADO_DEBUG_LONG_CHAPTER_V1 page body" />
+</hierarchy>
+UI hierarchy dumped to: /dev/tty
+"""
+        self.assertEqual(
+            "LEGADO_DEBUG_LONG_CHAPTER_V1 page body",
+            runner.extract_reader_content(dump),
+        )
+
+    def test_returns_empty_when_read_view_is_absent(self):
+        dump = """<?xml version="1.0"?><hierarchy><node class="android.view.View" /></hierarchy>"""
+        self.assertEqual("", runner.extract_reader_content(dump))
 
 
 if __name__ == "__main__":

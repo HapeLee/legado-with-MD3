@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 from typing import Any, Sequence
+import xml.etree.ElementTree as ET
 
 
 EXIT_ASSERTION = 1
@@ -77,12 +78,15 @@ def validate_scenario(scenario: Any, requested_name: str | None = None) -> None:
     timeout = scenario.get("readyTimeoutSeconds", 30)
     if not isinstance(timeout, int) or timeout < 1 or timeout > 300:
         raise ScenarioError("readyTimeoutSeconds must be between 1 and 300")
+    entry = scenario.get("entry")
+    if not isinstance(entry, dict) or entry.get("type") != "reader":
+        raise ScenarioError("entry.type must be reader")
 
     actions = scenario.get("actions")
     if not isinstance(actions, list) or not actions:
         raise ScenarioError("actions must be a non-empty array")
     for index, action in enumerate(actions):
-        if not isinstance(action, dict) or action.get("type") not in {"open_reader", "turn_page"}:
+        if not isinstance(action, dict) or action.get("type") != "turn_page":
             raise ScenarioError(f"actions[{index}] has an unsupported type")
         if action["type"] == "turn_page":
             if action.get("direction") not in {"next", "previous"}:
@@ -95,7 +99,7 @@ def validate_scenario(scenario: Any, requested_name: str | None = None) -> None:
     supported = {
         "reader_ready",
         "reader_activity_visible",
-        "page_content_changed",
+        "reader_content_changed",
         "no_fatal_exception",
     }
     if not isinstance(assertions, list) or not assertions:
@@ -248,12 +252,33 @@ def build_and_install(device: str, run_dir: Path) -> tuple[dict[str, Any], Path]
     if result.returncode != 0:
         raise CommandError(command, result)
     apk = find_debug_apk()
-    install = adb(device, "install", "-r", "-t", str(apk), timeout=180, check=False)
-    (run_dir / "install.log").write_text(install.stdout, encoding="utf-8")
-    if install.returncode != 0:
-        raise CommandError(["adb", "install", str(apk)], install)
+    install_mode = install_apk(device, apk, run_dir)
     build["apk"] = str(apk.relative_to(PROJECT_ROOT))
+    build["installMode"] = install_mode
     return build, apk
+
+
+def install_apk(device: str, apk: Path, run_dir: Path) -> str:
+    attempts = [
+        ("no_streaming", ["adb", "-s", device, "install", "--no-streaming", "-r", "-t", str(apk)], 120),
+        ("streaming_retry", ["adb", "-s", device, "install", "-r", "-t", str(apk)], 60),
+    ]
+    log_parts = []
+    last_error: Exception | None = None
+    for mode, command, timeout in attempts:
+        try:
+            result = run_command(command, timeout=timeout, check=False)
+            log_parts.append(f"[{mode}] exit={result.returncode}\n{result.stdout}")
+            if result.returncode == 0 and "Success" in result.stdout:
+                (run_dir / "install.log").write_text("\n".join(log_parts), encoding="utf-8")
+                return mode
+            last_error = CommandError(command, result)
+        except subprocess.TimeoutExpired as error:
+            log_parts.append(f"[{mode}] timeout={timeout}s\n")
+            last_error = error
+        cleanup_device(device)
+    (run_dir / "install.log").write_text("\n".join(log_parts), encoding="utf-8")
+    raise RuntimeError(f"APK install failed after {len(attempts)} attempts: {last_error}")
 
 
 def launch_fixture(device: str, fixture: str, session_id: str) -> None:
@@ -289,15 +314,40 @@ def current_focus(device: str) -> str:
     return adb(device, "shell", "dumpsys", "window", "windows", timeout=20, check=False).stdout
 
 
-def wait_until_reader_ready(device: str, marker: str, timeout_seconds: int) -> tuple[bool, str]:
+def extract_reader_content(dump: str) -> str:
+    start = dump.find("<?xml")
+    end = dump.rfind("</hierarchy>")
+    if start < 0 or end < 0:
+        return ""
+    try:
+        root = ET.fromstring(dump[start : end + len("</hierarchy>")])
+    except ET.ParseError:
+        return ""
+    contents = [
+        node.attrib.get("content-desc", "")
+        for node in root.iter("node")
+        if node.attrib.get("package") == PACKAGE
+        and node.attrib.get("class") == "io.legado.app.ui.book.read.page.ReadView"
+    ]
+    return max(contents, key=len, default="")
+
+
+def wait_until_reader_ready(device: str, marker: str, timeout_seconds: int) -> tuple[bool, str, str]:
     deadline = time.monotonic() + timeout_seconds
     latest = ""
+    content = ""
     while time.monotonic() < deadline:
         latest = ui_dump(device)
-        if marker in latest and PACKAGE in current_focus(device):
-            return True, latest
+        content = extract_reader_content(latest)
+        if marker in content and PACKAGE in current_focus(device):
+            return True, latest, content
         time.sleep(0.5)
-    return False, latest
+    return False, latest, content
+
+
+def application_pid(device: str) -> str | None:
+    result = adb(device, "shell", "pidof", PACKAGE, timeout=10, check=False)
+    return result.stdout.strip().split()[0] if result.returncode == 0 and result.stdout.strip() else None
 
 
 def screen_size(device: str) -> tuple[int, int]:
@@ -327,8 +377,6 @@ def perform_actions(device: str, scenario: dict[str, Any], action_repeat: int) -
     width, height = screen_size(device)
     performed = 0
     for action in scenario["actions"]:
-        if action["type"] == "open_reader":
-            continue
         direction = action["direction"]
         count = action.get("count", 1) * action_repeat
         x = round(width * (0.84 if direction == "next" else 0.16))
@@ -340,15 +388,38 @@ def perform_actions(device: str, scenario: dict[str, Any], action_repeat: int) -
     return performed
 
 
-def collect_logcat(device: str, run_dir: Path) -> str:
+def collect_logcat(
+    device: str,
+    run_dir: Path,
+    app_pid: str | None = None,
+    session_id: str | None = None,
+) -> str:
     logcat = adb(device, "logcat", "-d", "-v", "threadtime", timeout=45, check=False).stdout
     (run_dir / "logcat.txt").write_text(logcat, encoding="utf-8")
-    crash = extract_crash(logcat, PACKAGE)
+    session_logcat = ""
+    if app_pid:
+        session_logcat = adb(
+            device,
+            "logcat",
+            "-d",
+            f"--pid={app_pid}",
+            "-v",
+            "threadtime",
+            timeout=45,
+            check=False,
+        ).stdout
+    if session_id:
+        session_lines = [line for line in logcat.splitlines() if f"[session={session_id}]" in line]
+        for line in session_lines:
+            if line not in session_logcat:
+                session_logcat += line + "\n"
+    (run_dir / "session-logcat.txt").write_text(session_logcat, encoding="utf-8")
+    crash = extract_crash(logcat, PACKAGE, app_pid)
     (run_dir / "crash.txt").write_text(crash, encoding="utf-8")
     return logcat
 
 
-def extract_crash(logcat: str, package: str = PACKAGE) -> str:
+def extract_crash(logcat: str, package: str = PACKAGE, app_pid: str | None = None) -> str:
     lines = logcat.splitlines()
     chunks = []
     for index, line in enumerate(lines):
@@ -356,6 +427,8 @@ def extract_crash(logcat: str, package: str = PACKAGE) -> str:
         if f"ANR in {package}" in line:
             chunks.extend(chunk)
         elif "FATAL EXCEPTION:" in line and any(package in item for item in chunk[:10]):
+            chunks.extend(chunk)
+        elif "Fatal signal " in line and app_pid and re.search(rf"\b{re.escape(app_pid)}\b", line):
             chunks.extend(chunk)
     if not chunks:
         return ""
@@ -366,16 +439,35 @@ def parse_failure(crash: str) -> dict[str, Any] | None:
     if not crash:
         return None
     if "ANR in" in crash:
-        return {"category": "anr", "stacktraceArtifact": "crash.txt"}
-    exception = re.search(r"(?:Caused by: )?([\w.$]+(?:Exception|Error))(?:: ([^\n]+))?", crash)
+        return {
+            "category": "anr",
+            "confidence": "high",
+            "detectedSignals": ["anr"],
+            "stacktraceArtifact": "crash.txt",
+        }
+    if "Fatal signal " in crash:
+        return {
+            "category": "native_crash",
+            "confidence": "high",
+            "detectedSignals": ["fatal_signal"],
+            "stacktraceArtifact": "crash.txt",
+        }
+    exceptions = list(
+        re.finditer(r"(Caused by: )?([\w.$]+(?:Exception|Error))(?:: ([^\n]+))?", crash)
+    )
+    caused_by = [match for match in exceptions if match.group(1)]
+    exception = caused_by[-1] if caused_by else (exceptions[0] if exceptions else None)
     failure: dict[str, Any] = {
         "category": "uncaught_exception",
+        "confidence": "high",
+        "detectedSignals": ["fatal_exception"],
         "stacktraceArtifact": "crash.txt",
     }
     if exception:
-        failure["exceptionType"] = exception.group(1).split(".")[-1]
-        if exception.group(2):
-            failure["message"] = exception.group(2).strip()
+        failure["exceptionType"] = exception.group(2).split(".")[-1]
+        failure["exceptionConfidence"] = "medium" if exceptions else "low"
+        if exception.group(3):
+            failure["message"] = exception.group(3).strip()
     frame = re.search(
         r"at (io\.legado\.app\.[\w.$]+)\.([\w$<>]+)\(([^():]+):(\d+)\)",
         crash,
@@ -386,7 +478,7 @@ def parse_failure(crash: str) -> dict[str, Any] | None:
             "method": frame.group(2),
             "file": frame.group(3),
             "line": int(frame.group(4)),
-            "confidence": "high",
+            "confidence": "medium",
         }
     return failure
 
@@ -410,7 +502,7 @@ def make_summary(
     assertion_values = {
         "reader_ready": ready,
         "reader_activity_visible": activity_visible,
-        "page_content_changed": content_changed,
+        "reader_content_changed": content_changed,
         "no_fatal_exception": failure is None,
     }
     assertions = [
@@ -436,6 +528,7 @@ def make_summary(
         "artifacts": {
             "metadata": "metadata.json",
             "logcat": "logcat.txt",
+            "sessionLogcat": "session-logcat.txt",
             "crash": "crash.txt",
             "beforeScreenshot": "before.png",
             "afterScreenshot": "after.png",
@@ -468,6 +561,10 @@ def error_summary(
     if build is not None:
         summary["build"] = build
     return summary
+
+
+def cleanup_device(device: str) -> None:
+    adb(device, "shell", "am", "force-stop", PACKAGE, timeout=20, check=False)
 
 
 def execute(args: argparse.Namespace) -> int:
@@ -504,13 +601,16 @@ def execute(args: argparse.Namespace) -> int:
                 "artifact": "build.log" if (run_dir / "build.log").exists() else "install.log",
             }
         summary = error_summary(session_id, args.scenario, fixture, EXIT_BUILD, "build_or_install", str(error), build)
+        cleanup_device(device)
         write_json(run_dir / "summary.json", summary)
         print(run_dir / "summary.json")
         return EXIT_BUILD
 
+    app_pid: str | None = None
     try:
         launch_fixture(device, fixture, session_id)
-        ready, before_dump = wait_until_reader_ready(
+        app_pid = application_pid(device)
+        ready, before_dump, before_content = wait_until_reader_ready(
             device,
             scenario["readyMarker"],
             scenario.get("readyTimeoutSeconds", 30),
@@ -519,18 +619,22 @@ def execute(args: argparse.Namespace) -> int:
         action_count = perform_actions(device, scenario, args.action_repeat) if ready else 0
         time.sleep(0.5)
         after_dump = ui_dump(device)
+        after_content = extract_reader_content(after_dump)
         capture_screenshot(device, run_dir / "after.png")
         focus = current_focus(device)
         activity_visible = PACKAGE in focus and MAIN_ACTIVITY in focus
-        content_changed = ready and sha256_text(before_dump) != sha256_text(after_dump)
-        logcat = collect_logcat(device, run_dir)
-        failure = parse_failure(extract_crash(logcat))
+        content_changed = ready and bool(after_content) and before_content != after_content
+        logcat = collect_logcat(device, run_dir, app_pid, session_id)
+        failure = parse_failure(extract_crash(logcat, PACKAGE, app_pid))
         metadata.update(
             {
                 "finishedAt": dt.datetime.now().astimezone().isoformat(timespec="milliseconds"),
                 "actionRepeat": args.action_repeat,
                 "uiBeforeSha256": sha256_text(before_dump),
                 "uiAfterSha256": sha256_text(after_dump),
+                "readerContentBeforeSha256": sha256_text(before_content),
+                "readerContentAfterSha256": sha256_text(after_content),
+                "appPid": app_pid,
             }
         )
         write_json(run_dir / "metadata.json", metadata)
@@ -547,7 +651,7 @@ def execute(args: argparse.Namespace) -> int:
         )
     except (RuntimeError, CommandError, subprocess.TimeoutExpired, OSError) as error:
         try:
-            collect_logcat(device, run_dir)
+            collect_logcat(device, run_dir, app_pid, session_id)
         except Exception:
             pass
         summary = error_summary(
@@ -560,6 +664,8 @@ def execute(args: argparse.Namespace) -> int:
             build,
         )
         exit_code = EXIT_ENVIRONMENT
+    finally:
+        cleanup_device(device)
     write_json(run_dir / "summary.json", summary)
     print(run_dir / "summary.json")
     return exit_code

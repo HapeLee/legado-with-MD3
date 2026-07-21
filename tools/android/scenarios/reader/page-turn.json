@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "name": "reader/page-turn",
   "fixture": "long-chapter-v1",
+  "entry": { "type": "reader" },
   "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
   "readyTimeoutSeconds": 30,
   "actions": [
-    { "type": "open_reader" },
     { "type": "turn_page", "direction": "next", "count": 1 }
   ],
   "assertions": [
     "reader_ready",
     "reader_activity_visible",
-    "page_content_changed",
+    "reader_content_changed",
     "no_fatal_exception"
   ]
 }
