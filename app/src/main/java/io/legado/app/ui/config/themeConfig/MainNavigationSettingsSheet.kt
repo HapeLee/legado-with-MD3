@@ -24,6 +24,7 @@ import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.utils.move
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -36,7 +37,10 @@ fun MainNavigationSettingsSheet(
     onSetVisible: (String, Boolean) -> Unit,
     onSetOrder: (String) -> Unit,
     onSetDefault: (String) -> Unit,
+    onRequestNavigationIcon: (String) -> Unit,
+    onClearNavigationIcon: (String) -> Unit,
 ) {
+    var showNavigationIcons by remember(show) { mutableStateOf(false) }
     var navigationItems by remember(show) {
         mutableStateOf(MainDestination.ordered(settings.mainNavigationOrder))
     }
@@ -95,6 +99,22 @@ fun MainNavigationSettingsSheet(
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = onSetDefault,
             )
+            val customIconCount = listOf(
+                settings.navIconHome,
+                settings.navIconBookshelf,
+                settings.navIconExplore,
+                settings.navIconRss,
+                settings.navIconMy,
+            ).count { it.isNotEmpty() }
+            ClickableSettingItem(
+                title = stringResource(R.string.theme_config_nav_icons),
+                description = if (customIconCount > 0) {
+                    stringResource(R.string.theme_config_nav_icons_custom_count, customIconCount)
+                } else {
+                    stringResource(R.string.theme_config_nav_icons_default)
+                },
+                onClick = { showNavigationIcons = true },
+            )
             Spacer(modifier = Modifier.padding(bottom = 4.dp))
             LazyColumn(
                 state = navigationListState,
@@ -149,4 +169,12 @@ fun MainNavigationSettingsSheet(
             }
         }
     }
+
+    NavIconManageSheet(
+        show = showNavigationIcons,
+        settings = settings,
+        onDismissRequest = { showNavigationIcons = false },
+        onSelectIcon = onRequestNavigationIcon,
+        onClearIcon = onClearNavigationIcon,
+    )
 }
