@@ -904,7 +904,7 @@
     <string name="show_discovery">顯示發現</string>
     <string name="show_home">顯示首頁</string>
     <string name="main_navigation_settings">首頁與導覽</string>
-    <string name="main_navigation_settings_summary">設定首頁、發現、訂閱和預設主頁</string>
+    <string name="main_navigation_settings_summary">設定首頁、發現、訂閱、預設主頁和導航欄圖示</string>
     <string name="navigation_order">導覽順序</string>
     <string name="style">樣式</string>
     <string name="group_style">分組樣式</string>
@@ -1689,7 +1689,6 @@
     <string name="theme_config_blur_radius_performance_summary">較大的模糊半徑可能降低效能</string>
     <string name="theme_config_divider_width">分隔線寬度</string>
     <string name="theme_config_divider_length">分隔線長度</string>
-    <string name="theme_config_nav_icon_settings">導航欄圖示設定</string>
     <string name="theme_config_nav_icons">導航欄圖示</string>
     <string name="theme_config_nav_icons_custom_count">已設定 %1$d 個自訂圖示</string>
     <string name="theme_config_nav_icons_default">使用預設圖示</string>

@@ -1072,7 +1072,7 @@
     <string name="show_discovery">Show Discovery</string>
     <string name="show_home">Show Home</string>
     <string name="main_navigation_settings">Home and navigation</string>
-    <string name="main_navigation_settings_summary">Configure Home, Discovery, Subscriptions, and the start page</string>
+    <string name="main_navigation_settings_summary">Configure Home, Discovery, Subscriptions, start page, and navigation icons</string>
     <string name="navigation_order">Navigation order</string>
     <string name="style">Style</string>
     <string name="group_style">Group style</string>
@@ -1587,7 +1587,6 @@
     <string name="theme_config_blur_radius_performance_summary">Higher blur radius may reduce performance</string>
     <string name="theme_config_divider_width">Divider Width</string>
     <string name="theme_config_divider_length">Divider Length</string>
-    <string name="theme_config_nav_icon_settings">Navigation Bar Icon Settings</string>
     <string name="theme_config_nav_icons">Navigation Bar Icons</string>
     <string name="theme_config_nav_icons_custom_count">%1$d custom icons set</string>
     <string name="theme_config_nav_icons_default">Using default icons</string>

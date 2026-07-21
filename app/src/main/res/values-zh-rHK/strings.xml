@@ -901,7 +901,7 @@
     <string name="show_discovery">顯示發現</string>
     <string name="show_home">顯示首頁</string>
     <string name="main_navigation_settings">首頁與導覽</string>
-    <string name="main_navigation_settings_summary">設定首頁、發現、訂閱和預設主頁</string>
+    <string name="main_navigation_settings_summary">設定首頁、發現、訂閱、預設主頁和導航欄圖標</string>
     <string name="navigation_order">導覽順序</string>
     <string name="style">樣式</string>
     <string name="group_style">分組樣式</string>
@@ -2170,7 +2170,6 @@
     <string name="theme_config_label_color_name">標籤 %1$d</string>
     <string name="theme_config_manage_label_colors">管理標籤顏色</string>
     <string name="theme_config_miuix_experimental_warning">Miuix 目前為實驗性功能，不適用於 View 介面。</string>
-    <string name="theme_config_nav_icon_settings">導航欄圖標設定</string>
     <string name="theme_config_nav_icons">導航欄圖標</string>
     <string name="theme_config_nav_icons_custom_count">已設定 %1$d 個自訂圖標</string>
     <string name="theme_config_nav_icons_default">使用預設圖標</string>

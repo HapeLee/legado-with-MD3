@@ -1032,7 +1032,7 @@
     <string name="show_discovery">显示发现</string>
     <string name="show_home">显示首页</string>
     <string name="main_navigation_settings">首页与导航</string>
-    <string name="main_navigation_settings_summary">配置首页、发现、订阅和默认主页</string>
+    <string name="main_navigation_settings_summary">配置首页、发现、订阅、默认主页和导航栏图标</string>
     <string name="navigation_order">导航顺序</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
@@ -1527,7 +1527,6 @@
     <string name="theme_config_blur_radius_performance_summary">模糊半径越大，系统运行越卡顿</string>
     <string name="theme_config_divider_width">分割线粗细</string>
     <string name="theme_config_divider_length">分割线长度</string>
-    <string name="theme_config_nav_icon_settings">导航栏图标设置</string>
     <string name="theme_config_nav_icons">导航栏图标</string>
     <string name="theme_config_nav_icons_custom_count">已设置 %1$d 个自定义图标</string>
     <string name="theme_config_nav_icons_default">使用默认图标</string>

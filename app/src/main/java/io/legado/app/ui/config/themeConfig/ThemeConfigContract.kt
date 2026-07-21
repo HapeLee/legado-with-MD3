@@ -17,7 +17,6 @@ data class ThemeConfigUiState(
 
 sealed interface ThemeConfigSheet {
     data class Background(val dark: Boolean) : ThemeConfigSheet
-    data object NavigationIcons : ThemeConfigSheet
     data object MainNavigation : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet

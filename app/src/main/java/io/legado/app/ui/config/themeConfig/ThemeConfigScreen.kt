@@ -812,30 +812,6 @@ fun ThemeConfigScreen(
                 }
             }
 
-            // Nav icon settings
-            item {
-                SplicedColumnGroup(title = stringResource(R.string.theme_config_nav_icon_settings)) {
-                    val customCount = listOf(
-                        appShell.navIconHome,
-                        appShell.navIconBookshelf,
-                        appShell.navIconExplore,
-                        appShell.navIconRss,
-                        appShell.navIconMy
-                    ).count { it.isNotEmpty() }
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_config_nav_icons),
-                        description = if (customCount > 0) {
-                            stringResource(R.string.theme_config_nav_icons_custom_count, customCount)
-                        } else {
-                            stringResource(R.string.theme_config_nav_icons_default)
-                        },
-                        onClick = {
-                            onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.NavigationIcons))
-                        }
-                    )
-                }
-            }
-
             item {
                 SplicedColumnGroup {
                     ClickableSettingItem(
@@ -875,14 +851,6 @@ fun ThemeConfigScreen(
         onRemoveImage = { onIntent(ThemeConfigIntent.RemoveBackground(it)) },
     )
 
-    NavIconManageSheet(
-        show = state.activeSheet == ThemeConfigSheet.NavigationIcons,
-        settings = appShell,
-        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onSelectIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
-        onClearIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
-    )
-
     MainNavigationSettingsSheet(
         show = state.activeSheet == ThemeConfigSheet.MainNavigation,
         settings = appShell,
@@ -892,6 +860,8 @@ fun ThemeConfigScreen(
         },
         onSetOrder = { onIntent(ThemeConfigIntent.SetMainNavigationOrder(it)) },
         onSetDefault = { onIntent(ThemeConfigIntent.SetDefaultHomePage(it)) },
+        onRequestNavigationIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
+        onClearNavigationIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
     )
 
 
