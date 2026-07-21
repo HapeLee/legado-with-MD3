@@ -187,6 +187,8 @@ import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
+import io.legado.app.model.ReaderSession
+import io.legado.app.model.LegacyReaderSession
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
 import io.legado.app.help.coil.CoverFetcher
@@ -356,6 +358,7 @@ val appModule = module {
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     singleOf(::ReadAloudSettingsRepository)
     singleOf(::ReadAloudSessionStore)
+    single<ReaderSession> { LegacyReaderSession() }
     single<HttpTtsEngineGateway> { HttpTtsEngineRepository(get()) }
     single<ReadAloudSettingsGateway> { get<ReadAloudSettingsRepository>() }
     singleOf(::HttpTtsRepository)
@@ -681,6 +684,7 @@ val appModule = module {
             httpTtsRepository = get(),
             bookSourceRepository = get(),
             bookmarkRepository = get(),
+            readerSession = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)

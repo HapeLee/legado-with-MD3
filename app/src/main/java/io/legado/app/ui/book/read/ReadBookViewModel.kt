@@ -98,6 +98,7 @@ import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReaderSession
 import io.legado.app.model.ReadSessionState
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.activeReadAloudProgress
@@ -210,6 +211,7 @@ class ReadBookViewModel(
     private val httpTtsRepository: HttpTtsRepository,
     private val bookSourceRepository: BookSourceRepository,
     private val bookmarkRepository: BookmarkRepository,
+    private val readerSession: ReaderSession,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -307,7 +309,21 @@ class ReadBookViewModel(
         collectEyeProtectionSettings()
         collectReadAloudPreferences()
         collectEventBus()
+        collectReaderSession()
         execute { syncConfiguredTtsVoices() }
+    }
+
+    /**
+     * 消费 [ReaderSession.state]（Track A A5）：会话快照在任意受控 mutator 完成后发射，
+     * 据此驱动 UiState 刷新。与遗留 CallBack 刷新路径叠加、幂等（相同结果 StateFlow 不再发），
+     * 收集在 mutator 返回之后异步触发，故 syncFromReadBook 读到的 ReadBook 字段已是最终态。
+     */
+    private fun collectReaderSession() {
+        viewModelScope.launch {
+            readerSession.state.collect {
+                _uiState.update { state -> syncFromReadBook(state) }
+            }
+        }
     }
 
     // --- MVI Intent Dispatcher ---
