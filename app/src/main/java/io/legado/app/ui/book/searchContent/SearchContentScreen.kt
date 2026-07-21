@@ -65,6 +65,7 @@ import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -193,7 +194,19 @@ fun SearchContentScreen(
                     SearchBar(
                         query = searchQuery,
                         scrollState = listState,
-                        onQueryChange = { onIntent(SearchContentIntent.UpdateQuery(it)) }
+                        onQueryChange = { onIntent(SearchContentIntent.UpdateQuery(it)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                SmallPlainButton(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    onClick = {
+                                        onIntent(SearchContentIntent.UpdateQuery(""))
+                                    },
+                                    icon = AppIcons.Close,
+                                    contentDescription = stringResource(R.string.clear)
+                                )
+                            }
+                        }
                     )
                 }
 

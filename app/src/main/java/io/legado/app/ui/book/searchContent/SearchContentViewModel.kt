@@ -86,6 +86,7 @@ class SearchContentViewModel(
 
     private var searchJob: Job? = null
     private var historyJob: Job? = null
+    private var resultOpened = false
 
     init {
         initBook()
@@ -162,6 +163,7 @@ class SearchContentViewModel(
         val state = _uiState.value
         if (state.searchQuery.isBlank()) {
             searchContentRepository.clearSession(bookUrl)
+            SearchContentResult.clearResults(bookUrl)
             _uiState.update {
                 it.copy(isSearching = false, searchResults = persistentListOf(), error = null)
             }
@@ -199,7 +201,7 @@ class SearchContentViewModel(
 
     private fun leaveSearch() {
         searchJob?.cancel()
-        if (_uiState.value.searchQuery.isBlank()) SearchContentResult.clearResults(bookUrl)
+        if (!resultOpened) SearchContentResult.clearResults(bookUrl)
         _uiState.update {
             it.copy(
                 searchQuery = "",
@@ -215,6 +217,7 @@ class SearchContentViewModel(
         val results = _uiState.value.searchResults
         val index = results.indexOf(result)
         if (index < 0) return
+        resultOpened = true
         SearchContentResult.emitResult(
             SearchContentResult.Result(
                 bookUrl = bookUrl,
