@@ -2486,6 +2486,7 @@ class ReadBookViewModel(
                 readMenuTopBarLiquidGlassButtons = ReadBookConfig.readMenuTopBarLiquidGlassButtons,
                 readMenuTopBarTitleCapsule = ReadBookConfig.readMenuTopBarTitleCapsule,
                 readMenuBottomBarLiquidGlassButtons = ReadBookConfig.readMenuBottomBarLiquidGlassButtons,
+                readMenuFloatingIconLiquidGlass = ReadBookConfig.readMenuFloatingIconLiquidGlass,
                 readMenuTopBarBlurStyle = ReadBookConfig.readMenuTopBarBlurStyle,
                 readMenuBottomBarBlurStyle = ReadBookConfig.readMenuBottomBarBlurStyle,
                 readMenuIconStyle = ReadBookConfig.readMenuIconStyle,
@@ -5172,6 +5173,15 @@ class ReadBookViewModel(
                 }
                 _uiState.update {
                     it.copy(menuConfig = it.menuConfig.copy(readMenuBottomBarLiquidGlassButtons = update.value))
+                }
+            }
+
+            is ConfigUpdate.MenuFloatingIconLiquidGlass -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuFloatingIconLiquidGlass(update.value)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuFloatingIconLiquidGlass = update.value))
                 }
             }
 

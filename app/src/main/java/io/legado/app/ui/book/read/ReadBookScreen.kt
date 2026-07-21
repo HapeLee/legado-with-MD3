@@ -28,6 +28,7 @@ import io.legado.app.ui.book.read.sheet.ContentProcessesSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
+import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
@@ -39,7 +40,6 @@ import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
-import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
@@ -251,8 +251,8 @@ fun ReadBookScreen(
         onIntensityChange = { onIntent(ReadBookIntent.EyeProtectionIntensityChanged(it)) },
         onAutoNightChange = { onIntent(ReadBookIntent.EyeProtectionAutoNightChanged(it)) },
     )
-    TitleBarIconSheet(
-        show = state.activeSheet is ReadBookSheet.TitleBarIconConfig,
+    FloatingBarIconConfigSheet(
+        show = state.activeSheet is ReadBookSheet.FloatingBarIconConfig,
         items = state.menuConfig.titleBarButtons,
         customIcons = state.menuConfig.titleBarCustomIcons,
         onDismissRequest = dismissSheet,

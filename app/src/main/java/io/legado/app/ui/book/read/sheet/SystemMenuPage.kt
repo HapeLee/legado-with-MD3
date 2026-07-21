@@ -243,6 +243,9 @@ private fun GlobalMenuTab(
     onIntent: (ReadBookIntent) -> Unit,
     onShowColorPicker: (Int, Int) -> Unit,
 ) {
+    val customIconCount = remember(preferences.titleBarCustomIcons) {
+        countCustomIcons(preferences.titleBarCustomIcons)
+    }
     val bottomMode = preferences.readBarStyle
     val colorMode = preferences.readMenuColorMode.coerceIn(0, 1)
     val dayMenuBgColor = preferences.readMenuBgColor
@@ -511,6 +514,17 @@ private fun GlobalMenuTab(
         )
         AnimatedVisibility(visible = preferences.showTitleBarIcons) {
             Column {
+                TinyClickableSettingItem(
+                    title = stringResource(R.string.title_bar_icons),
+                    description = if (customIconCount == 0) {
+                        stringResource(R.string.read_menu_custom_icons_none)
+                    } else {
+                        stringResource(R.string.read_menu_custom_icons_count, customIconCount)
+                    },
+                    onClick = {
+                        onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FloatingBarIconConfig))
+                    },
+                )
                 TinyDropdownSettingItem(
                     title = stringResource(R.string.title_bar_icon_position),
                     selectedValue = preferences.titleBarIconPosition.toString(),
@@ -529,17 +543,17 @@ private fun GlobalMenuTab(
                         )
                     },
                 )
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.read_menu_icon_container_style),
-                    selectedValue = preferences.titleBarIconStyle.toString(),
-                    displayEntries = arrayOf(
-                        stringResource(R.string.read_menu_icon_style_plain),
-                        stringResource(R.string.read_menu_icon_style_tonal),
-                        stringResource(R.string.read_menu_icon_style_outlined),
-                    ),
-                    entryValues = arrayOf("0", "1", "2"),
-                    onValueChange = {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconStyle(it.toInt())))
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),
+                    checked = preferences.readMenuFloatingIconLiquidGlass,
+                    onCheckedChange = {
+                        onIntent(
+                            ReadBookIntent.UpdateConfig(
+                                ConfigUpdate.MenuFloatingIconLiquidGlass(
+                                    it
+                                )
+                            )
+                        )
                     },
                 )
             }
@@ -740,9 +754,6 @@ private fun TopBarTab(
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    val customIconCount = remember(preferences.titleBarCustomIcons) {
-        countCustomIcons(preferences.titleBarCustomIcons)
-    }
     val topBarBlurEnabled = preferences.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze
 
     val titleBarModeEntries = stringArrayResource(R.array.title_bar_mode)
@@ -785,17 +796,6 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCompact(it)))
             },
         )
-        TinyClickableSettingItem(
-            title = stringResource(R.string.title_bar_icons),
-            description = if (customIconCount == 0) {
-                stringResource(R.string.read_menu_custom_icons_none)
-            } else {
-                stringResource(R.string.read_menu_custom_icons_count, customIconCount)
-            },
-            onClick = {
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleBarIconConfig))
-            },
-        )
         TinyDropdownSettingItem(
             title = stringResource(R.string.read_menu_icon_container_style),
             selectedValue = preferences.titleBarIconStyle.toString(),
@@ -809,7 +809,6 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconStyle(it.toInt())))
             },
         )
-
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_bar_blur),
             checked = topBarBlurEnabled,
@@ -846,22 +845,20 @@ private fun TopBarTab(
                 )
             },
         )
-        AnimatedVisibility(visible = topBarBlurEnabled) {
-            TinySwitchSettingItem(
-                title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),
-                description = stringResource(R.string.read_menu_top_bar_liquid_glass_buttons_summary),
-                checked = preferences.readMenuTopBarLiquidGlassButtons,
-                onCheckedChange = {
-                    onIntent(
-                        ReadBookIntent.UpdateConfig(
-                            ConfigUpdate.MenuTopBarLiquidGlassButtons(
-                                it
-                            )
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),
+            description = stringResource(R.string.read_menu_top_bar_liquid_glass_buttons_summary),
+            checked = preferences.readMenuTopBarLiquidGlassButtons,
+            onCheckedChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarLiquidGlassButtons(
+                            it
                         )
                     )
-                },
-            )
-        }
+                )
+            },
+        )
     }
 }
 

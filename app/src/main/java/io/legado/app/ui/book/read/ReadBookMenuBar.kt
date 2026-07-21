@@ -1940,7 +1940,7 @@ private fun FloatingIconRow(
     backdrop: Backdrop?,
 ) {
     val context = LocalContext.current
-    val titleBarIcons = remember(
+    val floatingIcons = remember(
         state.menuConfig.titleBarButtons,
         state.isReadAloudRunning,
         state.isAutoPage,
@@ -1956,7 +1956,7 @@ private fun FloatingIconRow(
         )
     }
 
-    if (titleBarIcons.isEmpty()) return
+    if (floatingIcons.isEmpty()) return
 
     Row(
         modifier = Modifier
@@ -1970,21 +1970,20 @@ private fun FloatingIconRow(
         },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        titleBarIcons.forEach { iconDef ->
+        floatingIcons.forEach { iconDef ->
             val customPath = remember(state.menuConfig.titleBarCustomIcons, iconDef.id) {
                 state.menuConfig.titleBarCustomIcons[iconDef.id]
             }
             val isCustom = !customPath.isNullOrBlank()
+            val glassEnabled = !isCustom && state.menuConfig.readMenuFloatingIconLiquidGlass &&
+                    readerMenuLiquidGlassAvailable(backdrop)
             ReadMenuGlassButtonSurface(
                 onClick = iconDef.onClick,
                 colors = colors,
                 backdrop = backdrop,
                 menuConfig = state.menuConfig,
-                glassEnabled = !isCustom && readMenuTopBarButtonLiquidGlassEnabled(
-                    backdrop,
-                    state.menuConfig
-                ),
-                iconStyle = state.menuConfig.titleBarIconStyle,
+                glassEnabled = glassEnabled,
+                iconStyle = 1,
                 selected = iconDef.isActive,
                 modifier = Modifier.padding(horizontal = 4.dp),
                 onLongClick = iconDef.onLongClick,
@@ -3170,8 +3169,7 @@ private fun readMenuTopBarButtonLiquidGlassEnabled(
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
-    return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
-            menuConfig.readMenuTopBarLiquidGlassButtons &&
+    return menuConfig.readMenuTopBarLiquidGlassButtons &&
             readerMenuLiquidGlassAvailable(backdrop)
 }
 
@@ -3331,7 +3329,7 @@ private fun readMenuColors(readBarStyle: Int): ReadMenuColors {
 
 // ========== Title Bar Icons ==========
 
-private data class TitleBarIconDef(
+private data class FloatingIconDef(
     val id: String,
     val icon: ImageVector,
     val label: String,
@@ -3345,7 +3343,7 @@ private fun loadFloatingIcons(
     state: ReadBookUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
-): List<TitleBarIconDef> {
+): List<FloatingIconDef> {
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
 
     val actionMap: Map<String, () -> Unit> = mapOf(
@@ -3394,7 +3392,7 @@ private fun loadFloatingIcons(
         .mapNotNull { item ->
             val id = item.id
             val info = infoMap[id] ?: return@mapNotNull null
-            TitleBarIconDef(
+            FloatingIconDef(
                 id = id,
                 icon = info.icon,
                 label = info.label,

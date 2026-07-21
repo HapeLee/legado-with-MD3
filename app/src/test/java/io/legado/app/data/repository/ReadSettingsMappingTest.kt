@@ -80,6 +80,7 @@ class ReadSettingsMappingTest {
         assertEquals(1, settings.readMenuBorderWidth)
         assertEquals(3, settings.titleBarIconPosition)
         assertFalse(settings.showTitleBarIcons)
+        assertFalse(settings.readMenuFloatingIconLiquidGlass)
         assertFalse(settings.showMenuIcon)
         assertFalse(settings.titleBarCompact)
     }

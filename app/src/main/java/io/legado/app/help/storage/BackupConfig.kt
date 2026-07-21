@@ -225,6 +225,7 @@ object BackupConfig {
         PreferKey.readMenuTopBarLiquidGlassButtons,
         PreferKey.readMenuTopBarTitleCapsule,
         PreferKey.readMenuBottomBarLiquidGlassButtons,
+        PreferKey.readMenuFloatingIconLiquidGlass,
         PreferKey.readMenuTopBarBlurStyle,
         PreferKey.readMenuBottomBarBlurStyle,
         PreferKey.readMenuBlurRadius,

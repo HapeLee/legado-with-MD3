@@ -263,6 +263,9 @@ class ReadSettingsRepository(
     suspend fun setReadMenuBottomBarLiquidGlassButtons(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.readMenuBottomBarLiquidGlassButtons, value)
 
+    suspend fun setReadMenuFloatingIconLiquidGlass(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuFloatingIconLiquidGlass, value)
+
     suspend fun setReadMenuTopBarBlurStyle(value: Int) =
         settingsRepository.putInt(PreferKey.readMenuTopBarBlurStyle, value.coerceIn(0, 1))
 
@@ -411,6 +414,10 @@ class ReadSettingsRepository(
             readMenuTopBarLiquidGlassButtons = compatDsValue(Keys.ReadMenuTopBarLiquidGlassButtons, false),
             readMenuTopBarTitleCapsule = compatDsValue(Keys.ReadMenuTopBarTitleCapsule, false),
             readMenuBottomBarLiquidGlassButtons = compatDsValue(Keys.ReadMenuBottomBarLiquidGlassButtons, false),
+            readMenuFloatingIconLiquidGlass = compatDsValue(
+                Keys.ReadMenuFloatingIconLiquidGlass,
+                false
+            ),
             readMenuTopBarBlurStyle = compatDsValue(
                 Keys.ReadMenuTopBarBlurStyle,
                 ReadMenuBlurStyle.Solid
@@ -522,6 +529,8 @@ class ReadSettingsRepository(
             booleanPreferencesKey(PreferKey.readMenuTopBarTitleCapsule)
         val ReadMenuBottomBarLiquidGlassButtons =
             booleanPreferencesKey(PreferKey.readMenuBottomBarLiquidGlassButtons)
+        val ReadMenuFloatingIconLiquidGlass =
+            booleanPreferencesKey(PreferKey.readMenuFloatingIconLiquidGlass)
         val ReadMenuTopBarBlurStyle = intPreferencesKey(PreferKey.readMenuTopBarBlurStyle)
         val ReadMenuBottomBarBlurStyle = intPreferencesKey(PreferKey.readMenuBottomBarBlurStyle)
         val ReadMenuBlurRadius = intPreferencesKey(PreferKey.readMenuBlurRadius)

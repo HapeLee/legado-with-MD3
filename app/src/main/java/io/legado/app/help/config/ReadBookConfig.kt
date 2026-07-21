@@ -196,6 +196,7 @@ object ReadBookConfig {
     val readMenuTopBarLiquidGlassButtons get() = readSettings.readMenuTopBarLiquidGlassButtons
     val readMenuTopBarTitleCapsule get() = readSettings.readMenuTopBarTitleCapsule
     val readMenuBottomBarLiquidGlassButtons get() = readSettings.readMenuBottomBarLiquidGlassButtons
+    val readMenuFloatingIconLiquidGlass get() = readSettings.readMenuFloatingIconLiquidGlass
     val readMenuBorderColor get() = readSettings.readMenuBorderColor
     val readMenuBorderColorNight get() = readSettings.readMenuBorderColorNight
     val readMenuTextColor get() = readSettings.readMenuTextColor

@@ -336,6 +336,7 @@ object PreferKey {
     const val readMenuTopBarLiquidGlassButtons = "readMenuTopBarLiquidGlassButtons"
     const val readMenuTopBarTitleCapsule = "readMenuTopBarTitleCapsule"
     const val readMenuBottomBarLiquidGlassButtons = "readMenuBottomBarLiquidGlassButtons"
+    const val readMenuFloatingIconLiquidGlass = "readMenuFloatingIconLiquidGlass"
     const val readMenuTopBarBlurStyle = "readMenuTopBarBlurStyle"
     const val readMenuBottomBarBlurStyle = "readMenuBottomBarBlurStyle"
     const val readMenuBlurRadius = "readMenuBlurRadius"

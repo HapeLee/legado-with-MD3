@@ -50,7 +50,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
-fun TitleBarIconSheet(
+fun FloatingBarIconConfigSheet(
     show: Boolean,
     items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
@@ -139,7 +139,7 @@ private fun ButtonIconConfigSheet(
                             cornerRadius = 12.dp,
                             containerColor = LegadoTheme.colorScheme.surfaceContainerLow
                         ) {
-                            TitleBarIconItem(
+                            ButtonIconConfigItem(
                                 item = item,
                                 customIcon = customIcons[item.id],
                                 onToggleEnabled = {
@@ -182,7 +182,7 @@ private fun ButtonIconConfigSheet(
 }
 
 @Composable
-private fun TitleBarIconItem(
+private fun ButtonIconConfigItem(
     item: ButtonIconEntry,
     customIcon: String?,
     onToggleEnabled: () -> Unit,
