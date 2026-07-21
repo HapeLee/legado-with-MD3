@@ -1,8 +1,10 @@
 package io.legado.app.ui.theme
 
+import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
+import android.util.LruCache
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
@@ -10,39 +12,52 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import io.legado.app.domain.model.settings.customColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
 
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
-    val context = LocalContext.current
-    return remember(fontPath, context) {
-        if (!fontPath.isNullOrEmpty()) {
-            try {
-                val uri = Uri.parse(fontPath)
-                val typeface: Typeface? = if (uri.scheme == "content") {
-                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                        Typeface.Builder(it.fileDescriptor).build()
+    val context = LocalContext.current.applicationContext
+    val cachedFont = remember(fontPath) {
+        fontPath?.let { synchronized(customFontCache) { customFontCache.get(it) } }
+    }
+    return produceState(cachedFont, fontPath, context) {
+        if (value == null) {
+            value = fontPath?.takeIf(String::isNotBlank)?.let { path ->
+                withContext(Dispatchers.IO) {
+                    loadCustomFont(context, path)?.also { fontFamily ->
+                        synchronized(customFontCache) { customFontCache.put(path, fontFamily) }
                     }
-                } else {
-                    Typeface.createFromFile(uri.path)
                 }
-                typeface?.let { FontFamily(it) }
-            } catch (e: Exception) {
-                null
+            }
+        }
+    }.value
+}
+
+private val customFontCache = LruCache<String, FontFamily>(4)
+
+private fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
+    runCatching {
+        val uri = Uri.parse(fontPath)
+        val typeface = if (uri.scheme == "content") {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                Typeface.Builder(it.fileDescriptor).build()
             }
         } else {
-            null
+            Typeface.createFromFile(uri.path)
         }
-    }
-}
+        typeface?.let(::FontFamily)
+    }.getOrNull()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
