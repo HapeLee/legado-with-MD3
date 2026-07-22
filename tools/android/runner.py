@@ -32,6 +32,7 @@ SOURCE_EDIT_ACTIVITY = "io.legado.app.ui.book.source.edit.BookSourceEditActivity
 SOURCE_MANAGE_ACTIVITY = "io.legado.app.ui.book.source.manage.BookSourceActivity"
 THEME_MANIFEST_PATH = "manifest.json"
 THEME_ASSET_REMOTE = f"/sdcard/Android/data/{PACKAGE}/files/debug-theme-assets/background.png"
+DEBUG_STATE_URI = f"content://{PACKAGE}.debug-state"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
@@ -553,6 +554,24 @@ def find_node_by_text(
         if node.get("package") == package and node.get("text") == text
     ]
     return candidates[0] if candidates else None
+
+
+def debug_state(device: str, method: str) -> dict[str, Any]:
+    result = adb(
+        device,
+        "shell",
+        "content",
+        "call",
+        "--uri",
+        DEBUG_STATE_URI,
+        "--method",
+        method,
+        timeout=20,
+    )
+    match = re.search(r"resultB64=([A-Za-z0-9+/=]+)", result.stdout)
+    if match is None:
+        raise RuntimeError(f"debug state response is invalid: {result.stdout.strip()}")
+    return json.loads(base64.b64decode(match.group(1)).decode("utf-8"))
 
 
 def find_node_in_same_row(
@@ -1194,6 +1213,33 @@ class ReaderEntry(Entry):
         )
 
 
+@register_entry("rss_read")
+class RssReadEntry(Entry):
+    allowed_actions = {"toggle_rss_day_night"}
+
+    def prepare(self, ctx: Context) -> None:
+        ready, dump, _ = wait_until_text_present(
+            ctx.device,
+            "DEBUG RSS 日夜切换",
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        ctx.note_pid()
+        ctx.screenshot("beforeScreenshot", "before.png")
+        ctx.records["rss_read_ready"] = ready
+        ctx.records["rss_theme_changed"] = False
+        ctx.records["rss_pid_before"] = application_pid(ctx.device)
+        ctx.records["ui_before"] = dump
+
+    def finalize(self, ctx: Context) -> None:
+        ctx.screenshot("afterScreenshot", "after.png")
+        ctx.metadata.update(
+            {
+                "rssPidBefore": ctx.records["rss_pid_before"],
+                "rssPidAfter": application_pid(ctx.device),
+            }
+        )
+
+
 @register_entry("bookshelf")
 class BookshelfEntry(Entry):
     allowed_actions = {"open_fixture_book", "press_back"}
@@ -1353,6 +1399,19 @@ class TurnPage(Action):
             ctx.state["reader_content"] = after_content
         ctx.records["reader_content_after"] = after_content
         ctx.records["ui_after"] = after_dump
+
+
+@register_action("toggle_rss_day_night")
+class ToggleRssDayNight(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("rss_read_ready"):
+            return
+        before_pid = application_pid(ctx.device)
+        debug_state(ctx.device, "toggleTheme")
+        ctx.action_count += 1
+        time.sleep(1.5)
+        after_pid = application_pid(ctx.device)
+        ctx.records["rss_theme_changed"] = before_pid is not None and before_pid == after_pid
 
 
 @register_action("open_fixture_book")
@@ -1980,6 +2039,8 @@ ASSERTIONS.update(
         "reader_ready": lambda ctx: bool(ctx.records.get("reader_ready")),
         "reader_activity_visible": lambda ctx: bool(ctx.records.get("reader_activity_visible")),
         "reader_content_changed": lambda ctx: bool(ctx.records.get("reader_content_changed")),
+        "rss_read_ready": lambda ctx: bool(ctx.records.get("rss_read_ready")),
+        "rss_theme_changed": lambda ctx: bool(ctx.records.get("rss_theme_changed")),
         "bookshelf_ready": lambda ctx: bool(ctx.records.get("bookshelf_ready")),
         "reader_opened": lambda ctx: bool(ctx.records.get("reader_opened")),
         "returned_to_bookshelf": lambda ctx: bool(ctx.records.get("returned_to_bookshelf")),

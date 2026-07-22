@@ -46,9 +46,10 @@ class DebugScenarioActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             runCatching {
-                withContext(Dispatchers.IO) { installFixture(fixtureId) }
-            }.onSuccess { bookUrl ->
+                val bookUrl = withContext(Dispatchers.IO) { installFixture(fixtureId) }
                 applyPreferences(preferencesJson, sessionId)
+                bookUrl
+            }.onSuccess { bookUrl ->
                 Log.i(LOG_TAG, "[session=$sessionId] FIXTURE_READY fixture=$fixtureId entry=$entry")
                 val targetIntent = when (entry) {
                     ENTRY_BOOKSHELF -> {
@@ -63,6 +64,12 @@ class DebugScenarioActivity : AppCompatActivity() {
                     ENTRY_THEME_CONFIG -> MainIntent.createIntent(
                         this@DebugScenarioActivity,
                         ConfigTag.THEME_CONFIG,
+                    )
+                    ENTRY_RSS_READ -> MainIntent.createRssReadIntent(
+                        context = this@DebugScenarioActivity,
+                        title = "DEBUG RSS 日夜切换",
+                        origin = DEBUG_ORIGIN,
+                        openUrl = DEBUG_RSS_HTML,
                     )
                     else -> MainIntent.createReadBookIntent(this@DebugScenarioActivity, bookUrl)
                 }
@@ -232,11 +239,14 @@ class DebugScenarioActivity : AppCompatActivity() {
         const val ENTRY_BOOKSHELF = "bookshelf"
         const val ENTRY_SOURCE_MANAGE = "source_manage"
         const val ENTRY_THEME_CONFIG = "theme_config"
+        const val ENTRY_RSS_READ = "rss_read"
+        const val DEBUG_RSS_HTML = "data:text/html,<html><body style='background:white;color:black'><h1>DEBUG RSS THEME</h1><p>DAY NIGHT WEBVIEW</p></body></html>"
         val SUPPORTED_ENTRIES = setOf(
             ENTRY_READER,
             ENTRY_BOOKSHELF,
             ENTRY_SOURCE_MANAGE,
             ENTRY_THEME_CONFIG,
+            ENTRY_RSS_READ,
         )
         val FIXTURE_ID = Regex("[a-z0-9][a-z0-9-]*")
     }

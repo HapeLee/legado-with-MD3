@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "name": "rss/read-day-night",
+  "fixture": "long-chapter-v1",
+  "entry": { "type": "rss_read" },
+  "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
+  "readyTimeoutSeconds": 30,
+  "record": true,
+  "preferences": {
+    "themeMode": "1"
+  },
+  "actions": [
+    { "type": "toggle_rss_day_night" }
+  ],
+  "assertions": [
+    "rss_read_ready",
+    "rss_theme_changed",
+    "no_fatal_exception"
+  ]
+}

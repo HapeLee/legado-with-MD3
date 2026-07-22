@@ -9,5 +9,9 @@
             android:name="io.legado.app.debug.DebugThemeAssetProvider"
             android:authorities="${applicationId}.debug-theme-assets"
             android:exported="true" />
+        <provider
+            android:name="io.legado.app.debug.DebugStateProvider"
+            android:authorities="${applicationId}.debug-state"
+            android:exported="true" />
     </application>
 </manifest>

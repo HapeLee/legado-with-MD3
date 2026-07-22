@@ -26,6 +26,9 @@ Read `../../../tools/android/README.md` completely before taking debug actions. 
 - Do not automate settings-screen navigation when a setting value is only a precondition. Apply the value through a typed Debug Tool configuration command, production settings gateway/use case, and the corresponding runtime refresh signal.
 - Use real UI interaction when the settings screen, control handler, animation, navigation, picker contract, or accessibility behavior is itself under test. Never bypass the behavior being investigated.
 - Treat fake books, sources, themes, files, fonts, search results, groups, and failure providers as named debug fixtures with deterministic IDs, reset policy, installation evidence, and cleanup. Do not inject one-off anonymous data from a shell script.
+- Keep `tools/android/runner.py` as a thin compatibility/CLI entry point. Do not add feature entries, actions, assertions, picker flows, or fixture logic directly to it.
+- Put each domain capability in its own module and load only the module required by the scenario entry. The `list` command may load all modules; a scenario run must not import unrelated reader, theme, source, RSS, or bookshelf automation.
+- Extract repeated ADB, UIAutomator, system-picker, lifecycle, artifact, and app-state operations into focused drivers/helpers. Do not duplicate shell choreography inside feature actions.
 
 ## Workflow
 
@@ -71,9 +74,24 @@ If the current capability list cannot express the report, improve the tool befor
 - Add an artifact collector when screenshots, logs, video, private files, or exported data are not yet retained.
 - Add a system-UI helper when DocumentsUI, Photo Picker, permission UI, or another package participates in the flow.
 
-Register capabilities through `ENTRIES`, `ACTIONS`, and `ASSERTIONS`; avoid scenario-name conditionals and avoid growing `execute()` for one bug. Add or update Python tests for validation and helper behavior. Document the new scenario and injection mode in `tools/android/README.md`.
+Register capabilities through the shared registry from a domain module; avoid scenario-name conditionals and never grow the orchestration entry point for one bug. Add or update Python tests for validation and helper behavior. Document the new scenario and injection mode in `tools/android/README.md`.
 
 The first successful manual reproduction is discovery, not completion. A reusable scenario that another fresh session can run without oral instructions is the completion criterion.
+
+### Tool module boundaries
+
+Preserve these dependency directions when extending or refactoring the tool:
+
+- `runner.py`: compatibility shim that calls the CLI; no domain behavior.
+- core scenario/CLI modules: parse arguments, load minimal scenario metadata, select a capability module, orchestrate execution, and build summaries.
+- device drivers: ADB process calls, device readiness, UIAutomator, lifecycle, screen recording, DocumentsUI/Photo Picker, and private app-state access.
+- registry/contracts: `Context`, `Entry`, `Action`, assertions, capability registration, and lazy module discovery.
+- `capabilities/<domain>/`: reader, bookshelf, source, theme, RSS, font, and other domain-specific entries/actions/assertions.
+- fixture modules: fixture schema, installation, reset, composition, and evidence; no UI navigation.
+
+Load the scenario JSON far enough to read `entry.type`, import only its mapped capability module, then perform full action/assertion validation. Load every capability only for `list`. Keep shared modules independent of feature modules so imports do not become circular.
+
+When a feature module becomes large, split its entry, actions, assertions, and system-UI helpers inside a subpackage. Prefer small driver methods such as `documents.create_and_confirm(...)` or `ui.wait_for_text(...)` over copying multi-step ADB sequences.
 
 ### Fixture requirements
 

@@ -1,4 +1,6 @@
 import importlib.util
+import base64
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -59,6 +61,12 @@ class ScenarioValidationTest(unittest.TestCase):
     def test_deleted_applied_theme_export_scenario_is_valid(self):
         scenario = runner.load_scenario("theme/export-current-after-deleting-applied-theme")
         self.assertNotIn("expectThemeExportFailure", scenario)
+
+    def test_rss_day_night_scenario_is_valid(self):
+        self.assertEqual(
+            "rss_read",
+            runner.load_scenario("rss/read-day-night")["entry"]["type"],
+        )
 
     def test_rejects_unknown_action(self):
         scenario = {
@@ -248,6 +256,12 @@ class CommandDecodingTest(unittest.TestCase):
 
 
 class ReaderContentTest(unittest.TestCase):
+    @mock.patch.object(runner, "adb")
+    def test_decodes_debug_state_provider_response(self, adb):
+        payload = base64.b64encode(json.dumps({"themeMode": "2"}).encode()).decode()
+        adb.return_value = subprocess.CompletedProcess([], 0, f"Result: Bundle[{{resultB64={payload}}}]\n")
+        self.assertEqual({"themeMode": "2"}, runner.debug_state("device", "toggleTheme"))
+
     def test_extracts_reader_pages_from_logcat(self):
         logcat = (
             "07-21 23:52 26863 26863 I LegadoDebug: [session=x] FIXTURE_READY fixture=y entry=reader\n"

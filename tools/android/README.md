@@ -3,8 +3,9 @@
 项目级 Android 调试入口。它负责构建、安装、恢复 fixture、执行领域动作，并将结果写入
 `.debug-runs/<session-id>/summary.json`。
 
-当前提供 14 个端到端场景，覆盖阅读翻页、书架返回、书源编辑预见性返回，以及主题资源的
-保存、应用、删除和导出。先用 `list` 查看运行器实际注册的能力：
+当前提供 16 个端到端场景，覆盖阅读翻页、护眼模式、RSS 阅读日夜刷新、
+书架返回、书源编辑预见性返回，以及主题资源的保存、应用、删除和导出。
+先用 `list` 查看运行器实际注册的能力：
 
 ```bash
 tools/android/debug.sh list
@@ -44,6 +45,7 @@ tools/android/debug.sh run source-edit/predictive-back
 | 场景 | 验证目标 |
 | --- | --- |
 | `reader/page-turn` | 阅读页 ready、Activity 可见且翻页后正文变化 |
+| `rss/read-day-night` | RSS WebView 停留期间切换日夜并保留前后截图与录屏 |
 | `bookshelf/open-reader-back` | 从书架进入阅读页并返回同一书架 |
 | `bookshelf/miuix-hidden-statusbar` | Miuix + 隐藏状态栏条件下的阅读页返回 |
 | `source-edit/predictive-back` | 从书源管理进入编辑页后执行预见性返回 |
@@ -104,6 +106,14 @@ tools/android/debug.sh run source-edit/predictive-back
 ```bash
 tools/android/debug.sh run bookshelf/miuix-hidden-statusbar
 ```
+
+## Debug 状态探针与专用夹具
+
+`DebugStateProvider` 仅打进 debug APK，由 runner 通过 `content call` 读取机器可断言状态：
+
+- `toggleTheme`：在目标页面保持打开时切换应用日夜设置。
+
+这些准备动作均在 debug 包中完成，不进入 release 包。
 
 修改 `DebugScenarioActivity`（如新增可注入的设置）后第一次要全量构建，之后同一 APK 反复调用
 `--skip-build` 即可秒级复跑。
