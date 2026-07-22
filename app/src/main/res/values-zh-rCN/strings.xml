@@ -2508,6 +2508,7 @@
     <string name="read_books_prefix">已读 </string>
     <string name="read_books_suffix"> 本书</string>
     <string name="hours_minutes_format">%1$d小时%2$d分钟</string>
+    <string name="whole_hours_format">%1$d小时</string>
     <string name="minutes_format">%1$d分钟</string>
     <string name="total_reading_time_format">共阅读 %1$s</string>
     <string name="read_duration_done">已读 %1$s</string>

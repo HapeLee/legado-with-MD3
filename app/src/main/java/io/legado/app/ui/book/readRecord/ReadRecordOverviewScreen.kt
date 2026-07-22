@@ -143,8 +143,27 @@ fun ReadRecordOverviewScreen(
                 }
 
                 item {
+                    val readingTime = ReadRecordFormatter.hourMinuteDuration(state.totalTime)
+                    val readingTimeText = when {
+                        readingTime.hours > 0 && readingTime.minutes > 0 -> stringResource(
+                            R.string.hours_minutes_format,
+                            readingTime.hours,
+                            readingTime.minutes,
+                        )
+                        readingTime.hours > 0 -> stringResource(
+                            R.string.whole_hours_format,
+                            readingTime.hours,
+                        )
+                        else -> stringResource(
+                            R.string.minutes_format,
+                            readingTime.minutes,
+                        )
+                    }
                     val stats = listOf(
-                        StatItem(stringResource(R.string.reading_time), ReadRecordFormatter.formatDuration(state.totalTime)),
+                        StatItem(
+                            stringResource(R.string.reading_time),
+                            readingTimeText,
+                        ),
                         StatItem(stringResource(R.string.reading_days), stringResource(R.string.days_format, state.readingDays)),
                         StatItem(stringResource(R.string.total_read_books), stringResource(R.string.books_format, state.totalBooks)),
                         StatItem(stringResource(R.string.finished_books), stringResource(R.string.books_format, state.finishedBooks)),

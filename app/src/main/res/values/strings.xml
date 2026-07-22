@@ -2519,6 +2519,7 @@
     <string name="read_books_prefix">Read </string>
     <string name="read_books_suffix"> books</string>
     <string name="hours_minutes_format">%1$d h %2$d min</string>
+    <string name="whole_hours_format">%1$d hours</string>
     <string name="minutes_format">%1$d min</string>
     <string name="total_reading_time_format">Total reading %1$s</string>
     <string name="read_duration_done">Read %1$s</string>
