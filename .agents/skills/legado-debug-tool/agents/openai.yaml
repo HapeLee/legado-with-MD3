@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legado Debug Tool"
+  short_description: "用真机复现、取证并回归验证 Legado Android 缺陷"
+  default_prompt: "Use $legado-debug-tool to reproduce this Legado bug on the connected Android device, capture evidence, and verify the root cause before changing product code."
