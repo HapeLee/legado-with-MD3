@@ -9,8 +9,4 @@ class AppStartupMaintenanceUseCase(
     suspend fun deleteNotShelfBooks() {
         appStartupGateway.deleteNotShelfBooks()
     }
-
-    suspend fun ensureDefaultHttpTts() {
-        appStartupGateway.ensureDefaultHttpTts()
-    }
 }

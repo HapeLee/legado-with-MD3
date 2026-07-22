@@ -6,9 +6,12 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.LocaleListCompat
@@ -22,9 +25,12 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.diffFrom
 import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.ui.book.read.eyeProtectionColorFilter
+import io.legado.app.ui.book.read.rememberEyeProtectionActive
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -48,6 +54,7 @@ abstract class BaseComposeActivity(
 
     private val appLocaleGateway by inject<AppLocaleGateway>()
     private val appUiConfigurationGateway by inject<AppUiConfigurationGateway>()
+    private val themeSettingsGateway by inject<ThemeSettingsGateway>()
     private var lastUiConfiguration: AppUiConfiguration? = null
 
     @Composable
@@ -67,12 +74,30 @@ abstract class BaseComposeActivity(
         setupSystemBar()
         // Compose 入口
         val initialUiConfiguration = appUiConfigurationGateway.currentConfiguration
+        val initialThemeSettings = themeSettingsGateway.currentSettings
         setContent {
             val uiConfiguration by appUiConfigurationGateway.configuration
                 .collectAsStateWithLifecycle(initialUiConfiguration)
             AppTheme(configuration = uiConfiguration) {
                 SyncWindowBackground()
-                Content()
+                val themeSettings by themeSettingsGateway.settings
+                    .collectAsStateWithLifecycle(initialThemeSettings)
+                val eyeProtectionActive = rememberEyeProtectionActive(
+                    enabled = themeSettings.eyeProtectionEnabled,
+                    schedule = themeSettings.eyeProtectionSchedule,
+                    startTime = themeSettings.eyeProtectionStartTime,
+                    endTime = themeSettings.eyeProtectionEndTime,
+                )
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .eyeProtectionColorFilter(
+                            enabled = eyeProtectionActive,
+                            intensity = themeSettings.colorTemperature,
+                        )
+                ) {
+                    Content()
+                }
             }
         }
 

@@ -1744,6 +1744,7 @@ class ReadBookViewModel(
                 }
             },
             managedSources = setOf(ReadAloudVoice.MANAGED_BY_CONFIGURED_TTS),
+            removeMissingEngineTypes = setOf(ReadAloudVoice.ENGINE_HTTP),
         )
     }
 

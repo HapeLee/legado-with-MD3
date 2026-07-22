@@ -22,6 +22,7 @@ class SyncReadAloudVoicesUseCase(
     suspend operator fun invoke(
         entries: List<VoiceCatalogEntry>,
         managedSources: Set<String>,
+        removeMissingEngineTypes: Set<String> = emptySet(),
         now: Long = System.currentTimeMillis(),
     ): SyncReadAloudVoicesResult = syncMutex.withLock {
         val existing = voiceGateway.getVoices()
@@ -79,10 +80,15 @@ class SyncReadAloudVoicesUseCase(
         var unavailable = 0
         existing.asSequence()
             .filter { it.managedBy in managedSources }
-            .filter { it.id !in incomingIds && it.available }
+            .filter { it.id !in incomingIds }
             .forEach { voice ->
-                unavailable++
-                voiceGateway.upsertVoice(voice.copy(available = false, updatedAt = now))
+                if (voice.engineType in removeMissingEngineTypes) {
+                    unavailable++
+                    voiceGateway.deleteVoice(voice)
+                } else if (voice.available) {
+                    unavailable++
+                    voiceGateway.upsertVoice(voice.copy(available = false, updatedAt = now))
+                }
             }
         SyncReadAloudVoicesResult(inserted, updated, unavailable)
     }

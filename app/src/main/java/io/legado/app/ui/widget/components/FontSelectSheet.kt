@@ -20,6 +20,8 @@ import io.legado.app.R
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
+import io.legado.app.utils.isContentScheme
+import java.io.File
 
 @Composable
 fun FontSelectSheet(
@@ -41,7 +43,12 @@ fun FontSelectSheet(
     val selectedFontName = remember(selectedFontPath) {
         selectedFontPath?.let {
             runCatching {
-                DocumentFile.fromSingleUri(context, it.toUri())?.name
+                val uri = it.toUri()
+                if (uri.isContentScheme()) {
+                    DocumentFile.fromSingleUri(context, uri)?.name
+                } else {
+                    File(uri.path ?: it).name
+                }
             }.getOrNull()
         }
     }

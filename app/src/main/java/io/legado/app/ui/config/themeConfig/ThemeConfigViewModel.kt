@@ -20,6 +20,7 @@ import io.legado.app.utils.inputStream
 import io.legado.app.utils.openInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -374,17 +375,24 @@ class ThemeConfigViewModel(
                     .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
                     ?: "ttf"
                 val fontDir = File(appCtx.filesDir, "fonts").apply { mkdirs() }
-                val target = File(fontDir, "app_font.$extension")
-                val temp = File(fontDir, "app_font.$extension.tmp")
+                val target = File(fontDir, "app_font_${UUID.randomUUID()}.$extension")
+                val temp = File(fontDir, "${target.name}.tmp")
                 fileDoc.openInputStream().getOrThrow().use { input ->
                     FileOutputStream(temp).use(input::copyTo)
                 }
-                if (target.exists() && !target.delete()) error("Unable to replace app font")
                 if (!temp.renameTo(target)) {
                     temp.copyTo(target, overwrite = true)
                     temp.delete()
                 }
+                val oldPath = themeSettingsGateway.currentSettings.appFontPath
                 themeSettingsGateway.update { it.copy(appFontPath = target.absolutePath) }
+                oldPath?.let(::File)
+                    ?.takeIf {
+                        it != target &&
+                            it.parentFile == fontDir &&
+                            it.name.startsWith("app_font")
+                    }
+                    ?.delete()
             }.onFailure(Throwable::printStackTrace)
         }
     }

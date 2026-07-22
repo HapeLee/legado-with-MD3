@@ -365,7 +365,13 @@ fun FileDoc.checkWrite(): Boolean {
  * DocumentFile 的 listFiles() 非常的慢,尽量不要使用
  */
 fun DocumentFile.listFileDocs(filter: FileDocFilter? = null): ArrayList<FileDoc>? {
-    return FileDoc.fromDocumentFile(this).list(filter)
+    return FileDoc(
+        name = "",
+        isDir = true,
+        size = 0,
+        lastModified = 0,
+        uri = uri,
+    ).list(filter)
 }
 
 @Throws(Exception::class)

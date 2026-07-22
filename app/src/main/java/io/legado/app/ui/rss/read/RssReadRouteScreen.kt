@@ -204,6 +204,7 @@ fun RssReadRouteScreen(
     LaunchedEffect(isNight, webView) {
         val currentWebView = webView ?: return@LaunchedEffect
         currentWebView.settings.setDarkeningAllowed(isNight)
+        currentWebView.postInvalidate()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

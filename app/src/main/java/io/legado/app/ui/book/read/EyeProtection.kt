@@ -1,11 +1,17 @@
 package io.legado.app.ui.book.read
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorMatrix as ComposeColorMatrix
+import kotlinx.coroutines.delay
+import java.time.LocalTime
 
 
 object EyeProtection {
@@ -46,6 +52,35 @@ object EyeProtection {
     fun syncEnabledForNight(isNight: Boolean, autoNight: Boolean): Boolean? =
         if (autoNight) isNight else null
 
+    /**
+     * 计算护眼在给定时刻是否应生效。
+     * - 总开关关闭 → 永远不生效；
+     * - 未启用定时 → 只要总开关开就生效；
+     * - 启用定时但时间无法解析 → 退化为仅按总开关生效；
+     * - 启用定时 → 仅在 [startTime, endTime) 时段内生效（支持跨零点，如 22:00–07:00）。
+     */
+    fun isActiveAt(
+        enabled: Boolean,
+        schedule: Boolean,
+        startTime: String,
+        endTime: String,
+        now: LocalTime,
+    ): Boolean {
+        if (!enabled) return false
+        if (!schedule) return true
+        val start = parseTime(startTime) ?: return true
+        val end = parseTime(endTime) ?: return true
+        if (start == end) return true
+        return if (start < end) {
+            now >= start && now < end
+        } else {
+            now >= start || now < end
+        }
+    }
+
+    private fun parseTime(value: String): LocalTime? =
+        runCatching { LocalTime.parse(value.trim()) }.getOrNull()
+
     private val IDENTITY_MATRIX = floatArrayOf(
         1f, 0f, 0f, 0f, 0f,
         0f, 1f, 0f, 0f, 0f,
@@ -73,4 +108,26 @@ fun Modifier.eyeProtectionColorFilter(
     return graphicsLayer {
         colorFilter = cachedColorFilter
     }
+}
+
+/**
+ * 解析护眼当前是否生效，启用定时时按分钟自动重算，使时段边界能实时切换。
+ */
+@Composable
+fun rememberEyeProtectionActive(
+    enabled: Boolean,
+    schedule: Boolean,
+    startTime: String,
+    endTime: String,
+): Boolean {
+    if (!enabled) return false
+    if (!schedule) return true
+    var now by remember { mutableStateOf(LocalTime.now()) }
+    LaunchedEffect(startTime, endTime) {
+        while (true) {
+            now = LocalTime.now()
+            delay(60_000L)
+        }
+    }
+    return EyeProtection.isActiveAt(enabled, schedule, startTime, endTime, now)
 }

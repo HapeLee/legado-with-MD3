@@ -6,8 +6,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +38,11 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalLayoutApi::class,
+)
 @Composable
 fun GlassMediumFlexibleTopAppBar(
     title: String,
@@ -90,13 +98,19 @@ fun GlassMediumFlexibleTopAppBar(
     ) {
         when {
             isMiuix -> {
+                // Reserve constant status-bar space (ignoring visibility) instead
+                // of MiuixTopAppBar's default animating status-bar padding. This
+                // matches Material3's TopAppBar (systemBarsForVisualComponents) so
+                // the bar/content doesn't reflow down when the status bar is
+                // re-shown — e.g. returning from a reader that hid it.
                 MiuixTopAppBar(
-                    modifier = Modifier,
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility),
                     title = title,
                     subtitle = subtitleText.orEmpty(),
                     navigationIcon = navigationIcon,
                     actions = actions,
                     color = Color.Transparent,
+                    defaultWindowInsetsPadding = false,
                     scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
                 )
             }

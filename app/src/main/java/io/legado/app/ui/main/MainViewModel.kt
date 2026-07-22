@@ -59,10 +59,6 @@ class MainViewModel(
         FlowEventBus.post(EventBus.UP_ALL_BOOK_TOC, Unit)
     }
 
-    fun postLoad() {
-        viewModelScope.launch { appStartupMaintenanceUseCase.ensureDefaultHttpTts() }
-    }
-
     fun restoreWebDav(name: String) {
         viewModelScope.launch { webDavBackupUseCase.restore(name) }
     }
