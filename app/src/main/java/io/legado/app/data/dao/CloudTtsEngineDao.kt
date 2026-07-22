@@ -22,6 +22,21 @@ interface CloudTtsEngineDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(engine: CloudTtsEngineEntity)
 
+    @Query(
+        """
+        update cloud_tts_engines
+        set apiKey = :newApiKey, secretKey = :newSecretKey
+        where id = :id and apiKey = :oldApiKey and secretKey = :oldSecretKey
+        """
+    )
+    suspend fun updateCredentials(
+        id: String,
+        oldApiKey: String,
+        oldSecretKey: String,
+        newApiKey: String,
+        newSecretKey: String,
+    )
+
     @Delete
     suspend fun delete(engine: CloudTtsEngineEntity)
 }
