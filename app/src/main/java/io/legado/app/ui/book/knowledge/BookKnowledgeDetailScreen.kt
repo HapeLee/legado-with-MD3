@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -64,11 +66,13 @@ fun BookKnowledgeDetailScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(effects) {
         effects.collectLatest { effect ->
             when (effect) {
                 is KnowledgeDetailEffect.ShowToast -> context.toastOnUi(effect.message)
+                KnowledgeDetailEffect.NavigateBack -> onBack()
             }
         }
     }
@@ -82,6 +86,13 @@ fun BookKnowledgeDetailScreen(
                     TopBarNavigationButton(onClick = onBack)
                 },
                 actions = {
+                    if (state.entryId != null) {
+                        TopBarActionButton(
+                            onClick = { showDeleteDialog = true },
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                        )
+                    }
                     TopBarActionButton(
                         onClick = { onIntent(KnowledgeDetailIntent.Save) },
                         imageVector = Icons.Default.Save,
@@ -114,6 +125,17 @@ fun BookKnowledgeDetailScreen(
             )
         }
     }
+
+    AppAlertDialog(
+        show = showDeleteDialog,
+        onDismissRequest = { showDeleteDialog = false },
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_delete),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = { onIntent(KnowledgeDetailIntent.Delete); showDeleteDialog = false },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteDialog = false },
+    )
 }
 
 @Composable

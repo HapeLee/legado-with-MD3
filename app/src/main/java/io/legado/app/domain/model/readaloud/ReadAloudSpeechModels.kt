@@ -24,6 +24,13 @@ data class ReadAloudVoice(
     }
 }
 
+data class ReadAloudEngineSelection(
+    val engineType: String,
+    val engineId: String,
+    val speakerId: String = "",
+    val displayName: String = "",
+)
+
 data class VoiceCatalogEntry(
     val engineType: String,
     val engineId: String,
@@ -132,6 +139,8 @@ data class ChapterSpeechAnalysisResult(
 data class CharacterPerformanceProfile(
     val characterId: String,
     val role: String = "",
+    val voiceGender: String = "unknown",
+    val voiceAgeBand: String = "unknown",
     val personality: String = "",
     val updatedAt: Long = 0L,
 )
@@ -152,6 +161,8 @@ data class SpeakerCharacter(
     val name: String,
     val aliases: List<String> = emptyList(),
     val role: String = "",
+    val voiceGender: String = "unknown",
+    val voiceAgeBand: String = "unknown",
     val updatedAt: Long = 0L,
 )
 

@@ -7,7 +7,6 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.toastOnUi
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +69,12 @@ class AiPromptConfigViewModel(
             nameResId = R.string.ai_prompt_task_analyze_speech,
             descResId = R.string.ai_prompt_task_analyze_speech_desc,
             defaultPromptResId = R.string.ai_prompt_default_analyze_speech
+        ),
+        TaskPromptMeta(
+            taskType = AiTaskType.IDENTIFY_CHARACTERS,
+            nameResId = R.string.ai_prompt_task_identify_characters,
+            descResId = R.string.ai_prompt_task_identify_characters_desc,
+            defaultPromptResId = R.string.ai_prompt_default_identify_characters
         )
     )
 

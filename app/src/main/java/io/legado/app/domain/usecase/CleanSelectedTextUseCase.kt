@@ -25,6 +25,7 @@ class CleanSelectedTextUseCase(
     private val aiProfileGateway: AiProfileGateway,
     private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
     private val aiArtifactGateway: AiArtifactGateway,
+    private val aiTaskManager: AiTaskManager,
 ) {
 
     sealed interface StreamEvent {
@@ -35,6 +36,66 @@ class CleanSelectedTextUseCase(
             val rawText: String,
             val reasoning: String,
         ) : StreamEvent
+    }
+
+    fun observeTask(bookUrl: String, chapterIndex: Int) = aiTaskManager.observeBookTask(
+        bookUrl = bookUrl,
+        taskType = AiTaskType.CLEAN_SELECTION,
+        chapterIndex = chapterIndex,
+    )
+
+    fun observeTaskById(taskId: String) = aiTaskManager.observeTask(taskId)
+
+    suspend fun start(
+        bookUrl: String,
+        chapterIndex: Int,
+        chapterTitle: String,
+        selectedText: String,
+        contextBefore: String,
+        contextAfter: String,
+    ): String {
+        val preset = resolvePreset() ?: error("No AI model configured")
+        val input = buildUserContent(
+            chapterTitle = chapterTitle,
+            selectedText = selectedText,
+            contextBefore = contextBefore.takeLast(MAX_CONTEXT_CHARS),
+            contextAfter = contextAfter.take(MAX_CONTEXT_CHARS),
+        )
+        val contentHash = MD5Utils.md5Encode(input)
+        val promptHash = MD5Utils.md5Encode(
+            AiPromptTemplate.DEFAULT_CLEAN_SELECTION + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION,
+        )
+        val now = System.currentTimeMillis()
+        val artifact = AiArtifact(
+            id = "${bookUrl}_${chapterIndex}_${AiTaskType.CLEAN_SELECTION}_${contentHash}_${preset.model.id}",
+            taskType = AiTaskType.CLEAN_SELECTION,
+            bookUrl = bookUrl,
+            chapterIndex = chapterIndex,
+            contentHash = contentHash,
+            promptHash = promptHash,
+            modelProfileId = preset.model.id,
+            createdAt = now,
+            updatedAt = now,
+        )
+        return aiTaskManager.submit(artifact) {
+            var replacement = ""
+            executeStream(
+                bookUrl,
+                chapterIndex,
+                chapterTitle,
+                selectedText,
+                contextBefore,
+                contextAfter
+            )
+                .collect { event ->
+                    when (event) {
+                        is StreamEvent.Content -> appendContent(event.text)
+                        is StreamEvent.Reasoning -> appendReasoning(event.text)
+                        is StreamEvent.Done -> replacement = event.replacement
+                    }
+                }
+            replacement
+        }
     }
 
     suspend fun execute(

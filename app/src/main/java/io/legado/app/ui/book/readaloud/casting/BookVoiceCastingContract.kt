@@ -46,10 +46,6 @@ data class VoicePickerUi(
 
 enum class CastingSubjectKind {
     Narrator,
-    MaleLead,
-    FemaleLead,
-    MaleSupporting,
-    FemaleSupporting,
     UnknownMale,
     UnknownFemale,
     Unknown,

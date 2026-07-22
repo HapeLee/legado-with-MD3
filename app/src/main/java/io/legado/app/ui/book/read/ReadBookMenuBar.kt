@@ -160,6 +160,7 @@ import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.book.read.sheet.AutoReadContent
 import io.legado.app.ui.book.read.sheet.HeaderFooterPage
 import io.legado.app.ui.book.read.sheet.PaddingConfigContent
+import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
 import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
@@ -783,6 +784,36 @@ private fun ReadBookMenuSurface(
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleFontSelect))
                                 },
                                 onIntent = onIntent,
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.ReadAloud -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.aloud_config),
+                            maxHeight = maxHeight,
+                            scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ReadAloudContent(
+                                state = state,
+                                onIntent = onIntent,
+                                onDismissRequest = { onIntent(ReadBookIntent.HideMenu) },
+                                onOpenChapterList = {
+                                    onIntent(ReadBookIntent.HideMenu)
+                                    onIntent(ReadBookIntent.OpenChapterList)
+                                },
+                                onGoToBackground = {
+                                    onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+                                },
+                                onOpenMainMenu = {
+                                    onIntent(ReadBookIntent.ReadMenuBack)
+                                },
+                                onShowReadAloudConfig = {
+                                    onIntent(ReadBookIntent.ShowReadAloudConfig)
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
@@ -3054,7 +3085,7 @@ private fun loadToolButtons(
         infoMap.getValue("read_aloud").toButton(
             isActive = state.isReadAloudRunning,
             onLongClick = {
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudControls))
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
             },
         ) {
             if (state.isReadAloudRunning) {
@@ -3369,7 +3400,7 @@ private fun loadFloatingIcons(
                 onClick = actionMap[id] ?: {},
                 onLongClick = when (id) {
                     "read_aloud" -> {
-                        { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudControls)) }
+                        { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
                     }
 
                     "replace" -> {

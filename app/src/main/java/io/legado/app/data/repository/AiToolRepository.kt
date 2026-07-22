@@ -506,6 +506,10 @@ class AiToolRepository(
             avatarUri = args.string("avatarUri") ?: existing?.avatarUri,
             tagsJson = args.string("tagsJson") ?: existing?.tagsJson ?: "[]",
             role = args.string("role") ?: existing?.role.orEmpty(),
+            voiceGender = args.string("voiceGender") ?: existing?.voiceGender
+            ?: BookCharacterProfile.VOICE_GENDER_UNKNOWN,
+            voiceAgeBand = args.string("voiceAgeBand") ?: existing?.voiceAgeBand
+            ?: BookCharacterProfile.VOICE_AGE_UNKNOWN,
             personality = args.string("personality") ?: existing?.personality.orEmpty(),
             summary = args.string("summary") ?: existing?.summary.orEmpty(),
             status = args.int("status", existing?.status ?: BookCharacterProfile.STATUS_ACTIVE),
@@ -763,6 +767,8 @@ class AiToolRepository(
             "avatarUri" to avatarUri,
             "tagsJson" to tagsJson,
             "role" to role,
+            "voiceGender" to voiceGender,
+            "voiceAgeBand" to voiceAgeBand,
             "personality" to personality,
             "summary" to summary,
             "status" to status,

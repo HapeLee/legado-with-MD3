@@ -20,6 +20,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.AiArtifact
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -532,19 +533,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ShowSheet -> {
-                if (intent.sheet is ReadBookSheet.ReadAloudControls) {
-                    _uiState.update {
-                        it.copy(
-                            menuState = ReadBookMenuState(),
-                            activeSheet = intent.sheet,
-                            readAloudTtsTimer = if (BaseReadAloudService.isRun) {
-                                BaseReadAloudService.timeMinute.coerceAtLeast(0)
-                            } else {
-                                it.readAloudTtsTimer
-                            },
-                        )
-                    }
-                } else if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
+                if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
                     loadHighlightRules()
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 } else if (intent.sheet is ReadBookSheet.ContentProcesses) {
@@ -1378,7 +1367,8 @@ class ReadBookViewModel(
                 }
             }
             ReadBookIntent.OpenClassicReadAloudControls -> {
-                _uiState.update { it.copy(activeSheet = ReadBookSheet.ReadAloudControls) }
+                _uiState.update { it.copy(activeSheet = null) }
+                openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
             }
 
             is ReadBookIntent.SelectFont -> selectFont(intent.path)
@@ -1603,9 +1593,14 @@ class ReadBookViewModel(
                 }
             }
             is ReadBookIntent.SyncEyeProtectionForTheme -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update {
-                        it.copy(eyeProtectionEnabled = false)
+                EyeProtection.syncEnabledForNight(
+                    isNight = intent.isNight,
+                    autoNight = _readPreferences.value.eyeProtectionAutoNight,
+                )?.let { enabled ->
+                    viewModelScope.launch {
+                        readSettingsRepository.update {
+                            it.copy(eyeProtectionEnabled = enabled)
+                        }
                     }
                 }
             }
@@ -3158,66 +3153,49 @@ class ReadBookViewModel(
                 return@launch
             }
             try {
-                val fullSummary = StringBuilder()
-                val fullReasoning = StringBuilder()
-                var thinkingStartTime = 0L
-                generateChapterSummaryUseCase.executeStream(
-                    book = book,
-                    bookChapter = chapter,
-                    contentOverride = content,
-                ).collect { event ->
-                    if (!isCurrentChapterSummary(bookUrl, chapterIndex)) return@collect
-                    when (event) {
-                        is GenerateChapterSummaryUseCase.StreamEvent.Content -> {
-                            if (fullSummary.isEmpty() && thinkingStartTime > 0L) {
-                                val duration =
-                                    ((System.currentTimeMillis() - thinkingStartTime) / 1000).toInt()
-                                _uiState.update {
-                                    it.copy(
-                                        chapterSummary = it.chapterSummary.copy(
-                                            thinkingDuration = duration,
-                                        )
-                                    )
-                                }
-                            }
-                            fullSummary.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    chapterSummary = it.chapterSummary.copy(
-                                        summary = fullSummary.toString(),
-                                        errorMessage = null,
-                                    )
-                                )
-                            }
-                        }
+                withContext(IO) {
+                    generateChapterSummaryUseCase.start(
+                        book = book,
+                        bookChapter = chapter,
+                        contentOverride = content,
+                    )
+                }
+                generateChapterSummaryUseCase.observeTask(bookUrl, chapterIndex).collect { task ->
+                    if (!isCurrentChapterSummary(
+                            bookUrl,
+                            chapterIndex
+                        ) || task == null
+                    ) return@collect
+                    _uiState.update { state ->
+                        val summary = state.chapterSummary
+                        when (task.status) {
+                            AiArtifact.STATUS_RUNNING -> state.copy(
+                                chapterSummary = summary.copy(
+                                    isLoading = true,
+                                    summary = task.output.orEmpty(),
+                                    reasoningText = task.reasoning,
+                                    errorMessage = null,
+                                ),
+                            )
 
-                        is GenerateChapterSummaryUseCase.StreamEvent.Reasoning -> {
-                            if (thinkingStartTime == 0L) {
-                                thinkingStartTime = System.currentTimeMillis()
-                            }
-                            fullReasoning.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    chapterSummary = it.chapterSummary.copy(
-                                        reasoningText = fullReasoning.toString(),
-                                    )
-                                )
-                            }
-                        }
+                            AiArtifact.STATUS_SUCCESS -> state.copy(
+                                chapterSummary = summary.copy(
+                                    isLoading = false,
+                                    summary = task.output.orEmpty(),
+                                    reasoningText = task.reasoning,
+                                    errorMessage = null,
+                                ),
+                            )
 
-                        is GenerateChapterSummaryUseCase.StreamEvent.Done -> {
-                            _uiState.update {
-                                it.copy(
-                                    chapterSummary = it.chapterSummary.copy(
-                                        isLoading = false,
-                                        summary = event.text,
-                                        reasoningText = event.reasoning.ifBlank {
-                                            fullReasoning.toString()
-                                        },
-                                        errorMessage = null,
-                                    )
-                                )
-                            }
+                            AiArtifact.STATUS_FAILED -> state.copy(
+                                chapterSummary = summary.copy(
+                                    isLoading = false,
+                                    errorMessage = task.errorMessage
+                                        ?: context.getString(R.string.load_failed),
+                                ),
+                            )
+
+                            else -> state
                         }
                     }
                 }
@@ -3340,71 +3318,55 @@ class ReadBookViewModel(
         aiTextCleanJob?.cancel()
         aiTextCleanJob = viewModelScope.launch {
             try {
-                val rawText = StringBuilder()
-                val fullReasoning = StringBuilder()
-                var thinkingStartTime = 0L
-                cleanSelectedTextUseCase.executeStream(
-                    bookUrl = request.bookUrl,
-                    chapterIndex = request.chapterIndex,
-                    chapterTitle = request.chapterTitle,
-                    selectedText = request.originalText,
-                    contextBefore = request.contextBefore,
-                    contextAfter = request.contextAfter,
-                ).collect { event ->
+                val taskId = withContext(IO) {
+                    cleanSelectedTextUseCase.start(
+                        bookUrl = request.bookUrl,
+                        chapterIndex = request.chapterIndex,
+                        chapterTitle = request.chapterTitle,
+                        selectedText = request.originalText,
+                        contextBefore = request.contextBefore,
+                        contextAfter = request.contextAfter,
+                    )
+                }
+                cleanSelectedTextUseCase.observeTaskById(taskId).collect { task ->
+                    val snapshot = task ?: return@collect
                     if (!isCurrentAiTextClean(request)) return@collect
-                    when (event) {
-                        is CleanSelectedTextUseCase.StreamEvent.Content -> {
-                            if (rawText.isEmpty() && thinkingStartTime > 0L) {
-                                val duration =
-                                    ((System.currentTimeMillis() - thinkingStartTime) / 1000).toInt()
-                                _uiState.update {
-                                    it.copy(
-                                        aiTextClean = it.aiTextClean.copy(
-                                            thinkingDuration = duration,
-                                        )
-                                    )
-                                }
-                            }
-                            rawText.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    aiTextClean = it.aiTextClean.copy(
-                                        streamingText = rawText.toString(),
-                                        errorMessage = null,
-                                    )
+                    val clean = _uiState.value.aiTextClean
+                    when (snapshot.status) {
+                        AiArtifact.STATUS_RUNNING -> _uiState.update {
+                            it.copy(
+                                aiTextClean = clean.copy(
+                                    isLoading = true,
+                                    streamingText = snapshot.output.orEmpty(),
+                                    reasoningText = snapshot.reasoning,
+                                    errorMessage = null,
                                 )
-                            }
+                            )
                         }
 
-                        is CleanSelectedTextUseCase.StreamEvent.Reasoning -> {
-                            if (thinkingStartTime == 0L) {
-                                thinkingStartTime = System.currentTimeMillis()
-                            }
-                            fullReasoning.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    aiTextClean = it.aiTextClean.copy(
-                                        reasoningText = fullReasoning.toString(),
-                                    )
+                        AiArtifact.STATUS_SUCCESS -> _uiState.update {
+                            it.copy(
+                                aiTextClean = clean.copy(
+                                    isLoading = false,
+                                    replacementText = snapshot.output.orEmpty(),
+                                    streamingText = "",
+                                    reasoningText = snapshot.reasoning,
+                                    errorMessage = null,
                                 )
-                            }
+                            )
                         }
 
-                        is CleanSelectedTextUseCase.StreamEvent.Done -> {
-                            _uiState.update {
-                                it.copy(
-                                    aiTextClean = it.aiTextClean.copy(
-                                        isLoading = false,
-                                        replacementText = event.replacement,
-                                        streamingText = "",
-                                        reasoningText = event.reasoning.ifBlank {
-                                            fullReasoning.toString()
-                                        },
-                                        errorMessage = null,
-                                    )
+                        AiArtifact.STATUS_FAILED -> _uiState.update {
+                            it.copy(
+                                aiTextClean = clean.copy(
+                                    isLoading = false,
+                                    errorMessage = snapshot.errorMessage
+                                        ?: context.getString(R.string.load_failed),
                                 )
-                            }
+                            )
                         }
+
+                        else -> Unit
                     }
                 }
             } catch (error: CancellationException) {
@@ -3748,11 +3710,7 @@ class ReadBookViewModel(
         aiTextRewriteJob = viewModelScope.launch {
             try {
                 val referenceContext = buildAiRewriteReferenceContext(request)
-                val fullText = StringBuilder()
-                val fullReasoning = StringBuilder()
-                var thinkingStartTime = 0L
-                aiTextFactoryUseCase.executeStream(
-                    AiTextFactoryUseCase.Request(
+                val aiRequest = AiTextFactoryUseCase.Request(
                         bookUrl = request.bookUrl,
                         chapterIndex = request.chapterIndex,
                         chapterTitle = request.chapterTitle,
@@ -3766,57 +3724,31 @@ class ReadBookViewModel(
                         skipCache = true,
                         artifactContentHash = request.sourceContentHash,
                     )
-                ).collect { event ->
+                val taskId = withContext(IO) { aiTextFactoryUseCase.start(aiRequest) }
+                aiTextFactoryUseCase.observeTaskById(taskId).collect { task ->
+                    val snapshot = task ?: return@collect
                     if (!isCurrentAiTextRewrite(request)) return@collect
-                    when (event) {
-                        is AiTextFactoryUseCase.StreamEvent.Content -> {
-                            if (fullText.isEmpty() && thinkingStartTime > 0L) {
-                                val duration =
-                                    ((System.currentTimeMillis() - thinkingStartTime) / 1000).toInt()
-                                _uiState.update {
-                                    it.copy(
-                                        aiTextRewrite = it.aiTextRewrite.copy(
-                                            thinkingDuration = duration,
-                                        )
-                                    )
-                                }
-                            }
-                            fullText.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    aiTextRewrite = it.aiTextRewrite.copy(
-                                        rewrittenText = fullText.toString(),
-                                        referenceCount = referenceContext.count,
-                                        errorMessage = null,
-                                    )
+                    val rewrite = _uiState.value.aiTextRewrite
+                    when (snapshot.status) {
+                        AiArtifact.STATUS_RUNNING -> _uiState.update {
+                            it.copy(
+                                aiTextRewrite = rewrite.copy(
+                                    isLoading = true,
+                                    rewrittenText = snapshot.output.orEmpty(),
+                                    reasoningText = snapshot.reasoning,
+                                    referenceCount = referenceContext.count,
+                                    errorMessage = null,
                                 )
-                            }
+                            )
                         }
 
-                        is AiTextFactoryUseCase.StreamEvent.Reasoning -> {
-                            if (thinkingStartTime == 0L) {
-                                thinkingStartTime = System.currentTimeMillis()
-                            }
-                            fullReasoning.append(event.text)
+                        AiArtifact.STATUS_SUCCESS -> {
                             _uiState.update {
                                 it.copy(
-                                    aiTextRewrite = it.aiTextRewrite.copy(
-                                        reasoningText = fullReasoning.toString(),
-                                        referenceCount = referenceContext.count,
-                                    )
-                                )
-                            }
-                        }
-
-                        is AiTextFactoryUseCase.StreamEvent.Done -> {
-                            _uiState.update {
-                                it.copy(
-                                    aiTextRewrite = it.aiTextRewrite.copy(
+                                    aiTextRewrite = rewrite.copy(
                                         isLoading = false,
-                                        rewrittenText = event.text,
-                                        reasoningText = event.reasoning.ifBlank {
-                                            fullReasoning.toString()
-                                        },
+                                        rewrittenText = snapshot.output.orEmpty(),
+                                        reasoningText = snapshot.reasoning,
                                         referenceCount = referenceContext.count,
                                         errorMessage = null,
                                     )
@@ -3824,6 +3756,18 @@ class ReadBookViewModel(
                             }
                             loadAiRewriteHistory(request, selectLatest = false)
                         }
+
+                        AiArtifact.STATUS_FAILED -> _uiState.update {
+                            it.copy(
+                                aiTextRewrite = rewrite.copy(
+                                    isLoading = false,
+                                    errorMessage = snapshot.errorMessage
+                                        ?: context.getString(R.string.load_failed),
+                                )
+                            )
+                        }
+
+                        else -> Unit
                     }
                 }
             } catch (error: CancellationException) {
@@ -4849,21 +4793,30 @@ class ReadBookViewModel(
                         route,
                     ),
                 ),
+                readAloudTtsTimer = if (
+                    route == ReadBookMenuRoute.ReadAloud && BaseReadAloudService.isRun
+                ) {
+                    BaseReadAloudService.timeMinute.coerceAtLeast(0)
+                } else {
+                    it.readAloudTtsTimer
+                },
             )
         }
     }
 
     private fun openDefaultReadAloudInterface() {
-        val sheet = if (
+        if (
             _uiState.value.defaultReadAloudInterface ==
             ReadAloudSettingsRepository.DEFAULT_INTERFACE_PLAYER
         ) {
-            ReadBookSheet.ReadAloudPlayer
+            _uiState.update {
+                it.copy(
+                    menuState = ReadBookMenuState(),
+                    activeSheet = ReadBookSheet.ReadAloudPlayer
+                )
+            }
         } else {
-            ReadBookSheet.ReadAloudControls
-        }
-        _uiState.update {
-            it.copy(menuState = ReadBookMenuState(), activeSheet = sheet)
+            openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
         }
     }
 

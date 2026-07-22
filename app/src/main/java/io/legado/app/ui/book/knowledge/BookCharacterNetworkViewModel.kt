@@ -76,6 +76,7 @@ class BookCharacterNetworkViewModel(
             }
 
             is CharacterNetworkIntent.SaveRelation -> saveRelation(intent.relationId)
+            is CharacterNetworkIntent.DeleteRelation -> deleteRelation(intent.relationId)
             CharacterNetworkIntent.AddRelation -> addRelation()
         }
     }
@@ -227,6 +228,28 @@ class BookCharacterNetworkViewModel(
         }
     }
 
+    private fun deleteRelation(relationId: String) {
+        if (relationMap[relationId] == null) return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    bookKnowledgeGateway.deleteCharacterRelation(
+                        relationId
+                    )
+                }
+                load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _effects.tryEmit(
+                    CharacterNetworkEffect.ShowToast(
+                        e.localizedMessage ?: appCtx.getString(R.string.delete_failed)
+                    )
+                )
+            }
+        }
+    }
+
     private suspend fun findOrCreateProfile(name: String): BookCharacterProfile {
         val bookUrl = _uiState.value.bookUrl
         profileMap.values.firstOrNull { it.name == name }?.let { return it }
@@ -253,8 +276,10 @@ class BookCharacterNetworkViewModel(
             id = id,
             fromCharacterId = fromCharacterId,
             toCharacterId = toCharacterId,
-            fromName = profileMap[fromCharacterId]?.name.orEmpty(),
-            toName = profileMap[toCharacterId]?.name.orEmpty(),
+            fromName = profileMap[fromCharacterId]?.name
+                ?: appCtx.getString(R.string.character_deleted),
+            toName = profileMap[toCharacterId]?.name
+                ?: appCtx.getString(R.string.character_deleted),
             relationType = relationType,
             summary = summary,
             attitude = attitude,

@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.knowledge
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,13 +18,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,18 +43,23 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.ui.ai.AiTaskResultSheet
+import io.legado.app.ui.ai.chat.ReasoningCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
@@ -109,6 +119,13 @@ fun BookCharacterListScreen(
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBack)
                 },
+                actions = {
+                    TopBarActionButton(
+                        onClick = { onIntent(CharacterListIntent.OpenAiIdentify) },
+                        imageVector = Icons.Default.Person,
+                        contentDescription = stringResource(R.string.ai_identify_characters),
+                    )
+                },
                 scrollBehavior = scrollBehavior,
                 bottomContent = {
                     AppTabRow(
@@ -147,6 +164,124 @@ fun BookCharacterListScreen(
                     .imePadding(),
                 paddingValues = paddingValues
             )
+        }
+    }
+    CharacterIdentifySheet(state.aiSheet, state.isAiSheetVisible, onIntent)
+}
+
+@Composable
+private fun CharacterIdentifySheet(
+    sheet: CharacterIdentifySheet?,
+    visible: Boolean,
+    onIntent: (CharacterListIntent) -> Unit,
+) {
+    AiTaskResultSheet(
+        show = visible && sheet != null,
+        onDismissRequest = { onIntent(CharacterListIntent.DismissAiIdentify) },
+        title = stringResource(R.string.ai_identify_characters),
+        startAction = if (sheet != null) {
+            {
+                MediumTonalButton(
+                    onClick = { onIntent(CharacterListIntent.RunAiIdentify) },
+                    icon = Icons.Default.Refresh,
+                    contentDescription = stringResource(R.string.retry),
+                    enabled = !sheet.loading,
+                )
+            }
+        } else null,
+        endAction = if (sheet?.candidates?.isNotEmpty() == true) {
+            {
+                MediumTonalButton(
+                    onClick = { onIntent(CharacterListIntent.SaveAiCandidates) },
+                    contentDescription = stringResource(R.string.ai_identify_characters_save),
+                    icon = Icons.Default.Save,
+                    enabled = !sheet.loading,
+                )
+            }
+        } else null,
+    ) {
+        when {
+            sheet == null -> Unit
+            sheet.loading -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) { AppCircularProgressIndicator() }
+                sheet.toolNames.forEach { toolName ->
+                    TextCard(text = toolName)
+                }
+                ReasoningCard(
+                    text = sheet.reasoning,
+                    isStreaming = true,
+                    messageCreatedAt = sheet.startedAt,
+                )
+            }
+
+            sheet.error != null -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AnimatedTextLine(sheet.error, color = LegadoTheme.colorScheme.error)
+            }
+
+            sheet.candidates.isEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AnimatedTextLine(
+                    stringResource(R.string.ai_identify_characters_hint),
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                sheet.candidates.forEach { candidate ->
+                    CharacterIdentifyCandidateRow(candidate, onIntent)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CharacterIdentifyCandidateRow(
+    candidate: CharacterIdentifyCandidateUi,
+    onIntent: (CharacterListIntent) -> Unit,
+) {
+    val expanded = rememberSaveable(candidate.id) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        CheckboxItem(
+            title = candidate.name,
+            checked = candidate.selected,
+            onCheckedChange = { onIntent(CharacterListIntent.ToggleAiCandidate(candidate.id)) },
+        )
+        if (candidate.summary.isNotBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded.value = !expanded.value }
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AnimatedTextLine(
+                    text = candidate.summary.lineSequence().firstOrNull().orEmpty(),
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                AppIcon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = expanded.value,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut(),
+            ) {
+                AnimatedTextLine(
+                    candidate.summary,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
         }
     }
 }

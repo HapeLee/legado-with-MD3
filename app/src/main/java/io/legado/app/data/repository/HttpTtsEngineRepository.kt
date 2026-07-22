@@ -20,6 +20,7 @@ class HttpTtsEngineRepository(
                 displayName = source.name,
                 providerName = "HTTP TTS",
                 supportsVoiceDiscovery = false,
+                loginUrl = source.loginUrl.orEmpty(),
             )
         }
     }

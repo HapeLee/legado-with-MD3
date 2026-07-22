@@ -156,4 +156,19 @@ interface BookKnowledgeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertOutlineNode(node: BookOutlineNode)
+
+    @Query("delete from book_character_profiles where bookUrl = :bookUrl and id = :characterId")
+    suspend fun deleteCharacterProfile(bookUrl: String, characterId: String)
+
+    @Query("update book_character_relations set status = ${BookCharacterProfile.STATUS_DELETED} where fromCharacterId = :characterId or toCharacterId = :characterId")
+    suspend fun deleteRelationsForCharacter(characterId: String)
+
+    @Query("delete from book_character_events where bookUrl = :bookUrl and characterId = :characterId")
+    suspend fun deleteEventsForCharacter(bookUrl: String, characterId: String)
+
+    @Query("delete from book_character_relations where id = :relationId")
+    suspend fun deleteCharacterRelation(relationId: String)
+
+    @Query("delete from book_knowledge_entries where id = :entryId")
+    suspend fun deleteKnowledgeEntry(entryId: String)
 }

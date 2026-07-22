@@ -8,8 +8,6 @@ import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import splitties.init.appCtx
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import splitties.init.appCtx
 import java.util.UUID
 
 class BookCharacterDetailViewModel(
@@ -70,9 +69,12 @@ class BookCharacterDetailViewModel(
             }
 
             is CharacterDetailIntent.SetRole -> _uiState.update { it.copy(role = intent.value) }
+            is CharacterDetailIntent.SetVoiceGender -> _uiState.update { it.copy(voiceGender = intent.value) }
+            is CharacterDetailIntent.SetVoiceAgeBand -> _uiState.update { it.copy(voiceAgeBand = intent.value) }
             is CharacterDetailIntent.SetPersonality -> _uiState.update { it.copy(personality = intent.value) }
             is CharacterDetailIntent.SetSummary -> _uiState.update { it.copy(summary = intent.value) }
             CharacterDetailIntent.Save -> save()
+            is CharacterDetailIntent.Delete -> delete(intent)
         }
     }
 
@@ -111,6 +113,10 @@ class BookCharacterDetailViewModel(
                         avatarUri = profile?.avatarUri.orEmpty(),
                         tags = profile?.tagsJson.toTagList(),
                         role = profile?.role.orEmpty(),
+                        voiceGender = profile?.voiceGender
+                            ?: BookCharacterProfile.VOICE_GENDER_UNKNOWN,
+                        voiceAgeBand = profile?.voiceAgeBand
+                            ?: BookCharacterProfile.VOICE_AGE_UNKNOWN,
                         personality = profile?.personality.orEmpty(),
                         summary = profile?.summary.orEmpty(),
                         events = events.map { event ->
@@ -169,6 +175,8 @@ class BookCharacterDetailViewModel(
                     avatarUri = state.avatarUri.trim().takeIf { it.isNotBlank() },
                     tagsJson = state.tags.toTagsJson(),
                     role = state.role,
+                    voiceGender = state.voiceGender,
+                    voiceAgeBand = state.voiceAgeBand,
                     personality = state.personality.trim(),
                     summary = state.summary.trim(),
                     status = existing?.status ?: BookCharacterProfile.STATUS_ACTIVE,
@@ -196,6 +204,31 @@ class BookCharacterDetailViewModel(
                 _effects.tryEmit(
                     CharacterDetailEffect.ShowToast(
                         e.localizedMessage ?: appCtx.getString(R.string.character_save_failed)
+                    )
+                )
+            }
+        }
+    }
+
+    private fun delete(intent: CharacterDetailIntent.Delete) {
+        val profile = currentProfile ?: return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    bookKnowledgeGateway.deleteCharacterProfile(
+                        bookUrl = profile.bookUrl,
+                        characterId = profile.id,
+                        deleteRelations = intent.deleteRelations,
+                        deleteEvents = intent.deleteEvents,
+                    )
+                }
+                _effects.tryEmit(CharacterDetailEffect.NavigateBack)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _effects.tryEmit(
+                    CharacterDetailEffect.ShowToast(
+                        e.localizedMessage ?: appCtx.getString(R.string.delete_failed)
                     )
                 )
             }

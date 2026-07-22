@@ -44,7 +44,7 @@ sealed interface ReadAloudPlayerIntent {
     data object OpenSettings : ReadAloudPlayerIntent
     data object SwitchToClassic : ReadAloudPlayerIntent
     data object OpenToc : ReadAloudPlayerIntent
-    data object CycleBgMode : ReadAloudPlayerIntent
+    data class SetBgMode(val value: Int) : ReadAloudPlayerIntent
     data class SetSpeed(val value: Int) : ReadAloudPlayerIntent
     data class SetTimer(val minutes: Int) : ReadAloudPlayerIntent
     data class SeekTo(val chapterPosition: Int) : ReadAloudPlayerIntent

@@ -59,8 +59,10 @@ sealed interface KnowledgeDetailIntent {
     data class SetScopeEnd(val value: String) : KnowledgeDetailIntent
     data class SetPriority(val value: Int) : KnowledgeDetailIntent
     data object Save : KnowledgeDetailIntent
+    data object Delete : KnowledgeDetailIntent
 }
 
 sealed interface KnowledgeDetailEffect {
     data class ShowToast(val message: String) : KnowledgeDetailEffect
+    data object NavigateBack : KnowledgeDetailEffect
 }

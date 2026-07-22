@@ -92,6 +92,7 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         keepLight = "keep-light",
         titleBarMode = "title-mode",
         readMenuBlurAlpha = 37,
+        eyeProtectionIntensity = 73,
         showBrightnessView = "brightness-view",
         brightnessVwPos = "brightness-pos",
         readBrightness = 73,

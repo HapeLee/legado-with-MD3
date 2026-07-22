@@ -33,9 +33,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.constant.ReadAloudBgMode
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -56,15 +59,18 @@ import kotlinx.coroutines.launch
 @Composable
 fun ReadAloudConfigContent(
     state: ReadBookUiState,
+    playerState: ReadAloudPlayerUiState,
     onIntent: (ReadBookIntent) -> Unit,
+    onPlayerIntent: (ReadAloudPlayerIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         CardTabRow(
+            modifier = modifier,
             tabTitles = listOf(
                 stringResource(R.string.read_aloud_settings_general_tab),
                 stringResource(R.string.read_aloud_settings_voice_tab),
@@ -85,7 +91,7 @@ fun ReadAloudConfigContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 8.dp, bottom = 16.dp),
+                    .padding(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
             ) {
                 if (page == 0) {
                     TinyDropdownSettingItem(
@@ -98,6 +104,23 @@ fun ReadAloudConfigContent(
                         entryValues = arrayOf("classic", "player"),
                         description = stringResource(R.string.default_read_aloud_interface_summary),
                         onValueChange = { onIntent(ReadBookIntent.SetDefaultReadAloudInterface(it)) },
+                    )
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.read_aloud_player_background),
+                        selectedValue = playerState.bgMode.toString(),
+                        displayEntries = arrayOf(
+                            stringResource(R.string.read_aloud_bg_solid),
+                            stringResource(R.string.read_aloud_bg_blur),
+                            stringResource(R.string.read_aloud_bg_flowing_light),
+                            stringResource(R.string.read_aloud_bg_transparent),
+                        ),
+                        entryValues = arrayOf(
+                            ReadAloudBgMode.Solid.toString(),
+                            ReadAloudBgMode.Blur.toString(),
+                            ReadAloudBgMode.FlowingLight.toString(),
+                            ReadAloudBgMode.Transparent.toString(),
+                        ),
+                        onValueChange = { onPlayerIntent(ReadAloudPlayerIntent.SetBgMode(it.toInt())) },
                     )
                     TinySwitchSettingItem(
                         title = stringResource(R.string.show_read_aloud_capsule),
@@ -180,14 +203,6 @@ fun ReadAloudConfigContent(
                         onClick = { onIntent(ReadBookIntent.ResetReadAloudCapsulePosition) },
                     )
                 } else {
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.read_aloud_default_engine),
-                        description = stringResource(
-                            R.string.read_aloud_default_engine_summary,
-                            state.speakEngineName.ifEmpty { stringResource(R.string.system_tts) },
-                        ),
-                        onClick = { onIntent(ReadBookIntent.SelectSpeakEngine) },
-                    )
                     TinyClickableSettingItem(
                         title = stringResource(R.string.read_aloud_engines_and_voices),
                         description = stringResource(R.string.read_aloud_engines_and_voices_summary),

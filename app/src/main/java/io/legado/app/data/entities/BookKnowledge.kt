@@ -1,5 +1,6 @@
 package io.legado.app.data.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -20,6 +21,10 @@ data class BookCharacterProfile(
     val avatarUri: String? = null,
     val tagsJson: String = "[]",
     val role: String = "",
+    @ColumnInfo(defaultValue = "unknown")
+    val voiceGender: String = VOICE_GENDER_UNKNOWN,
+    @ColumnInfo(defaultValue = "unknown")
+    val voiceAgeBand: String = VOICE_AGE_UNKNOWN,
     val personality: String = "",
     val summary: String = "",
     val status: Int = STATUS_ACTIVE,
@@ -45,6 +50,22 @@ data class BookCharacterProfile(
         const val ROLE_FEMALE_SUPPORTING = "female_supporting"
         val ALL_ROLES =
             listOf(ROLE_MALE_LEAD, ROLE_FEMALE_LEAD, ROLE_MALE_SUPPORTING, ROLE_FEMALE_SUPPORTING)
+
+        const val VOICE_GENDER_MALE = "male"
+        const val VOICE_GENDER_FEMALE = "female"
+        const val VOICE_GENDER_UNKNOWN = "unknown"
+        val ALL_VOICE_GENDERS = listOf(VOICE_GENDER_MALE, VOICE_GENDER_FEMALE, VOICE_GENDER_UNKNOWN)
+
+        const val VOICE_AGE_CHILD = "child"
+        const val VOICE_AGE_TEEN = "teen"
+        const val VOICE_AGE_YOUNG_ADULT = "young_adult"
+        const val VOICE_AGE_ADULT = "adult"
+        const val VOICE_AGE_ELDERLY = "elderly"
+        const val VOICE_AGE_UNKNOWN = "unknown"
+        val ALL_VOICE_AGE_BANDS = listOf(
+            VOICE_AGE_CHILD, VOICE_AGE_TEEN, VOICE_AGE_YOUNG_ADULT,
+            VOICE_AGE_ADULT, VOICE_AGE_ELDERLY, VOICE_AGE_UNKNOWN,
+        )
     }
 }
 

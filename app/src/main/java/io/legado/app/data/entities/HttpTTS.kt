@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 import com.jayway.jsonpath.DocumentContext
 import io.legado.app.utils.GSON
 import io.legado.app.utils.jsonPath
+import io.legado.app.utils.readBool
 import io.legado.app.utils.readLong
 import io.legado.app.utils.readString
 
@@ -55,6 +56,8 @@ data class HttpTTS(
                     loginUrl = doc.readString("$.loginUrl"),
                     loginUi = if (loginUi is List<*>) GSON.toJson(loginUi) else loginUi?.toString(),
                     header = doc.readString("$.header"),
+                    jsLib = doc.readString("$.jsLib"),
+                    enabledCookieJar = doc.readBool("$.enabledCookieJar"),
                     loginCheckJs = doc.readString("$.loginCheckJs"),
                     lastUpdateTime = doc.readLong("$.lastUpdateTime") ?: System.currentTimeMillis()
                 )
