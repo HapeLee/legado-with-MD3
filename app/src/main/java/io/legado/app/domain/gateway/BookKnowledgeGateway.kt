@@ -61,4 +61,13 @@ interface BookKnowledgeGateway {
     suspend fun upsertCharacterRelation(relation: BookCharacterRelation)
     suspend fun upsertKnowledgeEntry(entry: BookKnowledgeEntry)
     suspend fun upsertOutlineNode(node: BookOutlineNode)
+    suspend fun deleteCharacterProfile(
+        bookUrl: String,
+        characterId: String,
+        deleteRelations: Boolean,
+        deleteEvents: Boolean,
+    )
+
+    suspend fun deleteCharacterRelation(relationId: String)
+    suspend fun deleteKnowledgeEntry(entryId: String)
 }

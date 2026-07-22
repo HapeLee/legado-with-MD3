@@ -344,6 +344,9 @@ class ReadSettingsRepository(
             textBottomJustify = compatDsValue(Keys.TextBottomJustify, true),
             adaptSpecialStyle = compatDsValue(Keys.AdaptSpecialStyle, true),
             useZhLayout = compatDsValue(Keys.UseZhLayout, false),
+            eyeProtectionEnabled = compatDsValue(Keys.EyeProtectionEnabled, false),
+            eyeProtectionIntensity = compatDsValue(Keys.EyeProtectionIntensity, 50),
+            eyeProtectionAutoNight = compatDsValue(Keys.EyeProtectionAutoNight, false),
             showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "0"),
             brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
             readBrightness = compatDsValue(Keys.ReadBrightness, 100),
@@ -456,6 +459,9 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
+        val EyeProtectionEnabled = booleanPreferencesKey(PreferKey.eyeProtectionEnabled)
+        val EyeProtectionIntensity = intPreferencesKey(PreferKey.colorTemperature)
+        val EyeProtectionAutoNight = booleanPreferencesKey(PreferKey.eyeProtectionAutoNight)
         val ShowBrightnessView = stringPreferencesKey(PreferKey.showBrightnessView)
         val BrightnessVwPos = stringPreferencesKey(PreferKey.brightnessVwPos)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)
@@ -553,7 +559,7 @@ class ReadSettingsRepository(
 }
 
 /**
- * ReadSettings 是 101 字段的读取超集；gateway update 当前只承诺持久化以下 45 个键。
+ * ReadSettings 是 101 字段的读取超集；gateway update 当前只承诺持久化以下 48 个键。
  * 扩展此边界时必须同步更新 ReadSettingsMappingTest 的显式键集契约。
  */
 internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
@@ -570,6 +576,9 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textBottomJustify to textBottomJustify,
     PreferKey.adaptSpecialStyle to adaptSpecialStyle,
     PreferKey.useZhLayout to useZhLayout,
+    PreferKey.eyeProtectionEnabled to eyeProtectionEnabled,
+    PreferKey.colorTemperature to eyeProtectionIntensity,
+    PreferKey.eyeProtectionAutoNight to eyeProtectionAutoNight,
     PreferKey.showBrightnessView to showBrightnessView,
     PreferKey.brightnessVwPos to brightnessVwPos,
     PreferKey.brightness to readBrightness,

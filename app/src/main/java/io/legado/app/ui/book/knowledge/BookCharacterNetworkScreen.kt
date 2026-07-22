@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +43,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -315,6 +317,7 @@ private fun RelationEditorCard(
     isSaving: Boolean,
     onIntent: (CharacterNetworkIntent) -> Unit,
 ) {
+    val showDeleteDialog = remember { mutableStateOf(false) }
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
@@ -339,6 +342,12 @@ private fun RelationEditorCard(
                     enabled = !isSaving,
                     icon = Icons.Default.Save,
                     contentDescription = stringResource(R.string.save),
+                )
+                SmallTonalButton(
+                    onClick = { showDeleteDialog.value = true },
+                    enabled = !isSaving,
+                    icon = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete),
                 )
             }
             AppTextField(
@@ -371,6 +380,19 @@ private fun RelationEditorCard(
             )
         }
     }
+    AppAlertDialog(
+        show = showDeleteDialog.value,
+        onDismissRequest = { showDeleteDialog.value = false },
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_delete),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = {
+            onIntent(CharacterNetworkIntent.DeleteRelation(relation.id))
+            showDeleteDialog.value = false
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteDialog.value = false },
+    )
 }
 
 @Composable

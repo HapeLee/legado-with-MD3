@@ -16,6 +16,8 @@ data class CharacterDetailUiState(
     val tags: ImmutableList<String> = persistentListOf(),
     val tagInput: String = "",
     val role: String = "",
+    val voiceGender: String = "unknown",
+    val voiceAgeBand: String = "unknown",
     val personality: String = "",
     val summary: String = "",
     val events: ImmutableList<CharacterEventUi> = persistentListOf(),
@@ -47,13 +49,20 @@ sealed interface CharacterDetailIntent {
     data class AddTag(val tag: String) : CharacterDetailIntent
     data class RemoveTag(val index: Int) : CharacterDetailIntent
     data class SetRole(val value: String) : CharacterDetailIntent
+    data class SetVoiceGender(val value: String) : CharacterDetailIntent
+    data class SetVoiceAgeBand(val value: String) : CharacterDetailIntent
     data class SetPersonality(val value: String) : CharacterDetailIntent
     data class SetSummary(val value: String) : CharacterDetailIntent
     data object Save : CharacterDetailIntent
+    data class Delete(
+        val deleteRelations: Boolean,
+        val deleteEvents: Boolean,
+    ) : CharacterDetailIntent
 }
 
 sealed interface CharacterDetailEffect {
     data class ShowToast(val message: String) : CharacterDetailEffect
+    data object NavigateBack : CharacterDetailEffect
 }
 
 @Stable
@@ -105,6 +114,7 @@ sealed interface CharacterNetworkIntent {
         CharacterNetworkIntent
 
     data class SaveRelation(val relationId: String) : CharacterNetworkIntent
+    data class DeleteRelation(val relationId: String) : CharacterNetworkIntent
     data object AddRelation : CharacterNetworkIntent
 }
 

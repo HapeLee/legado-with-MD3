@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +46,7 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -71,11 +73,13 @@ fun BookCharacterDetailScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(effects) {
         effects.collectLatest { effect ->
             when (effect) {
                 is CharacterDetailEffect.ShowToast -> context.toastOnUi(effect.message)
+                CharacterDetailEffect.NavigateBack -> onBack()
             }
         }
     }
@@ -89,6 +93,13 @@ fun BookCharacterDetailScreen(
                     TopBarNavigationButton(onClick = onBack)
                 },
                 actions = {
+                    if (state.characterId != null) {
+                        TopBarActionButton(
+                            onClick = { showDeleteDialog = true },
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                        )
+                    }
                     TopBarActionButton(
                         onClick = { onIntent(CharacterDetailIntent.Save) },
                         imageVector = Icons.Default.Save,
@@ -122,6 +133,15 @@ fun BookCharacterDetailScreen(
             )
         }
     }
+
+    CharacterDeleteDialog(
+        show = showDeleteDialog,
+        onDismiss = { showDeleteDialog = false },
+        onDelete = { deleteRelations, deleteEvents ->
+            onIntent(CharacterDetailIntent.Delete(deleteRelations, deleteEvents))
+            showDeleteDialog = false
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -136,6 +156,8 @@ private fun CharacterDetailContent(
     var dialogName by remember(state.name) { mutableStateOf(state.name) }
     var dialogAliases by remember(state.aliasesText) { mutableStateOf(state.aliasesText) }
     var dialogRole by remember(state.role) { mutableStateOf(state.role) }
+    var dialogVoiceGender by remember(state.voiceGender) { mutableStateOf(state.voiceGender) }
+    var dialogVoiceAgeBand by remember(state.voiceAgeBand) { mutableStateOf(state.voiceAgeBand) }
 
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -146,12 +168,16 @@ private fun CharacterDetailContent(
             aliasesText = state.aliasesText,
             avatarUri = state.avatarUri,
             roleDisplayName = state.role,
+            voiceGender = state.voiceGender,
+            voiceAgeBand = state.voiceAgeBand,
             tags = state.tags,
             onPickAvatar = onPickAvatar,
             onInfoClick = {
                 dialogName = state.name
                 dialogAliases = state.aliasesText
                 dialogRole = state.role
+                dialogVoiceGender = state.voiceGender
+                dialogVoiceAgeBand = state.voiceAgeBand
                 showProfileDialog = true
             },
         )
@@ -211,6 +237,8 @@ private fun CharacterDetailContent(
             onIntent(CharacterDetailIntent.SetName(dialogName))
             onIntent(CharacterDetailIntent.SetAliasesText(dialogAliases))
             onIntent(CharacterDetailIntent.SetRole(dialogRole))
+            onIntent(CharacterDetailIntent.SetVoiceGender(dialogVoiceGender))
+            onIntent(CharacterDetailIntent.SetVoiceAgeBand(dialogVoiceAgeBand))
             showProfileDialog = false
         },
         dismissText = stringResource(R.string.cancel),
@@ -235,9 +263,110 @@ private fun CharacterDetailContent(
                     selectedRole = dialogRole,
                     onRoleSelected = { dialogRole = it },
                 )
+                ProfileVoiceTraitDropdown(
+                    label = stringResource(R.string.character_voice_gender),
+                    selected = dialogVoiceGender,
+                    options = BookCharacterProfile.ALL_VOICE_GENDERS,
+                    displayName = { voiceGenderDisplayName(it) },
+                    onSelected = { dialogVoiceGender = it },
+                )
+                ProfileVoiceTraitDropdown(
+                    label = stringResource(R.string.character_voice_age_band),
+                    selected = dialogVoiceAgeBand,
+                    options = BookCharacterProfile.ALL_VOICE_AGE_BANDS,
+                    displayName = { voiceAgeBandDisplayName(it) },
+                    onSelected = { dialogVoiceAgeBand = it },
+                )
             }
         },
     )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ProfileVoiceTraitDropdown(
+    label: String,
+    selected: String,
+    options: List<String>,
+    displayName: @Composable (String) -> String,
+    onSelected: (String) -> Unit,
+) {
+    var showDropdown by remember { mutableStateOf(false) }
+    AppText(
+        text = label,
+        style = LegadoTheme.typography.labelMedium,
+        color = LegadoTheme.colorScheme.onSurfaceVariant
+    )
+    Box {
+        GlassCard(
+            onClick = { showDropdown = true },
+            containerColor = LegadoTheme.colorScheme.surfaceContainerLow
+        ) {
+            AnimatedTextLine(
+                text = displayName(selected),
+                style = LegadoTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+        RoundDropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false }) {
+            options.forEach { option ->
+                RoundDropdownMenuItem(text = displayName(option), onClick = {
+                    onSelected(option)
+                    showDropdown = false
+                })
+            }
+        }
+    }
+
+}
+
+@Composable
+private fun CharacterDeleteDialog(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    onDelete: (deleteRelations: Boolean, deleteEvents: Boolean) -> Unit,
+) {
+    var deleteRelations by remember { mutableStateOf(false) }
+    var deleteEvents by remember { mutableStateOf(false) }
+    AppAlertDialog(
+        show = show,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.character_delete_message),
+        confirmText = stringResource(R.string.delete),
+        onConfirm = { onDelete(deleteRelations, deleteEvents) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CheckboxItem(
+                    stringResource(R.string.character_delete_relations),
+                    checked = deleteRelations
+                ) { deleteRelations = it }
+                CheckboxItem(
+                    stringResource(R.string.character_delete_events),
+                    checked = deleteEvents
+                ) { deleteEvents = it }
+            }
+        },
+    )
+}
+
+@Composable
+private fun voiceGenderDisplayName(value: String): String = when (value) {
+    BookCharacterProfile.VOICE_GENDER_MALE -> stringResource(R.string.voice_gender_male)
+    BookCharacterProfile.VOICE_GENDER_FEMALE -> stringResource(R.string.voice_gender_female)
+    else -> stringResource(R.string.voice_gender_unknown)
+}
+
+@Composable
+private fun voiceAgeBandDisplayName(value: String): String = when (value) {
+    BookCharacterProfile.VOICE_AGE_CHILD -> stringResource(R.string.voice_age_child)
+    BookCharacterProfile.VOICE_AGE_TEEN -> stringResource(R.string.voice_age_teen)
+    BookCharacterProfile.VOICE_AGE_YOUNG_ADULT -> stringResource(R.string.voice_age_young_adult)
+    BookCharacterProfile.VOICE_AGE_ADULT -> stringResource(R.string.voice_age_adult)
+    BookCharacterProfile.VOICE_AGE_ELDERLY -> stringResource(R.string.voice_age_elderly)
+    else -> stringResource(R.string.voice_age_unknown)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -294,6 +423,8 @@ private fun CharacterHeader(
     aliasesText: String,
     avatarUri: String,
     roleDisplayName: String,
+    voiceGender: String,
+    voiceAgeBand: String,
     tags: ImmutableList<String>,
     onPickAvatar: () -> Unit,
     onInfoClick: () -> Unit,
@@ -362,6 +493,12 @@ private fun CharacterHeader(
                 if (resolvedRole.isNotBlank()) {
                     TextCard(text = resolvedRole)
                 }
+                if (voiceGender != BookCharacterProfile.VOICE_GENDER_UNKNOWN) {
+                    TextCard(text = voiceGenderDisplayName(voiceGender))
+                }
+                if (voiceAgeBand != BookCharacterProfile.VOICE_AGE_UNKNOWN) {
+                    TextCard(text = voiceAgeBandDisplayName(voiceAgeBand))
+                }
             }
             if (aliasesText.isNotBlank()) {
                 AnimatedTextLine(
@@ -390,10 +527,7 @@ private fun CharacterReadonlySection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AppText(
-            text = title,
-            style = LegadoTheme.typography.titleMedium,
-        )
+        AppText(text = title, style = LegadoTheme.typography.titleMedium)
         if (isEmpty) {
             GlassCard {
                 Box(
@@ -402,9 +536,7 @@ private fun CharacterReadonlySection(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    EmptyMessage(
-                        message = emptyText
-                    )
+                    EmptyMessage(message = emptyText)
                 }
             }
         } else {

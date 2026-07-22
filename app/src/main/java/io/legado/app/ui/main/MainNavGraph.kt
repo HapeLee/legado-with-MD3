@@ -1,5 +1,6 @@
 package io.legado.app.ui.main
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,6 +71,8 @@ import io.legado.app.ui.book.readRecord.ReadRecordRouteScreen
 import io.legado.app.ui.book.readaloud.cache.TtsCacheRouteScreen
 import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingScreen
 import io.legado.app.ui.book.readaloud.casting.BookVoiceCastingViewModel
+import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsEffect
+import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsIntent
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
 import io.legado.app.ui.book.search.SearchIntent
@@ -96,6 +99,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
+import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesRouteScreen
@@ -452,7 +456,7 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteBookVoiceCasting(bookUrl))
             },
             onOpenTtsEnginesAndVoices = {
-                onNavigateToRoute(MainRouteCloudTtsEngines)
+                onNavigateToRoute(MainRouteCloudTtsEngines(route.bookUrl))
             },
             onOpenTtsCache = {
                 onNavigateToRoute(MainRouteTtsCache)
@@ -854,12 +858,41 @@ fun MainActivity.mainEntryProvider(
             onIntent = viewModel::onIntent,
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
-            onManageCloudTts = { onNavigateToRoute(MainRouteCloudTtsEngines) },
+            onManageCloudTts = { onNavigateToRoute(MainRouteCloudTtsEngines(route.bookUrl)) },
         )
     }
 
-    entry<MainRouteCloudTtsEngines> {
+    entry<MainRouteCloudTtsEngines> { route ->
         val viewModel = koinViewModel<CloudTtsViewModel>()
+        LaunchedEffect(route.bookUrl) {
+            viewModel.onIntent(CloudTtsIntent.SetBookContext(route.bookUrl))
+        }
+        val context = LocalContext.current
+        val importLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri -> uri?.let { viewModel.onIntent(CloudTtsIntent.ImportHttpTtsFileSelected(it)) } }
+        val exportLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri -> uri?.let { viewModel.onIntent(CloudTtsIntent.ExportHttpTtsFileSelected(it)) } }
+        LaunchedEffect(viewModel) {
+            viewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    CloudTtsEffect.OpenHttpTtsImportPicker -> importLauncher.launch(
+                        arrayOf("application/json", "text/plain")
+                    )
+
+                    CloudTtsEffect.OpenHttpTtsExportPicker -> exportLauncher.launch("httpTTS.json")
+                    is CloudTtsEffect.OpenHttpTtsLogin -> context.startActivity(
+                        Intent(context, SourceLoginActivity::class.java).apply {
+                            putExtra("type", "httpTts")
+                            putExtra("key", effect.engineId.toString())
+                        }
+                    )
+
+                    else -> Unit
+                }
+            }
+        }
         CloudTtsScreen(
             state = viewModel.uiState.collectAsStateWithLifecycle().value,
             onIntent = viewModel::onIntent,

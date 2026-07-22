@@ -42,7 +42,10 @@ class ReadAloudPlayerViewModel(
             ReadAloudPlayerIntent.OpenSettings -> effect(ReadAloudPlayerEffect.ReturnToReaderSettings)
             ReadAloudPlayerIntent.SwitchToClassic -> effect(ReadAloudPlayerEffect.ReturnToClassic)
             ReadAloudPlayerIntent.OpenToc -> effect(ReadAloudPlayerEffect.OpenToc)
-            ReadAloudPlayerIntent.CycleBgMode -> cycleBgMode()
+            is ReadAloudPlayerIntent.SetBgMode -> AppConfigStore.putInt(
+                PreferKey.readAloudPlayerBgMode,
+                intent.value,
+            )
             is ReadAloudPlayerIntent.SetSpeed -> viewModelScope.launch {
                 coordinator.setSpeed(intent.value)
             }
@@ -52,17 +55,6 @@ class ReadAloudPlayerViewModel(
                 chapterLength = uiState.value.chapterLength,
             )
         }
-    }
-
-    private fun cycleBgMode() {
-        val current = readBgMode()
-        val next = when (current) {
-            ReadAloudBgMode.Solid -> ReadAloudBgMode.Blur
-            ReadAloudBgMode.Blur -> ReadAloudBgMode.FlowingLight
-            ReadAloudBgMode.FlowingLight -> ReadAloudBgMode.Transparent
-            else -> ReadAloudBgMode.Blur
-        }
-        AppConfigStore.putInt(PreferKey.readAloudPlayerBgMode, next)
     }
 
     private fun toUiState(

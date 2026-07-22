@@ -159,6 +159,7 @@ class BuildSpeechPlanUseCaseTest {
         assertEquals(characterVoice, plan.voice)
     }
 
+
     private fun voice(id: String) = ReadAloudVoice(
         id = id,
         engineType = "http",

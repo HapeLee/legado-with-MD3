@@ -30,7 +30,6 @@ import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
-import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
@@ -40,7 +39,6 @@ import io.legado.app.ui.book.read.sheet.ReadAloudPage
 import io.legado.app.ui.book.read.sheet.ReadAloudScreen
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
-import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
@@ -307,22 +305,6 @@ fun ReadBookScreen(
         },
         onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
     )
-    SpeakEngineConfigSheet(
-        show = state.activeSheet is ReadBookSheet.SpeakEngineConfig,
-        state = state,
-        onIntent = onIntent,
-        onDismissRequest = {
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
-        },
-    )
-    HttpTtsEditSheet(
-        show = state.activeSheet is ReadBookSheet.HttpTtsEdit,
-        httpTTS = state.editingHttpTts,
-        onIntent = onIntent,
-        onDismissRequest = {
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SpeakEngineConfig))
-        },
-    )
     ReadAloudNumberConfigSheet(
         show = state.activeSheet is ReadBookSheet.PreDownloadConfig,
         title = stringResource(R.string.read_aloud_preload),
@@ -438,7 +420,6 @@ fun ReadBookScreen(
         rememberThemeOverride(seedColor)
     }
     val readAloudPage = when (state.activeSheet) {
-        ReadBookSheet.ReadAloudControls -> ReadAloudPage.Controls
         ReadBookSheet.ReadAloudConfig -> ReadAloudPage.Config
         ReadBookSheet.ReadAloudPlayer -> ReadAloudPage.Player
         else -> null
@@ -451,17 +432,6 @@ fun ReadBookScreen(
         onIntent = onIntent,
         onPlayerIntent = aloudPlayerViewModel::onIntent,
         onDismissRequest = dismissSheet,
-        onOpenChapterList = {
-            onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.OpenChapterList)
-        },
-        onGoToBackground = {
-            onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
-        },
-        onOpenMainMenu = {
-            onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.ShowMenu)
-        },
     )
     LaunchedEffect(state.activeSheet) {
         if (state.activeSheet is ReadBookSheet.ReadAloudPlayer) {

@@ -48,19 +48,15 @@ class BuildSpeechPlanUseCase(
                         voicesById,
                     )
                 }
-                val characterRole = segment.characterId?.let(characterPerformances::get)?.role
-                val roleVoice = characterRole?.let { role ->
-                    bindings.voice(role, role, voicesById)
-                }
-                val genderFallback = when (characterRole) {
-                    BookVoiceBinding.SUBJECT_MALE_LEAD,
-                    BookVoiceBinding.SUBJECT_MALE_SUPPORTING -> bindings.voice(
+                val performance = segment.characterId?.let(characterPerformances::get)
+                val genderFallback = when (performance?.resolvedGender()) {
+                    "male" -> bindings.voice(
                         BookVoiceBinding.SUBJECT_UNKNOWN_MALE,
                         BookVoiceBinding.SUBJECT_UNKNOWN_MALE,
                         voicesById,
                     )
-                    BookVoiceBinding.SUBJECT_FEMALE_LEAD,
-                    BookVoiceBinding.SUBJECT_FEMALE_SUPPORTING -> bindings.voice(
+
+                    "female" -> bindings.voice(
                         BookVoiceBinding.SUBJECT_UNKNOWN_FEMALE,
                         BookVoiceBinding.SUBJECT_UNKNOWN_FEMALE,
                         voicesById,
@@ -69,7 +65,7 @@ class BuildSpeechPlanUseCase(
                 }
                 when (segment.roleType) {
                     SpeechRoleType.Character,
-                    SpeechRoleType.Thought -> characterVoice ?: roleVoice ?: genderFallback
+                    SpeechRoleType.Thought -> characterVoice ?: genderFallback
                         ?: unknown ?: narrator ?: defaultVoice
                     SpeechRoleType.Unknown -> unknown ?: narrator ?: defaultVoice
                     SpeechRoleType.Narrator -> narrator ?: defaultVoice
@@ -80,18 +76,16 @@ class BuildSpeechPlanUseCase(
             } else {
                 buildList {
                     if (segment.roleType != SpeechRoleType.Narrator) {
-                        val characterRole = segment.characterId
-                            ?.let(characterPerformances::get)?.role
-                        add(characterRole?.let { bindings.voice(it, it, voicesById) })
-                        add(when (characterRole) {
-                            BookVoiceBinding.SUBJECT_MALE_LEAD,
-                            BookVoiceBinding.SUBJECT_MALE_SUPPORTING -> bindings.voice(
+                        val performance = segment.characterId?.let(characterPerformances::get)
+                        add(
+                            when (performance?.resolvedGender()) {
+                                "male" -> bindings.voice(
                                 BookVoiceBinding.SUBJECT_UNKNOWN_MALE,
                                 BookVoiceBinding.SUBJECT_UNKNOWN_MALE,
                                 voicesById,
                             )
-                            BookVoiceBinding.SUBJECT_FEMALE_LEAD,
-                            BookVoiceBinding.SUBJECT_FEMALE_SUPPORTING -> bindings.voice(
+
+                                "female" -> bindings.voice(
                                 BookVoiceBinding.SUBJECT_UNKNOWN_FEMALE,
                                 BookVoiceBinding.SUBJECT_UNKNOWN_FEMALE,
                                 voicesById,
@@ -120,4 +114,17 @@ class BuildSpeechPlanUseCase(
         subjectId: String,
         voicesById: Map<String, ReadAloudVoice>,
     ): ReadAloudVoice? = get(subjectType to subjectId)?.voiceId?.let(voicesById::get)
+
+    private fun CharacterPerformanceProfile.resolvedGender(): String? = when (voiceGender) {
+        "male", "female" -> voiceGender
+        else -> when (role) {
+            BookVoiceBinding.SUBJECT_MALE_LEAD,
+            BookVoiceBinding.SUBJECT_MALE_SUPPORTING -> "male"
+
+            BookVoiceBinding.SUBJECT_FEMALE_LEAD,
+            BookVoiceBinding.SUBJECT_FEMALE_SUPPORTING -> "female"
+
+            else -> null
+        }
+    }
 }

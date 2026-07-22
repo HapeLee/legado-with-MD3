@@ -25,13 +25,58 @@ import kotlinx.coroutines.withContext
 class GenerateChapterSummaryUseCase(
     private val aiProfileGateway: AiProfileGateway,
     private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
-    private val aiArtifactGateway: AiArtifactGateway
+    private val aiArtifactGateway: AiArtifactGateway,
+    private val aiTaskManager: AiTaskManager,
 ) {
 
     sealed interface StreamEvent {
         data class Content(val text: String) : StreamEvent
         data class Reasoning(val text: String) : StreamEvent
         data class Done(val text: String, val reasoning: String) : StreamEvent
+    }
+
+    fun observeTask(bookUrl: String, chapterIndex: Int) = aiTaskManager.observeBookTask(
+        bookUrl = bookUrl,
+        taskType = AiTaskType.SUMMARIZE_CHAPTER,
+        chapterIndex = chapterIndex,
+    )
+
+    suspend fun start(
+        book: Book,
+        bookChapter: BookChapter,
+        contentOverride: String? = null,
+        maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
+    ): String {
+        val content = contentOverride ?: BookHelp.getContent(book, bookChapter)
+        ?: error("Failed to read chapter content")
+        val preset = resolvePreset() ?: error("No AI model configured for chapter summary")
+        val contentHash = MD5Utils.md5Encode(content)
+        val promptHash = MD5Utils.md5Encode(
+            preset.promptTemplate + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION,
+        )
+        val now = System.currentTimeMillis()
+        val artifact = AiArtifact(
+            id = "${book.bookUrl}_${bookChapter.index}_${AiTaskType.SUMMARIZE_CHAPTER}_${contentHash}_${preset.model.id}",
+            taskType = AiTaskType.SUMMARIZE_CHAPTER,
+            bookUrl = book.bookUrl,
+            chapterIndex = bookChapter.index,
+            contentHash = contentHash,
+            promptHash = promptHash,
+            modelProfileId = preset.model.id,
+            createdAt = now,
+            updatedAt = now,
+        )
+        return aiTaskManager.submit(artifact) {
+            var summary = ""
+            executeStream(book, bookChapter, content, maxCharsPerChunk).collect { event ->
+                when (event) {
+                    is StreamEvent.Content -> appendContent(event.text)
+                    is StreamEvent.Reasoning -> appendReasoning(event.text)
+                    is StreamEvent.Done -> summary = event.text
+                }
+            }
+            summary.ifBlank { error("AI returned an empty chapter summary") }
+        }
     }
 
     suspend fun execute(

@@ -113,4 +113,23 @@ class BookKnowledgeRepository(
     override suspend fun upsertOutlineNode(node: BookOutlineNode) = withContext(Dispatchers.IO) {
         dao.upsertOutlineNode(node)
     }
+
+    override suspend fun deleteCharacterProfile(
+        bookUrl: String,
+        characterId: String,
+        deleteRelations: Boolean,
+        deleteEvents: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        dao.deleteCharacterProfile(bookUrl, characterId)
+        if (deleteRelations) dao.deleteRelationsForCharacter(characterId)
+        if (deleteEvents) dao.deleteEventsForCharacter(bookUrl, characterId)
+    }
+
+    override suspend fun deleteCharacterRelation(relationId: String) = withContext(Dispatchers.IO) {
+        dao.deleteCharacterRelation(relationId)
+    }
+
+    override suspend fun deleteKnowledgeEntry(entryId: String) = withContext(Dispatchers.IO) {
+        dao.deleteKnowledgeEntry(entryId)
+    }
 }

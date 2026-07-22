@@ -41,7 +41,10 @@ class AiToolAwareGenerationUseCase(
                     }
 
                     is AiStreamEvent.Reasoning -> emit(event)
-                    is AiStreamEvent.ToolCallDelta -> toolTrace.append(event)
+                    is AiStreamEvent.ToolCallDelta -> {
+                        toolTrace.append(event)
+                        emit(event)
+                    }
                 }
             }
 

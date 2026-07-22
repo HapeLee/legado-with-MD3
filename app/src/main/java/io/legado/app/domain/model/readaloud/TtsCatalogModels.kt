@@ -8,6 +8,7 @@ data class TtsEngineDescriptor(
     val displayName: String,
     val providerName: String = "",
     val supportsVoiceDiscovery: Boolean = false,
+    val loginUrl: String = "",
 )
 
 enum class TtsEngineKind {

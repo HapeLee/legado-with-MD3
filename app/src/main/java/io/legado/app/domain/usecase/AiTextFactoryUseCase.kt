@@ -24,6 +24,7 @@ class AiTextFactoryUseCase(
     private val aiProfileGateway: AiProfileGateway,
     private val aiToolAwareGenerationUseCase: AiToolAwareGenerationUseCase,
     private val aiArtifactGateway: AiArtifactGateway,
+    private val aiTaskManager: AiTaskManager,
 ) {
 
     data class Request(
@@ -43,6 +44,45 @@ class AiTextFactoryUseCase(
         data class Content(val text: String) : StreamEvent
         data class Reasoning(val text: String) : StreamEvent
         data class Done(val text: String, val reasoning: String) : StreamEvent
+    }
+
+    fun observeTask(bookUrl: String, taskType: String, chapterIndex: Int?) =
+        aiTaskManager.observeBookTask(bookUrl, taskType, chapterIndex)
+
+    fun observeTaskById(taskId: String) = aiTaskManager.observeTask(taskId)
+
+    suspend fun start(request: Request): String {
+        val preset = resolvePreset(request.taskType) ?: error("No AI model configured")
+        val systemPrompt = buildSystemPrompt(preset, request.userInstruction)
+        val userInput =
+            buildUserInput(request.chapterTitle, request.inputText, request.referenceText)
+        val contentHash = request.artifactContentHash ?: MD5Utils.md5Encode(userInput)
+        val promptHash = MD5Utils.md5Encode(
+            systemPrompt + AiToolAwareGenerationUseCase.CACHE_PROMPT_VERSION,
+        )
+        val now = System.currentTimeMillis()
+        val artifact = AiArtifact(
+            id = request.buildArtifactId(contentHash, preset.model.id, now),
+            taskType = request.taskType,
+            bookUrl = request.bookUrl,
+            chapterIndex = request.chapterIndex,
+            contentHash = contentHash,
+            promptHash = promptHash,
+            modelProfileId = preset.model.id,
+            createdAt = now,
+            updatedAt = now,
+        )
+        return aiTaskManager.submit(artifact) {
+            var output = ""
+            executeStream(request).collect { event ->
+                when (event) {
+                    is StreamEvent.Content -> appendContent(event.text)
+                    is StreamEvent.Reasoning -> appendReasoning(event.text)
+                    is StreamEvent.Done -> output = event.text
+                }
+            }
+            output
+        }
     }
 
     suspend fun execute(request: Request): Result<String> = withContext(Dispatchers.IO) {

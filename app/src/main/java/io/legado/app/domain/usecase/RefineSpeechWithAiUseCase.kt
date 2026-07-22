@@ -21,9 +21,9 @@ import io.legado.app.domain.model.readaloud.SpeechEmotion
 import io.legado.app.domain.model.readaloud.SpeechIdentity
 import io.legado.app.domain.model.readaloud.SpeechResolutionSource
 import io.legado.app.domain.model.readaloud.SpeechRoleType
-import io.legado.app.help.readaloud.segment.RuleBasedSpeechSegmenter
 import io.legado.app.help.readaloud.segment.AiSpeechAtom
 import io.legado.app.help.readaloud.segment.AiSpeechAtomizer
+import io.legado.app.help.readaloud.segment.RuleBasedSpeechSegmenter
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 
@@ -338,6 +338,8 @@ class RefineSpeechWithAiUseCase(
         "name" to name,
         "aliasesJson" to aliasesJson,
         "role" to role,
+        "voiceGender" to voiceGender,
+        "voiceAgeBand" to voiceAgeBand,
         "personality" to personality,
     )
 

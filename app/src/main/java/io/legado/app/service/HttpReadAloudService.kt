@@ -947,6 +947,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             defaultRoute = SpeechEngineRoute(
                 engineType = ReadAloud.coordinatorDefaultEngineType,
                 engineId = ReadAloud.coordinatorDefaultEngineId,
+                speakerId = ReadAloud.coordinatorDefaultSpeakerId,
             ),
         ).voice!!
     }

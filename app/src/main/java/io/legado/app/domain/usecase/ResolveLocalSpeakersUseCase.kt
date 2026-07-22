@@ -4,8 +4,8 @@ import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
-import io.legado.app.domain.model.readaloud.CharacterPerformanceProfile
 import io.legado.app.domain.model.readaloud.ChapterSpeechAnalysisResult
+import io.legado.app.domain.model.readaloud.CharacterPerformanceProfile
 import io.legado.app.domain.model.readaloud.SpeakerCharacter
 import io.legado.app.domain.model.readaloud.SpeechAnalysisStatus
 import io.legado.app.domain.model.readaloud.SpeechIdentity
@@ -37,6 +37,8 @@ class ResolveLocalSpeakersUseCase(
                 name = profile.name,
                 aliases = GSON.fromJsonArray<String>(profile.aliasesJson).getOrNull().orEmpty(),
                 role = profile.role,
+                voiceGender = profile.voiceGender,
+                voiceAgeBand = profile.voiceAgeBand,
                 updatedAt = profile.updatedAt,
             )
         }
@@ -44,6 +46,8 @@ class ResolveLocalSpeakersUseCase(
             CharacterPerformanceProfile(
                 characterId = profile.id,
                 role = profile.role,
+                voiceGender = profile.voiceGender,
+                voiceAgeBand = profile.voiceAgeBand,
                 personality = profile.personality,
                 updatedAt = profile.updatedAt,
             )

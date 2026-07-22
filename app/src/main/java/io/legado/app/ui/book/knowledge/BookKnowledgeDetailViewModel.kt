@@ -9,7 +9,6 @@ import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +73,7 @@ class BookKnowledgeDetailViewModel(
             is KnowledgeDetailIntent.SetScopeEnd -> _uiState.update { it.copy(scopeEndChapter = intent.value) }
             is KnowledgeDetailIntent.SetPriority -> _uiState.update { it.copy(priority = intent.value) }
             KnowledgeDetailIntent.Save -> save()
+            KnowledgeDetailIntent.Delete -> delete()
         }
     }
 
@@ -170,6 +170,24 @@ class BookKnowledgeDetailViewModel(
                 _effects.tryEmit(
                     KnowledgeDetailEffect.ShowToast(
                         e.localizedMessage ?: appCtx.getString(R.string.save_failed)
+                    )
+                )
+            }
+        }
+    }
+
+    private fun delete() {
+        val entry = currentEntry ?: return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { bookKnowledgeGateway.deleteKnowledgeEntry(entry.id) }
+                _effects.tryEmit(KnowledgeDetailEffect.NavigateBack)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _effects.tryEmit(
+                    KnowledgeDetailEffect.ShowToast(
+                        e.localizedMessage ?: appCtx.getString(R.string.delete_failed)
                     )
                 )
             }

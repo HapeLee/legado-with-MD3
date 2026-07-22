@@ -1,30 +1,54 @@
 package io.legado.app.ui.book.readaloud.cloudtts
 
 import android.app.Application
-import io.legado.app.R
+import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
+import io.legado.app.constant.AppConst
+import io.legado.app.constant.AppPattern
+import io.legado.app.data.appDb
+import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.HttpTtsEngineGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
 import io.legado.app.domain.model.readaloud.CloudTtsEngine
 import io.legado.app.domain.model.readaloud.CloudTtsProviderType
-import io.legado.app.domain.model.readaloud.CloudTtsVoiceCatalogType
 import io.legado.app.domain.model.readaloud.CloudTtsSynthesisRequest
+import io.legado.app.domain.model.readaloud.CloudTtsVoiceCatalogType
 import io.legado.app.domain.model.readaloud.CloudTtsVoiceConfig
+import io.legado.app.domain.model.readaloud.ReadAloudEngineSelection
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.SpeechIdentity
-import io.legado.app.domain.model.readaloud.TtsEngineDescriptor
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
+import io.legado.app.domain.model.readaloud.TtsEngineDescriptor
 import io.legado.app.domain.model.readaloud.profile
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.http.decompressed
+import io.legado.app.help.http.newCallResponseBody
+import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.http.text
 import io.legado.app.help.readaloud.playback.CloudTtsAudioSynthesizer
 import io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer
 import io.legado.app.help.readaloud.playback.SystemTtsVoiceCatalog
+import io.legado.app.lib.dialogs.SelectItem
+import io.legado.app.model.ReadAloud
+import io.legado.app.model.ReadBook
+import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
+import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
+import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
-import java.io.File
-import java.util.UUID
-import kotlinx.collections.immutable.toImmutableList
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isDataUrl
+import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.isJsonObject
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -32,12 +56,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.UUID
 
 class CloudTtsViewModel(
     private val application: Application,
     private val engineGateway: CloudTtsEngineGateway,
     private val httpTtsEngineGateway: HttpTtsEngineGateway,
     private val voiceGateway: ReadAloudVoiceGateway,
+    private val readAloudSettingsGateway: ReadAloudSettingsGateway,
+    private val uploadRepository: UploadRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CloudTtsUiState())
     val uiState = _uiState.asStateFlow()
@@ -50,6 +79,8 @@ class CloudTtsViewModel(
     private var voices = emptyList<ReadAloudVoice>()
     private var systemEngines = emptyList<TtsEngineDescriptor>()
     private var httpEngines = emptyList<TtsEngineDescriptor>()
+    private var bookUrl: String? = null
+    private var bookEngineValue: String? = null
 
     init {
         viewModelScope.launch {
@@ -72,7 +103,23 @@ class CloudTtsViewModel(
                 _uiState.update { state -> state.copy(
                     loading = false,
                     engines = allEngines.map { engine ->
-                        CloudTtsEngineItemUi(engine.id, engine.name, engine.provider.profile.displayName)
+                        CloudTtsEngineItemUi(
+                            engine.id,
+                            engine.name,
+                            engine.provider.profile.displayName,
+                            isDefaultEngine(ReadAloudVoice.ENGINE_CLOUD, engine.id),
+                        )
+                    }.toImmutableList(),
+                    systemEngines = systemEngineItems(),
+                    httpEngines = allHttpEngines.map { engine ->
+                        TtsManagedEngineItemUi(
+                            engineType = ReadAloudVoice.ENGINE_HTTP,
+                            engineId = engine.sourceId,
+                            title = engine.displayName,
+                            summary = engine.providerName,
+                            selected = isDefaultEngine(ReadAloudVoice.ENGINE_HTTP, engine.sourceId),
+                            loginUrl = engine.loginUrl,
+                        )
                     }.toImmutableList(),
                     voices = savedVoices.map { voice ->
                         CloudTtsVoiceItemUi(
@@ -93,13 +140,19 @@ class CloudTtsViewModel(
         }
         viewModelScope.launch {
             systemEngines = systemCatalog.getEngines()
-            _uiState.update { it.copy(availableEngines = engineOptions()) }
+            _uiState.update {
+                it.copy(
+                    availableEngines = engineOptions(),
+                    systemEngines = systemEngineItems(),
+                )
+            }
         }
     }
 
     fun onIntent(intent: CloudTtsIntent) {
         when (intent) {
             is CloudTtsIntent.SelectTab -> _uiState.update { it.copy(selectedTab = intent.tab) }
+            is CloudTtsIntent.SetBookContext -> setBookContext(intent.bookUrl)
             CloudTtsIntent.AddEngine -> _uiState.update { it.copy(
                 engineEditor = CloudTtsEngineEditorUi(name = "MiMo", model = "mimo-v2.5-tts"),
             ) }
@@ -110,7 +163,43 @@ class CloudTtsViewModel(
             }
             is CloudTtsIntent.EditEngine -> editEngine(intent.id)
             is CloudTtsIntent.DeleteEngine -> deleteEngine(intent.id)
-            is CloudTtsIntent.DeleteVoice -> deleteVoice(intent.id)
+            is CloudTtsIntent.SetDefaultEngine -> setDefaultEngine(
+                intent.engineType,
+                intent.engineId
+            )
+
+            CloudTtsIntent.ApplyDefaultEngineGlobally -> applyPendingDefaultEngine(forBook = false)
+            CloudTtsIntent.ApplyDefaultEngineForBook -> applyPendingDefaultEngine(forBook = true)
+            is CloudTtsIntent.EditHttpTts -> editHttpTts(intent.engineId)
+            is CloudTtsIntent.SaveHttpTts -> saveHttpTts(intent.value)
+            is CloudTtsIntent.DeleteHttpTts -> deleteHttpTts(intent.engineId)
+            is CloudTtsIntent.OpenHttpTtsLogin -> intent.engineId.toLongOrNull()?.let {
+                _effects.tryEmit(CloudTtsEffect.OpenHttpTtsLogin(it))
+            }
+
+            CloudTtsIntent.DismissHttpTtsEditor -> _uiState.update { it.copy(httpTtsEditor = null) }
+            is CloudTtsIntent.ImportHttpTtsSource -> importHttpTtsSource(intent.text)
+            CloudTtsIntent.ImportHttpTtsFile -> _effects.tryEmit(CloudTtsEffect.OpenHttpTtsImportPicker)
+            is CloudTtsIntent.ImportHttpTtsFileSelected -> importHttpTtsFile(intent.uri)
+            CloudTtsIntent.CancelHttpTtsImport -> _uiState.update { it.copy(httpTtsImportState = BaseImportUiState.Idle) }
+            is CloudTtsIntent.ToggleHttpTtsImportSelection -> toggleHttpTtsImportSelection(intent.index)
+            is CloudTtsIntent.ToggleHttpTtsImportAll -> toggleHttpTtsImportAll(intent.selected)
+            is CloudTtsIntent.UpdateHttpTtsImportItem -> updateHttpTtsImportItem(
+                intent.index,
+                intent.value
+            )
+
+            CloudTtsIntent.SaveImportedHttpTts -> saveImportedHttpTts()
+            CloudTtsIntent.ExportHttpTtsFile -> _effects.tryEmit(CloudTtsEffect.OpenHttpTtsExportPicker)
+            is CloudTtsIntent.ExportHttpTtsFileSelected -> exportHttpTtsFile(intent.uri)
+            CloudTtsIntent.ExportHttpTtsUrl -> exportHttpTtsUrl()
+            CloudTtsIntent.ClearTtsCache -> {
+                io.legado.app.utils.TTSCacheUtils.clearTtsCache()
+                toast(application.getString(R.string.clear_cache_success))
+            }
+
+            is CloudTtsIntent.RequestDeleteVoice -> requestDeleteVoice(intent.id)
+            CloudTtsIntent.ConfirmDeleteVoice -> confirmDeleteVoice()
             is CloudTtsIntent.EditVoice -> editVoice(intent.id)
             is CloudTtsIntent.UpdateEngineEditor -> _uiState.update { it.copy(engineEditor = intent.editor) }
             is CloudTtsIntent.UpdateVoiceEditor -> _uiState.update { it.copy(voiceEditor = intent.editor) }
@@ -562,18 +651,360 @@ class CloudTtsViewModel(
             persistentListOf()
         }
 
+    private fun systemEngineItems() = buildList {
+        add(
+            TtsManagedEngineItemUi(
+                engineType = ReadAloudVoice.ENGINE_SYSTEM,
+                engineId = "",
+                title = application.getString(R.string.system_tts),
+                selected = isDefaultEngine(ReadAloudVoice.ENGINE_SYSTEM, ""),
+            )
+        )
+        addAll(systemEngines.map { engine ->
+            TtsManagedEngineItemUi(
+                engineType = ReadAloudVoice.ENGINE_SYSTEM,
+                engineId = engine.sourceId,
+                title = engine.displayName,
+                summary = engine.providerName,
+                selected = isDefaultEngine(ReadAloudVoice.ENGINE_SYSTEM, engine.sourceId),
+            )
+        })
+    }.toImmutableList()
+
+    private fun isDefaultEngine(engineType: String, engineId: String): Boolean {
+        val value = bookEngineValue ?: readAloudSettingsGateway.currentSettings.ttsEngine
+        return when (engineType) {
+            ReadAloudVoice.ENGINE_HTTP -> value == engineId
+            ReadAloudVoice.ENGINE_CLOUD -> GSON.fromJsonObject<ReadAloudEngineSelection>(value)
+                .getOrNull()?.let { it.engineType == engineType && it.engineId == engineId } == true
+
+            ReadAloudVoice.ENGINE_SYSTEM -> if (engineId.isBlank()) {
+                value.isNullOrBlank()
+            } else {
+                GSON.fromJsonObject<SelectItem<String>>(value).getOrNull()?.value == engineId
+            }
+
+            else -> false
+        }
+    }
+
+    private fun refreshEngineSelection() {
+        _uiState.update { state ->
+            state.copy(
+                engines = engines.map { engine ->
+                    CloudTtsEngineItemUi(
+                        engine.id,
+                        engine.name,
+                        engine.provider.profile.displayName,
+                        isDefaultEngine(ReadAloudVoice.ENGINE_CLOUD, engine.id),
+                    )
+                }.toImmutableList(),
+                systemEngines = systemEngineItems(),
+                httpEngines = httpEngines.map { engine ->
+                    TtsManagedEngineItemUi(
+                        engineType = ReadAloudVoice.ENGINE_HTTP,
+                        engineId = engine.sourceId,
+                        title = engine.displayName,
+                        summary = engine.providerName,
+                        selected = isDefaultEngine(ReadAloudVoice.ENGINE_HTTP, engine.sourceId),
+                        loginUrl = engine.loginUrl,
+                    )
+                }.toImmutableList(),
+            )
+        }
+    }
+
+    private fun setDefaultEngine(engineType: String, engineId: String) = viewModelScope.launch {
+        val (value, title) = when (engineType) {
+            ReadAloudVoice.ENGINE_SYSTEM -> if (engineId.isBlank()) {
+                null to application.getString(R.string.system_tts)
+            } else {
+                val name =
+                    systemEngines.firstOrNull { it.sourceId == engineId }?.displayName ?: engineId
+                GSON.toJson(SelectItem(name, engineId)) to name
+            }
+
+            ReadAloudVoice.ENGINE_HTTP -> engineId to
+                    (httpEngines.firstOrNull { it.sourceId == engineId }?.displayName ?: engineId)
+
+            ReadAloudVoice.ENGINE_CLOUD -> {
+                val voice = voices.firstOrNull {
+                    it.engineType == engineType && it.engineId == engineId && it.enabled && it.available
+                }
+                    ?: return@launch toast(application.getString(R.string.cloud_tts_default_requires_voice))
+                val name = engines.firstOrNull { it.id == engineId }?.name ?: engineId
+                GSON.toJson(
+                    ReadAloudEngineSelection(
+                        engineType = engineType,
+                        engineId = engineId,
+                        speakerId = voice.speakerId,
+                        displayName = name,
+                    )
+                ) to name
+            }
+
+            else -> return@launch
+        }
+        if (bookUrl != null) {
+            _uiState.update {
+                it.copy(
+                    activeDialog = CloudTtsDialog.DefaultEngineScope(
+                        value,
+                        title
+                    )
+                )
+            }
+        } else {
+            applyDefaultEngine(value, forBook = false)
+        }
+    }
+
+    private fun setBookContext(value: String?) = viewModelScope.launch {
+        bookUrl = value
+        bookEngineValue = withContext(Dispatchers.IO) {
+            value?.let(appDb.bookDao::getBook)?.getTtsEngine()
+        }
+        refreshEngineSelection()
+    }
+
+    private fun applyPendingDefaultEngine(forBook: Boolean) = viewModelScope.launch {
+        val dialog =
+            _uiState.value.activeDialog as? CloudTtsDialog.DefaultEngineScope ?: return@launch
+        applyDefaultEngine(dialog.value, forBook)
+    }
+
+    private suspend fun applyDefaultEngine(value: String?, forBook: Boolean) {
+        if (forBook && bookUrl != null) {
+            ReadBook.book?.takeIf { it.bookUrl == bookUrl }?.setTtsEngine(value)
+            withContext(Dispatchers.IO) {
+                appDb.bookDao.getBook(bookUrl!!)?.let { book ->
+                    book.setTtsEngine(value)
+                    appDb.bookDao.update(book)
+                }
+            }
+            bookEngineValue = value
+        } else {
+            ReadBook.book?.takeIf { it.bookUrl == bookUrl }?.setTtsEngine(null)
+            bookUrl?.let { url ->
+                withContext(Dispatchers.IO) {
+                    appDb.bookDao.getBook(url)?.let { book ->
+                        book.setTtsEngine(null)
+                        appDb.bookDao.update(book)
+                    }
+                }
+            }
+            readAloudSettingsGateway.update { it.copy(ttsEngine = value) }
+            bookEngineValue = null
+        }
+        ReadAloud.upReadAloudClass()
+        _uiState.update { it.copy(activeDialog = null) }
+        refreshEngineSelection()
+        toast(application.getString(R.string.read_aloud_default_engine_updated))
+    }
+
+    private fun editHttpTts(engineId: String?) = viewModelScope.launch {
+        val value = withContext(Dispatchers.IO) {
+            engineId?.toLongOrNull()?.let(appDb.httpTTSDao::get) ?: HttpTTS()
+        }
+        _uiState.update { it.copy(httpTtsEditor = value) }
+    }
+
+    private fun saveHttpTts(value: HttpTTS) = viewModelScope.launch {
+        withContext(Dispatchers.IO) { appDb.httpTTSDao.insert(value) }
+        _uiState.update { it.copy(httpTtsEditor = null) }
+        toast(application.getString(R.string.success))
+    }
+
+    private fun deleteHttpTts(engineId: String) = viewModelScope.launch {
+        val id = engineId.toLongOrNull() ?: return@launch
+        withContext(Dispatchers.IO) { appDb.httpTTSDao.get(id)?.let(appDb.httpTTSDao::delete) }
+        if (isDefaultEngine(ReadAloudVoice.ENGINE_HTTP, engineId)) {
+            readAloudSettingsGateway.update { it.copy(ttsEngine = null) }
+            ReadAloud.upReadAloudClass()
+        }
+    }
+
+    private fun importHttpTtsFile(uri: Uri) = viewModelScope.launch {
+        val text = withContext(Dispatchers.IO) {
+            application.contentResolver.openInputStream(uri)?.bufferedReader()
+                ?.use { it.readText() }
+        }
+        if (!text.isNullOrBlank()) importHttpTtsSource(text)
+    }
+
+    private fun importHttpTtsSource(text: String) = viewModelScope.launch {
+        _uiState.update { it.copy(httpTtsImportState = BaseImportUiState.Loading) }
+        runCatching {
+            val source = text.trim()
+            val list = withContext(Dispatchers.IO) { parseHttpTtsSource(source) }
+            val items = withContext(Dispatchers.IO) {
+                list.map { value ->
+                    val old = appDb.httpTTSDao.get(value.id)
+                    val status = when {
+                        old == null -> ImportStatus.New
+                        value.lastUpdateTime > old.lastUpdateTime -> ImportStatus.Update
+                        else -> ImportStatus.Existing
+                    }
+                    ImportItemWrapper(
+                        data = value,
+                        oldData = old,
+                        isSelected = status != ImportStatus.Existing,
+                        status = status,
+                    )
+                }
+            }
+            if (items.isEmpty()) throw NoStackTraceException(application.getString(R.string.wrong_format))
+            BaseImportUiState.Success(source, items)
+        }.onSuccess { result -> _uiState.update { it.copy(httpTtsImportState = result) } }
+            .onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        httpTtsImportState = BaseImportUiState.Error(
+                            error.localizedMessage ?: application.getString(R.string.wrong_format)
+                        )
+                    )
+                }
+            }
+    }
+
+    private suspend fun parseHttpTtsSource(text: String): List<HttpTTS> = when {
+        text.isHttpTtsImportUri() -> Uri.parse(text).getQueryParameter("src")
+            ?.let { parseHttpTtsSource(it) }
+            ?: throw NoStackTraceException(application.getString(R.string.wrong_format))
+
+        text.isJsonObject() -> listOf(HttpTTS.fromJson(text).getOrThrow())
+        text.isJsonArray() -> HttpTTS.fromJsonArray(text).getOrThrow()
+        text.isDataUrl() -> {
+            val data = AppPattern.dataUriRegex.find(text)?.groupValues?.getOrNull(1)
+                ?: throw NoStackTraceException(application.getString(R.string.wrong_format))
+            parseHttpTtsSource(Base64.decode(data, Base64.DEFAULT).toString(Charsets.UTF_8))
+        }
+
+        text.isAbsUrl() -> parseHttpTtsSource(okHttpClient.newCallResponseBody {
+            if (text.endsWith("#requestWithoutUA")) {
+                url(text.substringBeforeLast("#requestWithoutUA")); header(AppConst.UA_NAME, "null")
+            } else url(text)
+        }.decompressed().text())
+
+        else -> throw NoStackTraceException(application.getString(R.string.wrong_format))
+    }
+
+    private fun toggleHttpTtsImportSelection(index: Int) {
+        val state =
+            _uiState.value.httpTtsImportState as? BaseImportUiState.Success<HttpTTS> ?: return
+        if (index !in state.items.indices) return
+        val items = state.items.toMutableList()
+        items[index] = items[index].copy(isSelected = !items[index].isSelected)
+        _uiState.update { it.copy(httpTtsImportState = state.copy(items = items)) }
+    }
+
+    private fun toggleHttpTtsImportAll(selected: Boolean) {
+        val state =
+            _uiState.value.httpTtsImportState as? BaseImportUiState.Success<HttpTTS> ?: return
+        _uiState.update {
+            it.copy(
+                httpTtsImportState = state.copy(
+                items = state.items.map { item -> item.copy(isSelected = selected) }
+            ))
+        }
+    }
+
+    private fun updateHttpTtsImportItem(index: Int, value: HttpTTS) {
+        val state =
+            _uiState.value.httpTtsImportState as? BaseImportUiState.Success<HttpTTS> ?: return
+        if (index !in state.items.indices) return
+        val items = state.items.toMutableList()
+        items[index] = items[index].copy(data = value)
+        _uiState.update {
+            it.copy(
+                httpTtsImportState = state.copy(
+                    items = items,
+                    version = state.version + 1
+                )
+            )
+        }
+    }
+
+    private fun saveImportedHttpTts() = viewModelScope.launch {
+        val state = _uiState.value.httpTtsImportState as? BaseImportUiState.Success<HttpTTS>
+            ?: return@launch
+        val selected = state.items.filter { it.isSelected }.map { it.data }
+        if (selected.isEmpty()) return@launch
+        withContext(Dispatchers.IO) { appDb.httpTTSDao.insert(*selected.toTypedArray()) }
+        _uiState.update { it.copy(httpTtsImportState = BaseImportUiState.Idle) }
+        toast(application.getString(R.string.success))
+    }
+
+    private fun exportHttpTtsFile(uri: Uri) = viewModelScope.launch {
+        withContext(Dispatchers.IO) {
+            val json = GSON.toJson(appDb.httpTTSDao.all)
+            application.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+        }
+        toast(application.getString(R.string.export_success))
+    }
+
+    private fun exportHttpTtsUrl() = viewModelScope.launch {
+        val url = withContext(Dispatchers.IO) {
+            uploadRepository.upload(
+                "httpTTS.json",
+                GSON.toJson(appDb.httpTTSDao.all),
+                "application/json"
+            )
+        }
+        _effects.tryEmit(CloudTtsEffect.CopyText(url, application.getString(R.string.copy_url)))
+    }
+
     private fun deleteEngine(id: String) = viewModelScope.launch {
         voices.filter { it.engineId == id }.forEach { voiceGateway.deleteVoice(it) }
         engines.firstOrNull { it.id == id }?.let { engineGateway.delete(it) }
+        if (isDefaultEngine(ReadAloudVoice.ENGINE_CLOUD, id)) {
+            readAloudSettingsGateway.update { it.copy(ttsEngine = null) }
+            ReadAloud.upReadAloudClass()
+        }
     }
-    private fun deleteVoice(id: String) = viewModelScope.launch {
-        voices.firstOrNull { it.id == id }?.let { voiceGateway.deleteVoice(it) }
+
+    private fun requestDeleteVoice(id: String) {
+        val voice = voices.firstOrNull {
+            it.id == id && it.managedBy == ReadAloudVoice.MANAGED_BY_USER
+        } ?: return
+        _uiState.update {
+            it.copy(
+                activeDialog = CloudTtsDialog.DeleteVoice(
+                    voice.id,
+                    voice.displayName
+                )
+            )
+        }
+    }
+
+    private fun confirmDeleteVoice() = viewModelScope.launch {
+        val id = (_uiState.value.activeDialog as? CloudTtsDialog.DeleteVoice)?.id ?: return@launch
+        val voice = voices.firstOrNull {
+            it.id == id && it.managedBy == ReadAloudVoice.MANAGED_BY_USER
+        }
+        voice?.let { voiceGateway.deleteVoice(it) }
+        val selection = GSON.fromJsonObject<ReadAloudEngineSelection>(
+            readAloudSettingsGateway.currentSettings.ttsEngine
+        ).getOrNull()
+        if (voice != null && selection?.engineType == voice.engineType &&
+            selection.engineId == voice.engineId && selection.speakerId == voice.speakerId
+        ) {
+            readAloudSettingsGateway.update { it.copy(ttsEngine = null) }
+            ReadAloud.upReadAloudClass()
+            refreshEngineSelection()
+        }
+        _uiState.update { it.copy(activeDialog = null) }
     }
     private fun toast(message: String) { _effects.tryEmit(CloudTtsEffect.ShowToast(message)) }
     private fun showError(message: String) { _uiState.update { it.copy(activeDialog = CloudTtsDialog.Error(message)) } }
     private fun copyError() {
         val message = (_uiState.value.activeDialog as? CloudTtsDialog.Error)?.message ?: return
-        _effects.tryEmit(CloudTtsEffect.CopyText(message))
+        _effects.tryEmit(
+            CloudTtsEffect.CopyText(
+                message,
+                application.getString(R.string.cloud_tts_error_copied),
+            )
+        )
     }
     private fun formatError(error: Throwable): String = buildString {
         append(application.getString(R.string.cloud_tts_request_failed))
@@ -585,6 +1016,12 @@ class CloudTtsViewModel(
             append("\n\n").append(it.joinToString("\nCaused by: "))
         }
     }
+}
+
+private fun String.isHttpTtsImportUri(): Boolean {
+    val uri = runCatching { Uri.parse(this) }.getOrNull() ?: return false
+    return uri.scheme in setOf("legado", "yuedu") &&
+            uri.host == "import" && uri.path.equals("/httpTTS", ignoreCase = true)
 }
 
 private const val DEFAULT_ENGINE_VOICE_ID = "__engine_default__"

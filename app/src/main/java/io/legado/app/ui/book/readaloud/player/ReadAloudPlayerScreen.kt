@@ -45,10 +45,11 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -95,6 +96,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.TextCard
@@ -240,17 +242,21 @@ fun ReadAloudPlayerScreenContent(
                         .clip(RectangleShape)
                         .then(hazeModifier)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                        .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     PlayerProgressSlider(
+                        modifier = Modifier
+                            .padding(horizontal = 24.dp),
                         value = state.chapterPosition.coerceIn(0, state.chapterLength).toFloat(),
                         onValueChange = { onIntent(ReadAloudPlayerIntent.SeekTo(it.toInt())) },
                         valueRange = 0f..state.chapterLength.coerceAtLeast(1).toFloat(),
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         AppText(formatPosition(state.chapterPosition), style = LegadoTheme.typography.labelSmall, color = LegadoTheme.colorScheme.onSurfaceVariant)
@@ -260,10 +266,15 @@ fun ReadAloudPlayerScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp),
+                            .padding(top = 12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        MediumPlainButton(
+                            onClick = { onIntent(ReadAloudPlayerIntent.PreviousParagraph) },
+                            icon = Icons.Default.SkipPrevious,
+                            contentDescription = stringResource(R.string.prev_sentence),
+                        )
                         MediumTonalButton(
                             onClick = { onIntent(ReadAloudPlayerIntent.PreviousChapter) },
                             icon = Icons.Default.FastRewind,
@@ -284,11 +295,16 @@ fun ReadAloudPlayerScreenContent(
                             contentDescription = stringResource(R.string.next_chapter),
                             modifier = Modifier.size(48.dp),
                         )
+                        MediumPlainButton(
+                            onClick = { onIntent(ReadAloudPlayerIntent.NextParagraph) },
+                            icon = Icons.Default.SkipNext,
+                            contentDescription = stringResource(R.string.next_sentence),
+                        )
                     }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 16.dp, horizontal = 24.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         SmallPlainButton(
@@ -302,10 +318,9 @@ fun ReadAloudPlayerScreenContent(
                             contentDescription = stringResource(R.string.switch_to_classic_read_aloud),
                         )
                         SmallPlainButton(
-                            onClick = { onIntent(ReadAloudPlayerIntent.CycleBgMode) },
-                            icon = Icons.Default.WbTwilight,
-                            contentDescription = bgModeLabel(state.bgMode),
-                            selected = state.bgMode == ReadAloudBgMode.FlowingLight,
+                            onClick = { onIntent(ReadAloudPlayerIntent.OpenSettings) },
+                            icon = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.setting),
                         )
                         SmallPlainButton(
                             onClick = {
@@ -388,7 +403,6 @@ fun ReadAloudPlayerScreenContent(
         }
     }
 }
-
 @Composable
 private fun PlayerProgressSlider(
     value: Float,
@@ -482,7 +496,6 @@ private fun PlayerProgressSlider(
         }
     }
 }
-
 @Composable
 private fun CoverPage(
     state: ReadAloudPlayerUiState,
@@ -769,9 +782,10 @@ private fun ReadAloudBackground(
         }
 
         ReadAloudBgMode.Solid -> {
-            CoverBlurBackdrop(
-                state.bookName, state.author, state.coverPath, state.sourceOrigin,
-                modifier = modifier,
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(LegadoTheme.colorScheme.surface),
             )
         }
 
@@ -864,13 +878,4 @@ private fun flowingTextBlend(): List<BlendColorEntry> {
             )
         }
     }
-}
-
-@Composable
-private fun bgModeLabel(mode: Int): String = when (mode) {
-    ReadAloudBgMode.Solid -> stringResource(R.string.read_aloud_bg_solid)
-    ReadAloudBgMode.Blur -> stringResource(R.string.read_aloud_bg_blur)
-    ReadAloudBgMode.FlowingLight -> stringResource(R.string.read_aloud_bg_flowing_light)
-    ReadAloudBgMode.Transparent -> stringResource(R.string.read_aloud_bg_transparent)
-    else -> stringResource(R.string.read_aloud_bg_blur)
 }

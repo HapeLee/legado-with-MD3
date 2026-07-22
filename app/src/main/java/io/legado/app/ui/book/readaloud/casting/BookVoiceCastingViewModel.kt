@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,10 +91,6 @@ class BookVoiceCastingViewModel(
         val bindingsBySubject = bindings.associateBy { it.subjectType to it.subjectId }
         val specialItems = listOf(
             specialItem(BookVoiceBinding.SUBJECT_NARRATOR, CastingSubjectKind.Narrator),
-            specialItem(BookVoiceBinding.SUBJECT_MALE_LEAD, CastingSubjectKind.MaleLead),
-            specialItem(BookVoiceBinding.SUBJECT_FEMALE_LEAD, CastingSubjectKind.FemaleLead),
-            specialItem(BookVoiceBinding.SUBJECT_MALE_SUPPORTING, CastingSubjectKind.MaleSupporting),
-            specialItem(BookVoiceBinding.SUBJECT_FEMALE_SUPPORTING, CastingSubjectKind.FemaleSupporting),
             specialItem(BookVoiceBinding.SUBJECT_UNKNOWN_MALE, CastingSubjectKind.UnknownMale),
             specialItem(BookVoiceBinding.SUBJECT_UNKNOWN_FEMALE, CastingSubjectKind.UnknownFemale),
             specialItem(BookVoiceBinding.SUBJECT_UNKNOWN, CastingSubjectKind.Unknown),

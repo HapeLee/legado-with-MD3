@@ -334,10 +334,6 @@ private fun VoicePickerSheet(
 @Composable
 private fun subjectTitle(kind: CastingSubjectKind, name: String): String = when (kind) {
     CastingSubjectKind.Narrator -> stringResource(R.string.voice_role_narrator)
-    CastingSubjectKind.MaleLead -> stringResource(R.string.voice_role_male_lead)
-    CastingSubjectKind.FemaleLead -> stringResource(R.string.voice_role_female_lead)
-    CastingSubjectKind.MaleSupporting -> stringResource(R.string.voice_role_male_supporting)
-    CastingSubjectKind.FemaleSupporting -> stringResource(R.string.voice_role_female_supporting)
     CastingSubjectKind.UnknownMale -> stringResource(R.string.voice_role_unknown_male)
     CastingSubjectKind.UnknownFemale -> stringResource(R.string.voice_role_unknown_female)
     CastingSubjectKind.Unknown -> stringResource(R.string.voice_role_unknown)

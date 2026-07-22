@@ -35,6 +35,8 @@ object SpeechIdentity {
                 character.name,
                 character.aliases.sorted().joinToString("\u0002"),
                 character.role,
+                character.voiceGender,
+                character.voiceAgeBand,
                 character.updatedAt.toString(),
             ).joinToString("\u0000")
         }
