@@ -16,6 +16,8 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.utils.GSON
 import com.google.gson.reflect.TypeToken
@@ -54,6 +56,14 @@ class DebugScenarioActivity : AppCompatActivity() {
                         AppConfigStore.putLong(PreferKey.saveTabPosition, BookGroup.IdAll)
                         MainIntent.createHomeIntent(this@DebugScenarioActivity)
                     }
+                    ENTRY_SOURCE_MANAGE -> Intent(
+                        this@DebugScenarioActivity,
+                        BookSourceActivity::class.java,
+                    )
+                    ENTRY_THEME_CONFIG -> MainIntent.createIntent(
+                        this@DebugScenarioActivity,
+                        ConfigTag.THEME_CONFIG,
+                    )
                     else -> MainIntent.createReadBookIntent(this@DebugScenarioActivity, bookUrl)
                 }
                 startActivity(
@@ -196,7 +206,14 @@ class DebugScenarioActivity : AppCompatActivity() {
         const val DEBUG_ORIGIN = "legado-debug://fixture-source"
         const val ENTRY_READER = "reader"
         const val ENTRY_BOOKSHELF = "bookshelf"
-        val SUPPORTED_ENTRIES = setOf(ENTRY_READER, ENTRY_BOOKSHELF)
+        const val ENTRY_SOURCE_MANAGE = "source_manage"
+        const val ENTRY_THEME_CONFIG = "theme_config"
+        val SUPPORTED_ENTRIES = setOf(
+            ENTRY_READER,
+            ENTRY_BOOKSHELF,
+            ENTRY_SOURCE_MANAGE,
+            ENTRY_THEME_CONFIG,
+        )
         val FIXTURE_ID = Regex("[a-z0-9][a-z0-9-]*")
     }
 }

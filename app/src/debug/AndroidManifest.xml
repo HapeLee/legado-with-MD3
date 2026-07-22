@@ -5,5 +5,9 @@
             android:name="io.legado.app.debug.DebugScenarioActivity"
             android:exported="true"
             android:theme="@style/AppTheme.Transparent" />
+        <provider
+            android:name="io.legado.app.debug.DebugThemeAssetProvider"
+            android:authorities="${applicationId}.debug-theme-assets"
+            android:exported="true" />
     </application>
 </manifest>

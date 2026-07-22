@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "theme/export-missing-content-uri",
+  "fixture": "long-chapter-v1",
+  "entry": { "type": "theme_config" },
+  "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
+  "readyTimeoutSeconds": 15,
+  "record": true,
+  "themeAsset": "missing-content-uri",
+  "actions": [
+    { "type": "open_theme_manage" },
+    { "type": "export_current_theme", "namePrefix": "DEBUG_THEME_EXPORT_MISSING_CONTENT" }
+  ],
+  "assertions": [
+    "theme_config_ready",
+    "theme_manage_opened",
+    "theme_export_failed",
+    "theme_failure_feedback",
+    "theme_content_failure_armed",
+    "theme_open_input_stream_reached",
+    "no_fatal_exception"
+  ]
+}

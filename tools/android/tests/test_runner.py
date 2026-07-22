@@ -23,6 +23,39 @@ class ScenarioValidationTest(unittest.TestCase):
         scenario = runner.load_scenario("bookshelf/open-reader-back")
         self.assertEqual("bookshelf", scenario["entry"]["type"])
 
+    def test_source_edit_scenario_is_valid(self):
+        scenario = runner.load_scenario("source-edit/predictive-back")
+        self.assertEqual("source_manage", scenario["entry"]["type"])
+
+    def test_theme_save_baseline_scenario_is_valid(self):
+        scenario = runner.load_scenario("theme/save-current-baseline")
+        self.assertEqual("theme_config", scenario["entry"]["type"])
+
+    def test_theme_export_baseline_scenario_is_valid(self):
+        scenario = runner.load_scenario("theme/export-current-baseline")
+        self.assertEqual("theme_config", scenario["entry"]["type"])
+
+    def test_theme_background_scenarios_are_valid(self):
+        for name in (
+            "theme/select-day-background",
+            "theme/save-background-after-restart",
+            "theme/export-background-after-restart",
+        ):
+            with self.subTest(name=name):
+                scenario = runner.load_scenario(name)
+                self.assertEqual("theme_config", scenario["entry"]["type"])
+
+    def test_theme_failure_scenarios_are_valid(self):
+        for name in (
+            "theme/save-missing-file",
+            "theme/save-missing-content-uri",
+            "theme/export-missing-file",
+            "theme/export-missing-content-uri",
+        ):
+            with self.subTest(name=name):
+                scenario = runner.load_scenario(name)
+                self.assertIn(scenario["themeAsset"], {"missing-file", "missing-content-uri"})
+
     def test_rejects_unknown_action(self):
         scenario = {
             "schemaVersion": 1,
@@ -66,6 +99,19 @@ class CapabilityTest(unittest.TestCase):
         self.assertEqual(
             ["open_fixture_book", "press_back"],
             caps["entries"]["bookshelf"]["allowedActions"],
+        )
+        self.assertEqual(
+            ["open_fixture_source", "predictive_back"],
+            caps["entries"]["source_manage"]["allowedActions"],
+        )
+        self.assertEqual(
+            [
+                "export_current_theme",
+                "open_theme_manage",
+                "save_current_theme",
+                "select_day_background",
+            ],
+            caps["entries"]["theme_config"]["allowedActions"],
         )
         self.assertIn("turn_page", caps["actions"])
         self.assertIn("no_fatal_exception", caps["assertions"])
@@ -116,6 +162,12 @@ class PreferencesTest(unittest.TestCase):
 
     def test_rejects_non_boolean_record(self):
         scenario = {**self.BASE, "record": "yes"}
+        with self.assertRaises(runner.ScenarioError):
+            runner.validate_scenario(scenario)
+
+    def test_rejects_unknown_theme_asset_fixture(self):
+        scenario = runner.load_scenario("theme/save-background-after-restart")
+        scenario["themeAsset"] = "guess"
         with self.assertRaises(runner.ScenarioError):
             runner.validate_scenario(scenario)
 
@@ -222,6 +274,72 @@ class ReaderContentTest(unittest.TestCase):
         node = runner.find_node_by_content_prefix(dump, "调试夹具：长章节")
         self.assertIsNotNone(node)
         self.assertEqual((200, 400), runner.node_center(node))
+
+    def test_finds_node_in_external_picker_package(self):
+        dump = """<?xml version="1.0"?><hierarchy>
+<node package="com.google.android.photopicker" text="" content-desc="更多"
+ bounds="[924,753][1068,897]" />
+</hierarchy>"""
+        node = runner.find_node_by_content_prefix(
+            dump,
+            "更多",
+            "com.google.android.photopicker",
+        )
+        self.assertEqual((996, 825), runner.node_center(node))
+
+    def test_finds_edit_button_in_same_source_row(self):
+        dump = """<?xml version="1.0"?><hierarchy>
+<node package="io.legato.kazusa.debug" text="Legado Debug Fixture"
+ resource-id="io.legato.kazusa.debug:id/cb_book_source" bounds="[36,343][516,487]" />
+<node package="io.legato.kazusa.debug" text="" content-desc="编辑"
+ resource-id="io.legato.kazusa.debug:id/iv_edit" bounds="[744,343][888,487]" />
+<node package="io.legato.kazusa.debug" text="" content-desc="编辑"
+ resource-id="io.legato.kazusa.debug:id/iv_edit" bounds="[744,586][888,730]" />
+</hierarchy>"""
+        source = runner.find_node_by_text(dump, "Legado Debug Fixture")
+        edit = runner.find_node_in_same_row(
+            dump,
+            source,
+            "io.legato.kazusa.debug:id/iv_edit",
+        )
+        self.assertEqual((816, 415), runner.node_center(edit))
+
+
+class EntryExecutionTest(unittest.TestCase):
+    def make_context(self):
+        ctx = mock.Mock()
+        ctx.device = "device"
+        ctx.scenario = {"readyTimeoutSeconds": 30}
+        ctx.records = {}
+        ctx.state = {}
+        ctx.metadata = {}
+        return ctx
+
+    @mock.patch.object(runner, "find_node_in_same_row")
+    @mock.patch.object(runner, "find_node_by_text")
+    @mock.patch.object(runner, "ui_dump", return_value="source dump")
+    @mock.patch.object(runner, "wait_until_activity_resumed", return_value=(True, "source component"))
+    def test_source_manage_prepare_owns_its_state(
+        self,
+        _wait,
+        _dump,
+        find_text,
+        find_row,
+    ):
+        find_text.return_value = {"bounds": "[1,1][2,2]"}
+        find_row.return_value = {"bounds": "[3,3][4,4]"}
+        ctx = self.make_context()
+        runner.ENTRIES["source_manage"].prepare(ctx)
+        self.assertTrue(ctx.records["source_manage_ready"])
+        self.assertEqual("Legado Debug Fixture", ctx.state["source_name"])
+
+    @mock.patch.object(runner, "wait_until_text_present", return_value=(True, "theme dump", {}))
+    def test_theme_config_prepare_owns_its_state(self, _wait):
+        ctx = self.make_context()
+        runner.ENTRIES["theme_config"].prepare(ctx)
+        self.assertTrue(ctx.records["theme_config_ready"])
+        self.assertFalse(ctx.records["theme_save_succeeded"])
+        self.assertEqual("theme dump", ctx.records["ui_before"])
 
 
 class SessionLogTest(unittest.TestCase):

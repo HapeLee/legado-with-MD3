@@ -16,6 +16,7 @@ import sys
 import time
 from typing import Any, Callable, Sequence
 import xml.etree.ElementTree as ET
+import zipfile
 
 
 EXIT_ASSERTION = 1
@@ -27,9 +28,14 @@ EXIT_SCENARIO = 5
 PACKAGE = "io.legato.kazusa.debug"
 DEBUG_ACTIVITY = "io.legado.app.debug.DebugScenarioActivity"
 MAIN_ACTIVITY = "io.legado.app.ui.main.MainActivity"
+SOURCE_EDIT_ACTIVITY = "io.legado.app.ui.book.source.edit.BookSourceEditActivity"
+SOURCE_MANAGE_ACTIVITY = "io.legado.app.ui.book.source.manage.BookSourceActivity"
+THEME_MANIFEST_PATH = "manifest.json"
+THEME_ASSET_REMOTE = f"/sdcard/Android/data/{PACKAGE}/files/debug-theme-assets/background.png"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
+THEME_ASSET_FIXTURE = PROJECT_ROOT / "app" / "src" / "main" / "assets" / "web" / "uploadBook" / "img" / "close.png"
 SCENARIO_ROOT = SCRIPT_DIR / "scenarios"
 RUN_ROOT = PROJECT_ROOT / ".debug-runs"
 FIXTURE_ROOT = PROJECT_ROOT / "app" / "src" / "debug" / "assets" / "debug-fixtures"
@@ -97,6 +103,12 @@ def validate_scenario(scenario: Any, requested_name: str | None = None) -> None:
     if not isinstance(entry, dict) or entry.get("type") not in ENTRIES:
         raise ScenarioError(f"entry.type must be one of: {', '.join(sorted(ENTRIES))}")
     entry_handler = ENTRIES[entry["type"]]
+    theme_asset = scenario.get("themeAsset")
+    if theme_asset is not None:
+        if entry["type"] != "theme_config":
+            raise ScenarioError("themeAsset is only supported by theme_config scenarios")
+        if theme_asset not in {"valid-file", "missing-file", "missing-content-uri"}:
+            raise ScenarioError("themeAsset must be valid-file, missing-file, or missing-content-uri")
 
     actions = scenario.get("actions")
     if not isinstance(actions, list) or not actions:
@@ -205,6 +217,43 @@ def run_command(
 
 def adb(device: str, *arguments: str, timeout: int = 60, check: bool = True) -> subprocess.CompletedProcess[str]:
     return run_command(["adb", "-s", device, *arguments], timeout=timeout, check=check)
+
+
+def prepare_theme_asset(device: str, scenario: dict[str, Any]) -> dict[str, Any] | None:
+    preferences = dict(scenario.get("preferences") or {})
+    mode = scenario.get("themeAsset")
+    if mode is None:
+        return preferences or None
+    remote_folder = THEME_ASSET_REMOTE.rsplit("/", 1)[0]
+    adb(device, "shell", "rm", "-rf", remote_folder, timeout=10, check=False)
+    if mode == "valid-file":
+        adb(device, "shell", "mkdir", "-p", remote_folder, timeout=10)
+        run_command(
+            ["adb", "-s", device, "push", str(THEME_ASSET_FIXTURE), THEME_ASSET_REMOTE],
+            timeout=30,
+        )
+        background = THEME_ASSET_REMOTE
+    elif mode == "missing-file":
+        background = f"{remote_folder}/missing-background.png"
+    else:
+        background = f"content://{PACKAGE}.debug-theme-assets/missing-background.png"
+    preferences["backgroundImage"] = background
+    preferences["backgroundImageNight"] = ""
+    return preferences
+
+
+def arm_theme_content_failure(device: str) -> None:
+    adb(
+        device,
+        "shell",
+        "content",
+        "call",
+        "--uri",
+        f"content://{PACKAGE}.debug-theme-assets",
+        "--method",
+        "armFailure",
+        timeout=15,
+    )
 
 
 def select_device(requested: str | None) -> str:
@@ -473,25 +522,69 @@ def reader_current_page(device: str) -> str:
     return pages[-1] if pages else ""
 
 
-def find_node_by_content_prefix(dump: str, prefix: str) -> dict[str, str] | None:
+def find_node_by_content_prefix(
+    dump: str,
+    prefix: str,
+    package: str = PACKAGE,
+) -> dict[str, str] | None:
     # The bookshelf item's label lives on a node whose clickable flag is false
     # (the clickable modifier sits on an ancestor). Match by content-desc and
     # tap the label's center; the clickable ancestor is under that point.
     candidates = [
         node
         for node in parse_ui_nodes(dump)
-        if node.get("package") == PACKAGE
+        if node.get("package") == package
         and node.get("content-desc", "").startswith(prefix)
     ]
     return candidates[0] if candidates else None
 
 
+def find_node_by_text(
+    dump: str,
+    text: str,
+    package: str = PACKAGE,
+) -> dict[str, str] | None:
+    candidates = [
+        node
+        for node in parse_ui_nodes(dump)
+        if node.get("package") == package and node.get("text") == text
+    ]
+    return candidates[0] if candidates else None
+
+
+def find_node_in_same_row(
+    dump: str,
+    anchor: dict[str, str],
+    resource_id: str,
+) -> dict[str, str] | None:
+    anchor_bounds = parse_bounds(anchor)
+    if anchor_bounds is None:
+        return None
+    _, anchor_top, _, anchor_bottom = anchor_bounds
+    candidates = []
+    for node in parse_ui_nodes(dump):
+        if node.get("package") != PACKAGE or node.get("resource-id") != resource_id:
+            continue
+        bounds = parse_bounds(node)
+        if bounds is None:
+            continue
+        _, top, _, bottom = bounds
+        overlap = min(anchor_bottom, bottom) - max(anchor_top, top)
+        if overlap > 0:
+            candidates.append((overlap, node))
+    return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
+def parse_bounds(node: dict[str, str]) -> tuple[int, int, int, int] | None:
+    match = re.fullmatch(r"\[(\d+),(\d+)]\[(\d+),(\d+)]", node.get("bounds", ""))
+    return tuple(map(int, match.groups())) if match else None
+
+
 def node_center(node: dict[str, str]) -> tuple[int, int]:
-    bounds = node.get("bounds", "")
-    match = re.fullmatch(r"\[(\d+),(\d+)]\[(\d+),(\d+)]", bounds)
-    if match is None:
-        raise RuntimeError(f"invalid accessibility bounds: {bounds}")
-    left, top, right, bottom = map(int, match.groups())
+    bounds = parse_bounds(node)
+    if bounds is None:
+        raise RuntimeError(f"invalid accessibility bounds: {node.get('bounds', '')}")
+    left, top, right, bottom = bounds
     return (left + right) // 2, (top + bottom) // 2
 
 
@@ -510,6 +603,104 @@ def wait_until_node_present(
             return True, latest, node
         time.sleep(0.5)
     return False, latest, node
+
+
+def wait_until_text_present(
+    device: str,
+    text: str,
+    timeout_seconds: int,
+) -> tuple[bool, str, dict[str, str] | None]:
+    deadline = time.monotonic() + timeout_seconds
+    latest = ""
+    node = None
+    while time.monotonic() < deadline:
+        latest = ui_dump(device)
+        node = find_node_by_text(latest, text)
+        if node is not None and device_ready_for_ui(device):
+            return True, latest, node
+        time.sleep(0.25)
+    return False, latest, node
+
+
+def find_node_by_class(dump: str, class_name: str) -> dict[str, str] | None:
+    candidates = [
+        node
+        for node in parse_ui_nodes(dump)
+        if node.get("package") == PACKAGE and node.get("class") == class_name
+    ]
+    return candidates[0] if candidates else None
+
+
+def find_node_containing_text(dump: str, text: str) -> dict[str, str] | None:
+    candidates = [
+        node
+        for node in parse_ui_nodes(dump)
+        if text in node.get("text", "")
+    ]
+    return candidates[0] if candidates else None
+
+
+def saved_theme_manifest(device: str, theme_name: str) -> tuple[str, dict[str, Any]] | None:
+    result = adb(
+        device,
+        "exec-out",
+        "run-as",
+        PACKAGE,
+        "find",
+        "files/saved_themes",
+        "-name",
+        "manifest.json",
+        "-type",
+        "f",
+        timeout=20,
+        check=False,
+    )
+    for path in result.stdout.splitlines():
+        manifest = adb(
+            device,
+            "exec-out",
+            "run-as",
+            PACKAGE,
+            "cat",
+            path.strip(),
+            timeout=20,
+            check=False,
+        ).stdout
+        try:
+            data = json.loads(manifest)
+            if data.get("name") == theme_name:
+                return path.strip(), data
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def saved_theme_exists(device: str, theme_name: str) -> bool:
+    return saved_theme_manifest(device, theme_name) is not None
+
+
+def saved_theme_has_fixture_asset(device: str, theme_name: str) -> bool:
+    saved = saved_theme_manifest(device, theme_name)
+    if saved is None:
+        return False
+    manifest_path, manifest = saved
+    entry = (manifest.get("assets") or {}).get("background.light")
+    if not isinstance(entry, str) or not entry:
+        return False
+    asset_path = f"{manifest_path.rsplit('/', 1)[0]}/{entry}"
+    result = adb(
+        device,
+        "exec-out",
+        "run-as",
+        PACKAGE,
+        "sha256sum",
+        asset_path,
+        timeout=20,
+        check=False,
+    )
+    digest = result.stdout.split()
+    expected = hashlib.sha256(THEME_ASSET_FIXTURE.read_bytes()).hexdigest()
+    return bool(digest) and digest[0] == expected
 
 
 def wait_until_reader_ready(device: str, marker: str, timeout_seconds: int) -> tuple[bool, str, str]:
@@ -536,6 +727,28 @@ def wait_until_reader_content_changed(
             return True, content, content
         time.sleep(0.2)
     return False, content, content
+
+
+def resumed_activity(device: str) -> str:
+    output = adb(device, "shell", "dumpsys", "activity", "activities", timeout=20, check=False).stdout
+    match = re.search(r"topResumedActivity=.*?\s([\w.]+/[\w.$]+)\s", output)
+    return match.group(1) if match else ""
+
+
+def wait_until_activity_resumed(
+    device: str,
+    activity: str,
+    timeout_seconds: int,
+) -> tuple[bool, str]:
+    deadline = time.monotonic() + timeout_seconds
+    resumed = ""
+    component = f"{PACKAGE}/{activity}"
+    while time.monotonic() < deadline:
+        resumed = resumed_activity(device)
+        if resumed == component and device_ready_for_ui(device):
+            return True, resumed
+        time.sleep(0.2)
+    return False, resumed
 
 
 def application_pid(device: str) -> str | None:
@@ -994,6 +1207,86 @@ class BookshelfEntry(Entry):
         )
 
 
+@register_entry("source_manage")
+class SourceManageEntry(Entry):
+    allowed_actions = {"open_fixture_source", "predictive_back"}
+
+    def prepare(self, ctx: Context) -> None:
+        activity_ready, resumed = wait_until_activity_resumed(
+            ctx.device,
+            SOURCE_MANAGE_ACTIVITY,
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        source_name = "Legado Debug Fixture"
+        dump = ui_dump(ctx.device)
+        source_node = find_node_by_text(dump, source_name)
+        edit_node = find_node_in_same_row(
+            dump,
+            source_node,
+            f"{PACKAGE}:id/iv_edit",
+        ) if source_node else None
+        ctx.note_pid()
+        ctx.screenshot("beforeScreenshot", "before.png")
+        ctx.records["source_manage_ready"] = activity_ready and source_node is not None and edit_node is not None
+        ctx.records["source_edit_opened"] = False
+        ctx.records["returned_to_source_manage"] = False
+        ctx.records["resumed_before"] = resumed
+        ctx.records["resumed_after"] = resumed
+        ctx.state["source_name"] = source_name
+        ctx.state["edit_node"] = edit_node
+
+    def finalize(self, ctx: Context) -> None:
+        ctx.screenshot("afterScreenshot", "after.png")
+        ctx.metadata.update(
+            {
+                "resumedBefore": ctx.records["resumed_before"],
+                "resumedAfter": ctx.records["resumed_after"],
+            }
+        )
+
+
+@register_entry("theme_config")
+class ThemeConfigEntry(Entry):
+    allowed_actions = {
+        "export_current_theme",
+        "open_theme_manage",
+        "save_current_theme",
+        "select_day_background",
+    }
+
+    def prepare(self, ctx: Context) -> None:
+        ready, dump, _ = wait_until_text_present(
+            ctx.device,
+            "主题模式",
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        ctx.note_pid()
+        ctx.screenshot("beforeScreenshot", "before.png")
+        ctx.records["theme_config_ready"] = ready
+        ctx.records["theme_manage_opened"] = False
+        ctx.records["theme_save_succeeded"] = False
+        ctx.records["theme_export_succeeded"] = False
+        ctx.records["theme_save_failed"] = False
+        ctx.records["theme_export_failed"] = False
+        ctx.records["theme_failure_feedback"] = False
+        ctx.records["theme_save_asset_included"] = False
+        ctx.records["theme_export_asset_included"] = False
+        ctx.records["theme_day_background_copied"] = False
+        ctx.records["ui_before"] = dump
+        ctx.records["ui_after"] = dump
+
+    def finalize(self, ctx: Context) -> None:
+        ctx.screenshot("afterScreenshot", "after.png")
+        ctx.metadata.update(
+            {
+                "uiBeforeSha256": sha256_text(ctx.records["ui_before"]),
+                "uiAfterSha256": sha256_text(ctx.records["ui_after"]),
+                "savedThemeName": ctx.state.get("theme_name"),
+                "exportedThemeName": ctx.state.get("export_name"),
+            }
+        )
+
+
 @register_action("turn_page")
 class TurnPage(Action):
     params = {"direction": ["next", "previous"], "count": "1-100"}
@@ -1068,6 +1361,487 @@ class PressBack(Action):
         ctx.state["returned_node"] = returned_node
 
 
+@register_action("predictive_back")
+class PredictiveBack(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("source_edit_opened"):
+            return
+        width, height = screen_size(ctx.device)
+        y = round(height * 0.5)
+        end_x = round(width * 0.45)
+        adb(
+            ctx.device,
+            "shell",
+            "input",
+            "swipe",
+            "1",
+            str(y),
+            str(end_x),
+            str(y),
+            "300",
+            timeout=10,
+        )
+        ctx.action_count += 1
+        returned, resumed = wait_until_activity_resumed(
+            ctx.device,
+            SOURCE_MANAGE_ACTIVITY,
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        dump = ui_dump(ctx.device)
+        source_present = find_node_by_text(dump, ctx.state["source_name"]) is not None
+        ctx.records["returned_to_source_manage"] = returned and source_present
+        ctx.records["resumed_after"] = resumed
+
+
+@register_action("open_fixture_source")
+class OpenFixtureSource(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        edit_node = ctx.state.get("edit_node")
+        if not (ctx.records.get("source_manage_ready") and edit_node is not None):
+            return
+        x, y = node_center(edit_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        opened, _ = wait_until_activity_resumed(
+            ctx.device,
+            SOURCE_EDIT_ACTIVITY,
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        ctx.records["source_edit_opened"] = opened
+        ctx.screenshot("editScreenshot", "edit.png")
+
+
+@register_action("open_theme_manage")
+class OpenThemeManage(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("theme_config_ready"):
+            return
+        node = None
+        dump = ""
+        width, height = screen_size(ctx.device)
+        for _ in range(6):
+            dump = ui_dump(ctx.device)
+            node = find_node_by_text(dump, "主题管理")
+            if node is not None:
+                break
+            adb(
+                ctx.device,
+                "shell",
+                "input",
+                "swipe",
+                str(width // 2),
+                str(round(height * 0.84)),
+                str(width // 2),
+                str(round(height * 0.48)),
+                "300",
+                timeout=10,
+            )
+            time.sleep(0.4)
+        if node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        opened, dump, _ = wait_until_text_present(
+            ctx.device,
+            "保存当前设置",
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        ctx.records["theme_manage_opened"] = opened
+        ctx.records["ui_after"] = dump
+        ctx.screenshot("manageScreenshot", "manage.png")
+
+
+@register_action("select_day_background")
+class SelectDayBackground(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("theme_config_ready"):
+            return
+
+        fixture = PROJECT_ROOT / "app" / "src" / "main" / "assets" / "web" / "uploadBook" / "img" / "close.png"
+        remote_fixture = "/sdcard/Download/DEBUG_THEME_BG.png"
+        remote_folder = f"/sdcard/Android/data/{PACKAGE}/files/backgroundImage"
+        adb(ctx.device, "shell", "rm", "-rf", remote_folder, timeout=10, check=False)
+        run_command(["adb", "-s", ctx.device, "push", str(fixture), remote_fixture], timeout=30)
+        adb(
+            ctx.device,
+            "shell",
+            "am",
+            "broadcast",
+            "-a",
+            "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+            "-d",
+            f"file://{remote_fixture}",
+            timeout=15,
+            check=False,
+        )
+
+        day_node = None
+        dump = ""
+        width, height = screen_size(ctx.device)
+        for _ in range(8):
+            dump = ui_dump(ctx.device)
+            day_node = find_node_by_text(dump, "白天")
+            if day_node is not None:
+                break
+            adb(
+                ctx.device,
+                "shell",
+                "input",
+                "swipe",
+                str(width // 2),
+                str(round(height * 0.84)),
+                str(width // 2),
+                str(round(height * 0.48)),
+                "300",
+                timeout=10,
+            )
+            time.sleep(0.4)
+        if day_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(day_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+
+        deadline = time.monotonic() + 10
+        add_node = None
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            add_node = find_node_by_content_prefix(dump, "添加")
+            if add_node is not None:
+                break
+            time.sleep(0.2)
+        if add_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(add_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+
+        filename_node = None
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            filename_node = find_node_by_text(dump, "DEBUG_THEME_BG.png")
+            if filename_node is not None:
+                break
+            more_node = find_node_by_content_prefix(
+                dump,
+                "更多",
+                "com.google.android.photopicker",
+            )
+            if more_node is not None:
+                x, y = node_center(more_node)
+                adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+                browse_node = None
+                browse_deadline = time.monotonic() + 5
+                while time.monotonic() < browse_deadline:
+                    dump = ui_dump(ctx.device)
+                    browse_node = find_node_by_text(
+                        dump,
+                        "浏览…",
+                        "com.google.android.photopicker",
+                    )
+                    if browse_node is not None:
+                        break
+                    time.sleep(0.2)
+                if browse_node is not None:
+                    x, y = node_center(browse_node)
+                    adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+                    break
+            time.sleep(0.25)
+        if filename_node is None:
+            deadline = time.monotonic() + 15
+            download_opened = False
+            while time.monotonic() < deadline:
+                dump = ui_dump(ctx.device)
+                filename_node = find_node_by_text(
+                    dump,
+                    "DEBUG_THEME_BG.png",
+                    "com.google.android.documentsui",
+                )
+                if filename_node is not None:
+                    break
+                download_node = find_node_by_text(
+                    dump,
+                    "下载",
+                    "com.google.android.documentsui",
+                )
+                if download_node is not None and not download_opened:
+                    x, y = node_center(download_node)
+                    adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+                    download_opened = True
+                elif download_opened:
+                    adb(
+                        ctx.device,
+                        "shell",
+                        "input",
+                        "swipe",
+                        str(width // 2),
+                        str(round(height * 0.82)),
+                        str(width // 2),
+                        str(round(height * 0.40)),
+                        "250",
+                        timeout=10,
+                    )
+                time.sleep(0.4)
+        if filename_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(filename_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        wait_until_activity_resumed(
+            ctx.device,
+            MAIN_ACTIVITY,
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+
+        expected_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+        copied_path = ""
+        deadline = time.monotonic() + ctx.scenario.get("readyTimeoutSeconds", 30)
+        while time.monotonic() < deadline:
+            result = adb(
+                ctx.device,
+                "shell",
+                "find",
+                remote_folder,
+                "-type",
+                "f",
+                timeout=10,
+                check=False,
+            )
+            candidates = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            for candidate in candidates:
+                digest = adb(
+                    ctx.device,
+                    "shell",
+                    "sha256sum",
+                    candidate,
+                    timeout=10,
+                    check=False,
+                ).stdout.split()
+                if digest and digest[0] == expected_hash:
+                    copied_path = candidate
+                    break
+            if copied_path:
+                break
+            time.sleep(0.25)
+        adb(ctx.device, "shell", "rm", "-f", remote_fixture, timeout=10, check=False)
+        ctx.records["theme_day_background_copied"] = bool(copied_path)
+        ctx.state["day_background_path"] = copied_path
+        ctx.records["ui_after"] = ui_dump(ctx.device)
+        ctx.screenshot("backgroundScreenshot", "background.png")
+
+
+@register_action("save_current_theme")
+class SaveCurrentTheme(Action):
+    params = {"namePrefix": "non-empty ASCII string"}
+
+    def validate(self, action: dict[str, Any], index: int) -> None:
+        prefix = action.get("namePrefix")
+        if not isinstance(prefix, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", prefix):
+            raise ScenarioError(f"actions[{index}].namePrefix must be non-empty ASCII")
+
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("theme_manage_opened"):
+            return
+        theme_name = f"{action['namePrefix']}_{ctx.metadata['sessionId']}"
+        ctx.state["theme_name"] = theme_name
+        ready, _, save_current = wait_until_text_present(ctx.device, "保存当前设置", 10)
+        if not (ready and save_current):
+            return
+        x, y = node_center(save_current)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        deadline = time.monotonic() + 10
+        edit = None
+        dump = ""
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            edit = find_node_by_class(dump, "android.widget.EditText")
+            if edit is not None:
+                break
+            time.sleep(0.2)
+        if edit is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(edit)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        adb(ctx.device, "shell", "input", "text", theme_name, timeout=10)
+        dump = ui_dump(ctx.device)
+        confirm = find_node_by_text(dump, "保存")
+        if confirm is None:
+            ctx.records["ui_after"] = dump
+            return
+        if ctx.scenario.get("themeAsset") == "missing-content-uri":
+            arm_theme_content_failure(ctx.device)
+        x, y = node_center(confirm)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        deadline = time.monotonic() + ctx.scenario.get("readyTimeoutSeconds", 30)
+        succeeded = False
+        failure_feedback = ""
+        while time.monotonic() < deadline:
+            if saved_theme_exists(ctx.device, theme_name):
+                succeeded = True
+                break
+            dump = ui_dump(ctx.device)
+            failure_node = find_node_containing_text(dump, "主题保存失败")
+            if failure_node is not None:
+                failure_feedback = failure_node.get("text", "")
+                break
+            time.sleep(0.25)
+        ctx.records["theme_save_succeeded"] = succeeded
+        ctx.records["theme_save_failed"] = not succeeded and bool(failure_feedback)
+        ctx.records["theme_failure_feedback"] = bool(failure_feedback)
+        if failure_feedback:
+            ctx.state["theme_failure_feedback"] = failure_feedback
+        if succeeded and ctx.scenario.get("themeAsset") == "valid-file":
+            ctx.records["theme_save_asset_included"] = saved_theme_has_fixture_asset(
+                ctx.device,
+                theme_name,
+            )
+        ctx.records["ui_after"] = ui_dump(ctx.device)
+
+
+@register_action("export_current_theme")
+class ExportCurrentTheme(Action):
+    params = {"namePrefix": "non-empty ASCII string"}
+
+    def validate(self, action: dict[str, Any], index: int) -> None:
+        prefix = action.get("namePrefix")
+        if not isinstance(prefix, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", prefix):
+            raise ScenarioError(f"actions[{index}].namePrefix must be non-empty ASCII")
+
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        if not ctx.records.get("theme_manage_opened"):
+            return
+        export_name = f"{action['namePrefix']}_{ctx.metadata['sessionId']}.zip"
+        ctx.state["export_name"] = export_name
+        remote_path = f"/sdcard/Download/{export_name}"
+        adb(ctx.device, "shell", "rm", "-f", remote_path, timeout=10, check=False)
+        ready, _, export_current = wait_until_text_present(ctx.device, "导出当前主题", 10)
+        if not (ready and export_current):
+            return
+        x, y = node_center(export_current)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+
+        deadline = time.monotonic() + 15
+        filename_node = None
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            filename_node = next(
+                (
+                    node
+                    for node in parse_ui_nodes(dump)
+                    if node.get("package") == "com.google.android.documentsui"
+                    and node.get("class") == "android.widget.EditText"
+                ),
+                None,
+            )
+            if filename_node is not None:
+                break
+            time.sleep(0.25)
+        if filename_node is None:
+            return
+        x, y = node_center(filename_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        adb(ctx.device, "shell", "input", "keyevent", "KEYCODE_MOVE_END", timeout=10)
+        for _ in range(80):
+            adb(ctx.device, "shell", "input", "keyevent", "KEYCODE_DEL", timeout=10)
+        adb(ctx.device, "shell", "input", "text", export_name, timeout=10)
+        dump = ui_dump(ctx.device)
+        save_node = next(
+            (
+                node
+                for node in parse_ui_nodes(dump)
+                if node.get("package") == "com.google.android.documentsui"
+                and node.get("resource-id") == "android:id/button1"
+            ),
+            None,
+        )
+        if save_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        if ctx.scenario.get("themeAsset") == "missing-content-uri":
+            arm_theme_content_failure(ctx.device)
+        x, y = node_center(save_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+
+        local_path = ctx.run_dir / "export.zip"
+        deadline = time.monotonic() + ctx.scenario.get("readyTimeoutSeconds", 30)
+        pulled = False
+        wait_until_activity_resumed(
+            ctx.device,
+            MAIN_ACTIVITY,
+            ctx.scenario.get("readyTimeoutSeconds", 30),
+        )
+        last_size = -1
+        stable_reads = 0
+        failure_feedback = ""
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            failure_node = find_node_containing_text(dump, "主题导出失败")
+            if failure_node is not None:
+                failure_feedback = failure_node.get("text", "")
+            size_result = adb(
+                ctx.device,
+                "shell",
+                "stat",
+                "-c",
+                "%s",
+                remote_path,
+                timeout=10,
+                check=False,
+            )
+            try:
+                size = int(size_result.stdout.strip())
+            except ValueError:
+                size = 0
+            stable_reads = stable_reads + 1 if size > 0 and size == last_size else 0
+            last_size = size
+            if stable_reads < 2:
+                time.sleep(0.25)
+                continue
+            pull = run_command(
+                ["adb", "-s", ctx.device, "pull", remote_path, str(local_path)],
+                timeout=30,
+                check=False,
+            )
+            if pull.returncode == 0 and local_path.is_file() and local_path.stat().st_size > 0:
+                pulled = True
+                break
+            time.sleep(0.5)
+        valid = False
+        asset_included = False
+        if pulled:
+            try:
+                with zipfile.ZipFile(local_path) as archive:
+                    manifest = json.loads(archive.read(THEME_MANIFEST_PATH).decode("utf-8"))
+                    valid = manifest.get("formatVersion") == 1 and isinstance(manifest.get("config"), dict)
+                    entry = (manifest.get("assets") or {}).get("background.light")
+                    if isinstance(entry, str) and entry in archive.namelist():
+                        expected = hashlib.sha256(THEME_ASSET_FIXTURE.read_bytes()).hexdigest()
+                        asset_included = hashlib.sha256(archive.read(entry)).hexdigest() == expected
+            except (OSError, KeyError, json.JSONDecodeError, zipfile.BadZipFile):
+                valid = False
+        adb(ctx.device, "shell", "rm", "-f", remote_path, timeout=10, check=False)
+        if valid:
+            ctx.artifacts["exportedTheme"] = "export.zip"
+        ctx.records["theme_export_succeeded"] = valid
+        ctx.records["theme_export_failed"] = not valid and bool(failure_feedback)
+        ctx.records["theme_failure_feedback"] = bool(failure_feedback)
+        if failure_feedback:
+            ctx.state["theme_failure_feedback"] = failure_feedback
+        ctx.records["theme_export_asset_included"] = asset_included
+        ctx.records["ui_after"] = ui_dump(ctx.device)
+
+
 ASSERTIONS.update(
     {
         "reader_ready": lambda ctx: bool(ctx.records.get("reader_ready")),
@@ -1076,6 +1850,21 @@ ASSERTIONS.update(
         "bookshelf_ready": lambda ctx: bool(ctx.records.get("bookshelf_ready")),
         "reader_opened": lambda ctx: bool(ctx.records.get("reader_opened")),
         "returned_to_bookshelf": lambda ctx: bool(ctx.records.get("returned_to_bookshelf")),
+        "source_manage_ready": lambda ctx: bool(ctx.records.get("source_manage_ready")),
+        "source_edit_opened": lambda ctx: bool(ctx.records.get("source_edit_opened")),
+        "returned_to_source_manage": lambda ctx: bool(ctx.records.get("returned_to_source_manage")),
+        "theme_config_ready": lambda ctx: bool(ctx.records.get("theme_config_ready")),
+        "theme_manage_opened": lambda ctx: bool(ctx.records.get("theme_manage_opened")),
+        "theme_save_succeeded": lambda ctx: bool(ctx.records.get("theme_save_succeeded")),
+        "theme_export_succeeded": lambda ctx: bool(ctx.records.get("theme_export_succeeded")),
+        "theme_day_background_copied": lambda ctx: bool(ctx.records.get("theme_day_background_copied")),
+        "theme_save_asset_included": lambda ctx: bool(ctx.records.get("theme_save_asset_included")),
+        "theme_export_asset_included": lambda ctx: bool(ctx.records.get("theme_export_asset_included")),
+        "theme_save_failed": lambda ctx: bool(ctx.records.get("theme_save_failed")),
+        "theme_export_failed": lambda ctx: bool(ctx.records.get("theme_export_failed")),
+        "theme_failure_feedback": lambda ctx: bool(ctx.records.get("theme_failure_feedback")),
+        "theme_open_input_stream_reached": lambda ctx: bool(ctx.records.get("theme_open_input_stream_reached")),
+        "theme_content_failure_armed": lambda ctx: bool(ctx.records.get("theme_content_failure_armed")),
         "no_fatal_exception": lambda ctx: ctx.failure is None,
     }
 )
@@ -1156,7 +1945,25 @@ def execute(args: argparse.Namespace) -> int:
     ctx = Context(device, run_dir, scenario, fixture_data, metadata, args.action_repeat)
     recorder = ScreenRecorder(device) if scenario.get("record") else None
     try:
-        launch_fixture(device, fixture, entry_handler.type, session_id, scenario.get("preferences"))
+        if entry_handler.type == "theme_config":
+            # Activity result contracts can leave their external picker task
+            # above Legado after a failed run. Close both implementations used
+            # by this device before launching a deterministic theme scenario.
+            for picker_package in (
+                "com.google.android.documentsui",
+                "com.google.android.photopicker",
+            ):
+                adb(
+                    device,
+                    "shell",
+                    "am",
+                    "force-stop",
+                    picker_package,
+                    timeout=20,
+                    check=False,
+                )
+        preferences = prepare_theme_asset(device, scenario) if entry_handler.type == "theme_config" else scenario.get("preferences")
+        launch_fixture(device, fixture, entry_handler.type, session_id, preferences)
         ctx.note_pid()
         entry_handler.prepare(ctx)
         if recorder is not None:
@@ -1172,6 +1979,31 @@ def execute(args: argparse.Namespace) -> int:
         ctx.note_pid()
         logcat = collect_logcat(device, run_dir, ctx.app_pids, session_id)
         ctx.failure = parse_failure(extract_crash(logcat, PACKAGE, ctx.app_pids))
+        toast_signal = (
+            f"Toast already killed. pkg={PACKAGE}" in logcat
+            or f"pkg={PACKAGE}" in logcat and "enqueueToast" in logcat
+        )
+        open_input_stream_reached = "INJECTED_THEME_ASSET_OPEN" in logcat
+        failure_armed = "INJECTED_THEME_ASSET_FAILURE_ARMED" in logcat
+        ctx.records["theme_open_input_stream_reached"] = open_input_stream_reached
+        ctx.records["theme_content_failure_armed"] = failure_armed
+        if scenario.get("themeAsset") in {"missing-file", "missing-content-uri"}:
+            ctx.records["theme_failure_feedback"] = bool(
+                ctx.records.get("theme_failure_feedback") or toast_signal
+            )
+            if any(action["type"] == "save_current_theme" for action in scenario["actions"]):
+                ctx.records["theme_save_failed"] = (
+                    not ctx.records.get("theme_save_succeeded")
+                    and ctx.records["theme_failure_feedback"]
+                )
+            if any(action["type"] == "export_current_theme" for action in scenario["actions"]):
+                ctx.records["theme_export_failed"] = (
+                    not ctx.records.get("theme_export_succeeded")
+                    and ctx.records["theme_failure_feedback"]
+                )
+        metadata["themeOpenInputStreamReached"] = open_input_stream_reached
+        metadata["themeContentFailureArmed"] = failure_armed
+        metadata["themeFailureFeedbackObserved"] = bool(ctx.records.get("theme_failure_feedback"))
         for name in scenario["assertions"]:
             ctx.assertion_values[name] = ASSERTIONS[name](ctx)
         metadata.update(
