@@ -23,6 +23,9 @@ Read `../../../tools/android/README.md` completely before taking debug actions. 
 - Do not classify a failed scenario as an app bug until its preconditions and intended actions actually ran.
 - Treat every new bug pattern as a Debug Tool capability gap to close. Do not finish with a one-off sequence of shell commands when the flow can be represented as a reusable entry, action, fixture, injection mode, assertion, or artifact.
 - Use ad hoc ADB commands only to explore an unknown UI or provider. Before diagnosing or fixing product code, fold the discovered procedure back into `runner.py`, a scenario JSON, tool tests, and `tools/android/README.md`.
+- Do not automate settings-screen navigation when a setting value is only a precondition. Apply the value through a typed Debug Tool configuration command, production settings gateway/use case, and the corresponding runtime refresh signal.
+- Use real UI interaction when the settings screen, control handler, animation, navigation, picker contract, or accessibility behavior is itself under test. Never bypass the behavior being investigated.
+- Treat fake books, sources, themes, files, fonts, search results, groups, and failure providers as named debug fixtures with deterministic IDs, reset policy, installation evidence, and cleanup. Do not inject one-off anonymous data from a shell script.
 
 ## Workflow
 
@@ -48,7 +51,13 @@ Write down four things before running or editing:
 
 Map these to one entry, domain actions, and assertions. Reuse an existing scenario when it covers the flow. If not, add a small registered handler plus a JSON scenario; do not create a generic coordinate DSL.
 
-Use `preferences` for primitive String/Boolean settings applied before launch. Use a Debug-only fixture or provider for files, databases, content URIs, delayed failures, and other controlled state.
+Classify each step before choosing automation:
+
+- **Precondition only**: inject configuration or a named fixture directly; do not navigate through settings pages.
+- **Runtime configuration transition**: send one semantic Debug Tool command that persists through the production gateway/use case and emits the same refresh/recreate/day-night signal as production UI.
+- **Behavior under test**: perform the real UI, navigation, or system-contract action and observe its result.
+
+Use launch-time configuration for state that must exist before Activity creation. Use runtime commands for transitions such as theme mode, font, reader style, and visibility changes. Use a Debug-only fixture or provider for files, databases, content URIs, delayed failures, and other controlled state.
 
 ### 2a. Extend the tool for a new scenario
 
@@ -57,6 +66,7 @@ If the current capability list cannot express the report, improve the tool befor
 - Add an entry when a new real launch surface or task stack is required.
 - Add a domain action when a new user operation must be repeatable.
 - Add a fixture, `preferences` mapping, or Debug-only provider when a new precondition must be injected.
+- Add a typed configuration command when a setting should be changed without settings-screen navigation. The command must call the production settings gateway/use case and reproduce required runtime side effects; do not write an arbitrary key and hope observers refresh.
 - Add an assertion when the outcome cannot be proven by existing observations.
 - Add an artifact collector when screenshots, logs, video, private files, or exported data are not yet retained.
 - Add a system-UI helper when DocumentsUI, Photo Picker, permission UI, or another package participates in the flow.
@@ -64,6 +74,18 @@ If the current capability list cannot express the report, improve the tool befor
 Register capabilities through `ENTRIES`, `ACTIONS`, and `ASSERTIONS`; avoid scenario-name conditionals and avoid growing `execute()` for one bug. Add or update Python tests for validation and helper behavior. Document the new scenario and injection mode in `tools/android/README.md`.
 
 The first successful manual reproduction is discovery, not completion. A reusable scenario that another fresh session can run without oral instructions is the completion criterion.
+
+### Fixture requirements
+
+Build fake data as a reusable catalog rather than embedding setup in navigation actions:
+
+- Give every fixture a stable ID and schema version.
+- Declare whether installation replaces, merges, or preserves existing data.
+- Install through app repositories, DAOs, file ownership APIs, or Debug-only providers as appropriate.
+- Emit a fixture-ready marker only after writes are durable and immediately observable.
+- Record enough identity and paths for assertions to inspect the exact installed data.
+- Make cleanup deterministic and keep user data outside the fixture namespace untouched.
+- Allow scenarios to compose independent fixtures when a bug needs a book plus a font, theme, source, group, or failure condition.
 
 ### 3. Run a baseline before fixing
 
