@@ -380,7 +380,12 @@ class ThemePackageManager(
         root: File,
         manifest: ThemePackageManifest,
     ) {
-        val localAssets = resolveSavedAssets(root, manifest.assets)
+        val copiedAssets = mutableListOf<File>()
+        val localAssets = importAssets(
+            root = root,
+            entries = manifest.assets,
+            copiedFiles = copiedAssets,
+        )
         val savedAlbumId = theme.data.selectedCoverAlbumId
             ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
         var importedAlbumIds = emptyList<String>()
@@ -424,6 +429,7 @@ class ThemePackageManager(
                     runCatching { coverAlbumUseCase.deleteAlbum(id) }
                 }
             }
+            copiedAssets.forEach(File::delete)
             throw error
         }
     }

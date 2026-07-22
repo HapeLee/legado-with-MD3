@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "name": "theme/export-current-after-deleting-applied-theme",
+  "fixture": "long-chapter-v1",
+  "entry": { "type": "theme_config" },
+  "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
+  "readyTimeoutSeconds": 20,
+  "record": true,
+  "themeAsset": "valid-file",
+  "actions": [
+    { "type": "open_theme_manage" },
+    { "type": "save_current_theme", "namePrefix": "DEBUG_THEME_DELETE_APPLIED" },
+    { "type": "apply_saved_theme" },
+    { "type": "delete_saved_theme" },
+    { "type": "export_current_theme", "namePrefix": "DEBUG_THEME_EXPORT_DELETED_APPLIED" }
+  ],
+  "assertions": [
+    "theme_config_ready",
+    "theme_manage_opened",
+    "theme_save_succeeded",
+    "theme_save_asset_included",
+    "theme_saved_theme_applied",
+    "theme_saved_theme_deleted",
+    "theme_export_succeeded",
+    "theme_export_asset_included",
+    "no_fatal_exception"
+  ]
+}

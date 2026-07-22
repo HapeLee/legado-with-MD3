@@ -56,6 +56,10 @@ class ScenarioValidationTest(unittest.TestCase):
                 scenario = runner.load_scenario(name)
                 self.assertIn(scenario["themeAsset"], {"missing-file", "missing-content-uri"})
 
+    def test_deleted_applied_theme_export_scenario_is_valid(self):
+        scenario = runner.load_scenario("theme/export-current-after-deleting-applied-theme")
+        self.assertNotIn("expectThemeExportFailure", scenario)
+
     def test_rejects_unknown_action(self):
         scenario = {
             "schemaVersion": 1,
@@ -106,6 +110,8 @@ class CapabilityTest(unittest.TestCase):
         )
         self.assertEqual(
             [
+                "apply_saved_theme",
+                "delete_saved_theme",
                 "export_current_theme",
                 "open_theme_manage",
                 "save_current_theme",

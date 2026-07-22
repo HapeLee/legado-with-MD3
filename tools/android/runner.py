@@ -109,6 +109,9 @@ def validate_scenario(scenario: Any, requested_name: str | None = None) -> None:
             raise ScenarioError("themeAsset is only supported by theme_config scenarios")
         if theme_asset not in {"valid-file", "missing-file", "missing-content-uri"}:
             raise ScenarioError("themeAsset must be valid-file, missing-file, or missing-content-uri")
+    expect_export_failure = scenario.get("expectThemeExportFailure", False)
+    if not isinstance(expect_export_failure, bool):
+        raise ScenarioError("expectThemeExportFailure must be a boolean")
 
     actions = scenario.get("actions")
     if not isinstance(actions, list) or not actions:
@@ -638,6 +641,30 @@ def find_node_containing_text(dump: str, text: str) -> dict[str, str] | None:
         if text in node.get("text", "")
     ]
     return candidates[0] if candidates else None
+
+
+def find_node_by_content_desc_near(
+    dump: str,
+    content_desc: str,
+    anchor: dict[str, str],
+) -> dict[str, str] | None:
+    anchor_x, anchor_y = node_center(anchor)
+    candidates = [
+        node
+        for node in parse_ui_nodes(dump)
+        if node.get("package") == PACKAGE
+        and node.get("content-desc") == content_desc
+        and parse_bounds(node) is not None
+    ]
+    return min(
+        candidates,
+        key=lambda node: (
+            abs(node_center(node)[0] - anchor_x) > 360,
+            abs(node_center(node)[1] - anchor_y),
+            abs(node_center(node)[0] - anchor_x),
+        ),
+        default=None,
+    )
 
 
 def saved_theme_manifest(device: str, theme_name: str) -> tuple[str, dict[str, Any]] | None:
@@ -1252,6 +1279,8 @@ class ThemeConfigEntry(Entry):
         "open_theme_manage",
         "save_current_theme",
         "select_day_background",
+        "apply_saved_theme",
+        "delete_saved_theme",
     }
 
     def prepare(self, ctx: Context) -> None:
@@ -1272,6 +1301,8 @@ class ThemeConfigEntry(Entry):
         ctx.records["theme_save_asset_included"] = False
         ctx.records["theme_export_asset_included"] = False
         ctx.records["theme_day_background_copied"] = False
+        ctx.records["theme_saved_theme_applied"] = False
+        ctx.records["theme_saved_theme_deleted"] = False
         ctx.records["ui_before"] = dump
         ctx.records["ui_after"] = dump
 
@@ -1707,6 +1738,89 @@ class SaveCurrentTheme(Action):
         ctx.records["ui_after"] = ui_dump(ctx.device)
 
 
+@register_action("apply_saved_theme")
+class ApplySavedTheme(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        theme_name = ctx.state.get("theme_name")
+        if not theme_name:
+            return
+        width, height = screen_size(ctx.device)
+        name_node = None
+        dump = ""
+        for _ in range(20):
+            dump = ui_dump(ctx.device)
+            name_node = find_node_by_text(dump, theme_name)
+            if name_node is not None:
+                break
+            adb(
+                ctx.device,
+                "shell",
+                "input",
+                "swipe",
+                str(width // 2),
+                str(round(height * 0.82)),
+                str(width // 2),
+                str(round(height * 0.38)),
+                "250",
+                timeout=10,
+            )
+            time.sleep(0.3)
+        if name_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(name_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        dialog_ready, dump, confirm = wait_until_text_present(ctx.device, "应用", 10)
+        if not (dialog_ready and confirm):
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(confirm)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            dump = ui_dump(ctx.device)
+            if find_node_by_text(dump, theme_name) is not None and find_node_by_text(dump, "应用") is None:
+                ctx.records["theme_saved_theme_applied"] = True
+                break
+            time.sleep(0.25)
+        ctx.records["ui_after"] = dump
+
+
+@register_action("delete_saved_theme")
+class DeleteSavedTheme(Action):
+    def run(self, ctx: Context, action: dict[str, Any]) -> None:
+        theme_name = ctx.state.get("theme_name")
+        if not (theme_name and ctx.records.get("theme_saved_theme_applied")):
+            return
+        ready, dump, name_node = wait_until_text_present(ctx.device, theme_name, 15)
+        if not (ready and name_node):
+            ctx.records["ui_after"] = dump
+            return
+        delete_node = find_node_by_content_desc_near(dump, "删除", name_node)
+        if delete_node is None:
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(delete_node)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        dialog_ready, dump, confirm = wait_until_text_present(ctx.device, "删除", 10)
+        if not (dialog_ready and confirm):
+            ctx.records["ui_after"] = dump
+            return
+        x, y = node_center(confirm)
+        adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
+        ctx.action_count += 1
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            if not saved_theme_exists(ctx.device, theme_name):
+                ctx.records["theme_saved_theme_deleted"] = True
+                break
+            time.sleep(0.25)
+        ctx.records["ui_after"] = ui_dump(ctx.device)
+
+
 @register_action("export_current_theme")
 class ExportCurrentTheme(Action):
     params = {"namePrefix": "non-empty ASCII string"}
@@ -1723,8 +1837,27 @@ class ExportCurrentTheme(Action):
         ctx.state["export_name"] = export_name
         remote_path = f"/sdcard/Download/{export_name}"
         adb(ctx.device, "shell", "rm", "-f", remote_path, timeout=10, check=False)
-        ready, _, export_current = wait_until_text_present(ctx.device, "导出当前主题", 10)
-        if not (ready and export_current):
+        export_current = None
+        width, height = screen_size(ctx.device)
+        for _ in range(15):
+            dump = ui_dump(ctx.device)
+            export_current = find_node_by_text(dump, "导出当前主题")
+            if export_current is not None:
+                break
+            adb(
+                ctx.device,
+                "shell",
+                "input",
+                "swipe",
+                str(width // 2),
+                str(round(height * 0.38)),
+                str(width // 2),
+                str(round(height * 0.82)),
+                "250",
+                timeout=10,
+            )
+            time.sleep(0.3)
+        if export_current is None:
             return
         x, y = node_center(export_current)
         adb(ctx.device, "shell", "input", "tap", str(x), str(y), timeout=10)
@@ -1865,6 +1998,8 @@ ASSERTIONS.update(
         "theme_failure_feedback": lambda ctx: bool(ctx.records.get("theme_failure_feedback")),
         "theme_open_input_stream_reached": lambda ctx: bool(ctx.records.get("theme_open_input_stream_reached")),
         "theme_content_failure_armed": lambda ctx: bool(ctx.records.get("theme_content_failure_armed")),
+        "theme_saved_theme_applied": lambda ctx: bool(ctx.records.get("theme_saved_theme_applied")),
+        "theme_saved_theme_deleted": lambda ctx: bool(ctx.records.get("theme_saved_theme_deleted")),
         "no_fatal_exception": lambda ctx: ctx.failure is None,
     }
 )
@@ -1987,7 +2122,10 @@ def execute(args: argparse.Namespace) -> int:
         failure_armed = "INJECTED_THEME_ASSET_FAILURE_ARMED" in logcat
         ctx.records["theme_open_input_stream_reached"] = open_input_stream_reached
         ctx.records["theme_content_failure_armed"] = failure_armed
-        if scenario.get("themeAsset") in {"missing-file", "missing-content-uri"}:
+        if (
+            scenario.get("themeAsset") in {"missing-file", "missing-content-uri"}
+            or scenario.get("expectThemeExportFailure")
+        ):
             ctx.records["theme_failure_feedback"] = bool(
                 ctx.records.get("theme_failure_feedback") or toast_signal
             )

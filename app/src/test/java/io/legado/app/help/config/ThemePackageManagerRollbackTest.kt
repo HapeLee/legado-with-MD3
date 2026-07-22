@@ -93,15 +93,18 @@ class ThemePackageManagerRollbackTest {
     }
 
     @Test
-    fun `应用已保存主题失败会删除本次导入的封面图集`() = runBlocking {
+    fun `应用已保存主题失败会清理本次复制的资源和封面图集`() = runBlocking {
+        File(application.getExternalFilesDir(null), "theme_assets").deleteRecursively()
         val packageRoot = File(application.cacheDir, "saved-theme-package").apply {
             deleteRecursively()
             mkdirs()
         }
         File(packageRoot, "cover.png").writeBytes("cover".toByteArray())
+        File(packageRoot, "background.png").writeBytes("background".toByteArray())
         val manifest = ThemePackageManifest(
             name = "saved",
             config = ThemeExportData(appTheme = "new"),
+            assets = mapOf("background.light" to "background.png"),
             coverAlbums = listOf(
                 ThemePackageCoverAlbum(
                     ref = "album-ref",
@@ -133,6 +136,15 @@ class ThemePackageManagerRollbackTest {
         assertEquals("old-album", coverGateway.selection.value.albumId)
         assertEquals(1, coverGateway.deletedAlbumIds.size)
         assertFalse(File(coverGateway.rootDir, coverGateway.deletedAlbumIds.single()).exists())
+        val copiedBackground = File(requireNotNull(settingsGateway.attempts.first().bgImageLight))
+        assertFalse(copiedBackground.absolutePath.startsWith(packageRoot.absolutePath))
+        assertFalse(copiedBackground.exists())
+        assertTrue(
+            File(application.getExternalFilesDir(null), "theme_assets")
+                .listFiles()
+                .orEmpty()
+                .isEmpty()
+        )
     }
 
     @Test
@@ -184,12 +196,14 @@ class ThemePackageManagerRollbackTest {
         initial: ThemeExportData,
         private val failure: () -> Exception = { IOException("apply failed") },
     ) : ThemePackageSettingsGateway {
+        val attempts = mutableListOf<ThemeExportData>()
         var current: ThemeExportData = initial
             private set
 
         override fun exportCurrent(): ThemeExportData = current
 
         override suspend fun applyAndAwait(data: ThemeExportData) {
+            attempts += data
             throw failure()
         }
     }
