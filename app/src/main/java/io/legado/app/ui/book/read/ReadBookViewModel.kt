@@ -2564,14 +2564,11 @@ class ReadBookViewModel(
             ReadBookButtonIds.map { id ->
                 ReadBookButtonConfigItem(
                     id = id,
-                    enabled = id in DEFAULT_ENABLED_BUTTON_IDS ||
-                            (preferenceName == TOOL_BUTTON_PREFS && id in DEFAULT_AI_TOOL_BUTTON_IDS),
+                    enabled = id in DEFAULT_ENABLED_BUTTON_IDS,
                 )
             }
         } else {
-            normalizeButtonConfig(raw) { id ->
-                preferenceName == TOOL_BUTTON_PREFS && id in DEFAULT_AI_TOOL_BUTTON_IDS
-            }
+            normalizeButtonConfig(raw)
         }
     }
 
@@ -2589,7 +2586,6 @@ class ReadBookViewModel(
 
     private fun normalizeButtonConfig(
         items: List<ReadBookButtonConfigItem>,
-        defaultEnabled: (String) -> Boolean = { false },
     ): List<ReadBookButtonConfigItem> {
         val seen = mutableSetOf<String>()
         val normalized = items.mapNotNull { item ->
@@ -2602,12 +2598,7 @@ class ReadBookViewModel(
         }.toMutableList()
         ReadBookButtonIds.forEach { id ->
             if (seen.add(id)) {
-                val item = ReadBookButtonConfigItem(id, defaultEnabled(id))
-                if (id in DEFAULT_AI_TOOL_BUTTON_IDS && item.enabled) {
-                    normalized.add(0, item)
-                } else {
-                    normalized.add(item)
-                }
+                normalized.add(ReadBookButtonConfigItem(id, false))
             }
         }
         return normalized
@@ -6518,7 +6509,6 @@ private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "read_aloud",
     "setting",
 )
-private val DEFAULT_AI_TOOL_BUTTON_IDS = setOf("ai_summary", "ai_rewrite")
 
 private const val DARK_LUX_THRESHOLD = 8f
 private const val BRIGHT_LUX_THRESHOLD = 100f
