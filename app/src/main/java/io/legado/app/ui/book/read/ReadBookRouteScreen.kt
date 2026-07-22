@@ -523,12 +523,7 @@ fun ReadBookRouteScreen(
     var showSelectMenuConfigSheet by rememberSaveable { mutableStateOf(false) }
 
     Box(
-        Modifier
-            .fillMaxSize()
-            .eyeProtectionColorFilter(
-                enabled = readPreferences.eyeProtectionEnabled,
-                intensity = readPreferences.eyeProtectionIntensity,
-            )
+        Modifier.fillMaxSize()
     ) {
         key(controller) {
             ReadBookViewLayer(
