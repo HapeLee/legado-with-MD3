@@ -1,6 +1,8 @@
 package io.legado.app.ui.widget.components
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,6 +16,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
@@ -43,7 +46,25 @@ fun SplicedColumnGroup(
     val composeEngine = LegadoTheme.composeEngine
     val themeSettings = LocalAppUiConfiguration.current.theme
     val enableItemDivider = themeSettings.enableItemDivider
-    val cornerRadius = if (themeSettings.disableSplicedColumnGroupCornerRadius) 0.dp else 16.dp
+    val cornerRadius = when {
+        themeSettings.disableSplicedColumnGroupCornerRadius -> 0.dp
+        themeSettings.overrideBaseCardCornerRadius -> themeSettings.baseCardCornerRadius.dp
+        else -> 16.dp
+    }
+    val border = if (themeSettings.overrideBaseCardBorder) {
+        val configuredColor = if (LegadoTheme.isDark) {
+            themeSettings.baseCardBorderColorNight
+        } else {
+            themeSettings.baseCardBorderColor
+        }
+        BorderStroke(
+            themeSettings.baseCardBorderWidth.dp,
+            configuredColor.takeIf { it != 0 }?.let(::Color)
+                ?: LegadoTheme.colorScheme.outlineVariant
+        )
+    } else {
+        null
+    }
     val currentIndex = remember { mutableIntStateOf(0) }
 
     val groupState = remember(enableItemDivider) {
@@ -64,7 +85,13 @@ fun SplicedColumnGroup(
 
         CompositionLocalProvider(LocalSplicedColumnGroupState provides groupState) {
             if (ThemeResolver.isMiuixEngine(composeEngine)) {
-                MiuixCard(cornerRadius = cornerRadius) {
+                MiuixCard(
+                    modifier = Modifier.then(
+                        border?.let { Modifier.border(it, RoundedCornerShape(cornerRadius)) }
+                            ?: Modifier
+                    ),
+                    cornerRadius = cornerRadius,
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

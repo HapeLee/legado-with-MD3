@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.defaultTextStyles
 
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
@@ -124,7 +125,14 @@ fun MiuixThemeWrapper(
         }
     }
 
-    MiuixTheme(controller = controller) {
+    val miuixTextStyles = remember(customFontFamily) {
+        defaultTextStyles().withFont(customFontFamily)
+    }
+
+    MiuixTheme(
+        controller = controller,
+        textStyles = miuixTextStyles,
+    ) {
         val miuixStyles = MiuixTheme.textStyles
         val legadoTypography = remember(miuixStyles, customFontFamily) {
             miuixStylesToM3Typography(miuixStyles)
