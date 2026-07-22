@@ -28,7 +28,7 @@ class CloudTtsEngineRepository(
     override suspend fun get(id: String): CloudTtsEngine? = withContext(Dispatchers.IO) {
         dao.get(id)?.let { engine ->
             val encrypted = engine.encryptCredentials(credentialCipher)
-            if (encrypted != engine) dao.updateCredentials(engine, encrypted)
+            if (encrypted != engine) dao.upsert(encrypted)
             toDomain(engine)
         }
     }
@@ -46,20 +46,9 @@ class CloudTtsEngineRepository(
     private suspend fun encryptLegacyCredentials(engines: List<CloudTtsEngineEntity>) {
         engines.forEach { engine ->
             val encrypted = engine.encryptCredentials(credentialCipher)
-            if (encrypted != engine) dao.updateCredentials(engine, encrypted)
+            if (encrypted != engine) dao.upsert(encrypted)
         }
     }
-
-    private suspend fun CloudTtsEngineDao.updateCredentials(
-        old: CloudTtsEngineEntity,
-        new: CloudTtsEngineEntity,
-    ) = updateCredentials(
-        id = old.id,
-        oldApiKey = old.apiKey,
-        oldSecretKey = old.secretKey,
-        newApiKey = new.apiKey,
-        newSecretKey = new.secretKey,
-    )
 }
 
 private fun CloudTtsEngineEntity.encryptCredentials(cipher: CloudTtsCredentialCipher) = copy(

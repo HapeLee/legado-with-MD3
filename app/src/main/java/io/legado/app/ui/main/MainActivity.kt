@@ -235,7 +235,6 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             if (otherSettingsGateway.currentSettings.autoRefresh && !isAutoRefreshedBook) {
                 viewModel.upAllBookToc()
             }
-            viewModel.postLoad()
             if (shouldAutoCheckUpdate) {
                 checkUpdateOnStart()
             }
