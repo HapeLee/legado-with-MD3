@@ -260,7 +260,10 @@ class ReaderContentTest(unittest.TestCase):
     def test_decodes_debug_state_provider_response(self, adb):
         payload = base64.b64encode(json.dumps({"themeMode": "2"}).encode()).decode()
         adb.return_value = subprocess.CompletedProcess([], 0, f"Result: Bundle[{{resultB64={payload}}}]\n")
-        self.assertEqual({"themeMode": "2"}, runner.debug_state("device", "toggleTheme"))
+        self.assertEqual(
+            {"themeMode": "2"},
+            runner.debug_state("device", "toggleReaderDayNight"),
+        )
 
     def test_extracts_reader_pages_from_logcat(self):
         logcat = (

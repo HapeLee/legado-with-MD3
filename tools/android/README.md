@@ -111,7 +111,7 @@ tools/android/debug.sh run bookshelf/miuix-hidden-statusbar
 
 `DebugStateProvider` 仅打进 debug APK，由 runner 通过 `content call` 读取机器可断言状态：
 
-- `toggleTheme`：在目标页面保持打开时切换应用日夜设置。
+- `toggleReaderDayNight`：通过生产设置网关复现阅读页快捷日夜按钮的主题切换。
 
 这些准备动作均在 debug 包中完成，不进入 release 包。
 

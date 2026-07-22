@@ -6,9 +6,10 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
-import io.legado.app.constant.PreferKey
-import io.legado.app.help.config.AppConfigStore
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import org.koin.core.context.GlobalContext
 
 class DebugStateProvider : ContentProvider() {
 
@@ -16,7 +17,7 @@ class DebugStateProvider : ContentProvider() {
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle = Bundle().apply {
         val json = when (method) {
-            METHOD_TOGGLE_THEME -> toggleTheme()
+            METHOD_TOGGLE_READER_DAY_NIGHT -> toggleReaderDayNight()
             else -> error("unsupported method: $method")
         }
         putString(
@@ -25,10 +26,11 @@ class DebugStateProvider : ContentProvider() {
         )
     }
 
-    private fun toggleTheme(): JSONObject {
-        val current = AppConfigStore.getString(PreferKey.themeMode) ?: "1"
-        AppConfigStore.putString(PreferKey.themeMode, if (current == "2") "1" else "2")
-        return JSONObject().put("themeMode", AppConfigStore.getString(PreferKey.themeMode).orEmpty())
+    private fun toggleReaderDayNight(): JSONObject = runBlocking {
+        val gateway = GlobalContext.get().get<AppShellSettingsGateway>()
+        val current = gateway.currentSettings.themeMode
+        gateway.update { it.copy(themeMode = if (current == "2") "1" else "2") }
+        JSONObject().put("themeMode", gateway.currentSettings.themeMode)
     }
 
     override fun query(
@@ -50,7 +52,7 @@ class DebugStateProvider : ContentProvider() {
     ): Int = 0
 
     private companion object {
-        const val METHOD_TOGGLE_THEME = "toggleTheme"
+        const val METHOD_TOGGLE_READER_DAY_NIGHT = "toggleReaderDayNight"
         const val RESULT_BASE64 = "resultB64"
     }
 

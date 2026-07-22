@@ -1407,7 +1407,7 @@ class ToggleRssDayNight(Action):
         if not ctx.records.get("rss_read_ready"):
             return
         before_pid = application_pid(ctx.device)
-        debug_state(ctx.device, "toggleTheme")
+        debug_state(ctx.device, "toggleReaderDayNight")
         ctx.action_count += 1
         time.sleep(1.5)
         after_pid = application_pid(ctx.device)
