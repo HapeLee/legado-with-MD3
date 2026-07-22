@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { color-scheme: light dark; font-family: sans-serif; }
+    body { margin: 0; padding: 18px; background: Canvas; color: CanvasText; }
+    h2 { margin: 0 0 6px; font-size: 20px; }
+    .quote { margin: 0 0 16px; padding: 10px 12px; border-left: 4px solid #4f6bed; opacity: .78; }
+    .review { display: grid; grid-template-columns: 38px 1fr; gap: 10px; padding: 14px 0; border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: white; font-weight: 700; background: #4f6bed; }
+    .name { font-weight: 700; }
+    .time { margin-left: 8px; opacity: .55; font-size: 12px; }
+    .content { margin: 6px 0 0; line-height: 1.55; }
+    .reply { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, CanvasText 8%, transparent); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h2>段评 · 3 条</h2>
+  <p id="LEGADO_DEBUG_PARAGRAPH_REVIEW_V1" class="quote">第一段：这是用于阅读页翻页调试的固定长章节……</p>
+  <section class="review">
+    <div class="avatar">长</div>
+    <div><span class="name">长章节读者</span><span class="time">刚刚</span><p class="content">这是一条由 Debug Tool 注入的假段评，用来观察日夜模式切换。</p></div>
+  </section>
+  <section class="review">
+    <div class="avatar" style="background:#b35c1e">测</div>
+    <div><span class="name">测试账号</span><span class="time">2 分钟前</span><p class="content">段评属于正文第一段，不属于章节标题。</p><div class="reply">回复：点击入口后应打开真实的半屏 WebView。</div></div>
+  </section>
+  <section class="review">
+    <div class="avatar" style="background:#23856d">阅</div>
+    <div><span class="name">阅读观察员</span><span class="time">5 分钟前</span><p class="content">切换日夜模式时，这个列表应当立即跟随主题变化。</p></div>
+  </section>
+</body>
+</html>

@@ -15,7 +15,8 @@
       "title": "第一章 稳定翻页",
       "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
       "paragraph": "这是用于阅读页翻页调试的固定长章节。每一段都带有稳定编号，用于确认页面内容确实发生变化。天地玄黄，宇宙洪荒；日月盈昃，辰宿列张。",
-      "repeat": 180
+      "repeat": 180,
+      "paragraphReviewFixture": "paragraph-review-v1"
     },
     {
       "title": "第二章 边界验证",

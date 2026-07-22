@@ -131,12 +131,35 @@ class DebugScenarioActivity : AppCompatActivity() {
         }
         chapters.forEachIndexed { index, chapter ->
             val definition = fixture.chapters[index]
+            val paragraphReview = definition.paragraphReviewFixture?.let {
+                DebugParagraphReviewFixture.createTag(assets, it)
+            }
+            if (paragraphReview != null) {
+                AppConfigStore.putAll(
+                    mapOf(
+                        PreferKey.enableReview to false,
+                        PreferKey.clickImgWay to "0",
+                    )
+                )
+            }
             val content = buildString {
-                appendLine(definition.readyMarker)
-                repeat(definition.repeat) { paragraphIndex ->
-                    append(paragraphIndex + 1)
-                    append(". ")
-                    appendLine(definition.paragraph)
+                if (paragraphReview == null) {
+                    appendLine(definition.readyMarker)
+                    repeat(definition.repeat) { paragraphIndex ->
+                        append(paragraphIndex + 1)
+                        append(". ")
+                        appendLine(definition.paragraph)
+                    }
+                } else {
+                    append(definition.readyMarker)
+                    append(" 1. ")
+                    append(definition.paragraph)
+                    appendLine(paragraphReview)
+                    repeat(definition.repeat - 1) { paragraphIndex ->
+                        append(paragraphIndex + 2)
+                        append(". ")
+                        appendLine(definition.paragraph)
+                    }
                 }
             }
             BookHelp.saveText(book, chapter, content)
@@ -195,6 +218,7 @@ class DebugScenarioActivity : AppCompatActivity() {
         val readyMarker: String,
         val paragraph: String,
         val repeat: Int,
+        val paragraphReviewFixture: String? = null,
     )
 
     private companion object {

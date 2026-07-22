@@ -58,6 +58,13 @@ tools/android/debug.sh run source-edit/predictive-back
 | `theme/export-missing-content-uri` | 在确认导出前让受控 URI 失效，证明 `openInputStream` 调用链 |
 | `theme/export-current-after-deleting-applied-theme` | 保存并应用主题、删除主题包后，当前主题仍可完整导出 |
 
+## 长章节段评夹具
+
+`long-chapter-v1` 在正文第一段末尾注入 `paragraph-review-v1`：一个带书源 click 脚本的内联
+`ImageColumn`。点击后沿正式正文图片点击链调用 `java.showBrowser`，在 WebView 中展示三条固定假段评。
+章节 `reviewImg` 保持为空，因此入口不会挂到标题，也不会在每段尾部追加占位字符。夹具会固定关闭
+旧的字符段评开关，并把图片点击方式设为执行 click 脚本，避免受 debug 包历史设置影响。
+
 ## 主题资源故障注入
 
 主题场景支持顶层字段 `themeAsset`：
