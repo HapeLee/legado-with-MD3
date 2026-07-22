@@ -106,7 +106,8 @@ class ReadAloudPlayerCoordinator(
             chapterTitle = chapter?.title.orEmpty(),
             chapterText = chapter?.getContent().orEmpty(),
             textLines = chapter?.paragraphs.orEmpty().mapNotNull { paragraph ->
-                paragraph.text.trim().takeIf(String::isNotEmpty)?.let {
+                paragraph.text.replace(Regex("[袮꧁]"), " ").trim()
+                    .takeIf(String::isNotEmpty)?.let {
                     ReadAloudTextLineUi(it, paragraph.chapterPosition)
                 }
             }.toImmutableList(),
