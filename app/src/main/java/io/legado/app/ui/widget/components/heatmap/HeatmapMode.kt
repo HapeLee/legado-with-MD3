@@ -9,7 +9,7 @@ enum class HeatmapMode {
 
 data class HeatmapConfig(
     val cellSize: Dp = 16.dp,
-    val touchTargetSize: Dp = 48.dp,
+    val touchTargetSize: Dp = 16.dp,
     val cellSpacing: Dp = 4.dp,
     val cornerRadius: Dp = 4.dp,
     val gradientWidth: Dp = 16.dp,
