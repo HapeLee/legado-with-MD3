@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SyncReadAloudVoicesUseCaseTest {
@@ -64,6 +65,30 @@ class SyncReadAloudVoicesUseCaseTest {
         assertEquals(1, result.unavailable)
         assertFalse(gateway.voices.single().available)
         assertFalse(gateway.voices.single().enabled)
+    }
+
+    @Test
+    fun `missing configured HTTP voice is removed with deleted TTS`() = runBlocking {
+        val old = ReadAloudVoice(
+            id = SpeechIdentity.voiceId("http", "7", ""),
+            engineType = ReadAloudVoice.ENGINE_HTTP,
+            engineId = "7",
+            speakerId = "",
+            displayName = "deleted TTS",
+            managedBy = ReadAloudVoice.MANAGED_BY_CONFIGURED_TTS,
+            available = false,
+        )
+        val gateway = MutableVoiceGateway(mutableListOf(old))
+
+        val result = SyncReadAloudVoicesUseCase(gateway)(
+            entries = emptyList(),
+            managedSources = setOf(ReadAloudVoice.MANAGED_BY_CONFIGURED_TTS),
+            removeMissingEngineTypes = setOf(ReadAloudVoice.ENGINE_HTTP),
+            now = 200,
+        )
+
+        assertEquals(1, result.unavailable)
+        assertTrue(gateway.voices.isEmpty())
     }
 }
 

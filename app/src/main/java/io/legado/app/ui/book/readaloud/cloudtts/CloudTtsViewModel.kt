@@ -65,7 +65,17 @@ class CloudTtsViewModel(
                         ReadAloudVoice.ENGINE_HTTP,
                     )
                 })
-            }.collect { (allEngines, allHttpEngines, savedVoices) ->
+            }.collect { (allEngines, allHttpEngines, allSavedVoices) ->
+                val configuredHttpEngineIds = allHttpEngines.mapTo(mutableSetOf()) { it.sourceId }
+                val orphanedVoiceIds = allSavedVoices.asSequence()
+                    .filter { it.engineType == ReadAloudVoice.ENGINE_HTTP }
+                    .filter { it.managedBy == ReadAloudVoice.MANAGED_BY_CONFIGURED_TTS }
+                    .filter { it.engineId !in configuredHttpEngineIds }
+                    .mapTo(mutableSetOf()) { it.id }
+                allSavedVoices
+                    .filter { it.id in orphanedVoiceIds }
+                    .forEach { voiceGateway.deleteVoice(it) }
+                val savedVoices = allSavedVoices.filterNot { it.id in orphanedVoiceIds }
                 engines = allEngines
                 httpEngines = allHttpEngines
                 voices = savedVoices
