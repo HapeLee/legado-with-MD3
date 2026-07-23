@@ -99,6 +99,8 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.translation.TranslationChapterKey
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
@@ -151,6 +153,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -243,6 +246,8 @@ class ReadBookViewModel(
     private var aiTextRewriteJob: Job? = null
     private var pendingAiTextCleanRequest: PendingAiTextCleanRequest? = null
     private var pendingAiTextRewriteRequest: PendingAiTextRewriteRequest? = null
+    private var translationStatusJob: Job? = null
+    private var observedTranslationKey: TranslationChapterKey? = null
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
 
@@ -2425,6 +2430,7 @@ class ReadBookViewModel(
     private fun syncFromReadBook(current: ReadBookUiState): ReadBookUiState {
         val book = ReadBook.book
         val textChapter = ReadBook.curTextChapter
+        val translationStatus = observeCurrentTranslation(book, ReadBook.durChapterIndex)
         return current.copy(
             book = book,
             bookSource = ReadBook.bookSource,
@@ -2448,6 +2454,7 @@ class ReadBookViewModel(
             effectiveReplaceRules = textChapter?.effectiveReplaceRules.orEmpty().toImmutableList(),
             chineseConverterActive = readSettingsRepository.currentSettings.chineseConverterType > 0,
             translationMode = book?.getTranslationMode() ?: false,
+            translationStatus = translationStatus,
             isLocalTxt = book?.isLocalTxt == true,
             isEpub = book?.isEpub == true,
             useReplaceRule = book?.getUseReplaceRule(
@@ -2502,6 +2509,42 @@ class ReadBookViewModel(
                 titleBarCompact = ReadBookConfig.titleBarCompact,
             ),
         )
+    }
+
+    private fun observeCurrentTranslation(
+        book: Book?,
+        chapterIndex: Int,
+    ): TranslationChapterStatus {
+        val key = book
+            ?.takeIf { it.getTranslationMode() }
+            ?.let { TranslationChapterKey(it.bookUrl, chapterIndex) }
+        if (key == observedTranslationKey && translationStatusJob?.isActive == true) {
+            return _uiState.value.translationStatus
+        }
+
+        translationStatusJob?.cancel()
+        val taskFlow = key?.let {
+            TranslationManager.getChapterTaskStateFlow(it.bookUrl, it.chapterIndex)
+        }
+        if (taskFlow == null) {
+            observedTranslationKey = null
+            return TranslationChapterStatus.Idle
+        }
+
+        observedTranslationKey = key
+        translationStatusJob = viewModelScope.launch {
+            taskFlow.takeWhile { taskState ->
+                if (observedTranslationKey == taskState.key) {
+                    _uiState.update { state ->
+                        state.copy(translationStatus = taskState.status)
+                    }
+                }
+                taskState.status == TranslationChapterStatus.Translating ||
+                    taskState.status == TranslationChapterStatus.Thinking
+            }.collect {}
+            if (observedTranslationKey == key) observedTranslationKey = null
+        }
+        return taskFlow.value.status
     }
 
     private fun refreshButtonConfigs() {
@@ -6359,6 +6402,7 @@ class ReadBookViewModel(
     }
 
     override fun onCleared() {
+        translationStatusJob?.cancel()
         super.onCleared()
         if (BaseReadAloudService.isRun && BaseReadAloudService.pause) {
             ReadAloud.stop(context)

@@ -5,6 +5,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
@@ -17,19 +18,20 @@ import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.ContentChunker
 import io.legado.app.domain.model.DictPair
 import io.legado.app.domain.model.PartialTranslationAssembler
+import io.legado.app.domain.model.PartialTranslationAssembler.PartialChunkTranslation
 import io.legado.app.domain.model.RetryReason
 import io.legado.app.domain.model.TextChunk
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.TranslationConstants.OUTPUT_FORMAT
+import io.legado.app.domain.model.TranslationDictionaryPolicy
+import io.legado.app.domain.model.TranslationResultPreviewParser
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 
@@ -48,17 +50,12 @@ class TranslateChapterUseCase(
         val translatedChunkIndices: Set<Int> = emptySet()
     )
 
-    companion object {
-        private const val MAX_DICTIONARY_PAIRS = 80
-    }
-
-    private val dictionaryLock = Any()
-
     suspend fun execute(
         book: Book,
         bookChapter: BookChapter,
         onProgress: (TranslationProgress) -> Unit,
-        onTranslateStarted: () -> Unit
+        onTranslateStarted: () -> Unit,
+        onThinkingChanged: (Boolean) -> Unit = {},
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val settings = translationSettingsGateway.currentSettings
@@ -82,22 +79,6 @@ class TranslateChapterUseCase(
             }
 
             val contentHash = translationCacheGateway.computeContentHash(originalContent)
-
-            // Load book dictionary for consistent terminology
-            val bookDictionary = dictionaryGateway.getBookDictionaries(book)
-            val dictionaries = bookDictionary.pairs.toMutableList()
-
-            // Callback to update dictionary pairs immediately (persist as soon as discovered)
-            val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
-                val merged = synchronized(dictionaryLock) {
-                    mergeDictionaryPairs(dictionaries, newPairs)
-                }
-                if (merged) {
-                    synchronized(dictionaryLock) {
-                        dictionaryGateway.updateBookDic(book, dictionaries.toList())
-                    }
-                }
-            }
 
             val chunks = ContentChunker.chunk(
                 originalContent,
@@ -131,7 +112,7 @@ class TranslateChapterUseCase(
                     translatedChunks.size,
                     chunks.size,
                     mixedContent,
-                    translatedChunks.keys
+                    translatedChunks.keys.toSet()
                 ))
             }
 
@@ -149,41 +130,61 @@ class TranslateChapterUseCase(
             }
 
             onTranslateStarted()
-            var translationError: Throwable? = null
-            coroutineScope {
-                val concurrentChunks = settings.concurrentChunks.coerceIn(1, 4)
-                val chunkGroups = pendingChunks.chunked(concurrentChunks)
-
-                for ((groupIndex, group) in chunkGroups.withIndex()) {
-                    val results = group.map { chunk ->
-                        async {
-                            translateAndCacheChunk(
-                                chunk, book, bookChapter, targetLanguage, contentHash, provider,
-                                preset, dictionaries, onDictionaryUpdate, settings.retryCount
-                            )
-                        }
-                    }.awaitAll()
-
-                    for ((chunk, result) in group.zip(results)) {
-                        if (result.isSuccess) {
-                            translatedChunks[chunk.index] = result.getOrThrow()
-                            val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
-                            onProgress(TranslationProgress(
-                                translatedChunks.size + cachedChunkMap.size,
-                                chunks.size,
-                                mixedContent,
-                                translatedChunks.keys
-                            ))
-                        } else {
-                            translationError = result.exceptionOrNull() ?: Exception("Translation failed")
-                            return@coroutineScope
-                        }
-                    }
+            for (chunk in pendingChunks.sortedBy { it.index }) {
+                val publishWithoutPartial = {
+                    val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
+                    onProgress(
+                        TranslationProgress(
+                            currentChunk = translatedChunks.size,
+                            totalChunks = chunks.size,
+                            mixedContent = mixedContent,
+                            translatedChunkIndices = translatedChunks.keys.toSet(),
+                        )
+                    )
                 }
-            }
+                val result = try {
+                    translateAndCacheChunk(
+                        chunk = chunk,
+                        book = book,
+                        bookChapter = bookChapter,
+                        targetLanguage = targetLanguage,
+                        contentHash = contentHash,
+                        provider = provider,
+                        preset = preset,
+                        retryCount = settings.retryCount,
+                        onPreviewSnapshot = { preview ->
+                            val mixedContent = PartialTranslationAssembler.assemble(
+                                originalChunks = chunks,
+                                translatedMap = translatedChunks,
+                                partialChunk = PartialChunkTranslation(chunk.index, preview),
+                            )
+                            onProgress(
+                                TranslationProgress(
+                                    currentChunk = translatedChunks.size,
+                                    totalChunks = chunks.size,
+                                    mixedContent = mixedContent,
+                                    translatedChunkIndices = translatedChunks.keys.toSet(),
+                                )
+                            )
+                        },
+                        onPreviewReset = publishWithoutPartial,
+                        onThinkingChanged = onThinkingChanged,
+                    )
+                } catch (e: CancellationException) {
+                    publishWithoutPartial()
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+                if (result.isFailure) {
+                    publishWithoutPartial()
+                    return@withContext Result.failure(
+                        result.exceptionOrNull() ?: Exception("Translation failed")
+                    )
+                }
 
-            translationError?.let {
-                return@withContext Result.failure(it)
+                translatedChunks[chunk.index] = result.getOrThrow()
+                publishWithoutPartial()
             }
 
             if (translatedChunks.size != chunks.size) {
@@ -205,40 +206,6 @@ class TranslateChapterUseCase(
         }
     }
 
-    /**
-     * Merge new pairs into existing list:
-     * - If original exists, replace the translation
-     * - If new, add to list
-     * - Keep at most MAX_DICTIONARY_PAIRS
-     * @return true if any changes were made
-     */
-    private fun mergeDictionaryPairs(existing: MutableList<DictPair>, newPairs: List<DictPair>): Boolean {
-        var changed = false
-        for (newPair in newPairs) {
-            val existingIndex = existing.indexOfFirst { it.original == newPair.original }
-            if (existingIndex >= 0) {
-                if (existing[existingIndex].translation != newPair.translation) {
-                    existing[existingIndex] = newPair
-                    changed = true
-                }
-            } else {
-                existing.add(newPair)
-                changed = true
-            }
-        }
-
-        // Keep early important names and the most recently discovered terms.
-        if (existing.size > MAX_DICTIONARY_PAIRS) {
-            val headCount = MAX_DICTIONARY_PAIRS / 2
-            val tailCount = MAX_DICTIONARY_PAIRS - headCount
-            val trimmed = existing.take(headCount) + existing.takeLast(tailCount)
-            existing.clear()
-            existing.addAll(trimmed)
-            changed = true
-        }
-        return changed
-    }
-
     private suspend fun translateAndCacheChunk(
         chunk: TextChunk,
         book: Book,
@@ -247,9 +214,10 @@ class TranslateChapterUseCase(
         contentHash: String,
         provider: String,
         preset: AiTaskPresetConfig?,
-        dictionaries: MutableList<DictPair>,
-        onDictionaryUpdate: (List<DictPair>) -> Unit,
         retryCount: Int,
+        onPreviewSnapshot: (String) -> Unit,
+        onPreviewReset: () -> Unit,
+        onThinkingChanged: (Boolean) -> Unit,
     ): Result<String> {
         val existingCache =
             translationCacheGateway.getCachedChunk(book, bookChapter, targetLanguage, chunk.index)
@@ -258,57 +226,85 @@ class TranslateChapterUseCase(
         }
 
         val result = translateChunkWithRetry(
-            chunk, targetLanguage, provider, preset, dictionaries, onDictionaryUpdate, retryCount
+            chunk = chunk,
+            book = book,
+            targetLanguage = targetLanguage,
+            provider = provider,
+            preset = preset,
+            retryCount = retryCount,
+            onPreviewSnapshot = onPreviewSnapshot,
+            onPreviewReset = onPreviewReset,
+            onThinkingChanged = onThinkingChanged,
         )
         if (result.isSuccess) {
+            val translated = result.getOrThrow()
+            if (translated.discoveredPairs.isNotEmpty()) {
+                dictionaryGateway.mergeDiscoveredPairs(book, translated.discoveredPairs)
+            }
             translationCacheGateway.saveChunk(
                 book, bookChapter, targetLanguage,
                 chunk.index, chunk.content, contentHash,
                 provider,
-                TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null
-            )
-        } else {
-            val errorMessage = result.exceptionOrNull()?.message ?: "Translation failed"
-            translationCacheGateway.saveChunk(
-                book, bookChapter, targetLanguage,
-                chunk.index, chunk.content, contentHash,
-                provider,
-                TranslationCache.STATUS_FAILED, null, errorMessage
+                TranslationCache.STATUS_SUCCESS, translated.text, null
             )
         }
-        return result
+        return result.map { it.text }
     }
+
+    private data class ChunkTranslation(
+        val text: String,
+        val discoveredPairs: List<DictPair> = emptyList(),
+    )
 
     private suspend fun translateChunkWithRetry(
         chunk: TextChunk,
+        book: Book,
         targetLanguage: String,
         provider: String,
         preset: AiTaskPresetConfig?,
-        dictionaries: MutableList<DictPair>,
-        onDictionaryUpdate: (List<DictPair>) -> Unit,
         retryCount: Int,
-    ): Result<String> {
+        onPreviewSnapshot: (String) -> Unit,
+        onPreviewReset: () -> Unit,
+        onThinkingChanged: (Boolean) -> Unit,
+    ): Result<ChunkTranslation> {
         var lastError: Exception? = null
         var lastRetryReason: RetryReason? = null
-        for (attempt in 0..retryCount.coerceIn(0, 5)) {
-            val dictSnapshot = synchronized(dictionaryLock) { dictionaries.toList() }
-            val result = when (provider) {
-                TranslationConstants.PROVIDER_GOOGLE -> translateWithGoogle(chunk.content, targetLanguage)
-                TranslationConstants.PROVIDER_APP_AI -> translateWithAiGateway(
-                    text = chunk.content,
-                    targetLanguage = targetLanguage,
-                    preset = preset ?: return Result.failure(Exception("No AI translation preset configured")),
-                    dictionaries = dictSnapshot,
-                    onUpdate = onDictionaryUpdate,
-                    retryReason = lastRetryReason
-                )
-                else -> Result.failure(IllegalArgumentException("Unknown translation provider: $provider"))
+        try {
+            for (attempt in 0..retryCount.coerceIn(0, 5)) {
+                val result = when (provider) {
+                    TranslationConstants.PROVIDER_GOOGLE ->
+                        translateWithGoogle(chunk.content, targetLanguage).map { ChunkTranslation(it) }
+                    TranslationConstants.PROVIDER_APP_AI -> {
+                        val allDictionaries = dictionaryGateway.getBookDictionaries(book).pairs
+                        translateWithAiGateway(
+                            text = chunk.content,
+                            targetLanguage = targetLanguage,
+                            preset = preset
+                                ?: return Result.failure(Exception("No AI translation preset configured")),
+                            allDictionaries = allDictionaries,
+                            relevantDictionaries = TranslationDictionaryPolicy.selectRelevantPairs(
+                                allDictionaries,
+                                chunk.content,
+                            ),
+                            retryReason = lastRetryReason,
+                            onPreviewSnapshot = onPreviewSnapshot,
+                            onThinkingChanged = onThinkingChanged,
+                        )
+                    }
+                    else -> Result.failure(
+                        IllegalArgumentException("Unknown translation provider: $provider")
+                    )
+                }
+                if (result.isSuccess) {
+                    return result
+                }
+                onPreviewReset()
+                lastError = result.exceptionOrNull() as? Exception
+                lastRetryReason = parseRetryReason(lastError)
             }
-            if (result.isSuccess) {
-                return result
-            }
-            lastError = result.exceptionOrNull() as? Exception
-            lastRetryReason = parseRetryReason(lastError)
+        } catch (e: CancellationException) {
+            onPreviewReset()
+            throw e
         }
         return Result.failure(lastError ?: Exception("Translation failed after retries"))
     }
@@ -347,15 +343,17 @@ class TranslateChapterUseCase(
         text: String,
         targetLanguage: String,
         preset: AiTaskPresetConfig,
-        dictionaries: List<DictPair>,
-        onUpdate: ((List<DictPair>) -> Unit)?,
-        retryReason: RetryReason?
-    ): Result<String> {
+        allDictionaries: List<DictPair>,
+        relevantDictionaries: List<DictPair>,
+        retryReason: RetryReason?,
+        onPreviewSnapshot: (String) -> Unit,
+        onThinkingChanged: (Boolean) -> Unit,
+    ): Result<ChunkTranslation> {
         if (targetLanguage == "en" && isMostlyEnglish(text)) {
-            return Result.success(text)
+            return Result.success(ChunkTranslation(text))
         }
         if (targetLanguage == "zh" && isMostlyChinese(text)) {
-            return Result.success(text)
+            return Result.success(ChunkTranslation(text))
         }
         if (preset.model.provider.baseUrl.isBlank() ||
             preset.model.provider.apiKey.isBlank() ||
@@ -364,7 +362,7 @@ class TranslateChapterUseCase(
             return Result.failure(IllegalArgumentException("AI model configuration is incomplete"))
         }
 
-        val dictionaryInstruction = buildDictionaryInstruction(dictionaries)
+        val dictionaryInstruction = buildDictionaryInstruction(relevantDictionaries)
         val retryInstruction = buildRetryInstruction(retryReason)
         val systemPrompt = buildSystemPrompt(
             prompt = preset.promptTemplate,
@@ -378,33 +376,49 @@ class TranslateChapterUseCase(
                 ?: preset.model.defaultParams.temperature
                 ?: TranslationConstants.DEFAULT_TEMPERATURE
         )
-        val result = aiTextGateway.generate(
-            AiGenerateRequest(
-                model = preset.model,
-                messages = listOf(
-                    AiMessage(AiMessageRole.SYSTEM, systemPrompt),
-                    AiMessage(AiMessageRole.USER, "Translate the following text:\n\n$text")
-                ),
-                params = params
-            )
+        val request = AiGenerateRequest(
+            model = preset.model,
+            messages = listOf(
+                AiMessage(AiMessageRole.SYSTEM, systemPrompt),
+                AiMessage(AiMessageRole.USER, "Translate the following text:\n\n$text"),
+            ),
+            params = params,
         )
-        if (result.isFailure) {
-            return Result.failure(result.exceptionOrNull() ?: Exception("Translation failed"))
+        val rawContent = StringBuilder()
+        val previewParser = TranslationResultPreviewParser()
+        try {
+            aiTextGateway.generateStream(request).collect { event ->
+                when (event) {
+                    is AiStreamEvent.Reasoning -> onThinkingChanged(true)
+                    is AiStreamEvent.Content -> {
+                        onThinkingChanged(false)
+                        rawContent.append(event.text)
+                        previewParser.feed(event.text).forEach(onPreviewSnapshot)
+                    }
+                    is AiStreamEvent.ToolCallDelta -> Unit
+                }
+            }
+            previewParser.finish().forEach(onPreviewSnapshot)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return Result.failure(e)
+        } finally {
+            onThinkingChanged(false)
         }
-        val rawContent = result.getOrThrow().text
         if (rawContent.isBlank()) {
             return Result.failure(Exception("Empty translation result"))
         }
-        val parseResult = parseLlmOutput(rawContent, dictionaries)
-        if (parseResult.extractedPairs.isNotEmpty()) {
-            onUpdate?.invoke(parseResult.extractedPairs.take(10))
-        }
+        val parseResult = parseLlmOutput(rawContent.toString(), allDictionaries)
         val finalText = if (targetLanguage == "zh") {
             filterHighEnglishParagraphs(parseResult.translatedText)
         } else {
             parseResult.translatedText
         }
-        return Result.success(finalText)
+        if (finalText.isBlank()) {
+            return Result.failure(Exception("Empty translation result"))
+        }
+        return Result.success(ChunkTranslation(finalText, parseResult.extractedPairs.take(10)))
     }
 
     private data class ParseOutputResult(
@@ -416,7 +430,9 @@ class TranslateChapterUseCase(
         rawOutput: String,
         existingDictionaries: List<DictPair>
     ): ParseOutputResult {
-        val existingOriginals = existingDictionaries.map { it.original }.toSet()
+        val existingOriginals = existingDictionaries
+            .map { TranslationDictionaryPolicy.normalizeOriginal(it.original) }
+            .toSet()
         var dictionarySection: String? = null
         var resultSection: String? = null
         var currentSection: String? = null
@@ -424,8 +440,18 @@ class TranslateChapterUseCase(
         for (line in rawOutput.split('\n')) {
             val trimmedLine = line.trim()
             when {
-                trimmedLine.startsWith("[dictionary]", ignoreCase = true) -> currentSection = "dictionary"
-                trimmedLine.startsWith("[result]", ignoreCase = true) -> currentSection = "result"
+                trimmedLine.startsWith("[dictionary]", ignoreCase = true) -> {
+                    currentSection = "dictionary"
+                    trimmedLine.drop("[dictionary]".length).trim()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { dictionarySection = it + "\n" }
+                }
+                trimmedLine.startsWith("[result]", ignoreCase = true) -> {
+                    currentSection = "result"
+                    trimmedLine.drop("[result]".length).trimStart()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { resultSection = it + "\n" }
+                }
                 currentSection == "dictionary" -> dictionarySection = (dictionarySection ?: "") + line + "\n"
                 currentSection == "result" -> resultSection = (resultSection ?: "") + line + "\n"
             }
@@ -466,7 +492,11 @@ class TranslateChapterUseCase(
                 if (parts.size == 2) {
                     val original = parts[0].trim()
                     val translation = parts[1].trim()
-                    if (original !in existingOriginals && original.isNotEmpty() && translation.isNotEmpty()) {
+                    if (original.isNotEmpty() &&
+                        translation.isNotEmpty() &&
+                        TranslationDictionaryPolicy.normalizeOriginal(original) !in existingOriginals &&
+                        TranslationDictionaryPolicy.isValidNewOriginal(original)
+                    ) {
                         pairs.add(DictPair(original, translation))
                         if (pairs.size >= 10) break
                     }

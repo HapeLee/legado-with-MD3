@@ -16,6 +16,7 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.settings.ReadStyleItem
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -267,6 +268,7 @@ data class ReadBookUiState(
     val chineseConverterActive: Boolean = false,
     // Translation
     val translationMode: Boolean = false,
+    val translationStatus: TranslationChapterStatus = TranslationChapterStatus.Idle,
     // Chapter info
     val curTextChapter: TextChapter? = null,
     // Time / battery (from EventBus)

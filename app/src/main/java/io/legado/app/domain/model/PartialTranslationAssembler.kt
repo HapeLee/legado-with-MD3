@@ -6,6 +6,11 @@ package io.legado.app.domain.model
  */
 object PartialTranslationAssembler {
 
+    data class PartialChunkTranslation(
+        val chunkIndex: Int,
+        val accumulatedText: String,
+    )
+
     /**
      * Assemble mixed content from original chunks and translated portions.
      *
@@ -13,12 +18,19 @@ object PartialTranslationAssembler {
      * @param translatedMap Map of chunk index to translated content
      * @return Mixed content string with translated chunks replacing originals
      */
-    fun assemble(originalChunks: List<TextChunk>, translatedMap: Map<Int, String>): String {
+    fun assemble(
+        originalChunks: List<TextChunk>,
+        translatedMap: Map<Int, String>,
+        partialChunk: PartialChunkTranslation? = null,
+    ): String {
         if (originalChunks.isEmpty()) return ""
 
         val result = StringBuilder()
         for ((index, chunk) in originalChunks.withIndex()) {
             val translated = translatedMap[chunk.index]
+                ?: partialChunk
+                    ?.takeIf { it.chunkIndex == chunk.index && it.accumulatedText.isNotEmpty() }
+                    ?.accumulatedText
             val content = translated ?: chunk.content
 
             if (result.isNotEmpty()) {

@@ -4,14 +4,20 @@ import io.legado.app.data.entities.Book
 import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.model.BookDictionary
 import io.legado.app.domain.model.DictPair
+import io.legado.app.domain.model.TranslationDictionaryPolicy
 import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.GSON
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
 
 class DictionaryRepositoryImpl : DictionaryGateway {
 
     private companion object {
         const val DICT_FILE_NAME = "translation_dictionary.json"
+        val bookLocks = ConcurrentHashMap<String, Any>()
     }
 
     private fun getDictFile(book: Book): File {
@@ -20,7 +26,16 @@ class DictionaryRepositoryImpl : DictionaryGateway {
         return File(bookFolder, DICT_FILE_NAME)
     }
 
+    private fun getBookLock(book: Book): Any =
+        bookLocks.computeIfAbsent(getDictFile(book).absolutePath) { Any() }
+
     override fun getBookDictionaries(book: Book): BookDictionary {
+        return synchronized(getBookLock(book)) {
+            readDictionary(book)
+        }
+    }
+
+    private fun readDictionary(book: Book): BookDictionary {
         val dictFile = getDictFile(book)
         return if (dictFile.exists()) {
             try {
@@ -33,40 +48,50 @@ class DictionaryRepositoryImpl : DictionaryGateway {
         }
     }
 
-    override fun updateBookDic(book: Book, newPairs: List<DictPair>) {
-        val existingDict = getBookDictionaries(book)
-        @Suppress("SENSELESS_COMPARISON")
-        val updatedPairs = (existingDict.pairs ?: emptyList()).toMutableList()
-
-        for (newPair in newPairs) {
-            val existingIndex = updatedPairs.indexOfFirst {
-                it.original == newPair.original
-            }
-            if (existingIndex >= 0) {
-                updatedPairs[existingIndex] = newPair
-            } else {
-                updatedPairs.add(newPair)
-            }
+    override fun mergeDiscoveredPairs(book: Book, newPairs: List<DictPair>): BookDictionary {
+        return synchronized(getBookLock(book)) {
+            val existing = readDictionary(book)
+            @Suppress("USELESS_ELVIS")
+            val existingPairs = existing.pairs ?: emptyList()
+            val mergedPairs = TranslationDictionaryPolicy.mergeDiscoveredPairs(existingPairs, newPairs)
+            if (mergedPairs == existingPairs) return@synchronized existing
+            val updated = existing.copy(pairs = mergedPairs, updatedAt = System.currentTimeMillis())
+            saveDictionary(book, updated)
+            updated
         }
-
-        val updatedDict = existingDict.copy(
-            pairs = updatedPairs,
-            updatedAt = System.currentTimeMillis()
-        )
-
-        saveDictionary(book, updatedDict)
     }
 
     private fun saveDictionary(book: Book, dictionary: BookDictionary) {
         val dictFile = getDictFile(book)
         dictFile.parentFile?.mkdirs()
-        dictFile.writeText(GSON.toJson(dictionary))
+        val tempFile = File.createTempFile("$DICT_FILE_NAME.", ".tmp", dictFile.parentFile)
+        try {
+            tempFile.writeText(GSON.toJson(dictionary))
+            try {
+                Files.move(
+                    tempFile.toPath(),
+                    dictFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(
+                    tempFile.toPath(),
+                    dictFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            }
+        } finally {
+            tempFile.delete()
+        }
     }
 
     override fun clearBookDictionary(book: Book) {
-        val dictFile = getDictFile(book)
-        if (dictFile.exists()) {
-            dictFile.delete()
+        synchronized(getBookLock(book)) {
+            val dictFile = getDictFile(book)
+            if (dictFile.exists()) {
+                dictFile.delete()
+            }
         }
     }
 }
