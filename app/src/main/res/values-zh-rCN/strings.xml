@@ -2291,7 +2291,7 @@
     <string name="show_tags">显示标签</string>
     <string name="custom_tag_colors">自定义标签颜色</string>
     <string name="manage_tag_colors">管理标签颜色</string>
-    <string name="search_filter_first">搜索按钮优先打开筛选栏</string>
+    <string name="search_filter_first">搜索按钮优先打开搜索页面</string>
     <string name="import_from_network">网络导入</string>
     <string name="input_url_or_json_hint">请输入 URL 或 JSON</string>
     <string name="history_label">历史记录:</string>

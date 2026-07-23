@@ -2053,7 +2053,7 @@
     <string name="search_empty">暫無內容</string>
     <string name="search_empty_scope_disable_precision">%1$s 分組搜索無結果。是否關閉精準搜索？</string>
     <string name="search_empty_scope_switch_all">%1$s 分組搜索無結果。是否切換到全部分組？</string>
-    <string name="search_filter_first">搜索按鈕優先打開篩選</string>
+    <string name="search_filter_first">搜索按鈕優先打開搜索頁面</string>
     <string name="search_has_more">上拉或點擊按鈕載入更多</string>
     <string name="search_layout_list">列表佈局</string>
     <string name="search_layout_source_grouped">按源分組</string>
