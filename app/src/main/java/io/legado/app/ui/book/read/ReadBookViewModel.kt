@@ -337,7 +337,13 @@ class ReadBookViewModel(
                 closeReadMenu()
                 _uiState.update { it.copy(searchContentQuery = intent.word ?: "") }
                 ReadBook.book?.bookUrl?.let { bookUrl ->
-                    _effects.tryEmit(ReadBookEffect.OpenSearchActivity(intent.word, bookUrl))
+                    _effects.tryEmit(
+                        ReadBookEffect.OpenSearchActivity(
+                            word = intent.word,
+                            bookUrl = bookUrl,
+                            autoFocus = intent.autoFocus,
+                        )
+                    )
                 }
             }
 

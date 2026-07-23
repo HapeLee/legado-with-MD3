@@ -2334,7 +2334,9 @@ private fun SearchBottomMenuContent(
                 modifier = Modifier.weight(2f),
                 icon = Icons.Default.Search,
                 text = stringResource(R.string.all_results),
-                onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
+                onClick = {
+                    onIntent(ReadBookIntent.OpenSearch(word = null, autoFocus = false))
+                },
             )
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),

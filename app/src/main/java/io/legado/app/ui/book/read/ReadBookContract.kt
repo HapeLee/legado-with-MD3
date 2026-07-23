@@ -473,7 +473,10 @@ sealed interface ReadBookIntent {
     data object ReadMenuBack : ReadBookIntent
 
     // Search
-    data class OpenSearch(val word: String?) : ReadBookIntent
+    data class OpenSearch(
+        val word: String?,
+        val autoFocus: Boolean = true,
+    ) : ReadBookIntent
     data object ExitSearch : ReadBookIntent
     data object ShowSearchMenu : ReadBookIntent
     data object HideSearchMenu : ReadBookIntent
@@ -860,7 +863,11 @@ sealed interface ReadBookEffect {
     data object StopAutoPage : ReadBookEffect
 
     // Search
-    data class OpenSearchActivity(val word: String?, val bookUrl: String) : ReadBookEffect
+    data class OpenSearchActivity(
+        val word: String?,
+        val bookUrl: String,
+        val autoFocus: Boolean = true,
+    ) : ReadBookEffect
     data class NavigateToSearchResult(
         val result: SearchResult,
         val chapterIndex: Int,

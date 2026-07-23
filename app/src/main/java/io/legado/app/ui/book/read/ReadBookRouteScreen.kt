@@ -124,7 +124,7 @@ fun ReadBookRouteScreen(
     host: ReadBookRouteHost,
     controller: ReadBookController,
     onEffectsReady: () -> Unit = {},
-    onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
+    onOpenSearch: (word: String?, bookUrl: String, autoFocus: Boolean) -> Unit = { _, _, _ -> },
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
@@ -366,7 +366,7 @@ fun ReadBookRouteScreen(
                                 }
                             }
                             is ReadBookEffect.OpenSearchActivity -> {
-                                onOpenSearch(effect.word, effect.bookUrl)
+                                onOpenSearch(effect.word, effect.bookUrl, effect.autoFocus)
                             }
                             is ReadBookEffect.OpenBookVoiceCasting -> {
                                 onOpenVoiceCasting(effect.bookUrl)
