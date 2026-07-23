@@ -780,7 +780,7 @@ object ReadBookConfig {
         tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
         tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon, tipBatteryPercentage,
         tipPage, tipFullPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
-        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipCustom, tipFullPage
+        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipCustom
     )
     val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
     val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
