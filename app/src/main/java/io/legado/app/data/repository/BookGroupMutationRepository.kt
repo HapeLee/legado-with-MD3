@@ -82,6 +82,17 @@ class BookGroupMutationRepository(
         }
     }
 
+    override suspend fun deleteGroup(groupId: Long) {
+        database.withTransaction {
+            val group = database.bookGroupDao.getByID(groupId) ?: return@withTransaction
+            database.tagGroupRuleDao.getByGroupName(group.groupName)?.let {
+                database.tagGroupRuleDao.delete(it)
+            }
+            database.bookDao.removeGroup(groupId)
+            database.bookGroupDao.delete(group)
+        }
+    }
+
     private suspend fun upsertTagGroupRule(rule: TagGroupRuleUpdate) {
         val ruleDao = database.tagGroupRuleDao
         val existing = ruleDao.getByGroupName(rule.groupName)

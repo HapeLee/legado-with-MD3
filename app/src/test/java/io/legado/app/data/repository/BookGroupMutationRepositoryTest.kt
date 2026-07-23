@@ -102,6 +102,28 @@ class BookGroupMutationRepositoryTest {
     }
 
     @Test
+    fun `删除分组时同时删除匹配规则和书籍分组位`() = runBlocking {
+        val group = BookGroup(groupId = 1L, groupName = "Fantasy")
+        val rule = TagGroupRule(id = 1L, groupName = group.groupName, pattern = "fantasy")
+        val book = Book(
+            bookUrl = "book-1",
+            name = "Book",
+            author = "Author",
+            kind = "fantasy",
+            group = group.groupId,
+        )
+        database.bookGroupDao.insert(group)
+        database.tagGroupRuleDao.insert(rule)
+        database.bookDao.insert(book)
+
+        repository.deleteGroup(group.groupId)
+
+        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.tagGroupRuleDao.getAll().isEmpty())
+        assertEquals(0L, database.bookDao.getBook(book.bookUrl)?.group)
+    }
+
+    @Test
     fun `新增带规则分组后立即更新匹配书籍`() = runBlocking {
         val book = Book(
             bookUrl = "book-1",
