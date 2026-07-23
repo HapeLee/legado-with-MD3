@@ -454,7 +454,8 @@ object ReadBookConfig {
         }
 
     var titleSegScaling: Float
-        get() = config.titleSegScaling
+        //旧版本可能存入负值，负值非法，回落到默认比例
+        get() = config.titleSegScaling.let { if (it < 0f) 1f else it.coerceAtMost(2f) }
         set(value) {
             config.titleSegScaling = value
         }
