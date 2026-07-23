@@ -65,6 +65,9 @@ data class ThemeSettings(
     val customTagColorsJson: String? = null,
 )
 
+val ThemeSettings.isEyeProtectionConfigured: Boolean
+    get() = eyeProtectionEnabled || eyeProtectionAutoNight
+
 data class ThemeCustomColors(
     val primary: Int,
     val secondary: Int,

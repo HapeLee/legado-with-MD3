@@ -6,11 +6,25 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeSettingsMappingTest {
+
+    @Test
+    fun `手动护眼和跟随深色模式是独立配置来源`() {
+        val automatic = ThemeSettings(
+            eyeProtectionEnabled = false,
+            eyeProtectionAutoNight = true,
+        )
+
+        assertFalse(automatic.eyeProtectionEnabled)
+        assertTrue(automatic.eyeProtectionAutoNight)
+        assertTrue(automatic.isEyeProtectionConfigured)
+    }
 
     @Test
     fun `Theme gateway 持久化边界固定为 60 键`() {

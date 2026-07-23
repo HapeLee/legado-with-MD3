@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -444,7 +445,16 @@ fun ThemeConfigScreen(
                         }
                     )
 
-                    AnimatedVisibility(visible = theme.eyeProtectionEnabled) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_auto_night),
+                        description = stringResource(R.string.eye_protection_auto_night_summary),
+                        checked = theme.eyeProtectionAutoNight,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(eyeProtectionAutoNight = value) }
+                        }
+                    )
+
+                    AnimatedVisibility(visible = theme.isEyeProtectionConfigured) {
                         Column {
                             SliderSettingItem(
                                 title = stringResource(R.string.color_temperature),
@@ -457,15 +467,6 @@ fun ThemeConfigScreen(
                                 valueRange = 0f..100f,
                                 onValueChange = { value ->
                                     updateTheme { it.copy(colorTemperature = value.toInt()) }
-                                }
-                            )
-
-                            SwitchSettingItem(
-                                title = stringResource(R.string.eye_protection_auto_night),
-                                description = stringResource(R.string.eye_protection_auto_night_summary),
-                                checked = theme.eyeProtectionAutoNight,
-                                onCheckedChange = { value ->
-                                    updateTheme { it.copy(eyeProtectionAutoNight = value) }
                                 }
                             )
 

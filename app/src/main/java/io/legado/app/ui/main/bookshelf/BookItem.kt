@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -756,7 +757,9 @@ fun BookItem(
         columnContent = if (layoutMode == 0 && !isCompact && settings.showBookIntro) {
             {
                 val kindList = bookUi.displayTags
-                val intro = HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
+                val intro = remember(book.intro) {
+                    HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
+                }
                 if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
                         modifier = Modifier

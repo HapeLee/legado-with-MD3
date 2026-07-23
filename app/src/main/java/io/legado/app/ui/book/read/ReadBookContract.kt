@@ -345,7 +345,10 @@ data class EyeProtectionUiState(
     val schedule: Boolean = false,
     val startTime: String = "22:00",
     val endTime: String = "07:00",
-)
+) {
+    val configured: Boolean
+        get() = enabled || autoNight
+}
 
 @Stable
 data class HighlightRuleConfigUiState(

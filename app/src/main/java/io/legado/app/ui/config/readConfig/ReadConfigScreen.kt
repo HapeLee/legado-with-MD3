@@ -171,7 +171,7 @@ fun ReadConfigScreen(
 
                 ClickableSettingItem(
                     title = stringResource(R.string.eye_protection),
-                    option = if (state.eyeProtection.enabled) {
+                    option = if (state.eyeProtection.configured) {
                         stringResource(R.string.enabled)
                     } else {
                         stringResource(R.string.disabled)

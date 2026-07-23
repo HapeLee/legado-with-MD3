@@ -38,6 +38,7 @@ fun EyeProtectionConfigSheet(
 ) {
     var editingStartTime by remember { mutableStateOf(false) }
     var editingEndTime by remember { mutableStateOf(false) }
+    val configured = enabled || autoNight
 
     AppModalBottomSheet(
         show = show,
@@ -50,7 +51,13 @@ fun EyeProtectionConfigSheet(
             checked = enabled,
             onCheckedChange = onEnabledChange,
         )
-        AnimatedVisibility(visible = enabled) {
+        SwitchSettingItem(
+            title = stringResource(R.string.eye_protection_auto_night),
+            description = stringResource(R.string.eye_protection_auto_night_summary),
+            checked = autoNight,
+            onCheckedChange = onAutoNightChange,
+        )
+        AnimatedVisibility(visible = configured) {
             Column {
                 SliderSettingItem(
                     title = stringResource(R.string.eye_protection_intensity),
@@ -62,12 +69,6 @@ fun EyeProtectionConfigSheet(
                     defaultValue = 50f,
                     valueRange = 0f..100f,
                     onValueChange = { onIntensityChange(it.toInt()) },
-                )
-                SwitchSettingItem(
-                    title = stringResource(R.string.eye_protection_auto_night),
-                    description = stringResource(R.string.eye_protection_auto_night_summary),
-                    checked = autoNight,
-                    onCheckedChange = onAutoNightChange,
                 )
                 SwitchSettingItem(
                     title = stringResource(R.string.eye_protection_schedule),

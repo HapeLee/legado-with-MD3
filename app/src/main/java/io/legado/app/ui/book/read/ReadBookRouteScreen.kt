@@ -135,6 +135,14 @@ fun ReadBookRouteScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isDarkTheme = LocalAppUiConfiguration.current.isDarkTheme
+    val eyeProtectionActive = rememberEyeProtectionActive(
+        enabled = state.eyeProtection.enabled,
+        autoNight = state.eyeProtection.autoNight,
+        isDark = isDarkTheme,
+        schedule = state.eyeProtection.schedule,
+        startTime = state.eyeProtection.startTime,
+        endTime = state.eyeProtection.endTime,
+    )
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -542,6 +550,7 @@ fun ReadBookRouteScreen(
             ReadBookMenuBar(
                 state = state,
                 preferences = readPreferences,
+                eyeProtectionActive = eyeProtectionActive,
                 onIntent = viewModel::onIntent,
                 onBrightnessPreview = host::previewBrightness,
                 backdrop = menuBackdrop,

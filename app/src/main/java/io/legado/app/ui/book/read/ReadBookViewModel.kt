@@ -57,6 +57,7 @@ import io.legado.app.domain.gateway.ReadStyleStringKey
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.model.TextProcessAction
@@ -2340,7 +2341,14 @@ class ReadBookViewModel(
     }
 
     private fun toggleEyeProtection() = updateEyeProtection {
-        it.copy(eyeProtectionEnabled = !_uiState.value.eyeProtection.enabled)
+        if (it.isEyeProtectionConfigured) {
+            it.copy(
+                eyeProtectionEnabled = false,
+                eyeProtectionAutoNight = false,
+            )
+        } else {
+            it.copy(eyeProtectionEnabled = true)
+        }
     }
 
     private fun updateEyeProtection(transform: (ThemeSettings) -> ThemeSettings) {

@@ -11,6 +11,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import java.util.Locale
+
+internal fun formatTimeValue(hour: Int, minute: Int): String =
+    String.format(Locale.ROOT, "%02d:%02d", hour, minute)
+
+internal fun parseTimeNumber(value: String): Int? {
+    if (value.isEmpty()) return null
+    val normalized = buildString(value.length) {
+        value.forEach { char ->
+            val digit = Character.digit(char, 10)
+            if (digit < 0) return null
+            append(('0'.code + digit).toChar())
+        }
+    }
+    return normalized.toIntOrNull()
+}
 
 /**
  * 24 小时制时间选择对话框。[currentValue] 与回调值均为 `HH:mm`，
@@ -25,8 +41,10 @@ fun TimePickerDialog(
     onConfirm: (String) -> Unit,
 ) {
     val timePickerState = rememberTimePickerState(
-        initialHour = currentValue.substringBefore(':').toIntOrNull()?.coerceIn(0, 23) ?: 0,
-        initialMinute = currentValue.substringAfter(':', "").toIntOrNull()?.coerceIn(0, 59) ?: 0,
+        initialHour = parseTimeNumber(currentValue.substringBefore(':'))
+            ?.coerceIn(0, 23) ?: 0,
+        initialMinute = parseTimeNumber(currentValue.substringAfter(':', ""))
+            ?.coerceIn(0, 59) ?: 0,
         is24Hour = true,
     )
     AppAlertDialog(
@@ -43,7 +61,7 @@ fun TimePickerDialog(
         },
         confirmText = stringResource(R.string.ok),
         onConfirm = {
-            onConfirm("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
+            onConfirm(formatTimeValue(timePickerState.hour, timePickerState.minute))
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = onDismissRequest,
