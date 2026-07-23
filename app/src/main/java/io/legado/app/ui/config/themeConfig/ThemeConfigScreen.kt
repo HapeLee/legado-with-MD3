@@ -40,8 +40,10 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -840,6 +842,24 @@ fun ThemeConfigScreen(
         onDismiss = { onIntent(ThemeConfigIntent.DismissDialog) },
     )
 
+    val timePickerDialog = state.activeDialog as? ThemeConfigDialog.TimePicker
+    if (timePickerDialog != null) {
+        TimePickerDialog(
+            title = stringResource(
+                when (timePickerDialog.field) {
+                    ThemeTimeField.EyeProtectionStart -> R.string.eye_protection_start_time
+                    ThemeTimeField.EyeProtectionEnd -> R.string.eye_protection_end_time
+                }
+            ),
+            currentValue = timePickerDialog.currentValue,
+            onDismissRequest = { onIntent(ThemeConfigIntent.DismissDialog) },
+            onConfirm = { value ->
+                onIntent(ThemeConfigIntent.SetTime(timePickerDialog.field, value))
+                onIntent(ThemeConfigIntent.DismissDialog)
+            },
+        )
+    }
+
 
     BackgroundImageManageSheet(
         isDarkTheme = (state.activeSheet as? ThemeConfigSheet.Background)?.dark,
@@ -926,6 +946,40 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    title: String,
+    currentValue: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val timePickerState = rememberTimePickerState(
+        initialHour = currentValue.substringBefore(':').toIntOrNull()?.coerceIn(0, 23) ?: 0,
+        initialMinute = currentValue.substringAfter(':', "").toIntOrNull()?.coerceIn(0, 59) ?: 0,
+        is24Hour = true,
+    )
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismissRequest,
+        title = title,
+        content = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                TimePicker(state = timePickerState)
+            }
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onConfirm("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismissRequest,
+    )
 }
 
 @Composable

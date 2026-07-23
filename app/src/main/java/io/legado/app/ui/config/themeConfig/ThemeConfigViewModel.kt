@@ -154,9 +154,14 @@ class ThemeConfigViewModel(
                 readSettingsGateway.update { it.copy(fontFolder = intent.path) }
             }
             ThemeConfigIntent.RequestFontFolder -> _effects.tryEmit(ThemeConfigEffect.OpenFontFolder)
-            is ThemeConfigIntent.RequestTimePicker -> _effects.tryEmit(
-                ThemeConfigEffect.OpenTimePicker(intent.field, intent.currentValue)
-            )
+            is ThemeConfigIntent.RequestTimePicker -> _uiState.update {
+                it.copy(
+                    activeDialog = ThemeConfigDialog.TimePicker(
+                        field = intent.field,
+                        currentValue = intent.currentValue,
+                    )
+                )
+            }
             is ThemeConfigIntent.SetTime -> setTime(intent.field, intent.value)
             ThemeConfigIntent.DismissRefactorTip -> updateTheme {
                 it.copy(showRefactorTip = false)
