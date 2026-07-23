@@ -6,6 +6,6 @@ import io.legado.app.domain.model.DictPair
 
 interface DictionaryGateway {
     fun getBookDictionaries(book: Book): BookDictionary
-    fun updateBookDic(book: Book, newPairs: List<DictPair>)
+    fun mergeDiscoveredPairs(book: Book, newPairs: List<DictPair>): BookDictionary
     fun clearBookDictionary(book: Book)
 }

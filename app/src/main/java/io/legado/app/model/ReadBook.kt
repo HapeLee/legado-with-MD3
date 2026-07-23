@@ -63,6 +63,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -1161,20 +1162,31 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         translationObserverJobs[chapterIndex]?.cancel()
 
         val job = launch {
-            taskFlow.collect { state ->
-                when (state.status) {
-                    TranslationChapterStatus.Translating -> {
-                        state.mixedContent?.let { mixed ->
-                            contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
+            try {
+                taskFlow.takeWhile { state ->
+                    when (state.status) {
+                        TranslationChapterStatus.Translating,
+                        TranslationChapterStatus.Thinking -> {
+                            state.mixedContent?.let { mixed ->
+                                contentLoadFinish(
+                                    book,
+                                    chapter,
+                                    mixed,
+                                    upContent = true,
+                                    resetPageOffset = false,
+                                )
+                            }
                         }
+                        else -> Unit
                     }
-                    else -> {
-                        // no-op
-                    }
+                    state.status == TranslationChapterStatus.Translating ||
+                        state.status == TranslationChapterStatus.Thinking
+                }.collect {}
+            } finally {
+                coroutineContext[Job]?.let { job ->
+                    translationObserverJobs.remove(chapterIndex, job)
                 }
             }
-            // Clean up when coroutine finishes
-            translationObserverJobs.remove(chapterIndex)
         }
         translationObserverJobs[chapterIndex] = job
     }

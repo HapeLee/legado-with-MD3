@@ -2672,4 +2672,5 @@
     <string name="lab_page_estimate_diagnostics_count">%1$d 筆</string>
     <string name="lab_page_estimate_diagnostics_share_title">分享全文頁碼診斷</string>
     <string name="whole_book_page_unavailable">全書 - / -</string>
+    <string name="translation_model_thinking">模型思考中</string>
 </resources>
