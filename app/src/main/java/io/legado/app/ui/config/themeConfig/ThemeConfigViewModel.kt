@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
@@ -37,6 +39,7 @@ import splitties.init.appCtx
 
 class ThemeConfigViewModel(
     private val appShellSettingsGateway: AppShellSettingsGateway,
+    private val coverSettingsGateway: CoverSettingsGateway,
     private val readSettingsGateway: ReadSettingsGateway,
     private val themeSettingsGateway: ThemeSettingsGateway,
     private val labSettingsGateway: LabSettingsGateway,
@@ -186,6 +189,7 @@ class ThemeConfigViewModel(
     private fun resetDefaults() {
         viewModelScope.launch(Dispatchers.IO) {
             val defaultShell = AppShellSettings()
+            val defaultCover = CoverSettings()
             val defaultTheme = ThemeSettings()
             val currentTheme = _uiState.value.theme
 
@@ -204,6 +208,7 @@ class ThemeConfigViewModel(
             }
 
             appShellSettingsGateway.update { defaultShell }
+            coverSettingsGateway.update { defaultCover }
             themeSettingsGateway.update { defaultTheme }
             _effects.tryEmit(ThemeConfigEffect.ApplyDayNight)
             _effects.tryEmit(ThemeConfigEffect.NotifyMain)
