@@ -1666,6 +1666,11 @@
     <string name="placeholder_page_index">當前頁碼</string>
     <string name="placeholder_page_size">本章頁數</string>
     <string name="placeholder_read_progress">閱讀進度</string>
+    <string name="placeholder_full_page_index">全文頁碼</string>
+    <string name="placeholder_full_page_size">全文頁數</string>
+    <string name="placeholder_full_page_progress">全文進度</string>
+    <string name="full_book_pagination">全文分頁</string>
+    <string name="full_book_paginating">正在進行全文分頁…</string>
     <string name="custom_regex_rule">自訂正則規則</string>
     <string name="custom_tag_colors">自訂標籤顏色</string>
     <string name="custom_theme">自訂主題</string>

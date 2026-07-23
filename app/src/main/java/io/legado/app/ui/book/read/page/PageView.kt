@@ -19,7 +19,9 @@ import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.databinding.ViewBookPageBinding
 import io.legado.app.help.config.CustomTipPlaceholder
+import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.model.FullBookPaginator
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.book.read.page.entities.TextLine
@@ -71,6 +73,7 @@ class PageView(
     private var tvBatteryClassic: BatteryView? = null
     private var tvTimeBatteryClassic: BatteryView? = null
     private var tvTitleArrowClassic: BatteryView? = null
+    private var tvFullPage: BatteryView? = null
 
     private var isMainView = false
     var isScroll = false
@@ -392,6 +395,12 @@ class PageView(
             typeface = tipTypeface
             textSize = tipTextSize
         }
+        tvFullPage = getTipView(ReadBookConfig.tipFullPage)?.apply {
+            tag = ReadBookConfig.tipFullPage
+            batteryMode = BatteryView.BatteryMode.NO_BATTERY
+            typeface = tipTypeface
+            textSize = tipTextSize
+        }
         // 自定义页眉/页脚模板：6 个位置共享同一段配置逻辑
         val customTypeface = tipTypeface
         val customTextSize = tipTextSize
@@ -533,6 +542,14 @@ class PageView(
             if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
         }
         val readProgressDisplay = textPage.readProgress
+        val book = ReadBook.book
+        val isLocal = book?.isLocal == true
+        val (fullPageIndex, fullPageSize) = if (isLocal) {
+            FullBookPaginator.getFullPageData(book, textPage.chapterIndex, textPage.index, textPage.pageSize)
+        } else (0 to 0)
+
+        val fullPageIndexDisplay = if (isLocal) fullPageIndex.toString() else pageIndexDisplay
+        val fullPageSizeDisplay = if (isLocal) fullPageSize.toString() else pageSizeDisplay
         // 使用本 PageView 实例持有的电池字段，值由 [upBattery] 在系统电量变化时持续刷新。
         val batteryPercentDisplay = "$battery%"
         var result = template
@@ -547,6 +564,8 @@ class PageView(
                 CustomTipPlaceholder.PAGE_INDEX -> pageIndexDisplay
                 CustomTipPlaceholder.PAGE_SIZE -> pageSizeDisplay
                 CustomTipPlaceholder.READ_PROGRESS -> readProgressDisplay
+                CustomTipPlaceholder.FULL_PAGE_INDEX -> fullPageIndexDisplay
+                CustomTipPlaceholder.FULL_PAGE_SIZE -> fullPageSizeDisplay
             }
             result = result.replace(placeholder.token, replacement)
         }
@@ -599,9 +618,31 @@ class PageView(
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         } else {
             val pageSizeInt = pageSize
-            val pageSize = if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
-            tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
-            tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
+            val pageSizeStr = if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+            tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSizeStr  $readProgress")
+            tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSizeStr")
+        }
+        tvFullPage?.let { tv ->
+            val book = ReadBook.book
+            var handled = false
+            if (book?.isLocal == true) {
+                val (fullPageIndex, fullPageSize) = FullBookPaginator.getFullPageData(
+                    book, chapterIndex, index, pageSize
+                )
+                if (fullPageIndex > 0) {
+                    tv.setTextIfNotEqual("${fullPageIndex}/$fullPageSize")
+                    handled = true
+                }
+            }
+            if (!handled) {
+                if (textChapter.isCompleted) {
+                    tv.setTextIfNotEqual("${index.plus(1)}/$pageSize")
+                } else {
+                    val pageSizeInt = pageSize
+                    val ps = if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+                    tv.setTextIfNotEqual("${index.plus(1)}/$ps")
+                }
+            }
         }
         upCustomTip(textPage)
         this@PageView.layoutSync()

@@ -13,6 +13,7 @@ import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiProfileDao
 import io.legado.app.data.dao.AiPromptPresetDao
 import io.legado.app.data.dao.BookChapterDao
+import io.legado.app.data.dao.ChapterPageCountDao
 import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
@@ -66,6 +67,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.Cache
+import io.legado.app.data.entities.ChapterPageCount
 import io.legado.app.data.entities.ChapterSpeechAnalysisEntity
 import io.legado.app.data.entities.ChapterSpeechSegmentEntity
 import io.legado.app.data.entities.CloudTtsEngineEntity
@@ -108,7 +110,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 97,
+    version = 98,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -124,7 +126,7 @@ val appDb by lazy {
         BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
         BookOutlineNode::class, ReadAloudVoiceEntity::class, BookVoiceBindingEntity::class,
         ChapterSpeechAnalysisEntity::class, ChapterSpeechSegmentEntity::class,
-        CloudTtsEngineEntity::class],
+        CloudTtsEngineEntity::class, ChapterPageCount::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -180,7 +182,8 @@ val appDb by lazy {
         AutoMigration(from = 93, to = 94),
         AutoMigration(from = 94, to = 95),
         AutoMigration(from = 95, to = 96),
-        AutoMigration(from = 96, to = 97)
+        AutoMigration(from = 96, to = 97),
+        AutoMigration(from = 97, to = 98)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -189,6 +192,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val bookGroupDao: BookGroupDao
     abstract val bookSourceDao: BookSourceDao
     abstract val bookChapterDao: BookChapterDao
+    abstract val chapterPageCountDao: ChapterPageCountDao
     abstract val bookContentProcessDao: BookContentProcessDao
     abstract val bookKnowledgeDao: BookKnowledgeDao
     abstract val readAloudVoiceDao: ReadAloudVoiceDao

@@ -104,6 +104,7 @@
         <item>僅電量圖標</item>
         <item>電量%</item>
         <item>頁數</item>
+        <item>全文頁數(僅本地書籍)</item>
         <item>進度(%)</item>
         <item>進度(xx/yyy)</item>
         <item>頁數及進度</item>

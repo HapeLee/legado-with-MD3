@@ -98,6 +98,7 @@ import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
+import io.legado.app.model.FullBookPaginator
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
@@ -5474,6 +5475,7 @@ class ReadBookViewModel(
         } else {
             _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         }
+        FullBookPaginator.start(ReadBook.book)
     }
 
     private fun ConfigUpdate.toReadStyleMutation(): ReadStyleMutation? = when (this) {

@@ -27,6 +27,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.localBook.TextFile
+import io.legado.app.model.FullBookPaginator
 import io.legado.app.model.translation.TranslationChapterState
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.translation.TranslationManager
@@ -154,6 +155,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             downloadedChapters.clear()
             downloadFailChapters.clear()
         }
+        FullBookPaginator.start(book)
     }
 
     fun upData(book: Book) {
@@ -185,6 +187,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             downloadedChapters.clear()
             downloadFailChapters.clear()
         }
+        FullBookPaginator.start(book)
     }
 
     fun upWebBook(book: Book) {
@@ -221,6 +224,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
         }
+        FullBookPaginator.start(book)
     }
 
     fun setProgress(progress: BookProgress) {
