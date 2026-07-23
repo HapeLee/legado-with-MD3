@@ -124,6 +124,32 @@ class BookGroupMutationRepositoryTest {
     }
 
     @Test
+    fun `标签规则只添加新匹配分组而不清除旧分组`() = runBlocking {
+        val fantasy = BookGroup(groupId = 1L, groupName = "Fantasy")
+        val adventure = BookGroup(groupId = 2L, groupName = "Adventure")
+        val book = Book(
+            bookUrl = "book-1",
+            name = "Book",
+            author = "Author",
+            kind = "adventure",
+            group = fantasy.groupId,
+        )
+        database.bookGroupDao.insert(fantasy, adventure)
+        database.tagGroupRuleDao.insert(
+            TagGroupRule(id = 1L, groupName = fantasy.groupName, pattern = "fantasy"),
+            TagGroupRule(id = 2L, groupName = adventure.groupName, pattern = "adventure"),
+        )
+        database.bookDao.insert(book)
+
+        TagGroupRuleApplier(database).applyInCurrentTransaction()
+
+        assertEquals(
+            fantasy.groupId or adventure.groupId,
+            database.bookDao.getBook(book.bookUrl)?.group,
+        )
+    }
+
+    @Test
     fun `新增带规则分组后立即更新匹配书籍`() = runBlocking {
         val book = Book(
             bookUrl = "book-1",
