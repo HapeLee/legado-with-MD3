@@ -1,9 +1,7 @@
 package io.legado.app.ui.book.read
 
 import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalTime
@@ -38,21 +36,34 @@ class EyeProtectionTest {
         )
     }
 
-    @Test
-    fun `自动模式跟随当前主题`() {
-        assertEquals(true, EyeProtection.syncEnabledForNight(isNight = true, autoNight = true))
-        assertEquals(false, EyeProtection.syncEnabledForNight(isNight = false, autoNight = true))
-        assertNull(EyeProtection.syncEnabledForNight(isNight = true, autoNight = false))
-    }
-
     private fun activeAt(
         hour: Int,
         minute: Int = 0,
         enabled: Boolean = true,
+        autoNight: Boolean = false,
+        isDark: Boolean = false,
         schedule: Boolean = true,
         start: String = "22:00",
         end: String = "07:00",
-    ) = EyeProtection.isActiveAt(enabled, schedule, start, end, LocalTime.of(hour, minute))
+    ) = EyeProtection.isActiveAt(
+        enabled, autoNight, isDark, schedule, start, end, LocalTime.of(hour, minute)
+    )
+
+    @Test
+    fun `跟随深色模式时由深浅色决定并忽略总开关`() {
+        // 浅色下即使总开关是开的也不生效
+        assertFalse(activeAt(3, enabled = true, autoNight = true, isDark = false, schedule = false))
+        // 深色下即使总开关是关的也生效
+        assertTrue(activeAt(3, enabled = false, autoNight = true, isDark = true, schedule = false))
+        // 未开跟随深色时，深浅色不参与判定
+        assertTrue(activeAt(3, enabled = true, autoNight = false, isDark = false, schedule = false))
+    }
+
+    @Test
+    fun `跟随深色模式仍受定时时段约束`() {
+        assertTrue(activeAt(23, autoNight = true, isDark = true))
+        assertFalse(activeAt(12, autoNight = true, isDark = true))
+    }
 
     @Test
     fun `总开关关闭时永不生效`() {

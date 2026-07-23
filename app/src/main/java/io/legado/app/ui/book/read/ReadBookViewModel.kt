@@ -1599,14 +1599,6 @@ class ReadBookViewModel(
             is ReadBookIntent.EyeProtectionEndTimeChanged -> updateEyeProtection {
                 it.copy(eyeProtectionEndTime = intent.value)
             }
-            is ReadBookIntent.SyncEyeProtectionForTheme -> {
-                EyeProtection.syncEnabledForNight(
-                    isNight = intent.isNight,
-                    autoNight = _uiState.value.eyeProtection.autoNight,
-                )?.let { enabled ->
-                    updateEyeProtection { it.copy(eyeProtectionEnabled = enabled) }
-                }
-            }
         }
     }
 

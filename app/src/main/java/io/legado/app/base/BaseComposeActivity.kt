@@ -84,6 +84,8 @@ abstract class BaseComposeActivity(
                     .collectAsStateWithLifecycle(initialThemeSettings)
                 val eyeProtectionActive = rememberEyeProtectionActive(
                     enabled = themeSettings.eyeProtectionEnabled,
+                    autoNight = themeSettings.eyeProtectionAutoNight,
+                    isDark = uiConfiguration.isDarkTheme,
                     schedule = themeSettings.eyeProtectionSchedule,
                     startTime = themeSettings.eyeProtectionStartTime,
                     endTime = themeSettings.eyeProtectionEndTime,

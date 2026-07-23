@@ -155,10 +155,6 @@ fun ReadBookRouteScreen(
         controller.onMenuVisibilityChanged(state.menuVisible)
     }
 
-    LaunchedEffect(isDarkTheme, state.eyeProtection.autoNight) {
-        viewModel.onIntent(ReadBookIntent.SyncEyeProtectionForTheme(isDarkTheme))
-    }
-
     LaunchedEffect(viewModel, controller, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.readAloudProgress.collect { chapterStart ->

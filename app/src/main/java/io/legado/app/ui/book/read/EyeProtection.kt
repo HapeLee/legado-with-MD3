@@ -49,24 +49,23 @@ object EyeProtection {
         )
     }
 
-    fun syncEnabledForNight(isNight: Boolean, autoNight: Boolean): Boolean? =
-        if (autoNight) isNight else null
-
     /**
-     * 计算护眼在给定时刻是否应生效。
-     * - 总开关关闭 → 永远不生效；
-     * - 未启用定时 → 只要总开关开就生效；
-     * - 启用定时但时间无法解析 → 退化为仅按总开关生效；
+     * 计算护眼在给定时刻是否应生效。全 App 共用这一处判定，不落盘、不回写总开关。
+     * - 开启「跟随深色模式」→ 由当前深浅色决定，忽略总开关；否则看总开关；
+     * - 未启用定时 → 上一条为真即生效；
+     * - 启用定时但时间无法解析 → 退化为不看时段；
      * - 启用定时 → 仅在 [startTime, endTime) 时段内生效（支持跨零点，如 22:00–07:00）。
      */
     fun isActiveAt(
         enabled: Boolean,
+        autoNight: Boolean,
+        isDark: Boolean,
         schedule: Boolean,
         startTime: String,
         endTime: String,
         now: LocalTime,
     ): Boolean {
-        if (!enabled) return false
+        if (!(if (autoNight) isDark else enabled)) return false
         if (!schedule) return true
         val start = parseTime(startTime) ?: return true
         val end = parseTime(endTime) ?: return true
@@ -116,11 +115,13 @@ fun Modifier.eyeProtectionColorFilter(
 @Composable
 fun rememberEyeProtectionActive(
     enabled: Boolean,
+    autoNight: Boolean,
+    isDark: Boolean,
     schedule: Boolean,
     startTime: String,
     endTime: String,
 ): Boolean {
-    if (!enabled) return false
+    if (!(if (autoNight) isDark else enabled)) return false
     if (!schedule) return true
     var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(startTime, endTime) {
@@ -129,5 +130,13 @@ fun rememberEyeProtectionActive(
             delay(60_000L)
         }
     }
-    return EyeProtection.isActiveAt(enabled, schedule, startTime, endTime, now)
+    return EyeProtection.isActiveAt(
+        enabled = enabled,
+        autoNight = autoNight,
+        isDark = isDark,
+        schedule = schedule,
+        startTime = startTime,
+        endTime = endTime,
+        now = now,
+    )
 }
