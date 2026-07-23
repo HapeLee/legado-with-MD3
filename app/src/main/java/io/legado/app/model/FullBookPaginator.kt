@@ -66,8 +66,9 @@ object FullBookPaginator : KoinComponent {
     private suspend fun paginate(book: Book, layoutKey: String) {
         try {
             val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
-            val existingCounts = appDb.chapterPageCountDao.getByBookAndLayout(book.bookUrl, layoutKey)
-                .associateBy { it.chapterIndex }
+            val existingCounts =
+                appDb.chapterPageCountDao.getByBookAndLayout(book.bookUrl, layoutKey)
+                    .associateBy { it.chapterIndex }
 
             // 删除旧的布局缓存，保持数据库精简
             appDb.chapterPageCountDao.deleteOldLayouts(book.bookUrl, layoutKey)
@@ -95,7 +96,8 @@ object FullBookPaginator : KoinComponent {
                         chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
                     )
 
-                    val bookContent = processor.getContent(book, chapter, content, includeTitle = false)
+                    val bookContent =
+                        processor.getContent(book, chapter, content, includeTitle = false)
 
                     if (ChapterProvider.visibleWidth <= 0) break
 
@@ -112,14 +114,25 @@ object FullBookPaginator : KoinComponent {
                         pageCount++
                     }
 
-                    appDb.chapterPageCountDao.insert(
-                        ChapterPageCount(
-                            bookUrl = book.bookUrl,
-                            chapterIndex = chapter.index,
-                            layoutKey = layoutKey,
-                            pageCount = pageCount
-                        )
+                    val old = appDb.chapterPageCountDao.getChapterPageCount(
+                        book.bookUrl,
+                        chapter.index,
+                        layoutKey
                     )
+                    if (old == null) {
+                        appDb.chapterPageCountDao.insert(
+                            ChapterPageCount(
+                                bookUrl = book.bookUrl,
+                                chapterIndex = chapter.index,
+                                layoutKey = layoutKey,
+                                pageCount = pageCount
+                            )
+                        )
+                    } else if (old.pageCount != pageCount) {
+                        appDb.chapterPageCountDao.update(
+                            old.copy(pageCount = pageCount)
+                        )
+                    }
                     // 每一章完成后更新缓存标记，让下一帧 UI 能刷新
                     markCacheDirty()
                 } catch (e: Exception) {
@@ -171,12 +184,12 @@ object FullBookPaginator : KoinComponent {
             config.customTipFooterMiddle,
             config.customTipFooterRight
         )
-        
+
         val targetKeys = setOf(
             CustomTipPlaceholder.FULL_PAGE_INDEX.key,
             CustomTipPlaceholder.FULL_PAGE_SIZE.key
         )
-        
+
         return templates.any { template ->
             CustomTipPlaceholder.extractPlaceholders(template).any { it in targetKeys }
         }
@@ -272,7 +285,7 @@ object FullBookPaginator : KoinComponent {
 
         // 使用缓存进行 O(1) 计算
         val c = currentCache
-        
+
         // 计算平均值
         val avg = if (c.knownChaptersCount > 0) {
             c.totalKnownPages.toFloat() / c.knownChaptersCount
