@@ -14,12 +14,14 @@ import io.legado.app.service.FullBookPageService
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import splitties.init.appCtx
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 object FullBookPaginator : KoinComponent {
@@ -28,7 +30,9 @@ object FullBookPaginator : KoinComponent {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
     private val mutex = Mutex()
-    private val isRunning = AtomicBoolean(false)
+
+    private val _state = MutableStateFlow(PaginationState())
+    val state = _state.asStateFlow()
 
     fun start(book: Book?) {
         if (book == null || !book.isLocal) {
@@ -45,10 +49,10 @@ object FullBookPaginator : KoinComponent {
             mutex.withLock {
                 job?.cancelAndJoin()
                 val layoutKey = getLayoutKey()
+                _state.update { it.copy(isRunning = true, progress = 0, total = 0) }
                 job = launch {
                     FullBookPageService.start(appCtx)
                     paginate(book, layoutKey)
-                    FullBookPageService.stop(appCtx)
                 }
             }
         }
@@ -56,29 +60,29 @@ object FullBookPaginator : KoinComponent {
 
     fun stop() {
         job?.cancel()
-        isRunning.set(false)
-        FullBookPageService.stop(appCtx)
+        _state.update { it.copy(isRunning = false) }
     }
 
     private suspend fun paginate(book: Book, layoutKey: String) {
-        isRunning.set(true)
-        val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
-        val existingCounts = appDb.chapterPageCountDao.getByBookAndLayout(book.bookUrl, layoutKey)
-            .associateBy { it.chapterIndex }
+        try {
+            val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+            val existingCounts = appDb.chapterPageCountDao.getByBookAndLayout(book.bookUrl, layoutKey)
+                .associateBy { it.chapterIndex }
 
-        // 删除旧的布局缓存，保持数据库精简
-        appDb.chapterPageCountDao.deleteOldLayouts(book.bookUrl, layoutKey)
+            // 删除旧的布局缓存，保持数据库精简
+            appDb.chapterPageCountDao.deleteOldLayouts(book.bookUrl, layoutKey)
 
-        val processor = ContentProcessor.get(book)
-        val totalChapters = chapters.size
+            val processor = ContentProcessor.get(book)
+            val totalChapters = chapters.size
+            _state.update { it.copy(total = totalChapters) }
 
-        for ((index, chapter) in chapters.withIndex()) {
-            if (!isRunning.get()) break
-            
-            // 更新进度通知
-            FullBookPageService.update(appCtx, index + 1, totalChapters)
-            
-            if (existingCounts.containsKey(chapter.index)) continue
+            for ((index, chapter) in chapters.withIndex()) {
+                if (!state.value.isRunning) break
+
+                // 更新进度通知
+                _state.update { it.copy(progress = index + 1) }
+
+                if (existingCounts.containsKey(chapter.index)) continue
 
             try {
                 val content = BookHelp.getContent(book, chapter) ?: continue
@@ -95,7 +99,7 @@ object FullBookPaginator : KoinComponent {
                 val textChapter = ChapterProvider.getTextChapterAsync(
                     this@FullBookPaginator.scope, book, chapter, displayTitle, 
                     bookContent,
-                    chapters.size
+                    chapters.size,
                 )
                 
                 // 等待排版完成
@@ -118,8 +122,10 @@ object FullBookPaginator : KoinComponent {
                 e.printStackTrace()
             }
         }
-        isRunning.set(false)
+    } finally {
+        _state.update { it.copy(isRunning = false) }
     }
+}
 
     /**
      * 生成当前布局配置的唯一特征码
@@ -194,7 +200,8 @@ object FullBookPaginator : KoinComponent {
             // 异步刷新缓存，当前这次渲染可能还是旧的或空的
             scope.launch {
                 val counts = appDb.chapterPageCountDao.getByBookAndLayout(bookUrl, layoutKey)
-                    .associate { it.chapterIndex to it.pageCount }
+                    .associateBy { it.chapterIndex }
+                    .mapValues { it.value.pageCount }
                 cachedPageCounts = counts
             }
         }
