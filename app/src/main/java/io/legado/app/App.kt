@@ -35,8 +35,9 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
-import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -67,7 +68,9 @@ import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.chromium.base.ThreadUtils
@@ -171,6 +174,17 @@ class App : Application(), ImageLoaderFactory {
                 }
                 .distinctUntilChanged()
                 .collect { AppWebDav.upConfig() }
+        }
+        // themeMode 是日夜的唯一来源，除外观设置外（阅读页快捷按钮、主题包、恢复备份）
+        // 也会直接写网关。AppCompat 的夜间模式统一跟随网关，否则资源配置不变，
+        // WebView、旧 View 界面拿到的仍是切换前的深浅色。
+        Coroutine.async {
+            get<AppShellSettingsGateway>().settings
+                .map { it.themeMode }
+                .distinctUntilChanged()
+                .collect {
+                    withContext(Main) { ThemeConfigStore.initNightMode() }
+                }
         }
         Coroutine.async {
             LogUtils.init(this@App)
