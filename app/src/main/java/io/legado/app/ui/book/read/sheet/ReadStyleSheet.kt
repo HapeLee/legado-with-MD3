@@ -49,6 +49,7 @@ fun ReadStyleContent(
     readMenuCustomIcons: Map<String, String> = emptyMap(),
     bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     preferences: ReadPreferences,
+    eyeProtectionEnabled: Boolean,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
     styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
@@ -94,7 +95,7 @@ fun ReadStyleContent(
                 when (page) {
                     0 -> GlobalThemePage(
                         onToggleDayNight = onToggleDayNight,
-                        eyeProtectionEnabled = preferences.eyeProtectionEnabled,
+                        eyeProtectionEnabled = eyeProtectionEnabled,
                         onOpenBgTextConfig = onOpenBgTextConfig,
                         onOpenTextTitle = onOpenTextTitle,
                         onOpenPaddingConfig = onOpenPaddingConfig,

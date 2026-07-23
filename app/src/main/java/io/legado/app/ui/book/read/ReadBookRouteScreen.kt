@@ -155,7 +155,7 @@ fun ReadBookRouteScreen(
         controller.onMenuVisibilityChanged(state.menuVisible)
     }
 
-    LaunchedEffect(isDarkTheme, readPreferences.eyeProtectionAutoNight) {
+    LaunchedEffect(isDarkTheme, state.eyeProtection.autoNight) {
         viewModel.onIntent(ReadBookIntent.SyncEyeProtectionForTheme(isDarkTheme))
     }
 

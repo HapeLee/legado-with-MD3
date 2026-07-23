@@ -672,7 +672,7 @@ private fun ReadBookMenuSurface(
                     ReadBookMenuRoute.Main -> {
                     MenuBottomBar(
                         state = state,
-                        eyeProtectionEnabled = preferences.eyeProtectionEnabled,
+                        eyeProtectionEnabled = state.eyeProtection.enabled,
                         colors = colors,
                         onIntent = onIntent,
                         context = context,
@@ -720,6 +720,7 @@ private fun ReadBookMenuSurface(
                                 readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
                                 bottomBarButtons = state.menuConfig.bottomBarButtons,
                                 preferences = preferences,
+                                eyeProtectionEnabled = state.eyeProtection.enabled,
                                 onIntent = onIntent,
                                 styleConfig = state.styleConfig,
                             )
@@ -1946,7 +1947,7 @@ private fun FloatingIconRow(
         state.isAutoPage,
         state.translationMode,
         state.useReplaceRule,
-        preferences.eyeProtectionEnabled,
+        state.eyeProtection.enabled,
     ) {
         loadFloatingIcons(
             context = context,
@@ -3383,7 +3384,7 @@ private fun loadFloatingIcons(
         if (state.isAutoPage) add("auto_page")
         if (state.translationMode) add("translate")
         if (state.useReplaceRule) add("replace")
-        if (preferences.eyeProtectionEnabled) add("eye_protection")
+        if (state.eyeProtection.enabled) add("eye_protection")
     }
 
     return state.menuConfig.titleBarButtons

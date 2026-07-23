@@ -344,9 +344,6 @@ class ReadSettingsRepository(
             textBottomJustify = compatDsValue(Keys.TextBottomJustify, true),
             adaptSpecialStyle = compatDsValue(Keys.AdaptSpecialStyle, true),
             useZhLayout = compatDsValue(Keys.UseZhLayout, false),
-            eyeProtectionEnabled = compatDsValue(Keys.EyeProtectionEnabled, false),
-            eyeProtectionIntensity = compatDsValue(Keys.EyeProtectionIntensity, 50).coerceIn(0, 100),
-            eyeProtectionAutoNight = compatDsValue(Keys.EyeProtectionAutoNight, false),
             showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "0"),
             brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
             readBrightness = compatDsValue(Keys.ReadBrightness, 100),
@@ -459,9 +456,6 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
-        val EyeProtectionEnabled = booleanPreferencesKey(PreferKey.eyeProtectionEnabled)
-        val EyeProtectionIntensity = intPreferencesKey(PreferKey.colorTemperature)
-        val EyeProtectionAutoNight = booleanPreferencesKey(PreferKey.eyeProtectionAutoNight)
         val ShowBrightnessView = stringPreferencesKey(PreferKey.showBrightnessView)
         val BrightnessVwPos = stringPreferencesKey(PreferKey.brightnessVwPos)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)
@@ -576,9 +570,6 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textBottomJustify to textBottomJustify,
     PreferKey.adaptSpecialStyle to adaptSpecialStyle,
     PreferKey.useZhLayout to useZhLayout,
-    PreferKey.eyeProtectionEnabled to eyeProtectionEnabled,
-    PreferKey.colorTemperature to eyeProtectionIntensity.coerceIn(0, 100),
-    PreferKey.eyeProtectionAutoNight to eyeProtectionAutoNight,
     PreferKey.showBrightnessView to showBrightnessView,
     PreferKey.brightnessVwPos to brightnessVwPos,
     PreferKey.brightness to readBrightness,

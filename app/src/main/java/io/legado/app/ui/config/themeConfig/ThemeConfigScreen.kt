@@ -40,10 +40,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -75,6 +73,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.dialog.TimePickerDialog
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -458,6 +457,15 @@ fun ThemeConfigScreen(
                                 valueRange = 0f..100f,
                                 onValueChange = { value ->
                                     updateTheme { it.copy(colorTemperature = value.toInt()) }
+                                }
+                            )
+
+                            SwitchSettingItem(
+                                title = stringResource(R.string.eye_protection_auto_night),
+                                description = stringResource(R.string.eye_protection_auto_night_summary),
+                                checked = theme.eyeProtectionAutoNight,
+                                onCheckedChange = { value ->
+                                    updateTheme { it.copy(eyeProtectionAutoNight = value) }
                                 }
                             )
 
@@ -946,40 +954,6 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePickerDialog(
-    title: String,
-    currentValue: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    val timePickerState = rememberTimePickerState(
-        initialHour = currentValue.substringBefore(':').toIntOrNull()?.coerceIn(0, 23) ?: 0,
-        initialMinute = currentValue.substringAfter(':', "").toIntOrNull()?.coerceIn(0, 59) ?: 0,
-        is24Hour = true,
-    )
-    AppAlertDialog(
-        show = true,
-        onDismissRequest = onDismissRequest,
-        title = title,
-        content = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                TimePicker(state = timePickerState)
-            }
-        },
-        confirmText = stringResource(R.string.ok),
-        onConfirm = {
-            onConfirm("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
-        },
-        dismissText = stringResource(R.string.cancel),
-        onDismiss = onDismissRequest,
-    )
 }
 
 @Composable

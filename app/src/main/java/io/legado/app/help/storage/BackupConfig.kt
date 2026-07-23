@@ -249,6 +249,9 @@ object BackupConfig {
         PreferKey.eyeProtectionEnabled,
         PreferKey.colorTemperature,
         PreferKey.eyeProtectionAutoNight,
+        PreferKey.eyeProtectionSchedule,
+        PreferKey.eyeProtectionStartTime,
+        PreferKey.eyeProtectionEndTime,
     )
 
     private val themePrefKeys = arrayOf(

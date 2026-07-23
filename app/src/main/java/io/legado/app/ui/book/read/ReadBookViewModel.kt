@@ -54,7 +54,9 @@ import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleIntKey
 import io.legado.app.domain.gateway.ReadStyleMutation
 import io.legado.app.domain.gateway.ReadStyleStringKey
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.model.TextProcessAction
@@ -197,6 +199,7 @@ class ReadBookViewModel(
     private val otherSettingsGateway: OtherSettingsGateway,
     private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
     private val backupSettingsGateway: BackupSettingsGateway,
+    private val themeSettingsGateway: ThemeSettingsGateway,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -263,6 +266,7 @@ class ReadBookViewModel(
         ReadBook.register(this)
         refreshButtonConfigs()
         collectReadPreferences()
+        collectEyeProtectionSettings()
         collectReadAloudPreferences()
         collectEventBus()
         execute { syncConfiguredTtsVoices() }
@@ -1577,31 +1581,30 @@ class ReadBookViewModel(
             is ReadBookIntent.BooksDirSelected -> onBooksDirSelected(intent.uri)
 
             ReadBookIntent.ToggleEyeProtection -> toggleEyeProtection()
-            is ReadBookIntent.EyeProtectionEnabledChanged -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update { it.copy(eyeProtectionEnabled = intent.value) }
-                }
+            is ReadBookIntent.EyeProtectionEnabledChanged -> updateEyeProtection {
+                it.copy(eyeProtectionEnabled = intent.value)
             }
-            is ReadBookIntent.EyeProtectionIntensityChanged -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update { it.copy(eyeProtectionIntensity = intent.value) }
-                }
+            is ReadBookIntent.EyeProtectionIntensityChanged -> updateEyeProtection {
+                it.copy(colorTemperature = intent.value.coerceIn(0, 100))
             }
-            is ReadBookIntent.EyeProtectionAutoNightChanged -> {
-                viewModelScope.launch {
-                    readSettingsRepository.update { it.copy(eyeProtectionAutoNight = intent.value) }
-                }
+            is ReadBookIntent.EyeProtectionAutoNightChanged -> updateEyeProtection {
+                it.copy(eyeProtectionAutoNight = intent.value)
+            }
+            is ReadBookIntent.EyeProtectionScheduleChanged -> updateEyeProtection {
+                it.copy(eyeProtectionSchedule = intent.value)
+            }
+            is ReadBookIntent.EyeProtectionStartTimeChanged -> updateEyeProtection {
+                it.copy(eyeProtectionStartTime = intent.value)
+            }
+            is ReadBookIntent.EyeProtectionEndTimeChanged -> updateEyeProtection {
+                it.copy(eyeProtectionEndTime = intent.value)
             }
             is ReadBookIntent.SyncEyeProtectionForTheme -> {
                 EyeProtection.syncEnabledForNight(
                     isNight = intent.isNight,
-                    autoNight = _readPreferences.value.eyeProtectionAutoNight,
+                    autoNight = _uiState.value.eyeProtection.autoNight,
                 )?.let { enabled ->
-                    viewModelScope.launch {
-                        readSettingsRepository.update {
-                            it.copy(eyeProtectionEnabled = enabled)
-                        }
-                    }
+                    updateEyeProtection { it.copy(eyeProtectionEnabled = enabled) }
                 }
             }
         }
@@ -2247,6 +2250,25 @@ class ReadBookViewModel(
         }
     }
 
+    private fun collectEyeProtectionSettings() {
+        viewModelScope.launch {
+            themeSettingsGateway.settings.collect { settings ->
+                _uiState.update {
+                    it.copy(
+                        eyeProtection = EyeProtectionUiState(
+                            enabled = settings.eyeProtectionEnabled,
+                            intensity = settings.colorTemperature,
+                            autoNight = settings.eyeProtectionAutoNight,
+                            schedule = settings.eyeProtectionSchedule,
+                            startTime = settings.eyeProtectionStartTime,
+                            endTime = settings.eyeProtectionEndTime,
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun syncReadPreferencesSnapshot() {
         val preferences = readSettingsRepository.preferences.first()
         _readPreferences.value = preferences
@@ -2319,12 +2341,12 @@ class ReadBookViewModel(
         }
     }
 
-    private fun toggleEyeProtection() {
-        viewModelScope.launch {
-            readSettingsRepository.update {
-                it.copy(eyeProtectionEnabled = !_readPreferences.value.eyeProtectionEnabled)
-            }
-        }
+    private fun toggleEyeProtection() = updateEyeProtection {
+        it.copy(eyeProtectionEnabled = !_uiState.value.eyeProtection.enabled)
+    }
+
+    private fun updateEyeProtection(transform: (ThemeSettings) -> ThemeSettings) {
+        viewModelScope.launch { themeSettingsGateway.update(transform) }
     }
 
     private fun ReadPreferences.hasMenuClickArea(): Boolean {

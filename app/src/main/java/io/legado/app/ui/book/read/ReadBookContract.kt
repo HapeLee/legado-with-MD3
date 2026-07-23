@@ -330,10 +330,22 @@ data class ReadBookUiState(
     val aiTextClean: AiTextCleanUiState = AiTextCleanUiState(),
     val aiTextRewrite: AiTextRewriteUiState = AiTextRewriteUiState(),
     val aiRewritePresetConfig: AiRewritePresetConfigUiState = AiRewritePresetConfigUiState(),
+    val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
 }
+
+/** 护眼模式设置，来源是 ThemeSettings，与外观设置共用同一份值。 */
+@Stable
+data class EyeProtectionUiState(
+    val enabled: Boolean = false,
+    val intensity: Int = 50,
+    val autoNight: Boolean = false,
+    val schedule: Boolean = false,
+    val startTime: String = "22:00",
+    val endTime: String = "07:00",
+)
 
 @Stable
 data class HighlightRuleConfigUiState(
@@ -665,6 +677,9 @@ sealed interface ReadBookIntent {
     data class EyeProtectionEnabledChanged(val value: Boolean) : ReadBookIntent
     data class EyeProtectionIntensityChanged(val value: Int) : ReadBookIntent
     data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionScheduleChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionStartTimeChanged(val value: String) : ReadBookIntent
+    data class EyeProtectionEndTimeChanged(val value: String) : ReadBookIntent
     data class SyncEyeProtectionForTheme(val isNight: Boolean) : ReadBookIntent
 
     // Default font picker (needs Activity for AlertDialog)
