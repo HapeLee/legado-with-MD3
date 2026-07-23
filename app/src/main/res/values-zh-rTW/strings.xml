@@ -1797,7 +1797,7 @@
     <string name="compact_list">精簡列表</string>
     <string name="author_read">%1$s • %2$d 未讀</string>
     <string name="menu_alpha_sum">目前 %d%%</string>
-    <string name="menu_alpha">選單透明度</string>
+    <string name="menu_alpha">選單不透明度</string>
     <string name="change_source_option_title">選擇操作</string>
     <string name="replace_current_book">取代此書</string>
     <string name="add_as_new_book">新增為新書</string>

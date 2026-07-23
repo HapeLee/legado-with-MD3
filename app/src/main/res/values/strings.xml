@@ -1704,7 +1704,7 @@
     <string name="compact_list">Compact List</string>
     <string name="author_read">%1$s • %2$d Not read</string>
     <string name="menu_alpha_sum">Current %d%%</string>
-    <string name="menu_alpha">Menu Transparency</string>
+    <string name="menu_alpha">Menu opacity</string>
     <string name="change_source_option_title">Choose an Action</string>
     <string name="replace_current_book">Replace This Book</string>
     <string name="add_as_new_book">Add as New Book</string>

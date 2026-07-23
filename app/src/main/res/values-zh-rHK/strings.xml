@@ -1867,7 +1867,7 @@
     <string name="manual_input">手動輸入</string>
     <string name="match_pattern">匹配模式</string>
     <string name="material_version">顏色規格</string>
-    <string name="menu_alpha">選單透明度</string>
+    <string name="menu_alpha">選單不透明度</string>
     <string name="menu_alpha_sum">目前 %d%%</string>
     <string name="minify_json">壓縮</string>
     <string name="month_format">%1$d</string>
