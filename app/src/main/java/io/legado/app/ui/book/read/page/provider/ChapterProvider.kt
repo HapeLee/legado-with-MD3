@@ -1108,6 +1108,7 @@ object ChapterProvider {
         viewWidth = width
         viewHeight = height
         upLayout()
+        ReadBook.requestWholeBookPageEstimate()
         postEvent(EventBus.UP_CONFIG, arrayListOf(12))
     }
 

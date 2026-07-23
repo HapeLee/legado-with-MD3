@@ -1023,6 +1023,7 @@ sealed interface ConfigUpdateAction {
     data object UpdateChapterStyle : ConfigUpdateAction
     data object InvalidateTextPage : ConfigUpdateAction
     data object UpdateLayout : ConfigUpdateAction
+    data object RebuildWholeBookPageIndex : ConfigUpdateAction
     data object SubmitRenderTask : ConfigUpdateAction
     data object UpdatePageAnim : ConfigUpdateAction
 }
@@ -1066,7 +1067,10 @@ sealed interface ConfigUpdate {
 
     // --- Title style ---
     data class TitleMode(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
+            ConfigUpdateAction.ReloadContent,
+        )
     }
     data class TitleBold(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
@@ -1178,6 +1182,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent,
             ConfigUpdateAction.UpdateSystemUi,
             ConfigUpdateAction.UpdatePageAnim
@@ -1187,6 +1192,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent,
             ConfigUpdateAction.UpdatePageAnim
         )
@@ -1195,6 +1201,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdatePageAnim,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent
         )
     }
@@ -1461,22 +1468,22 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ReadBodyToLh(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class DefaultSourceChangeAll(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class TextFullJustify(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class TextBottomJustify(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class AdaptSpecialStyle(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class UseZhLayout(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class ShowBrightnessView(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
@@ -1564,6 +1571,6 @@ sealed interface ConfigUpdate {
 
     // --- Chinese converter ---
     data class ChineseConverterType(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
 }

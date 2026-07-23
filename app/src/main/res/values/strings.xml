@@ -2231,6 +2231,11 @@
     <string name="lab_eink_display_title">E-Ink Display</string>
     <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
     <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
+    <string name="lab_diagnostics">Diagnostics</string>
+    <string name="lab_page_estimate_diagnostics_title">Export page estimate diagnostics</string>
+    <string name="lab_page_estimate_diagnostics_summary">Share the latest local-only estimate and correction records. Nothing is uploaded automatically.</string>
+    <string name="lab_page_estimate_diagnostics_count">%1$d records</string>
+    <string name="lab_page_estimate_diagnostics_share_title">Share page estimate diagnostics</string>
 
     <!-- Eye Protection -->
     <string name="eye_protection">Eye Protection</string>
@@ -2882,4 +2887,7 @@
     <string name="ai_prompt_task_identify_characters">Character Identification</string>
     <string name="ai_prompt_task_identify_characters_desc">Read downloaded chapters and suggest stable character profiles</string>
     <string name="ai_prompt_default_identify_characters">Use read-only tools to inspect downloaded local chapters and existing characters. Return JSON only: {"characters":[{"name":string,"aliases":[string],"voiceGender":"male|female|unknown","voiceAgeBand":"child|teen|young_adult|adult|elderly|unknown","role":"male_lead|female_lead|male_supporting|female_supporting|","personality":string,"summary":string,"evidence":string,"confidence":number}]}. Do not create pronouns, generic titles, or one-off passers-by as characters. Use unknown rather than guessing. Do not duplicate existing names or aliases.</string>
+    <string name="whole_book_page_format">Book %1$d / %2$d</string>
+    <string name="whole_book_page_estimated_format">Book %1$s / %2$s</string>
+    <string name="whole_book_page_unavailable">Book - / -</string>
 </resources>

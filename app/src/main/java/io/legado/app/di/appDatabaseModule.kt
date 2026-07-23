@@ -44,6 +44,7 @@ val appDatabaseModule = module {
     factory<CacheDao> { get<AppDatabase>().cacheDao }
     factory<RuleSubDao> { get<AppDatabase>().ruleSubDao }
     factory<DictRuleDao> { get<AppDatabase>().dictRuleDao }
+    factory<ExactChapterPageCountDao> { get<AppDatabase>().exactChapterPageCountDao }
     factory<KeyboardAssistsDao> { get<AppDatabase>().keyboardAssistsDao }
     factory<ServerDao> { get<AppDatabase>().serverDao }
     factory<HomepageModuleDao> { get<AppDatabase>().homepageModuleDao }

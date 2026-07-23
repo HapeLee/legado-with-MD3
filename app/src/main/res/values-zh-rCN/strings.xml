@@ -2210,6 +2210,11 @@
     <string name="lab_eink_display_title">墨水屏显示</string>
     <string name="lab_eink_display_summary">在平板界面显示墨水屏选项</string>
     <string name="lab_eink_display_hint">可在 主题 → 显示 中调整墨水屏设置</string>
+    <string name="lab_diagnostics">诊断</string>
+    <string name="lab_page_estimate_diagnostics_title">导出全文页码诊断</string>
+    <string name="lab_page_estimate_diagnostics_summary">分享本机最近的估算与校正记录，不会自动上传。</string>
+    <string name="lab_page_estimate_diagnostics_count">%1$d 条</string>
+    <string name="lab_page_estimate_diagnostics_share_title">分享全文页码诊断</string>
 
     <!-- 护眼模式 -->
     <string name="eye_protection">护眼模式</string>
@@ -2871,4 +2876,7 @@
     <string name="ai_prompt_task_identify_characters">人物识别</string>
     <string name="ai_prompt_task_identify_characters_desc">读取已下载章节并建议稳定的人物档案</string>
     <string name="ai_prompt_default_identify_characters">使用只读工具查看已下载的本地章节和既有人物。只返回 JSON：{"characters":[{"name":string,"aliases":[string],"voiceGender":"male|female|unknown","voiceAgeBand":"child|teen|young_adult|adult|elderly|unknown","role":"male_lead|female_lead|male_supporting|female_supporting|","personality":string,"summary":string,"evidence":string,"confidence":number}]}。不要把代词、泛称谓或一次性路人识别为人物；不确定时使用 unknown；不要与已有姓名或别名重复。</string>
+    <string name="whole_book_page_format">全文 %1$d / %2$d</string>
+    <string name="whole_book_page_estimated_format">全文 %1$s / %2$s</string>
+    <string name="whole_book_page_unavailable">全文 - / -</string>
 </resources>
