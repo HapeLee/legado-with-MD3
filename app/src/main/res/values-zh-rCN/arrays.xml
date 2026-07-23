@@ -98,6 +98,7 @@
         <item>仅电量图标</item>
         <item>电量%</item>
         <item>页数</item>
+        <item>全文页数(仅本地书籍)</item>
         <item>进度(%)</item>
         <item>进度(xx/yyy)</item>
         <item>页数及进度</item>

@@ -26,7 +26,9 @@ enum class CustomTipPlaceholder(
     CHAPTER_SIZE("{ChapterSize}", "ChapterSize", R.string.placeholder_chapter_size),
     PAGE_INDEX("{PageIndex}", "PageIndex", R.string.placeholder_page_index),
     PAGE_SIZE("{PageSize}", "PageSize", R.string.placeholder_page_size),
-    READ_PROGRESS("{ReadProgress}", "ReadProgress", R.string.placeholder_read_progress);
+    READ_PROGRESS("{ReadProgress}", "ReadProgress", R.string.placeholder_read_progress),
+    FULL_PAGE_INDEX("{FullPageIndex}", "FullPageIndex", R.string.placeholder_full_page_index),
+    FULL_PAGE_SIZE("{FullPageSize}", "FullPageSize", R.string.placeholder_full_page_size);
 
     companion object {
         /** 占位符 key（即花括号内的部分），用于校验。 */

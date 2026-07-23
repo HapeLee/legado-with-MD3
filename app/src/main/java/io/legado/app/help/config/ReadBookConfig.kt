@@ -68,6 +68,7 @@ object ReadBookConfig {
     const val tipTimeBatteryClassic = 16
     const val tipChapterTitleArrowClassic = 17
     const val tipCustom = 18
+    const val tipFullPage = 19
     // endregion
 
     const val configFileName = "readConfig.json"
@@ -778,8 +779,8 @@ object ReadBookConfig {
     val tipValues = arrayOf(
         tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
         tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon, tipBatteryPercentage,
-        tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
-        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipCustom
+        tipPage, tipFullPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
+        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipCustom, tipFullPage
     )
     val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
     val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()

@@ -1213,6 +1213,11 @@
     <string name="placeholder_page_index">PageIndex</string>
     <string name="placeholder_page_size">PageSize</string>
     <string name="placeholder_read_progress">ReadProgress</string>
+    <string name="placeholder_full_page_index">FullPageIndex</string>
+    <string name="placeholder_full_page_size">FullPageSize</string>
+    <string name="placeholder_full_page_progress">FullProgress</string>
+    <string name="full_book_pagination">Full-book Pagination</string>
+    <string name="full_book_paginating">Full-book paginating&#8230;</string>
     <string name="sort_by_size">Sort by size</string>
     <string name="welcome_style">Launch interface style</string>
     <string name="welcome_style_summary">Startup screen image and whether to display text, etc.</string>

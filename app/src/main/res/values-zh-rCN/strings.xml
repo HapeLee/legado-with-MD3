@@ -2382,6 +2382,11 @@
     <string name="placeholder_page_index">当前页码</string>
     <string name="placeholder_page_size">本章页数</string>
     <string name="placeholder_read_progress">阅读进度</string>
+    <string name="placeholder_full_page_index">全文页码</string>
+    <string name="placeholder_full_page_size">全文页数</string>
+    <string name="placeholder_full_page_progress">全文进度</string>
+    <string name="full_book_pagination">全文分页</string>
+    <string name="full_book_paginating">正在进行全文分页…</string>
     <!-- Missing zh-rTW/HK translations (683 keys) -->
 
     <!-- 日夜间/深浅色主题切换提醒 -->
