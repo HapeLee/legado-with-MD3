@@ -71,6 +71,8 @@ data class TextChapter(
 
     var isCompleted = false
 
+    var pageEstimateGeneration = 0L
+
     val paragraphs by lazy {
         paragraphsInternal
     }

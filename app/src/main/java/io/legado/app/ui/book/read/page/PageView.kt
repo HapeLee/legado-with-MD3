@@ -62,6 +62,8 @@ class PageView(
     private var tvTotalProgress: BatteryView? = null
     private var tvTotalProgress1: BatteryView? = null
     private var tvPageAndTotal: BatteryView? = null
+    private var tvWholeBookPage: BatteryView? = null
+    private var tvWholeBookPageAndProgress: BatteryView? = null
     private var tvBookName: BatteryView? = null
     private var tvTimeBattery: BatteryView? = null
     private var tvTimeBatteryP: BatteryView? = null
@@ -362,6 +364,19 @@ class PageView(
             typeface = tipTypeface
             textSize = tipTextSize
         }
+        tvWholeBookPage = getTipView(ReadBookConfig.tipWholeBookPage)?.apply {
+            tag = ReadBookConfig.tipWholeBookPage
+            batteryMode = BatteryView.BatteryMode.NO_BATTERY
+            typeface = tipTypeface
+            textSize = tipTextSize
+        }
+        tvWholeBookPageAndProgress =
+            getTipView(ReadBookConfig.tipWholeBookPageAndProgress)?.apply {
+                tag = ReadBookConfig.tipWholeBookPageAndProgress
+                batteryMode = BatteryView.BatteryMode.NO_BATTERY
+                typeface = tipTypeface
+                textSize = tipTextSize
+            }
         tvBookName = getTipView(ReadBookConfig.tipBookName)?.apply {
             tag = ReadBookConfig.tipBookName
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
@@ -592,6 +607,24 @@ class PageView(
         tvTitleArrow?.setTextIfNotEqual(textPage.title)
         tvTitleArrowClassic?.setTextIfNotEqual(textPage.title)
         val readProgress = readProgress
+        val wholeBookPage = ReadBook.getWholeBookPageState(chapterIndex, index)
+        val pageDisplay = wholeBookPage?.let {
+            if (!it.estimated && it.allPreviousChaptersExact) {
+                context.getString(R.string.whole_book_page_format, it.currentPage, it.totalPages)
+            } else {
+                val currentPage = if (it.allPreviousChaptersExact) {
+                    it.currentPage.toString()
+                } else {
+                    "≈${it.currentPage}"
+                }
+                val totalPages = if (it.estimated) "≈${it.totalPages}" else it.totalPages.toString()
+                context.getString(
+                    R.string.whole_book_page_estimated_format,
+                    currentPage,
+                    totalPages,
+                )
+            }
+        }
         tvTotalProgress?.setTextIfNotEqual(readProgress)
         tvTotalProgress1?.setTextIfNotEqual("${chapterIndex.plus(1)}/${chapterSize}")
         if (textChapter.isCompleted) {
@@ -603,6 +636,12 @@ class PageView(
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }
+        val wholeBookPageDisplay = pageDisplay
+            ?: context.getString(R.string.whole_book_page_unavailable)
+        tvWholeBookPage?.setTextIfNotEqual(wholeBookPageDisplay)
+        tvWholeBookPageAndProgress?.setTextIfNotEqual(
+            "$wholeBookPageDisplay  $readProgress"
+        )
         upCustomTip(textPage)
         this@PageView.layoutSync()
     }

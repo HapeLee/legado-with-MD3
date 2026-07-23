@@ -2143,6 +2143,13 @@ class ReadBookViewModel(
                         else -> null
                     }
                 }.toSet()
+                    .let { actions ->
+                        if (5 in values) {
+                            setOf(ConfigUpdateAction.RebuildWholeBookPageIndex) + actions
+                        } else {
+                            actions
+                        }
+                    }
                 if (actions.isNotEmpty()) {
                     emitEffectWhenSubscribed(ReadBookEffect.UpdateReadViewConfig(actions))
                 }

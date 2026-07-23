@@ -843,9 +843,17 @@ class ReadBookController(
                         ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
                         ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) ReadBook.relayoutContent()
                         ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
-                        ConfigUpdateAction.UpdateChapterStyle -> ChapterProvider.upStyle()
+                        ConfigUpdateAction.UpdateChapterStyle -> {
+                            ChapterProvider.upStyle()
+                            ReadBook.requestWholeBookPageEstimate()
+                        }
                         ConfigUpdateAction.InvalidateTextPage -> r.readView.invalidateTextPage()
-                        ConfigUpdateAction.UpdateLayout -> ChapterProvider.upLayout()
+                        ConfigUpdateAction.UpdateLayout -> {
+                            ChapterProvider.upLayout()
+                            ReadBook.requestWholeBookPageEstimate()
+                        }
+                        ConfigUpdateAction.RebuildWholeBookPageIndex ->
+                            ReadBook.requestWholeBookPageEstimate()
                         ConfigUpdateAction.SubmitRenderTask -> r.readView.submitRenderTask()
                         ConfigUpdateAction.UpdatePageAnim -> r.readView.upPageAnim()
                     }
