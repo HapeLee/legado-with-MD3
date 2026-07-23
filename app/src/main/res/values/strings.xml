@@ -2882,4 +2882,5 @@
     <string name="ai_prompt_task_identify_characters">Character Identification</string>
     <string name="ai_prompt_task_identify_characters_desc">Read downloaded chapters and suggest stable character profiles</string>
     <string name="ai_prompt_default_identify_characters">Use read-only tools to inspect downloaded local chapters and existing characters. Return JSON only: {"characters":[{"name":string,"aliases":[string],"voiceGender":"male|female|unknown","voiceAgeBand":"child|teen|young_adult|adult|elderly|unknown","role":"male_lead|female_lead|male_supporting|female_supporting|","personality":string,"summary":string,"evidence":string,"confidence":number}]}. Do not create pronouns, generic titles, or one-off passers-by as characters. Use unknown rather than guessing. Do not duplicate existing names or aliases.</string>
+    <string name="translation_model_thinking">Model is thinking</string>
 </resources>

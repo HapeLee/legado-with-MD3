@@ -2659,4 +2659,5 @@
     <string name="character_delete_relations">同時刪除關聯關係</string>
     <string name="character_delete_events">同時刪除人物事件</string>
     <string name="character_deleted">已刪除人物</string>
+    <string name="translation_model_thinking">模型思考中</string>
 </resources>

@@ -2871,4 +2871,5 @@
     <string name="ai_prompt_task_identify_characters">人物识别</string>
     <string name="ai_prompt_task_identify_characters_desc">读取已下载章节并建议稳定的人物档案</string>
     <string name="ai_prompt_default_identify_characters">使用只读工具查看已下载的本地章节和既有人物。只返回 JSON：{"characters":[{"name":string,"aliases":[string],"voiceGender":"male|female|unknown","voiceAgeBand":"child|teen|young_adult|adult|elderly|unknown","role":"male_lead|female_lead|male_supporting|female_supporting|","personality":string,"summary":string,"evidence":string,"confidence":number}]}。不要把代词、泛称谓或一次性路人识别为人物；不确定时使用 unknown；不要与已有姓名或别名重复。</string>
+    <string name="translation_model_thinking">模型思考中</string>
 </resources>

@@ -15,6 +15,7 @@ data class TranslationChapterKey(
 enum class TranslationChapterStatus {
     Idle,
     Translating,
+    Thinking,
     Translated,
     Failed
 }
