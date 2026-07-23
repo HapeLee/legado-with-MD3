@@ -1042,7 +1042,11 @@ class BookInfoViewModel(
     private fun onShelfClick() {
         val book = currentBook ?: return
         if (inBookshelf) {
-            showDialog(BookInfoDialog.DeleteBook(book.isLocal))
+            if (LocalConfig.bookInfoDeleteAlert) {
+                showDialog(BookInfoDialog.DeleteBook(book.isLocal))
+            } else {
+                deleteBook(LocalConfig.deleteBookOriginal)
+            }
         } else if (book.isWebFile) {
             setSheet(BookInfoSheet.WebFiles(openAfterImport = false))
         } else {
