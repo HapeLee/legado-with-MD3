@@ -1,6 +1,7 @@
 package io.legado.app.utils
 
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import org.jsoup.Jsoup
 import java.net.URL
 import java.util.regex.Pattern
 
@@ -32,6 +33,17 @@ object HtmlFormatter {
             .replace(indent1Regex, "\n　　")
             .replace(indent2Regex, "　　")
             .replace(lastRegex, "")
+    }
+
+    /**
+     * Formats untrusted HTML for plain-text UI surfaces.
+     * Script and style elements must be removed with their contents before stripping tags.
+     */
+    fun formatDisplayText(html: String?): String {
+        if (html.isNullOrBlank()) return ""
+        val body = Jsoup.parseBodyFragment(html).body()
+        body.select("script, style, noscript").remove()
+        return format(body.html())
     }
 
     fun formatKeepImg(html: String?, redirectUrl: URL? = null): String {

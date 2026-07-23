@@ -60,6 +60,7 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.toTimeAgo
 import kotlinx.collections.immutable.ImmutableList
 
@@ -755,7 +756,7 @@ fun BookItem(
         columnContent = if (layoutMode == 0 && !isCompact && settings.showBookIntro) {
             {
                 val kindList = bookUi.displayTags
-                val intro = book.intro?.takeIf { it.isNotBlank() }
+                val intro = HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
                 if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
                         modifier = Modifier
