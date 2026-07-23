@@ -12,8 +12,11 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
@@ -29,20 +32,23 @@ import top.yukonga.miuix.kmp.theme.defaultTextStyles
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
     val context = LocalContext.current.applicationContext
-    val cachedFont = remember(fontPath) {
-        fontPath?.let { synchronized(customFontCache) { customFontCache.get(it) } }
+    val path = fontPath?.takeIf(String::isNotBlank)
+    val cachedFont = remember(path) {
+        path?.let { synchronized(customFontCache) { customFontCache.get(it) } }
     }
-    return produceState(cachedFont, fontPath, context) {
-        if (value == null) {
-            value = fontPath?.takeIf(String::isNotBlank)?.let { path ->
-                withContext(Dispatchers.IO) {
-                    loadCustomFont(context, path)?.also { fontFamily ->
-                        synchronized(customFontCache) { customFontCache.put(path, fontFamily) }
-                    }
-                }
+    // 加载结果跨 path 保留：切换字体时旧字体一直用到新字体就位，
+    // 中途不回落默认字体。
+    var loadedFont by remember(context) { mutableStateOf<FontFamily?>(null) }
+    LaunchedEffect(path, context) {
+        if (path == null || cachedFont != null) return@LaunchedEffect
+        loadedFont = withContext(Dispatchers.IO) {
+            loadCustomFont(context, path)?.also {
+                synchronized(customFontCache) { customFontCache.put(path, it) }
             }
         }
-    }.value
+    }
+    // path 为空即"清除"，必须当帧生效，不能受 loadedFont 影响。
+    return if (path == null) null else cachedFont ?: loadedFont
 }
 
 private val customFontCache = LruCache<String, FontFamily>(4)
