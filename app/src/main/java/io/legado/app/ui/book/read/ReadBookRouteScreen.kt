@@ -6,8 +6,10 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -532,13 +534,28 @@ fun ReadBookRouteScreen(
 
     var showSelectMenuConfigSheet by rememberSaveable { mutableStateOf(false) }
 
-    Box(
-        Modifier.fillMaxSize()
-    ) {
+    val firstFrameTracker = remember(controller) {
+        val requestedStart = controller.activity.intent.getLongExtra(
+            EXTRA_FIRST_FRAME_STARTED_AT_NANOS,
+            0L,
+        )
+        ReaderFirstFrameTracker(
+            startedAtNanos = requestedStart.takeIf { it > 0L }
+                ?: SystemClock.elapsedRealtimeNanos(),
+        )
+    }
+
+    Box(Modifier.fillMaxSize()) {
         key(controller) {
             ReadBookViewLayer(
                 modifier = Modifier
-                    .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
+                    .then(
+                        if (useMenuHazeSource) {
+                            Modifier.hazeSource(menuHazeState)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .layerBackdrop(menuBackdrop),
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
@@ -546,6 +563,7 @@ fun ReadBookRouteScreen(
                 contentTextViewCallBack = controller,
                 isDarkTheme = isDarkTheme,
                 onThemeChanged = controller::onAppThemeChanged,
+                onFirstContentDrawn = firstFrameTracker::report,
             )
         }
         ReadBookColorTheme(
@@ -674,6 +692,7 @@ private fun ReadBookViewLayer(
     contentTextViewCallBack: ContentTextView.CallBack,
     isDarkTheme: Boolean,
     onThemeChanged: (Boolean) -> Unit,
+    onFirstContentDrawn: () -> Unit,
 ) {
     AndroidView(
         modifier = modifier.fillMaxSize(),
@@ -742,6 +761,19 @@ private fun ReadBookViewLayer(
                         navigationBar = navigationBar,
                     )
                 )
+                val root = this
+                val firstDrawListener = object : ViewTreeObserver.OnDrawListener {
+                    override fun onDraw() {
+                        if (readView.curPage.textPage.lines.isEmpty()) return
+                        onFirstContentDrawn()
+                        root.post {
+                            if (root.viewTreeObserver.isAlive) {
+                                root.viewTreeObserver.removeOnDrawListener(this)
+                            }
+                        }
+                    }
+                }
+                viewTreeObserver.addOnDrawListener(firstDrawListener)
             }
         },
         update = {

@@ -91,6 +91,14 @@ class PageView(
             return binding.vwRoot.paddingStart
         }
 
+    val contentOffsetX: Int get() = binding.contentTextView.left
+
+    val contentOffsetY: Int get() = binding.contentTextView.top
+
+    val contentWidth: Int get() = binding.contentTextView.width
+
+    val contentHeight: Int get() = binding.contentTextView.height
+
     init {
         callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
@@ -821,6 +829,8 @@ class PageView(
     val selectedText: String get() = binding.contentTextView.getSelectedText()
 
     val selectStartPos get() = binding.contentTextView.selectStart
+
+    val selectEndPos get() = binding.contentTextView.selectEndPosition
 
     companion object {
         /**

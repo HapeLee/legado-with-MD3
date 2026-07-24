@@ -95,6 +95,11 @@ class ReadBookController(
 
     var refs: ReadBookViewRefs? = null
 
+    internal val layoutController = ReaderLayoutCoordinator(
+        updateLayoutSize = ChapterProvider::upViewSize,
+        relayoutContent = ReadBook::relayoutContent,
+    )
+
     // Fallback handler for effects not yet migrated to controller
     var onUnhandledEffect: (ReadBookEffect) -> Unit = {}
     var onClose: (() -> Unit)? = null
@@ -417,6 +422,7 @@ class ReadBookController(
     // ── ContentTextView.CallBack ──────────────────────────────────────
 
     override val headerHeight: Int get() = refs?.readView?.curPage?.headerHeight ?: 0
+    override val readerLayoutController: ReaderLayoutController get() = layoutController
     override val imgBgPaddingStart: Int get() = refs?.readView?.curPage?.imgBgPaddingStart ?: 0
     override val pageFactory: TextPageFactory
         get() = refs?.readView?.pageFactory ?: error("ReadView not ready")
@@ -853,6 +859,9 @@ class ReadBookController(
         resetPageOffset: Boolean,
         success: (() -> Unit)?
     ) {
+        if (layoutController.awaitViewport() == null) {
+            AppLog.putDebug("upContentAwait 等待 ReaderViewport 超时，继续旧内容更新路径")
+        }
         withContext(Main.immediate) {
             handleEffect(ReadBookEffect.UpContent(relativePosition, resetPageOffset, success))
         }
@@ -900,7 +909,9 @@ class ReadBookController(
                         ConfigUpdateAction.UpdateBackgroundAlpha -> r.readView.upBgAlpha()
                         ConfigUpdateAction.UpdatePageSlopSquare -> r.readView.upPageSlopSquare()
                         ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
-                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) ReadBook.relayoutContent()
+                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) {
+                            layoutController.requestRelayout()
+                        }
                         ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
                         ConfigUpdateAction.UpdateChapterStyle -> {
                             ChapterProvider.upStyle()
@@ -990,6 +1001,7 @@ class ReadBookController(
             }
 
             is ReadBookEffect.LayoutPageCompleted -> {
+                layoutController.publishPageLayout(effect.index)
                 upSeekBarThrottle.invoke()
                 refs?.readView?.onLayoutPageCompleted(effect.index, effect.page)
             }

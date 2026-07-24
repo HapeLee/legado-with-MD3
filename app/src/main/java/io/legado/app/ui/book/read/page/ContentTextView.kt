@@ -12,6 +12,8 @@ import io.legado.app.help.book.isOnLineTxt
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.ui.book.read.page.delegate.PageDelegate
+import io.legado.app.ui.book.read.ReaderLayoutController
+import io.legado.app.ui.book.read.ReaderViewport
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -54,6 +56,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     private val visibleRect = ChapterProvider.visibleRect
     val selectStart = TextPos(0, -1, -1)
     private val selectEnd = TextPos(0, -1, -1)
+    val selectEndPosition: TextPos get() = selectEnd
     var textPage: TextPage = TextPage()
         private set
     var isMainView = false
@@ -98,7 +101,13 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (!isMainView || MainNavigator.backNavigationInProgress) return
-        ChapterProvider.upViewSize(w, h)
+        requireCallBack.readerLayoutController.updateViewport(
+            ReaderViewport(
+                widthPx = w,
+                heightPx = h,
+                density = resources.displayMetrics.density,
+            )
+        )
         textPage.format()
     }
 
@@ -773,6 +782,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     }
 
     interface CallBack {
+        val readerLayoutController: ReaderLayoutController
         val headerHeight: Int
         val imgBgPaddingStart: Int
         val pageFactory: TextPageFactory

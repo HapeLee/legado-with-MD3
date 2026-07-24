@@ -33,7 +33,22 @@
 
 **③ F1 收尾**：仍缺一个**显式跑 `testAppDebugUnitTest` + `lintAppDebug` 的 CI job**——这是 F1 唯一没关上的门（当前单测失败/新增 lint 违规不会让 CI 红）。
 
-**④ Track A**：**A1–A5 已全部落地**。A1–A3：`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`，外部 6 处写入改走 `replaceCurrentBook`/`clearCurrentBook`/`updateReadingPosition` + `isCurrentBook` 谓词，编译器证明外部写入点为 0。A4：`LegacyReaderSnapshot` + `ReadBook.snapshot: StateFlow`，`publishSnapshot()` 落在 14 个内部 mutator + 3 个命令的原子末尾。A5：`ReaderSession` 接口 + `LegacyReaderSession` 桥接（`model/ReaderSession.kt`，Koin 注册），`ReadBookViewModel` 已注入并 `collectReaderSession()` 反应式消费。**Track B / C**：均未开始。
+**④ Track A**：**A1–A5 已全部落地**。A1–A3：`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`，外部 6 处写入改走 `replaceCurrentBook`/`clearCurrentBook`/`updateReadingPosition` + `isCurrentBook` 谓词，编译器证明外部写入点为 0。A4：`LegacyReaderSnapshot` + `ReadBook.snapshot: StateFlow`，`publishSnapshot()` 落在 14 个内部 mutator + 3 个命令的原子末尾。A5：`ReaderSession` 接口 + `LegacyReaderSession` 桥接（`model/ReaderSession.kt`，Koin 注册），`ReadBookViewModel` 已注入并 `collectReaderSession()` 反应式消费。
+
+**⑤ Track B**：**B1/B2 已落地**（渲染子集下沉），端游剩余项见下。**Track C**：**C0–C5 已落地后按 2026-07-21 决策暂停**（Compose overlay 冻结为 flag 下的可选渲染器，不推进 C6–C9），详见下方 ⑥ 与 `docs/dev/track-c-compose-reader-plan.md` 顶部状态。
+
+- **B1（接口切分）**：`ReadBook.CallBack` 切成 `ReaderRenderCallback`（渲染子集：`upContent`/`upContentAwait`/`pageChanged`/`contentLoadFinish`/`upPageAnim`/`cancelSelect` + `LayoutProgressListener`）与状态子集 `CallBack`（`upMenuView`/`loadChapterList`/`notifyBookChanged`/`sureNewProgress`）。
+- **B2（渲染下沉）**：新增 `ReadBook.renderCallBack: ReaderRenderCallback` 独立槽位；30+ 处渲染调用点由 `callBack?.` 改走 `renderCallBack?.`。`ReadBookController` 实现 `ReaderRenderCallback`，`onRefsReady` 注册 / `clearTts` 注销，渲染方法复用既有 `handleEffect` 分支（零渲染逻辑漂移）。**线程关键点**：`ReadBook` 在 `Coroutine.async`(默认 `Dispatchers.IO`) 里回调渲染，旧路径靠 VM 的 `SharedFlow`→生命周期收集器切主线程；B2 用 `handler.post`/`withContext(Main)` 保留同样的异步-切主线程语义。业务状态刷新改由 `collectReaderSession()` 收集快照驱动——为内容加载路径（`contentLoadFinish`/`contentLoadFinishAwait` 布局完成、`loadOrUpContent`、`upMsg`）补 `publishSnapshot()`，补齐旧 VM 渲染回调顺带做的 `syncFromReadBook`（尤其 `seekMax` 依赖 `curTextChapter.pages.size`）。`isInitFinish` 作为纯业务标志留在 VM，由 `controller.contentLoadFinish` 幂等置位。
+- **Track B 端游剩余（未做）**：① VM **仍实现** `ReadBook.CallBack`（状态子集），完整 B 验收「VM 不再实现 CallBack」需把状态子集也迁到 `ReaderSession`；② `emitEffectWhenSubscribed` 的 `subscriptionCount` 握手仍在（现仅服务于 `UpdateReadViewConfig` 这类非渲染 init 时序，一处），完整移除属端游；③ `PageChanged`/`ContentLoadFinish`/`LayoutPageCompleted` 三个 Effect 现在只由 controller 的渲染方法**直接**触发 `handleEffect`（不再经 `_effects` 总线），可在后续把这三个 handler 内联进渲染方法体、删掉对应 Effect 类。
+- **B2 验证边界（真机）**：翻页/换章时章节号与进度、seek bar 上限（page 模式依赖 `pages.size`，B2 改为布局完成后单次 `publishSnapshot` 刷新，非逐页）、首帧渲染（`registerRender` 已在有内容时立即同步一次）、朗读中翻页、`upContentAwait` 时序（B2 下 `withContext(Main)` 会在 await 内**同步**跑完视图更新，比旧实现「只 await emit」更靠后完成，需确认换章无闪烁/错序）。
+
+**⑥ 方向调整（2026-07-21）：Compose 阅读器暂停于 C5，新增 Track D（`ReadView` 自身业务解耦）为近期主线。**
+
+依据：C3 真机帧基线显示 Compose 渲染劣于旧 View（jank 50% vs 4.13%；50/90/95/99 = 30/42/44/53ms vs 5/8/21/65ms），且仿真卷曲/选择/滚动/自动翻页等成熟能力全量重写为「高回归风险、低用户收益」的改造。故：
+
+- **Track C 暂停、不删旧栈**：C0–C5 产物（`ReaderRenderer` 契约、`ReaderRenderModel`、`ComposeReaderSurface`、不可变 `ReaderPageSnapshot`）**保留在 lab flag 后，冻结为可选可插拔渲染器**（默认关），作为「将来真要换渲染器」的逃生舱与 parity 实验台。**C6–C9 不再是当前主线**，待后续专门的性能调查后再重估「Compose 默认 + 删 View」还是「View 永久渲染岛」。
+- **新增 Track D：把 `ReadView` 自身的出站业务耦合解掉**。核实（`ui/book/read/page/ReadView.kt`）：ReadView 仍直呼 `ReadBook.moveToNextChapter/moveToPrevChapter/moveToNextPage/moveToNextChapterAwait/syncProgress`、`ReadAloud.pause/resume`（509–750 行），并经 `callBack.*` 直接驱动书签/内容编辑/替换规则/目录/搜索/进度确认（504、513–519 行）。这是 A/B/C 都未触及的一面——A 收敛 `ReadBook` 所有权、B 把渲染回调移出 VM、C 让 Compose 面消费只读快照，**都没动 `ReadView` 的出站调用**。Track D 用 `ReaderEvent` 出站接口把这些业务调用路由回 `ReaderSession`/命令，让 View 阅读器本身符合 UDF——**不依赖 Compose**。设计见下方 Track D 节。
+- **C5 工作区改动保留**（`ComposeReaderSurface.kt`/`ReaderRenderModel.kt`/`ReaderRenderStateStoreTest.kt`/`ReaderPageSnapshot.kt`），作为冻结状态；可单独提交 `feat(Track C): C5 不可变快照（冻结为可选渲染器）`。
 
 ### 未提交
 
@@ -74,19 +89,22 @@
 - **不优先造扫描器**：写入面是个位数，用编译器（`private set`）约束，而不是先写 Detekt/lint 规则。
 - **不做万能 Repository**：DAO 去注入按功能逐批，不预先设计几十个大仓库。
 
-## 3. 三轨模型 + 两条横切地基
+## 3. 轨道模型 + 两条横切地基
 
-改造被拆成三条**相互解耦、可并行**的轨道，外加两条横切地基。关键洞察：三条轨道的进度互不阻塞，**除了 Track C 依赖 Track A/B 的产出**。
+改造被拆成若干**相互解耦、可并行**的轨道，外加两条横切地基。
 
 ```
 横切地基：
   F1  CI 质量门禁（测试/lint 基线/架构检查）
   F2  UI→DAO 去注入（全应用，非阅读器专属）
 
-Track A  所有权与业务状态   —— 现在就能做，最高优先级
-Track B  遗留渲染边界下沉   —— 现在就能做，与 A 并行
-Track C  声明式渲染 / Compose —— 长期，依赖 A、B 的产出
+Track A  所有权与业务状态       —— 已落地（A1–A5）
+Track B  遗留渲染边界下沉       —— 已落地（B1/B2），端游剩余
+Track C  声明式渲染 / Compose   —— C0–C5 已落地，2026-07-21 起暂停冻结为可选渲染器
+Track D  ReadView 自身业务解耦   —— 近期主线，不依赖 Compose，依赖 A（ReaderSession）
 ```
+
+> **方向修订（2026-07-21）**：原路线把 Track C（Compose 替换阅读器）当作阅读渲染的终点。基于 C3 真机性能基线（Compose 帧耗时/jank 明显劣于旧 View）与「仿真卷曲/选择/滚动/自动翻页全量重写=高回归风险、低用户收益」的判断，**改为**：保留成熟的 `ReadView` 作为渲染核心，把它从「业务+状态+渲染全包」重构成**只做绘制/手势/动画的专业渲染岛**；Compose 用于阅读器外围 UI（工具栏/菜单/设置/弹窗）与「可选可插拔渲染器」实验。**MAD ≠ Compose**：分层、UDF、状态所有权、`ViewModel+StateFlow`、生命周期感知、可测试的数据/业务层，均可在 View 上成立（Android 官方至 2026 仍维护专门的 View 架构指南）。Track C 是否最终成为默认渲染器，留待专门的性能调查后重估，不作为当前目标。
 
 ## 4. 分阶段执行
 
@@ -253,6 +271,8 @@ interface ReaderSession {
 
 ### Track B —— 遗留渲染边界下沉（与 A 并行，**不等 Compose**）
 
+> **进度**：B1（接口切分）+ B2（渲染子集下沉到 `ReadBookController`）已落地并提交，端游剩余项见进度快照 ⑤。
+
 关键结论：把指令式渲染协议**从 ViewModel 移到 UI 层的渲染控制器**，不需要 Compose。Compose 只用于让渲染**声明式**（Track C）。
 
 **B1. 先拆分 `CallBack` 接口，而不是整体搬迁**。`CallBack` 是两套协议穿了一件外套：
@@ -288,9 +308,15 @@ ReadBook ──legacy render callback──▶ LegacyReaderRenderController
 
 **验收**：VM 不再实现 `ReadBook.CallBack`；`_effects` 中的渲染类 Effect（`ToggleReadAloud`/`ToggleAutoPage` 等指令）全部由渲染控制器承接；`subscriptionCount.first { it > 0 }` 握手删除。剩余 `_effects` 仅保留真正的一次性 UI 消息/导航（严格 MAD 下仍扣分，但已是可辩护的最小面）。
 
+> **B2 已达成中期目标**（渲染子集不再穿过 VM）；上面这条**完整验收**尚未全绿——VM 仍实现 `CallBack` 的**状态子集**、握手仍在。三项端游剩余见进度快照 ⑤，属把状态子集也迁入 `ReaderSession` 的后续工作。
+
 ---
 
-### Track C —— 声明式渲染 / Compose 迁移（长期，依赖 A、B）
+### Track C —— 声明式渲染 / Compose 迁移（**2026-07-21 起暂停，冻结于 C5**）
+
+> **状态（2026-07-21）**：C0–C5 已落地并真机验收；此后**暂停**。Compose overlay 冻结为 lab flag（`LabSettings.composeRenderer`，默认关）下的**可选可插拔渲染器** + parity 实验台，**不推进 C6–C9、不删旧栈**。是否让 Compose 成为默认渲染器，待专门的性能调查后重估。当前阅读渲染的近期主线是 **Track D（保留 `ReadView`、解其自身业务耦合）**。暂停边界与 C0–C5 处置见 `docs/dev/track-c-compose-reader-plan.md` 顶部状态。
+
+> **执行计划见 `docs/dev/track-c-compose-reader-plan.md`**（已按两轮外部审阅重排：C0 立 `ReaderRenderer` 契约〔随 C3 补〕 → C1 抽只读 `ReaderRenderModel`〔已落地〕 → C2 flag 下 Compose 静态页 overlay〔已落地〕 → C3 稳住 overlay + parity/性能基线 → **C4 抽 `ReaderViewport`（含 `mode` 预留）让 Compose 驱动分页、旧 `ReadView` 可关、并开始拆 `upContentAwait`〔核心里程碑〕** → C5 不可变 `ReaderPageSnapshot` → C6 无动画阅读闭环〔图片/双页/点击/选择/滚动〕 → C7 停止双绘 + 删 `upContentAwait` → C8 翻页动画、仿真卷曲垫底 → C9 翻默认、删旧栈；排版引擎 `ChapterProvider` 全程不动）。**关键调整：把 viewport 解耦与不可变快照提到动画/复杂交互之前，避免在 overlay 上堆功能形成永久双栈。**
 
 ```
 Legacy Canvas View
@@ -301,6 +327,53 @@ Legacy Canvas View
 ```
 
 > Compose 不会自动蒸发分页排版复杂度，只是让"状态↔绘制"的关系更好表达。它是最自然、但非唯一的声明式实现。
+
+---
+
+### Track D —— `ReadView` 自身业务解耦（近期主线，不依赖 Compose）
+
+> **由来（2026-07-21）**：Track A 收敛了 `ReadBook` 所有权、Track B 把渲染回调移出 VM、Track C 让 Compose 面消费只读快照——但三者都没动 **`ReadView` 自己**的出站耦合。既然决定「保留 View 作为渲染核心」，就必须把 View 阅读器本身拉回 UDF：**`ReadView` 只做绘制/手势/动画，不认识 `ReadBook`/`ReadAloud`/Activity 导航。**
+
+**已核实的耦合**（`ui/book/read/page/ReadView.kt`）：
+- **直呼业务单例**：`ReadBook.moveToNextChapter/moveToPrevChapter/moveToNextPage/moveToNextChapterAwait/syncProgress`、`ReadAloud.pause/resume`（509、510、518、524、526、749、750 行）。
+- **经 `callBack` 直驱业务/导航**：`addBookmark`、`openContentEdit`、`changeReplaceRuleState`、`openChapterList`、`openSearchActivity`、`sureNewProgress`、`showActionMenu`（504、513–519 行）。
+- **直接读 `ReadBook` 取页数据**：`ReadBook.textChapter(0/1/-1)`（823–833 行，经 `pageFactory`）。
+
+**三类状态纪律（呼应反目标「不做伪状态」）**——Track D 必须守住这条线，避免为 UDF 把每个触点塞进 `StateFlow`：
+
+| 类别 | 归属 | 例 |
+|---|---|---|
+| 业务状态 | `ReaderSession`/VM | 书籍、章节、进度、配置、加载/错误、朗读态 |
+| 渲染状态 | 分页引擎产出 → View | 前/当前/后页、文本布局、图片布局、页面样式 |
+| 瞬时控件状态 | **`ReadView` 自持，绝不上浮** | 触摸坐标、`Path`/`Matrix`、`Scroller`、翻页动画进度、卷曲 `Bitmap`、阴影、选择手柄拖动、每帧 `invalidate` |
+
+> 尤其卷曲手势、动画进度、每帧 `invalidate` 是每秒几十上百次变化、且只属于 `ReadView` 的状态——**不进 `UiState`**。把它们塞进 `StateFlow` 是「把门铃伪装成恒温器」的镜像错误。
+
+**D1（出站解耦，先做、低风险、不依赖 Compose）**：定义 `ReaderEvent` 出站接口，`ReadView` 把「业务意图」以事件发出，由外层（Activity/VM）翻译成 `ReaderSession`/命令调用：
+```kotlin
+sealed interface ReaderEvent {
+    data object RequestPreviousPage : ReaderEvent
+    data object RequestNextPage : ReaderEvent
+    data object OpenMenu : ReaderEvent
+    data class SyncProgress(/* … */) : ReaderEvent
+    data class ToggleReadAloud(/* … */) : ReaderEvent
+    data object AddBookmark : ReaderEvent
+    data object OpenContentEdit : ReaderEvent
+    data object OpenChapterList : ReaderEvent
+    data object OpenSearch : ReaderEvent
+    // …翻页完成 / 选择变化 / 链接点击按需补
+}
+fun interface ReaderEventListener { fun onEvent(event: ReaderEvent) }
+```
+`ReadView` 的 `ReadBook.*`/`ReadAloud.*` 直调与 `callBack` 的业务项改为 `eventListener?.onEvent(...)`；外层 `readView.eventListener = ReaderEventListener { viewModel.onIntent(it.toReaderIntent()) }`。验收：`grep` 证明 `ReadView.kt` 不再为 mutation 引用 `ReadBook`/`ReadAloud`，业务调用全部经事件出站。**保留** `ReadView` 对 `pageFactory` 的**只读**页数据拉取（属 D2，D1 不强改签名）。
+
+> **忠实边界**：D1 只搬「谁下达业务命令」，不改翻页/排版/动画行为。`callBack` 里真正属于「瞬时 UI 副作用」的项（`screenOffTimerStart`/`upSystemUiVisibility`/`showTextActionMenu`）可留在 View↔宿主的直接协作里，不必强行事件化——它们不是业务状态。
+
+**D2（入站解耦，较大、可后置）**：把 `ReadView` 对 `ReadBook.textChapter(...)` 的直接页数据拉取，改为消费一个由会话/渲染模型派生的**只读输入**（报告里的 `ReaderRenderState`——与 Track C1/C5 的 `ReaderRenderModel`/`ReaderPageSnapshot` 同源，只是这次喂给旧 `ReadView` 而非 Compose 面）。这一步更大（涉及 `pageFactory` 取页时序），**可在 D1 稳定后再评估**，不与 D1 捆绑。
+
+**最终形态（可选，视需要）**：把「渲染岛」收敛到 `ReaderRenderer` 契约背后（Track C0 已立），当前实现 `ViewReaderRenderer`（包 `ReadView`）为**规范实现**；`ComposeReaderRenderer`（C0–C5 的冻结产物）为可选。业务层不因渲染器切换而重做。
+
+**验收**：`ReadView` 不再直接写 `ReadBook`/调 `ReadAloud`/驱动 Activity 业务导航（D1，编译器/grep 可证）；瞬时控件状态全部留在 View、未上浮到 `UiState`；翻页/仿真卷曲/选择/滚动/自动翻页行为零漂移（真机 parity）。
 
 ---
 
@@ -346,6 +419,8 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 ```
 迁移期，旧 `ReadBook.CallBack`（渲染子集）由 `LegacyReaderRenderController` 实现；最终从 `ReadBook` 抽走渲染职责。
 
+> **2026-07-21 修订**：底部「→ 最终由 Track C 替换为声明式渲染」**改为长期可选**。当前目标是 `ReadView`/`ContentTextView` 作为**稳定的规范渲染岛**保留，Track D 补一条 `ReadView → ReaderEvent → VM/ReaderSession` 的出站回边（替代 `ReadView` 现在直呼 `ReadBook`/`ReadAloud`/`callBack` 业务项）。Compose 渲染器（`ComposeReaderRenderer`）冻结在 `ReaderRenderer` 契约后，作为可选实现，非默认终点。
+
 ## 6. 强制机制（编译器 > 扫描器）
 
 | 约束 | 机制 | 强度 |
@@ -361,6 +436,6 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 
 ## 7. 推荐执行顺序（一句话）
 
-**先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A）；同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B）→ 并行拆分 VM 中与渲染无关的业务 → 最后渐进迁移 Compose/新渲染器（Track C）。** 全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
+**先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A，已落地）；同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B，已落地）→ 并行拆分 VM 中与渲染无关的业务 → 把 `ReadView` 自身的业务耦合解掉、让 View 阅读器符合 UDF（Track D，近期主线，不依赖 Compose）。Compose 阅读器（Track C）暂停冻结为可选渲染器，是否默认化留待专门的性能重估。** 全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
 
 严格 MAD 下 Effect 仍扣分；但准确的表述是——**问题从来不是"指令式 View 无解"，而是"指令式渲染协议被错误地穿过了 ViewModel"**。本计划的每一步都在把那条线拉回 UI 层，而不需要等待 Compose。
