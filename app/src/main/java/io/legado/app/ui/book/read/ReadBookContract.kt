@@ -1306,7 +1306,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.UpdateLayout)
     }
     data class UnderlineColor(val color: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
     }
 
     // --- Body padding ---
@@ -1380,7 +1380,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackgroundAlpha)
     }
     data class StatusIconDark(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
     }
     data class StyleName(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()

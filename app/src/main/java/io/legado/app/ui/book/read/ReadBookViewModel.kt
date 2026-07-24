@@ -1461,6 +1461,7 @@ class ReadBookViewModel(
                     _uiState.update {
                         it.copy(
                             styleConfig = buildStyleConfig(),
+                            sheetConfig = buildSheetConfig(),
                             activeSheet = null,
                         )
                     }
@@ -1478,7 +1479,12 @@ class ReadBookViewModel(
                 if (!readBookStyleConfigRepository.applyPreset(intent.presetIndex)) {
                     return@onIntent
                 }
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _uiState.update {
+                    it.copy(
+                        styleConfig = buildStyleConfig(),
+                        sheetConfig = buildSheetConfig(),
+                    )
+                }
                 _effects.tryEmit(
                     ReadBookEffect.UpdateReadViewConfig(
                         setOf(
@@ -5495,12 +5501,17 @@ class ReadBookViewModel(
             }
         }
 
-        // Notify rendering layer
+        // Notify rendering layer. styleConfig and sheetConfig are both derived
+        // from ReadBookConfig, so keep them rebuilt together — otherwise the
+        // settings sheet re-seeds its controls from a stale sheetConfig on reopen.
+        _uiState.update {
+            it.copy(
+                styleConfig = buildStyleConfig(),
+                sheetConfig = buildSheetConfig(),
+            )
+        }
         if (update.actions.isNotEmpty()) {
-            _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
             _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(update.actions))
-        } else {
-            _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         }
     }
 
@@ -5967,7 +5978,8 @@ class ReadBookViewModel(
             }
             it.copy(
                 activeReminder = newActiveReminder,
-                styleConfig = buildStyleConfig()
+                styleConfig = buildStyleConfig(),
+                sheetConfig = buildSheetConfig(),
             )
         }
         reminderQueue.removeAll { it.type is ReminderType.DayNightReminder }
@@ -6033,7 +6045,12 @@ class ReadBookViewModel(
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.importCurrentStyle(bytes)
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _uiState.update {
+                    it.copy(
+                        styleConfig = buildStyleConfig(),
+                        sheetConfig = buildSheetConfig(),
+                    )
+                }
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                     setOf(
                         ConfigUpdateAction.UpdateBackground,
