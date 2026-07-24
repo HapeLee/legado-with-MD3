@@ -115,8 +115,8 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 1. **`ConfigUpdateActionsInvariantTest`**（`ui/book/read/`）—— 反射遍历 `ConfigUpdate`
    全部 157 个成员并实例化，断言 `actions` 要么非空、要么类名在 `NO_RENDER_EFFECT`
    白名单（52 条）里；反向断言白名单无失效条目；外加一条「反射确实枚举到成员」防假绿。
-   > 直接封死 `UnderlineColor` 那类错配的复发。白名单是**临时**的，E1 把这些成员迁到
-   > `ReadPreferenceUpdate` 后整体删除。
+   > 直接封死 `UnderlineColor` 那类错配的复发。原计划由 E1 迁族后删除白名单，
+   > **E1 已撤销**，故白名单转为长期资产——它就是「这 52 项确认不需要渲染副作用」的备案。
 2. **`ReaderConfigSnapshotInvariantTest`**（`ui/book/read/`）—— 反射取
    `ReadSheetConfigUiState`(50 字段) / `ReadBookStyleConfig`(25 字段) 的构造参数名，
    源码扫描 `buildSheetConfig()` / `buildStyleConfig()` 的具名实参，断言无遗漏。
@@ -134,29 +134,31 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 
 ---
 
-### E1 —— 按通道拆分 `ConfigUpdate`（结构性除错）
+### E1 —— ~~按通道拆分 `ConfigUpdate`~~ ❌ 已撤销（2026-07-25，前提不成立）
 
-把 157 个成员按**写入目标**拆成两族：
-
-```kotlin
-// 写 readConfig.json 排版 → 必须驱动渲染副作用
-sealed interface ReadStyleUpdate : ConfigUpdate {
-    val actions: Set<ConfigUpdateAction>   // 抽象成员，编译器强制每个实现填
-}
-
-// 写 DataStore → 由 readPreferences StateFlow 反应式生效，天然无 actions
-sealed interface ReadPreferenceUpdate : ConfigUpdate
-```
-
-- 57+ 个 `actions = emptySet()` 的菜单外观成员迁到 `ReadPreferenceUpdate`，**从类型上不再有
-  actions 字段**——不是"填了空集"，是"没这个概念"。
-- 剩余排版成员的 `actions` 变成抽象成员的实现，漏填 = 编译不过（比 E0 的测试更强）。
-
-**风险**：`handleConfigUpdate` 的巨型 `when` 需相应分成两个。改动面大但**机械**、无逻辑判断。
-建议分 3–4 个 commit（按 §1.3 的注释分组：文本/标题/页眉页脚/菜单）。
-
-**验收**：`grep 'actions = emptySet()'` 归零；`handleConfigUpdate` 拆成
-`handleStyleUpdate` + `handlePreferenceUpdate`，各自 ≤ 原来一半。
+> **撤销理由（E0 之后核实）**：本阶段原写的两条依据都是错的。
+>
+> 1. **「漏填 actions 编译不过」今天就已成立**——`ConfigUpdate` 的 `val actions:
+>    Set<ConfigUpdateAction>` **已经是抽象成员**（ReadBookContract.kt:1028），每个实现
+>    必须 override。E1 号称新增的编译期保证，是既有的。
+> 2. **「按写入目标分族 ⇒ 一族天然无 actions」不成立**——两条轴正交。实测交叉表：
+>
+>    | | 有渲染副作用 | 无渲染副作用 |
+>    |---|---:|---:|
+>    | 写 readConfig.json 排版 | 80 | 1（`StyleName`） |
+>    | 写 DataStore | **25** | 51 |
+>
+>    那 25 个（`StyleSelect`/`ShareLayout`/`MenuBgColor`/`HideStatusBar`/`TextFullJustify`…）
+>    写 DataStore 但**确实需要**命令式渲染副作用。按写入目标分族会把它们塞进一个
+>    「没有 actions 概念」的族里，直接坏掉。
+>
+> **剩余收益不足以支撑改动**：只剩「少写 52 个 `emptySet()` 字面量 + 劈开大 `when`」，
+> 而 157 个成员逐个归类的误判风险是实打实的（归错一个 = 悄悄丢掉它的渲染副作用）。
+> 真正的失效模式（actions 填空/填错）已由 E0 的 `ConfigUpdateActionsInvariantTest` 覆盖。
+>
+> **若将来仍想收敛**：正确的切法不是分族，而是让 actions **可推导**——把
+> `ConfigUpdateAction` 与「哪些渲染资源被这项设置影响」建立声明式映射，从设置本身推出
+> 副作用集。那是独立议题，不在 Track E 范围内。
 
 ---
 
@@ -236,7 +238,7 @@ tryEmit 在无订阅者时会丢渲染 effect）。
 `EventBus.UP_CONFIG` 的 `ArrayList<Int>` 载荷改为直接投递 `Set<ConfigUpdateAction>`
 （或干脆让 8 个生产者改调 gateway/VM 的具名方法）。整数码 0–12 的翻译表随之删除。
 
-优先级低于 E1–E3：它是**可读性**问题，不是正确性问题（翻译表本身没查出错配）。
+优先级低于 E2/E3：它是**可读性**问题，不是正确性问题（翻译表本身没查出错配）。
 
 **验收**：`grep -rn 'EventBus.UP_CONFIG'` 只剩事件定义；VM:2084 的整数 `when` 删除。
 
@@ -259,18 +261,18 @@ tryEmit 在无订阅者时会丢渲染 effect）。
 ## 4. 推荐顺序与依赖
 
 ```
-E0 ──► E1 ──► E2 ──┬──► E3
- ✅已落地 (类型)  (核心)  └──► E4
+E0 ──►  ✗E1  ──► E2 ──┬──► E3
+ ✅已落地  已撤销   (核心)  └──► E4
 
-                    E5 ← 并入 Track D2 评估（不单独做）
+                       E5 ← 并入 Track D2 评估（不单独做）
 ```
 
-- **E0 → E1 → E2 是主线**，三步做完，「设置乱」的结构性成因基本消除。
+- **E0 → E2 是主线**（E1 已撤销，见上），两步做完，「设置乱」的结构性成因基本消除。
 - E3/E4 是主线之后的清理，可并行、可分批。
 - E5 不在本轨道单独推进。
 
 **单步价值排序（若只能做一步）**：做 **E2**。它单独就能消灭"弹层显示旧值"整个 bug 类别；
-E0/E1 是为了让 E2 之后不再退化。
+E0 是为了让 E2 之后不再退化。
 
 ---
 
@@ -279,7 +281,7 @@ E0/E1 是为了让 E2 之后不再退化。
 | 阶段 | 可机器验证的判据 |
 |---|---|
 | E0 | ✅ 3 个测试类 / 8 条断言进 CI，四条变异实测可红 |
-| E1 | `grep 'actions = emptySet()'` == 0；漏填 actions 编译不过 |
+| ~~E1~~ | ❌ 已撤销：前提不成立（actions 本就抽象；两条轴正交） |
 | E2 | VM 中 `ReadBookConfig.` 直读 93 → ≤10；`handleConfigUpdate` 无手动 `styleConfig` 重建；`tryEmit` 归零 |
 | E3 | `sheet/` 下 `ReadBookConfig.` 直读 == 0 |
 | E4 | `EventBus.UP_CONFIG` 生产者 == 0 |
@@ -297,7 +299,7 @@ E0/E1 是为了让 E2 之后不再退化。
 |---|---|---|
 | 方向 | `ReadView` **出站**业务意图 | 设置 **入站**数据流 |
 | 触碰 | `ReadView.kt` 的 `ReadBook.*`/`ReadAloud.*` 直调 | `ReadBookConfig` / `ConfigUpdate` / sheet UI |
-| 依赖 | Track A（ReaderSession） | 无（可立即开始 E0/E1） |
+| 依赖 | Track A（ReaderSession） | 无 |
 | 交汇 | D2（入站只读输入） == E5（引擎去全局读）→ **合并做一次** |
 
 ---
