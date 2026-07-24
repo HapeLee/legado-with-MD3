@@ -100,8 +100,9 @@
 
 Track A  所有权与业务状态       —— 已落地（A1–A5）
 Track B  遗留渲染边界下沉       —— 已落地（B1/B2），端游剩余
-Track C  声明式渲染 / Compose   —— C0–C5 已落地，2026-07-21 起暂停冻结为可选渲染器
+Track C  声明式渲染 / Compose   —— C0–C5 已落地，2026-07-21 起暂停；2026-07-25 已删除
 Track D  ReadView 自身业务解耦   —— 近期主线，不依赖 Compose，依赖 A（ReaderSession）
+Track E  阅读设置的 SSOT 与 UDF —— 与 D 正交、可并行，无前置依赖
 ```
 
 > **方向修订（2026-07-21）**：原路线把 Track C（Compose 替换阅读器）当作阅读渲染的终点。基于 C3 真机性能基线（Compose 帧耗时/jank 明显劣于旧 View）与「仿真卷曲/选择/滚动/自动翻页全量重写=高回归风险、低用户收益」的判断，**改为**：保留成熟的 `ReadView` 作为渲染核心，把它从「业务+状态+渲染全包」重构成**只做绘制/手势/动画的专业渲染岛**；Compose 用于阅读器外围 UI（工具栏/菜单/设置/弹窗）与「可选可插拔渲染器」实验。**MAD ≠ Compose**：分层、UDF、状态所有权、`ViewModel+StateFlow`、生命周期感知、可测试的数据/业务层，均可在 View 上成立（Android 官方至 2026 仍维护专门的 View 架构指南）。Track C 是否最终成为默认渲染器，留待专门的性能调查后重估，不作为当前目标。
@@ -312,9 +313,13 @@ ReadBook ──legacy render callback──▶ LegacyReaderRenderController
 
 ---
 
-### Track C —— 声明式渲染 / Compose 迁移（**2026-07-21 起暂停，冻结于 C5**）
+### Track C —— 声明式渲染 / Compose 迁移（**2026-07-21 暂停，2026-07-25 已删除**）
 
-> **状态（2026-07-21）**：C0–C5 已落地并真机验收；此后**暂停**。Compose overlay 冻结为 lab flag（`LabSettings.composeRenderer`，默认关）下的**可选可插拔渲染器** + parity 实验台，**不推进 C6–C9、不删旧栈**。是否让 Compose 成为默认渲染器，待专门的性能调查后重估。当前阅读渲染的近期主线是 **Track D（保留 `ReadView`、解其自身业务耦合）**。暂停边界与 C0–C5 处置见 `docs/dev/track-c-compose-reader-plan.md` 顶部状态。
+> **状态（2026-07-25）**：C0–C5 的 Compose 正文渲染实现**已从代码库删除**——`ComposeReaderSurface`、`ComposeReaderRenderCache`、`ReaderPageSnapshot`、`ReaderRenderModel`/`ReaderRenderStateStore`、`ReaderRenderer` 契约、lab flag `LabSettings.composeRenderer` 及其字符串与 DataStore 键，连同两个对应单测一并移除。冻结状态维护成本（每次翻页都在 `publishStructure` 里做一遍无消费方的快照投影）大于其 parity 实验台价值。
+>
+> **保留下来的 C 期产物**：`ReaderViewport`/`ReaderLayoutCoordinator`（C4 的 viewport 解耦接缝，`ContentTextView` 与 `ReadBookController` 在用）、`ReaderFirstFrame.kt`（debug 首帧探针，`tools/` 采集脚本依赖）。
+>
+> **原暂停依据（2026-07-21）**：C3 真机帧基线 Compose 明显劣于旧 View（jank 50% vs 4.13%）；仿真卷曲/选择/滚动/自动翻页全量重写 = 高回归风险、低用户收益。若将来重启，从下面的历史设计重新实现，不必复活已删代码。
 
 > **执行计划见 `docs/dev/track-c-compose-reader-plan.md`**（已按两轮外部审阅重排：C0 立 `ReaderRenderer` 契约〔随 C3 补〕 → C1 抽只读 `ReaderRenderModel`〔已落地〕 → C2 flag 下 Compose 静态页 overlay〔已落地〕 → C3 稳住 overlay + parity/性能基线 → **C4 抽 `ReaderViewport`（含 `mode` 预留）让 Compose 驱动分页、旧 `ReadView` 可关、并开始拆 `upContentAwait`〔核心里程碑〕** → C5 不可变 `ReaderPageSnapshot` → C6 无动画阅读闭环〔图片/双页/点击/选择/滚动〕 → C7 停止双绘 + 删 `upContentAwait` → C8 翻页动画、仿真卷曲垫底 → C9 翻默认、删旧栈；排版引擎 `ChapterProvider` 全程不动）。**关键调整：把 viewport 解耦与不可变快照提到动画/复杂交互之前，避免在 overlay 上堆功能形成永久双栈。**
 
@@ -377,6 +382,27 @@ fun interface ReaderEventListener { fun onEvent(event: ReaderEvent) }
 
 ---
 
+### Track E —— 阅读设置的单一数据源与 UDF（与 D 正交，可立即开始）
+
+> **执行计划见 `docs/dev/track-e-reader-settings-udf-plan.md`**。
+
+Track D 管「`ReadView` 怎么把业务意图**发出去**」，Track E 管「设置怎么**流进来**」。两者不互相阻塞。
+
+**核心问题（2026-07-25 核实）**：排版底座 `ReadBookConfig.Config`（`readConfig.json`）是**可变全局、无 flow**，
+而 `ReadStyleGateway.state` 只暴露 items/selectedIndex/shareLayout，不含任何排版字段。于是 UDF 靠 VM
+在每次写入后**手工重建** `styleConfig`/`sheetConfig` 快照来模拟——漏一处就是「弹层显示旧值」
+（2026-07-24 已修一例，但下一个新站点仍会复发）。另有 157 个 `ConfigUpdate` 成员各自**手写**
+渲染副作用集（已查出 2 例错配），以及 4 个 sheet 文件直读可变全局并 seed 本地镜像状态。
+
+**阶段**：E0 防回归不变式测试 → E1 按通道把 `ConfigUpdate` 拆成两族（漏填 actions 编译不过）→
+**E2 给排版底座补全量不可变快照 flow（核心，单独就能消灭整个 bug 类别）** → E3 sheet 去全局直读 →
+E4 收敛 EventBus 整数码 → E5 排版引擎去全局读（**不单独做，并入 Track D2**）。
+
+**写入面不动**：排版写入已收敛到 `ReadStyleMutation` 类型化键，全库仅 `ReadBookStyleConfigRepository`
+一处直写 `ReadBookConfig`。Track E 只补「写完之后怎么让所有人看到新值」。
+
+---
+
 ### ViewModel 拆分（不整体等待 Session）
 
 拆分按依赖归类，**与渲染无关的部分现在就能并行拆**：
@@ -436,6 +462,6 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 
 ## 7. 推荐执行顺序（一句话）
 
-**先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A，已落地）；同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B，已落地）→ 并行拆分 VM 中与渲染无关的业务 → 把 `ReadView` 自身的业务耦合解掉、让 View 阅读器符合 UDF（Track D，近期主线，不依赖 Compose）。Compose 阅读器（Track C）暂停冻结为可选渲染器，是否默认化留待专门的性能重估。** 全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
+**先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A，已落地）；同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B，已落地）→ 并行拆分 VM 中与渲染无关的业务 → 把 `ReadView` 自身的业务耦合解掉、让 View 阅读器符合 UDF（Track D，近期主线，不依赖 Compose），并行推进阅读设置的 SSOT 收敛（Track E，无前置依赖）。Compose 阅读器（Track C）已于 2026-07-25 删除，若重启需重新实现。** 全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
 
 严格 MAD 下 Effect 仍扣分；但准确的表述是——**问题从来不是"指令式 View 无解"，而是"指令式渲染协议被错误地穿过了 ViewModel"**。本计划的每一步都在把那条线拉回 UI 层，而不需要等待 Compose。
