@@ -194,6 +194,7 @@ import kotlin.math.roundToInt
 fun ReadBookMenuBar(
     state: ReadBookUiState,
     preferences: ReadPreferences,
+    eyeProtectionActive: Boolean,
     onIntent: (ReadBookIntent) -> Unit,
     onBrightnessPreview: (Int) -> Unit,
     backdrop: Backdrop? = null,
@@ -262,6 +263,7 @@ fun ReadBookMenuBar(
                     FloatingIconRow(
                         state = state,
                         preferences = preferences,
+                        eyeProtectionActive = eyeProtectionActive,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 0) {
                             Alignment.Start
@@ -377,6 +379,7 @@ fun ReadBookMenuBar(
                     FloatingIconRow(
                         state = state,
                         preferences = preferences,
+                        eyeProtectionActive = eyeProtectionActive,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 2) {
                             Alignment.Start
@@ -391,6 +394,7 @@ fun ReadBookMenuBar(
                     contentTarget = contentTarget,
                     state = state,
                     preferences = preferences,
+                    eyeProtectionActive = eyeProtectionActive,
                     colors = menuColors,
                     onIntent = onIntent,
                     context = context,
@@ -416,6 +420,7 @@ private fun ReadBookMenuSurface(
     contentTarget: ReadBookMenuContent,
     state: ReadBookUiState,
     preferences: ReadPreferences,
+    eyeProtectionActive: Boolean,
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     context: Context,
@@ -672,7 +677,7 @@ private fun ReadBookMenuSurface(
                     ReadBookMenuRoute.Main -> {
                     MenuBottomBar(
                         state = state,
-                        eyeProtectionEnabled = preferences.eyeProtectionEnabled,
+                        eyeProtectionEnabled = eyeProtectionActive,
                         colors = colors,
                         onIntent = onIntent,
                         context = context,
@@ -720,6 +725,7 @@ private fun ReadBookMenuSurface(
                                 readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
                                 bottomBarButtons = state.menuConfig.bottomBarButtons,
                                 preferences = preferences,
+                                eyeProtectionEnabled = eyeProtectionActive,
                                 onIntent = onIntent,
                                 styleConfig = state.styleConfig,
                             )
@@ -1934,6 +1940,7 @@ private fun CharsetActionButton(
 private fun FloatingIconRow(
     state: ReadBookUiState,
     preferences: ReadPreferences,
+    eyeProtectionActive: Boolean,
     colors: ReadMenuColors,
     alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
     onIntent: (ReadBookIntent) -> Unit,
@@ -1946,12 +1953,13 @@ private fun FloatingIconRow(
         state.isAutoPage,
         state.translationMode,
         state.useReplaceRule,
-        preferences.eyeProtectionEnabled,
+        eyeProtectionActive,
     ) {
         loadFloatingIcons(
             context = context,
             state = state,
             preferences = preferences,
+            eyeProtectionActive = eyeProtectionActive,
             onIntent = onIntent,
         )
     }
@@ -2333,7 +2341,9 @@ private fun SearchBottomMenuContent(
                 modifier = Modifier.weight(2f),
                 icon = Icons.Default.Search,
                 text = stringResource(R.string.all_results),
-                onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
+                onClick = {
+                    onIntent(ReadBookIntent.OpenSearch(word = null, autoFocus = false))
+                },
             )
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),
@@ -3342,6 +3352,7 @@ private fun loadFloatingIcons(
     context: Context,
     state: ReadBookUiState,
     preferences: ReadPreferences,
+    eyeProtectionActive: Boolean,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<FloatingIconDef> {
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
@@ -3383,7 +3394,7 @@ private fun loadFloatingIcons(
         if (state.isAutoPage) add("auto_page")
         if (state.translationMode) add("translate")
         if (state.useReplaceRule) add("replace")
-        if (preferences.eyeProtectionEnabled) add("eye_protection")
+        if (eyeProtectionActive) add("eye_protection")
     }
 
     return state.menuConfig.titleBarButtons

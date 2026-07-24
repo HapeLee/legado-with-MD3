@@ -1648,7 +1648,7 @@
     <string name="compact_list">紧凑列表</string>
     <string name="author_read">%1$s • %2$d章未读</string>
     <string name="menu_alpha_sum">当前 %d%%</string>
-    <string name="menu_alpha">菜单透明度</string>
+    <string name="menu_alpha">菜单不透明度</string>
     <string name="change_source_option_title">请选择操作</string>
     <string name="replace_current_book">替换本书</string>
     <string name="add_as_new_book">新增书籍</string>
@@ -2291,7 +2291,7 @@
     <string name="show_tags">显示标签</string>
     <string name="custom_tag_colors">自定义标签颜色</string>
     <string name="manage_tag_colors">管理标签颜色</string>
-    <string name="search_filter_first">搜索按钮优先打开筛选栏</string>
+    <string name="search_filter_first">搜索按钮优先打开搜索页面</string>
     <string name="import_from_network">网络导入</string>
     <string name="input_url_or_json_hint">请输入 URL 或 JSON</string>
     <string name="history_label">历史记录:</string>

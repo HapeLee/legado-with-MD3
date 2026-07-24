@@ -42,31 +42,43 @@ data class SearchResult(
     fun getContentSpannable(textColor: Int, accentColor: Int, bgColor: Int): SpannableStringBuilder {
         val spannable = SpannableStringBuilder(resultText)
 
-        if (query.isNotBlank()) {
-            var searchStart = 0
-            while (true) {
-                val start = resultText.indexOf(query, searchStart, ignoreCase = true)
-                if (start == -1) break
-                val end = start + query.length
-
-                if (AppConfig.isEInkMode) {
-                    spannable.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                } else {
-                    // 字体加粗
-                    spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    // 字体颜色
-                    spannable.setSpan(ForegroundColorSpan(accentColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    // 背景色
-                    spannable.setSpan(BackgroundColorSpan(bgColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-
-                searchStart = end
-            }
+        // Apply the body color first so the more specific highlight color wins.
+        if (!AppConfig.isEInkMode) {
+            spannable.setSpan(
+                ForegroundColorSpan(textColor),
+                0,
+                spannable.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
         }
 
-        // 设置整体字体颜色（正文）
-        if (!AppConfig.isEInkMode) {
-            spannable.setSpan(ForegroundColorSpan(textColor), 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val ranges = if (isRegex) {
+            listOf(queryIndexInResult to matchLength)
+        } else if (query.isNotBlank()) {
+            buildList {
+                var searchStart = 0
+                while (searchStart < resultText.length) {
+                    val start = resultText.indexOf(query, searchStart, ignoreCase = true)
+                    if (start == -1) break
+                    add(start to query.length)
+                    searchStart = start + query.length.coerceAtLeast(1)
+                }
+            }
+        } else {
+            emptyList()
+        }
+
+        ranges.forEach { (start, length) ->
+            val end = (start + length).coerceAtMost(resultText.length)
+            if (start !in 0 until end) return@forEach
+
+            if (AppConfig.isEInkMode) {
+                spannable.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else {
+                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(ForegroundColorSpan(accentColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(BackgroundColorSpan(bgColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
 
         return spannable

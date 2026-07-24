@@ -554,8 +554,8 @@ internal fun TitleSettingsPage(
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
             value = titleSegScaling,
-            valueRange = -2f..2f,
-            steps = 39,
+            valueRange = 0f..2f,
+            steps = 19,
             stepSize = 0.1f,
             valueFormat = { "%.1f".format(it) },
             onValueChange = { value ->

@@ -1797,7 +1797,7 @@
     <string name="compact_list">精簡列表</string>
     <string name="author_read">%1$s • %2$d 未讀</string>
     <string name="menu_alpha_sum">目前 %d%%</string>
-    <string name="menu_alpha">選單透明度</string>
+    <string name="menu_alpha">選單不透明度</string>
     <string name="change_source_option_title">選擇操作</string>
     <string name="replace_current_book">取代此書</string>
     <string name="add_as_new_book">新增為新書</string>
@@ -2229,7 +2229,7 @@
     <string name="show_tags">顯示標籤</string>
     <string name="custom_tag_colors">自訂標籤顏色</string>
     <string name="manage_tag_colors">管理標籤顏色</string>
-    <string name="search_filter_first">搜尋按鈕先開啟篩選</string>
+    <string name="search_filter_first">搜尋按鈕優先開啟搜尋頁面</string>
     <string name="import_from_network">從網路匯入</string>
     <string name="input_url_or_json_hint">輸入 URL 或 JSON</string>
     <string name="history_label">歷史記錄：</string>

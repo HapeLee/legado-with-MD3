@@ -89,9 +89,6 @@ fun ThemeConfigRouteScreen(
                     backgroundImageLauncher.launch("image/*")
                 }
                 is ThemeConfigEffect.ShowToast -> context.toastOnUi(effect.stringRes)
-                is ThemeConfigEffect.OpenTimePicker -> {
-                    // Time picker intent handled by ThemeConfigScreen internally
-                }
             }
         }
     }

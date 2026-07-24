@@ -461,9 +461,6 @@ fun applyTagGroupRules(
         }
     }
 
-    // Mask of all group IDs managed by tag group rules
-    val allRuleGroupMask = groupCache.values.fold(0L) { acc, id -> acc or id }
-
     val updatedBooks = mutableListOf<Book>()
     for (book in books) {
         val kinds = book.getDisplayTagList()
@@ -473,9 +470,8 @@ fun applyTagGroupRules(
                 newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
             }
         }
-        // Clear old rule-managed bits, then set new ones
-        val clearedGroup = book.group and allRuleGroupMask.inv()
-        val finalGroup = clearedGroup or newGroupMask
+        // Tag rules only add matching groups; manually assigned groups are preserved.
+        val finalGroup = book.group or newGroupMask
         if (book.group != finalGroup) {
             book.group = finalGroup
             updatedBooks.add(book)
@@ -520,7 +516,6 @@ fun applyTagGroupRulesForBook(book: Book) {
         }
     }
 
-    val allRuleGroupMask = groupCache.values.fold(0L) { acc, id -> acc or id }
     val kinds = book.getDisplayTagList()
     var newGroupMask = 0L
     for ((rule, regex) in compiledRules) {
@@ -528,8 +523,7 @@ fun applyTagGroupRulesForBook(book: Book) {
             newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
         }
     }
-    val clearedGroup = book.group and allRuleGroupMask.inv()
-    val finalGroup = clearedGroup or newGroupMask
+    val finalGroup = book.group or newGroupMask
     if (book.group != finalGroup) {
         book.group = finalGroup
     }

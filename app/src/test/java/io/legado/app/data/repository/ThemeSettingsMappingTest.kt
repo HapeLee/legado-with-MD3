@@ -6,25 +6,39 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeSettingsMappingTest {
 
     @Test
-    fun `Theme gateway 持久化边界固定为 59 键`() {
+    fun `手动护眼和跟随深色模式是独立配置来源`() {
+        val automatic = ThemeSettings(
+            eyeProtectionEnabled = false,
+            eyeProtectionAutoNight = true,
+        )
+
+        assertFalse(automatic.eyeProtectionEnabled)
+        assertTrue(automatic.eyeProtectionAutoNight)
+        assertTrue(automatic.isEyeProtectionConfigured)
+    }
+
+    @Test
+    fun `Theme gateway 持久化边界固定为 60 键`() {
         val actualKeys = ThemeSettings().toGatewayPrefMap().keys
         val expectedKeys = ThemeSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(59, actualKeys.size)
+        assertEquals(60, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
         assertFalse(PreferKey.customMode in actualKeys)
         assertFalse(PreferKey.bookInfoInputColor in actualKeys)
     }
 
     @Test
-    fun `Theme gateway 59 键写读映射逐字段对应`() {
+    fun `Theme gateway 60 键写读映射逐字段对应`() {
         themeMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
@@ -186,6 +200,7 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         itemDividerColor = 126,
         eyeProtectionEnabled = false,
         colorTemperature = 127,
+        eyeProtectionAutoNight = false,
         eyeProtectionSchedule = false,
         eyeProtectionStartTime = "start-time",
         eyeProtectionEndTime = "end-time",
@@ -207,6 +222,7 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         base.copy(bookInfoFollowCoverColor = true),
         base.copy(enableItemDivider = true),
         base.copy(eyeProtectionEnabled = true),
+        base.copy(eyeProtectionAutoNight = true),
         base.copy(eyeProtectionSchedule = true),
         base.copy(showRefactorTip = true),
         base.copy(enableCustomTagColors = true),
@@ -267,6 +283,7 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.itemDividerColor to itemDividerColor,
     PreferKey.eyeProtectionEnabled to eyeProtectionEnabled,
     PreferKey.colorTemperature to colorTemperature,
+    PreferKey.eyeProtectionAutoNight to eyeProtectionAutoNight,
     PreferKey.eyeProtectionSchedule to eyeProtectionSchedule,
     PreferKey.eyeProtectionStartTime to eyeProtectionStartTime,
     PreferKey.eyeProtectionEndTime to eyeProtectionEndTime,

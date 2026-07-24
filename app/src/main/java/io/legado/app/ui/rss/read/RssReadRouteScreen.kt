@@ -71,9 +71,9 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.NetworkUtils
+import io.legado.app.utils.applyDayNight
 import io.legado.app.utils.keepScreenOn
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.share
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
@@ -203,8 +203,7 @@ fun RssReadRouteScreen(
 
     LaunchedEffect(isNight, webView) {
         val currentWebView = webView ?: return@LaunchedEffect
-        currentWebView.settings.setDarkeningAllowed(isNight)
-        currentWebView.postInvalidate()
+        currentWebView.applyDayNight(isNight)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

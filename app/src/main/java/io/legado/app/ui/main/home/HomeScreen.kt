@@ -135,7 +135,6 @@ import kotlin.math.roundToInt
 
 @Composable
 fun HomeRouteScreen(
-    showOverflowMenuRequest: Long = 0L,
     onOpenBook: (Book) -> Unit,
     onNavigateToBookInfo: (
         name: String?,
@@ -334,7 +333,6 @@ fun HomeRouteScreen(
     }
 
     HomeScreen(
-        showOverflowMenuRequest = showOverflowMenuRequest,
         state = state,
         homepageState = homepageState,
         homepageFeedActions = feedActions,
@@ -381,7 +379,6 @@ fun HomeRouteScreen(
 )
 @Composable
 fun HomeScreen(
-    showOverflowMenuRequest: Long = 0L,
     state: HomeUiState,
     homepageState: HomepageUiState,
     homepageFeedActions: HomepageFeedActions,
@@ -411,12 +408,6 @@ fun HomeScreen(
 
     val currentPageSourceName by remember(selectedSets, pagerState) {
         derivedStateOf { selectedSets.getOrNull(pagerState.currentPage)?.sourceName }
-    }
-
-    LaunchedEffect(showOverflowMenuRequest) {
-        if (showOverflowMenuRequest > 0L) {
-            showPageMenu = true
-        }
     }
 
     LaunchedEffect(pagerState) {
