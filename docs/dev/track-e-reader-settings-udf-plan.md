@@ -74,8 +74,13 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 
 ### 1.7 附带确认的两个缺陷
 
-- `ReadSettingsRepository.update{}` 的 `toGatewayPrefMap` 只覆盖 **45/101** 字段（:550-596）
-  ⇒ 通用 `update{}` 路径对其余 56 个字段**静默丢写**。（另有 91 个专用 setter 是安全路径。）
+- `ReadSettingsRepository.update{}` 的 `toGatewayPrefMap` 只覆盖 **45/101** 字段（:550-596）。
+  > **更正（E0 落地时核实）**：这**不是现存 bug**，是有意设计——`ReadSettingsGateway.update`
+  > 的 KDoc 明确写了「仅持久化 gateway 实现映射声明的 45 个配置键，其余字段仍须通过对应的
+  > 遗留 Repository setter 写入」。全库只有 4 个 `update{}` 调用点（ThemeConfigViewModel:141、
+  > ReadBookViewModel:265/5237、MangaMenu:284），写的都是**已在 map 内**的字段。
+  > 真实风险是**latent**：将来有人对那 56 个字段之一 `update{ copy(x=…) }` 会被静默丢弃。
+  > 因此 E0 不去凑满 101，而是把「走不通 `update{}` 的字段集合」冻成基线做双向棘轮。
 - 排版引擎 `ChapterProvider`(62 处)/`PageView`(54)/`TextChapterLayout`(11)/`TextLine`(12)
   在排版与绘制时**直接裸读** `ReadBookConfig` ——渲染输入不是参数，是全局。
 
@@ -102,19 +107,30 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 
 ## 3. 阶段划分
 
-### E0 —— 防回归地基（先做，成本最低，无行为改动）
+### E0 —— 防回归地基 ✅ 已落地（2026-07-25）
 
-纯新增测试，不改产品代码。
+纯新增测试，产品代码零改动。三个文件、8 条断言，全部采用本仓既有的**双向棘轮**惯例
+（新增违规报红 / 基线修好了不下调也报红）。
 
-1. **actions 完备性测试**：反射遍历 `ConfigUpdate` 全部 157 个成员，断言每个成员的 `actions`
-   要么非空，要么其类名在显式白名单里。新增成员忘了填 actions ⇒ 测试红。
-   > 这条直接封死 `UnderlineColor` 那类错配的复发。
-2. **快照完备性测试**：断言 `ReadSheetConfigUiState` / `ReadBookStyleConfig` 的每个字段都能在
-   `buildSheetConfig()` / `buildStyleConfig()` 里找到赋值（反射比对构造参数名）。
-3. **DataStore 覆盖率测试**：断言 `ReadSettings` 的字段数 == `toGatewayPrefMap` 的键数
-   （当前 101 vs 45，**测试会先红**）。
+1. **`ConfigUpdateActionsInvariantTest`**（`ui/book/read/`）—— 反射遍历 `ConfigUpdate`
+   全部 157 个成员并实例化，断言 `actions` 要么非空、要么类名在 `NO_RENDER_EFFECT`
+   白名单（52 条）里；反向断言白名单无失效条目；外加一条「反射确实枚举到成员」防假绿。
+   > 直接封死 `UnderlineColor` 那类错配的复发。白名单是**临时**的，E1 把这些成员迁到
+   > `ReadPreferenceUpdate` 后整体删除。
+2. **`ReaderConfigSnapshotInvariantTest`**（`ui/book/read/`）—— 反射取
+   `ReadSheetConfigUiState`(50 字段) / `ReadBookStyleConfig`(25 字段) 的构造参数名，
+   源码扫描 `buildSheetConfig()` / `buildStyleConfig()` 的具名实参，断言无遗漏。
+   > 用源码扫描是因为两个函数是 VM 的 private 成员、VM 需大量 Koin 依赖才能构造。
+   > **E2 之后应改写**：那时它们变成 `ReadStyleSnapshot` 上的纯函数，可以直接实例断言。
+3. **`ReadSettingsGatewayCoverageTest`**（`data/repository/`）—— **行为性**判定：逐字段
+   变异 `ReadSettings` 并观察 `toGatewayPrefMap()` 输出是否随之变化，把「走不通
+   `update{}` 的 56 个字段」冻成基线。**不**断言 101 == 45（那会推翻 §1.7 的既定设计）。
 
-**验收**：三条测试进 CI；第 3 条允许先以 `@Ignore` + issue 落地，在 E1 修复后解禁。
+**变异验证**（每条都实测过能变红，非空跑）：白名单少一条 → 测试 1 红；白名单多一条 →
+测试 2 红；给 `ReadSheetConfigUiState` 加字段不赋值 → 测试 3 红；给 `ReadSettings`
+加字段不接线 → 测试 4 红。四条报错都直接给出字段名与修法。
+
+**现状**：全量单测 285 条绿（E0 前 277）。
 
 ---
 
@@ -244,8 +260,8 @@ tryEmit 在无订阅者时会丢渲染 effect）。
 
 ```
 E0 ──► E1 ──► E2 ──┬──► E3
- (测试)  (类型)  (核心)  └──► E4
-                          
+ ✅已落地 (类型)  (核心)  └──► E4
+
                     E5 ← 并入 Track D2 评估（不单独做）
 ```
 
@@ -262,7 +278,7 @@ E0/E1 是为了让 E2 之后不再退化。
 
 | 阶段 | 可机器验证的判据 |
 |---|---|
-| E0 | 3 条不变式测试进 CI |
+| E0 | ✅ 3 个测试类 / 8 条断言进 CI，四条变异实测可红 |
 | E1 | `grep 'actions = emptySet()'` == 0；漏填 actions 编译不过 |
 | E2 | VM 中 `ReadBookConfig.` 直读 93 → ≤10；`handleConfigUpdate` 无手动 `styleConfig` 重建；`tryEmit` 归零 |
 | E3 | `sheet/` 下 `ReadBookConfig.` 直读 == 0 |
@@ -286,4 +302,4 @@ E0/E1 是为了让 E2 之后不再退化。
 
 ---
 
-*创建于 2026-07-25。基线数据（行号/计数）截至同日 HEAD。*
+*创建于 2026-07-25，同日完成 E0。基线数据（行号/计数）截至同日 HEAD。*
