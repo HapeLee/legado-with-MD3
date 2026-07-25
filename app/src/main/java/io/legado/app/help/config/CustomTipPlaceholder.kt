@@ -26,6 +26,7 @@ enum class CustomTipPlaceholder(
     CHAPTER_SIZE("{ChapterSize}", "ChapterSize", R.string.placeholder_chapter_size),
     PAGE_INDEX("{PageIndex}", "PageIndex", R.string.placeholder_page_index),
     PAGE_SIZE("{PageSize}", "PageSize", R.string.placeholder_page_size),
+    PAGE_REMAINING("{PageRemaining}", "PageRemaining", R.string.placeholder_page_remaining),
     READ_PROGRESS("{ReadProgress}", "ReadProgress", R.string.placeholder_read_progress),
     FULL_PAGE_INDEX("{FullPageIndex}", "FullPageIndex", R.string.placeholder_full_page_index),
     FULL_PAGE_SIZE("{FullPageSize}", "FullPageSize", R.string.placeholder_full_page_size);

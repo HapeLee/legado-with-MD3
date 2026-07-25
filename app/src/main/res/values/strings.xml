@@ -1212,6 +1212,7 @@
     <string name="placeholder_chapter_size">ChapterSize</string>
     <string name="placeholder_page_index">PageIndex</string>
     <string name="placeholder_page_size">PageSize</string>
+    <string name="placeholder_page_remaining">PageRemaining</string>
     <string name="placeholder_read_progress">ReadProgress</string>
     <string name="placeholder_full_page_index">FullPageIndex</string>
     <string name="placeholder_full_page_size">FullPageSize</string>

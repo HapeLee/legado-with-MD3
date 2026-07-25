@@ -2386,6 +2386,7 @@
     <string name="placeholder_chapter_size">章节总数</string>
     <string name="placeholder_page_index">当前页码</string>
     <string name="placeholder_page_size">本章页数</string>
+    <string name="placeholder_page_remaining">本章剩余页数</string>
     <string name="placeholder_read_progress">阅读进度</string>
     <string name="placeholder_full_page_index">全文页码</string>
     <string name="placeholder_full_page_size">全文页数</string>

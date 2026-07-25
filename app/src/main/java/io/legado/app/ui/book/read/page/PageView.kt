@@ -547,6 +547,12 @@ class PageView(
             val pageSizeInt = textPage.pageSize
             if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
         }
+        val pageRemaining = (textPage.pageSize - textPage.index - 1).coerceAtLeast(0)
+        val pageRemainingDisplay = when {
+            textPage.textChapter.isCompleted -> pageRemaining.toString()
+            textPage.pageSize <= 0 -> "-"
+            else -> "~$pageRemaining"
+        }
         val readProgressDisplay = textPage.readProgress
         val wholeBookPage = ReadBook.getWholeBookPageState(textPage.chapterIndex, textPage.index)
         val fullPageIndexDisplay = wholeBookPage?.currentPage?.toString() ?: pageIndexDisplay
@@ -564,6 +570,7 @@ class PageView(
                 CustomTipPlaceholder.CHAPTER_SIZE -> chapterSizeDisplay
                 CustomTipPlaceholder.PAGE_INDEX -> pageIndexDisplay
                 CustomTipPlaceholder.PAGE_SIZE -> pageSizeDisplay
+                CustomTipPlaceholder.PAGE_REMAINING -> pageRemainingDisplay
                 CustomTipPlaceholder.READ_PROGRESS -> readProgressDisplay
                 CustomTipPlaceholder.FULL_PAGE_INDEX -> fullPageIndexDisplay
                 CustomTipPlaceholder.FULL_PAGE_SIZE -> fullPageSizeDisplay
