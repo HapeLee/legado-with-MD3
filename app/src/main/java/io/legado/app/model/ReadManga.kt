@@ -484,7 +484,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (BookHelp.hasImageContent(book, chapter)) return true
         val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return false
         val failures = BookHelp.saveImages(source, book, chapter, resolvedContent)
-        return failures == 0 && BookHelp.hasImageFilesCached(book, chapter)
+        return BookHelp.isChapterImageCacheComplete(book, chapter, failures)
     }
 
     private fun preDownload() {
@@ -535,6 +535,10 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (BookHelp.hasContent(book, chapter)) {
             if (cacheChapterImagesIfNeeded(book, chapter)) {
                 downloadedChapters.add(chapter.index)
+                downloadFailChapters.remove(chapter.index)
+            } else {
+                downloadFailChapters[chapter.index] =
+                    (downloadFailChapters[chapter.index] ?: 0) + 1
             }
         } else {
             delay(1000)

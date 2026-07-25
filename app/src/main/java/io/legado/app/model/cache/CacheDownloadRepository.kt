@@ -47,9 +47,10 @@ class CacheDownloadRepository {
         chapter: BookChapter,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
     ) {
-        val content = BookHelp.getContent(book, chapter) ?: return
+        val content = BookHelp.getContent(book, chapter)
+            ?: throw NoStackTraceException("${book.name} ${chapter.title} 图片缓存未完成：缺少正文")
         val failures = BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress)
-        if (failures > 0 || !BookHelp.hasImageFilesCached(book, chapter)) {
+        if (!BookHelp.isChapterImageCacheComplete(book, chapter, failures)) {
             throw NoStackTraceException("${book.name} ${chapter.title} 图片缓存未完成")
         }
     }

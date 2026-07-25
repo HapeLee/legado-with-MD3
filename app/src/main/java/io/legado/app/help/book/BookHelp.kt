@@ -327,7 +327,8 @@ object BookHelp {
     }
 
     /**
-     * @return true 表示图片已存在或本次写入成功
+     * @return true 表示图片已存在，或本次下载且校验通过。
+     * 数据异常时仍会落盘（避免反复拉坏图），但返回 false 以便调用方记失败。
      */
     suspend fun saveImage(
         bookSource: BookSource?,
@@ -370,12 +371,13 @@ object BookHelp {
                             AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
                             return false
                         }
-                        if (!checkImage(decoded)) {
-                            // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
-                            // 所以无论如何都要将数据写入到文件里
-                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
-                        }
+                        // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
+                        // 所以无论如何都要将数据写入到文件里；但仍记失败，避免章节被标为已缓存
                         writeImage(book, src, decoded)
+                        if (!checkImage(decoded)) {
+                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
+                            return false
+                        }
                         return true
                     } finally {
                         imageDecodeSlots.release()
@@ -393,6 +395,21 @@ object BookHelp {
             downloadImages.remove(src)
             mutex.unlock()
         }
+    }
+
+    /**
+     * 一次 saveImages 批次是否可视为章节图片缓存完成。
+     */
+    fun isChapterImageCacheComplete(failures: Int, filesCached: Boolean): Boolean {
+        return failures == 0 && filesCached
+    }
+
+    fun isChapterImageCacheComplete(
+        book: Book,
+        bookChapter: BookChapter,
+        failures: Int,
+    ): Boolean {
+        return isChapterImageCacheComplete(failures, hasImageFilesCached(book, bookChapter))
     }
 
     fun getImage(book: Book, src: String): File {
