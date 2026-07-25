@@ -11,9 +11,9 @@ class MainNavigatorReadAloudTest {
         val reader = MainRouteReadBook(bookUrl = "book")
         val backStack = mutableListOf<NavKey>(MainRouteHome, reader)
 
-        MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines)
+        MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines())
 
-        assertEquals(listOf(MainRouteHome, reader, MainRouteCloudTtsEngines), backStack)
+        assertEquals(listOf(MainRouteHome, reader, MainRouteCloudTtsEngines()), backStack)
     }
 
     @Test
@@ -23,8 +23,8 @@ class MainNavigatorReadAloudTest {
             MainRouteSettings,
         )
 
-        MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines)
+        MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines())
 
-        assertEquals(listOf(MainRouteHome, MainRouteCloudTtsEngines), backStack)
+        assertEquals(listOf(MainRouteHome, MainRouteCloudTtsEngines()), backStack)
     }
 }

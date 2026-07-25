@@ -62,6 +62,7 @@ import kotlin.math.min
 
 @Suppress("unused", "ConstPropertyName")
 object BookHelp {
+    private const val CACHED_CONTENT_PREFIX_LENGTH = 1_024
     private val downloadDir: File = appCtx.externalFiles
     private const val cacheFolderName = "book_cache"
     private const val cacheImageFolderName = "images"
@@ -661,6 +662,58 @@ object BookHelp {
         }
         return null
     }
+
+    /**
+     * 只统计已经落盘的章节缓存，不读取本地书源，也不会触发网络请求。
+     */
+    fun getCachedContentLength(book: Book, bookChapter: BookChapter): Int? {
+        return getCachedContentInfo(book, bookChapter)?.contentLength
+    }
+
+    /**
+     * 流式读取已落盘正文，只保留用于页数缓存校验的短前缀，不加载本地书源或网络正文。
+     */
+    fun getCachedContentInfo(book: Book, bookChapter: BookChapter): CachedContentInfo? {
+        val file = downloadDir.getFile(
+            cacheFolderName,
+            book.getFolderName(),
+            bookChapter.getFileName()
+        )
+        if (!file.isFile) return null
+
+        return try {
+            var length = 0L
+            val prefix = StringBuilder(CACHED_CONTENT_PREFIX_LENGTH)
+            file.bufferedReader().use { reader ->
+                val buffer = CharArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val readCount = reader.read(buffer)
+                    if (readCount < 0) break
+                    length += readCount
+                    if (prefix.length < CACHED_CONTENT_PREFIX_LENGTH) {
+                        prefix.append(
+                            buffer,
+                            0,
+                            min(readCount, CACHED_CONTENT_PREFIX_LENGTH - prefix.length),
+                        )
+                    }
+                    if (length > Int.MAX_VALUE) {
+                        return CachedContentInfo(Int.MAX_VALUE, prefix.toString())
+                    }
+                }
+            }
+            length.toInt().takeIf { it > 0 }?.let {
+                CachedContentInfo(it, prefix.toString())
+            }
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    data class CachedContentInfo(
+        val contentLength: Int,
+        val prefix: String,
+    )
 
     /**
      * 删除章节内容
