@@ -297,6 +297,9 @@ object BookHelp {
         return count
     }
 
+    /**
+     * @return 失败的图片数量（0 表示全部成功或无需下载）
+     */
     suspend fun saveImages(
         bookSource: BookSource,
         book: Book,
@@ -304,30 +307,36 @@ object BookHelp {
         content: String,
         concurrency: Int = OtherConfig.threadCount,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
-    ) = coroutineScope {
+    ): Int = coroutineScope {
         val imageUrls = flowImages(bookChapter, content).toList()
         val total = imageUrls.size
         onProgress?.invoke(0, total)
-        if (total == 0) return@coroutineScope
+        if (total == 0) return@coroutineScope 0
         val progressMutex = Mutex()
         var completed = 0
+        var failures = 0
         imageUrls.asFlow().onEachParallel(concurrency) { mSrc ->
-            saveImage(bookSource, book, mSrc, bookChapter)
+            val ok = saveImage(bookSource, book, mSrc, bookChapter)
             progressMutex.withLock {
+                if (!ok) failures++
                 completed++
                 onProgress?.invoke(completed, total)
             }
         }.collect()
+        failures
     }
 
+    /**
+     * @return true 表示图片已存在或本次写入成功
+     */
     suspend fun saveImage(
         bookSource: BookSource?,
         book: Book,
         src: String,
         chapter: BookChapter? = null
-    ) {
+    ): Boolean {
         if (isImageExist(book, src)) {
-            return
+            return true
         }
         val mutex = synchronized(this) {
             downloadImages.getOrPut(src) { Mutex() }
@@ -335,7 +344,7 @@ object BookHelp {
         mutex.lock()
         try {
             if (isImageExist(book, src)) {
-                return
+                return true
             }
             imageDownloadSlots.acquire()
             try {
@@ -346,24 +355,28 @@ object BookHelp {
                     analyzeUrl.getInputStreamAwait().use {
                         writeImage(book, src, it)
                     }
+                    return true
                 } else {
                     imageDecodeSlots.acquire()
                     try {
                         val bytes = analyzeUrl.getByteArrayAwait()
                         //某些图片被加密，需要进一步解密
-                        runScriptWithContext {
+                        val decoded = runScriptWithContext {
                             ImageUtils.decode(
                                 src, bytes, isCover = false, bookSource, book
                             )
-                        }?.let {
-                            if (!checkImage(it)) {
-                                // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
-                                // 所以无论如何都要将数据写入到文件里
-                                // throw NoStackTraceException("数据异常")
-                                AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
-                            }
-                            writeImage(book, src, it)
                         }
+                        if (decoded == null) {
+                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
+                            return false
+                        }
+                        if (!checkImage(decoded)) {
+                            // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
+                            // 所以无论如何都要将数据写入到文件里
+                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
+                        }
+                        writeImage(book, src, decoded)
+                        return true
                     } finally {
                         imageDecodeSlots.release()
                     }
@@ -375,6 +388,7 @@ object BookHelp {
             currentCoroutineContext().ensureActive()
             val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
+            return false
         } finally {
             downloadImages.remove(src)
             mutex.unlock()

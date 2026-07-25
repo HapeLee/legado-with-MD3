@@ -188,7 +188,8 @@ class BookCacheManageViewModel(
                     if (bookState.runningIndices.isNotEmpty() || bookState.chapterProgress.isNotEmpty()) {
                         scheduleProgressUpdate(bookUrl, debounceMillis = 100)
                     } else {
-                        scheduleDownloadStatusRefresh(bookUrl)
+                        // 下载结束时立刻全量刷新，取消进行中的进度-only 更新，避免 isCached 滞后
+                        scheduleBookReload(bookUrl, debounceMillis = 80)
                     }
                 }
                 pendingDownloadSummaryRefresh = true
@@ -653,6 +654,8 @@ class BookCacheManageViewModel(
                     progress = chapterProgress,
                 )
                 item.copy(
+                    // 进行中强制未缓存；完成后由 scheduleBookReload 全量校正 isCached/cachedCount
+                    isCached = if (isDownloading || isWaiting || isPaused) false else item.isCached,
                     isWaiting = isWaiting,
                     isDownloading = isDownloading,
                     isPaused = isPaused,

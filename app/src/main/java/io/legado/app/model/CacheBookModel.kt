@@ -631,6 +631,19 @@ class CacheBookModel(
         return BookHelp.countImagesInContent(chapter, content)
     }
 
+    private suspend fun ensureChapterImagesCached(chapter: BookChapter) {
+        if (!book.isImage || repository.hasImageContent(book, chapter)) return
+        reportImageDownloadProgress(chapter, completed = 0)
+        repository.saveCachedImagesAwait(
+            bookSource = bookSource,
+            book = book,
+            chapter = chapter,
+            onProgress = { completed, total ->
+                reportImageDownloadProgress(chapter, completed, total)
+            },
+        )
+    }
+
     suspend fun downloadAwait(chapter: BookChapter): String {
         synchronized(this) {
             onDownloadSet.add(chapter.index)
@@ -639,16 +652,7 @@ class CacheBookModel(
         }
         try {
             val content = repository.downloadContentAwait(bookSource, book, chapter)
-            if (book.isImage && !repository.hasImageContent(book, chapter)) {
-                repository.saveCachedImagesAwait(
-                    bookSource = bookSource,
-                    book = book,
-                    chapter = chapter,
-                    onProgress = { completed, total ->
-                        reportImageDownloadProgress(chapter, completed, total)
-                    },
-                )
-            }
+            ensureChapterImagesCached(chapter)
             onSuccess(chapter)
             ReadBook.downloadedChapters.add(chapter.index)
             ReadBook.downloadFailChapters.remove(chapter.index)
@@ -712,15 +716,9 @@ class CacheBookModel(
             context = IO,
             executeContext = IO,
             semaphore = semaphore
-        ).timeout(DOWNLOAD_TIMEOUT_MS).onSuccess { content ->
-            if (book.isImage && !repository.hasImageContent(book, chapter)) {
-                Coroutine.async(scope, IO) {
-                    repository.saveCachedImagesAwait(bookSource, book, chapter)
-                }.start()
-            }
-            onSuccess(chapter)
-            ReadBook.downloadedChapters.add(chapter.index)
-            ReadBook.downloadFailChapters.remove(chapter.index)
+        ).timeout(DOWNLOAD_TIMEOUT_MS)
+        task.onSuccess { content ->
+            // 正文先交给阅读器；缓存成功态等图片完成后再标记
             downloadFinish(
                 chapter,
                 content,
@@ -728,6 +726,19 @@ class CacheBookModel(
                 preserveReadAloudPosition = preserveReadAloudPosition,
             )
             emitPendingReadContent(chapter, content)
+            try {
+                ensureChapterImagesCached(chapter)
+                onSuccess(chapter)
+                ReadBook.downloadedChapters.add(chapter.index)
+                ReadBook.downloadFailChapters.remove(chapter.index)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onError(chapter, e)
+                ReadBook.downloadFailChapters[chapter.index] =
+                    (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
+                // 不覆盖已展示的正文
+            }
         }.onError {
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
@@ -749,7 +760,9 @@ class CacheBookModel(
                 preserveReadAloudPosition = preserveReadAloudPosition,
             )
         }.onFinally {
-            chapterTasks.remove(chapter.index)
+            if (chapterTasks[chapter.index] === task) {
+                chapterTasks.remove(chapter.index)
+            }
             host.onTaskQueuesChanged(book.bookUrl)
         }
         task.start()

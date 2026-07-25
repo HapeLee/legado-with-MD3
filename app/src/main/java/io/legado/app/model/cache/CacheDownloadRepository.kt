@@ -4,6 +4,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
@@ -46,8 +47,10 @@ class CacheDownloadRepository {
         chapter: BookChapter,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
     ) {
-        BookHelp.getContent(book, chapter)?.let { content ->
-            BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress)
+        val content = BookHelp.getContent(book, chapter) ?: return
+        val failures = BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress)
+        if (failures > 0 || !BookHelp.hasImageFilesCached(book, chapter)) {
+            throw NoStackTraceException("${book.name} ${chapter.title} 图片缓存未完成")
         }
     }
 
