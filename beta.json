@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.5",
-  "name": "Pre-release 3.26.16-beta.5",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 优化\n* feat: 优化\n* feat: 人物详情页增加了AI添加人物的功能，人物添加青年等标识，优化听书功能喵喵喵\n* 修复 HTTP TTS 删除后重启恢复\n* 恢复正则超时强制重启\n* 修复已删除 TTS 引擎重启后恢复\n* 修复正则替换超时取消\n* 护眼模式全局生效并支持定时时段\n* 修复 Miuix 主题下字体/边框/圆角设置不生效\n* 调整阅读总览时长显示\n* 停止跟踪本地调试技能\n* 停止跟踪本地调试工具\n* 修复阅读热力图方块间距过大\n* 修正 RSS 日夜切换调试语义\n* 完善护眼与 RSS 调试场景\n* 添加长章节段评调试夹具\n* 修复段评页面日夜模式即时切换\n* 修复阅读主题、TTS 音色与字体热更新\n* 完善 Debug Tool 配置注入与夹具规范\n* 新增 Legado Debug Tool 项目级 Skill\n* 修复删除已应用主题后导出失败\n* 完善 Android 主题与返回调试场景\n* fix(miuix): 顶栏预留固定状态栏高度,避免返回书架时内容下移\n* feat(debug-tools): 场景注册表化、配置注入、录屏与真机可靠的阅读页检测\n* feat: 增强阅读器场景，提取内容并优化安装流程\n* 添加 Android 调试场景工具",
+  "tag_name": "3.26.16-beta.6",
+  "name": "Pre-release 3.26.16-beta.6",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 改进翻译流式预览和术语字典\n* 页眉页脚添加PageRemaining\n* feat(reader): 融合全文页码 —— 估算校准 + 全书后台扫描\n* fix(epub): 修复超过 2GB 的 EPUB 无法读取\n* perf(reader): baseline profile 补采开书热路径,消除首开 JIT 卡顿\n* fix(replace): 正则完成后回收超时看门狗,修复大规则集下替换净化 OOM\n* fix(reader): 排版弹层重开显示旧值 + 修正状态栏图标/下划线颜色刷新动作\n* 回退正则超时中断改动\n* fix: 修复护眼设置弹窗布局挤压\n* fix: 修复护眼配置与分支审查问题\n* 清理书籍简介中的脚本和样式代码\n* 修复详情页关闭删除提醒后仍弹窗\n* 调整标签规则为只添加分组\n* 修复删除分组后匹配规则残留\n* 修正书架搜索按钮设置文案\n* 修正阅读菜单不透明度文案\n* 修复文件夹书架冷启动闪现普通布局\n* 移除重复点击首页弹出右上菜单\n* 修复正则替换超时任务导致内存溢出\n* 修复恢复默认主题遗漏封面设置\n* 为高亮规则选项切换添加过渡动画\n* 修复全文搜索关键词高亮\n* 修复恢复全文搜索结果时弹出键盘\n* fix: WebView 日夜切换只生效一次，之后永久停在首次切换的那一侧\n* fix: AppCompat 夜间模式跟随设置网关，不再只由外观页触发\n* fix: 「护眼跟随深色模式」改为全局判定,不再回写总开关\n* refactor: 护眼模式收口到一套设置\n* fix: 护眼定时的时段点不开\n* fix: 标题次行缩放负值不生效\n* fix: 角色绑定的音色未生效\n* fix: 修复自定义字体切换与清除不生效",
   "prerelease": true,
-  "created_at": "2026-07-22T19:29:06Z",
+  "created_at": "2026-07-25T19:11:20Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.5/legado-3.26.16-beta.5-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.6/legado-3.26.16-beta.6-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-22T19:44:29Z",
+      "created_at": "2026-07-25T20:30:08Z",
       "download_count": 0,
-      "id": 486349498,
-      "name": "legado-3.26.16-beta.5-arm64-v8a.apk",
+      "id": 489734253,
+      "name": "legado-3.26.16-beta.6-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/486349498"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/489734253"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.5/legado-3.26.16-beta.5-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.6/legado-3.26.16-beta.6-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-22T19:44:29Z",
+      "created_at": "2026-07-25T20:30:08Z",
       "download_count": 0,
-      "id": 486349497,
-      "name": "legado-3.26.16-beta.5-armeabi-v7a.apk",
+      "id": 489734251,
+      "name": "legado-3.26.16-beta.6-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/486349497"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/489734251"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.5/legado-3.26.16-beta.5.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.6/legado-3.26.16-beta.6.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-22T19:44:29Z",
+      "created_at": "2026-07-25T20:30:08Z",
       "download_count": 0,
-      "id": 486349496,
-      "name": "legado-3.26.16-beta.5.apk",
+      "id": 489734250,
+      "name": "legado-3.26.16-beta.6.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/486349496"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/489734250"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.5/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.6/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-07-22T19:44:29Z",
+      "created_at": "2026-07-25T20:30:08Z",
       "download_count": 0,
-      "id": 486349499,
+      "id": 489734249,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/486349499"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/489734249"
     }
   ]
 }
