@@ -35,7 +35,7 @@ public class AndroidZipEntry implements ZipConstants, Cloneable {
     private String comment = null;
 
     int flags;              /* used by ZipOutputStream */
-    int offset;             /* used by ZipFile and ZipOutputStream */
+    long offset;             /* used by ZipFile and ZipOutputStream */
 
 
     /**
