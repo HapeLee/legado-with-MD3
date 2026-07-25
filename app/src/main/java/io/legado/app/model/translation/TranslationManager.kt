@@ -36,7 +36,7 @@ object TranslationManager : KoinComponent {
      */
     fun getChapterTaskStateFlow(bookUrl: String, chapterIndex: Int): StateFlow<TranslationChapterState>? {
         val key = TranslationChapterKey(bookUrl, chapterIndex)
-        return _taskStateFlows[key]?.takeIf { it.value.status == TranslationChapterStatus.Translating }
+        return _taskStateFlows[key]?.takeIf { it.value.status.isActive() }
     }
 
     /**
@@ -74,7 +74,7 @@ object TranslationManager : KoinComponent {
 
         // Check if already translating
         _taskStateFlows[key]?.let { taskFlow ->
-            if (taskFlow.value.status == TranslationChapterStatus.Translating) {
+            if (taskFlow.value.status.isActive()) {
                 return taskFlow
             }
         }
@@ -90,7 +90,9 @@ object TranslationManager : KoinComponent {
         }
 
         // Create new task flow
-        val taskFlow = MutableStateFlow(TranslationChapterState(key, status = TranslationChapterStatus.Idle))
+        val taskFlow = MutableStateFlow(
+            TranslationChapterState(key, status = TranslationChapterStatus.Translating)
+        )
         _taskStateFlows[key] = taskFlow
 
         // Start translation in background
@@ -123,7 +125,22 @@ object TranslationManager : KoinComponent {
                     )
                 }
             },
-            onTranslateStarted = onTranslateStarted
+            onTranslateStarted = onTranslateStarted,
+            onThinkingChanged = { thinking ->
+                taskFlow.update { state ->
+                    if (state.status.isActive()) {
+                        state.copy(
+                            status = if (thinking) {
+                                TranslationChapterStatus.Thinking
+                            } else {
+                                TranslationChapterStatus.Translating
+                            }
+                        )
+                    } else {
+                        state
+                    }
+                }
+            },
         )
 
         result.onSuccess { content ->
@@ -142,6 +159,7 @@ object TranslationManager : KoinComponent {
                 )
             }
         }
+        _taskStateFlows.remove(key, taskFlow)
     }
 
     /**
@@ -180,5 +198,8 @@ object TranslationManager : KoinComponent {
     private fun currentTargetLanguage(): String {
         return translationSettingsGateway.currentSettings.targetLanguage
     }
+
+    private fun TranslationChapterStatus.isActive(): Boolean =
+        this == TranslationChapterStatus.Translating || this == TranslationChapterStatus.Thinking
 
 }

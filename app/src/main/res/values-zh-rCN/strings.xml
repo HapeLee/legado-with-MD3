@@ -2883,4 +2883,5 @@
     <string name="whole_book_page_format">全文 %1$d / %2$d</string>
     <string name="whole_book_page_estimated_format">全文 %1$s / %2$s</string>
     <string name="whole_book_page_unavailable">全文 - / -</string>
+    <string name="translation_model_thinking">模型思考中</string>
 </resources>
