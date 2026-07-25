@@ -10,6 +10,14 @@ interface ReadStyleGateway {
 
     fun refresh()
     fun save()
+
+    /**
+     * 日夜 / 墨水屏模式切换后调用。
+     *
+     * 排版值本身没变，但**解析后的生效值**变了（`curTextColor()`/`curUnderlineColor()`/
+     * `curTextShadowColor()` 等都按当前模式取值），订阅方必须重新派生快照。
+     */
+    fun notifyModeChanged()
     fun updateCurrentStyle(mutation: ReadStyleMutation)
     fun applyPreset(index: Int): Boolean
     fun addStyle(): Int

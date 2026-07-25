@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicLong
 
 class ReadBookStyleConfigRepository(
     private val readStyleRepository: ReadStyleRepository,
@@ -41,6 +42,7 @@ class ReadBookStyleConfigRepository(
             AppLog.put("保存排版配置文件出错", error)
         },
     )
+    private val stateRevision = AtomicLong(0L)
     private val _state = MutableStateFlow(buildState())
     override val state: StateFlow<ReadStyleState> = _state.asStateFlow()
     override val currentState: ReadStyleState get() = _state.value
@@ -48,6 +50,10 @@ class ReadBookStyleConfigRepository(
     override fun refresh() {
         ReadBookConfig.initConfigs()
         ReadBookConfig.initShareConfig()
+        publishState()
+    }
+
+    override fun notifyModeChanged() {
         publishState()
     }
 
@@ -267,6 +273,7 @@ class ReadBookStyleConfigRepository(
     }
 
     private fun buildState(): ReadStyleState = ReadStyleState(
+        revision = stateRevision.incrementAndGet(),
         items = ReadBookConfig.configsSnapshot().map { config ->
             ReadStyleItem(
                 name = config.name,

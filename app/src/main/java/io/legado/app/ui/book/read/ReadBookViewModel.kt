@@ -310,7 +310,32 @@ class ReadBookViewModel(
         collectReadAloudPreferences()
         collectEventBus()
         collectReaderSession()
+        collectReadStyle()
         execute { syncConfiguredTtsVoices() }
+    }
+
+    /**
+     * 消费 [ReadStyleGateway.state]（Track E · E2）：排版配置的唯一变更通知。
+     *
+     * 排版底座 `ReadBookConfig.Config` 是可变全局、无 flow，此前 UiState 里的
+     * [ReadBookStyleConfig] / [ReadSheetConfigUiState] 只能靠各写入站点手工重建——
+     * 13 处重建 `styleConfig`、**只有 1 处**重建 `sheetConfig`（`syncFromReadBook`），
+     * 于是编辑排版后重开弹层显示的是旧值。
+     *
+     * 改由 gateway 的 `publishState()` 统一驱动后，「新增写入路径忘了重建快照」这个
+     * 失效类别不再存在：写入必经 gateway，gateway 必发 state，这里必然重建两份快照。
+     */
+    private fun collectReadStyle() {
+        viewModelScope.launch {
+            readBookStyleConfigRepository.state.collect {
+                _uiState.update { state ->
+                    state.copy(
+                        styleConfig = buildStyleConfig(),
+                        sheetConfig = buildSheetConfig(),
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -1538,13 +1563,7 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.DeleteCurrentReadStyleConfig -> {
                 if (readBookStyleConfigRepository.deleteCurrentStyle()) {
-                    _uiState.update {
-                        it.copy(
-                            styleConfig = buildStyleConfig(),
-                            sheetConfig = buildSheetConfig(),
-                            activeSheet = null,
-                        )
-                    }
+                    _uiState.update { it.copy(activeSheet = null) }
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(
                             ConfigUpdateAction.UpdateBackground,
@@ -1558,12 +1577,6 @@ class ReadBookViewModel(
             is ReadBookIntent.ApplyPresetTheme -> {
                 if (!readBookStyleConfigRepository.applyPreset(intent.presetIndex)) {
                     return@onIntent
-                }
-                _uiState.update {
-                    it.copy(
-                        styleConfig = buildStyleConfig(),
-                        sheetConfig = buildSheetConfig(),
-                    )
                 }
                 _effects.tryEmit(
                     ReadBookEffect.UpdateReadViewConfig(
@@ -2170,7 +2183,10 @@ class ReadBookViewModel(
         viewModelScope.launch {
             eventFlow<ArrayList<Int>>(EventBus.UP_CONFIG).collect { values ->
                 _uiState.update {
-                    it.copy(styleConfig = buildStyleConfig())
+                    it.copy(
+                        styleConfig = buildStyleConfig(),
+                        sheetConfig = buildSheetConfig(),
+                    )
                 }
                 // Convert legacy integer codes to ConfigUpdateAction set
                 val actions = values.mapNotNull { code ->
@@ -4943,7 +4959,8 @@ class ReadBookViewModel(
 
     @Suppress("LongMethod")
     private fun handleConfigUpdate(update: ConfigUpdate) {
-        update.toReadStyleMutation()?.let(readBookStyleConfigRepository::updateCurrentStyle)
+        val styleMutation = update.toReadStyleMutation()
+        styleMutation?.let(readBookStyleConfigRepository::updateCurrentStyle)
         when (update) {
             // --- Text style ---
             is ConfigUpdate.TextSize,
@@ -5495,7 +5512,6 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setProgressBarBehavior(update.value)
                 }
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
             }
             is ConfigUpdate.MouseWheelPage -> {
                 viewModelScope.launch {
@@ -5600,14 +5616,16 @@ class ReadBookViewModel(
             }
         }
 
-        // Notify rendering layer. styleConfig and sheetConfig are both derived
-        // from ReadBookConfig, so keep them rebuilt together — otherwise the
-        // settings sheet re-seeds its controls from a stale sheetConfig on reopen.
-        _uiState.update {
-            it.copy(
-                styleConfig = buildStyleConfig(),
-                sheetConfig = buildSheetConfig(),
-            )
+        // 走了 gateway 的更新由 collectReadStyle 重建快照；只写 DataStore 的更新
+        // 不经 gateway，需在此手工重建——且必须两份一起，
+        // 否则像 ChineseConverterType 这种本就在 sheetConfig 里的项会一直显示旧值。
+        if (styleMutation == null) {
+            _uiState.update {
+                it.copy(
+                    styleConfig = buildStyleConfig(),
+                    sheetConfig = buildSheetConfig(),
+                )
+            }
         }
         if (update.actions.isNotEmpty()) {
             _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(update.actions))
@@ -6078,12 +6096,11 @@ class ReadBookViewModel(
             } else {
                 it.activeReminder
             }
-            it.copy(
-                activeReminder = newActiveReminder,
-                styleConfig = buildStyleConfig(),
-                sheetConfig = buildSheetConfig(),
-            )
+            it.copy(activeReminder = newActiveReminder)
         }
+        // 排版值没变但解析后的生效值变了（颜色按模式取），经 gateway 统一重新发布，
+        // 由 collectReadStyle 重建 styleConfig + sheetConfig。
+        readBookStyleConfigRepository.notifyModeChanged()
         reminderQueue.removeAll { it.type is ReminderType.DayNightReminder }
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(
@@ -6105,7 +6122,6 @@ class ReadBookViewModel(
                     readBookStyleConfigRepository.saveBackgroundImage(it, name)
                 } ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.setCurrentBackgroundImage(path)
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                     setOf(ConfigUpdateAction.UpdateBackground)
                 ))
@@ -6127,7 +6143,6 @@ class ReadBookViewModel(
                     readBookStyleConfigRepository.saveBackgroundImage(it, name)
                 } ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.setCurrentBackgroundImageForMode(path, isNight)
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                     setOf(ConfigUpdateAction.UpdateBackground)
                 ))
@@ -6147,12 +6162,6 @@ class ReadBookViewModel(
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.importCurrentStyle(bytes)
-                _uiState.update {
-                    it.copy(
-                        styleConfig = buildStyleConfig(),
-                        sheetConfig = buildSheetConfig(),
-                    )
-                }
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                     setOf(
                         ConfigUpdateAction.UpdateBackground,
