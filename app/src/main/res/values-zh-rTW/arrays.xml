@@ -110,6 +110,8 @@
         <item>時間及電量</item>
         <item>時間及電量经典</item>
         <item>時間及電量%</item>
+        <item>全書頁數</item>
+        <item>全書頁數及進度</item>
         <item>自訂</item>
     </string-array>
 

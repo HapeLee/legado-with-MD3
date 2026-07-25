@@ -73,6 +73,8 @@
         <item>時間同埋電量</item>
         <item>時間同埋電量經典</item>
         <item>時間同埋電量%</item>
+        <item>全書頁數</item>
+        <item>全書頁數及進度</item>
         <item>自訂</item>
     </string-array>
 

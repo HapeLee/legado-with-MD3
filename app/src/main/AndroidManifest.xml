@@ -532,6 +532,9 @@
         <service
             android:name=".service.DownloadService"
             android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".service.FullBookPageService"
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
