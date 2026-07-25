@@ -246,9 +246,6 @@ object BackupConfig {
         PreferKey.showMenuIcon,
         PreferKey.titleBarMode,
         PreferKey.shouldShowExpandButton,
-        PreferKey.eyeProtectionEnabled,
-        PreferKey.colorTemperature,
-        PreferKey.eyeProtectionAutoNight,
     )
 
     private val themePrefKeys = arrayOf(
@@ -295,7 +292,13 @@ object BackupConfig {
         PreferKey.primaryTextColorNight,
         PreferKey.secondaryTextColorNight,
         PreferKey.themeBackgroundColorNight,
-        PreferKey.labelContainerColorNight
+        PreferKey.labelContainerColorNight,
+        PreferKey.eyeProtectionEnabled,
+        PreferKey.colorTemperature,
+        PreferKey.eyeProtectionAutoNight,
+        PreferKey.eyeProtectionSchedule,
+        PreferKey.eyeProtectionStartTime,
+        PreferKey.eyeProtectionEndTime,
     )
 
     private val bookshelfPrefKeys = arrayOf(

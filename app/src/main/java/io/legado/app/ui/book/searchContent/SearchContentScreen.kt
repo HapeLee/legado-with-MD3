@@ -80,6 +80,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SearchContentRouteScreen(
     onBack: () -> Unit,
+    autoFocus: Boolean = true,
     viewModel: SearchContentViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -95,6 +96,7 @@ fun SearchContentRouteScreen(
     }
     SearchContentScreen(
         state = state,
+        autoFocus = autoFocus,
         onIntent = viewModel::onIntent,
         onBack = onBack,
     )
@@ -104,6 +106,7 @@ fun SearchContentRouteScreen(
 @Composable
 fun SearchContentScreen(
     state: SearchContentUiState,
+    autoFocus: Boolean = true,
     onIntent: (SearchContentIntent) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -193,6 +196,7 @@ fun SearchContentScreen(
                 ) {
                     SearchBar(
                         query = searchQuery,
+                        autoFocus = autoFocus,
                         scrollState = listState,
                         onQueryChange = { onIntent(SearchContentIntent.UpdateQuery(it)) },
                         trailingIcon = {

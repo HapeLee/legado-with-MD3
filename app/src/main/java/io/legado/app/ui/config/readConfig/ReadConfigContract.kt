@@ -1,6 +1,7 @@
 package io.legado.app.ui.config.readConfig
 
 import androidx.compose.runtime.Stable
+import io.legado.app.ui.book.read.EyeProtectionUiState
 
 @Stable
 data class ReadConfigUiState(
@@ -17,9 +18,7 @@ data class ReadConfigUiState(
     val textBottomJustify: Boolean = true,
     val adaptSpecialStyle: Boolean = true,
     val useZhLayout: Boolean = false,
-    val eyeProtectionEnabled: Boolean = false,
-    val eyeProtectionIntensity: Int = 50,
-    val eyeProtectionAutoNight: Boolean = false,
+    val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
     val brightnessAuto: Boolean = true,
@@ -78,6 +77,9 @@ sealed interface ReadConfigIntent {
     data class EyeProtectionEnabledChanged(val value: Boolean) : ReadConfigIntent
     data class EyeProtectionIntensityChanged(val value: Int) : ReadConfigIntent
     data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadConfigIntent
+    data class EyeProtectionScheduleChanged(val value: Boolean) : ReadConfigIntent
+    data class EyeProtectionStartTimeChanged(val value: String) : ReadConfigIntent
+    data class EyeProtectionEndTimeChanged(val value: String) : ReadConfigIntent
     data class ShowBrightnessViewChanged(val value: String) : ReadConfigIntent
     data class BrightnessVwPosChanged(val value: String) : ReadConfigIntent
     data class UseUnderlineChanged(val value: Boolean) : ReadConfigIntent

@@ -37,6 +37,11 @@ class BuildSpeechPlanUseCase(
             ?: narrator
 
         return segments.map { segment ->
+            val performance = segment.characterId?.let(characterPerformances::get)
+            // 角色（男主/女主/男配/女配）绑定的音色，优先级低于角色专属绑定、高于性别兜底
+            val roleVoice = performance?.roleSubject()?.let { subject ->
+                bindings.voice(subject, subject, voicesById)
+            }
             val primary = if (!useMultiSpeaker) {
                 // Multi-speaker disabled — every segment uses the default voice
                 defaultVoice
@@ -48,7 +53,6 @@ class BuildSpeechPlanUseCase(
                         voicesById,
                     )
                 }
-                val performance = segment.characterId?.let(characterPerformances::get)
                 val genderFallback = when (performance?.resolvedGender()) {
                     "male" -> bindings.voice(
                         BookVoiceBinding.SUBJECT_UNKNOWN_MALE,
@@ -65,7 +69,7 @@ class BuildSpeechPlanUseCase(
                 }
                 when (segment.roleType) {
                     SpeechRoleType.Character,
-                    SpeechRoleType.Thought -> characterVoice ?: genderFallback
+                    SpeechRoleType.Thought -> characterVoice ?: roleVoice ?: genderFallback
                         ?: unknown ?: narrator ?: defaultVoice
                     SpeechRoleType.Unknown -> unknown ?: narrator ?: defaultVoice
                     SpeechRoleType.Narrator -> narrator ?: defaultVoice
@@ -76,7 +80,7 @@ class BuildSpeechPlanUseCase(
             } else {
                 buildList {
                     if (segment.roleType != SpeechRoleType.Narrator) {
-                        val performance = segment.characterId?.let(characterPerformances::get)
+                        add(roleVoice)
                         add(
                             when (performance?.resolvedGender()) {
                                 "male" -> bindings.voice(
@@ -104,7 +108,7 @@ class BuildSpeechPlanUseCase(
                 segment = segment,
                 voice = primary,
                 fallbackVoices = fallbackVoices,
-                characterPerformance = segment.characterId?.let(characterPerformances::get),
+                characterPerformance = performance,
             )
         }
     }
@@ -114,6 +118,16 @@ class BuildSpeechPlanUseCase(
         subjectId: String,
         voicesById: Map<String, ReadAloudVoice>,
     ): ReadAloudVoice? = get(subjectType to subjectId)?.voiceId?.let(voicesById::get)
+
+    /** 只有已知的角色标识才对应绑定主体，避免任意角色文本参与查询 */
+    private fun CharacterPerformanceProfile.roleSubject(): String? = when (role) {
+        BookVoiceBinding.SUBJECT_MALE_LEAD,
+        BookVoiceBinding.SUBJECT_FEMALE_LEAD,
+        BookVoiceBinding.SUBJECT_MALE_SUPPORTING,
+        BookVoiceBinding.SUBJECT_FEMALE_SUPPORTING -> role
+
+        else -> null
+    }
 
     private fun CharacterPerformanceProfile.resolvedGender(): String? = when (voiceGender) {
         "male", "female" -> voiceGender

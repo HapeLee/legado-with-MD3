@@ -177,6 +177,7 @@ data class MainRouteSearchContent(
     val bookUrl: String,
     val searchWord: String? = null,
     val searchResultIndex: Int = 0,
+    val autoFocus: Boolean = true,
 ) : MainRoute
 
 @Serializable

@@ -66,7 +66,7 @@ fun CharSequence.replace(
                     block.resumeWithException(e)
                 }
             }
-            handler.postDelayed(timeout) {
+            val timeoutRunnable = handler.postDelayed(timeout) {
                 if (coroutine.isActive) {
                     val timeoutMsg =
                         "替换超时,3秒后还未结束将重启应用\n替换规则$regex\n替换内容:$charSequence"
@@ -80,6 +80,11 @@ fun CharSequence.replace(
                         }
                     }
                 }
+            }
+            // 正则结束后立即撤掉看门狗,否则它会在主线程消息队列里存活整个 timeout 窗口,
+            // 并钉住整段正文拷贝;规则数量多时会在 3 秒内堆积成百上千份拷贝导致 OOM。
+            coroutine.invokeOnCompletion {
+                handler.removeCallbacks(timeoutRunnable)
             }
         }
     }

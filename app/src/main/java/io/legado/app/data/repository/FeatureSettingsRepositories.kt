@@ -391,6 +391,7 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     itemDividerColor = compatDsInt(PreferKey.itemDividerColor) ?: 0,
     eyeProtectionEnabled = compatDsBoolean(PreferKey.eyeProtectionEnabled) ?: false,
     colorTemperature = compatDsInt(PreferKey.colorTemperature) ?: 50,
+    eyeProtectionAutoNight = compatDsBoolean(PreferKey.eyeProtectionAutoNight) ?: false,
     eyeProtectionSchedule = compatDsBoolean(PreferKey.eyeProtectionSchedule) ?: false,
     eyeProtectionStartTime = compatDsString(PreferKey.eyeProtectionStartTime) ?: "22:00",
     eyeProtectionEndTime = compatDsString(PreferKey.eyeProtectionEndTime) ?: "07:00",
@@ -402,7 +403,7 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
 )
 
 /**
- * Theme gateway 的 59 键写入边界。主题包专用的 [ThemeSettings.customMode] 与
+ * Theme gateway 的 60 键写入边界。主题包专用的 [ThemeSettings.customMode] 与
  * [ThemeSettings.bookInfoInputColor] 由 ThemePackageSettingsGateway 的事务路径持久化。
  */
 internal fun ThemeSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
@@ -459,6 +460,7 @@ internal fun ThemeSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.itemDividerColor to itemDividerColor,
     PreferKey.eyeProtectionEnabled to eyeProtectionEnabled,
     PreferKey.colorTemperature to colorTemperature,
+    PreferKey.eyeProtectionAutoNight to eyeProtectionAutoNight,
     PreferKey.eyeProtectionSchedule to eyeProtectionSchedule,
     PreferKey.eyeProtectionStartTime to eyeProtectionStartTime,
     PreferKey.eyeProtectionEndTime to eyeProtectionEndTime,

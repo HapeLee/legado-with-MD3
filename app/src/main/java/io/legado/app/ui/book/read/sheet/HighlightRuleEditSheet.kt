@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -304,7 +305,7 @@ fun HighlightRuleEditSheet(
                 checked = hasTextColor,
                 onCheckedChange = { hasTextColor = it },
             )
-            if (hasTextColor) {
+            AnimatedVisibility(visible = hasTextColor) {
                 TinyColorSettingItem(
                     title = stringResource(R.string.select_color),
                     colorValue = textColor,
@@ -318,59 +319,61 @@ fun HighlightRuleEditSheet(
                 checked = hasUnderline,
                 onCheckedChange = { hasUnderline = it },
             )
-            if (hasUnderline) {
-                val underlineEntries = arrayOf(
-                    stringResource(R.string.underline_solid),
-                    stringResource(R.string.underline_dashed),
-                    stringResource(R.string.underline_wave),
-                    stringResource(R.string.underline_title_bar),
-                    stringResource(R.string.underline_svg),
-                )
-                val underlineValues = arrayOf("1", "2", "3", "4", "5")
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.underline_style),
-                    selectedValue = underlineMode.toString(),
-                    displayEntries = underlineEntries,
-                    entryValues = underlineValues,
-                    onValueChange = { underlineMode = it.toIntOrNull() ?: 1 },
-                )
-
-                TinySwitchSettingItem(
-                    title = stringResource(R.string.underline_color),
-                    checked = hasUnderlineColor,
-                    onCheckedChange = { hasUnderlineColor = it },
-                )
-                if (hasUnderlineColor) {
-                    TinyColorSettingItem(
-                        title = stringResource(R.string.select_color),
-                        colorValue = underlineColor,
-                        onClick = { showUnderlineColorPicker = true },
+            AnimatedVisibility(visible = hasUnderline) {
+                Column {
+                    val underlineEntries = arrayOf(
+                        stringResource(R.string.underline_solid),
+                        stringResource(R.string.underline_dashed),
+                        stringResource(R.string.underline_wave),
+                        stringResource(R.string.underline_title_bar),
+                        stringResource(R.string.underline_svg),
                     )
-                }
-
-                TinySliderSettingItem(
-                    title = stringResource(R.string.underline_width),
-                    value = underlineWidth,
-                    valueRange = 0.1f..10f,
-                    description = String.format("%.1f dp", underlineWidth),
-                    onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
-                )
-
-                TinySliderSettingItem(
-                    title = stringResource(R.string.underline_offset),
-                    value = underlineOffset,
-                    valueRange = 0f..20f,
-                    description = String.format("%.1f dp", underlineOffset),
-                    onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
-                )
-
-                if (underlineMode == 5) {
-                    AppTextField(
-                        value = underlineSvgPath,
-                        onValueChange = { underlineSvgPath = it },
-                        label = stringResource(R.string.svg_path),
-                        modifier = Modifier.fillMaxWidth(),
+                    val underlineValues = arrayOf("1", "2", "3", "4", "5")
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.underline_style),
+                        selectedValue = underlineMode.toString(),
+                        displayEntries = underlineEntries,
+                        entryValues = underlineValues,
+                        onValueChange = { underlineMode = it.toIntOrNull() ?: 1 },
                     )
+
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.underline_color),
+                        checked = hasUnderlineColor,
+                        onCheckedChange = { hasUnderlineColor = it },
+                    )
+                    AnimatedVisibility(visible = hasUnderlineColor) {
+                        TinyColorSettingItem(
+                            title = stringResource(R.string.select_color),
+                            colorValue = underlineColor,
+                            onClick = { showUnderlineColorPicker = true },
+                        )
+                    }
+
+                    TinySliderSettingItem(
+                        title = stringResource(R.string.underline_width),
+                        value = underlineWidth,
+                        valueRange = 0.1f..10f,
+                        description = String.format("%.1f dp", underlineWidth),
+                        onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
+                    )
+
+                    TinySliderSettingItem(
+                        title = stringResource(R.string.underline_offset),
+                        value = underlineOffset,
+                        valueRange = 0f..20f,
+                        description = String.format("%.1f dp", underlineOffset),
+                        onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
+                    )
+
+                    AnimatedVisibility(visible = underlineMode == 5) {
+                        AppTextField(
+                            value = underlineSvgPath,
+                            onValueChange = { underlineSvgPath = it },
+                            label = stringResource(R.string.svg_path),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
 
@@ -380,7 +383,7 @@ fun HighlightRuleEditSheet(
                 checked = hasBgColor,
                 onCheckedChange = { hasBgColor = it },
             )
-            if (hasBgColor) {
+            AnimatedVisibility(visible = hasBgColor) {
                 TinyColorSettingItem(
                     title = stringResource(R.string.select_color),
                     colorValue = bgColor,
@@ -394,7 +397,7 @@ fun HighlightRuleEditSheet(
                 checked = hasBgImage,
                 onCheckedChange = { hasBgImage = it },
             )
-            if (hasBgImage) {
+            AnimatedVisibility(visible = hasBgImage) {
                 TinyClickableSettingItem(
                     title = stringResource(R.string.highlight_bg_image),
                     description = bgImage.ifBlank { null }?.let { File(it).name },
@@ -403,28 +406,30 @@ fun HighlightRuleEditSheet(
                     },
                 )
             }
-            if (hasBgImage && bgImage.isNotBlank()) {
-                val fitEntries = arrayOf(
-                    stringResource(R.string.bg_fit_tile),
-                    stringResource(R.string.bg_fit_stretch),
-                    stringResource(R.string.bg_fit_crop),
-                )
-                val fitValues = arrayOf("0", "1", "2")
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.bg_image_fit),
-                    selectedValue = bgImageFit.toString(),
-                    displayEntries = fitEntries,
-                    entryValues = fitValues,
-                    onValueChange = { bgImageFit = it.toIntOrNull() ?: 0 },
-                )
+            AnimatedVisibility(visible = hasBgImage && bgImage.isNotBlank()) {
+                Column {
+                    val fitEntries = arrayOf(
+                        stringResource(R.string.bg_fit_tile),
+                        stringResource(R.string.bg_fit_stretch),
+                        stringResource(R.string.bg_fit_crop),
+                    )
+                    val fitValues = arrayOf("0", "1", "2")
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.bg_image_fit),
+                        selectedValue = bgImageFit.toString(),
+                        displayEntries = fitEntries,
+                        entryValues = fitValues,
+                        onValueChange = { bgImageFit = it.toIntOrNull() ?: 0 },
+                    )
 
-                TinySliderSettingItem(
-                    title = stringResource(R.string.highlight_bg_image_scale),
-                    value = bgImageScale,
-                    valueRange = 0.1f..5f,
-                    description = String.format("%.1fx", bgImageScale),
-                    onValueChange = { bgImageScale = (it * 10).toInt() / 10f },
-                )
+                    TinySliderSettingItem(
+                        title = stringResource(R.string.highlight_bg_image_scale),
+                        value = bgImageScale,
+                        valueRange = 0.1f..5f,
+                        description = String.format("%.1fx", bgImageScale),
+                        onValueChange = { bgImageScale = (it * 10).toInt() / 10f },
+                    )
+                }
             }
 
             // === Section 3: Config Binding ===
@@ -486,7 +491,7 @@ fun HighlightRuleEditSheet(
                 checked = hasFont,
                 onCheckedChange = { hasFont = it },
             )
-            if (hasFont) {
+            AnimatedVisibility(visible = hasFont) {
                 TinyClickableSettingItem(
                     title = stringResource(R.string.select_font),
                     description = fontPath.ifBlank { null }?.let { File(it).name },

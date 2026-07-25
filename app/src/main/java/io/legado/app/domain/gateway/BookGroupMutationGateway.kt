@@ -17,4 +17,6 @@ interface BookGroupMutationGateway {
     suspend fun saveTagGroupRule(rule: TagGroupRuleUpdate)
 
     suspend fun deleteTagGroupRule(ruleId: Long)
+
+    suspend fun deleteGroup(groupId: Long)
 }

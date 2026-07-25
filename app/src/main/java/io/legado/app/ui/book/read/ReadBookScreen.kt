@@ -240,13 +240,19 @@ fun ReadBookScreen(
     )
     EyeProtectionConfigSheet(
         show = state.activeSheet is ReadBookSheet.EyeProtection,
-        enabled = preferences.eyeProtectionEnabled,
-        intensity = preferences.eyeProtectionIntensity,
-        autoNight = preferences.eyeProtectionAutoNight,
+        enabled = state.eyeProtection.enabled,
+        intensity = state.eyeProtection.intensity,
+        autoNight = state.eyeProtection.autoNight,
+        schedule = state.eyeProtection.schedule,
+        startTime = state.eyeProtection.startTime,
+        endTime = state.eyeProtection.endTime,
         onDismissRequest = dismissSheet,
         onEnabledChange = { onIntent(ReadBookIntent.EyeProtectionEnabledChanged(it)) },
         onIntensityChange = { onIntent(ReadBookIntent.EyeProtectionIntensityChanged(it)) },
         onAutoNightChange = { onIntent(ReadBookIntent.EyeProtectionAutoNightChanged(it)) },
+        onScheduleChange = { onIntent(ReadBookIntent.EyeProtectionScheduleChanged(it)) },
+        onStartTimeChange = { onIntent(ReadBookIntent.EyeProtectionStartTimeChanged(it)) },
+        onEndTimeChange = { onIntent(ReadBookIntent.EyeProtectionEndTimeChanged(it)) },
     )
     FloatingBarIconConfigSheet(
         show = state.activeSheet is ReadBookSheet.FloatingBarIconConfig,

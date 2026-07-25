@@ -61,7 +61,7 @@ object ThemeConfigStore {
         initNightMode()
     }
 
-    private fun initNightMode() {
+    fun initNightMode() {
         ThemeConfig.initNightMode()
     }
 

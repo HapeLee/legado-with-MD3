@@ -11,7 +11,6 @@ import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.model.BookGroupUpdate
 import io.legado.app.domain.model.NewBookGroup
 import io.legado.app.domain.model.TagGroupRuleUpdate
-import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -19,7 +18,6 @@ import kotlinx.coroutines.launch
 class GroupViewModel(
     application: Application,
     private val bookGroupRepository: BookGroupRepository,
-    private val removeBookGroupAssignmentUseCase: RemoveBookGroupAssignmentUseCase,
     private val bookGroupMutationGateway: BookGroupMutationGateway,
 ) : BaseViewModel(application) {
 
@@ -87,8 +85,7 @@ class GroupViewModel(
 
     fun delGroup(bookGroup: BookGroup, finally: () -> Unit) {
         execute {
-            bookGroupRepository.delete(bookGroup)
-            removeBookGroupAssignmentUseCase.execute(bookGroup.groupId)
+            bookGroupMutationGateway.deleteGroup(bookGroup.groupId)
         }.onFinally {
             finally()
         }

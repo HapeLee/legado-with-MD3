@@ -64,6 +64,7 @@ import io.legado.app.ui.main.MainIntent
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.GSON
+import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.fromJsonArray
@@ -1042,7 +1043,11 @@ class BookInfoViewModel(
     private fun onShelfClick() {
         val book = currentBook ?: return
         if (inBookshelf) {
-            showDialog(BookInfoDialog.DeleteBook(book.isLocal))
+            if (LocalConfig.bookInfoDeleteAlert) {
+                showDialog(BookInfoDialog.DeleteBook(book.isLocal))
+            } else {
+                deleteBook(LocalConfig.deleteBookOriginal)
+            }
         } else if (book.isWebFile) {
             setSheet(BookInfoSheet.WebFiles(openAfterImport = false))
         } else {
@@ -1708,7 +1713,7 @@ class BookInfoViewModel(
             durChapterIndex = durChapterIndex,
             durChapterPos = durChapterPos,
             remark = remark,
-            displayIntro = getDisplayIntro(),
+            displayIntro = HtmlFormatter.formatDisplayText(getDisplayIntro()),
         )
     }
 

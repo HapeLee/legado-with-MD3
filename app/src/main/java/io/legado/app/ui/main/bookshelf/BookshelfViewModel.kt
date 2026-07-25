@@ -611,6 +611,9 @@ class BookshelfViewModel(
         SharingStarted.WhileSubscribed(5000),
         BookshelfUiState(
             settings = initialSettings,
+            selectedGroupId = initialSettings.saveTabPosition,
+            isInFolderRoot = initialSettings.bookGroupStyle == 2,
+            bookGroupStyle = initialSettings.bookGroupStyle,
             useRaisedBottomInset = initialAppShellSettings.useFloatingBottomBar || initialThemeSettings.enableBlur,
             enableCustomTagColors = initialThemeSettings.enableCustomTagColors,
             customTagColors = parseTagColors(initialThemeSettings.customTagColorsJson),

@@ -3,7 +3,6 @@ package io.legado.app.ui.widget.dialog
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
@@ -72,7 +71,7 @@ import io.legado.app.utils.invisible
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.setLayout
-import io.legado.app.utils.setDarkeningAllowed
+import io.legado.app.utils.applyDayNight
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -527,27 +526,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
     private fun applyWebViewTheme(isDark: Boolean, force: Boolean = false) {
         if (!force && appliedDarkTheme == isDark) return
         appliedDarkTheme = isDark
-        val configuration = Configuration(currentWebView.resources.configuration).apply {
-            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or if (isDark) {
-                Configuration.UI_MODE_NIGHT_YES
-            } else {
-                Configuration.UI_MODE_NIGHT_NO
-            }
-        }
-        currentWebView.dispatchConfigurationChanged(configuration)
-        currentWebView.settings.setDarkeningAllowed(isDark)
-        currentWebView.evaluateJavascript(
-            """
-            (() => {
-              const root = document.documentElement;
-              if (!root) return;
-              root.style.setProperty('color-scheme', '${if (isDark) "dark" else "light"}', 'important');
-              window.dispatchEvent(new CustomEvent('legado-theme-change', { detail: { dark: $isDark } }));
-            })();
-            """.trimIndent(),
-            null,
-        )
-        currentWebView.postInvalidate()
+        currentWebView.applyDayNight(isDark)
     }
 
     private fun buildSpliceHtml(originalHtml: String): String {
@@ -786,7 +765,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            appliedDarkTheme?.let { applyWebViewTheme(it, force = true) }
+            applyWebViewTheme(appliedDarkTheme ?: AppConfig.isNightTheme, force = true)
         }
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {

@@ -56,6 +56,7 @@ data class ThemeSettings(
     val itemDividerColor: Int = 0,
     val eyeProtectionEnabled: Boolean = false,
     val colorTemperature: Int = 50,
+    val eyeProtectionAutoNight: Boolean = false,
     val eyeProtectionSchedule: Boolean = false,
     val eyeProtectionStartTime: String = "22:00",
     val eyeProtectionEndTime: String = "07:00",
@@ -63,6 +64,9 @@ data class ThemeSettings(
     val enableCustomTagColors: Boolean = false,
     val customTagColorsJson: String? = null,
 )
+
+val ThemeSettings.isEyeProtectionConfigured: Boolean
+    get() = eyeProtectionEnabled || eyeProtectionAutoNight
 
 data class ThemeCustomColors(
     val primary: Int,

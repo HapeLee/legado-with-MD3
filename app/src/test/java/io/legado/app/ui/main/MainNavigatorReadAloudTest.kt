@@ -9,6 +9,7 @@ class MainNavigatorReadAloudTest {
     @Test
     fun `opens cloud TTS manager on top of reader`() {
         val reader = MainRouteReadBook(bookUrl = "book")
+        val cloudTts = MainRouteCloudTtsEngines(bookUrl = "book")
         val backStack = mutableListOf<NavKey>(MainRouteHome, reader)
 
         MainNavigator.navigateToRoute(backStack, MainRouteCloudTtsEngines())
@@ -18,6 +19,7 @@ class MainNavigatorReadAloudTest {
 
     @Test
     fun `resets to home before cloud TTS manager from unrelated route`() {
+        val cloudTts = MainRouteCloudTtsEngines()
         val backStack = mutableListOf<NavKey>(
             MainRouteHome,
             MainRouteSettings,

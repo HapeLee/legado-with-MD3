@@ -171,7 +171,7 @@ fun ReadConfigScreen(
 
                 ClickableSettingItem(
                     title = stringResource(R.string.eye_protection),
-                    option = if (settings.eyeProtectionEnabled) {
+                    option = if (state.eyeProtection.configured) {
                         stringResource(R.string.enabled)
                     } else {
                         stringResource(R.string.disabled)
@@ -414,12 +414,18 @@ fun ReadConfigScreen(
 
     EyeProtectionConfigSheet(
         show = state.activeSheet == ReadConfigSheet.EyeProtection,
-        enabled = settings.eyeProtectionEnabled,
-        intensity = settings.eyeProtectionIntensity,
-        autoNight = settings.eyeProtectionAutoNight,
+        enabled = state.eyeProtection.enabled,
+        intensity = state.eyeProtection.intensity,
+        autoNight = state.eyeProtection.autoNight,
+        schedule = state.eyeProtection.schedule,
+        startTime = state.eyeProtection.startTime,
+        endTime = state.eyeProtection.endTime,
         onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
         onEnabledChange = { onIntent(ReadConfigIntent.EyeProtectionEnabledChanged(it)) },
         onIntensityChange = { onIntent(ReadConfigIntent.EyeProtectionIntensityChanged(it)) },
         onAutoNightChange = { onIntent(ReadConfigIntent.EyeProtectionAutoNightChanged(it)) },
+        onScheduleChange = { onIntent(ReadConfigIntent.EyeProtectionScheduleChanged(it)) },
+        onStartTimeChange = { onIntent(ReadConfigIntent.EyeProtectionStartTimeChanged(it)) },
+        onEndTimeChange = { onIntent(ReadConfigIntent.EyeProtectionEndTimeChanged(it)) },
     )
 }

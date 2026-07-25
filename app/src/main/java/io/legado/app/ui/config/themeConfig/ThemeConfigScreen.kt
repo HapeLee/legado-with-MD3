@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -73,6 +74,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.dialog.TimePickerDialog
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -443,7 +445,16 @@ fun ThemeConfigScreen(
                         }
                     )
 
-                    AnimatedVisibility(visible = theme.eyeProtectionEnabled) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_auto_night),
+                        description = stringResource(R.string.eye_protection_auto_night_summary),
+                        checked = theme.eyeProtectionAutoNight,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(eyeProtectionAutoNight = value) }
+                        }
+                    )
+
+                    AnimatedVisibility(visible = theme.isEyeProtectionConfigured) {
                         Column {
                             SliderSettingItem(
                                 title = stringResource(R.string.color_temperature),
@@ -839,6 +850,24 @@ fun ThemeConfigScreen(
         onConfirm = { onIntent(ThemeConfigIntent.ResetDefaults) },
         onDismiss = { onIntent(ThemeConfigIntent.DismissDialog) },
     )
+
+    val timePickerDialog = state.activeDialog as? ThemeConfigDialog.TimePicker
+    if (timePickerDialog != null) {
+        TimePickerDialog(
+            title = stringResource(
+                when (timePickerDialog.field) {
+                    ThemeTimeField.EyeProtectionStart -> R.string.eye_protection_start_time
+                    ThemeTimeField.EyeProtectionEnd -> R.string.eye_protection_end_time
+                }
+            ),
+            currentValue = timePickerDialog.currentValue,
+            onDismissRequest = { onIntent(ThemeConfigIntent.DismissDialog) },
+            onConfirm = { value ->
+                onIntent(ThemeConfigIntent.SetTime(timePickerDialog.field, value))
+                onIntent(ThemeConfigIntent.DismissDialog)
+            },
+        )
+    }
 
 
     BackgroundImageManageSheet(

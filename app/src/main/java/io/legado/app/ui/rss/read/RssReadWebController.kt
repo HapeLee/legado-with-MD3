@@ -35,6 +35,7 @@ import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.Download
 import io.legado.app.ui.association.OnLineImportActivity
+import io.legado.app.utils.applyDayNight
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
@@ -246,6 +247,7 @@ internal fun configureRssReadWebView(
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            view.applyDayNight(AppConfig.isNightTheme)
             view.title?.let { webTitle ->
                 if (
                     webTitle != url &&

@@ -443,12 +443,13 @@ fun MainActivity.mainEntryProvider(
             host = controller,
             controller = controller,
             onEffectsReady = { effectsReady.complete(Unit) },
-            onOpenSearch = { word, bookUrl ->
+            onOpenSearch = { word, bookUrl, autoFocus ->
                 onNavigateToRoute(
                     MainRouteSearchContent(
                         bookUrl = bookUrl,
                         searchWord = word,
-                        searchResultIndex = readBookViewModel.uiState.value.searchResultIndex
+                        searchResultIndex = readBookViewModel.uiState.value.searchResultIndex,
+                        autoFocus = autoFocus,
                     )
                 )
             },
@@ -521,6 +522,7 @@ fun MainActivity.mainEntryProvider(
         )
         SearchContentRouteScreen(
             viewModel = viewModel,
+            autoFocus = route.autoFocus,
             onBack = { onNavigateBack() },
         )
     }

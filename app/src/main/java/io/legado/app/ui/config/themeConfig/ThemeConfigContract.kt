@@ -26,6 +26,10 @@ sealed interface ThemeConfigSheet {
 
 sealed interface ThemeConfigDialog {
     data object ResetDefaults : ThemeConfigDialog
+    data class TimePicker(
+        val field: ThemeTimeField,
+        val currentValue: String,
+    ) : ThemeConfigDialog
 }
 
 enum class ThemeTimeField {
@@ -88,9 +92,5 @@ sealed interface ThemeConfigEffect {
     data object OpenFontFolder : ThemeConfigEffect
     data class OpenNavigationIcon(val destination: String) : ThemeConfigEffect
     data class OpenBackgroundImage(val dark: Boolean) : ThemeConfigEffect
-    data class OpenTimePicker(
-        val field: ThemeTimeField,
-        val currentValue: String,
-    ) : ThemeConfigEffect
     data class ShowToast(val stringRes: Int) : ThemeConfigEffect
 }
