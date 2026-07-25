@@ -1344,6 +1344,8 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.UpdateLayout)
     }
     data class UnderlineColor(val color: Int) : ConfigUpdate {
+        // 对齐兄弟项 Underline/DottedLine：改颜色要重绘已排好的 TextPage，
+        // 仅 UpdateStyle（readView.upStyle()）不会重画下划线。
         override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
     }
 
@@ -1418,6 +1420,9 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackgroundAlpha)
     }
     data class StatusIconDark(val value: Boolean) : ConfigUpdate {
+        // 唯一生效路径是 UpdateSystemUi → upSystemUiVisibility() →
+        // setLightStatusBar(curStatusIconDark())（ReadBookController:318）。
+        // 原本的 ReloadContent 只会重新加载正文，与状态栏图标无关。
         override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
     }
     data class StyleName(val value: String) : ConfigUpdate {
