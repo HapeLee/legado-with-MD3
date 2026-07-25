@@ -162,55 +162,70 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 
 ---
 
-### E2 —— 给排版底座补 flow（**本轨道的核心一步**）
+### E2 —— 排版快照改由 gateway 统一驱动 ✅ 已落地（2026-07-25，方案已调整）
 
-让 `ReadStyleGateway.state` 携带**完整排版快照**，而不是只有 items/selectedIndex/shareLayout：
+#### 实际落地的方案（与原计划的差异，先说清楚）
 
-```kotlin
-// domain/model/settings/ReadStyleState.kt
-data class ReadStyleState(
-    val items: List<ReadStyleItem> = emptyList(),
-    val selectedIndex: Int = 0,
-    val shareLayout: Boolean = false,
-    val current: ReadStyleSnapshot = ReadStyleSnapshot(),   // 新增：不可变全量排版快照
-)
-```
+原计划写的是「让 `ReadStyleState` 携带 60 字段的不可变 `ReadStyleSnapshot`，VM 从快照纯函数
+派生」。**实际落地的是更小的方案**：加一个 `revision` 计数器让 flow 能发得出去，VM 收到通知后
+仍用原来的 `buildStyleConfig()`/`buildSheetConfig()` 派生。
 
-`ReadStyleSnapshot` 是纯值对象（字号/行距/间距/标题各项/页眉页脚/下划线/阴影/内边距/背景…），
-由 `ReadBookStyleConfigRepository.buildState()` 从 `ReadBookConfig.durConfig`/`shareConfig` 投影。
-**`publishState()` 已经在每个 mutation 后被调用**（updateCurrentStyle/applyPreset/import/delete/save
-全都调），所以这一步**不需要新增触发点**——只需把 `buildState()` 多填一个字段。
+**为什么改**：60 字段的投影要把 `curTextColor()`/`curUnderlineColor()` 这类**模式相关的解析
+逻辑**整体搬进 repository，是 ~200 行的机械映射 + 逐字段核对风险；而它对「弹层显示旧值」这个
+实际症状的贡献，与 20 行的 revision 方案**完全相同**。按 CLAUDE.md 的 Simplicity First，
+先取小的。
 
-然后 VM 侧：
+**关键前提（原计划和外部审计都没写出来的那一步）**：`ReadStyleState` 只投影
+items/selectedIndex/shareLayout 三项，「只改了字号」不会让这三项变化 ——
+而 `MutableStateFlow` 在新值与旧值**相等时不更新、不通知订阅方**。所以单纯让 VM
+`collect(gateway.state)` 是**无效**的，绝大多数排版编辑根本发不出去。必须先加
+`revision` 破解判等。这条已由 `ReadStyleStateRevisionTest` 固定。
 
-```kotlin
-init {
-    viewModelScope.launch {
-        readStyleGateway.state.collect { style ->
-            _uiState.update {
-                it.copy(
-                    styleConfig = style.toStyleConfig(readSettings),
-                    sheetConfig = style.toSheetConfig(readSettings),
-                )
-            }
-        }
-    }
-}
-```
+#### 改动
 
-`buildStyleConfig()` / `buildSheetConfig()` 从「裸读可变全局」改为「从不可变快照派生」，
-`handleConfigUpdate` 尾部那两行手动 `_uiState.update { copy(styleConfig = …) }` **整段删除**。
+- `ReadStyleState` 新增 `revision: Long`，`ReadBookStyleConfigRepository` 每次
+  `buildState()` 用 `AtomicLong` 递增。
+- `ReadBookViewModel.collectReadStyle()`：collect gateway 的 state，**统一重建两份快照**。
+- `ReadStyleGateway` 新增 `notifyModeChanged()`：日夜/墨水屏切换时排版值没变、但解析后的
+  生效值变了，经 gateway 重新发布，走同一条派生链。
+- 删除 6 处已被 collector 覆盖的手工重建（`DeleteCurrentReadStyleConfig`、
+  `ApplyPresetTheme`、背景图 ×2、导入配置、`ProgressBarBehavior`）。
+- `handleConfigUpdate` 尾部：捕获 `styleMutation`，只在「没走 gateway」时手工重建，
+  且**两份一起**重建。
 
-> 这一步之后，「忘记重建 sheetConfig」这个 bug 类别**不再存在**——写入必经 gateway，
-> gateway 必发 state，VM 必然收到。
+#### 顺带修掉的三个同类别活 bug
 
-**同时修**：`_effects.tryEmit` → `emitEffectWhenSubscribed`（[reader-config-flow-audit] 已列，
-tryEmit 在无订阅者时会丢渲染 effect）。
+E2 之前 `sheetConfig` 全项目**只有 1 处**重建（`syncFromReadBook`），于是：
 
-**验收**：
-- `ReadBookViewModel` 中 `ReadBookConfig.` 的直读从 93 处降到 ≤10（只剩 A 类只读转发）；
-- 真机 parity：编辑排版 → 关弹层 → 重开，值正确（覆盖 2026-07-24 修复的 5 个站点 + 预设/导入/日夜切换）；
-- E0 的快照完备性测试仍绿。
+1. 编辑排版（字号/行距/下划线/页眉页脚…）后重开弹层显示旧值 —— 主症状。
+2. **日夜切换后** `sheetConfig` 里的 `textColor`/`titleColor`/`underlineColor`/
+   `textShadowColor` 仍是白天色（它们都按当前模式解析）。
+3. **`ChineseConverterType`** 本身就在 `sheetConfig` 里，却只重建 `styleConfig` → 一直显示旧值。
+4. `EventBus.UP_CONFIG` 路径（主题变更改变解析后的颜色）同样只重建 `styleConfig`。
+
+> 这三条都是 [reader-config-flow-audit] 那次排查的延伸。**注意**：该 memory 记的
+> 「2026-07-24 已实施最小修复」**从未提交**——2026-07-21 到 2026-07-25 之间仓库无任何提交，
+> 三个 bug（含两处 action 错配）到今天都还是活的，已在本轮一并修掉。
+
+#### 验收：达成情况
+
+| 原定判据 | 结果 |
+|---|---|
+| `handleConfigUpdate` 无手动 `styleConfig` 重建 | ✅ 改为仅在非 gateway 路径重建，且两份一起 |
+| 手工重建站点收敛 | ✅ styleConfig 13 → 5（含 collector 自身）、sheetConfig 1 → 4 |
+| 「新增写入路径忘了重建」失效类别消失 | ✅ 对**走 gateway 的排版写入**成立 |
+| VM 中 `ReadBookConfig.` 直读 93 → ≤10 | ❌ **未达成，仍是 94** |
+| `tryEmit` 归零 | ❌ 未做（改 effect 发射语义是独立风险，另行评估） |
+
+**最后两条为什么没达成、以及它留下了什么**：本轮没有做 60 字段投影，所以
+`buildStyleConfig()`/`buildSheetConfig()` 仍在**派生时刻裸读可变全局**。这不影响正确性
+（`publishState()` happens-before collector 读取，读到的必是新值），但意味着：
+
+- 派生仍不是纯函数、不可单测 → `ReaderConfigSnapshotInvariantTest` 只能继续做源码扫描；
+- **E5/D2 若要让排版引擎吃只读快照，那 60 字段的投影仍然要做**，只是届时 flow 管道已经就位。
+
+真机验收（待用户执行）：编辑字号/行距/页眉页脚 → 关弹层重开值正确；切预设；导入配置；
+**日夜切换后弹层颜色**；分享排版开关；简繁转换。
 
 ---
 
@@ -262,7 +277,7 @@ tryEmit 在无订阅者时会丢渲染 effect）。
 
 ```
 E0 ──►  ✗E1  ──► E2 ──┬──► E3
- ✅已落地  已撤销   (核心)  └──► E4
+ ✅已落地  已撤销  ✅已落地  └──► E4
 
                        E5 ← 并入 Track D2 评估（不单独做）
 ```
@@ -282,7 +297,7 @@ E0 是为了让 E2 之后不再退化。
 |---|---|
 | E0 | ✅ 3 个测试类 / 8 条断言进 CI，四条变异实测可红 |
 | ~~E1~~ | ❌ 已撤销：前提不成立（actions 本就抽象；两条轴正交） |
-| E2 | VM 中 `ReadBookConfig.` 直读 93 → ≤10；`handleConfigUpdate` 无手动 `styleConfig` 重建；`tryEmit` 归零 |
+| E2 | ✅ 部分达成 —— 手工重建收敛 + 三个活 bug 修掉；直读未降（改用 revision 小方案）、`tryEmit` 未动，见 E2 节验收表 |
 | E3 | `sheet/` 下 `ReadBookConfig.` 直读 == 0 |
 | E4 | `EventBus.UP_CONFIG` 生产者 == 0 |
 | E5 | （并入 D2） |
