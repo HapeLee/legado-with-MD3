@@ -8,9 +8,9 @@ class BookHelpImageCacheCompleteTest {
 
     @Test
     fun completeOnlyWhenNoFailuresAndFilesCached() {
-        assertTrue(BookHelp.isChapterImageCacheComplete(failures = 0, filesCached = true))
-        assertFalse(BookHelp.isChapterImageCacheComplete(failures = 1, filesCached = true))
-        assertFalse(BookHelp.isChapterImageCacheComplete(failures = 0, filesCached = false))
-        assertFalse(BookHelp.isChapterImageCacheComplete(failures = 2, filesCached = false))
+        assertTrue(isChapterImageCacheComplete(failures = 0, filesCached = true))
+        assertFalse(isChapterImageCacheComplete(failures = 1, filesCached = true))
+        assertFalse(isChapterImageCacheComplete(failures = 0, filesCached = false))
+        assertFalse(isChapterImageCacheComplete(failures = 2, filesCached = false))
     }
 }

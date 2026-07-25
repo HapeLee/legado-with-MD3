@@ -59,7 +59,8 @@ class CacheBookService : BaseService() {
     }
 
     private val threadCount = OtherConfig.cacheBookThreadCount.coerceIn(1, CacheBook.maxDownloadConcurrency)
-    private val maxActiveBookCount = (threadCount * 2).coerceAtLeast(1)
+    // 显式离线缓存：书籍级 FIFO，同时只准入一本；单书内仍用 threadCount 并发章节
+    private val maxActiveBookCount = 1
     private val admissionQueue = CacheDownloadAdmissionQueue(maxActiveBookCount)
     private val admissionLock = Any()
     private val admittingBookUrls = hashSetOf<String>()
@@ -377,7 +378,10 @@ class CacheBookService : BaseService() {
 
     private fun admittedBookUrls(): Set<String> {
         return synchronized(admissionLock) {
-            CacheBook.cacheBookMap.keys.toHashSet().apply {
+            // 已暂停或仅剩暂停章节的书籍不占用 FIFO 名额，便于让位给下一本
+            CacheBook.cacheBookMap.filterValues { model ->
+                model.isLoading() || model.isWaitingRetry() || model.hasRunnableDownloads()
+            }.keys.toHashSet().apply {
                 addAll(admittingBookUrls)
             }
         }

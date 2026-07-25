@@ -401,7 +401,7 @@ object BookHelp {
      * 一次 saveImages 批次是否可视为章节图片缓存完成。
      */
     fun isChapterImageCacheComplete(failures: Int, filesCached: Boolean): Boolean {
-        return failures == 0 && filesCached
+        return io.legado.app.help.book.isChapterImageCacheComplete(failures, filesCached)
     }
 
     fun isChapterImageCacheComplete(
@@ -409,7 +409,10 @@ object BookHelp {
         bookChapter: BookChapter,
         failures: Int,
     ): Boolean {
-        return isChapterImageCacheComplete(failures, hasImageFilesCached(book, bookChapter))
+        return io.legado.app.help.book.isChapterImageCacheComplete(
+            failures,
+            hasImageFilesCached(book, bookChapter),
+        )
     }
 
     fun getImage(book: Book, src: String): File {

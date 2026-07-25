@@ -44,6 +44,7 @@ class CacheBookModel(
         fun incrementSuccessCount(): Int
         fun onTaskQueuesChanged(bookUrl: String)
         fun onTaskRemoved(bookUrl: String, clearState: Boolean = false)
+        fun onExplicitBookQueued(bookUrl: String)
         fun emitDownloadingIndices(bookUrl: String, indices: Set<Int>)
         fun emitDownloadError(bookUrl: String, indices: Set<Int>)
         fun emitChapterCached(chapter: BookChapter)
@@ -137,6 +138,8 @@ class CacheBookModel(
     }
 
     fun isLoading(): Boolean = isLoading
+
+    fun isWaitingRetry(): Boolean = waitingRetry
 
     @Synchronized
     fun hasQueuedDownloads(): Boolean {
@@ -274,6 +277,9 @@ class CacheBookModel(
         queue.enqueue(request)
         host.cacheBookMap[book.bookUrl] = this
         isLoading = false
+        if (request.source != CacheDownloadSource.ReadPreload) {
+            host.onExplicitBookQueued(book.bookUrl)
+        }
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
     }
