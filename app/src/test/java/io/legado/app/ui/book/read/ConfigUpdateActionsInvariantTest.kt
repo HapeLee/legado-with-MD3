@@ -91,6 +91,7 @@ class ConfigUpdateActionsInvariantTest {
             "MenuIconStyle",
             "MenuIconItemsPerRow",
             "MenuIconRowCount",
+            "MenuFloatingIconLiquidGlass",
             "MenuBottomCornerRadius",
             "MenuBlurRadius",
             "MenuBlurAlpha",

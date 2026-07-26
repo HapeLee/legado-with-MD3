@@ -569,6 +569,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.paddingDisplayCutouts to paddingDisplayCutouts,
     PreferKey.titleBarMode to titleBarMode,
     PreferKey.readMenuBlurAlpha to readMenuBlurAlpha,
+    PreferKey.readMenuFloatingIconLiquidGlass to readMenuFloatingIconLiquidGlass,
     PreferKey.readBodyToLh to readBodyToLh,
     PreferKey.defaultSourceChangeAll to defaultSourceChangeAll,
     PreferKey.textFullJustify to textFullJustify,

@@ -13,16 +13,16 @@ import org.junit.Test
 class ReadSettingsMappingTest {
 
     @Test
-    fun `gateway 持久化边界固定为显式声明的 45 键`() {
+    fun `gateway 持久化边界固定为显式声明的 46 键`() {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(45, actualKeys.size)
+        assertEquals(46, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 
     @Test
-    fun `阅读设置 gateway 45 键写读映射逐字段对应`() {
+    fun `阅读设置 gateway 46 键写读映射逐字段对应`() {
         val repository = ReadSettingsRepository(
             settingsRepository = SettingsRepository(),
             preferencesFlow = MutableStateFlow(mutablePreferencesOf()),
@@ -92,6 +92,7 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         keepLight = "keep-light",
         titleBarMode = "title-mode",
         readMenuBlurAlpha = 37,
+        readMenuFloatingIconLiquidGlass = true,
         showBrightnessView = "brightness-view",
         brightnessVwPos = "brightness-pos",
         readBrightness = 73,
@@ -147,6 +148,7 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.paddingDisplayCutouts to paddingDisplayCutouts,
     PreferKey.titleBarMode to titleBarMode,
     PreferKey.readMenuBlurAlpha to readMenuBlurAlpha,
+    PreferKey.readMenuFloatingIconLiquidGlass to readMenuFloatingIconLiquidGlass,
     PreferKey.readBodyToLh to readBodyToLh,
     PreferKey.defaultSourceChangeAll to defaultSourceChangeAll,
     PreferKey.textFullJustify to textFullJustify,
