@@ -297,6 +297,13 @@ data class TextChapter(
         visibleHeight = textLayout.visibleHeight
     }
 
+    /**
+     * 排版还在进行中: 已经创建了排版任务, 既没有排完也没有出错/被取消.
+     * 用来区分"还在排"和"排到一半就废了", 前者可以继续用已排出的页.
+     */
+    val isLayoutRunning: Boolean
+        get() = layout?.let { !isCompleted && it.exception == null && !it.isCanceled } ?: false
+
     fun setProgressListener(l: LayoutProgressListener?) {
         if (isCompleted) {
             // no op
