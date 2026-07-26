@@ -641,6 +641,11 @@ class ReadView(
                 // scenario runner (uiautomator does not expose ReadView on all
                 // devices). See tools/android/runner.py.
                 Log.i("LegadoDebug", "READER_PAGE " + text.replace("\n", " "))
+                if (text == context.getString(R.string.data_loading)) {
+                    // Locale-independent signal for the placeholder frame; the
+                    // scenario runner counts these. See tools/android/runner.py.
+                    Log.i("LegadoDebug", "READER_PAGE_PLACEHOLDER_FRAME")
+                }
             }
         }
         if (isScroll && !isAutoPage) {

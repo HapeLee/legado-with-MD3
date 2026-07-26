@@ -255,6 +255,32 @@ class ReadBookViewModel(
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
 
+    private var cachedChapterBookUrl: String? = null
+
+    /**
+     * ReadView 在 Compose 组合期就构造并画第一帧, 早于 initData 完成,
+     * 那时 isInitFinish 还是 false, 于是先闪一帧 "加载数据中".
+     * 记下本路由要打开的书, 供 [isCachedChapterUsable] 在绘制时判定.
+     */
+    fun prepareCachedChapterFallback(bookUrl: String?, chapterChanged: Boolean) {
+        cachedChapterBookUrl = bookUrl?.takeUnless { it.isEmpty() || chapterChanged }
+    }
+
+    /**
+     * ReadBook 里已经有本书可直接用的章节(重新进入, 或导航期间预加载排好的).
+     * 在绘制时判定而不是组合期一次性判定: 预加载的发布可能比组合晚几十毫秒.
+     */
+    fun isCachedChapterUsable(): Boolean {
+        val bookUrl = cachedChapterBookUrl ?: return false
+        if (ReadBook.book?.bookUrl != bookUrl) return false
+        if (ReadBook.msg != null) return false
+        val chapter = ReadBook.curTextChapter ?: return false
+        if (!chapter.isLayoutSizeMatch()) return false
+        // 长章节在导航窗口内排不完整章, 只要当前页已经排出来就够画第一帧了
+        return chapter.isCompleted ||
+                (chapter.isLayoutRunning && chapter.getPage(ReadBook.durPageIndex) != null)
+    }
+
     private fun isNightTheme(): Boolean =
         appUiConfigurationGateway.currentConfiguration.isDarkTheme
 

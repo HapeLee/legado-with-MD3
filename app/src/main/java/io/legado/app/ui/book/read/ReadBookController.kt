@@ -313,7 +313,10 @@ class ReadBookController(
 
     // ── ReadView.CallBack ─────────────────────────────────────────────
 
-    override val isInitFinish: Boolean get() = viewModel.uiState.value.isInitFinish
+    // initData 还没跑完时, 只要 ReadBook 里已有本书可用的章节就让 ReadView 直接画正文,
+    // 否则首帧必然是 "加载数据中" 占位页
+    override val isInitFinish: Boolean
+        get() = viewModel.uiState.value.isInitFinish || viewModel.isCachedChapterUsable()
 
     override fun showActionMenu() {
         val state = viewModel.uiState.value

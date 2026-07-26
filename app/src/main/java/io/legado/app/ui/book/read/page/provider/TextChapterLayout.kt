@@ -206,7 +206,12 @@ class TextChapterLayout(
         }
     }
 
+    @Volatile
+    var isCanceled = false
+        private set
+
     fun cancel() {
+        isCanceled = true
         job.cancel()
         listener = null
     }

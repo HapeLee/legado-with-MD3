@@ -16,6 +16,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
@@ -26,6 +27,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
+import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.TextFile
 import io.legado.app.model.translation.TranslationChapterState
 import io.legado.app.model.translation.TranslationChapterStatus
@@ -59,6 +61,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,8 +93,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var durChapterPos = 0
     var isLocalBook = true
     var chapterChanged = false
+    @Volatile
     var prevTextChapter: TextChapter? = null
+    @Volatile
     var curTextChapter: TextChapter? = null
+    @Volatile
     var nextTextChapter: TextChapter? = null
     var bookSource: BookSource? = null
     var msg: String? = null
@@ -200,7 +206,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             durChapterPos = book.durChapterPos
             clearTextChapter()
         }
-        if (curTextChapter?.isCompleted == false) {
+        // 还在排版中的当前章不能丢: 丢了会重新加载一遍, 反而多闪一次占位页
+        if (curTextChapter?.isCompleted == false && curTextChapter?.isLayoutRunning != true) {
             curTextChapter = null
         }
         if (nextTextChapter?.isCompleted == false) {
@@ -930,6 +937,36 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     /**
+     * 导航到阅读页时提前加载, 让加载与导航动画/组合并行.
+     * 阅读页真正初始化时若章节已排版完成, 首帧直接显示正文, 不再闪占位页.
+     * 任何一个前提不满足就直接返回, 由阅读页按原有流程加载.
+     */
+    fun prefetchForOpen(bookUrl: String) {
+        if (callBack != null) return
+        if (BaseReadAloudService.isRun) return
+        if (ChapterProvider.visibleWidth <= 0 || ChapterProvider.visibleHeight <= 0) return
+        if (book?.bookUrl == bookUrl && curTextChapter?.isCompleted == true) return
+        ioScope.launch {
+            val book = appDb.bookDao.getBook(bookUrl) ?: return@launch
+            // 需要联网补目录、本地文件缺失或已改动的, 都交给阅读页的完整初始化流程
+            if (!book.isLocal && book.tocUrl.isEmpty()) return@launch
+            if (book.isLocal) {
+                if (book.isLocalModified()) return@launch
+                val readable = runCatching {
+                    LocalBook.getBookInputStream(book).close()
+                }.isSuccess
+                if (!readable) return@launch
+            }
+            if (appDb.bookChapterDao.getChapterCount(bookUrl) == 0) return@launch
+            if (callBack != null) return@launch
+            resetData(book)
+            // 不能走 loadContent: Coroutine.async 会先派发到主线程,
+            // 而导航动画和阅读页组合正把主线程占满, 预加载会排到几百毫秒之后.
+            loadContentAwait(durChapterIndex, resetPageOffset = true)
+        }
+    }
+
+    /**
      * 加载当前章节和前后一章内容
      * @param resetPageOffset 滚动阅读是否重置滚动位置
      * @param success 当前章节加载完成回调
@@ -1274,8 +1311,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
         when (val offset = chapter.index - durChapterIndex) {
             0 -> curChapterLoadingLock.withLock {
-                withContext(Main) {
-                    ensureActive()
+                publishTextChapter(textChapter) {
                     curTextChapter?.cancelLayout()
                     curTextChapter = textChapter
                 }
@@ -1305,8 +1341,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             }
 
             -1 -> prevChapterLoadingLock.withLock {
-                withContext(Main) {
-                    ensureActive()
+                publishTextChapter(textChapter) {
                     prevTextChapter?.cancelLayout()
                     prevTextChapter = textChapter
                 }
@@ -1317,8 +1352,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             }
 
             1 -> nextChapterLoadingLock.withLock {
-                withContext(Main) {
-                    ensureActive()
+                publishTextChapter(textChapter) {
                     nextTextChapter?.cancelLayout()
                     nextTextChapter = textChapter
                 }
@@ -1330,6 +1364,25 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             }
 
             else -> textChapter.cancelLayout()
+        }
+    }
+
+    /**
+     * 发布排版好的章节.
+     * 阅读页正在显示时切到主线程赋值, 保持原有的线程约束, 不与正在进行的帧交错;
+     * 阅读页还没显示时(导航期间的预加载)直接赋值: 此时主线程正被导航动画和
+     * 阅读页组合占满, 等一次主线程派发要几百毫秒, 预加载就白做了.
+     * 三个章节字段都是 @Volatile, 直接赋值对随后显示的阅读页可见.
+     */
+    private suspend fun publishTextChapter(textChapter: TextChapter, assign: () -> Unit) {
+        if (!isUiActive) {
+            currentCoroutineContext().ensureActive()
+            assign()
+        } else {
+            withContext(Main) {
+                currentCoroutineContext().ensureActive()
+                assign()
+            }
         }
     }
 
