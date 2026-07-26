@@ -9,7 +9,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import splitties.init.injectAsAppCtx
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -23,6 +25,7 @@ class DictionaryRepositoryImplTest {
 
     @Before
     fun setUp() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
         repository = DictionaryRepositoryImpl()
         book = Book(
             bookUrl = "dictionary-test-${UUID.randomUUID()}",
