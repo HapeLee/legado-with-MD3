@@ -34,10 +34,15 @@ class ExplicitCacheBookFifo {
         order.addLast(bookUrl)
     }
 
+    /**
+     * 仅在已持有本实例监视器、且 [predicate] 不再获取其它锁时使用。
+     * 若需结合 CacheBookModel 状态筛选，应先 [snapshot] 再在锁外判断，避免 ABBA 死锁。
+     */
     fun headWhere(predicate: (String) -> Boolean): String? {
         return order.firstOrNull(predicate)
     }
 
+    /** 顺序副本，供调用方在锁外做 model 状态判断。 */
     fun snapshot(): List<String> = order.toList()
 
     fun clear() {

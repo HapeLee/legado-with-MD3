@@ -79,11 +79,13 @@ object CacheBook {
                         workingState.first { it }
                     }
                     var emitted = false
-                    // 显式离线缓存：仅调度 FIFO 队首，避免多书章节交错抢线程
-                    val fifoHead = synchronized(explicitFifo) {
-                        explicitFifo.headWhere { bookUrl ->
-                            taskMap[bookUrl]?.hasLaunchableChapters() == true
-                        }
+                    // 显式离线缓存：仅调度 FIFO 队首，避免多书章节交错抢线程。
+                    // 锁序：禁止在持有 explicitFifo 时调用 CacheBookModel（@Synchronized），
+                    // 否则与 addRequest → onExplicitBookQueued 形成 ABBA 死锁。
+                    val fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
+                    val explicitBookUrls = fifoOrder.toHashSet()
+                    val fifoHead = fifoOrder.firstOrNull { bookUrl ->
+                        taskMap[bookUrl]?.hasLaunchableChapters() == true
                     }
                     if (fifoHead != null) {
                         val headModel = taskMap[fifoHead]
@@ -98,7 +100,7 @@ object CacheBook {
                     }
                     // 阅读器预下载等非 FIFO 书籍仍可并行（不受显式离线缓存规则约束）
                     taskMap.forEach { (bookUrl, model) ->
-                        if (synchronized(explicitFifo) { explicitFifo.contains(bookUrl) }) return@forEach
+                        if (bookUrl in explicitBookUrls) return@forEach
                         if (model.hasLaunchableChapters()) {
                             emit(model)
                             emitted = true

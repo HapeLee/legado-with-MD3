@@ -245,7 +245,6 @@ class CacheBookModel(
         host.onTaskQueuesChanged(book.bookUrl)
     }
 
-    @Synchronized
     fun addDownload(start: Int, end: Int) {
         addRequest(
             CacheDownloadRequest(
@@ -256,7 +255,6 @@ class CacheBookModel(
         )
     }
 
-    @Synchronized
     fun addDownloads(indices: Iterable<Int>) {
         val values = indices.toSet()
         if (values.isEmpty()) return
@@ -269,47 +267,50 @@ class CacheBookModel(
         )
     }
 
-    @Synchronized
     fun addRequest(request: CacheDownloadRequest) {
-        isStopped = false
-        val selected = selectionIndices(request.selection)
-        // 整书暂停时再入队：只解冻本次请求的章节，其余等待章转为单章暂停
-        if (isPaused) {
-            releaseBookPauseKeepingOnly(selected)
-        }
-        isPaused = false
-        when (val selection = request.selection) {
-            is ChapterSelection.Range -> {
-                canceledDownloadSet.removeAll { it in selection.start..selection.end }
-                pausedChapterSet.removeAll { it in selection.start..selection.end }
+        val enqueueExplicit = request.source != CacheDownloadSource.ReadPreload
+        synchronized(this) {
+            isStopped = false
+            val selected = selectionIndices(request.selection)
+            // 整书暂停时再入队：只解冻本次请求的章节，其余等待章转为单章暂停
+            if (isPaused) {
+                releaseBookPauseKeepingOnly(selected)
             }
-            is ChapterSelection.Indices -> selection.values.forEach {
-                canceledDownloadSet.remove(it)
-                pausedChapterSet.remove(it)
-            }
-            is ChapterSelection.Single -> {
-                canceledDownloadSet.remove(selection.index)
-                pausedChapterSet.remove(selection.index)
-            }
-        }
-        queue.enqueue(request)
-        // 单章/少量章节提到队首，避免排在失败重试之后；大 Range 保持懒游标
-        when (val selection = request.selection) {
-            is ChapterSelection.Single -> queue.prioritize(selection.index)
-            is ChapterSelection.Indices -> {
-                if (selection.values.size <= 16) {
-                    selection.values.toList().asReversed().forEach { queue.prioritize(it) }
+            isPaused = false
+            when (val selection = request.selection) {
+                is ChapterSelection.Range -> {
+                    canceledDownloadSet.removeAll { it in selection.start..selection.end }
+                    pausedChapterSet.removeAll { it in selection.start..selection.end }
+                }
+                is ChapterSelection.Indices -> selection.values.forEach {
+                    canceledDownloadSet.remove(it)
+                    pausedChapterSet.remove(it)
+                }
+                is ChapterSelection.Single -> {
+                    canceledDownloadSet.remove(selection.index)
+                    pausedChapterSet.remove(selection.index)
                 }
             }
-            is ChapterSelection.Range -> Unit
+            queue.enqueue(request)
+            // 单章/少量章节提到队首，避免排在失败重试之后；大 Range 保持懒游标
+            when (val selection = request.selection) {
+                is ChapterSelection.Single -> queue.prioritize(selection.index)
+                is ChapterSelection.Indices -> {
+                    if (selection.values.size <= 16) {
+                        selection.values.toList().asReversed().forEach { queue.prioritize(it) }
+                    }
+                }
+                is ChapterSelection.Range -> Unit
+            }
+            host.cacheBookMap[book.bookUrl] = this
+            isLoading = false
+            notifyDownloadSetChanged()
+            host.onTaskQueuesChanged(book.bookUrl)
         }
-        host.cacheBookMap[book.bookUrl] = this
-        isLoading = false
-        if (request.source != CacheDownloadSource.ReadPreload) {
+        // 必须在释放 model 锁之后再碰 explicitFifo，避免与 startProcessJob 形成 ABBA 死锁
+        if (enqueueExplicit) {
             host.onExplicitBookQueued(book.bookUrl)
         }
-        notifyDownloadSetChanged()
-        host.onTaskQueuesChanged(book.bookUrl)
     }
 
     fun addDownload(index: Int) {
