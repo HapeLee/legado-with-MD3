@@ -45,6 +45,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,6 +125,12 @@ fun SearchContentScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val hideSearchKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
 
     val scrollToCurrentChapter = {
         val targetIndex = searchResults.indexOfFirst { it.chapterIndex == durChapterIndex }
@@ -275,6 +283,7 @@ fun SearchContentScreen(
                             history = searchHistory,
                             onlyThisBook = historyOnlyThisBook,
                             onHistoryClick = {
+                                hideSearchKeyboard()
                                 onIntent(SearchContentIntent.UpdateQuery(it.query))
                             },
                             onDeleteHistory = {
