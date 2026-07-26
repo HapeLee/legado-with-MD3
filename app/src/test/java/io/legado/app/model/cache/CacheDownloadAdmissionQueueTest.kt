@@ -60,6 +60,21 @@ class CacheDownloadAdmissionQueueTest {
         assertNull(queue.pollReady(emptySet()))
     }
 
+    @Test
+    fun drainAllReturnsFifoOrderAndClearsQueue() {
+        val queue = CacheDownloadAdmissionQueue(maxActiveBooks = 1)
+        val a = request("a")
+        val b = request("b")
+        val c = request("c")
+        queue.add(a)
+        queue.add(b)
+        queue.add(c)
+
+        assertEquals(listOf(a, b, c), queue.drainAll())
+        assertTrue(queue.isEmpty())
+        assertEquals(emptyList<CacheDownloadRequest>(), queue.drainAll())
+    }
+
     private fun request(bookUrl: String): CacheDownloadRequest {
         return CacheDownloadRequest(
             bookUrl = bookUrl,

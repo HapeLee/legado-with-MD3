@@ -439,12 +439,14 @@ object CacheBook {
 
     fun resume(context: Context): Boolean {
         if (!hasQueuedDownloads) return false
-        isPaused = false
+        // 先同步解冻所有书，避免仅依赖 Service 异步 Intent 时 UI/调度只看到队首
+        resumeFromService()
         val started = startCacheBookService(context) {
             action = IntentAction.resume
         }
         if (!started) {
-            resumeFromService()
+            // Service 未拉起时 resumeFromService 已处理；仍确保全局标志
+            isPaused = false
         }
         return true
     }
@@ -468,6 +470,13 @@ object CacheBook {
         cacheBookMap.keys.forEach { _queueChangedFlow.tryEmit(it) }
     }
 
+    /** 清除全局暂停并唤醒调度，不调用各书 [CacheBookModel.resume]（保留单章暂停）。 */
+    internal fun clearGlobalPauseFromService() {
+        isPaused = false
+        updateSummary()
+        cacheBookMap.keys.forEach { _queueChangedFlow.tryEmit(it) }
+    }
+
     fun pauseBook(context: Context, bookUrl: String): Boolean {
         val paused = cacheBookMap[bookUrl]?.pause() == true
         if (paused) {
@@ -481,25 +490,20 @@ object CacheBook {
     fun resumeBook(context: Context, bookUrl: String): Boolean {
         val model = cacheBookMap[bookUrl] ?: return false
         if (!model.isPaused() && model.pausedIndices().isEmpty()) return false
+        val resumed = model.resume()
+        if (!resumed) return false
         // 恢复后追加到队尾，不抢占当前队首
         synchronized(explicitFifo) {
             if (explicitFifo.contains(bookUrl)) {
                 explicitFifo.moveToTail(bookUrl)
             }
         }
-        val resumed = model.resume()
-        if (resumed) {
-            isPaused = false
-            updateSummary()
-            _queueChangedFlow.tryEmit(bookUrl)
-            val started = startCacheBookService(context) {
-                action = IntentAction.resume
-            }
-            if (!started) {
-                resumeFromService()
-            }
-        }
-        return resumed
+        isPaused = false
+        updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
+        // 不可用 IntentAction.resume：会 resume() 解冻其它已暂停书籍
+        kickContinueDownload(context)
+        return true
     }
 
     fun pauseChapter(bookUrl: String, chapterIndex: Int): Boolean {
@@ -515,24 +519,30 @@ object CacheBook {
     fun resumeChapter(context: Context, bookUrl: String, chapterIndex: Int): Boolean {
         val model = cacheBookMap[bookUrl] ?: return false
         if (!model.isPaused(chapterIndex)) return false
+        val resumed = model.resumeDownload(chapterIndex)
+        if (!resumed) return false
+        // 恢复后追加到队尾，不抢占当前队首（多书 FIFO）
         synchronized(explicitFifo) {
             if (explicitFifo.contains(bookUrl)) {
                 explicitFifo.moveToTail(bookUrl)
             }
         }
-        val resumed = model.resumeDownload(chapterIndex)
-        if (resumed) {
-            isPaused = false
-            updateSummary()
-            _queueChangedFlow.tryEmit(bookUrl)
-            val started = startCacheBookService(context) {
-                action = IntentAction.resume
-            }
-            if (!started) {
-                resumeFromService()
-            }
+        isPaused = false
+        updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
+        // 不可用 IntentAction.resume：会 model.resume() 解冻其它暂停书/其余单章
+        kickContinueDownload(context)
+        return true
+    }
+
+    /** 清除全局暂停并唤醒调度，不解冻其它书的暂停状态。 */
+    private fun kickContinueDownload(context: Context) {
+        val started = startCacheBookService(context) {
+            action = IntentAction.continueDownload
         }
-        return resumed
+        if (!started) {
+            clearGlobalPauseFromService()
+        }
     }
 
     fun close(clearFailureState: Boolean = false) {
@@ -612,7 +622,9 @@ object CacheBook {
                 _pendingAdmissionFlow.value.isNotEmpty()
 
     val hasPausedDownloads: Boolean
-        get() = (isPaused && hasQueuedDownloads) || cacheBookMap.values.any { it.isPaused() }
+        get() = (isPaused && hasQueuedDownloads) || cacheBookMap.values.any {
+            it.isPaused() || it.pausedIndices().isNotEmpty()
+        }
 
     val isGloballyPaused: Boolean
         get() = isPaused && hasQueuedDownloads
@@ -723,6 +735,11 @@ object CacheBook {
         synchronized(explicitFifo) {
             explicitFifo.ensure(bookUrl)
         }
+    }
+
+    /** 显式离线缓存的书籍排队顺序（FIFO），供缓存管理列表稳定排序。 */
+    fun explicitDownloadOrder(): List<String> {
+        return synchronized(explicitFifo) { explicitFifo.snapshot() }
     }
 
     private class ModelHostImpl : CacheBookModel.Host {

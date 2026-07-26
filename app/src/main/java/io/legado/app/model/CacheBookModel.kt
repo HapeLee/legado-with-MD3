@@ -193,14 +193,18 @@ class CacheBookModel(
         isPaused = true
         isLoading = false
         waitingRetry = false
-        // 整书暂停：先把进行中的章节收回队列，再取消任务。
+        // 整书暂停：进行中与等待中的章节都移出调度队列，转入单章暂停集合。
         // onCancel 使用 requeue=false，避免与超时/失败路径双重入队。
         onDownloadSet.toList().forEach { index ->
             canceledDownloadSet.add(index)
-            queue.enqueue(ChapterSelection.Single(index))
+            pausedChapterSet.add(index)
             host.stateStore.clearChapterProgress(book.bookUrl, index)
         }
         onDownloadSet.clear()
+        for (index in queue.waitingIndices()) {
+            queue.removeChapter(index)
+            pausedChapterSet.add(index)
+        }
         chapterTasks.values.toList().forEach { task ->
             tasks.delete(task)
             task.cancel()
@@ -268,6 +272,11 @@ class CacheBookModel(
     @Synchronized
     fun addRequest(request: CacheDownloadRequest) {
         isStopped = false
+        val selected = selectionIndices(request.selection)
+        // 整书暂停时再入队：只解冻本次请求的章节，其余等待章转为单章暂停
+        if (isPaused) {
+            releaseBookPauseKeepingOnly(selected)
+        }
         isPaused = false
         when (val selection = request.selection) {
             is ChapterSelection.Range -> {
@@ -284,6 +293,16 @@ class CacheBookModel(
             }
         }
         queue.enqueue(request)
+        // 单章/少量章节提到队首，避免排在失败重试之后；大 Range 保持懒游标
+        when (val selection = request.selection) {
+            is ChapterSelection.Single -> queue.prioritize(selection.index)
+            is ChapterSelection.Indices -> {
+                if (selection.values.size <= 16) {
+                    selection.values.toList().asReversed().forEach { queue.prioritize(it) }
+                }
+            }
+            is ChapterSelection.Range -> Unit
+        }
         host.cacheBookMap[book.bookUrl] = this
         isLoading = false
         if (request.source != CacheDownloadSource.ReadPreload) {
@@ -414,12 +433,42 @@ class CacheBookModel(
 
     @Synchronized
     fun resumeDownload(index: Int): Boolean {
-        if (!pausedChapterSet.remove(index)) return false
-        isPaused = false
-        queue.enqueue(ChapterSelection.Single(index))
+        val fromChapterPause = pausedChapterSet.remove(index)
+        val bookPaused = isPaused
+        // 整书暂停时 isPaused(index) 对等待中章节为 true，但章节不在 pausedChapterSet
+        if (!fromChapterPause && !bookPaused) return false
+        if (bookPaused) {
+            releaseBookPauseKeepingOnly(setOf(index))
+        }
+        if (!queue.isWaiting(index)) {
+            queue.enqueue(ChapterSelection.Single(index))
+        }
+        queue.prioritize(index)
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
+    }
+
+    /**
+     * 解除整书暂停：仅 [keepRunnable] 留在等待队列，其余等待章转入单章暂停。
+     */
+    private fun releaseBookPauseKeepingOnly(keepRunnable: Set<Int>) {
+        if (!isPaused) return
+        for (idx in queue.waitingIndices()) {
+            if (idx !in keepRunnable) {
+                queue.removeChapter(idx)
+                pausedChapterSet.add(idx)
+            }
+        }
+        isPaused = false
+    }
+
+    private fun selectionIndices(selection: ChapterSelection): Set<Int> {
+        return when (selection) {
+            is ChapterSelection.Range -> (selection.start..selection.end).toSet()
+            is ChapterSelection.Indices -> selection.values
+            is ChapterSelection.Single -> setOf(selection.index)
+        }
     }
 
     /**
