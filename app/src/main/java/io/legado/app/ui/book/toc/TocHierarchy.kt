@@ -7,6 +7,18 @@ internal fun filterCollapsedToc(
     items: List<TocDomainItem>,
     collapsedIds: Set<Int>,
 ): List<TocDomainItem> = buildList {
+    if (items.none { it.chapter.tocLevel > 0 }) {
+        var collapsed = false
+        for (item in items) {
+            if (item.chapter.isVolume) {
+                add(item)
+                collapsed = item.chapter.index in collapsedIds
+            } else if (!collapsed) {
+                add(item)
+            }
+        }
+        return@buildList
+    }
     val collapsedAncestorLevels = ArrayDeque<Int>()
     for (item in items) {
         val level = item.chapter.tocLevel

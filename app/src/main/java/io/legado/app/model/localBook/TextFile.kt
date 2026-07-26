@@ -106,6 +106,11 @@ class TextFile(private var book: Book) {
             bookChapter.bookUrl = book.bookUrl
             bookChapter.url = MD5Utils.md5Encode16(book.originName + index + bookChapter.title)
         }
+        var tocLevel = 0
+        toc.forEach { chapter ->
+            chapter.tocLevel = tocLevel
+            if (chapter.isVolume) tocLevel = 1
+        }
         return toc
     }
 
