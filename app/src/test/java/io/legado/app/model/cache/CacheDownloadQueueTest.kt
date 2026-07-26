@@ -67,6 +67,28 @@ class CacheDownloadQueueTest {
         assertEquals(2, queue.next("book", emptySet())?.chapterIndex)
     }
 
+    @Test
+    fun prioritizeMovesChapterAheadOfFailedRetry() {
+        val queue = CacheDownloadQueue()
+        queue.enqueue(ChapterSelection.Range(0, 20))
+        queue.enqueue(ChapterSelection.Single(10))
+        queue.prioritize(13)
+
+        assertEquals(13, queue.next("book", emptySet())?.chapterIndex)
+        assertEquals(10, queue.next("book", emptySet())?.chapterIndex)
+        assertEquals(0, queue.next("book", emptySet())?.chapterIndex)
+    }
+
+    @Test
+    fun waitingIndicesListsIndicesBeforeRangeRemainder() {
+        val queue = CacheDownloadQueue()
+        queue.enqueue(ChapterSelection.Range(0, 3))
+        queue.enqueue(ChapterSelection.Single(9))
+
+        assertEquals(listOf(9, 0, 1, 2, 3), queue.waitingIndices())
+        assertEquals(5, queue.waitingCount())
+    }
+
     private fun drain(queue: CacheDownloadQueue): List<Int> {
         val result = mutableListOf<Int>()
         while (true) {

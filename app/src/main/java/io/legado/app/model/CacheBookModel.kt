@@ -44,6 +44,7 @@ class CacheBookModel(
         fun incrementSuccessCount(): Int
         fun onTaskQueuesChanged(bookUrl: String)
         fun onTaskRemoved(bookUrl: String, clearState: Boolean = false)
+        fun onExplicitBookQueued(bookUrl: String)
         fun emitDownloadingIndices(bookUrl: String, indices: Set<Int>)
         fun emitDownloadError(bookUrl: String, indices: Set<Int>)
         fun emitChapterCached(chapter: BookChapter)
@@ -138,6 +139,8 @@ class CacheBookModel(
 
     fun isLoading(): Boolean = isLoading
 
+    fun isWaitingRetry(): Boolean = waitingRetry
+
     @Synchronized
     fun hasQueuedDownloads(): Boolean {
         return queue.waitingCount() > 0 ||
@@ -158,9 +161,28 @@ class CacheBookModel(
     }
 
     /**
+     * 是否占用下载槽：正文/图片进行中、加载目录、或失败重试退避中。
+     * 不含仅 waiting——独占 FIFO 下后续书会带着 waiting 干等，不能据此判定「正在下载」。
+     * 用于恢复时是否 [moveToTail]：有其它书占槽则队尾，否则队首。
+     */
+    @Synchronized
+    fun hasInFlightDownloads(): Boolean {
+        return waitingRetry || (
+                !isPaused && (
+                        onDownloadSet.isNotEmpty() ||
+                                chapterTasks.isNotEmpty() ||
+                                isLoading
+                        )
+                )
+    }
+
+    /**
      * 有可启动的下载任务（队列中有待下载章节或正在加载目录）。
      * 与 [hasRunnableDownloads] 不同，不包含已在执行中的任务。
      * 用于判断是否需要向下载循环 emit 模型，避免无新章节可取时的高频空转。
+     *
+     * 注意：多书 FIFO 选「独占队首」必须用 [hasRunnableDownloads]（或重试中），
+     * 不能用本方法——否则并发下图时 waiting 暂时为空会跳过当前书去调度下一本。
      */
     @Synchronized
     fun hasLaunchableChapters(): Boolean {
@@ -190,10 +212,23 @@ class CacheBookModel(
         isPaused = true
         isLoading = false
         waitingRetry = false
+        // 整书暂停：进行中与等待中的章节都移出调度队列，转入单章暂停集合。
+        // onCancel 使用 requeue=false，避免与超时/失败路径双重入队。
+        onDownloadSet.toList().forEach { index ->
+            canceledDownloadSet.add(index)
+            pausedChapterSet.add(index)
+            host.stateStore.clearChapterProgress(book.bookUrl, index)
+        }
+        onDownloadSet.clear()
+        for (index in queue.waitingIndices()) {
+            queue.removeChapter(index)
+            pausedChapterSet.add(index)
+        }
         chapterTasks.values.toList().forEach { task ->
             tasks.delete(task)
             task.cancel()
         }
+        chapterTasks.clear()
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
@@ -229,7 +264,6 @@ class CacheBookModel(
         host.onTaskQueuesChanged(book.bookUrl)
     }
 
-    @Synchronized
     fun addDownload(start: Int, end: Int) {
         addRequest(
             CacheDownloadRequest(
@@ -240,7 +274,6 @@ class CacheBookModel(
         )
     }
 
-    @Synchronized
     fun addDownloads(indices: Iterable<Int>) {
         val values = indices.toSet()
         if (values.isEmpty()) return
@@ -253,29 +286,52 @@ class CacheBookModel(
         )
     }
 
-    @Synchronized
     fun addRequest(request: CacheDownloadRequest) {
-        isStopped = false
-        isPaused = false
-        when (val selection = request.selection) {
-            is ChapterSelection.Range -> {
-                canceledDownloadSet.removeAll { it in selection.start..selection.end }
-                pausedChapterSet.removeAll { it in selection.start..selection.end }
-            }
-            is ChapterSelection.Indices -> selection.values.forEach {
-                canceledDownloadSet.remove(it)
-                pausedChapterSet.remove(it)
-            }
-            is ChapterSelection.Single -> {
-                canceledDownloadSet.remove(selection.index)
-                pausedChapterSet.remove(selection.index)
-            }
+        val enqueueExplicit = request.source != CacheDownloadSource.ReadPreload
+        // 先入 FIFO，再暴露可调度章节。若反过来，冷启动多书并行准入时会出现：
+        // 已在 taskMap 且 waiting>0、尚未 ensure → processJob 当成非 FIFO 预下载并行。
+        // 锁序：仅 fifo → 释放 → model，与 startProcessJob（fifo snapshot 后调 model）不 ABBA。
+        if (enqueueExplicit) {
+            host.onExplicitBookQueued(book.bookUrl)
         }
-        queue.enqueue(request)
-        host.cacheBookMap[book.bookUrl] = this
-        isLoading = false
-        notifyDownloadSetChanged()
-        host.onTaskQueuesChanged(book.bookUrl)
+        synchronized(this) {
+            isStopped = false
+            val selected = selectionIndices(request.selection)
+            // 整书暂停时再入队：只解冻本次请求的章节，其余等待章转为单章暂停
+            if (isPaused) {
+                releaseBookPauseKeepingOnly(selected)
+            }
+            isPaused = false
+            when (val selection = request.selection) {
+                is ChapterSelection.Range -> {
+                    canceledDownloadSet.removeAll { it in selection.start..selection.end }
+                    pausedChapterSet.removeAll { it in selection.start..selection.end }
+                }
+                is ChapterSelection.Indices -> selection.values.forEach {
+                    canceledDownloadSet.remove(it)
+                    pausedChapterSet.remove(it)
+                }
+                is ChapterSelection.Single -> {
+                    canceledDownloadSet.remove(selection.index)
+                    pausedChapterSet.remove(selection.index)
+                }
+            }
+            queue.enqueue(request)
+            // 单章/少量章节提到队首，避免排在失败重试之后；大 Range 保持懒游标
+            when (val selection = request.selection) {
+                is ChapterSelection.Single -> queue.prioritize(selection.index)
+                is ChapterSelection.Indices -> {
+                    if (selection.values.size <= 16) {
+                        selection.values.toList().asReversed().forEach { queue.prioritize(it) }
+                    }
+                }
+                is ChapterSelection.Range -> Unit
+            }
+            host.cacheBookMap[book.bookUrl] = this
+            isLoading = false
+            notifyDownloadSetChanged()
+            host.onTaskQueuesChanged(book.bookUrl)
+        }
     }
 
     fun addDownload(index: Int) {
@@ -391,6 +447,7 @@ class CacheBookModel(
                 it.cancel()
             }
         }
+        host.stateStore.clearChapterProgress(book.bookUrl, index)
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
@@ -398,12 +455,42 @@ class CacheBookModel(
 
     @Synchronized
     fun resumeDownload(index: Int): Boolean {
-        if (!pausedChapterSet.remove(index)) return false
-        isPaused = false
-        queue.enqueue(ChapterSelection.Single(index))
+        val fromChapterPause = pausedChapterSet.remove(index)
+        val bookPaused = isPaused
+        // 整书暂停时 isPaused(index) 对等待中章节为 true，但章节不在 pausedChapterSet
+        if (!fromChapterPause && !bookPaused) return false
+        if (bookPaused) {
+            releaseBookPauseKeepingOnly(setOf(index))
+        }
+        if (!queue.isWaiting(index)) {
+            queue.enqueue(ChapterSelection.Single(index))
+        }
+        queue.prioritize(index)
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
+    }
+
+    /**
+     * 解除整书暂停：仅 [keepRunnable] 留在等待队列，其余等待章转入单章暂停。
+     */
+    private fun releaseBookPauseKeepingOnly(keepRunnable: Set<Int>) {
+        if (!isPaused) return
+        for (idx in queue.waitingIndices()) {
+            if (idx !in keepRunnable) {
+                queue.removeChapter(idx)
+                pausedChapterSet.add(idx)
+            }
+        }
+        isPaused = false
+    }
+
+    private fun selectionIndices(selection: ChapterSelection): Set<Int> {
+        return when (selection) {
+            is ChapterSelection.Range -> (selection.start..selection.end).toSet()
+            is ChapterSelection.Indices -> selection.values
+            is ChapterSelection.Single -> setOf(selection.index)
+        }
     }
 
     /**
@@ -456,7 +543,7 @@ class CacheBookModel(
             context = context,
             start = CoroutineStart.LAZY,
             executeContext = context,
-        )
+        ).timeout(DOWNLOAD_TIMEOUT_MS)
         if (!attachTaskIfActive(task, chapter, chapterIndex, scope, context, chainImagesAfterContent = true)) {
             task.cancel()
             return
@@ -482,6 +569,7 @@ class CacheBookModel(
             return null
         }
         onDownloadSet.add(chapterIndex)
+        host.stateStore.clearFailure(book.bookUrl, chapterIndex)
         notifyDownloadSetChanged()
         return candidate
     }
@@ -545,7 +633,8 @@ class CacheBookModel(
             }
             emitPendingReadError(chapter, it)
         }.onCancel(IO) {
-            onCancel(chapterIndex)
+            // 失败重试由 onError 入队；主动暂停由 pause/pauseDownload 入队或标记 canceled
+            onCancel(chapterIndex, requeue = false)
             emitPendingReadCanceled(chapter)
         }.onFinally(IO) {
             if (chapterTasks[chapterIndex] === task) {
@@ -631,6 +720,19 @@ class CacheBookModel(
         return BookHelp.countImagesInContent(chapter, content)
     }
 
+    private suspend fun ensureChapterImagesCached(chapter: BookChapter) {
+        if (!book.isImage || repository.hasImageContent(book, chapter)) return
+        reportImageDownloadProgress(chapter, completed = 0)
+        repository.saveCachedImagesAwait(
+            bookSource = bookSource,
+            book = book,
+            chapter = chapter,
+            onProgress = { completed, total ->
+                reportImageDownloadProgress(chapter, completed, total)
+            },
+        )
+    }
+
     suspend fun downloadAwait(chapter: BookChapter): String {
         synchronized(this) {
             onDownloadSet.add(chapter.index)
@@ -639,16 +741,7 @@ class CacheBookModel(
         }
         try {
             val content = repository.downloadContentAwait(bookSource, book, chapter)
-            if (book.isImage && !repository.hasImageContent(book, chapter)) {
-                repository.saveCachedImagesAwait(
-                    bookSource = bookSource,
-                    book = book,
-                    chapter = chapter,
-                    onProgress = { completed, total ->
-                        reportImageDownloadProgress(chapter, completed, total)
-                    },
-                )
-            }
+            ensureChapterImagesCached(chapter)
             onSuccess(chapter)
             ReadBook.downloadedChapters.add(chapter.index)
             ReadBook.downloadFailChapters.remove(chapter.index)
@@ -712,15 +805,9 @@ class CacheBookModel(
             context = IO,
             executeContext = IO,
             semaphore = semaphore
-        ).timeout(DOWNLOAD_TIMEOUT_MS).onSuccess { content ->
-            if (book.isImage && !repository.hasImageContent(book, chapter)) {
-                Coroutine.async(scope, IO) {
-                    repository.saveCachedImagesAwait(bookSource, book, chapter)
-                }.start()
-            }
-            onSuccess(chapter)
-            ReadBook.downloadedChapters.add(chapter.index)
-            ReadBook.downloadFailChapters.remove(chapter.index)
+        ).timeout(DOWNLOAD_TIMEOUT_MS)
+        task.onSuccess { content ->
+            // 正文先交给阅读器；缓存成功态等图片完成后再标记
             downloadFinish(
                 chapter,
                 content,
@@ -728,6 +815,19 @@ class CacheBookModel(
                 preserveReadAloudPosition = preserveReadAloudPosition,
             )
             emitPendingReadContent(chapter, content)
+            try {
+                ensureChapterImagesCached(chapter)
+                onSuccess(chapter)
+                ReadBook.downloadedChapters.add(chapter.index)
+                ReadBook.downloadFailChapters.remove(chapter.index)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onError(chapter, e)
+                ReadBook.downloadFailChapters[chapter.index] =
+                    (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
+                // 不覆盖已展示的正文
+            }
         }.onError {
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
@@ -749,7 +849,9 @@ class CacheBookModel(
                 preserveReadAloudPosition = preserveReadAloudPosition,
             )
         }.onFinally {
-            chapterTasks.remove(chapter.index)
+            if (chapterTasks[chapter.index] === task) {
+                chapterTasks.remove(chapter.index)
+            }
             host.onTaskQueuesChanged(book.bookUrl)
         }
         task.start()

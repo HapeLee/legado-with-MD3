@@ -471,18 +471,20 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         }.start()
     }
 
-    private fun cacheChapterImagesIfNeeded(
+    /**
+     * @return true 表示非图片书，或图片已齐全 / 本次补全成功
+     */
+    private suspend fun cacheChapterImagesIfNeeded(
         book: Book,
         chapter: BookChapter,
         content: String? = null,
-    ) {
-        if (!book.isImage) return
-        val source = bookSource ?: return
-        Coroutine.async(downloadScope, IO) {
-            if (BookHelp.hasImageContent(book, chapter)) return@async
-            val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return@async
-            BookHelp.saveImages(source, book, chapter, resolvedContent)
-        }.start()
+    ): Boolean {
+        if (!book.isImage) return true
+        val source = bookSource ?: return false
+        if (BookHelp.hasImageContent(book, chapter)) return true
+        val resolvedContent = content ?: BookHelp.getContent(book, chapter) ?: return false
+        val failures = BookHelp.saveImages(source, book, chapter, resolvedContent)
+        return BookHelp.isChapterImageCacheComplete(book, chapter, failures)
     }
 
     private fun preDownload() {
@@ -531,8 +533,13 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         val book = book ?: return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: return
         if (BookHelp.hasContent(book, chapter)) {
-            downloadedChapters.add(chapter.index)
-            cacheChapterImagesIfNeeded(book, chapter)
+            if (cacheChapterImagesIfNeeded(book, chapter)) {
+                downloadedChapters.add(chapter.index)
+                downloadFailChapters.remove(chapter.index)
+            } else {
+                downloadFailChapters[chapter.index] =
+                    (downloadFailChapters[chapter.index] ?: 0) + 1
+            }
         } else {
             delay(1000)
             if (addLoading(index)) {
@@ -553,10 +560,15 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         val bookSource = bookSource
         if (bookSource != null) {
             downloadNetworkContent(bookSource, scope, chapter, book, semaphore, success = { content ->
-                cacheChapterImagesIfNeeded(book, chapter, content)
-                downloadedChapters.add(chapter.index)
-                downloadFailChapters.remove(chapter.index)
+                // 正文先展示；「已下载」集合等图片补全后再写入，避免预下载误跳过缺图章节
                 contentLoadFinish(chapter, content)
+                if (cacheChapterImagesIfNeeded(book, chapter, content)) {
+                    downloadedChapters.add(chapter.index)
+                    downloadFailChapters.remove(chapter.index)
+                } else {
+                    downloadFailChapters[chapter.index] =
+                        (downloadFailChapters[chapter.index] ?: 0) + 1
+                }
             }, error = {
                 downloadFailChapters[chapter.index] =
                     (downloadFailChapters[chapter.index] ?: 0) + 1

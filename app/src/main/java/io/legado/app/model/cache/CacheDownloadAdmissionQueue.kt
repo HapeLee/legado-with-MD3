@@ -45,6 +45,14 @@ class CacheDownloadAdmissionQueue(
         return removed
     }
 
+    /** 取出并清空全部待准入请求（用于全局暂停前落盘为 model）。 */
+    fun drainAll(): List<CacheDownloadRequest> {
+        if (requests.isEmpty()) return emptyList()
+        val drained = requests.toList()
+        requests.clear()
+        return drained
+    }
+
     fun clear() {
         requests.clear()
     }

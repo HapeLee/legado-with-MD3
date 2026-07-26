@@ -7,6 +7,8 @@ object IntentAction {
     const val playNew = "playNew"
     const val stop = "stop"
     const val resume = "resume"
+    /** 仅清除全局暂停并继续调度，不解冻各书已单章暂停的章节 */
+    const val continueDownload = "continueDownload"
     const val pause = "pause"
     const val addTimer = "addTimer"
     const val setTimer = "setTimer"

@@ -59,7 +59,8 @@ class CacheBookService : BaseService() {
     }
 
     private val threadCount = OtherConfig.cacheBookThreadCount.coerceIn(1, CacheBook.maxDownloadConcurrency)
-    private val maxActiveBookCount = (threadCount * 2).coerceAtLeast(1)
+    // 显式离线缓存：书籍级 FIFO，同时只准入一本；单书内仍用 threadCount 并发章节
+    private val maxActiveBookCount = 1
     private val admissionQueue = CacheDownloadAdmissionQueue(maxActiveBookCount)
     private val admissionLock = Any()
     private val admittingBookUrls = hashSetOf<String>()
@@ -149,6 +150,9 @@ class CacheBookService : BaseService() {
                 IntentAction.pause -> {
                     serviceCommandScope.launch {
                         serviceCommandMutex.withLock {
+                            // 全局暂停前：把准入队列/缓冲里尚未落地的书也建成 model，再统一 pause
+                            // 否则 FAB 暂停只冻住队首，恢复时其余书仍停在「待准入/假暂停」
+                            flushPendingAdmissionsIntoModels()
                             CacheBook.pauseAllFromService()
                             notificationContent = CacheBook.downloadSummary
                             upCacheBookNotification(force = true)
@@ -159,6 +163,16 @@ class CacheBookService : BaseService() {
                     serviceCommandScope.launch {
                         serviceCommandMutex.withLock {
                             CacheBook.resumeFromService()
+                            ensureDownloadJob()
+                            notificationContent = CacheBook.downloadSummary
+                            upCacheBookNotification(force = true)
+                        }
+                    }
+                }
+                IntentAction.continueDownload -> {
+                    serviceCommandScope.launch {
+                        serviceCommandMutex.withLock {
+                            CacheBook.clearGlobalPauseFromService()
                             ensureDownloadJob()
                             notificationContent = CacheBook.downloadSummary
                             upCacheBookNotification(force = true)
@@ -214,36 +228,51 @@ class CacheBookService : BaseService() {
         )
     }
 
+    /**
+     * 将准入队列与 admission 缓冲中的请求全部写入 CacheBookModel，并清除 pending 计数。
+     * 供全局暂停使用，保证 FAB 一键暂停覆盖所有已开始下载的书。
+     */
+    private suspend fun flushPendingAdmissionsIntoModels() {
+        val bufferedRequests = synchronized(admissionLock) {
+            admissionGenerations.keys.toList().forEach { bookUrl ->
+                admissionGenerations[bookUrl] = admissionGenerations[bookUrl].orZero() + 1L
+            }
+            val requests = ArrayList<CacheDownloadRequest>()
+            admissionBuffers.values.forEach { buffer ->
+                while (buffer.isNotEmpty()) {
+                    requests.add(buffer.removeFirst().request)
+                }
+            }
+            admissionBuffers.clear()
+            admittingBookUrls.clear()
+            admissionIdleWaiters.values.flatten().forEach { it.complete(Unit) }
+            admissionIdleWaiters.clear()
+            requests
+        }
+        val queuedRequests = synchronized(admissionQueue) {
+            admissionQueue.drainAll()
+        }
+        (bufferedRequests + queuedRequests).forEach { request ->
+            val cacheBook = CacheBook.getOrCreate(request.bookUrl) ?: return@forEach
+            cacheBook.addRequest(request)
+            CacheBook.removePendingAdmission(request)
+        }
+    }
+
     private fun addDownloadRequest(request: CacheDownloadRequest) {
         addDownloadRequestsToQueue(listOf(request))
     }
 
     private fun addDownloadRequestsToQueue(requests: List<CacheDownloadRequest>) {
         if (requests.isEmpty()) return
-        val queuedRequests = mutableListOf<CacheDownloadRequest>()
-        val startRequests = mutableListOf<CacheDownloadRequest>()
-        synchronized(admissionQueue) {
-            // 快照当前已准入的书籍集合；同一批次内同一本书的后续请求直接准入，
-            // 绕过 maxActiveBookCount 限制。并发批次各自持有独立的快照，
-            // 因此准入上限是尽力而为的（best-effort），非严格保证。
-            val activeBookUrls = admittedBookUrls().toMutableSet()
-            requests.forEach { request ->
-                if (!admissionQueue.shouldQueue(request, activeBookUrls)) {
-                    startRequests.add(request)
-                    activeBookUrls.add(request.bookUrl)
-                    return@forEach
-                }
-                admissionQueue.add(request)
-                queuedRequests.add(request)
-            }
-        }
-        if (queuedRequests.isNotEmpty()) {
-            CacheBook.addPendingAdmissions(queuedRequests)
-            ensureDownloadJob()
-        }
-        startRequests.forEach { request ->
+        // 书籍级 FIFO 独占已由 CacheBook.explicitFifo + processJob 保证。
+        // 若再把后续书丢进 admissionQueue，它们只增加 pendingAdmission 计数、不进 Model，
+        // 书级会显示「等待」但章节行仍是「未缓存」，整书暂停也无效。
+        // 因此所有请求立即准入 Model；真正开下仍只调度 FIFO 队首。
+        requests.forEach { request ->
             submitDownloadRequest(request, fromAdmissionQueue = false)
         }
+        ensureDownloadJob()
     }
 
     private fun submitDownloadRequest(
@@ -293,6 +322,12 @@ class CacheBookService : BaseService() {
         if (!admission.isCurrent()) {
             CacheBook.removeModelFromService(request.bookUrl, cacheBook)
             return
+        }
+
+        // getOrCreate 已写入 taskMap；显式缓存必须先登记 FIFO，再 setLoading/addRequest。
+        // 否则 isLoading/waiting 可见窗口内会被 processJob 当成非 FIFO 并行调度。
+        if (request.source != CacheDownloadSource.ReadPreload) {
+            CacheBook.ensureExplicitFifo(request.bookUrl)
         }
 
         val book = cacheBook.book
@@ -377,7 +412,10 @@ class CacheBookService : BaseService() {
 
     private fun admittedBookUrls(): Set<String> {
         return synchronized(admissionLock) {
-            CacheBook.cacheBookMap.keys.toHashSet().apply {
+            // 已暂停或仅剩暂停章节的书籍不占用 FIFO 名额，便于让位给下一本
+            CacheBook.cacheBookMap.filterValues { model ->
+                model.isLoading() || model.isWaitingRetry() || model.hasRunnableDownloads()
+            }.keys.toHashSet().apply {
                 addAll(admittingBookUrls)
             }
         }

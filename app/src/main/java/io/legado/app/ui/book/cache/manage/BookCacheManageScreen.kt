@@ -608,16 +608,25 @@ private fun BookCacheChapterRow(
 
 @Composable
 private fun chapterStatusText(item: BookCacheChapterItem): String {
-    if (item.isDownloading && !item.progressLabel.isNullOrBlank()) {
-        return item.progressLabel
-    }
-    return when {
-        item.isDownloading -> stringResource(R.string.downloading)
-        item.isWaiting -> stringResource(R.string.wait_download)
-        item.isPaused -> stringResource(R.string.download_paused)
-        item.isError -> stringResource(R.string.download_error)
-        item.isCached -> stringResource(R.string.download_success)
-        else -> stringResource(R.string.not_cached)
+    return when (
+        resolveChapterCacheStatusKey(
+            isDownloading = item.isDownloading,
+            isWaiting = item.isWaiting,
+            isPaused = item.isPaused,
+            isError = item.isError,
+            isCached = item.isCached,
+            hasProgressLabel = !item.progressLabel.isNullOrBlank(),
+        )
+    ) {
+        ChapterCacheStatusKey.ProgressLabel -> item.progressLabel.orEmpty()
+        ChapterCacheStatusKey.Downloading -> stringResource(R.string.downloading)
+        ChapterCacheStatusKey.ErrorWaitingRetry ->
+            stringResource(R.string.download_error_waiting_retry)
+        ChapterCacheStatusKey.Waiting -> stringResource(R.string.wait_download)
+        ChapterCacheStatusKey.Paused -> stringResource(R.string.download_paused)
+        ChapterCacheStatusKey.Error -> stringResource(R.string.download_error)
+        ChapterCacheStatusKey.Cached -> stringResource(R.string.download_success)
+        ChapterCacheStatusKey.NotCached -> stringResource(R.string.not_cached)
     }
 }
 

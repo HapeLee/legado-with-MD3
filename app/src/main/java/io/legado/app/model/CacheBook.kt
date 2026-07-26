@@ -12,6 +12,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
+import io.legado.app.model.cache.ExplicitCacheBookFifo
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.LogUtils
@@ -71,23 +72,71 @@ object CacheBook {
 
         suspend fun startProcessJob(context: CoroutineContext) = processMutex.withLock {
             setWorkingState(true)
+            val concurrency = OtherConfig.cacheBookThreadCount.coerceIn(1, maxDownloadConcurrency)
             flow {
                 while (currentCoroutineContext().isActive && taskMap.isNotEmpty() && !isPaused) {
                     if (!workingState.value) {
                         workingState.first { it }
                     }
                     var emitted = false
-                    taskMap.forEach { (_, model) ->
+                    // 显式离线缓存：仅调度 FIFO 队首，避免多书章节交错抢线程。
+                    // 锁序：禁止在持有 explicitFifo 时调用 CacheBookModel（@Synchronized）。
+                    // 显式书必须在暴露 launchable 之前 ensure（见 addRequest / ensureExplicitFifo）。
+                    fun selectExclusiveFifoHead(order: List<String>): String? {
+                        // 独占队首：仍有进行中/重试/可调度任务的书，即使 waiting 暂时为空也不能跳过。
+                        return order.firstOrNull { bookUrl ->
+                            val model = taskMap[bookUrl] ?: return@firstOrNull false
+                            model.hasRunnableDownloads() || model.isWaitingRetry()
+                        }
+                    }
+                    var fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
+                    var fifoHead = selectExclusiveFifoHead(fifoOrder)
+                    // 冷启动并行准入：本轮 snapshot 时 FIFO 可能还是空的，随后已 ensure；
+                    // 队首为空时再取一次，避免空等一整拍。
+                    if (fifoHead == null) {
+                        fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
+                        fifoHead = selectExclusiveFifoHead(fifoOrder)
+                    }
+                    if (fifoHead != null) {
+                        val headModel = taskMap[fifoHead]
+                        // 仅当队首还有可新启动的章节时才 emit；进行中则空转等待，不轮到下一本
+                        if (headModel != null && headModel.hasLaunchableChapters()) {
+                            repeat(concurrency) {
+                                if (headModel.hasLaunchableChapters()) {
+                                    emit(headModel)
+                                    emitted = true
+                                }
+                            }
+                        }
+                    }
+                    // 阅读器预下载等非 FIFO 书可与队首并行；显式书由上面独占调度。
+                    // 必须用「此刻」的 live snapshot 排除：若用本轮初空 snapshot，刚 ensure 的书
+                    // 会漏出并与队首抢满并发（冷启动第一次 FAB 必现 7+1）。
+                    // 不要用 fifo.isEmpty() 整段关闭——FIFO 非空时仍应允许真正的预下载。
+                    val explicitBookUrls =
+                        synchronized(explicitFifo) { explicitFifo.snapshot().toHashSet() }
+                    taskMap.forEach { (bookUrl, model) ->
+                        if (bookUrl in explicitBookUrls) return@forEach
                         if (model.hasLaunchableChapters()) {
                             emit(model)
                             emitted = true
                         }
                     }
-                    if (!emitted) delay(800)
+                    if (!emitted) {
+                        val keepWaiting = taskMap.values.any {
+                            it.isLoading() || it.isWaitingRetry() || it.hasRunnableDownloads()
+                        }
+                        if (keepWaiting) {
+                            delay(800)
+                        } else {
+                            // 仅剩暂停书籍时退出，让 Service 继续 drain 下一本
+                            break
+                        }
+                    }
                 }
             }.onStart {
                 updateSummary()
-            }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceIn(1, maxDownloadConcurrency)) {
+            }.onEachParallel(concurrency) {
                 coroutineScope {
                     it.download(this, context)
                 }
@@ -99,6 +148,7 @@ object CacheBook {
 
     private val modelHost = ModelHostImpl()
     private val coordinator = CacheBookCoordinator()
+    private val explicitFifo = ExplicitCacheBookFifo()
     private val stateStore = CacheDownloadStateStore()
     private val pendingRemoveRequests = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
     private val pendingRequestId = AtomicLong(0)
@@ -358,6 +408,7 @@ object CacheBook {
     internal fun removeBookFromService(bookUrl: String): Boolean {
         val model = cacheBookMap.remove(bookUrl)
         model?.stop()
+        synchronized(explicitFifo) { explicitFifo.remove(bookUrl) }
         removePendingAdmission(bookUrl)
         stateStore.removeBook(bookUrl)
         updateSummary()
@@ -369,6 +420,7 @@ object CacheBook {
         val removed = cacheBookMap.remove(bookUrl, model)
         if (!removed) return false
         model.stop()
+        synchronized(explicitFifo) { explicitFifo.remove(bookUrl) }
         stateStore.removeBook(bookUrl)
         updateSummary()
         _queueChangedFlow.tryEmit(bookUrl)
@@ -405,12 +457,14 @@ object CacheBook {
 
     fun resume(context: Context): Boolean {
         if (!hasQueuedDownloads) return false
-        isPaused = false
+        // 先同步解冻所有书，避免仅依赖 Service 异步 Intent 时 UI/调度只看到队首
+        resumeFromService()
         val started = startCacheBookService(context) {
             action = IntentAction.resume
         }
         if (!started) {
-            resumeFromService()
+            // Service 未拉起时 resumeFromService 已处理；仍确保全局标志
+            isPaused = false
         }
         return true
     }
@@ -434,9 +488,17 @@ object CacheBook {
         cacheBookMap.keys.forEach { _queueChangedFlow.tryEmit(it) }
     }
 
+    /** 清除全局暂停并唤醒调度，不调用各书 [CacheBookModel.resume]（保留单章暂停）。 */
+    internal fun clearGlobalPauseFromService() {
+        isPaused = false
+        updateSummary()
+        cacheBookMap.keys.forEach { _queueChangedFlow.tryEmit(it) }
+    }
+
     fun pauseBook(context: Context, bookUrl: String): Boolean {
         val paused = cacheBookMap[bookUrl]?.pause() == true
         if (paused) {
+            // 暂停让位：FIFO 顺序保留；processJob 跳过该书后退出，Service 继续 drain 下一本
             updateSummary()
             _queueChangedFlow.tryEmit(bookUrl)
         }
@@ -444,24 +506,25 @@ object CacheBook {
     }
 
     fun resumeBook(context: Context, bookUrl: String): Boolean {
-        val resumed = cacheBookMap[bookUrl]?.resume() == true
-        if (resumed) {
-            isPaused = false
-            updateSummary()
-            _queueChangedFlow.tryEmit(bookUrl)
-            val started = startCacheBookService(context) {
-                action = IntentAction.resume
-            }
-            if (!started) {
-                resumeFromService()
-            }
-        }
-        return resumed
+        val model = cacheBookMap[bookUrl] ?: return false
+        if (!model.isPaused() && model.pausedIndices().isEmpty()) return false
+        // 在 resume 前判断：避免把自己算进「正在下载」
+        val hasActiveOther = hasActiveExplicitDownloadBesides(bookUrl)
+        val resumed = model.resume()
+        if (!resumed) return false
+        repositionExplicitBookOnResume(bookUrl, hasActiveOther)
+        isPaused = false
+        updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
+        // 不可用 IntentAction.resume：会 resume() 解冻其它已暂停书籍
+        kickContinueDownload(context)
+        return true
     }
 
     fun pauseChapter(bookUrl: String, chapterIndex: Int): Boolean {
         val paused = cacheBookMap[bookUrl]?.pauseDownload(chapterIndex) == true
         if (paused) {
+            // 仅剩暂停章节时 processJob 会让位给下一本
             updateSummary()
             _queueChangedFlow.tryEmit(bookUrl)
         }
@@ -469,25 +532,66 @@ object CacheBook {
     }
 
     fun resumeChapter(context: Context, bookUrl: String, chapterIndex: Int): Boolean {
-        val resumed = cacheBookMap[bookUrl]?.resumeDownload(chapterIndex) == true
-        if (resumed) {
-            isPaused = false
-            updateSummary()
-            _queueChangedFlow.tryEmit(bookUrl)
-            val started = startCacheBookService(context) {
-                action = IntentAction.resume
-            }
-            if (!started) {
-                resumeFromService()
+        val model = cacheBookMap[bookUrl] ?: return false
+        if (!model.isPaused(chapterIndex)) return false
+        val hasActiveOther = hasActiveExplicitDownloadBesides(bookUrl)
+        val resumed = model.resumeDownload(chapterIndex)
+        if (!resumed) return false
+        repositionExplicitBookOnResume(bookUrl, hasActiveOther)
+        isPaused = false
+        updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
+        // 不可用 IntentAction.resume：会 model.resume() 解冻其它暂停书/其余单章
+        kickContinueDownload(context)
+        return true
+    }
+
+    /**
+     * 是否存在其它显式离线缓存书正在占槽（不含 [bookUrl]）。
+     * 只看 [explicitFifo] + [CacheBookModel.hasInFlightDownloads]，忽略：
+     * - 阅读器预下载等非 FIFO 任务
+     * - 仅 waiting 的后续书（独占 FIFO 下它们本来就会干等，不能当成「在下」）
+     */
+    private fun hasActiveExplicitDownloadBesides(bookUrl: String): Boolean {
+        // 先 snapshot 再判 model，避免持有 fifo 锁时调用 @Synchronized model（ABBA）
+        val others = synchronized(explicitFifo) {
+            explicitFifo.urlsBesides(bookUrl)
+        }
+        return others.any { url ->
+            cacheBookMap[url]?.hasInFlightDownloads() == true
+        }
+    }
+
+    /**
+     * 恢复后的 FIFO 定位：有其它书正在占槽则队尾（不插队）；
+     * 无人占槽（含全暂停、或仅有后续书 waiting）则队首（点哪本先下哪本）。
+     */
+    private fun repositionExplicitBookOnResume(bookUrl: String, hasActiveOther: Boolean) {
+        synchronized(explicitFifo) {
+            if (!explicitFifo.contains(bookUrl)) return
+            if (hasActiveOther) {
+                explicitFifo.moveToTail(bookUrl)
+            } else {
+                explicitFifo.moveToHead(bookUrl)
             }
         }
-        return resumed
+    }
+
+    /** 清除全局暂停并唤醒调度，不解冻其它书的暂停状态。 */
+    private fun kickContinueDownload(context: Context) {
+        val started = startCacheBookService(context) {
+            action = IntentAction.continueDownload
+        }
+        if (!started) {
+            clearGlobalPauseFromService()
+        }
     }
 
     fun close(clearFailureState: Boolean = false) {
         isPaused = false
         cacheBookMap.forEach { (_, model) -> model.stop() }
         cacheBookMap.clear()
+        synchronized(explicitFifo) { explicitFifo.clear() }
         successDownloadCount.set(0)
         pendingRemoveRequests.values.forEach { it.complete(false) }
         pendingRemoveRequests.clear()
@@ -511,7 +615,10 @@ object CacheBook {
             toRemove.add(bookUrl)
             model.stop()
         }
-        toRemove.forEach { cacheBookMap.remove(it) }
+        toRemove.forEach {
+            cacheBookMap.remove(it)
+            synchronized(explicitFifo) { explicitFifo.remove(it) }
+        }
         successDownloadCount.set(0)
         pendingRemoveRequests.values.forEach { it.complete(false) }
         pendingRemoveRequests.clear()
@@ -547,7 +654,9 @@ object CacheBook {
         get() = !isPaused && (
                 lastQueueStats.waitingCount > 0 ||
                         lastQueueStats.downloadingCount > 0 ||
-                        cacheBookMap.values.any { it.hasQueuedDownloads() }
+                        cacheBookMap.values.any {
+                            it.hasRunnableDownloads() || it.isLoading() || it.isWaitingRetry()
+                        }
                 )
 
     val hasQueuedDownloads: Boolean
@@ -555,7 +664,9 @@ object CacheBook {
                 _pendingAdmissionFlow.value.isNotEmpty()
 
     val hasPausedDownloads: Boolean
-        get() = (isPaused && hasQueuedDownloads) || cacheBookMap.values.any { it.isPaused() }
+        get() = (isPaused && hasQueuedDownloads) || cacheBookMap.values.any {
+            it.isPaused() || it.pausedIndices().isNotEmpty()
+        }
 
     val isGloballyPaused: Boolean
         get() = isPaused && hasQueuedDownloads
@@ -654,11 +765,31 @@ object CacheBook {
 
     private fun notifyTaskRemoved(bookUrl: String, clearState: Boolean = false) {
         cacheBookMap.remove(bookUrl)
+        synchronized(explicitFifo) { explicitFifo.remove(bookUrl) }
         if (clearState) {
             stateStore.removeBook(bookUrl)
         }
         updateSummary()
         _queueChangedFlow.tryEmit(bookUrl)
+    }
+
+    private fun onExplicitBookQueued(bookUrl: String) {
+        ensureExplicitFifo(bookUrl)
+    }
+
+    /**
+     * 显式离线缓存尽早登记 FIFO（准入/setLoading 之前即可）。
+     * 避免 getOrCreate 已进 taskMap、尚未 addRequest ensure 时被当成预下载并行。
+     */
+    internal fun ensureExplicitFifo(bookUrl: String) {
+        synchronized(explicitFifo) {
+            explicitFifo.ensure(bookUrl)
+        }
+    }
+
+    /** 显式离线缓存的书籍排队顺序（FIFO），供缓存管理列表稳定排序。 */
+    fun explicitDownloadOrder(): List<String> {
+        return synchronized(explicitFifo) { explicitFifo.snapshot() }
     }
 
     private class ModelHostImpl : CacheBookModel.Host {
@@ -673,6 +804,9 @@ object CacheBook {
         }
         override fun onTaskRemoved(bookUrl: String, clearState: Boolean) {
             CacheBook.notifyTaskRemoved(bookUrl, clearState)
+        }
+        override fun onExplicitBookQueued(bookUrl: String) {
+            CacheBook.onExplicitBookQueued(bookUrl)
         }
         override fun emitDownloadingIndices(bookUrl: String, indices: Set<Int>) {
             CacheBook._downloadingIndicesFlow.tryEmit(bookUrl to indices)
