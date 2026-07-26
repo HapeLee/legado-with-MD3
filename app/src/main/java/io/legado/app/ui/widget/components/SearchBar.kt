@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -60,8 +61,15 @@ fun SearchBar(
 ) {
     val textFieldState = rememberTextFieldState(initialText = query)
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var hasFocused by rememberSaveable { mutableStateOf(false) }
+
+    val submitSearch: (String) -> Unit = { value ->
+        onSearch(value)
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
 
     LaunchedEffect(autoFocus) {
         if (autoFocus && !hasFocused) {
@@ -69,6 +77,9 @@ fun SearchBar(
             // 某些情况下需要手动调用 show() 确保键盘弹出
             keyboardController?.show()
             hasFocused = true
+        } else if (!autoFocus) {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
         }
     }
 
@@ -109,13 +120,13 @@ fun SearchBar(
             trailingIcon = trailingIcon,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             onKeyboardAction = {
-                onSearch(textFieldState.text.toString())
+                submitSearch(textFieldState.text.toString())
             },
             lineLimits = TextFieldLineLimits.SingleLine,
             backgroundColor = resolvedBackgroundColor,
             miuixUseSearchBarInputField = true,
             miuixSearchBarLabel = resolvedPlaceholder,
-            miuixOnSearch = onSearch,
+            miuixOnSearch = submitSearch,
         )
     } else {
         Surface(
@@ -135,7 +146,7 @@ fun SearchBar(
                 trailingIcon = trailingIcon,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 onKeyboardAction = {
-                    onSearch(textFieldState.text.toString())
+                    submitSearch(textFieldState.text.toString())
                 },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 backgroundColor = Color.Transparent
