@@ -161,9 +161,28 @@ class CacheBookModel(
     }
 
     /**
+     * 是否占用下载槽：正文/图片进行中、加载目录、或失败重试退避中。
+     * 不含仅 waiting——独占 FIFO 下后续书会带着 waiting 干等，不能据此判定「正在下载」。
+     * 用于恢复时是否 [moveToTail]：有其它书占槽则队尾，否则队首。
+     */
+    @Synchronized
+    fun hasInFlightDownloads(): Boolean {
+        return waitingRetry || (
+                !isPaused && (
+                        onDownloadSet.isNotEmpty() ||
+                                chapterTasks.isNotEmpty() ||
+                                isLoading
+                        )
+                )
+    }
+
+    /**
      * 有可启动的下载任务（队列中有待下载章节或正在加载目录）。
      * 与 [hasRunnableDownloads] 不同，不包含已在执行中的任务。
      * 用于判断是否需要向下载循环 emit 模型，避免无新章节可取时的高频空转。
+     *
+     * 注意：多书 FIFO 选「独占队首」必须用 [hasRunnableDownloads]（或重试中），
+     * 不能用本方法——否则并发下图时 waiting 暂时为空会跳过当前书去调度下一本。
      */
     @Synchronized
     fun hasLaunchableChapters(): Boolean {
@@ -269,6 +288,12 @@ class CacheBookModel(
 
     fun addRequest(request: CacheDownloadRequest) {
         val enqueueExplicit = request.source != CacheDownloadSource.ReadPreload
+        // 先入 FIFO，再暴露可调度章节。若反过来，冷启动多书并行准入时会出现：
+        // 已在 taskMap 且 waiting>0、尚未 ensure → processJob 当成非 FIFO 预下载并行。
+        // 锁序：仅 fifo → 释放 → model，与 startProcessJob（fifo snapshot 后调 model）不 ABBA。
+        if (enqueueExplicit) {
+            host.onExplicitBookQueued(book.bookUrl)
+        }
         synchronized(this) {
             isStopped = false
             val selected = selectionIndices(request.selection)
@@ -306,10 +331,6 @@ class CacheBookModel(
             isLoading = false
             notifyDownloadSetChanged()
             host.onTaskQueuesChanged(book.bookUrl)
-        }
-        // 必须在释放 model 锁之后再碰 explicitFifo，避免与 startProcessJob 形成 ABBA 死锁
-        if (enqueueExplicit) {
-            host.onExplicitBookQueued(book.bookUrl)
         }
     }
 

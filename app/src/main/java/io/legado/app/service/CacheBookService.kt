@@ -324,6 +324,12 @@ class CacheBookService : BaseService() {
             return
         }
 
+        // getOrCreate 已写入 taskMap；显式缓存必须先登记 FIFO，再 setLoading/addRequest。
+        // 否则 isLoading/waiting 可见窗口内会被 processJob 当成非 FIFO 并行调度。
+        if (request.source != CacheDownloadSource.ReadPreload) {
+            CacheBook.ensureExplicitFifo(request.bookUrl)
+        }
+
         val book = cacheBook.book
         val chapterCount = appDb.bookChapterDao.getChapterCount(request.bookUrl)
 

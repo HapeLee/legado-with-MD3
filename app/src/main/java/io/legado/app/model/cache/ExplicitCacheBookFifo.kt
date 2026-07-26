@@ -2,7 +2,8 @@ package io.legado.app.model.cache
 
 /**
  * 显式离线缓存的书籍级 FIFO 顺序。
- * 不包含阅读器预下载；暂停让位后恢复时通过 [moveToTail] 追加到队尾。
+ * 不包含阅读器预下载。
+ * 恢复时：有其它书正在下载则 [moveToTail]；全部暂停则 [moveToHead]。
  */
 class ExplicitCacheBookFifo {
 
@@ -28,6 +29,12 @@ class ExplicitCacheBookFifo {
         return true
     }
 
+    fun moveToHead(bookUrl: String) {
+        if (bookUrl !in bookUrls) return
+        order.remove(bookUrl)
+        order.addFirst(bookUrl)
+    }
+
     fun moveToTail(bookUrl: String) {
         if (bookUrl !in bookUrls) return
         order.remove(bookUrl)
@@ -44,6 +51,9 @@ class ExplicitCacheBookFifo {
 
     /** 顺序副本，供调用方在锁外做 model 状态判断。 */
     fun snapshot(): List<String> = order.toList()
+
+    /** 除 [bookUrl] 外的顺序副本，供恢复时判断其它显式书是否可调度。 */
+    fun urlsBesides(bookUrl: String): List<String> = order.filter { it != bookUrl }
 
     fun clear() {
         order.clear()

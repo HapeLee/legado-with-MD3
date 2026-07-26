@@ -80,15 +80,26 @@ object CacheBook {
                     }
                     var emitted = false
                     // 显式离线缓存：仅调度 FIFO 队首，避免多书章节交错抢线程。
-                    // 锁序：禁止在持有 explicitFifo 时调用 CacheBookModel（@Synchronized），
-                    // 否则与 addRequest → onExplicitBookQueued 形成 ABBA 死锁。
-                    val fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
-                    val explicitBookUrls = fifoOrder.toHashSet()
-                    val fifoHead = fifoOrder.firstOrNull { bookUrl ->
-                        taskMap[bookUrl]?.hasLaunchableChapters() == true
+                    // 锁序：禁止在持有 explicitFifo 时调用 CacheBookModel（@Synchronized）。
+                    // 显式书必须在暴露 launchable 之前 ensure（见 addRequest / ensureExplicitFifo）。
+                    fun selectExclusiveFifoHead(order: List<String>): String? {
+                        // 独占队首：仍有进行中/重试/可调度任务的书，即使 waiting 暂时为空也不能跳过。
+                        return order.firstOrNull { bookUrl ->
+                            val model = taskMap[bookUrl] ?: return@firstOrNull false
+                            model.hasRunnableDownloads() || model.isWaitingRetry()
+                        }
+                    }
+                    var fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
+                    var fifoHead = selectExclusiveFifoHead(fifoOrder)
+                    // 冷启动并行准入：本轮 snapshot 时 FIFO 可能还是空的，随后已 ensure；
+                    // 队首为空时再取一次，避免空等一整拍。
+                    if (fifoHead == null) {
+                        fifoOrder = synchronized(explicitFifo) { explicitFifo.snapshot() }
+                        fifoHead = selectExclusiveFifoHead(fifoOrder)
                     }
                     if (fifoHead != null) {
                         val headModel = taskMap[fifoHead]
+                        // 仅当队首还有可新启动的章节时才 emit；进行中则空转等待，不轮到下一本
                         if (headModel != null && headModel.hasLaunchableChapters()) {
                             repeat(concurrency) {
                                 if (headModel.hasLaunchableChapters()) {
@@ -98,7 +109,12 @@ object CacheBook {
                             }
                         }
                     }
-                    // 阅读器预下载等非 FIFO 书籍仍可并行（不受显式离线缓存规则约束）
+                    // 阅读器预下载等非 FIFO 书可与队首并行；显式书由上面独占调度。
+                    // 必须用「此刻」的 live snapshot 排除：若用本轮初空 snapshot，刚 ensure 的书
+                    // 会漏出并与队首抢满并发（冷启动第一次 FAB 必现 7+1）。
+                    // 不要用 fifo.isEmpty() 整段关闭——FIFO 非空时仍应允许真正的预下载。
+                    val explicitBookUrls =
+                        synchronized(explicitFifo) { explicitFifo.snapshot().toHashSet() }
                     taskMap.forEach { (bookUrl, model) ->
                         if (bookUrl in explicitBookUrls) return@forEach
                         if (model.hasLaunchableChapters()) {
@@ -492,14 +508,11 @@ object CacheBook {
     fun resumeBook(context: Context, bookUrl: String): Boolean {
         val model = cacheBookMap[bookUrl] ?: return false
         if (!model.isPaused() && model.pausedIndices().isEmpty()) return false
+        // 在 resume 前判断：避免把自己算进「正在下载」
+        val hasActiveOther = hasActiveExplicitDownloadBesides(bookUrl)
         val resumed = model.resume()
         if (!resumed) return false
-        // 恢复后追加到队尾，不抢占当前队首
-        synchronized(explicitFifo) {
-            if (explicitFifo.contains(bookUrl)) {
-                explicitFifo.moveToTail(bookUrl)
-            }
-        }
+        repositionExplicitBookOnResume(bookUrl, hasActiveOther)
         isPaused = false
         updateSummary()
         _queueChangedFlow.tryEmit(bookUrl)
@@ -521,20 +534,47 @@ object CacheBook {
     fun resumeChapter(context: Context, bookUrl: String, chapterIndex: Int): Boolean {
         val model = cacheBookMap[bookUrl] ?: return false
         if (!model.isPaused(chapterIndex)) return false
+        val hasActiveOther = hasActiveExplicitDownloadBesides(bookUrl)
         val resumed = model.resumeDownload(chapterIndex)
         if (!resumed) return false
-        // 恢复后追加到队尾，不抢占当前队首（多书 FIFO）
-        synchronized(explicitFifo) {
-            if (explicitFifo.contains(bookUrl)) {
-                explicitFifo.moveToTail(bookUrl)
-            }
-        }
+        repositionExplicitBookOnResume(bookUrl, hasActiveOther)
         isPaused = false
         updateSummary()
         _queueChangedFlow.tryEmit(bookUrl)
         // 不可用 IntentAction.resume：会 model.resume() 解冻其它暂停书/其余单章
         kickContinueDownload(context)
         return true
+    }
+
+    /**
+     * 是否存在其它显式离线缓存书正在占槽（不含 [bookUrl]）。
+     * 只看 [explicitFifo] + [CacheBookModel.hasInFlightDownloads]，忽略：
+     * - 阅读器预下载等非 FIFO 任务
+     * - 仅 waiting 的后续书（独占 FIFO 下它们本来就会干等，不能当成「在下」）
+     */
+    private fun hasActiveExplicitDownloadBesides(bookUrl: String): Boolean {
+        // 先 snapshot 再判 model，避免持有 fifo 锁时调用 @Synchronized model（ABBA）
+        val others = synchronized(explicitFifo) {
+            explicitFifo.urlsBesides(bookUrl)
+        }
+        return others.any { url ->
+            cacheBookMap[url]?.hasInFlightDownloads() == true
+        }
+    }
+
+    /**
+     * 恢复后的 FIFO 定位：有其它书正在占槽则队尾（不插队）；
+     * 无人占槽（含全暂停、或仅有后续书 waiting）则队首（点哪本先下哪本）。
+     */
+    private fun repositionExplicitBookOnResume(bookUrl: String, hasActiveOther: Boolean) {
+        synchronized(explicitFifo) {
+            if (!explicitFifo.contains(bookUrl)) return
+            if (hasActiveOther) {
+                explicitFifo.moveToTail(bookUrl)
+            } else {
+                explicitFifo.moveToHead(bookUrl)
+            }
+        }
     }
 
     /** 清除全局暂停并唤醒调度，不解冻其它书的暂停状态。 */
@@ -734,6 +774,14 @@ object CacheBook {
     }
 
     private fun onExplicitBookQueued(bookUrl: String) {
+        ensureExplicitFifo(bookUrl)
+    }
+
+    /**
+     * 显式离线缓存尽早登记 FIFO（准入/setLoading 之前即可）。
+     * 避免 getOrCreate 已进 taskMap、尚未 addRequest ensure 时被当成预下载并行。
+     */
+    internal fun ensureExplicitFifo(bookUrl: String) {
         synchronized(explicitFifo) {
             explicitFifo.ensure(bookUrl)
         }
