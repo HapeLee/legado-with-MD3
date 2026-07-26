@@ -624,16 +624,10 @@ class PageView(
             if (!it.estimated && it.allPreviousChaptersExact) {
                 context.getString(R.string.whole_book_page_format, it.currentPage, it.totalPages)
             } else {
-                val currentPage = if (it.allPreviousChaptersExact) {
-                    it.currentPage.toString()
-                } else {
-                    "≈${it.currentPage}"
-                }
-                val totalPages = if (it.estimated) "≈${it.totalPages}" else it.totalPages.toString()
                 context.getString(
                     R.string.whole_book_page_estimated_format,
-                    currentPage,
-                    totalPages,
+                    it.currentPage.toString(),
+                    it.totalPages.toString(),
                 )
             }
         }

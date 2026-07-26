@@ -22,7 +22,10 @@ object HtmlFormatter {
     private val indent2Regex = "^[\\n\\s]+".toRegex()
     private val lastRegex = "[\\n\\s]+$".toRegex()
 
-    fun format(html: String?, otherRegex: Regex = otherHtmlRegex): String {
+    fun format(html: String?, otherRegex: Regex = otherHtmlRegex): String =
+        format(html, otherRegex, "　　")
+
+    private fun format(html: String?, otherRegex: Regex, paragraphIndent: String): String {
         html ?: return ""
         return html.replace(nbspRegex, " ")
             .replace(espRegex, " ")
@@ -30,8 +33,8 @@ object HtmlFormatter {
             .replace(wrapHtmlRegex, "\n")
             .replace(commentRegex, "")
             .replace(otherRegex, "")
-            .replace(indent1Regex, "\n　　")
-            .replace(indent2Regex, "　　")
+            .replace(indent1Regex, "\n$paragraphIndent")
+            .replace(indent2Regex, paragraphIndent)
             .replace(lastRegex, "")
     }
 
@@ -41,9 +44,11 @@ object HtmlFormatter {
      */
     fun formatDisplayText(html: String?): String {
         if (html.isNullOrBlank()) return ""
-        val body = Jsoup.parseBodyFragment(html).body()
+        val document = Jsoup.parseBodyFragment(html)
+        document.outputSettings().prettyPrint(false)
+        val body = document.body()
         body.select("script, style, noscript").remove()
-        return format(body.html())
+        return format(body.html(), otherHtmlRegex, "")
     }
 
     fun formatKeepImg(html: String?, redirectUrl: URL? = null): String {

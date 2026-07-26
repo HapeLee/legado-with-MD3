@@ -7,6 +7,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.SearchContentRepository
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -34,6 +35,7 @@ data class SearchContentUiState(
     val searchHistory: ImmutableList<SearchContentHistory> = persistentListOf(),
     val historyOnlyThisBook: Boolean = true,
     val shouldAutoScroll: Boolean = false,
+    val isEInkMode: Boolean = false,
 )
 
 sealed interface SearchContentIntent {
@@ -66,6 +68,7 @@ class SearchContentViewModel(
     private val searchResultIndex: Int,
     private val bookRepository: BookRepository,
     private val searchContentRepository: SearchContentRepository,
+    private val themeSettingsGateway: ThemeSettingsGateway,
 ) : ViewModel() {
     private val restoredSession = if (initialSearchWord == null) {
         searchContentRepository.getLastSession(bookUrl)
@@ -77,6 +80,7 @@ class SearchContentViewModel(
             replaceEnabled = restoredSession?.replaceEnabled ?: false,
             regexReplace = restoredSession?.regexReplace ?: false,
             shouldAutoScroll = searchResultIndex > 0,
+            isEInkMode = themeSettingsGateway.currentSettings.appTheme == "4",
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -90,6 +94,11 @@ class SearchContentViewModel(
 
     init {
         initBook()
+        viewModelScope.launch {
+            themeSettingsGateway.settings.collect { settings ->
+                _uiState.update { it.copy(isEInkMode = settings.appTheme == "4") }
+            }
+        }
     }
 
     fun onIntent(intent: SearchContentIntent) {
