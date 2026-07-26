@@ -8,7 +8,13 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
-import io.legado.app.help.config.AppConfig
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 
 data class SearchResult(
     val bookUrl: String = "",
@@ -27,32 +33,86 @@ data class SearchResult(
     val progressPercent: Float = 0f
 ) {
 
-    fun getTitleSpannable(accentColor: Int): SpannableString {
-        return if (AppConfig.isEInkMode) {
-            SpannableString(chapterTitle).apply {
-                setSpan(UnderlineSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+    fun getTitleAnnotatedString(
+        accentColor: Color,
+        isEInkMode: Boolean,
+    ): AnnotatedString = buildAnnotatedString {
+        withStyle(
+            SpanStyle(
+                color = if (isEInkMode) Color.Unspecified else accentColor,
+                textDecoration = if (isEInkMode) TextDecoration.Underline else null,
+            )
+        ) {
+            append(chapterTitle)
+        }
+    }
+
+    fun getContentAnnotatedString(
+        textColor: Color,
+        accentColor: Color,
+        backgroundColor: Color,
+        isEInkMode: Boolean,
+    ): AnnotatedString {
+        val ranges = getHighlightRanges()
+
+        return buildAnnotatedString {
+            append(resultText)
+            if (!isEInkMode && resultText.isNotEmpty()) {
+                addStyle(SpanStyle(color = textColor), 0, resultText.length)
             }
-        } else {
-            SpannableString(chapterTitle).apply {
-                setSpan(ForegroundColorSpan(accentColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+            ranges.forEach { (start, length) ->
+                val end = (start + length).coerceAtMost(resultText.length)
+                if (start !in 0 until end) return@forEach
+                addStyle(
+                    style = if (isEInkMode) {
+                        SpanStyle(textDecoration = TextDecoration.Underline)
+                    } else {
+                        SpanStyle(
+                            color = accentColor,
+                            background = backgroundColor,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    start = start,
+                    end = end,
+                )
             }
         }
     }
 
-    fun getContentSpannable(textColor: Int, accentColor: Int, bgColor: Int): SpannableStringBuilder {
-        val spannable = SpannableStringBuilder(resultText)
-
-        // Apply the body color first so the more specific highlight color wins.
-        if (!AppConfig.isEInkMode) {
-            spannable.setSpan(
-                ForegroundColorSpan(textColor),
-                0,
-                spannable.length,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
+    fun getTitleSpannable(accentColor: Int, isEInkMode: Boolean): SpannableString =
+        SpannableString(chapterTitle).apply {
+            if (isEInkMode) {
+                setSpan(UnderlineSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else {
+                setSpan(ForegroundColorSpan(accentColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
 
-        val ranges = if (isRegex) {
+    fun getContentSpannable(
+        textColor: Int,
+        accentColor: Int,
+        backgroundColor: Int,
+        isEInkMode: Boolean,
+    ): SpannableStringBuilder = SpannableStringBuilder(resultText).apply {
+        if (!isEInkMode && isNotEmpty()) {
+            setSpan(ForegroundColorSpan(textColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        getHighlightRanges().forEach { (start, matchLength) ->
+            val end = (start + matchLength).coerceAtMost(resultText.length)
+            if (start !in 0 until end) return@forEach
+            if (isEInkMode) {
+                setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else {
+                setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(ForegroundColorSpan(accentColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(BackgroundColorSpan(backgroundColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+    }
+
+    private fun getHighlightRanges(): List<Pair<Int, Int>> = if (isRegex) {
             listOf(queryIndexInResult to matchLength)
         } else if (query.isNotBlank()) {
             buildList {
@@ -67,20 +127,4 @@ data class SearchResult(
         } else {
             emptyList()
         }
-
-        ranges.forEach { (start, length) ->
-            val end = (start + length).coerceAtMost(resultText.length)
-            if (start !in 0 until end) return@forEach
-
-            if (AppConfig.isEInkMode) {
-                spannable.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(ForegroundColorSpan(accentColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(BackgroundColorSpan(bgColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        }
-
-        return spannable
-    }
 }

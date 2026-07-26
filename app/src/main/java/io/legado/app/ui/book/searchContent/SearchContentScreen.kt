@@ -44,10 +44,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,6 +117,7 @@ fun SearchContentScreen(
     val isSearching = state.isSearching
     val searchResults = state.searchResults
     val durChapterIndex = state.durChapterIndex
+    val isEInkMode = state.isEInkMode
     val error = state.error
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -303,6 +302,7 @@ fun SearchContentScreen(
                                 SearchResultItem(
                                     modifier = Modifier.animateItem(),
                                     result = result,
+                                    isEInkMode = isEInkMode,
                                     isCurrentChapter = result.chapterIndex == durChapterIndex,
                                     onClick = {
                                         onIntent(SearchContentIntent.OpenResult(result))
@@ -415,6 +415,7 @@ fun SearchHistoryList(
 fun SearchResultItem(
     modifier: Modifier,
     result: SearchResult,
+    isEInkMode: Boolean,
     isCurrentChapter: Boolean,
     onClick: () -> Unit
 ) {
@@ -432,13 +433,10 @@ fun SearchResultItem(
 
             Column {
                 AppText(
-                    text = buildAnnotatedString {
-                        append(
-                            result.getTitleSpannable(
-                                LegadoTheme.colorScheme.primary.toArgb()
-                            )
-                        )
-                    },
+                    text = result.getTitleAnnotatedString(
+                        accentColor = LegadoTheme.colorScheme.primary,
+                        isEInkMode = isEInkMode,
+                    ),
                     style = LegadoTheme.typography.titleSmall
                 )
 
@@ -449,15 +447,12 @@ fun SearchResultItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 AppText(
-                    text = buildAnnotatedString {
-                        append(
-                            result.getContentSpannable(
-                                textColor = LegadoTheme.colorScheme.onSurface.toArgb(),
-                                accentColor = LegadoTheme.colorScheme.primary.toArgb(),
-                                bgColor = LegadoTheme.colorScheme.primaryContainer.toArgb()
-                            )
-                        )
-                    },
+                    text = result.getContentAnnotatedString(
+                        textColor = LegadoTheme.colorScheme.onSurface,
+                        accentColor = LegadoTheme.colorScheme.primary,
+                        backgroundColor = LegadoTheme.colorScheme.primaryContainer,
+                        isEInkMode = isEInkMode,
+                    ),
                     style = LegadoTheme.typography.bodyMedium
                 )
             }
