@@ -55,6 +55,7 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -196,44 +197,43 @@ fun HighlightRuleEditSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(titleRes),
         endAction = {
-            androidx.compose.material3.IconButton(onClick = {
-                if (pattern.isNotBlank()) {
-                    val result = runCatching { Regex(pattern) }
-                    if (result.isFailure) {
-                        patternError = result.exceptionOrNull()?.message
-                        return@IconButton
+            MediumTonalButton(
+                onClick = {
+                    if (pattern.isNotBlank()) {
+                        val result = runCatching { Regex(pattern) }
+                        if (result.isFailure) {
+                            patternError = result.exceptionOrNull()?.message
+                            return@MediumTonalButton
+                        }
                     }
-                }
-                patternError = null
-                onSave(
-                    HighlightRule(
-                        id = initial.id,
-                        name = name,
-                        pattern = pattern,
-                        sampleText = sampleText,
-                        targetScope = targetScope,
-                        enabled = enabled,
-                        position = initial.position,
-                        textColor = if (hasTextColor) textColor else null,
-                        bgColor = if (hasBgColor) bgColor else null,
-                        underlineMode = if (hasUnderline) underlineMode else 0,
-                        underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
-                        underlineWidth = underlineWidth,
-                        underlineOffset = underlineOffset,
-                        underlineSvgPath = underlineSvgPath.ifBlank { null },
-                        bgImage = if (hasBgImage) bgImage.ifBlank { null } else null,
-                        bgImageFit = bgImageFit,
-                        bgImageScale = bgImageScale,
-                        configName = if (configNames.isEmpty()) null else configNames.toList().toJsonArray(),
-                        fontPath = if (hasFont) fontPath.ifBlank { null } else null,
+                    patternError = null
+                    onSave(
+                        HighlightRule(
+                            id = initial.id,
+                            name = name,
+                            pattern = pattern,
+                            sampleText = sampleText,
+                            targetScope = targetScope,
+                            enabled = enabled,
+                            position = initial.position,
+                            textColor = if (hasTextColor) textColor else null,
+                            bgColor = if (hasBgColor) bgColor else null,
+                            underlineMode = if (hasUnderline) underlineMode else 0,
+                            underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
+                            underlineWidth = underlineWidth,
+                            underlineOffset = underlineOffset,
+                            underlineSvgPath = underlineSvgPath.ifBlank { null },
+                            bgImage = if (hasBgImage) bgImage.ifBlank { null } else null,
+                            bgImageFit = bgImageFit,
+                            bgImageScale = bgImageScale,
+                            configName = if (configNames.isEmpty()) null else configNames.toList().toJsonArray(),
+                            fontPath = if (hasFont) fontPath.ifBlank { null } else null,
+                        )
                     )
-                )
-            }) {
-                androidx.compose.material3.Icon(
-                    Icons.Default.Done,
-                    contentDescription = stringResource(R.string.save),
-                )
-            }
+                },
+                icon = Icons.Default.Done,
+                contentDescription = stringResource(R.string.save),
+            )
         },
     ) {
         Column(

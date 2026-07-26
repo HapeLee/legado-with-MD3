@@ -38,7 +38,7 @@ import io.legado.app.ui.tagGroupRule.TagGroupRuleEditSheet
 import io.legado.app.ui.tagGroupRule.TagGroupRuleIntent
 import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -119,7 +119,7 @@ fun GroupManageSheet(
             if (!isEditing) {
                 Box {
                     var showMenu by remember { mutableStateOf(false) }
-                    SmallPlainButton(
+                    MediumTonalButton(
                         onClick = { showMenu = true },
                         icon = Icons.Default.Add,
                         contentDescription = stringResource(R.string.add),

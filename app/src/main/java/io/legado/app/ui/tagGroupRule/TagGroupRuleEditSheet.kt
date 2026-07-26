@@ -30,7 +30,7 @@ import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -71,7 +71,7 @@ fun TagGroupRuleEditSheet(
             stringResource(R.string.tag_group_edit_rule)
         },
         startAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = onDismissRequest,
                 icon = Icons.Default.Close,
                 contentDescription = stringResource(R.string.close),
@@ -79,7 +79,7 @@ fun TagGroupRuleEditSheet(
         },
         endAction = {
             Box {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showMenu = true },
                     icon = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_menu)

@@ -84,6 +84,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -1324,12 +1325,12 @@ private fun BookSourcePickerSheet(
         onDismissRequest = onDismissRequest,
         title = title,
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = {
                     onConfirm(selectedSources.mapNotNull { it.getBookSource() })
                 },
                 icon = Icons.Default.PlayArrow,
-                text = stringResource(android.R.string.ok)
+                contentDescription = stringResource(android.R.string.ok)
             )
         }
     ) {
@@ -1445,17 +1446,17 @@ private fun BatchChangePreviewSheet(
         onDismissRequest = onDismissRequest,
         title = "批量换源预览",
         startAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = onAddAllToShelf,
                 icon = Icons.Default.Add,
-                text = "新增全部"
+                contentDescription = stringResource(R.string.add)
             )
         },
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = onMigrateAll,
                 icon = Icons.Default.PlayArrow,
-                text = "迁移全部"
+                contentDescription = stringResource(R.string.confirm)
             )
         }
     ) { items ->

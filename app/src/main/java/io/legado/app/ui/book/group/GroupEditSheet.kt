@@ -35,7 +35,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -336,7 +336,7 @@ fun GroupDeleteAction(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    MediumPlainButton(
+    MediumTonalButton(
         onClick = {
             showDeleteDialog = true
         },
@@ -369,7 +369,7 @@ fun GroupResetCoverAction(
     onCoverPathChange: (String?) -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
-    MediumPlainButton(
+    MediumTonalButton(
         onClick = {
             if (group != null) {
                 viewModel.clearCover(group) {

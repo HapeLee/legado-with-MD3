@@ -54,6 +54,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -219,7 +220,7 @@ fun ChangeSourceSheet(
         startAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box {
-                    MediumPlainButton(
+                    MediumTonalButton(
                         onClick = { showOptionsMenu = true },
                 icon = Icons.Default.MoreVert,
                 contentDescription = stringResource(R.string.more_menu)
@@ -269,7 +270,7 @@ fun ChangeSourceSheet(
                         )
                     }
                 }
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showMigrationOptions = true },
                     icon = Icons.Outlined.Settings,
                     contentDescription = stringResource(R.string.setting)
@@ -278,12 +279,12 @@ fun ChangeSourceSheet(
         },
         endAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { viewModel.startOrStopSearch() },
                     icon = if (isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
                     contentDescription = stringResource(if (isSearching) R.string.pause else R.string.refresh),
                 )
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showFilterSheet = true },
                     icon = Icons.Default.FilterList,
                     contentDescription = stringResource(R.string.screen)

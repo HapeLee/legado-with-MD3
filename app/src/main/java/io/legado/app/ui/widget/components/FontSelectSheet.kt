@@ -17,7 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.isContentScheme
@@ -76,7 +76,7 @@ fun FontSelectSheet(
                         )
                     }
                 }
-                SmallPlainButton(
+                MediumTonalButton(
                     onClick = { showTypefaceMenu = true },
                     icon = Icons.Default.TextFields,
                     contentDescription = stringResource(R.string.select_font),
@@ -84,7 +84,7 @@ fun FontSelectSheet(
             }
         },
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 onClick = onOpenFolderPicker,
                 icon = folderIcon,
                 contentDescription = folderContentDescription

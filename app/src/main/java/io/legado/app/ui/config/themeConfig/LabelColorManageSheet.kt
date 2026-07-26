@@ -28,7 +28,7 @@ import androidx.core.graphics.ColorUtils
 import io.legado.app.R
 import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -57,7 +57,7 @@ fun LabelColorManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_manage_label_colors),
         startAction = {
-            MediumOutlinedButton(
+            MediumTonalButton(
                 onClick = {
                     val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
                     val generatedColors = TagColorGenerator.generateTagColors(baseColor)
@@ -70,7 +70,7 @@ fun LabelColorManageSheet(
             )
         },
         endAction = {
-            MediumOutlinedButton(
+            MediumTonalButton(
                 onClick = {
                     tagColors.add(TagColorPair(0, 0))
                     editingIndex = tagColors.size - 1

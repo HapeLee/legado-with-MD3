@@ -35,6 +35,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -120,7 +121,7 @@ fun HighlightRuleConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.highlight_rule_config),
         startAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.AddHighlightRule) },
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.add)
@@ -129,7 +130,7 @@ fun HighlightRuleConfigSheet(
         endAction = {
             var expanded by remember { mutableStateOf(false) }
             Box {
-                SmallTonalButton(
+                MediumTonalButton(
                     onClick = { expanded = true },
                     icon = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_menu)

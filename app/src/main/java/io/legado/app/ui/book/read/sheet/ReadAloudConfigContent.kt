@@ -42,6 +42,7 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -343,7 +344,7 @@ fun SpeakEngineConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_aloud_default_engine),
         startAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.add)
@@ -352,7 +353,7 @@ fun SpeakEngineConfigSheet(
         endAction = {
             var expanded by remember { mutableStateOf(false) }
             Box {
-                SmallTonalButton(
+                MediumTonalButton(
                     onClick = { expanded = true },
                     icon = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_menu)
@@ -460,7 +461,7 @@ fun HttpTtsEditSheet(
         startAction = {
             var expanded by remember { mutableStateOf(false) }
             Box {
-                SmallTonalButton(
+                MediumTonalButton(
                     onClick = { expanded = true },
                     icon = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_menu)
@@ -504,7 +505,7 @@ fun HttpTtsEditSheet(
             }
         },
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 icon = Icons.Default.Save,
                 contentDescription = stringResource(R.string.save),
                 onClick = {

@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -45,7 +45,7 @@ fun CoverAlbumSelectSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.select_cover_album),
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 onClick = onManage,
                 icon = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.manage_cover_albums),

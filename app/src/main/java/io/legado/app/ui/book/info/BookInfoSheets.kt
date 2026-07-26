@@ -72,7 +72,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -146,14 +146,14 @@ fun GroupSelectSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.group_select),
         startAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = { showAddGroup = true },
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.group_add)
             )
         },
         endAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = { onConfirm(selectedGroupId) },
                 icon = Icons.Default.Check,
                 contentDescription = stringResource(R.string.confirm)
@@ -240,7 +240,7 @@ fun ChangeCoverSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.change_cover_source),
         endAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = { viewModel.startOrStopSearch() },
                 icon = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
                 contentDescription = stringResource(

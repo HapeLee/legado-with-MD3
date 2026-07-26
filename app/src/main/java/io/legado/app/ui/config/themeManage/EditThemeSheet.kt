@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeExportData
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
@@ -60,7 +60,7 @@ fun EditThemeSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_manage_edit_theme),
         endAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = {
                     if (name.isNotBlank()) {
                         onSave(name, data)

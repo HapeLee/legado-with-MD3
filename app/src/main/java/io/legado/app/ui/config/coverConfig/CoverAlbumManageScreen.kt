@@ -53,6 +53,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -309,10 +310,10 @@ private fun CoverAlbumEditorSheet(
         onDismissRequest = onDismissRequest,
         title = album?.name,
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 onClick = { onAddImages(isDark) },
                 icon = Icons.Default.Add,
-                text = stringResource(R.string.cover_album_add_images),
+                contentDescription = stringResource(R.string.cover_album_add_images),
             )
         },
     ) {

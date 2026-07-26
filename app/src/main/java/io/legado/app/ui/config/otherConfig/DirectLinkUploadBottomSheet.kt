@@ -32,7 +32,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -59,7 +59,7 @@ fun DirectLinkUploadBottomSheet(
         show = show,
         title = stringResource(R.string.direct_link_upload_config),
         startAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = {
                     onIntent(OtherConfigIntent.TestDirectLinkRule)
                 },
@@ -69,7 +69,7 @@ fun DirectLinkUploadBottomSheet(
         },
         endAction = {
             Box {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showMenu = true },
                 icon = Icons.Default.MoreVert,
                 contentDescription = stringResource(R.string.more_menu)

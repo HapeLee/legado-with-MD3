@@ -25,7 +25,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -91,7 +91,7 @@ fun ScopeSelectSheet(
         title = title,
         startAction = onConfirm?.let {
             {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = it,
                     icon = AppIcons.Settings,
                     contentDescription = stringResource(R.string.book_source_manage),
@@ -100,7 +100,7 @@ fun ScopeSelectSheet(
         },
         endAction = onApplyScope?.let {
             {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = {
                         applyDraftSelection()
                         onDismissRequest()

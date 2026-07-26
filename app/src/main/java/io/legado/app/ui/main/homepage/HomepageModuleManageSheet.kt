@@ -38,7 +38,7 @@ import io.legado.app.ui.main.homepage.manage.SetListPage
 import io.legado.app.ui.main.homepage.manage.SourceBrowseDetailPage
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -131,13 +131,13 @@ fun <T> HomepageModuleManageSheet(
         },
         startAction = {
             if (showCustomSetAddModules) {
-                SmallPlainButton(
+                MediumTonalButton(
                         onClick = { showCustomSetAddModules = false },
                         icon = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back)
                 )
             } else if (browsingSourceUrl != null || showSourceBrowser) {
-                SmallPlainButton(
+                MediumTonalButton(
                     onClick = {
                         if (browsingDetail) browsingDetail = false
                         else if (showSourceBrowser) showSourceBrowser = false
@@ -147,7 +147,7 @@ fun <T> HomepageModuleManageSheet(
                         contentDescription = stringResource(R.string.back)
                 )
             } else if (selectingSetUrl != null) {
-                SmallPlainButton(
+                MediumTonalButton(
                         onClick = { selectingSetUrl = null },
                         icon = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back)
@@ -161,7 +161,7 @@ fun <T> HomepageModuleManageSheet(
                 supportsMultipleKinds &&
                 selectedKindTitles.isNotEmpty()
             ) {
-                SmallPlainButton(
+                MediumTonalButton(
                         onClick = { showAddKindGroupDialog = true },
                         icon = Icons.Default.Check,
                         contentDescription = stringResource(R.string.confirm)
@@ -169,7 +169,7 @@ fun <T> HomepageModuleManageSheet(
             } else if ((showSourceBrowser || browsingSourceUrl != null) && !browsingDetail) {
                 var expanded by remember { mutableStateOf(false) }
                 Box {
-                    SmallPlainButton(
+                    MediumTonalButton(
                         onClick = { expanded = true },
                         icon = Icons.Default.FilterList,
                         contentDescription = stringResource(R.string.screen)
