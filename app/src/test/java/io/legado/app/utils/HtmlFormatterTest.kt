@@ -18,6 +18,7 @@ class HtmlFormatterTest {
             """.trimIndent()
         )
 
+        assertEquals("第一段\n第二段", result)
         assertTrue(result.contains("第一段"))
         assertTrue(result.contains("第二段"))
         assertFalse(result.contains("color: red"))
@@ -27,5 +28,13 @@ class HtmlFormatterTest {
     @Test
     fun formatDisplayText_keepsPlainText() {
         assertEquals("普通简介", HtmlFormatter.formatDisplayText("普通简介"))
+    }
+
+    @Test
+    fun formatDisplayText_keepsPlainTextLineBreaks() {
+        assertEquals(
+            "第一段\n第二段",
+            HtmlFormatter.formatDisplayText("第一段\n第二段")
+        )
     }
 }
