@@ -193,10 +193,19 @@ class CacheBookModel(
         isPaused = true
         isLoading = false
         waitingRetry = false
+        // 整书暂停：先把进行中的章节收回队列，再取消任务。
+        // onCancel 使用 requeue=false，避免与超时/失败路径双重入队。
+        onDownloadSet.toList().forEach { index ->
+            canceledDownloadSet.add(index)
+            queue.enqueue(ChapterSelection.Single(index))
+            host.stateStore.clearChapterProgress(book.bookUrl, index)
+        }
+        onDownloadSet.clear()
         chapterTasks.values.toList().forEach { task ->
             tasks.delete(task)
             task.cancel()
         }
+        chapterTasks.clear()
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
@@ -397,6 +406,7 @@ class CacheBookModel(
                 it.cancel()
             }
         }
+        host.stateStore.clearChapterProgress(book.bookUrl, index)
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
         return true
@@ -462,7 +472,7 @@ class CacheBookModel(
             context = context,
             start = CoroutineStart.LAZY,
             executeContext = context,
-        )
+        ).timeout(DOWNLOAD_TIMEOUT_MS)
         if (!attachTaskIfActive(task, chapter, chapterIndex, scope, context, chainImagesAfterContent = true)) {
             task.cancel()
             return
@@ -488,6 +498,7 @@ class CacheBookModel(
             return null
         }
         onDownloadSet.add(chapterIndex)
+        host.stateStore.clearFailure(book.bookUrl, chapterIndex)
         notifyDownloadSetChanged()
         return candidate
     }
@@ -551,7 +562,8 @@ class CacheBookModel(
             }
             emitPendingReadError(chapter, it)
         }.onCancel(IO) {
-            onCancel(chapterIndex)
+            // 失败重试由 onError 入队；主动暂停由 pause/pauseDownload 入队或标记 canceled
+            onCancel(chapterIndex, requeue = false)
             emitPendingReadCanceled(chapter)
         }.onFinally(IO) {
             if (chapterTasks[chapterIndex] === task) {

@@ -949,6 +949,7 @@
     <string name="wait_download">待下載</string>
     <string name="download_success">下載完成</string>
     <string name="download_error">下載失敗</string>
+    <string name="download_error_waiting_retry">下載失敗，等待重試</string>
     <string name="downloading">下載中</string>
     <string name="unknown_state">未知狀態</string>
     <string name="disable_source">禁用源</string>

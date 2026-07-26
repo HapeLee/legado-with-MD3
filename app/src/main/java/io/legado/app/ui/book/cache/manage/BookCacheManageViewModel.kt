@@ -659,6 +659,7 @@ class BookCacheManageViewModel(
                     isWaiting = isWaiting,
                     isDownloading = isDownloading,
                     isPaused = isPaused,
+                    isError = errorIndices(bookUrl).contains(item.index),
                     downloadProgress = downloadProgress,
                     progressLabel = progressLabel,
                 )
