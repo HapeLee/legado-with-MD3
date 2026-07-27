@@ -269,7 +269,6 @@ jobs:
   create_release:
     needs: [ prepare, build ]
     # 只有 Release APK workflow 调用时才发布；普通 Auto Build 仍然只构建产物。
-    if: inputs.publish && github.actor == 'HapeLee' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
