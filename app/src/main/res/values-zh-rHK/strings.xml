@@ -1667,6 +1667,7 @@
     <string name="placeholder_page_index">當前頁碼</string>
     <string name="placeholder_page_size">本章頁數</string>
     <string name="placeholder_page_remaining">本章剩餘頁數</string>
+    <string name="chapter_complete">本章完</string>
     <string name="placeholder_read_progress">閱讀進度</string>
     <string name="custom_regex_rule">自訂正則規則</string>
     <string name="custom_tag_colors">自訂標籤顏色</string>

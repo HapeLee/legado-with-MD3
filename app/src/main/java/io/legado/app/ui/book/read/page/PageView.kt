@@ -545,14 +545,14 @@ class PageView(
             textPage.pageSize.toString()
         } else {
             val pageSizeInt = textPage.pageSize
-            if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+            if (pageSizeInt <= 0) "-" else pageSizeInt.toString()
         }
-        val pageRemaining = (textPage.pageSize - textPage.index - 1).coerceAtLeast(0)
-        val pageRemainingDisplay = when {
-            textPage.textChapter.isCompleted -> pageRemaining.toString()
-            textPage.pageSize <= 0 -> "-"
-            else -> "~$pageRemaining"
-        }
+        val pageRemainingDisplay = formatCustomTipPageRemaining(
+            pageSize = textPage.pageSize,
+            pageIndex = textPage.index,
+            isChapterCompleted = textPage.textChapter.isCompleted,
+            chapterCompleteText = context.getString(R.string.chapter_complete),
+        )
         val readProgressDisplay = textPage.readProgress
         val wholeBookPage = ReadBook.getWholeBookPageState(textPage.chapterIndex, textPage.index)
         val fullPageIndexDisplay = wholeBookPage?.currentPage?.toString() ?: pageIndexDisplay
@@ -638,7 +638,7 @@ class PageView(
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         } else {
             val pageSizeInt = pageSize
-            val pageSize = if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+            val pageSize = if (pageSizeInt <= 0) "-" else pageSizeInt.toString()
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }

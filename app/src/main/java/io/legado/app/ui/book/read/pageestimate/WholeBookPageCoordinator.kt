@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.pageestimate
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,6 +24,7 @@ class WholeBookPageCoordinator(
     private val pendingCorrections = mutableMapOf<Int, PendingCorrection>()
     private val pendingLengthUpdates = mutableMapOf<Int, PendingLengthUpdate>()
     private var estimateJob: Job? = null
+    private var estimateReady = CompletableDeferred(false)
     private var activeEstimate: ActiveEstimate? = null
 
     @Volatile
@@ -46,16 +48,19 @@ class WholeBookPageCoordinator(
             .takeIf(PageEstimateCalibration::fitted)
             ?: calibrationStore.get(layoutBucket)
         val chapterEstimator = estimator ?: HeuristicPageEstimator()
+        val taskReady = CompletableDeferred<Boolean>()
         synchronized(lock) {
             generation++
             taskGeneration = generation
             estimateJob?.cancel()
+            estimateReady.complete(false)
+            estimateReady = taskReady
             pageIndex = null
             activeEstimate = null
             pendingCorrections.clear()
             pendingLengthUpdates.clear()
         }
-        estimateJob = scope.launch(Dispatchers.Default) {
+        val job = scope.launch(Dispatchers.Default) {
             val chapters = withContext(Dispatchers.IO) { chapterLoader() }
                 .sortedBy(ChapterLengthInfo::chapterIndex)
             ensureActive()
@@ -169,6 +174,13 @@ class WholeBookPageCoordinator(
                 onStateChanged()
             }
         }
+        estimateJob = job
+        job.invokeOnCompletion {
+            val initialized = synchronized(lock) {
+                generation == taskGeneration && pageIndex?.isInitialized == true
+            }
+            taskReady.complete(initialized)
+        }
         return taskGeneration
     }
 
@@ -229,10 +241,33 @@ class WholeBookPageCoordinator(
             pageIndex?.getState(chapterIndex, localPageIndex)
         }
 
+    fun hasEstimate(): Boolean = synchronized(lock) {
+        pageIndex?.isInitialized == true || estimateJob?.isActive == true
+    }
+
+    suspend fun awaitInitialized(layoutGeneration: Long): Boolean {
+        val ready = synchronized(lock) {
+            if (generation != layoutGeneration) return false
+            if (pageIndex?.isInitialized == true) return true
+            estimateReady
+        }
+        if (!ready.await()) return false
+        return synchronized(lock) {
+            generation == layoutGeneration && pageIndex?.isInitialized == true
+        }
+    }
+
+    fun isChapterExact(chapterIndex: Int, layoutGeneration: Long): Boolean =
+        synchronized(lock) {
+            generation == layoutGeneration && pageIndex?.isExact(chapterIndex) == true
+        }
+
     fun clear() {
         synchronized(lock) {
             generation++
             estimateJob?.cancel()
+            estimateReady.complete(false)
+            estimateReady = CompletableDeferred(false)
             estimateJob = null
             pageIndex = null
             activeEstimate = null

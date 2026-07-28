@@ -1594,6 +1594,7 @@
     <string name="placeholder_page_index">當前頁碼</string>
     <string name="placeholder_page_size">本章頁數</string>
     <string name="placeholder_page_remaining">本章剩餘頁數</string>
+    <string name="chapter_complete">本章完</string>
     <string name="placeholder_read_progress">閱讀進度</string>
     <string name="cover_selected_images_count">已選擇 %1$d 張圖片</string>
     <string name="confirm_skip_to_chapter">是否跳轉到此章節？</string>
