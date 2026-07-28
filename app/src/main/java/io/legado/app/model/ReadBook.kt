@@ -35,6 +35,8 @@ import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
@@ -557,7 +559,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val oldIndex = ReadBookConfig.styleSelect
         ReadSessionState.isComic = book.isImage
         if (oldIndex != ReadBookConfig.styleSelect) {
-            postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+            ReadConfigUpdateBus.post(
+                setOf(
+                    ConfigUpdateAction.UpdateBackground,
+                    ConfigUpdateAction.UpdateStyle,
+                    ConfigUpdateAction.ReloadContent,
+                    ConfigUpdateAction.RebuildWholeBookPageIndex,
+                )
+            )
             if (ReadConfig.readBarStyleFollowPage) {
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }

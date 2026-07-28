@@ -10,6 +10,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -36,7 +37,9 @@ class ReadAloudPlayerCoordinator(
             EVENT_KEYS.forEach { LiveEventBus.get<Any>(it).removeObserver(observer) }
         }
     }
-    private val bookState = merge(bookChanges, refreshRequests).map { snapshotBook() }
+    private val configChanges = ReadConfigUpdateBus.events.map { }
+    private val bookState =
+        merge(bookChanges, refreshRequests, configChanges).map { snapshotBook() }
 
     val state: Flow<ReadAloudPlayerSourceState> = combine(
         sessionStore.state,
@@ -144,7 +147,6 @@ class ReadAloudPlayerCoordinator(
 
     private companion object {
         val EVENT_KEYS = listOf(
-            EventBus.UP_CONFIG,
             EventBus.UPDATE_READ_ACTION_BAR,
             EventBus.SOURCE_CHANGED,
             EventBus.ALOUD_STATE,

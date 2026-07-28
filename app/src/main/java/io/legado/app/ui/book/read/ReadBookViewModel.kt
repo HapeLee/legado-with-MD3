@@ -2181,41 +2181,14 @@ class ReadBookViewModel(
             }
         }
         viewModelScope.launch {
-            eventFlow<ArrayList<Int>>(EventBus.UP_CONFIG).collect { values ->
+            ReadConfigUpdateBus.events.collect { actions ->
                 _uiState.update {
                     it.copy(
                         styleConfig = buildStyleConfig(),
                         sheetConfig = buildSheetConfig(),
                     )
                 }
-                // Convert legacy integer codes to ConfigUpdateAction set
-                val actions = values.mapNotNull { code ->
-                    when (code) {
-                        0 -> ConfigUpdateAction.UpdateSystemUi
-                        1 -> ConfigUpdateAction.UpdateBackground
-                        2 -> ConfigUpdateAction.UpdateStyle
-                        3 -> ConfigUpdateAction.UpdateBackgroundAlpha
-                        4 -> ConfigUpdateAction.UpdatePageSlopSquare
-                        5 -> ConfigUpdateAction.ReloadContent
-                        6 -> ConfigUpdateAction.UpdateContent
-                        8 -> ConfigUpdateAction.UpdateChapterStyle
-                        9 -> ConfigUpdateAction.InvalidateTextPage
-                        10 -> ConfigUpdateAction.UpdateLayout
-                        11 -> ConfigUpdateAction.SubmitRenderTask
-                        12 -> ConfigUpdateAction.RelayoutContent
-                        else -> null
-                    }
-                }.toSet()
-                    .let { actions ->
-                        if (5 in values) {
-                            setOf(ConfigUpdateAction.RebuildWholeBookPageIndex) + actions
-                        } else {
-                            actions
-                        }
-                    }
-                if (actions.isNotEmpty()) {
-                    emitEffectWhenSubscribed(ReadBookEffect.UpdateReadViewConfig(actions))
-                }
+                emitEffectWhenSubscribed(ReadBookEffect.UpdateReadViewConfig(actions))
             }
         }
         viewModelScope.launch {

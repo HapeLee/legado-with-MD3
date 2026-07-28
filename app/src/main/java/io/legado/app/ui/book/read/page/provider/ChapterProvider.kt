@@ -11,7 +11,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.net.toUri
 import androidx.core.os.postDelayed
-import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookContent
@@ -19,13 +18,14 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedBase
 import io.legado.app.help.config.ReadBookConfig.dottedRatio
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isPad
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.spToPx
 import io.legado.app.utils.textHeight
 import kotlinx.coroutines.CoroutineScope
@@ -1109,7 +1109,7 @@ object ChapterProvider {
         viewHeight = height
         upLayout()
         ReadBook.requestWholeBookPageEstimate()
-        postEvent(EventBus.UP_CONFIG, arrayListOf(12))
+        ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.RelayoutContent))
     }
 
     /**
