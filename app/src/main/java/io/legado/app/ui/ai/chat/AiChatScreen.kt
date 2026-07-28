@@ -91,7 +91,6 @@ import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -385,8 +384,8 @@ fun AiChatScreen(
                 }
 
                 // Draw behind both the floating input and the system navigation/IME area.
-                AppColumn(
-                    Modifier
+                Column(
+                    modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                 ) {
@@ -426,8 +425,8 @@ fun AiChatScreen(
                             .fillMaxWidth()
                             .onSizeChanged { bottomOverlayHeightPx = it.height }
                     ) {
-                        AppColumn(
-                            Modifier
+                        Column(
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 32.dp)
                         ) {
@@ -535,8 +534,8 @@ fun AiChatScreen(
                                 shape = RoundedCornerShape(50),
                                 color = LegadoTheme.colorScheme.surfaceContainerLow
                             ) {
-                                AppColumn(
-                                    Modifier
+                                Column(
+                                    modifier = Modifier
                                         .height(40.dp)
                                         .padding(horizontal = 12.dp),
                                     horizontalAlignment = Alignment.Start,
@@ -598,9 +597,7 @@ private fun PendingToolConfirmationCard(
             .fillMaxWidth()
             .padding(top = 8.dp)
     ) {
-        AppColumn(
-            Modifier.padding(12.dp)
-        ) {
+        Column(modifier = Modifier.padding(12.dp)) {
             AppText(
                 text = stringResource(R.string.ai_tool_confirmation),
                 style = LegadoTheme.typography.labelMedium,
@@ -730,8 +727,8 @@ private fun RecentChatsDrawer(
                         LegadoTheme.colorScheme.surface
                     }
                 ) {
-                    AppColumn(
-                        Modifier
+                    Column(
+                        modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
@@ -909,9 +906,7 @@ private fun ChatInputBar(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AppColumn(
-                    Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     AppText(
                         text = label,
                         style = LegadoTheme.typography.bodyLarge,

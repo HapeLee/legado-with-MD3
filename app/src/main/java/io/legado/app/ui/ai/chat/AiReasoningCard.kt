@@ -45,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -130,11 +129,12 @@ fun ReasoningCard(
     val (state, loading) = rememberReasoningState(text, isStreaming, messageCreatedAt)
     val fadeHeight = 64f
 
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
             .animateContentSize()
     ) {
+        // Header row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -193,6 +193,8 @@ fun ReasoningCard(
                 tint = LegadoTheme.colorScheme.outline
             )
         }
+
+        // Content area
         if (state.expandState != ReasoningCardState.Collapsed) {
             val isPreview = state.expandState == ReasoningCardState.Preview
             val contentModifier = Modifier

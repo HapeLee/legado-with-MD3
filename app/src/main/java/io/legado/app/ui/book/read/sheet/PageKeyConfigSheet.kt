@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.read.sheet
 
-import android.view.KeyEvent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +29,6 @@ import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -56,8 +54,8 @@ fun PageKeyConfigSheet(
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.custom_page_key)) },
         text = {
-            AppColumn(
-                modifier = Modifier.verticalScroll(rememberScrollState())
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 OutlinedTextField(
                     value = prevKeys,
@@ -69,8 +67,8 @@ fun PageKeyConfigSheet(
                         .fillMaxWidth()
                         .onKeyEvent { event ->
                             val keyCode = event.nativeKeyEvent.keyCode
-                            if (keyCode != KeyEvent.KEYCODE_BACK &&
-                                keyCode != KeyEvent.KEYCODE_DEL
+                            if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
+                                keyCode != android.view.KeyEvent.KEYCODE_DEL
                             ) {
                                 prevKeys = if (prevKeys.isEmpty() || prevKeys.endsWith(",")) {
                                     "$prevKeys$keyCode"
@@ -94,8 +92,8 @@ fun PageKeyConfigSheet(
                         .fillMaxWidth()
                         .onKeyEvent { event ->
                             val keyCode = event.nativeKeyEvent.keyCode
-                            if (keyCode != KeyEvent.KEYCODE_BACK &&
-                                keyCode != KeyEvent.KEYCODE_DEL
+                            if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
+                                keyCode != android.view.KeyEvent.KEYCODE_DEL
                             ) {
                                 nextKeys = if (nextKeys.isEmpty() || nextKeys.endsWith(",")) {
                                     "$nextKeys$keyCode"

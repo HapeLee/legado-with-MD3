@@ -17,12 +17,15 @@ data class ThemeConfigUiState(
 
 sealed interface ThemeConfigSheet {
     data class Background(val dark: Boolean) : ThemeConfigSheet
+    data class ContainerBackground(val target: ContainerBackgroundTarget, val dark: Boolean) : ThemeConfigSheet
     data object MainNavigation : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
     data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet
     data object Font : ThemeConfigSheet
 }
+
+enum class ContainerBackgroundTarget { LargeContainer, Item }
 
 sealed interface ThemeConfigDialog {
     data object ResetDefaults : ThemeConfigDialog
@@ -73,6 +76,12 @@ sealed interface ThemeConfigIntent {
     data class RequestBackgroundImage(val dark: Boolean) : ThemeConfigIntent
     data class SelectBackground(val uri: String, val dark: Boolean) : ThemeConfigIntent
     data class RemoveBackground(val dark: Boolean) : ThemeConfigIntent
+    data class RequestContainerBackgroundImage(val target: ContainerBackgroundTarget, val dark: Boolean) : ThemeConfigIntent
+    data class SelectContainerBackground(val target: ContainerBackgroundTarget, val dark: Boolean, val uri: String) : ThemeConfigIntent
+    data class RemoveContainerBackground(
+        val target: ContainerBackgroundTarget,
+        val dark: Boolean,
+    ) : ThemeConfigIntent
     data class SelectAppFont(val file: FileDoc) : ThemeConfigIntent
     data object ClearAppFont : ThemeConfigIntent
     data class SetFontFolder(val path: String) : ThemeConfigIntent
@@ -92,5 +101,6 @@ sealed interface ThemeConfigEffect {
     data object OpenFontFolder : ThemeConfigEffect
     data class OpenNavigationIcon(val destination: String) : ThemeConfigEffect
     data class OpenBackgroundImage(val dark: Boolean) : ThemeConfigEffect
+    data class OpenContainerBackgroundImage(val target: ContainerBackgroundTarget, val dark: Boolean) : ThemeConfigEffect
     data class ShowToast(val stringRes: Int) : ThemeConfigEffect
 }

@@ -35,7 +35,6 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -65,11 +64,12 @@ fun RankingModule(
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         cornerRadius = 16.dp
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .padding(top = 12.dp)
                 .animateContentSize()
         ) {
+            // 显示书籍列表
             displayBooks.forEachIndexed { index, item ->
                 RankingItem(
                     rank = index + 1,

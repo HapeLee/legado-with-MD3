@@ -83,7 +83,6 @@ import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -96,7 +95,6 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -305,8 +303,8 @@ private fun BookInfoScreenContent(
                             )
                         }
                         item {
-                            AppColumn(
-                                Modifier
+                            Column(
+                                modifier = Modifier
                                     .fillMaxWidth()
                                     .background(
                                         color = LegadoTheme.colorScheme.surface
@@ -353,12 +351,7 @@ private fun BookInfoScreenContent(
                                             onIntent(BookInfoIntent.RelatedBookClick(book))
                                         },
                                         onMoreClick = {
-                                            onIntent(
-                                                BookInfoIntent.RelatedBooksMore(
-                                                    module.title,
-                                                    module.resolvedUrl
-                                                )
-                                            )
+                                            onIntent(BookInfoIntent.RelatedBooksMore(module.title, module.resolvedUrl))
                                         },
                                     )
                                 }
@@ -894,8 +887,8 @@ private fun BookInfoHeader(
     sharedCoverKey: String?,
 ) {
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
@@ -1141,8 +1134,8 @@ private fun BookInfoActionCard(
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         contentColor = LegadoTheme.colorScheme.onSurface,
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -1164,18 +1157,15 @@ private fun BookInfoSummary(
     tocLoadFailed: Boolean,
     onRemarkClick: () -> Unit,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AnimatedTextLine(
-            text = stringResource(
-                R.string.toc_s,
-                book.durChapterTitle ?: stringResource(R.string.loading)
-            ),
+            text = stringResource(R.string.toc_s, book.durChapterTitle ?: stringResource(R.string.loading)),
             style = LegadoTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
@@ -1227,10 +1217,7 @@ private fun BookInfoSummary(
                 onClick = onRemarkClick,
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     AnimatedTextLine(
                         text = remark,
                         style = LegadoTheme.typography.labelMediumEmphasized
@@ -1365,8 +1352,8 @@ private fun RelatedBooksBanner(
     onBookClick: (SearchBook, String?) -> Unit,
     onMoreClick: () -> Unit,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
     ) {
@@ -1391,7 +1378,7 @@ private fun RelatedBooksBanner(
             }
         }
         BannerModule(
-            books = books.map { HomepageBookItemUi(book = it) }
+            books = books.map { io.legado.app.ui.main.homepage.HomepageBookItemUi(book = it) }
                 .toImmutableList(),
             onClick = onBookClick,
             modifier = Modifier
@@ -1410,8 +1397,8 @@ private fun BookInfoCharacters(
     onKnowledgeClick: () -> Unit,
     onEventsClick: () -> Unit,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
             .padding(vertical = 8.dp),
@@ -1490,7 +1477,7 @@ private fun CharacterEntryCard(
         onClick = onClick,
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        AppColumn(
+        Column(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -1561,8 +1548,8 @@ private fun BookInfoKnowledge(
     onViewAllClick: () -> Unit,
 ) {
     if (entries.isEmpty()) return
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
             .padding(vertical = 8.dp),
@@ -1613,7 +1600,7 @@ private fun KnowledgeInfoCard(
         modifier = Modifier.width(140.dp),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        AppColumn(
+        Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -1638,8 +1625,8 @@ private fun BookInfoEvents(
     onViewAllClick: () -> Unit,
 ) {
     if (events.isEmpty()) return
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
             .padding(vertical = 8.dp),
@@ -1693,7 +1680,7 @@ private fun EventInfoCard(
         modifier = Modifier.width(160.dp),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        AppColumn(
+        Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

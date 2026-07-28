@@ -50,7 +50,6 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
@@ -237,12 +236,13 @@ fun HighlightRuleEditSheet(
             )
         },
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
         ) {
+            // === Section 1: Rule Info ===
             SectionTitle(stringResource(R.string.rule_info))
 
             AppTextField(
@@ -295,7 +295,11 @@ fun HighlightRuleEditSheet(
                 checked = enabled,
                 onCheckedChange = { enabled = it },
             )
+
+            // === Section 2: Style Settings ===
             SectionTitle(stringResource(R.string.style_settings))
+
+            // Text color
             TinySwitchSettingItem(
                 title = stringResource(R.string.text_color),
                 checked = hasTextColor,
@@ -308,6 +312,8 @@ fun HighlightRuleEditSheet(
                     onClick = { showTextColorPicker = true },
                 )
             }
+
+            // Underline
             TinySwitchSettingItem(
                 title = stringResource(R.string.underline_style),
                 checked = hasUnderline,
@@ -370,6 +376,8 @@ fun HighlightRuleEditSheet(
                     }
                 }
             }
+
+            // Background color
             TinySwitchSettingItem(
                 title = stringResource(R.string.bg_color),
                 checked = hasBgColor,
@@ -382,6 +390,8 @@ fun HighlightRuleEditSheet(
                     onClick = { showBgColorPicker = true },
                 )
             }
+
+            // Background image
             TinySwitchSettingItem(
                 title = stringResource(R.string.highlight_bg_image),
                 checked = hasBgImage,
@@ -421,6 +431,8 @@ fun HighlightRuleEditSheet(
                     )
                 }
             }
+
+            // === Section 3: Config Binding ===
             if (allConfigNames.isNotEmpty()) {
                 SectionTitle("应用排版")
                 LazyRow(
@@ -471,6 +483,8 @@ fun HighlightRuleEditSheet(
                     }
                 }
             }
+
+            // === Section 4: Font ===
             SectionTitle("字体替换")
             TinySwitchSettingItem(
                 title = "自定义字体",
@@ -484,6 +498,8 @@ fun HighlightRuleEditSheet(
                     onClick = { showFontSelect = true },
                 )
             }
+
+            // === Section 5: Preview ===
             SectionTitle(stringResource(R.string.preview_effect))
 
             AppTextField(

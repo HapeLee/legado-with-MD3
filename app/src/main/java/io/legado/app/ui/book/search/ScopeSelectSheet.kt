@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -112,8 +111,8 @@ fun ScopeSelectSheet(
             }
         },
     ) {
-        AppColumn(
-        ) {
+        Column {
+
             SearchBar(
                 query = filterText,
                 onQueryChange = { filterText = it },

@@ -26,7 +26,6 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.book.SearchBookTagChip
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -60,8 +59,8 @@ fun WaterfallItem(
         },
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
     ) {
-        AppColumn(
-            modifier
+        Column(
+            modifier = modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = onClick,

@@ -39,7 +39,6 @@ import io.legado.app.ui.main.Launcher5
 import io.legado.app.ui.main.Launcher6
 import io.legado.app.ui.main.LauncherW
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.getCompatDrawable
@@ -61,11 +60,12 @@ fun LauncherIconPickerSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.change_icon)
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 contentPadding = PaddingValues(horizontal = 16.dp),

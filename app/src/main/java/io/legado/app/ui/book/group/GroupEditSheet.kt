@@ -32,7 +32,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -140,8 +139,8 @@ fun GroupEditContent(
         }
     }
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
             .verticalScroll(rememberScrollState()),

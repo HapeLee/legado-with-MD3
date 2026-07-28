@@ -24,7 +24,6 @@ import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.text.AppText
@@ -51,8 +50,7 @@ fun TextListInputDialog(
         onDismissRequest = onDismissRequest,
         title = title,
         content = {
-            AppColumn(
-            ) {
+            Column {
                 AppTextField(
                     value = text,
                     onValueChange = { text = it },

@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.text.AppText
@@ -97,8 +96,8 @@ fun WeekdayLabelsColumn(
     cellSpacing: Dp,
     modifier: Modifier = Modifier
 ) {
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .padding(top = 20.dp, end = 8.dp)
     ) {
         val labels = listOf(
@@ -144,7 +143,7 @@ fun NoEarlierDataIndicator(
         modifier = modifier
             .padding(top = 24.dp, start = 8.dp, end = 16.dp)
     ) {
-        AppColumn(
+        Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             repeat(7) {
@@ -167,10 +166,7 @@ fun NoEarlierDataIndicator(
                                     color = outlineColor,
                                     style = stroke,
                                     topLeft = Offset(inset, inset),
-                                    size = Size(
-                                        size.width - strokeWidth,
-                                        size.height - strokeWidth
-                                    ),
+                                    size = Size(size.width - strokeWidth, size.height - strokeWidth),
                                     cornerRadius = CornerRadius(4.dp.toPx())
                                 )
                             }
@@ -181,7 +177,7 @@ fun NoEarlierDataIndicator(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        AppColumn(
+        Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -267,7 +263,7 @@ fun HeatmapWeekColumn(
     val firstDayOfMonth = week.firstOrNull { it?.dayOfMonth == 1 }
 
     Box(modifier = modifier.width(config.interactiveCellSize)) {
-        AppColumn(
+        Column(
             modifier = Modifier.padding(top = 24.dp),
             verticalArrangement = Arrangement.spacedBy(config.cellSpacing)
         ) {

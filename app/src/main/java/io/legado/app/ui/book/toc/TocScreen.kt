@@ -96,7 +96,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.CollapsibleHeader
@@ -889,9 +888,7 @@ fun ChapterItem(
                 .adaptiveHorizontalPadding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (item.isVip && !item.isPay) {
                         Icon(

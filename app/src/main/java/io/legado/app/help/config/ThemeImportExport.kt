@@ -30,6 +30,10 @@ object ThemeImportExport {
         val assetPaths = mapOf(
             "bgImageLight" to data.bgImageLight,
             "bgImageDark" to data.bgImageDark,
+            "largeContainerBackgroundImageLight" to data.largeContainerBackgroundImageLight,
+            "largeContainerBackgroundImageDark" to data.largeContainerBackgroundImageDark,
+            "itemBackgroundImageLight" to data.itemBackgroundImageLight,
+            "itemBackgroundImageDark" to data.itemBackgroundImageDark,
             "navIconHome" to data.navIconHome,
             "navIconBookshelf" to data.navIconBookshelf,
             "navIconExplore" to data.navIconExplore,
@@ -109,6 +113,16 @@ object ThemeImportExport {
             data = data.copy(
                 bgImageLight = embeddedAssets.paths["bgImageLight"] ?: data.bgImageLight,
                 bgImageDark = embeddedAssets.paths["bgImageDark"] ?: data.bgImageDark,
+                largeContainerBackgroundImageLight =
+                    embeddedAssets.paths["largeContainerBackgroundImageLight"]
+                        ?: data.largeContainerBackgroundImageLight,
+                largeContainerBackgroundImageDark =
+                    embeddedAssets.paths["largeContainerBackgroundImageDark"]
+                        ?: data.largeContainerBackgroundImageDark,
+                itemBackgroundImageLight = embeddedAssets.paths["itemBackgroundImageLight"]
+                    ?: data.itemBackgroundImageLight,
+                itemBackgroundImageDark = embeddedAssets.paths["itemBackgroundImageDark"]
+                    ?: data.itemBackgroundImageDark,
                 navIconHome = embeddedAssets.paths["navIconHome"] ?: data.navIconHome,
                 navIconBookshelf = embeddedAssets.paths["navIconBookshelf"]
                     ?: data.navIconBookshelf,
@@ -143,6 +157,13 @@ object ThemeImportExport {
                         val folder = File(baseDir, key)
                         folder.mkdirs()
                         File(folder, "theme_asset_${UUID.randomUUID()}.jpg")
+                    }
+
+                    key.contains("ContainerBackgroundImage") -> {
+                        val baseDir = appCtx.getExternalFilesDir(null) ?: appCtx.filesDir
+                        val folder = File(baseDir, "container_background/$key")
+                        folder.mkdirs()
+                        File(folder, "theme_asset_${UUID.randomUUID()}.png")
                     }
 
                     key.startsWith("navIcon") -> {

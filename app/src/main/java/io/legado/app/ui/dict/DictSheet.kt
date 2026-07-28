@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import io.legado.app.R
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.pager.pagerHeight
@@ -162,8 +161,8 @@ private fun DictPagerContent(
         heightAnimationSpec = spring(),
     )
 
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier,
     ) {
         AppTabRow(
             tabTitles = tabTitles,
@@ -228,8 +227,8 @@ private fun DictPageContent(
     emptyMessage: String?,
     modifier: Modifier = Modifier,
 ) {
-    AppColumn(
-        modifier.verticalScroll(rememberScrollState())
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
     ) {
         when {
             state.isLoading -> {
@@ -271,9 +270,7 @@ private fun DictHtmlContent(
     modifier: Modifier = Modifier,
 ) {
     val blocks = remember(htmlContent) { parseHtmlBlocks(htmlContent) }
-    AppColumn(
-        modifier.padding(horizontal = 32.dp, vertical = 16.dp)
-    ) {
+    Column(modifier = modifier.padding(horizontal = 32.dp, vertical = 16.dp)) {
         blocks.forEach { block ->
             when (block) {
                 is HtmlBlock.Text -> {
@@ -283,7 +280,6 @@ private fun DictHtmlContent(
                         },
                     )
                 }
-
                 is HtmlBlock.Image -> {
                     AsyncImage(
                         model = block.url,

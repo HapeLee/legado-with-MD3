@@ -29,7 +29,6 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.domain.model.settings.AppShellSettings
-import io.legado.app.ui.widget.components.AppColumn
 
 private data class NavIconDestination(
     val key: String,
@@ -63,11 +62,9 @@ fun NavIconManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_nav_icons),
     ) {
-        AppColumn(
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp)
-        ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

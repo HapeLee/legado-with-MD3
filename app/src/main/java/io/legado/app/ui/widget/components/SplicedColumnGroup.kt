@@ -75,9 +75,7 @@ fun SplicedColumnGroup(
         )
     }
 
-    AppColumn(
-        modifier.padding(top = 8.dp, bottom = 8.dp)
-    ) {
+    Column(modifier = modifier.padding(top = 8.dp, bottom = 8.dp)) {
         if (title.isNotEmpty()) {
             AdaptiveTitle(
                 text = title,
@@ -138,9 +136,7 @@ fun SettingItemWithDivider(
     if (groupState.enableItemDivider && groupState.currentIndex() > 0) {
         SettingItemDivider()
     }
-    AppColumn(
-        modifier.fillMaxWidth()
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         groupState.incrementIndex()
         content()
     }

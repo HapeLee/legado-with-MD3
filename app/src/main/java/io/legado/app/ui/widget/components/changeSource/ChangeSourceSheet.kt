@@ -50,7 +50,6 @@ import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -349,7 +348,7 @@ fun ChangeSourceSheet(
                             )
                         },
                         supportingContent = {
-                            AppColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AppText(
                                     text = item.author,
                                     style = LegadoTheme.typography.labelLargeEmphasized
@@ -491,7 +490,7 @@ fun ChangeSourceSheet(
             val existingSource = conflict.existingBook.originName.ifBlank {
                 conflict.existingBook.origin
             }
-            AppColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 AppText(
                     text = "${stringResource(R.string.book_name)}：${conflict.existingBook.name}",
                     style = LegadoTheme.typography.bodyMedium,

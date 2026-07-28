@@ -58,7 +58,6 @@ import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -153,8 +152,8 @@ fun BookInfoEditContent(
         }
     }
 
-    AppColumn(
-        modifier.padding(16.dp)
+    Column(
+        modifier = modifier.padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -292,7 +291,7 @@ private fun BookKnowledgeEditCard(
     onOpenEventList: (String) -> Unit,
 ) {
     NormalCard(modifier = Modifier.fillMaxWidth()) {
-        AppColumn(
+        Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -413,12 +412,11 @@ fun KindEditor(
         mutable.add(to, mutable.removeAt(from))
         onKindListChange(mutable)
     }
-
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         moveKind(from.index, to.index)
     }
 
-    AppColumn(
+    Column(
         modifier = Modifier.padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {

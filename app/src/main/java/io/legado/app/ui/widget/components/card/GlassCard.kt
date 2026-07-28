@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.CardDefaults
@@ -14,14 +15,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AppContainerBackgroundType
+import io.legado.app.ui.widget.components.appContainerBackground
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+
+@Composable
+private fun BaseCardContent(
+    modifier: Modifier = Modifier,
+    shape: Shape,
+    useItemBackground: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    if (!useItemBackground) {
+        Column(modifier = modifier, content = content)
+        return
+    }
+
+    Box(modifier = modifier) {
+        Spacer(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(shape)
+                .appContainerBackground(type = AppContainerBackgroundType.Item)
+        )
+        Column(content = content)
+    }
+}
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -36,12 +63,13 @@ private fun BaseCard(
     elevation: Dp = 0.dp,
     border: BorderStroke? = null,
     alpha: Float = 1f,
+    useItemBackground: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.surfaceContainer)
         .let { it.copy(alpha = it.alpha * alpha) }
-    val isTransparent = containerColor == Color.Transparent
     val themeSettings = LocalAppUiConfiguration.current.theme
+    val isTransparent = containerColor == Color.Transparent
     val resolvedCornerRadius = if (themeSettings.overrideBaseCardCornerRadius) {
         themeSettings.baseCardCornerRadius.dp
     } else {
@@ -81,11 +109,12 @@ private fun BaseCard(
         } else {
             decoratedModifier.clip(resolvedShape)
         }
-        Box(
-            modifier = clickableModifier
-        ) {
-            Column(content = content)
-        }
+        BaseCardContent(
+            modifier = clickableModifier,
+            shape = resolvedShape,
+            useItemBackground = useItemBackground,
+            content = content,
+        )
     } else if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         val colors = MiuixCardDefaults.defaultColors(
             color = resolvedContainerColor,
@@ -99,14 +128,26 @@ private fun BaseCard(
                 showIndication = true,
                 onClick = onClick,
                 onLongPress = onLongClick,
-                content = content,
+                content = {
+                    BaseCardContent(
+                        shape = resolvedShape,
+                        useItemBackground = useItemBackground,
+                        content = content,
+                    )
+                },
                 colors = colors
             )
         } else {
             MiuixCard(
                 modifier = decoratedModifier,
                 cornerRadius = resolvedCornerRadius,
-                content = content,
+                content = {
+                    BaseCardContent(
+                        shape = resolvedShape,
+                        useItemBackground = useItemBackground,
+                        content = content,
+                    )
+                },
                 colors = colors
             )
         }
@@ -136,7 +177,11 @@ private fun BaseCard(
             shadowElevation = elevation,
             border = resolvedBorder
         ) {
-            Column(content = content)
+            BaseCardContent(
+                shape = resolvedShape,
+                useItemBackground = useItemBackground,
+                content = content,
+            )
         }
     }
 }
@@ -166,6 +211,7 @@ fun GlassCard(
         elevation = elevation,
         border = border,
         alpha = LocalAppUiConfiguration.current.theme.containerOpacity / 100f,
+        useItemBackground = true,
         content = content
     )
 }
@@ -195,6 +241,7 @@ fun NormalCard(
         elevation = elevation,
         border = border,
         alpha = 1f,
+        useItemBackground = false,
         content = content
     )
 }

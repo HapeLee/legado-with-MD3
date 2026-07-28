@@ -22,7 +22,6 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +37,7 @@ fun CharsetConfigSheet(
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.set_charset)) },
         text = {
-            AppColumn(
-            ) {
+            Column {
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = it },

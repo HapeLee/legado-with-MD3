@@ -1,10 +1,5 @@
 package io.legado.app.ui.book.knowledge
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +47,6 @@ import io.legado.app.ui.ai.AiTaskResultSheet
 import io.legado.app.ui.ai.chat.ReasoningCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -208,7 +202,7 @@ private fun CharacterIdentifySheet(
     ) {
         when {
             sheet == null -> Unit
-            sheet.loading -> AppColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            sheet.loading -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -225,18 +219,18 @@ private fun CharacterIdentifySheet(
                 )
             }
 
-            sheet.error != null -> AppColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            sheet.error != null -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AnimatedTextLine(sheet.error, color = LegadoTheme.colorScheme.error)
             }
 
-            sheet.candidates.isEmpty() -> AppColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            sheet.candidates.isEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AnimatedTextLine(
                     stringResource(R.string.ai_identify_characters_hint),
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            else -> AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 sheet.candidates.forEach { candidate ->
                     CharacterIdentifyCandidateRow(candidate, onIntent)
                 }
@@ -251,7 +245,7 @@ private fun CharacterIdentifyCandidateRow(
     onIntent: (CharacterListIntent) -> Unit,
 ) {
     val expanded = rememberSaveable(candidate.id) { mutableStateOf(false) }
-    AppColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         CheckboxItem(
             title = candidate.name,
             checked = candidate.selected,
@@ -277,10 +271,10 @@ private fun CharacterIdentifyCandidateRow(
                     tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = expanded.value,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut(),
             ) {
                 AnimatedTextLine(
                     candidate.summary,
@@ -379,7 +373,7 @@ private fun CharacterListItem(
                     )
                 }
             }
-            AppColumn(
+            Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {

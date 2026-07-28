@@ -29,7 +29,6 @@ import io.legado.app.R
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
@@ -104,8 +103,8 @@ fun PaddingConfigContent(
         }
     }
 
-    AppColumn(
-        modifier.fillMaxWidth()
+    Column(
+        modifier = modifier.fillMaxWidth(),
     ) {
         CardTabRow(
             tabTitles = tabTitles,
@@ -222,9 +221,7 @@ internal fun PaddingSliders(
     onTopChange: (Float) -> Unit, onBottomChange: (Float) -> Unit,
     onLeftChange: (Float) -> Unit, onRightChange: (Float) -> Unit,
 ) {
-    AppColumn(
-        Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         TinySliderSettingItem(
             title = stringResource(R.string.padding_top),
             value = top,

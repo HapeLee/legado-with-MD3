@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
@@ -75,8 +74,8 @@ fun AiGeneratedMessageContent(
         .flatMap { block -> block.steps.filterIsInstance<AiThinkingStep.ToolStep>() }
     val contentBlocks = groupedParts.filterIsInstance<AiMessagePartBlock.ContentBlock>()
 
-    AppColumn(
-        modifier.animateContentSize()
+    Column(
+        modifier = modifier.animateContentSize()
     ) {
         if (showHeader) {
             AppText(
@@ -265,7 +264,7 @@ private fun BookResultsList(
 ) {
     if (books.isEmpty()) return
     Spacer(modifier = Modifier.height(10.dp))
-    AppColumn(
+    Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -307,9 +306,7 @@ private fun ChatBookResultItem(
                 .height(68.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
-        AppColumn(
-            Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             AppText(
                 text = book.name.ifBlank { book.bookUrl },
                 style = LegadoTheme.typography.titleSmall,
@@ -375,9 +372,7 @@ private fun TracePanel(
 ) {
     var expanded by rememberSaveable(title) { mutableStateOf(false) }
 
-    AppColumn(
-        Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

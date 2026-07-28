@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeExportData
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -72,14 +71,15 @@ fun EditThemeSheet(
             )
         }
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Name
             AppTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -90,6 +90,8 @@ fun EditThemeSheet(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Basic settings
             SectionTitle(stringResource(R.string.theme_manage_section_basic))
             CompactDropdownSettingItem(
                 title = stringResource(R.string.theme_mode),
@@ -121,6 +123,8 @@ fun EditThemeSheet(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Colors
             SectionTitle(stringResource(R.string.theme_manage_section_colors))
             CompactSwitchSettingItem(
                 title = stringResource(R.string.theme_manage_use_palette_colors),
@@ -132,71 +136,38 @@ fun EditThemeSheet(
                 ColorItem(stringResource(R.string.theme_manage_primary_color), data.themeColor) {
                     currentColorKey = "themeColor"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_secondary_color),
-                    data.secondaryThemeColor
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_color), data.secondaryThemeColor) {
                     currentColorKey = "secondaryThemeColor"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_primary_text_color),
-                    data.primaryTextColor
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_primary_text_color), data.primaryTextColor) {
                     currentColorKey = "primaryTextColor"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_secondary_text_color),
-                    data.secondaryTextColor
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_text_color), data.secondaryTextColor) {
                     currentColorKey = "secondaryTextColor"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_background_color),
-                    data.themeBackgroundColor
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_background_color), data.themeBackgroundColor) {
                     currentColorKey = "themeBackgroundColor"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_label_container_color),
-                    data.labelContainerColor
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_label_container_color), data.labelContainerColor) {
                     currentColorKey = "labelContainerColor"; showColorPicker = true
                 }
                 SectionTitle(stringResource(R.string.night))
-                ColorItem(
-                    stringResource(R.string.theme_manage_primary_color),
-                    data.themeColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_primary_color), data.themeColorNight) {
                     currentColorKey = "themeColorNight"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_secondary_color),
-                    data.secondaryThemeColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_color), data.secondaryThemeColorNight) {
                     currentColorKey = "secondaryThemeColorNight"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_primary_text_color),
-                    data.primaryTextColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_primary_text_color), data.primaryTextColorNight) {
                     currentColorKey = "primaryTextColorNight"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_secondary_text_color),
-                    data.secondaryTextColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_text_color), data.secondaryTextColorNight) {
                     currentColorKey = "secondaryTextColorNight"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_background_color),
-                    data.themeBackgroundColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_background_color), data.themeBackgroundColorNight) {
                     currentColorKey = "themeBackgroundColorNight"; showColorPicker = true
                 }
-                ColorItem(
-                    stringResource(R.string.theme_manage_label_container_color),
-                    data.labelContainerColorNight
-                ) {
+                ColorItem(stringResource(R.string.theme_manage_label_container_color), data.labelContainerColorNight) {
                     currentColorKey = "labelContainerColorNight"; showColorPicker = true
                 }
             } else {
@@ -209,6 +180,8 @@ fun EditThemeSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Interface layout
             SectionTitle(stringResource(R.string.theme_manage_section_layout))
             CompactSwitchSettingItem(
                 title = stringResource(R.string.show_home),
@@ -268,6 +241,8 @@ fun EditThemeSheet(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Blur
             SectionTitle(stringResource(R.string.theme_manage_section_blur))
             CompactSwitchSettingItem(
                 title = stringResource(R.string.is_blur_enable),
@@ -302,6 +277,8 @@ fun EditThemeSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Opacity
             SectionTitle(stringResource(R.string.theme_manage_section_opacity))
             CompactSliderSettingItem(
                 title = stringResource(R.string.top_bar_opacity),
@@ -317,6 +294,8 @@ fun EditThemeSheet(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Container
             SectionTitle(stringResource(R.string.theme_manage_section_container))
             CompactSliderSettingItem(
                 title = stringResource(R.string.container_opacity),
@@ -326,6 +305,8 @@ fun EditThemeSheet(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Other
             SectionTitle(stringResource(R.string.other))
             CompactSwitchSettingItem(
                 title = stringResource(R.string.pure_black),

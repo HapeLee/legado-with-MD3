@@ -55,7 +55,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -168,8 +167,7 @@ fun SearchContentScreen(
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            AppColumn(
-            ) {
+            Column {
                 GlassMediumFlexibleTopAppBar(
                     title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                         "共 ${searchResults.size} 条结果"
@@ -260,8 +258,8 @@ fun SearchContentScreen(
             }
         }
     ) { paddingValues ->
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
@@ -295,7 +293,6 @@ fun SearchContentScreen(
                             onToggleScope = { onIntent(SearchContentIntent.ToggleHistoryScope) }
                         )
                     }
-
                     SearchContentState.EmptyResult -> {
                         EmptyMessage(
                             message = "没有找到相关内容！",
@@ -341,9 +338,7 @@ fun SearchHistoryList(
     onClearHistory: () -> Unit,
     onToggleScope: () -> Unit
 ) {
-    AppColumn(
-        Modifier.fillMaxSize()
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -445,8 +440,7 @@ fun SearchResultItem(
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
 
-            AppColumn(
-            ) {
+            Column {
                 AppText(
                     text = result.getTitleAnnotatedString(
                         accentColor = LegadoTheme.colorScheme.primary,
@@ -472,7 +466,7 @@ fun SearchResultItem(
                 )
             }
 
-            Row(
+            Row (
                 modifier = Modifier.align(Alignment.TopEnd),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {

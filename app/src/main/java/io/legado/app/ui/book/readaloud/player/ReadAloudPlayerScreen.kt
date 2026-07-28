@@ -95,7 +95,6 @@ import io.legado.app.constant.ReadAloudBgMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -189,7 +188,7 @@ fun ReadAloudPlayerScreenContent(
                         .padding(horizontal = 24.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AppColumn(
+                    Column(
                         modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.Start,
                     ) {
@@ -237,8 +236,8 @@ fun ReadAloudPlayerScreenContent(
                 } else {
                     Modifier
                 }
-                AppColumn(
-                    Modifier
+                Column(
+                    modifier = Modifier
                         .fillMaxWidth()
                         .clip(RectangleShape)
                         .then(hazeModifier)
@@ -260,20 +259,8 @@ fun ReadAloudPlayerScreenContent(
                             .padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        AppText(
-                            formatPosition(state.chapterPosition),
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant
-                        )
-                        AppText(
-                            "${
-                                (state.chapterPosition * 100 / state.chapterLength.coerceAtLeast(
-                                    1
-                                ))
-                            }%",
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant
-                        )
+                        AppText(formatPosition(state.chapterPosition), style = LegadoTheme.typography.labelSmall, color = LegadoTheme.colorScheme.onSurfaceVariant)
+                        AppText("${(state.chapterPosition * 100 / state.chapterLength.coerceAtLeast(1))}%", style = LegadoTheme.typography.labelSmall, color = LegadoTheme.colorScheme.onSurfaceVariant)
                     }
 
                     Row(
@@ -515,8 +502,8 @@ private fun CoverPage(
     contentPadding: PaddingValues,
     flowingTextModifier: Modifier,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
             .padding(horizontal = 24.dp),

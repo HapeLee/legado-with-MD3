@@ -166,7 +166,6 @@ import io.legado.app.ui.book.read.sheet.ReadStyleContent
 import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppVerticalSlider
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -251,8 +250,7 @@ fun ReadBookMenuBar(
             exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            AppColumn(
-            ) {
+            Column {
                 MenuTitleBar(
                     state = state,
                     colors = menuColors,
@@ -373,7 +371,7 @@ fun ReadBookMenuBar(
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
-            AppColumn(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (state.menuVisible &&
                     state.menuConfig.showTitleBarIcons &&
                     state.menuConfig.titleBarIconPosition >= 2
@@ -866,12 +864,12 @@ private fun ReadBookMenuRoutePage(
     onBack: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxHeight)
             .let { if (animateSize) it.animateContentSize() else it }
-            .padding(top = 16.dp, bottom = 16.dp + bottomPadding)
+            .padding(top = 16.dp, bottom = 16.dp + bottomPadding),
     ) {
         Row(
             modifier = Modifier
@@ -957,8 +955,8 @@ private fun MenuTitleBar(
         )
     )
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .then(
                 if (useTopBarBlur && hazeState != null) {
@@ -1012,6 +1010,8 @@ private fun MenuTitleBar(
     ) {
         val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
         val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
+
+        // Title row: left group (back + capsule/title) + right group (actions)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1141,6 +1141,8 @@ private fun MenuTitleBar(
                 }
             }
         }
+
+        // Book name on its own line (mode "1") — hidden when capsule is active
         if (titleBarMode == "1" && !useTitleCapsule) {
             AppText(
                 text = state.bookName,
@@ -1160,6 +1162,8 @@ private fun MenuTitleBar(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+
+        // Chapter name + source action (modes "0" and "1") — hidden when capsule is active
         if ((titleBarMode == "0" || titleBarMode == "1") && !useTitleCapsule) {
             Row(
                 modifier = Modifier
@@ -1464,8 +1468,8 @@ private fun RowScope.TitleCapsuleGlassLayout(
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppColumn(
-            Modifier.weight(1f)
+        Column(
+            modifier = Modifier.weight(1f),
         ) {
             AppText(
                 text = state.bookName,
@@ -2278,14 +2282,14 @@ private fun SearchBottomMenuContent(
         0
     }
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
             )
             .padding(top = 12.dp, bottom = bottomPadding)
-            .animateContentSize()
+            .animateContentSize(),
     ) {
         Column(
             modifier = Modifier
@@ -2432,11 +2436,7 @@ private fun MenuBottomBar(
 ) {
     val seekMax = state.seekMax.coerceAtLeast(0)
     val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
-    var sliderValue by remember {
-        mutableFloatStateOf(
-            state.seekProgress.coerceIn(0, seekMax).toFloat()
-        )
-    }
+    var sliderValue by remember { mutableFloatStateOf(state.seekProgress.coerceIn(0, seekMax).toFloat()) }
     var sliderDragging by remember { mutableStateOf(false) }
     var previewPageIndex by remember { mutableIntStateOf(state.seekProgress.coerceIn(0, seekMax)) }
     val toolButtonsBottomPadding = if (buttonGlassEnabled) 6.dp else 0.dp
@@ -2490,14 +2490,14 @@ private fun MenuBottomBar(
         }
     }
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
             )
             .padding(top = 8.dp, bottom = contentBottomPadding)
-            .animateContentSize()
+            .animateContentSize(),
     ) {
         if (state.menuConfig.showBrightnessView == "1") {
             BrightnessBar(
@@ -2520,6 +2520,8 @@ private fun MenuBottomBar(
             )
             Spacer(Modifier.height(4.dp))
         }
+
+        // Seek bar row: prev + slider + next
         AnimatedVisibility(visible = state.menuConfig.readSliderMode != "1") {
             Row(
                 modifier = Modifier
@@ -2571,6 +2573,8 @@ private fun MenuBottomBar(
         }
 
         Spacer(Modifier.height(12.dp))
+
+        // Tool buttons
         val toolButtons = remember(
             context,
             state.menuConfig.bottomBarButtons,
@@ -2937,7 +2941,7 @@ private fun ToolButtonItem(
         else -> null
     }
 
-    AppColumn(
+    Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -3483,8 +3487,8 @@ private fun BrightnessBar(
     )
 
     if (vertical) {
-        AppColumn(
-            modifier
+        Column(
+            modifier = modifier
                 .width(if (buttonGlassEnabled) 64.dp else 56.dp)
                 .padding(vertical = 12.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

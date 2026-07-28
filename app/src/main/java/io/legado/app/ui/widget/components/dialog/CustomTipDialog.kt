@@ -25,7 +25,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.CustomTipPlaceholder
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 
 /**
@@ -65,8 +64,7 @@ fun CustomTipDialog(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.custom_tip),
         content = {
-            AppColumn(
-            ) {
+            Column {
                 OutlinedTextField(
                     value = template,
                     onValueChange = { template = it },

@@ -55,7 +55,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -135,12 +134,13 @@ fun BookshelfItem(
                 )
                 .then(accessibilityModifier)
         ) {
-            AppColumn(
+            Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .width(coverWidth.dp)
             ) {
+
                 Box(
                     modifier = Modifier
                         .padding(4.dp)
@@ -199,8 +199,7 @@ fun BookshelfItem(
             }
         }
     } else {
-        AppColumn(
-        ) {
+        Column {
             NormalCard(
                 modifier = modifier
                     .fillMaxWidth()
@@ -247,26 +246,26 @@ fun BookshelfItem(
                             .padding(top = 4.dp, bottom = 4.dp, end = 8.dp, start = 4.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            AppText(
-                                text = title,
-                                style = if (titleColor != null) {
-                                    LegadoTheme.typography.titleMediumEmphasized.copy(color = titleColor)
-                                } else {
-                                    LegadoTheme.typography.titleMediumEmphasized
-                                },
-                                maxLines = settings.bookshelfTitleMaxLines,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            titleEnd?.let {
-                                Box(modifier = Modifier.padding(top = 4.dp, start = 4.dp)) {
-                                    it.invoke()
-                                }
+                    Row(
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        AppText(
+                            text = title,
+                            style = if (titleColor != null) {
+                                LegadoTheme.typography.titleMediumEmphasized.copy(color = titleColor)
+                            } else {
+                                LegadoTheme.typography.titleMediumEmphasized
+                            },
+                            maxLines = settings.bookshelfTitleMaxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        titleEnd?.let {
+                            Box(modifier = Modifier.padding(top = 4.dp, start = 4.dp)) {
+                                it.invoke()
                             }
                         }
+                    }
                         subTitle?.let {
                             AppText(
                                 text = it,
@@ -345,10 +344,10 @@ fun BookGroupCover(
                     }
                 }
             ) {
-                AppColumn(
-                    Modifier
+                Column(
+                    modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 1.dp)
+                        .padding(horizontal = 1.dp),
                 ) {
                     Row(modifier = Modifier.weight(1f)) {
                         Box(
@@ -557,8 +556,7 @@ fun BookGroupItemHorizontalCovers(
     onLongClick: (() -> Unit)? = null,
     onBookClick: ((BookShelfItem) -> Unit)? = null
 ) {
-    AppColumn(
-    ) {
+    Column {
         val isDark = LegadoTheme.isDark
         val bookshelfCardColor =
             if (isDark) settings.bookshelfCardColorDark else settings.bookshelfCardColor

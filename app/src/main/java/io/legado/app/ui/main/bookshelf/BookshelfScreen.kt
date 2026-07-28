@@ -111,7 +111,6 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -1298,7 +1297,7 @@ private fun BookshelfOverlays(
                 cornerRadius = 12.dp,
                 containerColor = LegadoTheme.colorScheme.surfaceContainerHigh
             ) {
-                AppColumn(
+                Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {

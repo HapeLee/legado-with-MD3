@@ -25,7 +25,6 @@ import io.legado.app.ui.book.read.AiRewritePresetConfigUiState
 import io.legado.app.ui.book.read.AiRewritePresetUi
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -46,8 +45,8 @@ fun AiRewritePresetConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.ai_rewrite_presets),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
         ) {
             Row(
@@ -130,8 +129,8 @@ private fun PresetEditor(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -178,9 +177,7 @@ private fun PresetItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AppColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 AppText(
                     text = preset.name,
                     style = LegadoTheme.typography.labelLargeEmphasized,

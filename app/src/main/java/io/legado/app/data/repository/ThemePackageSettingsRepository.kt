@@ -100,6 +100,20 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         bgImageDark = AppConfigStore.getString(PreferKey.bgImageN),
         bgImageBlurring = int(PreferKey.bgImageBlurring, 0),
         bgImageNBlurring = int(PreferKey.bgImageNBlurring, 0),
+        largeContainerBackgroundImageLight = AppConfigStore.getString(
+            PreferKey.largeContainerBackgroundImageLight
+        ),
+        largeContainerBackgroundImageDark = AppConfigStore.getString(
+            PreferKey.largeContainerBackgroundImageDark
+        ),
+        itemBackgroundImageLight = AppConfigStore.getString(PreferKey.itemBackgroundImageLight),
+        itemBackgroundImageDark = AppConfigStore.getString(PreferKey.itemBackgroundImageDark),
+        enableContainerBackgroundImage = boolean(
+            PreferKey.enableContainerBackgroundImage,
+            false,
+        ),
+        appColumnBackgroundOpacity = int(PreferKey.appColumnBackgroundOpacity, 100),
+        glassCardBackgroundOpacity = int(PreferKey.glassCardBackgroundOpacity, 100),
         appFontPath = AppConfigStore.getString(PreferKey.appFontPath),
         coverLoadOnlyWifi = boolean(PreferKey.loadCoverOnlyWifi, false),
         coverUseDefault = boolean(PreferKey.useDefaultCover, false),
@@ -215,6 +229,15 @@ internal fun ThemeExportData.toPreferenceValues(): Map<String, Any?> {
                 PreferKey.bgImageN to data.bgImageDark,
                 PreferKey.bgImageBlurring to data.bgImageBlurring,
                 PreferKey.bgImageNBlurring to data.bgImageNBlurring,
+                PreferKey.largeContainerBackgroundImageLight to
+                    data.largeContainerBackgroundImageLight,
+                PreferKey.largeContainerBackgroundImageDark to
+                    data.largeContainerBackgroundImageDark,
+                PreferKey.itemBackgroundImageLight to data.itemBackgroundImageLight,
+                PreferKey.itemBackgroundImageDark to data.itemBackgroundImageDark,
+                PreferKey.enableContainerBackgroundImage to data.enableContainerBackgroundImage,
+                PreferKey.appColumnBackgroundOpacity to data.appColumnBackgroundOpacity,
+                PreferKey.glassCardBackgroundOpacity to data.glassCardBackgroundOpacity,
                 PreferKey.appFontPath to data.appFontPath,
                 PreferKey.loadCoverOnlyWifi to data.coverLoadOnlyWifi,
                 PreferKey.useDefaultCover to data.coverUseDefault,

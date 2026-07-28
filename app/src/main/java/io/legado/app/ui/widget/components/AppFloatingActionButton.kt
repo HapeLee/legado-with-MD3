@@ -147,7 +147,7 @@ fun AppFloatingActionButtonMenu(
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
     if (isMiuix) {
-        AppColumn(
+        Column(
             modifier = modifier.padding(horizontal = 16.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(12.dp)

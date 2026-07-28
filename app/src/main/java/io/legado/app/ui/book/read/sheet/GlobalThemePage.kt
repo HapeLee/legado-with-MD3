@@ -60,7 +60,6 @@ import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -94,8 +93,8 @@ fun GlobalThemePage(
 
     val configList = styleConfig.styleItems
 
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
@@ -135,6 +134,8 @@ fun GlobalThemePage(
         }
 
         Spacer(Modifier.height(4.dp))
+
+        // Style section label + Day/Night
         NormalCard(
             containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             cornerRadius = 12.dp
@@ -207,13 +208,7 @@ fun GlobalThemePage(
                     NormalCard(
                         onClick = {
                             val newShareLayout = !shareLayout
-                            onIntent(
-                                ReadBookIntent.UpdateConfig(
-                                    ConfigUpdate.ShareLayout(
-                                        newShareLayout
-                                    )
-                                )
-                            )
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(newShareLayout)))
                             onShareLayoutChange(newShareLayout)
                         },
                         modifier = Modifier

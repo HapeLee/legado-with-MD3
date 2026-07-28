@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -134,7 +133,7 @@ fun AiThinkingCard(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            io.legado.app.ui.widget.components.AppColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 400.dp)
@@ -153,7 +152,6 @@ fun AiThinkingCard(
                                     .padding(horizontal = 12.dp, vertical = 10.dp)
                             )
                         }
-
                         is AiThinkingStep.ToolStep -> {
                             ToolStepContent(tool = step.tool)
                         }
@@ -168,8 +166,8 @@ fun AiThinkingCard(
 private fun ToolStepContent(tool: AiMessagePart.Tool) {
     val hasContent = tool.output.isNotBlank() || tool.input.isNotBlank()
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp)
     ) {

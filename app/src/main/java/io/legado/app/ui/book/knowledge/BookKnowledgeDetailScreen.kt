@@ -29,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -145,7 +144,7 @@ private fun KnowledgeDetailContent(
     onIntent: (KnowledgeDetailIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppColumn(
+    Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -196,7 +195,7 @@ private fun KnowledgeTypeSelector(
     var showDropdown by remember { mutableStateOf(false) }
     val currentLabel = KNOWLEDGE_TYPE_LABELS[selectedType]?.let { stringResource(it) } ?: "—"
 
-    AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AppText(
             text = stringResource(R.string.knowledge_type),
             style = LegadoTheme.typography.titleMedium,

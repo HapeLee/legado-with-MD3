@@ -18,7 +18,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -48,8 +47,8 @@ fun PageKeySheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.custom_page_key)
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -64,12 +63,11 @@ fun PageKeySheet(
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                             val keyCode = event.nativeKeyEvent.keyCode
                             if (keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_DEL) {
-                                prevKeysDraft =
-                                    if (prevKeysDraft.isEmpty() || prevKeysDraft.endsWith(",")) {
-                                        prevKeysDraft + keyCode.toString()
-                                    } else {
-                                        "$prevKeysDraft,$keyCode"
-                                    }
+                                prevKeysDraft = if (prevKeysDraft.isEmpty() || prevKeysDraft.endsWith(",")) {
+                                    prevKeysDraft + keyCode.toString()
+                                } else {
+                                    "$prevKeysDraft,$keyCode"
+                                }
                                 return@onPreviewKeyEvent true
                             }
                         }
@@ -82,18 +80,17 @@ fun PageKeySheet(
                 value = nextKeysDraft,
                 onValueChange = { nextKeysDraft = it },
                 label = stringResource(R.string.next_page_key),
-                modifier = Modifier
+                modifier = Modifier.Companion
                     .fillMaxWidth()
                     .onPreviewKeyEvent { event ->
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                             val keyCode = event.nativeKeyEvent.keyCode
                             if (keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_DEL) {
-                                nextKeysDraft =
-                                    if (nextKeysDraft.isEmpty() || nextKeysDraft.endsWith(",")) {
-                                        nextKeysDraft + keyCode.toString()
-                                    } else {
-                                        "$nextKeysDraft,$keyCode"
-                                    }
+                                nextKeysDraft = if (nextKeysDraft.isEmpty() || nextKeysDraft.endsWith(",")) {
+                                    nextKeysDraft + keyCode.toString()
+                                } else {
+                                    "$nextKeysDraft,$keyCode"
+                                }
                                 return@onPreviewKeyEvent true
                             }
                         }

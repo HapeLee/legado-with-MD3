@@ -24,7 +24,6 @@ import io.legado.app.R
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
@@ -53,11 +52,11 @@ fun UnderlineConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.text_underline),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             TinySwitchSettingItem(
                 title = stringResource(R.string.text_underline),
@@ -93,6 +92,8 @@ fun UnderlineConfigSheet(
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineExtend(it)))
                 },
             )
+
+            // Underline height & padding
             TinySliderSettingItem(
                 title = stringResource(R.string.underline_height),
                 value = underlineHeight,
@@ -113,6 +114,8 @@ fun UnderlineConfigSheet(
             )
 
             Spacer(Modifier.height(8.dp))
+
+            // Dotted line section title
             Text(
                 text = stringResource(R.string.text_dottedline),
                 style = MaterialTheme.typography.titleSmallEmphasized,
@@ -123,6 +126,8 @@ fun UnderlineConfigSheet(
             )
 
             Spacer(Modifier.height(8.dp))
+
+            // Dotted line sliders
             TinySliderSettingItem(
                 title = stringResource(R.string.dotted_line_black),
                 value = dottedBase,

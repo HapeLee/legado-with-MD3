@@ -151,6 +151,16 @@ class ThemeConfigViewModel(
             )
             is ThemeConfigIntent.SelectBackground -> setBackground(intent.uri, intent.dark)
             is ThemeConfigIntent.RemoveBackground -> removeBackground(intent.dark)
+            is ThemeConfigIntent.RequestContainerBackgroundImage -> _effects.tryEmit(ThemeConfigEffect.OpenContainerBackgroundImage(intent.target, intent.dark))
+            is ThemeConfigIntent.SelectContainerBackground -> setContainerBackground(
+                uriString = intent.uri,
+                target = intent.target,
+                dark = intent.dark,
+            )
+            is ThemeConfigIntent.RemoveContainerBackground -> removeContainerBackground(
+                target = intent.target,
+                dark = intent.dark,
+            )
             is ThemeConfigIntent.SelectAppFont -> setAppFont(intent.file)
             ThemeConfigIntent.ClearAppFont -> clearAppFont()
             is ThemeConfigIntent.SetFontFolder -> viewModelScope.launch {
@@ -193,7 +203,14 @@ class ThemeConfigViewModel(
             val defaultTheme = ThemeSettings()
             val currentTheme = _uiState.value.theme
 
-            listOf(currentTheme.backgroundImageLight, currentTheme.backgroundImageDark)
+            listOf(
+                currentTheme.backgroundImageLight,
+                currentTheme.backgroundImageDark,
+                currentTheme.largeContainerBackgroundImageLight,
+                currentTheme.largeContainerBackgroundImageDark,
+                currentTheme.itemBackgroundImageLight,
+                currentTheme.itemBackgroundImageDark,
+            )
                 .filterNotNull()
                 .map(::File)
                 .filter { it.absolutePath.startsWith(appCtx.externalFiles.absolutePath) }
@@ -345,22 +362,111 @@ class ThemeConfigViewModel(
     private fun setBackground(uriString: String, dark: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val uri = Uri.parse(uriString)
-                val fileDoc = FileDoc.fromUri(uri, false)
-                val suffix = fileDoc.name.substringAfterLast(".", "jpg")
-                val md5 = uri.inputStream(appCtx).getOrThrow().use(MD5Utils::md5Encode)
                 val preferenceKey = if (dark) PreferKey.bgImageN else PreferKey.bgImage
-                val folder = File(appCtx.externalFiles, preferenceKey)
-                val file = File(folder, "$md5.$suffix")
-                if (!file.exists()) {
-                    FileUtils.createFileIfNotExist(file.absolutePath)
-                    uri.inputStream(appCtx).getOrThrow().use { input ->
-                        FileOutputStream(file).use(input::copyTo)
-                    }
-                }
-                updateBackgroundPath(dark, file.absolutePath)
+                updateBackgroundPath(
+                    dark = dark,
+                    newPath = copyBackgroundImage(uriString, preferenceKey),
+                )
             }.onFailure(Throwable::printStackTrace)
         }
+    }
+
+    private fun setContainerBackground(
+        uriString: String,
+        target: ContainerBackgroundTarget,
+        dark: Boolean,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val folderName = buildString {
+                    append("container_background/")
+                    append(if (target == ContainerBackgroundTarget.LargeContainer) "large" else "item")
+                    append(if (dark) "_dark" else "_light")
+                }
+                val newPath = copyBackgroundImage(uriString, folderName)
+                val oldPath = when (target) {
+                    ContainerBackgroundTarget.LargeContainer -> if (dark) {
+                        _uiState.value.theme.largeContainerBackgroundImageDark
+                    } else {
+                        _uiState.value.theme.largeContainerBackgroundImageLight
+                    }
+                    ContainerBackgroundTarget.Item -> if (dark) {
+                        _uiState.value.theme.itemBackgroundImageDark
+                    } else {
+                        _uiState.value.theme.itemBackgroundImageLight
+                    }
+                }
+                themeSettingsGateway.update { theme ->
+                    when (target) {
+                        ContainerBackgroundTarget.LargeContainer -> if (dark) {
+                            theme.copy(largeContainerBackgroundImageDark = newPath)
+                        } else {
+                            theme.copy(largeContainerBackgroundImageLight = newPath)
+                        }
+                        ContainerBackgroundTarget.Item -> if (dark) {
+                            theme.copy(itemBackgroundImageDark = newPath)
+                        } else {
+                            theme.copy(itemBackgroundImageLight = newPath)
+                        }
+                    }
+                }
+                deleteOwnedBackground(oldPath, newPath)
+            }.onFailure(Throwable::printStackTrace)
+        }
+    }
+
+    private fun copyBackgroundImage(uriString: String, folderName: String): String {
+        val uri = Uri.parse(uriString)
+        val fileDoc = FileDoc.fromUri(uri, false)
+        val suffix = if (fileDoc.name.endsWith(".9.png", ignoreCase = true)) {
+            "9.png"
+        } else {
+            fileDoc.name.substringAfterLast(".", "jpg")
+        }
+        val md5 = uri.inputStream(appCtx).getOrThrow().use(MD5Utils::md5Encode)
+        val file = File(File(appCtx.externalFiles, folderName), "$md5.$suffix")
+        if (!file.exists()) {
+            FileUtils.createFileIfNotExist(file.absolutePath)
+            uri.inputStream(appCtx).getOrThrow().use { input ->
+                FileOutputStream(file).use(input::copyTo)
+            }
+        }
+        return file.absolutePath
+    }
+
+    private fun removeContainerBackground(
+        target: ContainerBackgroundTarget,
+        dark: Boolean,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var oldPath: String? = null
+            themeSettingsGateway.update { theme ->
+                when (target) {
+                    ContainerBackgroundTarget.LargeContainer -> if (dark) {
+                        oldPath = theme.largeContainerBackgroundImageDark
+                        theme.copy(largeContainerBackgroundImageDark = null)
+                    } else {
+                        oldPath = theme.largeContainerBackgroundImageLight
+                        theme.copy(largeContainerBackgroundImageLight = null)
+                    }
+                    ContainerBackgroundTarget.Item -> if (dark) {
+                        oldPath = theme.itemBackgroundImageDark
+                        theme.copy(itemBackgroundImageDark = null)
+                    } else {
+                        oldPath = theme.itemBackgroundImageLight
+                        theme.copy(itemBackgroundImageLight = null)
+                    }
+                }
+            }
+            deleteOwnedBackground(oldPath, null)
+        }
+    }
+
+    private fun deleteOwnedBackground(oldPath: String?, newPath: String?) {
+        if (oldPath == null || oldPath == newPath) return
+        File(oldPath)
+            .takeIf { it.absolutePath.startsWith(appCtx.externalFiles.absolutePath) }
+            ?.delete()
     }
 
     private fun removeBackground(dark: Boolean) {
@@ -373,11 +479,7 @@ class ThemeConfigViewModel(
         } else {
             _uiState.value.theme.backgroundImageLight
         }
-        if (oldPath != newPath && oldPath != null) {
-            File(oldPath)
-                .takeIf { it.absolutePath.contains(appCtx.externalFiles.absolutePath) }
-                ?.delete()
-        }
+        deleteOwnedBackground(oldPath, newPath)
         themeSettingsGateway.update {
             if (dark) it.copy(backgroundImageDark = newPath)
             else it.copy(backgroundImageLight = newPath)

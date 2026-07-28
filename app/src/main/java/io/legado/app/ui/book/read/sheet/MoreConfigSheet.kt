@@ -18,7 +18,6 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -45,12 +44,13 @@ fun MoreConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.more_setting),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
         ) {
+            // Screen settings
             SectionTitle(stringResource(R.string.screen_settings))
             ScreenSettings(
                 preferences = preferences,
@@ -91,6 +91,8 @@ fun MoreConfigSheet(
                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EyeProtection))
                 }
             )
+
+            // Page control
             SectionTitle(stringResource(R.string.page_control))
             PageControlSettings(
                 preferences = preferences,
@@ -113,6 +115,8 @@ fun MoreConfigSheet(
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.KeyPageOnLongPress(it)))
                 },
             )
+
+            // Other
             SectionTitle(stringResource(R.string.other))
             OtherSettings(
                 preferences = preferences,

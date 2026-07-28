@@ -36,7 +36,6 @@ import io.legado.app.ui.book.changesource.ChangeChapterSourceIntent
 import io.legado.app.ui.book.changesource.ChangeChapterSourceUiState
 import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
@@ -272,7 +271,7 @@ private fun SearchContent(
                         )
                     },
                     supportingContent = {
-                        AppColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             AppText(
                                 text = item.author,
                                 style = LegadoTheme.typography.labelLargeEmphasized

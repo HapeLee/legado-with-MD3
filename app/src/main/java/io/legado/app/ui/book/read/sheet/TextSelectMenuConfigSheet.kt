@@ -46,7 +46,6 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.book.read.ActionMenuItem
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -136,11 +135,11 @@ fun TextSelectMenuConfigSheet(
             )
         }
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.8f)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -219,8 +218,7 @@ fun TextSelectMenuConfigSheet(
 
 
                 stickyHeader(key = "group2") {
-                    val subtitle =
-                        if (expandTextMenu) stringResource(R.string.merged_in_multiline) else null
+                    val subtitle = if (expandTextMenu) stringResource(R.string.merged_in_multiline) else null
                     SheetHeader(
                         isCollapsed = !group2Expanded,
                         onToggle = { group2Expanded = !group2Expanded },
@@ -271,7 +269,7 @@ fun TextSelectMenuConfigSheet(
                 }
 
 
-                item(key = "group_3") {
+                item (key="group_3"){
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -288,8 +286,7 @@ fun TextSelectMenuConfigSheet(
                                 if (expanded) {
                                     coroutineScope.launch {
                                         delay(300.milliseconds)
-                                        val targetIndex =
-                                            lazyListState.layoutInfo.totalItemsCount - 1
+                                        val targetIndex = lazyListState.layoutInfo.totalItemsCount - 1
                                         if (targetIndex >= 0) {
                                             lazyListState.animateScrollToItem(targetIndex)
                                         }
@@ -306,8 +303,7 @@ fun TextSelectMenuConfigSheet(
                                         }
                                         coroutineScope.launch {
                                             delay(200.milliseconds)
-                                            val targetIndex =
-                                                lazyListState.layoutInfo.totalItemsCount - 1
+                                            val targetIndex = lazyListState.layoutInfo.totalItemsCount - 1
                                             if (targetIndex >= 0) {
                                                 lazyListState.scrollToItem(targetIndex)
                                             }

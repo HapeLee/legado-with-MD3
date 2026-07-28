@@ -38,7 +38,6 @@ import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.fadingEdge
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
@@ -69,11 +68,9 @@ fun SearchBookListItem(
             )
             .then(if (showPadding) Modifier.adaptiveHorizontalPadding(vertical = 8.dp) else Modifier)
     ) {
-        Box(
-            modifier = Modifier
-                .width(72.dp)
-                .aspectRatio(5f / 7f)
-        ) {
+        Box(modifier = Modifier
+            .width(72.dp)
+            .aspectRatio(5f / 7f)) {
             CoilBookCover(
                 name = book.name,
                 author = book.author,
@@ -107,8 +104,8 @@ fun SearchBookListItem(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .weight(1f)
                 .align(Alignment.CenterVertically)
         ) {
@@ -204,8 +201,8 @@ fun SearchBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .width(IntrinsicSize.Min)
             .clip(RoundedCornerShape(4.dp))
             .combinedClickable(

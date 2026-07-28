@@ -28,9 +28,7 @@ fun JsonRawEditor(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    AppColumn(
-        modifier
-    ) {
+    Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

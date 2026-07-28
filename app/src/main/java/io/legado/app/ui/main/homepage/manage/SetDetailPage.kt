@@ -25,7 +25,6 @@ import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.main.homepage.HomepageModuleManageUi
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.SecondaryButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
@@ -60,7 +59,7 @@ fun SetDetailPage(
     }
 
     if (modules.isEmpty()) {
-        AppColumn(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp),

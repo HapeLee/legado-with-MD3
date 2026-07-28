@@ -35,7 +35,6 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SettingItemWithDivider
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -105,7 +104,7 @@ private fun MaterialAboutScreen(
             )
         }
     ) { padding ->
-        AppColumn(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
@@ -201,14 +200,7 @@ private fun MaterialAboutScreen(
                 SettingItemWithDivider {
                     SettingItem(
                         title = stringResource(R.string.disclaimer),
-                        onClick = {
-                            onIntent(
-                                AboutIntent.ShowMdFile(
-                                    disclaimerTitle,
-                                    "disclaimer.md"
-                                )
-                            )
-                        }
+                        onClick = { onIntent(AboutIntent.ShowMdFile(disclaimerTitle, "disclaimer.md")) }
                     )
                 }
                 SettingItemWithDivider {

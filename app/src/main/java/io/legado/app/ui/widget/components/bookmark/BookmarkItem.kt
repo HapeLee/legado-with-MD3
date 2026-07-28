@@ -24,7 +24,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -67,8 +66,8 @@ fun BookmarkItem(
             },
         color = backgroundColor
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .adaptiveHorizontalPadding(vertical = 12.dp)
         ) {

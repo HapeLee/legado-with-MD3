@@ -46,7 +46,7 @@ fun EmptyMessage(
 ) {
     var currentFace by remember { mutableStateOf(faces.random()) }
 
-    AppColumn(
+    Column(
         modifier = modifier
             .wrapContentSize()
             .padding(16.dp),

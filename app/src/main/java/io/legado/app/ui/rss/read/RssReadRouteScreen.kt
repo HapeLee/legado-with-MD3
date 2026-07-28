@@ -57,7 +57,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -448,9 +447,7 @@ private fun RssReadTopAppBar(
         Modifier.background(containerColor)
     }
 
-    AppColumn(
-        modifier
-    ) {
+    Column(modifier = modifier) {
         MiuixSmallTopAppBar(
             title = title,
             navigationIcon = navigationIcon,
@@ -484,8 +481,7 @@ private fun FavoriteEditSheet(
         }
     ) {
 
-        AppColumn(
-        ) {
+        Column {
             AppTextField(
                 value = titleValue,
                 onValueChange = onTitleChange,

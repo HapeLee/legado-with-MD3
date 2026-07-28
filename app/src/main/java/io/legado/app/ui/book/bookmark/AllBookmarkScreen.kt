@@ -76,7 +76,6 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.ui.widget.components.AppColumn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -168,8 +167,7 @@ fun AllBookmarkScreen(
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            AppColumn(
-            ) {
+            Column {
                 GlassMediumFlexibleTopAppBar(
                     title = stringResource(R.string.all_bookmark),
                     scrollBehavior = scrollBehavior,
@@ -244,8 +242,8 @@ fun AllBookmarkScreen(
             }
         }
     ) { paddingValues ->
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
         ) {
             AnimatedContent(
@@ -309,11 +307,7 @@ fun AllBookmarkScreen(
                                             subtitle = headerKey.bookAuthor,
                                             isCollapsed = isCollapsed,
                                             onToggle = {
-                                                onIntent(
-                                                    AllBookmarkIntent.ToggleGroupCollapse(
-                                                        headerKey
-                                                    )
-                                                )
+                                                onIntent(AllBookmarkIntent.ToggleGroupCollapse(headerKey))
                                             },
                                             isMiuix = isMiuix
                                         )

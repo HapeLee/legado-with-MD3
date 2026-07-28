@@ -22,7 +22,6 @@ import io.legado.app.ui.book.readRecord.ReadRecordUiState
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
@@ -89,22 +88,16 @@ fun ReadingSummaryCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 AppText(title, style = LegadoTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 AppText(
-                    text = "共阅读 $bookCount 本书，时长 ${
-                        ReadRecordFormatter.formatDuration(
-                            totalTimeMillis
-                        )
-                    }",
+                    text = "共阅读 $bookCount 本书，时长 ${ReadRecordFormatter.formatDuration(totalTimeMillis)}",
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             }
-
+            
             BookStackView(
                 bookNamesForCover = bookNamesForCover,
                 viewModel = viewModel

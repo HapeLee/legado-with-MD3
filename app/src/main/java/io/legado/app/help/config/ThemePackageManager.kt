@@ -54,6 +54,10 @@ class ThemePackageManager(
 
         private const val ASSET_BACKGROUND_LIGHT = "background.light"
         private const val ASSET_BACKGROUND_DARK = "background.dark"
+        private const val ASSET_CONTAINER_LARGE_LIGHT = "container.large.light"
+        private const val ASSET_CONTAINER_LARGE_DARK = "container.large.dark"
+        private const val ASSET_CONTAINER_ITEM_LIGHT = "container.item.light"
+        private const val ASSET_CONTAINER_ITEM_DARK = "container.item.dark"
         private const val ASSET_NAV_HOME = "navigation.home"
         private const val ASSET_NAV_BOOKSHELF = "navigation.bookshelf"
         private const val ASSET_NAV_EXPLORE = "navigation.explore"
@@ -137,6 +141,12 @@ class ThemePackageManager(
                         manifest.config.copy(
                             bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                             bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                            largeContainerBackgroundImageLight =
+                                localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                            largeContainerBackgroundImageDark =
+                                localAssets[ASSET_CONTAINER_LARGE_DARK],
+                            itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                            itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
                             navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
                             navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
                             navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
@@ -299,6 +309,10 @@ class ThemePackageManager(
             val data = manifest.config.copy(
                 bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                 bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                largeContainerBackgroundImageLight = localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                largeContainerBackgroundImageDark = localAssets[ASSET_CONTAINER_LARGE_DARK],
+                itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
                 navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
                 navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
                 navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
@@ -402,6 +416,12 @@ class ThemePackageManager(
                 data = manifest.config.copy(
                     bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                     bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                    largeContainerBackgroundImageLight =
+                        localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                    largeContainerBackgroundImageDark =
+                        localAssets[ASSET_CONTAINER_LARGE_DARK],
+                    itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                    itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
                     navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
                     navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
                     navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
@@ -495,6 +515,26 @@ class ThemePackageManager(
         val sources = mapOf(
             "bgImageLight" to AssetSource(ASSET_BACKGROUND_LIGHT, null, "assets/background/light"),
             "bgImageDark" to AssetSource(ASSET_BACKGROUND_DARK, null, "assets/background/dark"),
+            "largeContainerBackgroundImageLight" to AssetSource(
+                ASSET_CONTAINER_LARGE_LIGHT,
+                null,
+                "assets/container/large/light",
+            ),
+            "largeContainerBackgroundImageDark" to AssetSource(
+                ASSET_CONTAINER_LARGE_DARK,
+                null,
+                "assets/container/large/dark",
+            ),
+            "itemBackgroundImageLight" to AssetSource(
+                ASSET_CONTAINER_ITEM_LIGHT,
+                null,
+                "assets/container/item/light",
+            ),
+            "itemBackgroundImageDark" to AssetSource(
+                ASSET_CONTAINER_ITEM_DARK,
+                null,
+                "assets/container/item/dark",
+            ),
             "navIconHome" to AssetSource(ASSET_NAV_HOME, null, "assets/navigation/home"),
             "navIconBookshelf" to AssetSource(
                 ASSET_NAV_BOOKSHELF,
@@ -658,12 +698,11 @@ class ThemePackageManager(
         return entries.mapNotNull { (key, entryPath) ->
             val source = resolvePackageFile(root, entryPath)
             require(source.isFile) { "主题资源不存在: $entryPath" }
-            val extension = source.extension
-                .lowercase()
-                .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
-                ?: "asset"
+            val extension = sourceExtension(source.absolutePath, key)
             val targetDir = when (key) {
-                ASSET_BACKGROUND_LIGHT, ASSET_BACKGROUND_DARK -> {
+                ASSET_BACKGROUND_LIGHT, ASSET_BACKGROUND_DARK,
+                ASSET_CONTAINER_LARGE_LIGHT, ASSET_CONTAINER_LARGE_DARK,
+                ASSET_CONTAINER_ITEM_LIGHT, ASSET_CONTAINER_ITEM_DARK -> {
                     File(context.getExternalFilesDir(null) ?: context.filesDir, "theme_assets")
                 }
 
@@ -890,6 +929,10 @@ class ThemePackageManager(
     private fun ThemeExportData.toPortableConfig() = copy(
         bgImageLight = null,
         bgImageDark = null,
+        largeContainerBackgroundImageLight = null,
+        largeContainerBackgroundImageDark = null,
+        itemBackgroundImageLight = null,
+        itemBackgroundImageDark = null,
         navIconHome = "",
         navIconBookshelf = "",
         navIconExplore = "",
@@ -909,6 +952,26 @@ class ThemePackageManager(
     private fun assetSources(config: ThemeExportData) = listOf(
         AssetSource(ASSET_BACKGROUND_LIGHT, config.bgImageLight, "assets/background/light"),
         AssetSource(ASSET_BACKGROUND_DARK, config.bgImageDark, "assets/background/dark"),
+        AssetSource(
+            ASSET_CONTAINER_LARGE_LIGHT,
+            config.largeContainerBackgroundImageLight,
+            "assets/container/large/light",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_LARGE_DARK,
+            config.largeContainerBackgroundImageDark,
+            "assets/container/large/dark",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_ITEM_LIGHT,
+            config.itemBackgroundImageLight,
+            "assets/container/item/light",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_ITEM_DARK,
+            config.itemBackgroundImageDark,
+            "assets/container/item/dark",
+        ),
         AssetSource(ASSET_NAV_HOME, config.navIconHome, "assets/navigation/home"),
         AssetSource(
             ASSET_NAV_BOOKSHELF,
@@ -931,10 +994,11 @@ class ThemePackageManager(
     }
 
     private fun sourceExtension(path: String, key: String): String {
-        val candidate = Uri.parse(path).lastPathSegment
-            ?.substringAfterLast('.', "")
-            ?.lowercase()
-            ?.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+        val fileName = Uri.parse(path).lastPathSegment.orEmpty()
+        if (fileName.endsWith(".9.png", ignoreCase = true)) return "9.png"
+        val candidate = fileName.substringAfterLast('.', "")
+            .lowercase()
+            .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
         return candidate ?: if (key == ASSET_FONT) "ttf" else "img"
     }
 
@@ -1006,6 +1070,10 @@ class ThemePackageManager(
             get() = when (key) {
                 ASSET_BACKGROUND_LIGHT -> "bgImageLight"
                 ASSET_BACKGROUND_DARK -> "bgImageDark"
+                ASSET_CONTAINER_LARGE_LIGHT -> "largeContainerBackgroundImageLight"
+                ASSET_CONTAINER_LARGE_DARK -> "largeContainerBackgroundImageDark"
+                ASSET_CONTAINER_ITEM_LIGHT -> "itemBackgroundImageLight"
+                ASSET_CONTAINER_ITEM_DARK -> "itemBackgroundImageDark"
                 ASSET_NAV_HOME -> "navIconHome"
                 ASSET_NAV_BOOKSHELF -> "navIconBookshelf"
                 ASSET_NAV_EXPLORE -> "navIconExplore"

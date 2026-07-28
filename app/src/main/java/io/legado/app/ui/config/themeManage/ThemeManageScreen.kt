@@ -234,7 +234,7 @@ private fun SavedThemeItem(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            Modifier.fillMaxWidth()
         ) {
             val lightPrimary = if (theme.data.themeColor != 0) Color(theme.data.themeColor)
             else if (theme.data.cPrimary != 0) Color(theme.data.cPrimary)
@@ -248,8 +248,9 @@ private fun SavedThemeItem(
                 lightPrimary
             }
 
-            val lightBg = if (theme.data.themeBackgroundColor != 0) Color(theme.data.themeBackgroundColor)
-            else Color(0xFFF7F2FA)
+            val lightBg =
+                if (theme.data.themeBackgroundColor != 0) Color(theme.data.themeBackgroundColor)
+                else Color(0xFFF7F2FA)
 
             val darkBg = if (theme.data.themeBackgroundColorNight != 0) {
                 Color(theme.data.themeBackgroundColorNight)
@@ -262,8 +263,6 @@ private fun SavedThemeItem(
             } else {
                 Color(0xFF1C1B1F)
             }
-
-            // 预览区域
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -279,7 +278,9 @@ private fun SavedThemeItem(
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_day),
                         style = MaterialTheme.typography.labelMediumEmphasized,
-                        color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
+                        color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(
+                            alpha = 0.6f
+                        )
                         else Color.Black.copy(alpha = 0.5f),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
@@ -357,18 +358,18 @@ private fun SavedThemeItem(
                 ) {
                     SmallPlainButton(
                         onClick = onEdit,
-            icon = Icons.Default.Edit,
-            contentDescription = stringResource(R.string.edit)
+                        icon = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.edit)
                     )
                     SmallPlainButton(
                         onClick = onExport,
-            icon = Icons.Default.Share,
-            contentDescription = stringResource(R.string.share)
+                        icon = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.share)
                     )
                     SmallPlainButton(
                         onClick = onDelete,
-            icon = Icons.Default.Delete,
-            contentDescription = stringResource(R.string.delete)
+                        icon = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete)
                     )
                 }
             }

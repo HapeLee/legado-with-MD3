@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +27,6 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import org.koin.compose.koinInject
@@ -81,9 +79,10 @@ fun AutoReadContent(
         speed = preferences.autoReadSpeed.coerceIn(1, 120).toFloat()
     }
 
-    AppColumn(
-        modifier.fillMaxWidth()
+    Column(
+        modifier = modifier.fillMaxWidth(),
     ) {
+        // Speed display
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -116,6 +115,8 @@ fun AutoReadContent(
         )
 
         Spacer(Modifier.height(12.dp))
+
+        // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -154,10 +155,10 @@ private fun ActionButton(
     label: String,
     onClick: () -> Unit,
 ) {
-    AppColumn(
+    Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        FilledTonalIconButton(onClick = onClick) {
+        androidx.compose.material3.FilledTonalIconButton(onClick = onClick) {
             Icon(
                 painter = painterResource(icon),
                 contentDescription = label,

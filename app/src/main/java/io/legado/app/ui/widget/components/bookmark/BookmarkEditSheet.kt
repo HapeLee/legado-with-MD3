@@ -19,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextFieldSurface
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -96,8 +95,8 @@ fun BookmarkEditContent(
     content: String,
     onContentChange: (String) -> Unit,
 ) {
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()

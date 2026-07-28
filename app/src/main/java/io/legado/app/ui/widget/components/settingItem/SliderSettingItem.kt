@@ -36,7 +36,6 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.sliderAccessibility
@@ -106,8 +105,8 @@ fun SliderSettingItem(
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
 
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
         ) {
             BasicComponent(

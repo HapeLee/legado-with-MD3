@@ -24,7 +24,6 @@ import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
@@ -73,7 +72,7 @@ fun ButtonGroupModule(
     val numRows = (total + maxColumns - 1) / maxColumns
     val actualColumns = (total + numRows - 1) / numRows
 
-    AppColumn(
+    Column(
         modifier = modifier
             .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),

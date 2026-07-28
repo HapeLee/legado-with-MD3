@@ -19,7 +19,6 @@ import io.legado.app.R
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
@@ -45,11 +44,11 @@ fun ShadowSetSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.text_shadow_set),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         ) {
             TinySwitchSettingItem(
                 title = stringResource(R.string.text_shadow_set),

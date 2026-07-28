@@ -64,7 +64,6 @@ import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.pager.pagerHeight
@@ -130,8 +129,8 @@ internal fun SystemMenuPage(
         }
     }
 
-    AppColumn(
-        modifier.fillMaxWidth()
+    Column(
+        modifier = modifier.fillMaxWidth(),
     ) {
         val tabTitles = listOf(
             stringResource(R.string.read_config_menu_system),
@@ -148,10 +147,7 @@ internal fun SystemMenuPage(
                     try {
                         pagerState.animateScrollToPage(
                             page = index,
-                            animationSpec = tween(
-                                durationMillis = 300,
-                                easing = FastOutSlowInEasing
-                            )
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
                         )
                     } finally {
                         clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
@@ -214,86 +210,17 @@ internal fun SystemMenuPage(
         onColorSelected = { color ->
             when (colorPickerId) {
                 COLOR_BG -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColor(color)))
-                COLOR_MENU_ACCENT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuAccentColor(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_MENU_CONTAINER -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuContainerColor(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_BG_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuBgColorNight(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_MENU_ACCENT_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuAccentColorNight(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_MENU_CONTAINER_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuContainerColorNight(
-                            color
-                        )
-                    )
-                )
-
+                COLOR_MENU_ACCENT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColor(color)))
+                COLOR_MENU_CONTAINER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColor(color)))
+                COLOR_BG_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColorNight(color)))
+                COLOR_MENU_ACCENT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColorNight(color)))
+                COLOR_MENU_CONTAINER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColorNight(color)))
                 COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
-                COLOR_BORDER_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.BorderColorNight(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_BLUR_TINT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuBlurColor(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_BLUR_TINT_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuBlurColorNight(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_MENU_TEXT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuTextColor(
-                            color
-                        )
-                    )
-                )
-
-                COLOR_MENU_TEXT_NIGHT -> onIntent(
-                    ReadBookIntent.UpdateConfig(
-                        ConfigUpdate.MenuTextColorNight(
-                            color
-                        )
-                    )
-                )
+                COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
+                COLOR_BLUR_TINT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(color)))
+                COLOR_BLUR_TINT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColorNight(color)))
+                COLOR_MENU_TEXT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColor(color)))
+                COLOR_MENU_TEXT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuTextColorNight(color)))
             }
             showColorPicker = false
         },
@@ -340,11 +267,11 @@ private fun GlobalMenuTab(
         .takeIf { it != 0 }
         ?: nightMenuBgColor
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
     ) {
         TinyDropdownSettingItem(
             title = stringResource(R.string.tool_bar_style),
@@ -433,10 +360,7 @@ private fun GlobalMenuTab(
                             enabled = true,
                             onClickColor = { isNight ->
                                 if (isNight) {
-                                    onShowColorPicker(
-                                        COLOR_MENU_CONTAINER_NIGHT,
-                                        nightMenuContainerColor
-                                    )
+                                    onShowColorPicker(COLOR_MENU_CONTAINER_NIGHT, nightMenuContainerColor)
                                 } else {
                                     onShowColorPicker(COLOR_MENU_CONTAINER, dayMenuContainerColor)
                                 }
@@ -516,10 +440,7 @@ private fun GlobalMenuTab(
                     },
                     onClickColor = { isNight ->
                         if (isNight) {
-                            onShowColorPicker(
-                                COLOR_BORDER_NIGHT,
-                                preferences.readMenuBorderColorNight
-                            )
+                            onShowColorPicker(COLOR_BORDER_NIGHT, preferences.readMenuBorderColorNight)
                         } else {
                             onShowColorPicker(COLOR_BORDER, preferences.readMenuBorderColor)
                         }
@@ -580,6 +501,8 @@ private fun GlobalMenuTab(
                 }
             },
         )
+
+        // --- Floating icon settings (at bottom) ---
         SectionTitle(stringResource(R.string.show_title_bar_icons))
 
         TinySwitchSettingItem(
@@ -658,11 +581,11 @@ private fun BottomBarTab(
         preferences.readMenuBottomBarBlurMode
     }
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
     ) {
         val readSliderModeEntries = stringArrayResource(R.array.read_slider_mode)
         val readSliderModeValues = stringArrayResource(R.array.read_slider_mode_value)
@@ -836,11 +759,11 @@ private fun TopBarTab(
     val titleBarModeEntries = stringArrayResource(R.array.title_bar_mode)
     val titleBarModeValues = stringArrayResource(R.array.title_bar_mode_value)
 
-    AppColumn(
-        Modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
     ) {
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_top_bar_title_capsule),

@@ -61,7 +61,6 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -361,9 +360,7 @@ private fun RssArticleItem(
                         .padding(8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    AppColumn(
-                        Modifier.weight(1f)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = article.title,
                             style = LegadoTheme.typography.titleSmall,
@@ -394,11 +391,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.LargeCard -> {
-                AppColumn(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = false,
@@ -427,11 +422,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.GridCard -> {
-                AppColumn(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = true,
@@ -460,11 +453,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.Waterfall -> {
-                AppColumn(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                ) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = false,

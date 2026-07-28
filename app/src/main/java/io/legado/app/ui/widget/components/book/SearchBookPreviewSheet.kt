@@ -29,7 +29,6 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -52,11 +51,11 @@ fun SearchBookPreviewSheet(
         onDismissRequest = onDismissRequest,
     ) { book ->
         val isInShelf = shelfState == BookShelfState.IN_SHELF
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp)
+                .padding(bottom = 24.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

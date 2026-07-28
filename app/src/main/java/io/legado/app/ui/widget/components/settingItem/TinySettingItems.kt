@@ -61,7 +61,6 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AccentColorButton
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
@@ -118,9 +117,7 @@ fun TinySettingItem(
         containerColor = color?.copy(alpha = alpha),
         contentColor = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
     ) {
-        AppColumn(
-            Modifier.fillMaxWidth()
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

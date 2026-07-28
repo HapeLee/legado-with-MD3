@@ -27,7 +27,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
@@ -72,10 +71,10 @@ fun ClickActionConfigSheet(
             .background(LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.4f))
             .clickable(onClick = onDismissRequest),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp)
+                .padding(12.dp),
         ) {
             Spacer(
                 modifier = Modifier.padding(top = 36.dp)
@@ -181,8 +180,7 @@ fun ClickActionConfigSheet(
         onDismissRequest = { selectingPrefKey = null },
         title = stringResource(R.string.select_action),
         content = {
-            AppColumn(
-            ) {
+            Column {
                 actionValues.forEachIndexed { index, label ->
                     AppText(
                         text = label,

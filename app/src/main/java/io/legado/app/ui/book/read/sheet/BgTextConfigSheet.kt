@@ -43,7 +43,6 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -94,12 +93,13 @@ fun BgTextConfigSheet(
         title = styleName,
         contentWindowInsets = { WindowInsets.navigationBars },
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
         ) {
+            // Action buttons row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -184,6 +184,8 @@ fun BgTextConfigSheet(
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgAlpha(it.toInt())))
                 },
             )
+
+            // TODO: Add background image grid from assets
         }
     }
 
@@ -285,7 +287,7 @@ private fun ActionCard(
         modifier = modifier,
         containerColor = if (enabled) LegadoTheme.colorScheme.surfaceContainerLow else LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
     ) {
-        AppColumn(
+        Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier

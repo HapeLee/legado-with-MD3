@@ -48,7 +48,6 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -149,7 +148,7 @@ fun CoverAlbumManageScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center,
             ) {
-                AppColumn(
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -255,7 +254,7 @@ private fun CoverAlbumCard(
                     )
                 }
             }
-            AppColumn(
+            Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -281,8 +280,7 @@ private fun CoverAlbumCard(
                     )
                 }
             }
-            AppColumn(
-            ) {
+            Column {
                 SmallPlainButton(
                     onClick = onRename,
                     icon = Icons.Default.Edit,

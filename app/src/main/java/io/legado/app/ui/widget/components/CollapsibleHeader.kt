@@ -56,7 +56,7 @@ fun CollapsibleHeader(
                 leadingContent()
                 Spacer(modifier = Modifier.width(12.dp))
             }
-            AppColumn(
+            Column(
                 modifier = Modifier.weight(1f)
             ) {
                 if (titleContent != null) {

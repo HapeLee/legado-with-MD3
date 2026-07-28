@@ -28,6 +28,11 @@ class ThemePackageSettingsMappingTest {
             bottomBarLensRadius = 31.5f,
             mainNavigationOrder = "bookshelf,home,my",
             bgImageLight = "/light.jpg",
+            largeContainerBackgroundImageLight = "/large-light.9.png",
+            itemBackgroundImageDark = "/item-dark.png",
+            enableContainerBackgroundImage = true,
+            appColumnBackgroundOpacity = 75,
+            glassCardBackgroundOpacity = 60,
             coverDefaultImageDark = "/dark-cover.jpg",
             assets = mapOf("bgImageLight" to "base64"),
         ).toPreferenceValues()
@@ -47,6 +52,14 @@ class ThemePackageSettingsMappingTest {
         assertEquals(31.5f, values[PreferKey.bottomBarLensRadius])
         assertEquals("bookshelf,home,my", values[PreferKey.mainNavigationOrder])
         assertEquals("/light.jpg", values[PreferKey.bgImage])
+        assertEquals(
+            "/large-light.9.png",
+            values[PreferKey.largeContainerBackgroundImageLight],
+        )
+        assertEquals("/item-dark.png", values[PreferKey.itemBackgroundImageDark])
+        assertEquals(true, values[PreferKey.enableContainerBackgroundImage])
+        assertEquals(75, values[PreferKey.appColumnBackgroundOpacity])
+        assertEquals(60, values[PreferKey.glassCardBackgroundOpacity])
         assertEquals("/dark-cover.jpg", values[PreferKey.defaultCoverDark])
         assertFalse(values.containsKey("assets"))
     }

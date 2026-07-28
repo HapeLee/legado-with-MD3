@@ -45,7 +45,6 @@ import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -406,8 +405,8 @@ private fun IgnoreItemsSheet(
             )
         },
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -465,8 +464,7 @@ private fun BackupConfigDialogs(
         title = stringResource(R.string.web_dav_account),
         content = {
             auth?.let {
-                io.legado.app.ui.widget.components.AppColumn(
-                ) {
+                Column {
                     AppTextField(
                         value = it.account,
                         onValueChange = { value ->

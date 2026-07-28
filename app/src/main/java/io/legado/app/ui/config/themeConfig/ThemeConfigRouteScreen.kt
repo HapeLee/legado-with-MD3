@@ -32,6 +32,7 @@ fun ThemeConfigRouteScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var pendingNavigationDestination by remember { mutableStateOf<String?>(null) }
     var pendingBackgroundDark by remember { mutableStateOf(false) }
+    var pendingContainerBackground by remember { mutableStateOf<ContainerBackgroundTarget?>(null) }
 
     val fontFolderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -66,9 +67,10 @@ fun ThemeConfigRouteScreen(
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            viewModel.onIntent(
-                ThemeConfigIntent.SelectBackground(uri.toString(), pendingBackgroundDark)
-            )
+            pendingContainerBackground?.let { target ->
+                viewModel.onIntent(ThemeConfigIntent.SelectContainerBackground(target, pendingBackgroundDark, uri.toString()))
+                pendingContainerBackground = null
+            } ?: viewModel.onIntent(ThemeConfigIntent.SelectBackground(uri.toString(), pendingBackgroundDark))
         }
     }
 
@@ -85,6 +87,12 @@ fun ThemeConfigRouteScreen(
                     navigationIconLauncher.launch("image/png")
                 }
                 is ThemeConfigEffect.OpenBackgroundImage -> {
+                    pendingContainerBackground = null
+                    pendingBackgroundDark = effect.dark
+                    backgroundImageLauncher.launch("image/*")
+                }
+                is ThemeConfigEffect.OpenContainerBackgroundImage -> {
+                    pendingContainerBackground = effect.target
                     pendingBackgroundDark = effect.dark
                     backgroundImageLauncher.launch("image/*")
                 }

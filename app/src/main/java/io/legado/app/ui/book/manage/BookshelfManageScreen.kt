@@ -79,7 +79,6 @@ import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FabMenuItem
@@ -710,8 +709,8 @@ private fun BookshelfManageScreen(
                         onLongClick = { toggleBookSelection(book) },
                         containerColor = animatedContainerColor
                     ) {
-                        AppColumn(
-                            Modifier
+                        Column(
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .adaptiveHorizontalPadding(vertical = 12.dp),
                             verticalArrangement = Arrangement.SpaceBetween
@@ -735,15 +734,10 @@ private fun BookshelfManageScreen(
                                     )
                                     AppText(
                                         text = "${groupNameResolver(book)} | ${book.originName.ifBlank { book.origin }}",
-                                        style = LegadoTheme.typography.labelSmallEmphasized.copy(
-                                            color = LegadoTheme.colorScheme.primary
-                                        )
+                                        style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.primary)
                                     )
                                     if (exportMsg != null) {
-                                        AppText(
-                                            text = exportMsg,
-                                            modifier = Modifier.padding(top = 2.dp)
-                                        )
+                                        AppText(text = exportMsg, modifier = Modifier.padding(top = 2.dp))
                                     }
                                 }
                                 TextCard(
@@ -814,11 +808,7 @@ private fun BookshelfManageScreen(
                                     SmallTonalButton(
                                         onClick = {
                                             if (!book.isLocal) {
-                                                viewModel.dispatch(
-                                                    BookshelfManageScreenIntent.ToggleBookDownload(
-                                                        book
-                                                    )
-                                                )
+                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
                                             }
                                         },
                                         icon = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
@@ -958,7 +948,7 @@ private fun BookshelfManageScreen(
         },
         title = stringResource(R.string.change_source_batch),
         content = {
-            AppColumn(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1019,7 +1009,7 @@ private fun BookshelfManageScreen(
         onDismissRequest = { showDeleteBookConfirmDialog = false },
         title = stringResource(R.string.draw),
         content = {
-            AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppText(text = stringResource(R.string.sure_del))
                 if (hasLocalBookInDeleteTarget) {
                     Row(
@@ -1118,7 +1108,7 @@ private fun BookshelfManageScreen(
         onDismissRequest = { showExportFileNameDialog = false },
         title = stringResource(R.string.export_file_name),
         content = {
-            AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppText(text = exportFileNameHelpText)
                 AppTextField(
                     value = exportFileNameInput,
@@ -1179,7 +1169,7 @@ private fun BookshelfManageScreen(
         content = {
             val episodeTemplateValid = customEpisodeExportNameInput.isNotBlank()
                 && tryParesExportFileName(customEpisodeExportNameInput)
-            AppColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1508,8 +1498,8 @@ private fun BatchChangePreviewRow(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.onSheetContent,
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1592,7 +1582,7 @@ private fun PreviewBookInfo(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppColumn(
+    Column(
         modifier = modifier.clickable(enabled = book != null, onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.text
 
-import android.content.ClipData
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
@@ -120,9 +118,7 @@ fun MarkdownBlock(
     }
 
     ProvideTextStyle(style) {
-        AppColumn(
-            modifier.padding(horizontal = 4.dp)
-        ) {
+        Column(modifier = modifier.padding(horizontal = 4.dp)) {
             data.astTree.children.fastForEach { child ->
                 MarkdownNode(
                     node = child,
@@ -384,9 +380,7 @@ private fun MarkdownUnorderedList(
     val bullet = when (level % 3) {
         0 -> "• "; 1 -> "◦ "; else -> "▪ "
     }
-    AppColumn(
-        modifier.padding(start = (level * 8).dp)
-    ) {
+    Column(modifier = modifier.padding(start = (level * 8).dp)) {
         node.children.fastForEach { child ->
             if (child.type == MarkdownElementTypes.LIST_ITEM) {
                 MarkdownListItem(
@@ -409,9 +403,7 @@ private fun MarkdownOrderedList(
     onClickLink: ((String) -> Unit)? = null,
     level: Int = 0,
 ) {
-    AppColumn(
-        modifier.padding(start = (level * 8).dp)
-    ) {
+    Column(modifier = modifier.padding(start = (level * 8).dp)) {
         var index = 1
         node.children.fastForEach { child ->
             if (child.type == MarkdownElementTypes.LIST_ITEM) {
@@ -438,8 +430,7 @@ private fun MarkdownListItem(
     onClickLink: ((String) -> Unit)? = null,
     level: Int,
 ) {
-    AppColumn(
-    ) {
+    Column {
         val (directContent, nestedLists) = separateContentAndLists(node)
         if (directContent.isNotEmpty()) {
             Row {
@@ -496,8 +487,8 @@ private fun MarkdownBlockquote(
     ProvideTextStyle(LocalTextStyle.current.copy(fontStyle = FontStyle.Italic)) {
         val borderColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
         val bgColor = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .drawWithContent {
                     drawRect(color = bgColor, size = size)
                     drawContent()
@@ -566,8 +557,8 @@ private fun MarkdownCodeBlock(
     var isExpanded by remember(code) { mutableStateOf(codeLines.size <= collapsedLines) }
     val canCollapse = codeLines.size > collapsedLines
 
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
@@ -598,7 +589,7 @@ private fun MarkdownCodeBlock(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
                     .clickable {
-                        val clip = ClipData.newPlainText("code", code)
+                        val clip = android.content.ClipData.newPlainText("code", code)
                         clipboardManager.setPrimaryClip(clip)
                     }
                     .padding(4.dp)
@@ -611,8 +602,7 @@ private fun MarkdownCodeBlock(
                 if (true) Modifier else Modifier.horizontalScroll(scrollState)
             )
         ) {
-            val displayCode =
-                if (isExpanded) code else codeLines.take(collapsedLines).joinToString("\n")
+            val displayCode = if (isExpanded) code else codeLines.take(collapsedLines).joinToString("\n")
             AppText(
                 text = displayCode,
                 style = LegadoTheme.typography.bodySmall.copy(
@@ -655,19 +645,16 @@ private fun MarkdownTable(
         ?.map { it.getTextInNode(content).trim() } ?: emptyList()
 
     val rows = rowNodes.map { rowNode ->
-        rowNode.children.filter { it.type == GFMTokenTypes.CELL }
-            .map { it.getTextInNode(content).trim() }
+        rowNode.children.filter { it.type == GFMTokenTypes.CELL }.map { it.getTextInNode(content).trim() }
     }
 
-    AppColumn(
-        modifier
+    Column(
+        modifier = modifier
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(8.dp))
-            .border(
-                BorderStroke(0.5.dp, LegadoTheme.colorScheme.outlineVariant),
-                RoundedCornerShape(8.dp)
-            )
+            .border(BorderStroke(0.5.dp, LegadoTheme.colorScheme.outlineVariant), RoundedCornerShape(8.dp))
     ) {
+        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -685,6 +672,7 @@ private fun MarkdownTable(
                 )
             }
         }
+        // Rows
         rows.forEachIndexed { index, row ->
             Row(
                 modifier = Modifier

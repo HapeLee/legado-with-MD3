@@ -26,8 +26,8 @@ fun LogDetailSheet(
         title = title,
         content = {
             SelectionContainer {
-                io.legado.app.ui.widget.components.AppColumn(
-                    Modifier
+                Column(
+                    modifier = Modifier
                         .heightIn(max = 400.dp)
                         .verticalScroll(rememberScrollState())
                 ) {

@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -53,8 +52,8 @@ fun CoverAlbumSelectSheet(
             )
         },
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = 8.dp),
@@ -136,9 +135,7 @@ private fun CoverAlbumSelectionItem(
                     )
                 }
             }
-            AppColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 AppText(
                     text = name,
                     style = LegadoTheme.typography.titleSmall,

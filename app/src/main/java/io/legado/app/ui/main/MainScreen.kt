@@ -345,8 +345,7 @@ fun MainScreen(
                 header = {
                     val expanded = navState.targetValue == WideNavigationRailValue.Expanded
 
-                    io.legado.app.ui.widget.components.AppColumn(
-                    ) {
+                    Column {
                         IconButton(
                             modifier = Modifier.padding(start = 24.dp),
                             onClick = {

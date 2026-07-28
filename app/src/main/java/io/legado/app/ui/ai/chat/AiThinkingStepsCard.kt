@@ -37,9 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
-import io.legado.app.domain.model.AiToolApprovalState
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -70,11 +68,12 @@ fun AiThinkingStepsCard(
     NormalCard(
         modifier = modifier.fillMaxWidth(),
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .animateContentSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
+            // Collapse/expand toggle - no padding, ripple clipped by card
             if (canCollapse) {
                 Row(
                     modifier = Modifier
@@ -96,16 +95,15 @@ fun AiThinkingStepsCard(
                         text = if (expanded) {
                             stringResource(R.string.ai_thinking_collapse)
                         } else {
-                            stringResource(
-                                R.string.ai_thinking_show_more,
-                                steps.size - collapsedVisibleCount
-                            )
+                            stringResource(R.string.ai_thinking_show_more, steps.size - collapsedVisibleCount)
                         },
                         style = LegadoTheme.typography.labelMedium,
                         color = LegadoTheme.colorScheme.primary,
                     )
                 }
             }
+
+            // Content
             Column {
                 visibleSteps.forEachIndexed { index, step ->
                     ThinkingStepRow(
@@ -159,8 +157,7 @@ private fun ToolStepRow(
     var expanded by remember { mutableStateOf(false) }
     val hasContent = tool.input.isNotBlank() || tool.output.isNotBlank()
 
-    AppColumn(
-    ) {
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -203,9 +200,8 @@ private fun ToolStepRow(
             // Status
             val statusText = when {
                 tool.output.isNotBlank() -> stringResource(R.string.ai_tool_done)
-                tool.approvalState == AiToolApprovalState.PENDING ->
+                tool.approvalState == io.legado.app.domain.model.AiToolApprovalState.PENDING ->
                     stringResource(R.string.ai_tool_pending)
-
                 else -> stringResource(R.string.ai_tool_running)
             }
             AppText(
@@ -223,6 +219,8 @@ private fun ToolStepRow(
                 )
             }
         }
+
+        // Expandable tool details
         AnimatedVisibility(
             visible = expanded,
             enter = fadeIn() + expandVertically(),

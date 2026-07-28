@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.text.AppText
@@ -51,9 +50,7 @@ fun InputSettingItem(
     SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        AppColumn(
-            Modifier.fillMaxWidth()
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             BasicComponent(
                 title = title,
                 summary = value,

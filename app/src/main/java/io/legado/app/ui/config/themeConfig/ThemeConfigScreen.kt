@@ -615,21 +615,6 @@ fun ThemeConfigScreen(
                             )
                         }
                     }
-                    if (!isMiuixEngine) {
-                        SliderSettingItem(
-                            title = stringResource(R.string.container_opacity),
-                            description = stringResource(
-                                R.string.container_opacity_summary,
-                                theme.containerOpacity
-                            ),
-                            value = theme.containerOpacity.toFloat(),
-                            defaultValue = 100f,
-                            valueRange = 0f..100f,
-                            onValueChange = { value ->
-                                updateTheme { it.copy(containerOpacity = value.toInt()) }
-                            }
-                        )
-                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.background_image)) {
@@ -687,6 +672,91 @@ fun ThemeConfigScreen(
             // Container settings
             item {
                 SplicedColumnGroup(title = stringResource(R.string.theme_manage_section_container)) {
+                    SwitchSettingItem(
+                        title = "容器背景图",
+                        description = "大容器和项目分别使用独立的日间/夜间图片",
+                        checked = theme.enableContainerBackgroundImage,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(enableContainerBackgroundImage = value) }
+                        }
+                    )
+                    AnimatedVisibility(visible = theme.enableContainerBackgroundImage) {
+                        Column {
+                            ContainerBackgroundSettingItem(
+                                title = "大容器日间背景图片",
+                                path = theme.largeContainerBackgroundImageLight,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.LargeContainer, false))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.LargeContainer, false))
+                                },
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "大容器夜间背景图片",
+                                path = theme.largeContainerBackgroundImageDark,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.LargeContainer, true))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.LargeContainer, true))
+                                },
+                            )
+                            SliderSettingItem(
+                                title = "大容器背景图透明度",
+                                description = "${theme.appColumnBackgroundOpacity}%",
+                                value = theme.appColumnBackgroundOpacity.toFloat(),
+                                defaultValue = 100f,
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(appColumnBackgroundOpacity = value.toInt()) }
+                                }
+                            )
+                            SliderSettingItem(
+                                title = "项目背景图透明度",
+                                description = "${theme.glassCardBackgroundOpacity}%",
+                                value = theme.glassCardBackgroundOpacity.toFloat(),
+                                defaultValue = 100f,
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(glassCardBackgroundOpacity = value.toInt()) }
+                                }
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "项目日间背景图片",
+                                path = theme.itemBackgroundImageLight,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.Item, false))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.Item, false))
+                                },
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "项目夜间背景图片",
+                                path = theme.itemBackgroundImageDark,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.Item, true))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.Item, true))
+                                },
+                            )
+                        }
+                    }
+                    SliderSettingItem(
+                            title = stringResource(R.string.container_opacity),
+                            description = stringResource(
+                                R.string.container_opacity_summary,
+                                theme.containerOpacity
+                            ),
+                            value = theme.containerOpacity.toFloat(),
+                            defaultValue = 100f,
+                            valueRange = 0f..100f,
+                            onValueChange = { value ->
+                                updateTheme { it.copy(containerOpacity = value.toInt()) }
+                            }
+                    )
                     SwitchSettingItem(
                         title = stringResource(R.string.disable_spliced_group_corner_radius),
                         description = stringResource(R.string.disable_spliced_group_corner_radius_summary),
@@ -956,6 +1026,31 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
+}
+
+@Composable
+private fun ContainerBackgroundSettingItem(
+    title: String,
+    path: String?,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    ClickableSettingItem(
+        title = title,
+        description = if (path.isNullOrBlank()) "选择图片" else "已选择",
+        onClick = onClick,
+        trailingContent = if (path.isNullOrBlank()) {
+            null
+        } else {
+            {
+                SmallPlainButton(
+                    onClick = onRemove,
+                    icon = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.clear),
+                )
+            }
+        },
+    )
 }
 
 @Composable

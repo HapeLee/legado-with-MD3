@@ -34,7 +34,6 @@ import io.legado.app.R
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -229,8 +228,7 @@ fun AiProviderEditScreen(
         onDismissRequest = { showApiKeyDialog = false },
         title = stringResource(R.string.ai_api_key),
         content = {
-            AppColumn(
-            ) {
+            Column {
                 AppTextField(
                     value = apiKeyDraft,
                     onValueChange = { apiKeyDraft = it },
@@ -240,8 +238,7 @@ fun AiProviderEditScreen(
                     visualTransformation = if (apiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
-                        val image =
-                            if (apiKeyVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val image = if (apiKeyVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         val description = if (apiKeyVisible) {
                             stringResource(R.string.hide_password)
                         } else {
@@ -269,8 +266,7 @@ fun AiProviderEditScreen(
         onDismissRequest = { onIntent(AiProviderEditIntent.DismissModelEditor) },
         title = stringResource(R.string.ai_model_edit),
         content = { model ->
-            io.legado.app.ui.widget.components.AppColumn(
-            ) {
+            Column {
                 AppTextField(
                     value = model.modelName,
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingModelName(it)) },

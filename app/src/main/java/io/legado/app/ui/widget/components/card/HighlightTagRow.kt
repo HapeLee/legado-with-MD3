@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.book.info.HighlightedTag
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -63,7 +62,7 @@ private fun HighlightTagItem(
     tag: HighlightedTag,
     modifier: Modifier = Modifier,
 ) {
-    AppColumn(
+    Column(
         modifier = modifier.padding(vertical = 8.dp),
         horizontalAlignment = Alignment.Start,
     ) {

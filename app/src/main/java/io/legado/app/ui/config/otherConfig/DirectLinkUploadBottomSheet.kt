@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -140,8 +139,8 @@ fun DirectLinkUploadBottomSheet(
         },
         onDismissRequest = onDismiss
     ) {
-        AppColumn(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
                 .verticalScroll(rememberScrollState())
