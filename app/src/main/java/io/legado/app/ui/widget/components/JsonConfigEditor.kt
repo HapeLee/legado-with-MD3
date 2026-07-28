@@ -47,7 +47,9 @@ fun JsonConfigEditor(
         }.getOrElse { JsonObject() }
     }
 
-    Column(modifier = modifier) {
+    io.legado.app.ui.widget.components.AppColumn(
+        modifier
+    ) {
         jsonObject.entrySet().forEach { entry ->
             val key = entry.key
             val value = entry.value

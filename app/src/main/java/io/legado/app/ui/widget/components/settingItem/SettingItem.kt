@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.SettingCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.text.AppText
@@ -78,7 +79,8 @@ fun SettingItem(
             containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
     ) {
-        Column {
+        AppColumn(
+        ) {
             ListItem(
                 modifier = Modifier
                     .semantics(mergeDescendants = true) {

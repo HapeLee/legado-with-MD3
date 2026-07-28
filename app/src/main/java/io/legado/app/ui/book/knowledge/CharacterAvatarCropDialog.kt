@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import kotlin.math.roundToInt
 
@@ -70,7 +71,7 @@ fun CharacterAvatarCropDialog(
         dismissText = stringResource(R.string.cancel),
         onDismiss = onDismissRequest,
         content = {
-            Column(
+            AppColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 BoxWithConstraints(

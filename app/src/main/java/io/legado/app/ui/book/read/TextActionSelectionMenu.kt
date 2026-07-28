@@ -63,6 +63,7 @@ import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.roundToInt
@@ -421,8 +422,8 @@ private fun MoreMenuView(
 ) {
     val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
+    AppColumn(
+        Modifier
             .width(IntrinsicSize.Max)
     ) {
         Box(

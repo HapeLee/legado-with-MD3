@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -112,8 +113,8 @@ private fun LogItem(
     item: LogEntry,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
+    AppColumn(
+        Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(16.dp)

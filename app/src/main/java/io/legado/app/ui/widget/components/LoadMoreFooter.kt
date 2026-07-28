@@ -106,11 +106,9 @@ fun LoadMoreFooter(
                         onClick = { showFullError = error },
                         containerColor = LegadoTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
+                        AppColumn(
+                            Modifier.fillMaxWidth()
                         ) {
-
-                            // 信息区域
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -140,8 +138,6 @@ fun LoadMoreFooter(
                             HorizontalDivider(
                                 color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
-
-                            // 操作区域
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -173,11 +169,10 @@ fun LoadMoreFooter(
                 }
 
                 loading -> {
-                    Column(
+                    AppColumn(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-
                         AppContainedLoadingIndicator()
 
                         AppText(
@@ -194,7 +189,9 @@ fun LoadMoreFooter(
                             modifier = Modifier.fillMaxWidth(),
                             containerColor = LegadoTheme.colorScheme.surfaceContainer,
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            AppColumn(
+                                Modifier.fillMaxWidth()
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -251,7 +248,9 @@ fun LoadMoreFooter(
                             modifier = Modifier.fillMaxWidth(),
                             containerColor = LegadoTheme.colorScheme.surfaceContainer,
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            AppColumn(
+                                Modifier.fillMaxWidth()
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -286,8 +285,8 @@ fun LoadMoreFooter(
                             containerColor = LegadoTheme.colorScheme.surfaceContainer,
                             onClick = onRetry
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth()
+                            AppColumn(
+                                Modifier.fillMaxWidth()
                             ) {
                                 Row(
                                     modifier = Modifier

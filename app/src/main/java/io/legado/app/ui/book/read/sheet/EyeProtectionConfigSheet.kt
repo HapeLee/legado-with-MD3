@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
@@ -52,11 +53,11 @@ fun EyeProtectionConfigSheet(
         title = stringResource(R.string.eye_protection),
         animateContentSize = false,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 16.dp),
+                .padding(bottom = 16.dp)
         ) {
             SwitchSettingItem(
                 title = stringResource(R.string.eye_protection_enabled),

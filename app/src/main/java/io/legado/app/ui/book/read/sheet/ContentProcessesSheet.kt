@@ -31,6 +31,7 @@ import io.legado.app.ui.book.read.ContentProcessConfigUiState
 import io.legado.app.ui.book.read.ContentProcessItemUi
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -113,7 +114,8 @@ fun ContentProcessesSheet(
                         onDismissRequest = { viewingItem = null },
                         title = contentProcessTitle(item),
                         content = {
-                            Column {
+                            AppColumn(
+                            ) {
                                 AppText(
                                     text = stringResource(R.string.ai_text_clean_before),
                                     style = LegadoTheme.typography.labelSmall,
@@ -174,10 +176,10 @@ private fun ContentProcessItem(
         onClick = onClick,
         containerColor = LegadoTheme.colorScheme.onSheetContent,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

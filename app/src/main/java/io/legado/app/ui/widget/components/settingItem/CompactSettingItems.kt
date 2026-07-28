@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -139,7 +140,9 @@ fun CompactSliderSettingItem(
     val sliderAccessibilityValue = description ?: displayValue.toString()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        AppColumn(
+            Modifier.fillMaxWidth()
+        ) {
             BasicComponent(
                 title = title,
                 summary = description,

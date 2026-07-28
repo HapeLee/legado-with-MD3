@@ -41,6 +41,7 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -190,7 +191,7 @@ private fun CharacterNodeStrip(
     characters: List<CharacterNodeUi>,
     onOpenCharacter: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AppText(
             text = stringResource(R.string.book_characters),
             style = LegadoTheme.typography.titleMedium,
@@ -255,7 +256,7 @@ private fun AddRelationCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -322,7 +323,7 @@ private fun RelationEditorCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

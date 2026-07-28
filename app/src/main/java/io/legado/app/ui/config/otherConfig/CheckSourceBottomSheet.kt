@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
@@ -32,12 +33,11 @@ fun CheckSourceBottomSheet(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.check_source_config)
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
         ) {
-
             GlassCard {
                 SliderSettingItem(
                     title = stringResource(R.string.check_source_timeout),

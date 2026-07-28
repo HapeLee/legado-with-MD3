@@ -38,6 +38,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.menuItem.LocalUseMiuixWindowPopup
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
@@ -128,8 +129,8 @@ fun AppModalBottomSheet(
                     dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
                     contentWindowInsets = contentWindowInsets
                 ) {
-                    Column(
-                        modifier = Modifier
+                    AppColumn(
+                        Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                             .heightIn(max = maxHeight)

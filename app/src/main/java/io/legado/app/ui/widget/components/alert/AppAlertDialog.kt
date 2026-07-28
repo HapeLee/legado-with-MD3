@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.SecondaryButton
 import top.yukonga.miuix.kmp.window.WindowDialog
@@ -50,8 +51,8 @@ fun AppAlertDialog(
             onDismissRequest = onDismissRequest,
             content = {
                 if (content != null) {
-                    Column(
-                        modifier = Modifier
+                    AppColumn(
+                        Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp)
                             .verticalScroll(rememberScrollState())
@@ -101,8 +102,8 @@ fun AppAlertDialog(
                 tonalElevation = AlertDialogDefaults.TonalElevation,
                 title = title?.let { { Text(text = it) } },
                 text = {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    AppColumn(
+                        Modifier.verticalScroll(rememberScrollState())
                     ) {
                         if (text != null) {
                             SelectionContainer {

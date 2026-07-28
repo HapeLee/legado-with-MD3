@@ -92,6 +92,7 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.FabMenuItem
@@ -349,8 +350,8 @@ private fun ReaderBookHeader(book: Book?) {
             sourceOrigin = book?.origin,
             modifier = Modifier.width(40.dp),
         )
-        Column(
-            modifier = Modifier.weight(1f),
+        AppColumn(
+            Modifier.weight(1f)
         ) {
             AppText(
                 text = book?.name.orEmpty(),
@@ -377,7 +378,6 @@ private fun ReaderBookHeader(book: Book?) {
                     text = if (total > 0) "$current / $total" else "--",
                 )
             }
-
         }
     }
 }
@@ -414,7 +414,7 @@ private fun InformationRow(label: String, value: String) {
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
@@ -581,7 +581,9 @@ private fun ReaderBookTocPage(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    AppColumn(
+        Modifier.fillMaxSize()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -774,7 +776,9 @@ private fun ReaderSheetChapterItem(
             modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            AppColumn(
+                modifier = Modifier.weight(1f)
+            ) {
                 AppText(
                     modifier = Modifier.padding(vertical = 8.dp),
                     text = item.title,
@@ -960,7 +964,9 @@ private fun ReaderBookBookmarksPage(
 ) {
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val date = remember { SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date()) }
-    Column(modifier = Modifier.fillMaxSize()) {
+    AppColumn(
+        Modifier.fillMaxSize()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1089,7 +1095,7 @@ private fun ReaderSheetBookmarkItem(
         contentColor = contentColor,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

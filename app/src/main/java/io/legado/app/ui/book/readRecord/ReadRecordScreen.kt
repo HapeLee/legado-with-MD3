@@ -76,6 +76,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.fadingEdge
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -227,7 +228,8 @@ fun ReadRecordScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Column {
+            AppColumn(
+            ) {
                 GlassMediumFlexibleTopAppBar(
                     title = if (inSelectionMode) {
                         stringResource(R.string.selected_count, selectedItemKeys.size)
@@ -297,7 +299,10 @@ fun ReadRecordScreen(
                                 AppIcon(icon, description)
                             }
                             AppIconButton(onClick = { showSearch = !showSearch }) {
-                                AppIcon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                                AppIcon(
+                                    Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.search)
+                                )
                             }
                             AppIconButton(onClick = { showActionsSheet = true }) {
                                 AppIcon(
@@ -466,12 +471,16 @@ fun ReadRecordScreen(
         onDismissRequest = { pendingDeleteAction = null },
         title = stringResource(R.string.confirm_delete_read_record),
         content = { _ ->
-            Column {
+            AppColumn(
+            ) {
                 AppText(
                     if (pendingDeleteCount == -1) {
                         stringResource(R.string.clear_read_records_message)
                     } else if (pendingDeleteCount > 1) {
-                        stringResource(R.string.delete_selected_read_records_message, pendingDeleteCount)
+                        stringResource(
+                            R.string.delete_selected_read_records_message,
+                            pendingDeleteCount
+                        )
                     } else {
                         stringResource(R.string.delete_read_record_message)
                     }
@@ -548,7 +557,8 @@ fun ReadRecordScreen(
         title = stringResource(R.string.merge_read_records),
         content = { (targetRecord, candidates) ->
             val unknownAuthor = stringResource(R.string.unknown_author)
-            Column {
+            AppColumn(
+            ) {
                 AppText(
                     stringResource(
                         R.string.merge_read_records_message,
@@ -614,8 +624,8 @@ private fun ReadRecordActionsSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_record_options)
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -771,8 +781,8 @@ fun HeatmapCalendarSection(
         }
     }
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .padding(bottom = 32.dp)
@@ -1050,7 +1060,9 @@ fun LatestReadItem(
 
         Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = record.bookName,
                 style = LegadoTheme.typography.titleMedium,
@@ -1170,7 +1182,7 @@ fun TimelineSessionItem(
                 .padding(start = contentPaddingStart, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
+            AppColumn(
                 modifier = Modifier.width(48.dp),
                 verticalArrangement = Arrangement.Center
             ) {
@@ -1191,7 +1203,8 @@ fun TimelineSessionItem(
                 )
                 SelectionCheckmark(inSelectionMode, isSelected)
                 Spacer(modifier = Modifier.width(8.dp))
-                Column {
+                AppColumn(
+                ) {
                     AppText(
                         text = session.bookName,
                         style = LegadoTheme.typography.titleMedium,
@@ -1269,7 +1282,9 @@ fun ReadRecordItem(
 
         Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = detail.bookName,
                 style = LegadoTheme.typography.titleMedium,
@@ -1282,7 +1297,10 @@ fun ReadRecordItem(
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
-                text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
+                text = stringResource(
+                    R.string.reading_time_with_value,
+                    formatDuring(detail.readTime)
+                ),
                 color = MaterialTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
@@ -1363,8 +1381,9 @@ fun ReadingSummaryCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Column(modifier = Modifier.weight(1f)) {
-
+            AppColumn(
+                modifier = Modifier.weight(1f)
+            ) {
                 AppText(
                     text = title,
                     style = LegadoTheme.typography.labelLarge,
@@ -1374,8 +1393,8 @@ fun ReadingSummaryCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
-                AppText(
-                    text = stringResource(R.string.read_books_prefix),
+                    AppText(
+                        text = stringResource(R.string.read_books_prefix),
                         style = LegadoTheme.typography.titleMedium
                     )
                     AppText(
@@ -1384,8 +1403,8 @@ fun ReadingSummaryCard(
                         color = LegadoTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
-                AppText(
-                    text = stringResource(R.string.read_books_suffix),
+                    AppText(
+                        text = stringResource(R.string.read_books_suffix),
                         style = LegadoTheme.typography.titleMedium
                     )
                 }

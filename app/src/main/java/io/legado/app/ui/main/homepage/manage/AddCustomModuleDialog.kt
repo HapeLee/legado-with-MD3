@@ -22,6 +22,7 @@ import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.JsonConfigEditor
 import io.legado.app.ui.widget.components.JsonRawEditor
@@ -75,7 +76,7 @@ fun <T> AddCustomModuleDialog(
             R.string.homepage_edit_module
         ),
         content = {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(400.dp)

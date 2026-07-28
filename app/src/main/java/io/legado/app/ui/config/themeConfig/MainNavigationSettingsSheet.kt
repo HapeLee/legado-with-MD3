@@ -22,6 +22,7 @@ import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
@@ -87,10 +88,10 @@ fun MainNavigationSettingsSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.main_navigation_settings),
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = 24.dp)
         ) {
             CompactDropdownSettingItem(
                 title = stringResource(R.string.default_home_page),

@@ -52,6 +52,7 @@ import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -116,8 +117,8 @@ fun MyScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(
@@ -255,7 +256,9 @@ fun WebServiceSettingBlock(
     onToggleWebService: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    AppColumn(
+        Modifier.fillMaxWidth()
+    ) {
         SwitchSettingItem(
             title = stringResource(R.string.web_service),
             description = if (uiState.isWebServiceRun) {

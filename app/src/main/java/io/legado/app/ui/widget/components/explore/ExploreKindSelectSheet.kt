@@ -29,6 +29,7 @@ import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -89,7 +90,8 @@ fun ExploreKindSelectSheet(
             }
         }
     ) {
-        Column {
+        AppColumn(
+        ) {
             SearchBar(
                 query = query,
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,

@@ -69,6 +69,7 @@ import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppRadioButton
 import io.legado.app.ui.widget.components.AppTextField
@@ -395,8 +396,8 @@ private fun ServersSheetContent(
     onDelete: (Server) -> Unit,
     onDefault: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
+    AppColumn(
+        Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(bottom = 8.dp)
@@ -493,8 +494,8 @@ private fun ServerConfigSheetContent(
     var password by remember { mutableStateOf(configJson.optString("password")) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
+    AppColumn(
+        Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
@@ -684,10 +685,9 @@ private fun RemoteBookItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(
+            AppColumn(
                 modifier = Modifier.weight(1f)
             ) {
-
                 AppText(
                     text = book.filename.substringBeforeLast("."),
                     style = LegadoTheme.typography.bodyMedium,

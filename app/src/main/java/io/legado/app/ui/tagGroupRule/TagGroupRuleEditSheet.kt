@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -113,7 +114,7 @@ fun TagGroupRuleEditSheet(
         onDismissRequest = onDismissRequest
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 120.dp)
@@ -136,7 +137,6 @@ fun TagGroupRuleEditSheet(
                     label = stringResource(R.string.tag_group_pattern),
                     minLines = 3
                 )
-
             }
 
             AppFloatingActionButton(

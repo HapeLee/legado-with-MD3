@@ -63,6 +63,7 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideThemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -148,7 +149,8 @@ fun ReadAloudScreen(
                 label = "ReadAloudPage",
             ) { targetPage ->
                 when (targetPage) {
-                    ReadAloudPage.Config -> Column {
+                    ReadAloudPage.Config -> AppColumn(
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -207,10 +209,9 @@ fun ReadAloudContent(
     val ttsSpeechRate = state.readAloudTtsSpeechRate
     var timerMenuExpanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
+    AppColumn(
+        modifier.fillMaxWidth()
     ) {
-        // Media controls
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -361,7 +362,7 @@ private fun ActionButton(
     label: String,
     onClick: () -> Unit,
 ) {
-    Column(
+    AppColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         MediumTonalButton(

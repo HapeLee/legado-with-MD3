@@ -66,6 +66,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.LoadMoreFooter
@@ -307,7 +308,8 @@ fun SearchScreen(
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            Column {
+            AppColumn(
+            ) {
                 GlassMediumFlexibleTopAppBar(
                     title = stringResource(R.string.search),
                     navigationIcon = {
@@ -332,7 +334,8 @@ fun SearchScreen(
                         TopBarAnimatedActionButton(
                             checked = state.matchMode == MatchMode.EXACT,
                             onCheckedChange = {
-                                val newMode = if (state.matchMode == MatchMode.EXACT) MatchMode.DEFAULT else MatchMode.EXACT
+                                val newMode =
+                                    if (state.matchMode == MatchMode.EXACT) MatchMode.DEFAULT else MatchMode.EXACT
                                 onIntent(SearchIntent.SetMatchMode(newMode))
                             },
                             iconChecked = AppIcons.PrecisionSearch,
@@ -401,8 +404,8 @@ fun SearchScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
@@ -576,8 +579,15 @@ fun SearchScreen(
                         TopFloatingStickyItem(
                             item = if (showResultCountCard || showSourceProgressCard) {
                                 SearchFloatingSummary(
-                                    resultText = if (showResultCountCard) stringResource(R.string.search_result_count, state.results.size) else null,
-                                    sourceText = if (showSourceProgressCard) stringResource(R.string.search_source_progress, state.processedSources, state.totalSources) else null,
+                                    resultText = if (showResultCountCard) stringResource(
+                                        R.string.search_result_count,
+                                        state.results.size
+                                    ) else null,
+                                    sourceText = if (showSourceProgressCard) stringResource(
+                                        R.string.search_source_progress,
+                                        state.processedSources,
+                                        state.totalSources
+                                    ) else null,
                                 )
                             } else {
                                 null
@@ -592,13 +602,22 @@ fun SearchScreen(
                                 contentColor = LegadoTheme.colorScheme.onCardContainer
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = 12.dp,
+                                        vertical = 8.dp
+                                    ),
                                 ) {
                                     summary.resultText?.let { text ->
-                                        AppText(text = text, style = LegadoTheme.typography.labelSmallEmphasized)
+                                        AppText(
+                                            text = text,
+                                            style = LegadoTheme.typography.labelSmallEmphasized
+                                        )
                                     }
                                     summary.sourceText?.let { text ->
-                                        AppText(text = text, style = LegadoTheme.typography.labelSmallEmphasized)
+                                        AppText(
+                                            text = text,
+                                            style = LegadoTheme.typography.labelSmallEmphasized
+                                        )
                                     }
                                 }
                             }
@@ -672,7 +691,7 @@ fun SearchScreen(
         onDismissRequest = { onIntent(SearchIntent.SetSettingsSheetVisible(false)) },
         title = stringResource(R.string.setting),
     ) {
-        Column(
+        AppColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CompactDropdownSettingItem(

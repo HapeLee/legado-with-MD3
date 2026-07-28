@@ -32,6 +32,7 @@ import io.legado.app.ui.book.readRecord.ReadPeriod
 import io.legado.app.ui.book.readRecord.ReadRecordFormatter
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
 import java.time.LocalDate
@@ -58,7 +59,9 @@ fun ReadingTimeBarChartCard(
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        AppColumn(
+            Modifier.padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.BarChart,
@@ -130,6 +133,7 @@ fun ReadingTimeBarChartCard(
                             ReadPeriod.WEEK -> when (date.dayOfWeek.value) {
                                 1 -> "一"; 2 -> "二"; 3 -> "三"; 4 -> "四"; 5 -> "五"; 6 -> "六"; 7 -> "日"; else -> ""
                             }
+
                             else -> date.dayOfMonth.toString()
                         }
 
@@ -159,7 +163,10 @@ fun ReadingTimeBarChartCard(
                                 )
                             }
 
-                            Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.TopCenter) {
+                            Box(
+                                modifier = Modifier.height(20.dp),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
                                 if (showLabel) {
                                     AppText(
                                         text = labelText,

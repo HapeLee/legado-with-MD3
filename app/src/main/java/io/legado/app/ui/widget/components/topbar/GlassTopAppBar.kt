@@ -20,6 +20,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
+import io.legado.app.ui.widget.components.AppColumn
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -48,7 +49,9 @@ fun GlassTopAppBar(
         modifier.background(color = containerColor)
     }
 
-    Column(modifier = finalModifier) {
+    AppColumn(
+        finalModifier
+    ) {
         if (isMiuix) {
             // Reserve constant status-bar space (ignoring visibility) like
             // Material3's TopAppBar, so content doesn't reflow when the status

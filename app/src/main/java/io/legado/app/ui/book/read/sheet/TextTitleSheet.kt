@@ -49,6 +49,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
@@ -155,8 +156,8 @@ internal fun ReadStyleTextTitleContent(
         orientation = Orientation.Horizontal,
     )
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
     ) {
         CardTabRow(
@@ -218,11 +219,11 @@ internal fun LayoutSpacingPage(
     var paragraphSpacing by remember { mutableFloatStateOf(config.paragraphSpacing.toFloat()) }
     var indentCount by remember { mutableIntStateOf(config.paragraphIndentCount) }
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
     ) {
         SectionTitle(stringResource(R.string.read_config_body_spacing))
         TinySliderSettingItem(
@@ -232,7 +233,15 @@ internal fun LayoutSpacingPage(
             steps = 3,
             onValueChange = { value ->
                 indentCount = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ParagraphIndent("　".repeat(indentCount))))
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.ParagraphIndent(
+                            "　".repeat(
+                                indentCount
+                            )
+                        )
+                    )
+                )
             },
         )
         TinySliderSettingItem(
@@ -290,11 +299,11 @@ internal fun TextEffectsPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
     ) {
         SectionTitle(stringResource(R.string.text_typeface))
         TinySwitchSettingItem(
@@ -331,8 +340,6 @@ internal fun TextEffectsPage(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ChineseConverterType(it.toInt())))
             },
         )
-
-        // Colors
         SectionTitle(stringResource(R.string.read_color))
         TinyColorSettingItem(
             title = stringResource(R.string.text_color),
@@ -421,11 +428,11 @@ internal fun TitleSettingsPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
     ) {
         TinyDropdownSettingItem(
             title = stringResource(R.string.body_title),
@@ -481,15 +488,11 @@ internal fun TitleSettingsPage(
                 showColorPicker = true
             },
         )
-
-        // Title font
         TinyClickableSettingItem(
             title = stringResource(R.string.read_config_title_settings),
             imageVector = Icons.Default.TextFields,
             onClick = onOpenTitleFontSelect,
         )
-
-        // Title segmentation
         TinyDropdownSettingItem(
             title = stringResource(R.string.split_title_mode),
             selectedValue = titleSegType.toString(),
@@ -513,7 +516,13 @@ internal fun TitleSettingsPage(
                 steps = 18,
                 onValueChange = { value ->
                     titleSegDistance = value.toInt()
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegDistance(titleSegDistance)))
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.TitleSegDistance(
+                                titleSegDistance
+                            )
+                        )
+                    )
                 },
             )
         }
@@ -549,8 +558,6 @@ internal fun TitleSettingsPage(
                 onDismiss = { showFlagDialog = false },
             )
         }
-
-        // Title spacing sliders
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
             value = titleSegScaling,
@@ -569,7 +576,13 @@ internal fun TitleSettingsPage(
             valueRange = 0f..20f,
             onValueChange = { value ->
                 titleLineSpacingExtra = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingExtra(titleLineSpacingExtra)))
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.TitleLineSpacingExtra(
+                            titleLineSpacingExtra
+                        )
+                    )
+                )
             },
         )
         TinySliderSettingItem(
@@ -578,7 +591,13 @@ internal fun TitleSettingsPage(
             valueRange = -30f..30f,
             onValueChange = { value ->
                 titleLineSpacingSub = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(titleLineSpacingSub)))
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.TitleLineSpacingSub(
+                            titleLineSpacingSub
+                        )
+                    )
+                )
             },
         )
         TinySliderSettingItem(
@@ -605,10 +624,15 @@ internal fun TitleSettingsPage(
             valueRange = 0f..200f,
             onValueChange = { value ->
                 titleBottomSpacing = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBottomSpacing(titleBottomSpacing)))
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.TitleBottomSpacing(
+                            titleBottomSpacing
+                        )
+                    )
+                )
             },
         )
-
     }
 
     // Color picker
@@ -621,6 +645,7 @@ internal fun TitleSettingsPage(
                 COLOR_TITLE -> {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(color)))
                 }
+
                 COLOR_TITLE_NIGHT -> {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColorNight(color)))
                 }
@@ -648,7 +673,8 @@ private fun FontWeightSetting(
     }
     val weightEntries = stringArrayResource(R.array.text_font_weight)
 
-    Column {
+    AppColumn(
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

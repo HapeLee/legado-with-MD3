@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
@@ -42,7 +43,9 @@ fun StatsGridCard(
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        AppColumn(
+            Modifier.padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppIcon(
                     imageVector = Icons.Default.Equalizer,
@@ -80,7 +83,7 @@ private fun StatCell(
     item: StatItem,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    AppColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.Start
     ) {

@@ -26,6 +26,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
+import io.legado.app.ui.widget.components.AppColumn
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.window.WindowListPopup
@@ -55,7 +56,9 @@ fun RoundDropdownMenu(
         ) {
             ProvideAppContentColor(popupContentColor) {
                 ListPopupColumn {
-                    Column(modifier = Modifier.background(popupContainerColor)) {
+                    AppColumn(
+                        Modifier.background(popupContainerColor)
+                    ) {
                         Spacer(Modifier.height(12.dp))
                         content(onDismissRequest)
                         Spacer(Modifier.height(12.dp))
@@ -81,7 +84,7 @@ fun RoundDropdownMenu(
                 motionScheme = MotionScheme.expressive(),
                 shapes = Shapes()
             ) {
-                Column(
+                AppColumn(
                     verticalArrangement = Arrangement.spacedBy(verticalSpacing)
                 ) {
                     content(onDismissRequest)

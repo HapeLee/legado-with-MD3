@@ -30,6 +30,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
@@ -72,9 +73,9 @@ fun ReadStyleContent(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth(),
+    AppColumn(
+        modifier
+            .fillMaxWidth()
     ) {
         HorizontalPager(
             state = pagerState,
@@ -100,7 +101,13 @@ fun ReadStyleContent(
                         onOpenTextTitle = onOpenTextTitle,
                         onOpenPaddingConfig = onOpenPaddingConfig,
                         onShareLayoutChange = { shareLayout ->
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
+                            onIntent(
+                                ReadBookIntent.UpdateConfig(
+                                    ConfigUpdate.ShareLayout(
+                                        shareLayout
+                                    )
+                                )
+                            )
                         },
                         onStyleSelect = { index ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
@@ -135,10 +142,14 @@ fun ReadStyleContent(
                         scope.launch {
                             pagerState.animateScrollToPage(
                                 page = index,
-                                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing
+                                )
                             )
                         }
                     }
+
                     2 -> onOpenHeaderFooterConfig()
                     3 -> onOpenMoreConfig()
                 }

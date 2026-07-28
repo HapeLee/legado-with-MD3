@@ -56,6 +56,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionActions
@@ -530,7 +531,9 @@ private fun ImportBookItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            AppColumn(
+                modifier = Modifier.weight(1f)
+            ) {
                 AppText(
                     text = item.name,
                     style = LegadoTheme.typography.bodyMedium,
@@ -551,7 +554,11 @@ private fun ImportBookItem(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         AppText(
-                            text = "${ConvertUtils.formatFileSize(item.size)} - ${AppConst.dateFormat.format(item.lastModified)}",
+                            text = "${ConvertUtils.formatFileSize(item.size)} - ${
+                                AppConst.dateFormat.format(
+                                    item.lastModified
+                                )
+                            }",
                             style = LegadoTheme.typography.labelMedium,
                             color = LegadoTheme.colorScheme.onSurfaceVariant
                         )

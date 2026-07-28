@@ -101,6 +101,7 @@ import io.legado.app.ui.main.homepage.HomepageModuleManageSheet
 import io.legado.app.ui.main.homepage.HomepageUiState
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -516,10 +517,10 @@ fun HomeScreen(
                 val viewportHeight = maxHeight
                 val hasDashboard = state.visibleSections.isNotEmpty()
 
-                Column(
-                    modifier = Modifier
+                AppColumn(
+                    Modifier
                         .fillMaxSize()
-                        .verticalScroll(dashboardScrollState),
+                        .verticalScroll(dashboardScrollState)
                 ) {
                     Spacer(
                         modifier = Modifier
@@ -642,7 +643,7 @@ private fun HomeDashboardContent(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    Column(
+    AppColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -749,7 +750,8 @@ private fun StatisticCard(
                 tint = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
-            Column {
+            AppColumn(
+            ) {
                 AppText(
                     text = title,
                     style = LegadoTheme.typography.bodySmall,
@@ -803,7 +805,7 @@ private fun RecentBookCard(
                 )
             }
 
-            Column(
+            AppColumn(
                 modifier = Modifier.padding(
                     start = 16.dp,
                     end = 16.dp,
@@ -1048,8 +1050,8 @@ private fun ReadingGoalCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1187,7 +1189,7 @@ private fun WebDavBackupCard(
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -1274,7 +1276,7 @@ private fun HomeDashboardSettingsSheet(
         show = show,
         onDismissRequest = onDismissRequest,
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

@@ -59,6 +59,7 @@ import io.legado.app.ui.book.readRecord.component.StatItem
 import io.legado.app.ui.book.readRecord.component.StatsGridCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -114,8 +115,8 @@ fun ReadRecordOverviewScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
@@ -150,10 +151,12 @@ fun ReadRecordOverviewScreen(
                             readingTime.hours,
                             readingTime.minutes,
                         )
+
                         readingTime.hours > 0 -> stringResource(
                             R.string.whole_hours_format,
                             readingTime.hours,
                         )
+
                         else -> stringResource(
                             R.string.minutes_format,
                             readingTime.minutes,
@@ -164,11 +167,26 @@ fun ReadRecordOverviewScreen(
                             stringResource(R.string.reading_time),
                             readingTimeText,
                         ),
-                        StatItem(stringResource(R.string.reading_days), stringResource(R.string.days_format, state.readingDays)),
-                        StatItem(stringResource(R.string.total_read_books), stringResource(R.string.books_format, state.totalBooks)),
-                        StatItem(stringResource(R.string.finished_books), stringResource(R.string.books_format, state.finishedBooks)),
-                        StatItem(stringResource(R.string.reading_books), stringResource(R.string.books_format, state.readingBooks)),
-                        StatItem(stringResource(R.string.reading_words), ReadRecordFormatter.formatWords(state.totalWords))
+                        StatItem(
+                            stringResource(R.string.reading_days),
+                            stringResource(R.string.days_format, state.readingDays)
+                        ),
+                        StatItem(
+                            stringResource(R.string.total_read_books),
+                            stringResource(R.string.books_format, state.totalBooks)
+                        ),
+                        StatItem(
+                            stringResource(R.string.finished_books),
+                            stringResource(R.string.books_format, state.finishedBooks)
+                        ),
+                        StatItem(
+                            stringResource(R.string.reading_books),
+                            stringResource(R.string.books_format, state.readingBooks)
+                        ),
+                        StatItem(
+                            stringResource(R.string.reading_words),
+                            ReadRecordFormatter.formatWords(state.totalWords)
+                        )
                     )
                     StatsGridCard(title = stringResource(R.string.reading_data), items = stats)
                 }
@@ -283,7 +301,9 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        AppColumn(
+            Modifier.padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.GridOn,
@@ -292,7 +312,10 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText(stringResource(R.string.reading_heatmap), style = LegadoTheme.typography.titleMedium)
+                AppText(
+                    stringResource(R.string.reading_heatmap),
+                    style = LegadoTheme.typography.titleMedium
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             HeatmapCalendarSection(
@@ -317,7 +340,9 @@ fun TopReadingListCard(
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(vertical = 16.dp)) {
+        AppColumn(
+            Modifier.padding(vertical = 16.dp)
+        ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -335,7 +360,7 @@ fun TopReadingListCard(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             topBooks.forEachIndexed { index, book ->
                 var coverPath by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(book.bookName, book.bookAuthor) {
@@ -415,7 +440,9 @@ fun ReadingCalendarCard(
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        AppColumn(
+            Modifier.padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
@@ -424,10 +451,13 @@ fun ReadingCalendarCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText(stringResource(R.string.reading_calendar), style = LegadoTheme.typography.titleMedium)
+                AppText(
+                    stringResource(R.string.reading_calendar),
+                    style = LegadoTheme.typography.titleMedium
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(modifier = Modifier.fillMaxWidth()) {
                 val days = listOf("日", "一", "二", "三", "四", "五", "六")
                 days.forEach { day ->
@@ -439,7 +469,7 @@ fun ReadingCalendarCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
 
             val totalCells = ((daysInMonth + firstDayOfWeek + 6) / 7) * 7
@@ -448,7 +478,7 @@ fun ReadingCalendarCard(
                     for (j in 0 until 7) {
                         val cellIndex = i + j
                         val dayOfMonth = cellIndex - firstDayOfWeek + 1
-                        
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)

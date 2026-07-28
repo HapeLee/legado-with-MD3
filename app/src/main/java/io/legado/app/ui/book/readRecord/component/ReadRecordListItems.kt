@@ -28,6 +28,7 @@ import io.legado.app.ui.book.readRecord.ReadRecordFormatter
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.readRecord.TimelineItem
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.StringUtils.formatFriendlyDate
@@ -58,7 +59,9 @@ fun LatestReadItem(
             modifier = Modifier.size(48.dp, 64.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = record.bookName,
                 style = LegadoTheme.typography.titleMedium,
@@ -113,7 +116,9 @@ fun TimelineSessionItem(
             modifier = Modifier.size(40.dp, 56.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = session.bookName,
                 style = LegadoTheme.typography.bodyMedium,
@@ -160,7 +165,9 @@ fun ReadRecordItem(
             modifier = Modifier.size(40.dp, 56.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = detail.bookName,
                 style = LegadoTheme.typography.bodyLarge,

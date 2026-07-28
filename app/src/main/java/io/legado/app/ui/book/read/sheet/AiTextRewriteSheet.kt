@@ -38,6 +38,7 @@ import io.legado.app.ui.book.read.AiRewritePresetUi
 import io.legado.app.ui.book.read.AiTextRewriteUiState
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppRadioButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -92,9 +93,9 @@ fun AiTextRewriteSheet(
             )
         }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
+        AppColumn(
+            Modifier
+                .fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
@@ -312,8 +313,8 @@ private fun RewriteHistoryItem(
         onClick = if (enabled) onSelect else null,
         containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -402,7 +403,9 @@ private fun RewritePresetOption(
                 onClick = onSelect,
                 enabled = enabled,
             )
-            Column(modifier = Modifier.weight(1f)) {
+            AppColumn(
+                modifier = Modifier.weight(1f)
+            ) {
                 AppText(
                     text = preset.name,
                     style = LegadoTheme.typography.labelLargeEmphasized,
@@ -435,7 +438,9 @@ private fun CollapsibleTextPreview(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        AppColumn(
+            Modifier.padding(16.dp)
+        ) {
             SelectionContainer {
                 AppText(
                     text = text,

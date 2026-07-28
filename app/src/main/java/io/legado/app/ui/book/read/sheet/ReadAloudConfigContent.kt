@@ -39,6 +39,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -67,8 +68,8 @@ fun ReadAloudConfigContent(
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
-    Column(
-        modifier = Modifier.fillMaxWidth(),
+    AppColumn(
+        Modifier.fillMaxWidth()
     ) {
         CardTabRow(
             modifier = modifier,
@@ -635,8 +636,8 @@ fun ReadAloudNumberConfigSheet(
         onDismissRequest = onDismissRequest,
         title = title,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {

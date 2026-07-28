@@ -58,6 +58,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -222,14 +223,13 @@ fun ReplaceEditScreen(
                     onInsert = { text -> onIntent(ReplaceEditIntent.InsertTextAtCursor(text)) }
                 )
             }
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
                 AppTextField(
                     value = state.name,
                     onValueChange = { onIntent(ReplaceEditIntent.OnNameChange(it)) },
@@ -345,7 +345,6 @@ fun ReplaceEditScreen(
                 )
 
                 Spacer(Modifier.height(120.dp))
-
             }
 
             ManageGroupDialog(
@@ -430,7 +429,7 @@ fun ManageGroupDialog(
             if (groups.isEmpty()) {
                 AppText(stringResource(R.string.no_other_groups))
             } else {
-                Column(
+                AppColumn(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     groups.forEach { group ->

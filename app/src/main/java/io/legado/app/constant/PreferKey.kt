@@ -239,6 +239,13 @@ object PreferKey {
     const val labelContainerColorNight = "colorMD3SurfaceContainerLowNight"
     // 中间单线间隔设置
     const val enableItemDivider = "enableItemDivider"
+    const val enableContainerBackgroundImage = "enableContainerBackgroundImage"
+    const val appColumnBackgroundOpacity = "appColumnBackgroundOpacity"
+    const val glassCardBackgroundOpacity = "glassCardBackgroundOpacity"
+    const val largeContainerBackgroundImageLight = "largeContainerBackgroundImageLight"
+    const val largeContainerBackgroundImageDark = "largeContainerBackgroundImageDark"
+    const val itemBackgroundImageLight = "itemBackgroundImageLight"
+    const val itemBackgroundImageDark = "itemBackgroundImageDark"
     const val itemDividerWidth = "itemDividerWidth"
     const val itemDividerLength = "itemDividerLength"
     const val itemDividerColor = "itemDividerColor"

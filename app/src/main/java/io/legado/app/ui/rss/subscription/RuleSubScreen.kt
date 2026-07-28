@@ -58,6 +58,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.ui.widget.components.AppColumn
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -245,7 +246,7 @@ fun RuleSubEditDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.rule_subscription),
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // 替换原生的 OutlinedTextField，确保双端主题适配
                 AppTextField(
                     value = name,

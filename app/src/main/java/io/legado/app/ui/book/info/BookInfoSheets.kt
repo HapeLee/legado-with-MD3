@@ -69,6 +69,7 @@ import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -160,7 +161,9 @@ fun GroupSelectSheet(
             )
         }
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        AppColumn(
+            Modifier.fillMaxWidth()
+        ) {
             LazyColumn(
                 modifier = Modifier.heightIn(max = 560.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -255,8 +258,8 @@ fun ChangeCoverSheet(
         }
         LazyVerticalGrid(columns = GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(items, key = { it.bookUrl + it.originName }) { item ->
-                Column(
-                    modifier = Modifier
+                AppColumn(
+                    Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(4.dp))
                         .clickable {

@@ -52,6 +52,7 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -309,10 +310,10 @@ private fun RulePreviewCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .padding(12.dp)
-                    .padding(bottom = 28.dp),
+                    .padding(bottom = 28.dp)
             ) {
                 AppText(
                     text = item.rule.name,
@@ -384,8 +385,8 @@ private fun RulePreviewListItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
+            AppColumn(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = item.rule.name,
@@ -439,12 +440,11 @@ private fun ChapterListSheetContent(
     item: TocRulePreviewItem,
     onEditRule: (TxtTocRule) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
+    AppColumn(
+        Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -478,8 +478,6 @@ private fun ChapterListSheetContent(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
-
-        // Chapter list
         FastScrollLazyColumn(
             modifier = Modifier
                 .fillMaxWidth()

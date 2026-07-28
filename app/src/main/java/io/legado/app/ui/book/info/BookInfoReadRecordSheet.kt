@@ -28,6 +28,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -64,7 +65,8 @@ fun BookReadRecordSheet(
                     contentDescription = null,
                     tint = LegadoTheme.colorScheme.primary
                 )
-                Column {
+                AppColumn(
+                ) {
                     AppText(
                         text = stringResource(R.string.all_read_time),
                         style = LegadoTheme.typography.labelMedium,
@@ -140,7 +142,9 @@ private fun TimelineSessionRow(session: ReadRecordSession) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Spacer(modifier = Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        AppColumn(
+            Modifier.weight(1f)
+        ) {
             AppText(
                 text = DateUtil.format(Date(session.endTime), "HH:mm"),
                 style = LegadoTheme.typography.bodyMedium,

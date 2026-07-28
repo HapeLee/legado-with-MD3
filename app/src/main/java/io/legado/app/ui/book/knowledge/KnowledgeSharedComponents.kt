@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -54,7 +55,7 @@ fun KnowledgeEditFieldCard(
         modifier = modifier,
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -112,7 +113,7 @@ fun KnowledgeFlowTagEditor(
     var removeTagIndex by remember { mutableStateOf(-1) }
     var removeTagName by remember { mutableStateOf("") }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AppText(
             text = title,
             style = LegadoTheme.typography.titleMedium,

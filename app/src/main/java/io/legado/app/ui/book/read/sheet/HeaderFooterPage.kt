@@ -50,6 +50,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.dialog.CustomTipDialog
@@ -200,22 +201,27 @@ internal fun HeaderFooterPage(
                 headerLeft = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(value)))
             }
+
             CustomTipTarget.HEADER_MIDDLE -> {
                 headerMiddle = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(value)))
             }
+
             CustomTipTarget.HEADER_RIGHT -> {
                 headerRight = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(value)))
             }
+
             CustomTipTarget.FOOTER_LEFT -> {
                 footerLeft = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(value)))
             }
+
             CustomTipTarget.FOOTER_MIDDLE -> {
                 footerMiddle = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(value)))
             }
+
             CustomTipTarget.FOOTER_RIGHT -> {
                 footerRight = value
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(value)))
@@ -244,8 +250,8 @@ internal fun HeaderFooterPage(
         }
     }
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .fillMaxWidth()
     ) {
         CardTabRow(
@@ -258,7 +264,10 @@ internal fun HeaderFooterPage(
                     try {
                         pagerState.animateScrollToPage(
                             page = index,
-                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                            animationSpec = tween(
+                                durationMillis = 300,
+                                easing = FastOutSlowInEasing
+                            )
                         )
                     } finally {
                         clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
@@ -284,320 +293,432 @@ internal fun HeaderFooterPage(
                     }
             ) {
                 when (page) {
-                0 -> {
-                    // Header tab
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .verticalScroll(headerScrollState),
-                    ) {
-                        TinySwitchSettingItem(
-                            title = stringResource(R.string.showLine),
-                            checked = showHeaderLine,
-                            onCheckedChange = {
-                                showHeaderLine = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowHeaderLine(it)))
-                            },
-                        )
-                        val headerModes = ReadBookConfig.getHeaderModes(context)
-                        TinyDropdownSettingItem(
-                            title = stringResource(R.string.header),
-                            selectedValue = headerMode.toString(),
-                            displayEntries = headerModes.values.toTypedArray(),
-                            entryValues = headerModes.keys.map { it.toString() }.toTypedArray(),
-                            onValueChange = {
-                                headerMode = it.toInt()
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderMode(headerMode)))
-                            },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.left),
-                            value = headerLeft,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_LEFT, it) },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.middle),
-                            value = headerMiddle,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_MIDDLE, it) },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.right),
-                            value = headerRight,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.HEADER_RIGHT, it) },
-                        )
-                        TinyColorModeSettingItem(
-                            title = stringResource(R.string.header_color),
-                            dayColor = if (ReadBookConfig.tipHeaderColor != 0) {
-                                ReadBookConfig.tipHeaderColor
-                            } else {
-                                ReadBookConfig.textColor
-                            },
-                            nightColor = if (ReadBookConfig.tipHeaderColorNight != 0) {
-                                ReadBookConfig.tipHeaderColorNight
-                            } else {
-                                ReadBookConfig.textColorNight
-                            },
-                            onClickColor = { isNight ->
-                                if (isNight) {
-                                    colorPickerId = COLOR_HEADER_NIGHT
-                                    colorPickerInitial = if (ReadBookConfig.tipHeaderColorNight != 0) {
-                                        ReadBookConfig.tipHeaderColorNight
-                                    } else {
-                                        ReadBookConfig.textColorNight
-                                    }
-                                } else {
-                                    colorPickerId = COLOR_HEADER
-                                    colorPickerInitial = if (ReadBookConfig.tipHeaderColor != 0) {
-                                        ReadBookConfig.tipHeaderColor
-                                    } else {
-                                        ReadBookConfig.textColor
-                                    }
-                                }
-                                showColorPicker = true
-                            },
-                        )
-
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.padding),
-                            description = stringResource(
-                                R.string.padding_format,
-                                headerPaddingTop.toInt(),
-                                headerPaddingBottom.toInt(),
-                                headerPaddingLeft.toInt(),
-                                headerPaddingRight.toInt(),
-                            ),
-                            trailingContent = {
-                                Icon(
-                                    imageVector = if (expandHeaderPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            },
-                            onClick = {
-                                expandHeaderPadding = !expandHeaderPadding
-                            },
-                        )
-                        AnimatedVisibility(
-                            visible = expandHeaderPadding,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut(),
+                    0 -> {
+                        // Header tab
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .verticalScroll(headerScrollState),
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                PaddingSliders(
-                                    top = headerPaddingTop, bottom = headerPaddingBottom,
-                                    left = headerPaddingLeft, right = headerPaddingRight,
-                                    onTopChange = {
-                                        headerPaddingTop = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingTop(it.toInt())))
-                                    },
-                                    onBottomChange = {
-                                        headerPaddingBottom = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingBottom(it.toInt())))
-                                    },
-                                    onLeftChange = {
-                                        headerPaddingLeft = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingLeft(it.toInt())))
-                                    },
-                                    onRightChange = {
-                                        headerPaddingRight = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingRight(it.toInt())))
-                                    },
-                                )
+                            TinySwitchSettingItem(
+                                title = stringResource(R.string.showLine),
+                                checked = showHeaderLine,
+                                onCheckedChange = {
+                                    showHeaderLine = it
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(
+                                            ConfigUpdate.ShowHeaderLine(
+                                                it
+                                            )
+                                        )
+                                    )
+                                },
+                            )
+                            val headerModes = ReadBookConfig.getHeaderModes(context)
+                            TinyDropdownSettingItem(
+                                title = stringResource(R.string.header),
+                                selectedValue = headerMode.toString(),
+                                displayEntries = headerModes.values.toTypedArray(),
+                                entryValues = headerModes.keys.map { it.toString() }.toTypedArray(),
+                                onValueChange = {
+                                    headerMode = it.toInt()
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(
+                                            ConfigUpdate.HeaderMode(
+                                                headerMode
+                                            )
+                                        )
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.left),
+                                value = headerLeft,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.HEADER_LEFT,
+                                        it
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.middle),
+                                value = headerMiddle,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.HEADER_MIDDLE,
+                                        it
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.right),
+                                value = headerRight,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.HEADER_RIGHT,
+                                        it
+                                    )
+                                },
+                            )
+                            TinyColorModeSettingItem(
+                                title = stringResource(R.string.header_color),
+                                dayColor = if (ReadBookConfig.tipHeaderColor != 0) {
+                                    ReadBookConfig.tipHeaderColor
+                                } else {
+                                    ReadBookConfig.textColor
+                                },
+                                nightColor = if (ReadBookConfig.tipHeaderColorNight != 0) {
+                                    ReadBookConfig.tipHeaderColorNight
+                                } else {
+                                    ReadBookConfig.textColorNight
+                                },
+                                onClickColor = { isNight ->
+                                    if (isNight) {
+                                        colorPickerId = COLOR_HEADER_NIGHT
+                                        colorPickerInitial =
+                                            if (ReadBookConfig.tipHeaderColorNight != 0) {
+                                                ReadBookConfig.tipHeaderColorNight
+                                            } else {
+                                                ReadBookConfig.textColorNight
+                                            }
+                                    } else {
+                                        colorPickerId = COLOR_HEADER
+                                        colorPickerInitial =
+                                            if (ReadBookConfig.tipHeaderColor != 0) {
+                                                ReadBookConfig.tipHeaderColor
+                                            } else {
+                                                ReadBookConfig.textColor
+                                            }
+                                    }
+                                    showColorPicker = true
+                                },
+                            )
+
+                            TinyClickableSettingItem(
+                                title = stringResource(R.string.padding),
+                                description = stringResource(
+                                    R.string.padding_format,
+                                    headerPaddingTop.toInt(),
+                                    headerPaddingBottom.toInt(),
+                                    headerPaddingLeft.toInt(),
+                                    headerPaddingRight.toInt(),
+                                ),
+                                trailingContent = {
+                                    Icon(
+                                        imageVector = if (expandHeaderPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                },
+                                onClick = {
+                                    expandHeaderPadding = !expandHeaderPadding
+                                },
+                            )
+                            AnimatedVisibility(
+                                visible = expandHeaderPadding,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    PaddingSliders(
+                                        top = headerPaddingTop, bottom = headerPaddingBottom,
+                                        left = headerPaddingLeft, right = headerPaddingRight,
+                                        onTopChange = {
+                                            headerPaddingTop = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.HeaderPaddingTop(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onBottomChange = {
+                                            headerPaddingBottom = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.HeaderPaddingBottom(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onLeftChange = {
+                                            headerPaddingLeft = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.HeaderPaddingLeft(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onRightChange = {
+                                            headerPaddingRight = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.HeaderPaddingRight(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                1 -> {
-                    // Footer tab
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .verticalScroll(footerScrollState),
-                    ) {
-                        TinySwitchSettingItem(
-                            title = stringResource(R.string.showLine),
-                            checked = showFooterLine,
-                            onCheckedChange = {
-                                showFooterLine = it
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowFooterLine(it)))
-                            },
-                        )
-                        val footerModes = ReadBookConfig.getFooterModes(context)
-                        TinyDropdownSettingItem(
-                            title = stringResource(R.string.footer),
-                            selectedValue = footerMode.toString(),
-                            displayEntries = footerModes.values.toTypedArray(),
-                            entryValues = footerModes.keys.map { it.toString() }.toTypedArray(),
-                            onValueChange = {
-                                footerMode = it.toInt()
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterMode(footerMode)))
-                            },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.left),
-                            value = footerLeft,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_LEFT, it) },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.middle),
-                            value = footerMiddle,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_MIDDLE, it) },
-                        )
-                        TipPositionDropdown(
-                            label = stringResource(R.string.right),
-                            value = footerRight,
-                            tipNames = tipNames,
-                            tipValues = tipValues,
-                            onValueChange = { handleTipChange(CustomTipTarget.FOOTER_RIGHT, it) },
-                        )
-                        TinyColorModeSettingItem(
-                            title = stringResource(R.string.footer_color),
-                            dayColor = if (ReadBookConfig.tipFooterColor != 0) {
-                                ReadBookConfig.tipFooterColor
-                            } else {
-                                ReadBookConfig.textColor
-                            },
-                            nightColor = if (ReadBookConfig.tipFooterColorNight != 0) {
-                                ReadBookConfig.tipFooterColorNight
-                            } else {
-                                ReadBookConfig.textColorNight
-                            },
-                            onClickColor = { isNight ->
-                                if (isNight) {
-                                    colorPickerId = COLOR_FOOTER_NIGHT
-                                    colorPickerInitial = if (ReadBookConfig.tipFooterColorNight != 0) {
-                                        ReadBookConfig.tipFooterColorNight
-                                    } else {
-                                        ReadBookConfig.textColorNight
-                                    }
-                                } else {
-                                    colorPickerId = COLOR_FOOTER
-                                    colorPickerInitial = if (ReadBookConfig.tipFooterColor != 0) {
-                                        ReadBookConfig.tipFooterColor
-                                    } else {
-                                        ReadBookConfig.textColor
-                                    }
-                                }
-                                showColorPicker = true
-                            },
-                        )
-
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.padding),
-                            description = stringResource(
-                                R.string.padding_format,
-                                footerPaddingTop.toInt(),
-                                footerPaddingBottom.toInt(),
-                                footerPaddingLeft.toInt(),
-                                footerPaddingRight.toInt(),
-                            ),
-                            trailingContent = {
-                                Icon(
-                                    imageVector = if (expandFooterPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            },
-                            onClick = {
-                                expandFooterPadding = !expandFooterPadding
-                            },
-                        )
-                        AnimatedVisibility(
-                            visible = expandFooterPadding,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut(),
+                    1 -> {
+                        // Footer tab
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .verticalScroll(footerScrollState),
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                PaddingSliders(
-                                    top = footerPaddingTop, bottom = footerPaddingBottom,
-                                    left = footerPaddingLeft, right = footerPaddingRight,
-                                    onTopChange = {
-                                        footerPaddingTop = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingTop(it.toInt())))
-                                    },
-                                    onBottomChange = {
-                                        footerPaddingBottom = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingBottom(it.toInt())))
-                                    },
-                                    onLeftChange = {
-                                        footerPaddingLeft = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingLeft(it.toInt())))
-                                    },
-                                    onRightChange = {
-                                        footerPaddingRight = it
-                                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingRight(it.toInt())))
-                                    },
-                                )
+                            TinySwitchSettingItem(
+                                title = stringResource(R.string.showLine),
+                                checked = showFooterLine,
+                                onCheckedChange = {
+                                    showFooterLine = it
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(
+                                            ConfigUpdate.ShowFooterLine(
+                                                it
+                                            )
+                                        )
+                                    )
+                                },
+                            )
+                            val footerModes = ReadBookConfig.getFooterModes(context)
+                            TinyDropdownSettingItem(
+                                title = stringResource(R.string.footer),
+                                selectedValue = footerMode.toString(),
+                                displayEntries = footerModes.values.toTypedArray(),
+                                entryValues = footerModes.keys.map { it.toString() }.toTypedArray(),
+                                onValueChange = {
+                                    footerMode = it.toInt()
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(
+                                            ConfigUpdate.FooterMode(
+                                                footerMode
+                                            )
+                                        )
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.left),
+                                value = footerLeft,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.FOOTER_LEFT,
+                                        it
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.middle),
+                                value = footerMiddle,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.FOOTER_MIDDLE,
+                                        it
+                                    )
+                                },
+                            )
+                            TipPositionDropdown(
+                                label = stringResource(R.string.right),
+                                value = footerRight,
+                                tipNames = tipNames,
+                                tipValues = tipValues,
+                                onValueChange = {
+                                    handleTipChange(
+                                        CustomTipTarget.FOOTER_RIGHT,
+                                        it
+                                    )
+                                },
+                            )
+                            TinyColorModeSettingItem(
+                                title = stringResource(R.string.footer_color),
+                                dayColor = if (ReadBookConfig.tipFooterColor != 0) {
+                                    ReadBookConfig.tipFooterColor
+                                } else {
+                                    ReadBookConfig.textColor
+                                },
+                                nightColor = if (ReadBookConfig.tipFooterColorNight != 0) {
+                                    ReadBookConfig.tipFooterColorNight
+                                } else {
+                                    ReadBookConfig.textColorNight
+                                },
+                                onClickColor = { isNight ->
+                                    if (isNight) {
+                                        colorPickerId = COLOR_FOOTER_NIGHT
+                                        colorPickerInitial =
+                                            if (ReadBookConfig.tipFooterColorNight != 0) {
+                                                ReadBookConfig.tipFooterColorNight
+                                            } else {
+                                                ReadBookConfig.textColorNight
+                                            }
+                                    } else {
+                                        colorPickerId = COLOR_FOOTER
+                                        colorPickerInitial =
+                                            if (ReadBookConfig.tipFooterColor != 0) {
+                                                ReadBookConfig.tipFooterColor
+                                            } else {
+                                                ReadBookConfig.textColor
+                                            }
+                                    }
+                                    showColorPicker = true
+                                },
+                            )
+
+                            TinyClickableSettingItem(
+                                title = stringResource(R.string.padding),
+                                description = stringResource(
+                                    R.string.padding_format,
+                                    footerPaddingTop.toInt(),
+                                    footerPaddingBottom.toInt(),
+                                    footerPaddingLeft.toInt(),
+                                    footerPaddingRight.toInt(),
+                                ),
+                                trailingContent = {
+                                    Icon(
+                                        imageVector = if (expandFooterPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                },
+                                onClick = {
+                                    expandFooterPadding = !expandFooterPadding
+                                },
+                            )
+                            AnimatedVisibility(
+                                visible = expandFooterPadding,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    PaddingSliders(
+                                        top = footerPaddingTop, bottom = footerPaddingBottom,
+                                        left = footerPaddingLeft, right = footerPaddingRight,
+                                        onTopChange = {
+                                            footerPaddingTop = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.FooterPaddingTop(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onBottomChange = {
+                                            footerPaddingBottom = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.FooterPaddingBottom(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onLeftChange = {
+                                            footerPaddingLeft = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.FooterPaddingLeft(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                        onRightChange = {
+                                            footerPaddingRight = it
+                                            onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.FooterPaddingRight(
+                                                        it.toInt()
+                                                    )
+                                                )
+                                            )
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                2 -> {
-                    // Global tab
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        SectionTitle(stringResource(R.string.read_config_divider_line))
-                        TinyColorSettingItem(
-                            title = stringResource(R.string.tip_divider_color),
-                            colorValue = when (ReadBookConfig.tipDividerColor) {
-                                -1 -> context.getCompatColor(R.color.divider)
-                                0 -> ReadBookConfig.textColor
-                                else -> ReadBookConfig.tipDividerColor
-                            },
-                            onClick = {
-                                colorPickerId = COLOR_DIVIDER
-                                colorPickerInitial = when (ReadBookConfig.tipDividerColor) {
+                    2 -> {
+                        // Global tab
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            SectionTitle(stringResource(R.string.read_config_divider_line))
+                            TinyColorSettingItem(
+                                title = stringResource(R.string.tip_divider_color),
+                                colorValue = when (ReadBookConfig.tipDividerColor) {
                                     -1 -> context.getCompatColor(R.color.divider)
                                     0 -> ReadBookConfig.textColor
                                     else -> ReadBookConfig.tipDividerColor
-                                }
-                                showColorPicker = true
-                            },
-                        )
+                                },
+                                onClick = {
+                                    colorPickerId = COLOR_DIVIDER
+                                    colorPickerInitial = when (ReadBookConfig.tipDividerColor) {
+                                        -1 -> context.getCompatColor(R.color.divider)
+                                        0 -> ReadBookConfig.textColor
+                                        else -> ReadBookConfig.tipDividerColor
+                                    }
+                                    showColorPicker = true
+                                },
+                            )
 
-                        SectionTitle(stringResource(R.string.text_typeface))
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.header_font),
-                            description = stringResource(R.string.select_font),
-                            imageVector = Icons.Default.TextFields,
-                            onClick = { showFontSelect = true },
-                        )
-                        TinySliderSettingItem(
-                            title = stringResource(R.string.header_font_size),
-                            value = headerFontSize.toFloat(),
-                            valueRange = 0f..100f,
-                            onValueChange = { value ->
-                                headerFontSize = value.toInt()
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFontSize(value.toInt())))
-                                onIntent(ReadBookIntent.SaveReadStyleConfig)
-                            },
-                        )
+                            SectionTitle(stringResource(R.string.text_typeface))
+                            TinyClickableSettingItem(
+                                title = stringResource(R.string.header_font),
+                                description = stringResource(R.string.select_font),
+                                imageVector = Icons.Default.TextFields,
+                                onClick = { showFontSelect = true },
+                            )
+                            TinySliderSettingItem(
+                                title = stringResource(R.string.header_font_size),
+                                value = headerFontSize.toFloat(),
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    headerFontSize = value.toInt()
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(
+                                            ConfigUpdate.HeaderFontSize(
+                                                value.toInt()
+                                            )
+                                        )
+                                    )
+                                    onIntent(ReadBookIntent.SaveReadStyleConfig)
+                                },
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
 
     // Color picker
     ColorPickerSheet(

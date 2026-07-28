@@ -142,11 +142,10 @@ fun FontSelectGrid(
 
     val showLoading = folderState is FontFolderState.Loading || filesLoading
 
-    Column(
-        modifier = Modifier
+    io.legado.app.ui.widget.components.AppColumn(
+        Modifier
             .fillMaxWidth()
     ) {
-        // Search
         SearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
@@ -192,8 +191,6 @@ fun FontSelectGrid(
         )
 
         Spacer(Modifier.height(4.dp))
-
-        // Font grid
         if (showLoading) {
             Box(
                 modifier = Modifier

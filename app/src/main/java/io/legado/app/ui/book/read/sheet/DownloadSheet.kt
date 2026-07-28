@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 
 @Composable
 fun DownloadSheet(
@@ -34,7 +35,7 @@ fun DownloadSheet(
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.offline_cache)) },
         text = {
-            androidx.compose.foundation.layout.Column {
+            AppColumn {
                 OutlinedTextField(
                     value = startChapter,
                     onValueChange = { startChapter = it },

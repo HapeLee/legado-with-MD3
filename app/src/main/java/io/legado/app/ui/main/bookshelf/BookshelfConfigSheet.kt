@@ -35,6 +35,7 @@ import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
@@ -68,8 +69,8 @@ fun BookshelfConfigSheet(
         show = show,
         onDismissRequest = onDismissRequest
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .animateContentSize(),
@@ -107,8 +108,6 @@ fun BookshelfConfigSheet(
                     onUpdate { it.copy(bookshelfSort = value.toInt()) }
                 }
             )
-
-            // Sort Order
             CompactDropdownSettingItem(
                 title = stringResource(R.string.sort_order),
                 selectedValue = settings.bookshelfSortOrder.toString(),
@@ -123,16 +122,12 @@ fun BookshelfConfigSheet(
             )
 
             PillHeaderDivider(title = stringResource(R.string.bookshelf_section_layout))
-
-            // Layout Mode (non-folder)
             val layoutMode =
                 if (isLandscape) settings.bookshelfLayoutModeLandscape
                 else settings.bookshelfLayoutModePortrait
             val folderLayoutMode =
                 if (isLandscape) settings.bookshelfFolderLayoutModeLandscape
                 else settings.bookshelfFolderLayoutModePortrait
-
-            // Folder Layout Mode
             AnimatedVisibility(visible = settings.bookGroupStyle == 2) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
@@ -140,7 +135,10 @@ fun BookshelfConfigSheet(
                         title = stringResource(R.string.folder_layout_mode),
                         description = stringResource(if (isLandscape) R.string.screen_landscape else R.string.screen_portrait),
                         selectedValue = folderLayoutMode.toString(),
-                        displayEntries = arrayOf(stringResource(R.string.layout_mode_list), stringResource(R.string.layout_mode_grid)),
+                        displayEntries = arrayOf(
+                            stringResource(R.string.layout_mode_list),
+                            stringResource(R.string.layout_mode_grid)
+                        ),
                         entryValues = arrayOf("0", "1"),
                         onValueChange = { value ->
                             onUpdate {
@@ -216,7 +214,11 @@ fun BookshelfConfigSheet(
                             CompactDropdownSettingItem(
                                 title = stringResource(R.string.folder_list_style),
                                 selectedValue = settings.bookshelfGroupListStyle.toString(),
-                                displayEntries = arrayOf(stringResource(R.string.group), stringResource(R.string.compact_list), stringResource(R.string.horizontal_cover_count)),
+                                displayEntries = arrayOf(
+                                    stringResource(R.string.group),
+                                    stringResource(R.string.compact_list),
+                                    stringResource(R.string.horizontal_cover_count)
+                                ),
                                 entryValues = arrayOf("0", "1", "2"),
                                 onValueChange = { value ->
                                     onUpdate { it.copy(bookshelfGroupListStyle = value.toInt()) }
@@ -453,7 +455,12 @@ fun BookshelfConfigSheet(
                             ) {
                                 CompactSliderSettingItem(
                                     title = stringResource(R.string.synopsis_lines),
-                                    description = if (settings.bookshelfIntroMaxLines == 0) stringResource(R.string.show_all_synopsis) else stringResource(R.string.show_lines_synopsis, settings.bookshelfIntroMaxLines),
+                                    description = if (settings.bookshelfIntroMaxLines == 0) stringResource(
+                                        R.string.show_all_synopsis
+                                    ) else stringResource(
+                                        R.string.show_lines_synopsis,
+                                        settings.bookshelfIntroMaxLines
+                                    ),
                                     value = settings.bookshelfIntroMaxLines.toFloat(),
                                     valueRange = 0f..10f,
                                     steps = 10,
@@ -604,7 +611,10 @@ fun BookshelfConfigSheet(
 
             CompactSliderSettingItem(
                 title = stringResource(R.string.bookshelf_update_limit),
-                description = if (settings.bookshelfRefreshingLimit <= 0) stringResource(R.string.refresh_limit_unlimited) else stringResource(R.string.refresh_limit_books, settings.bookshelfRefreshingLimit),
+                description = if (settings.bookshelfRefreshingLimit <= 0) stringResource(R.string.refresh_limit_unlimited) else stringResource(
+                    R.string.refresh_limit_books,
+                    settings.bookshelfRefreshingLimit
+                ),
                 value = settings.bookshelfRefreshingLimit.toFloat(),
                 valueRange = 0f..100f,
                 steps = 100,
@@ -614,7 +624,6 @@ fun BookshelfConfigSheet(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-
         }
 
         LabelColorManageSheet(

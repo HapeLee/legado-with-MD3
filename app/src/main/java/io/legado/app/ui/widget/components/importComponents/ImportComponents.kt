@@ -70,7 +70,8 @@ fun SourceInputDialog(
         onDismissRequest = onDismissRequest,
         title = title,
         content = {
-            Column {
+            io.legado.app.ui.widget.components.AppColumn(
+            ) {
                 AppTextField(
                     value = text,
                     onValueChange = { text = it },
@@ -82,7 +83,10 @@ fun SourceInputDialog(
 
                 if (historyValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    AppText(stringResource(R.string.history_label), style = LegadoTheme.typography.labelSmall)
+                    AppText(
+                        stringResource(R.string.history_label),
+                        style = LegadoTheme.typography.labelSmall
+                    )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(historyValues) { history ->
                             AssistChip(

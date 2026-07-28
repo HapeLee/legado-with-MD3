@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -159,7 +160,7 @@ private fun CharacterDetailContent(
     var dialogVoiceGender by remember(state.voiceGender) { mutableStateOf(state.voiceGender) }
     var dialogVoiceAgeBand by remember(state.voiceAgeBand) { mutableStateOf(state.voiceAgeBand) }
 
-    Column(
+    AppColumn(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -244,7 +245,7 @@ private fun CharacterDetailContent(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { showProfileDialog = false },
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            AppColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AppTextField(
                     value = dialogName,
                     onValueChange = { dialogName = it },
@@ -338,7 +339,7 @@ private fun CharacterDeleteDialog(
         dismissText = stringResource(R.string.cancel),
         onDismiss = onDismiss,
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 CheckboxItem(
                     stringResource(R.string.character_delete_relations),
                     checked = deleteRelations
@@ -473,8 +474,8 @@ private fun CharacterHeader(
             }
         }
 
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(12.dp))
                 .clickable(onClick = onInfoClick)
@@ -526,7 +527,7 @@ private fun CharacterReadonlySection(
     isEmpty: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    AppColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AppText(text = title, style = LegadoTheme.typography.titleMedium)
         if (isEmpty) {
             GlassCard {
@@ -554,7 +555,7 @@ private fun InfoCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

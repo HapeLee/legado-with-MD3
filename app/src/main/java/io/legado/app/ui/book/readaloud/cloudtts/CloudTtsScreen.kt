@@ -49,6 +49,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.profile
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -689,7 +690,7 @@ private fun CloudTtsEngineEditorContent(
     val profile = provider.profile
     LazyColumn {
         item {
-            Column(
+            AppColumn(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 MenuButton(profile.displayName) { providerMenu = true }

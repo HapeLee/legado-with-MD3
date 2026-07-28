@@ -46,6 +46,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -220,7 +221,7 @@ private fun BookCacheManageScreen(
         }
     ) { paddingValues ->
         if (state.isLoading) {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
@@ -419,8 +420,8 @@ private fun BookCacheBookCard(
         onClick = onToggleExpanded,
         containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -492,10 +493,12 @@ private fun BookCacheBookCard(
                                 R.string.pause_book_download,
                                 item.name
                             )
+
                             item.isPaused -> stringResource(
                                 R.string.resume_book_download,
                                 item.name
                             )
+
                             else -> stringResource(R.string.start_book_download, item.name)
                         }
                     )
@@ -540,8 +543,8 @@ private fun BookCacheChapterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .weight(1f)
                 .semantics(mergeDescendants = true) {
                     contentDescription = chapterDescription

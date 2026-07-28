@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -52,7 +53,7 @@ fun CheckboxItem(
                     .alpha(alpha)
                     .clearAndSetSemantics { }
             )
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 12.dp)

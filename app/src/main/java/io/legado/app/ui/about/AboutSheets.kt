@@ -24,6 +24,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -43,7 +44,7 @@ fun MarkdownSheet(
         title = title,
     ) {
         SelectionContainer {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
@@ -78,8 +79,8 @@ fun UpdateSheet(
         onDismissRequest = onDismissRequest,
         title = title,
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {

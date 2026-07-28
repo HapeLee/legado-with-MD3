@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
@@ -33,7 +34,7 @@ fun OptionSheet(
         title = title,
         onDismissRequest = onDismissRequest
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -66,7 +67,7 @@ fun RowScope.OptionCard(
         containerColor = LegadoTheme.colorScheme.onSheetContent,
         elevation = 2.dp
     ) {
-        Column(
+        AppColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center

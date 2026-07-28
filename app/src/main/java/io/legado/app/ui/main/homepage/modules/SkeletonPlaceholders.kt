@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 
 @Composable
@@ -84,7 +86,8 @@ fun WaterfallSkeletonItem(modifier: Modifier = Modifier) {
         modifier = modifier,
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column {
+        AppColumn(
+        ) {
             SkeletonBox(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -135,7 +138,9 @@ fun WaterfallSkeletonItem(modifier: Modifier = Modifier) {
 
 @Composable
 fun GridSkeletonItem(modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
+    AppColumn(
+        modifier
+    ) {
         SkeletonBox(
             modifier = Modifier
                 .fillMaxWidth()
@@ -157,7 +162,7 @@ fun GridSkeletonModule(
     columns: Int = 3,
     rows: Int = 2,
 ) {
-    Column(
+    AppColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -200,11 +205,11 @@ fun BannerSkeletonModule(
 
 @Composable
 fun CardSkeletonItem(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .width(120.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(LegadoTheme.colorScheme.surfaceContainerLow),
+            .background(LegadoTheme.colorScheme.surfaceContainerLow)
     ) {
         SkeletonBox(
             modifier = Modifier
@@ -255,13 +260,15 @@ fun RankingSkeletonModule(
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         cornerRadius = 16.dp,
     ) {
-        Column(modifier = Modifier.padding(top = 12.dp)) {
+        AppColumn(
+            Modifier.padding(top = 12.dp)
+        ) {
             repeat(rows) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 4.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SkeletonBox(
                         modifier = Modifier
@@ -305,13 +312,15 @@ fun GridRankingSkeletonModule(
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         cornerRadius = 20.dp,
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        AppColumn(
+            Modifier.padding(12.dp)
+        ) {
             repeat(rows) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SkeletonBox(
                         modifier = Modifier
@@ -354,8 +363,8 @@ fun HomepageModuleSkeleton(
 ) {
     when (type) {
         HomepageModuleType.Waterfall -> {
-            Column(
-                modifier = modifier,
+            AppColumn(
+                modifier = Modifier,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 repeat(2) {

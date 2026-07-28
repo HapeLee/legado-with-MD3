@@ -37,6 +37,7 @@ import io.legado.app.R
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -235,7 +236,7 @@ private fun VoiceCastingCard(
                 }
             },
             supportingContent = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                AppColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (item.description.isNotBlank()) {
                         AnimatedTextLine(
                             text = item.description,
@@ -281,7 +282,7 @@ private fun VoicePickerSheet(
         title = picker?.let { subjectTitle(it.kind, it.name) }.orEmpty(),
     ) {
         if (picker == null) return@AppModalBottomSheet
-        Column(
+        AppColumn(
             modifier = Modifier
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),

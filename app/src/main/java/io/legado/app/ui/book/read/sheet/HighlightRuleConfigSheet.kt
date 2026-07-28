@@ -32,6 +32,7 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.configNames
 import io.legado.app.ui.book.read.HighlightRuleConfigUiState
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -164,10 +165,10 @@ fun HighlightRuleConfigSheet(
             }
         },
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 16.dp)
         ) {
             LazyColumn(
                 state = listState,

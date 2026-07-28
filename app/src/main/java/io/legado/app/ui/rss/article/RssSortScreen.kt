@@ -50,6 +50,7 @@ import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.read.title
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -425,7 +426,9 @@ private fun RssReadRecordSheet(
                         onClick = { onOpen(record) },
                         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
                     ) {
-                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        AppColumn(
+                            Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
                             AppText(
                                 text = record.title.orEmpty(),
                                 style = LegadoTheme.typography.titleSmall,
@@ -469,8 +472,8 @@ private fun RssSourceVariableSheet(
             )
         }
     ) { sheetState ->
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()

@@ -56,6 +56,7 @@ import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -318,8 +319,8 @@ fun RssSourceGridItem(
     val openLabel = stringResource(R.string.open)
     val moreMenuLabel = stringResource(R.string.more_menu)
 
-    Column(
-        modifier = modifier
+    AppColumn(
+        modifier
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
                 role = Role.Button,

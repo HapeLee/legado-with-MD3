@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.HomepageBookItemUi
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import kotlinx.collections.immutable.ImmutableList
 
@@ -34,7 +35,7 @@ fun GridModule(
     if (maxRows != null) {
         rows = rows.take(maxRows)
     }
-    Column(
+    AppColumn(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

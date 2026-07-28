@@ -55,6 +55,7 @@ import io.legado.app.ui.util.pageContentPadding
 import io.legado.app.ui.util.pageScrollModifiers
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.util.shouldShowSplitPane
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.effect.BgEffectBackground
 import io.legado.app.ui.widget.components.effect.ColorBlendToken
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -248,8 +249,8 @@ private fun AboutContent(
         bgModifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier,
         alpha = { 1f - scrollProgress },
     ) {
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .fillMaxWidth()
                 .padding(
                     top = logoPadding.calculateTopPadding() + 52.dp,
@@ -355,10 +356,10 @@ private fun AboutContent(
             }
 
             item(key = "about") {
-                Column(
-                    modifier = Modifier
+                AppColumn(
+                    Modifier
                         .fillParentMaxHeight()
-                        .padding(bottom = scrollPadding.calculateBottomPadding()),
+                        .padding(bottom = scrollPadding.calculateBottomPadding())
                 ) {
                     Card(
                         modifier = Modifier
@@ -439,7 +440,14 @@ private fun AboutContent(
                         )
                         ArrowPreference(
                             title = stringResource(R.string.license),
-                            onClick = { onIntent(AboutIntent.ShowMdFile(licenseTitle, "LICENSE.md")) },
+                            onClick = {
+                                onIntent(
+                                    AboutIntent.ShowMdFile(
+                                        licenseTitle,
+                                        "LICENSE.md"
+                                    )
+                                )
+                            },
                         )
                         ArrowPreference(
                             title = stringResource(R.string.disclaimer),

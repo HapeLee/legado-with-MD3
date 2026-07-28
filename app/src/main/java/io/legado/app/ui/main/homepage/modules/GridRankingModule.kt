@@ -35,6 +35,7 @@ import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
@@ -75,7 +76,7 @@ fun GridRankingModule(
             containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             cornerRadius = 20.dp
         ) {
-            Column(
+            AppColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp, horizontal = 12.dp)
@@ -96,7 +97,6 @@ fun GridRankingModule(
                         sharedCoverKey = sharedCoverKey,
                     )
                 }
-                // 占位逻辑
                 repeat(rows - page.size) {
                     Spacer(modifier = Modifier.height(76.dp))
                 }
@@ -182,8 +182,8 @@ private fun GridRankingItem(
         )
 
         // 3. 文字信息
-        Column(
-            modifier = Modifier
+        AppColumn(
+            Modifier
                 .padding(start = 4.dp)
                 .weight(1f)
         ) {

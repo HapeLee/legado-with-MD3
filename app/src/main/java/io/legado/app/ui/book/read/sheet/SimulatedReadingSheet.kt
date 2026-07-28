@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppColumn
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import java.time.Instant
 import java.time.LocalDate
@@ -53,7 +54,8 @@ fun SimulatedReadingSheet(
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.simulated_reading)) },
         text = {
-            Column {
+            AppColumn(
+            ) {
                 OutlinedTextField(
                     value = startDate.format(dateFormatter),
                     onValueChange = {},
@@ -72,7 +74,6 @@ fun SimulatedReadingSheet(
                     onCheckedChange = { enabled = it },
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                // Start chapter + daily chapters
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = startChapter,
