@@ -1050,9 +1050,16 @@ sealed interface ConfigUpdateAction {
     data object InvalidateTextPage : ConfigUpdateAction
     data object UpdateLayout : ConfigUpdateAction
     data object RebuildWholeBookPageIndex : ConfigUpdateAction
+    data object UpdateWholeBookPageDemand : ConfigUpdateAction
     data object SubmitRenderTask : ConfigUpdateAction
     data object UpdatePageAnim : ConfigUpdateAction
 }
+
+private val HEADER_FOOTER_TIP_ACTIONS = setOf(
+    ConfigUpdateAction.UpdateStyle,
+    ConfigUpdateAction.UpdateContent,
+    ConfigUpdateAction.UpdateWholeBookPageDemand,
+)
 
 /**
  * Typed config mutations replace direct writes to the legacy ReadBookConfig facade.
@@ -1146,40 +1153,40 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipHeaderLeft(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipHeaderMiddle(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipHeaderRight(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterLeft(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterMiddle(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterRight(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipHeaderLeft(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipHeaderMiddle(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipHeaderRight(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipFooterLeft(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipFooterMiddle(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class CustomTipFooterRight(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class HeaderFont(val path: String) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)

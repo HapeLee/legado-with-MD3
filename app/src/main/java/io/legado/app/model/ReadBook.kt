@@ -149,11 +149,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             LocalPageEstimateMetrics.record(metric)
             AppLog.putDebug("PageEstimate $metric")
         },
-        onStateChanged = {
-            launch {
-                callBack?.upContent(resetPageOffset = false)
-            }
-        },
     )
     //占位
     private var currentReadLength: Long = 10L
@@ -228,7 +223,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun requestWholeBookPageEstimate() {
         val book = book ?: return
+        if (!FullBookPaginator.isNeeded()) {
+            FullBookPaginator.stop()
+            wholeBookPageCoordinator.clear()
+            return
+        }
         if (book.isImage || book.isPdf) {
+            FullBookPaginator.stop()
             wholeBookPageCoordinator.clear()
             return
         }
@@ -276,7 +277,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val showChapterTitle = ReadBookConfig.titleMode != 2
         val wholeBookAverageChapterLength = book.wordCount.toContentLength()
             ?.div(chapterSize.coerceAtLeast(1))
-        wholeBookPageCoordinator.requestEstimate(
+        val layoutGeneration = wholeBookPageCoordinator.requestEstimate(
             config = config,
             bookId = bookUrl,
             fallbackContentLength = wholeBookAverageChapterLength,
@@ -311,22 +312,35 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 )
             }
         }
-        FullBookPaginator.startIfNeeded()
+        FullBookPaginator.startIfNeeded(layoutGeneration)
+    }
+
+    fun updateWholeBookPageDemand() {
+        if (!FullBookPaginator.isNeeded()) {
+            FullBookPaginator.stop()
+            wholeBookPageCoordinator.clear()
+            return
+        }
+        if (wholeBookPageCoordinator.hasEstimate()) {
+            FullBookPaginator.startIfNeeded(wholeBookPageCoordinator.generation)
+        } else {
+            requestWholeBookPageEstimate()
+        }
     }
 
     fun getWholeBookPageState(chapterIndex: Int, localPageIndex: Int): WholeBookPageState? =
         wholeBookPageCoordinator.getState(chapterIndex, localPageIndex)
 
-    /** Performs local-book precision pagination and feeds the existing whole-book coordinator. */
-    suspend fun paginateLocalBookPages(onProgress: (completed: Int, total: Int) -> Unit) {
+    /** Silently paginates uncached local-book chapters and feeds the whole-book coordinator. */
+    suspend fun paginateLocalBookPages(layoutGeneration: Long) {
         val book = book?.takeIf { it.isLocal && !it.isImage && !it.isPdf } ?: return
-        val generation = wholeBookPageCoordinator.generation
+        if (!wholeBookPageCoordinator.awaitInitialized(layoutGeneration)) return
         val chapters = withContext(IO) { appDb.bookChapterDao.getChapterList(book.bookUrl) }
         val processor = ContentProcessor.get(book)
         val useReplaceRule = book.getUseReplaceRule(AppConfig.replaceEnableDefault)
-        for ((completed, chapter) in chapters.withIndex()) {
+        for (chapter in chapters) {
             ensureActive()
-            onProgress(completed, chapters.size)
+            if (wholeBookPageCoordinator.isChapterExact(chapter.index, layoutGeneration)) continue
             val content = withContext(IO) { BookHelp.getContent(book, chapter) } ?: continue
             val displayTitle = chapter.getDisplayTitle(
                 processor.getTitleReplaceRules(),
@@ -334,6 +348,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chineseConverterType = AppConfig.chineseConverterType,
             )
             val processed = processor.getContent(book, chapter, content, includeTitle = false)
+            wholeBookPageCoordinator.updateChapterContent(
+                chapterIndex = chapter.index,
+                actualLength = processed.textList
+                    .sumOf { it.length.toLong() }
+                    .coerceAtMost(Int.MAX_VALUE.toLong())
+                    .toInt(),
+                contentHash = if (book.isLocalTxt) {
+                    ChapterContentHasher.fromLocalOffsets(chapter.start, chapter.end)
+                } else {
+                    ChapterContentHasher.fromContent(content)
+                },
+                layoutGeneration = layoutGeneration,
+            )
             val textChapter = ChapterProvider.getTextChapterAsync(
                 this, book, chapter, displayTitle, processed, chapters.size,
             )
@@ -348,13 +375,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 wholeBookPageCoordinator.correctChapter(
                     chapterIndex = chapter.index,
                     realPageCount = pageCount.coerceAtLeast(1),
-                    layoutGeneration = generation,
+                    layoutGeneration = layoutGeneration,
                 )
             } finally {
                 textChapter.cancelLayout()
             }
         }
-        onProgress(chapters.size, chapters.size)
     }
 
     private fun String?.toContentLength(): Int? {

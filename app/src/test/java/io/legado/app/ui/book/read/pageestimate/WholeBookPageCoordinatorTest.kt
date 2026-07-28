@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read.pageestimate
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -70,6 +71,21 @@ class WholeBookPageCoordinatorTest {
         coordinator.clear()
         assertNull(coordinator.getState(0, 0))
         assertEquals(newGeneration + 1, coordinator.generation)
+    }
+
+    @Test
+    fun `waiting paginator is released when estimate generation is replaced`() = runBlocking {
+        val loaderGate = CompletableDeferred<Unit>()
+        val coordinator = WholeBookPageCoordinator(this, ChapterPageEstimator { 3f })
+        val oldGeneration = coordinator.requestEstimate(config, BOOK_ID) {
+            loaderGate.await()
+            chapters(1)
+        }
+        val oldReady = async { coordinator.awaitInitialized(oldGeneration) }
+
+        coordinator.requestEstimate(config, BOOK_ID) { chapters(1) }
+
+        assertFalse(withTimeout(2_000) { oldReady.await() })
     }
 
     @Test
@@ -231,10 +247,12 @@ class WholeBookPageCoordinatorTest {
                 ChapterLengthInfo(1, "chapter-1", 10, contentLength = 100, contentHash = 12L),
             )
         }
-        awaitState(coordinator)
+        assertTrue(coordinator.awaitInitialized(generation))
 
         assertEquals(27, coordinator.getState(0, 0)?.totalPages)
         assertTrue(coordinator.getState(0, 0)?.currentChapterExact == true)
+        assertTrue(coordinator.isChapterExact(0, generation))
+        assertFalse(coordinator.isChapterExact(1, generation))
         coordinator.correctChapter(0, realPageCount = 7, layoutGeneration = generation)
         assertTrue(calibrationStore.recorded.isEmpty())
         assertEquals(1, exactStore.values.size)

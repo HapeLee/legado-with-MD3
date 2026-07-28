@@ -3,53 +3,34 @@ package io.legado.app.model
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.service.FullBookPageService
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import splitties.init.appCtx
-
-data class FullBookPaginationState(
-    val isRunning: Boolean = false,
-    val completed: Int = 0,
-    val total: Int = 0,
-)
 
 /** Optional precision producer for local books; the coordinator remains the only page-count SSOT. */
 object FullBookPaginator {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
     private var activeBookUrl: String? = null
-    private val _state = MutableStateFlow(FullBookPaginationState())
-    val state = _state.asStateFlow()
+    private var activeLayoutGeneration: Long = -1L
 
-    fun startIfNeeded() {
+    fun startIfNeeded(layoutGeneration: Long) {
         val bookUrl = ReadBook.book?.takeIf { it.isLocal }?.bookUrl
-        if (bookUrl == null || !isFullPagePlaceholderActive()) {
+        if (bookUrl == null || !isNeeded()) {
             stop()
             return
         }
-        if (job?.isActive == true && activeBookUrl == bookUrl) return
+        if (job?.isActive == true &&
+            activeBookUrl == bookUrl &&
+            activeLayoutGeneration == layoutGeneration
+        ) return
         stop()
         activeBookUrl = bookUrl
+        activeLayoutGeneration = layoutGeneration
         job = scope.launch {
-            _state.value = FullBookPaginationState(isRunning = true)
-            runCatching { FullBookPageService.start(appCtx) }
-            try {
-                ReadBook.paginateLocalBookPages { completed, total ->
-                    _state.update { it.copy(completed = completed, total = total) }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } finally {
-                _state.update { it.copy(isRunning = false) }
-            }
+            ReadBook.paginateLocalBookPages(layoutGeneration)
         }
     }
 
@@ -57,35 +38,59 @@ object FullBookPaginator {
         job?.cancel()
         job = null
         activeBookUrl = null
-        _state.value = FullBookPaginationState()
+        activeLayoutGeneration = -1L
     }
 
-    private fun isFullPagePlaceholderActive(): Boolean {
-        val directTips = listOf(
-            ReadBookConfig.tipHeaderLeft,
-            ReadBookConfig.tipHeaderMiddle,
-            ReadBookConfig.tipHeaderRight,
-            ReadBookConfig.tipFooterLeft,
-            ReadBookConfig.tipFooterMiddle,
-            ReadBookConfig.tipFooterRight,
-        )
-        if (directTips.any {
-                it == ReadBookConfig.tipWholeBookPage ||
-                    it == ReadBookConfig.tipWholeBookPageAndProgress
-            }
-        ) return true
-        return listOf(
-        ReadBookConfig.customTipHeaderLeft,
-        ReadBookConfig.customTipHeaderMiddle,
-        ReadBookConfig.customTipHeaderRight,
-        ReadBookConfig.customTipFooterLeft,
-        ReadBookConfig.customTipFooterMiddle,
-        ReadBookConfig.customTipFooterRight,
-    ).any { template ->
-        CustomTipPlaceholder.extractPlaceholders(template).any {
+    fun isNeeded(): Boolean = hasActiveFullBookPageTip(
+        selections = listOf(
+            FullBookPageTipSelection(
+                ReadBookConfig.tipHeaderLeft,
+                ReadBookConfig.customTipHeaderLeft,
+            ),
+            FullBookPageTipSelection(
+                ReadBookConfig.tipHeaderMiddle,
+                ReadBookConfig.customTipHeaderMiddle,
+            ),
+            FullBookPageTipSelection(
+                ReadBookConfig.tipHeaderRight,
+                ReadBookConfig.customTipHeaderRight,
+            ),
+            FullBookPageTipSelection(
+                ReadBookConfig.tipFooterLeft,
+                ReadBookConfig.customTipFooterLeft,
+            ),
+            FullBookPageTipSelection(
+                ReadBookConfig.tipFooterMiddle,
+                ReadBookConfig.customTipFooterMiddle,
+            ),
+            FullBookPageTipSelection(
+                ReadBookConfig.tipFooterRight,
+                ReadBookConfig.customTipFooterRight,
+            ),
+        ),
+        customTipValue = ReadBookConfig.tipCustom,
+        wholeBookPageTipValue = ReadBookConfig.tipWholeBookPage,
+        wholeBookPageAndProgressTipValue = ReadBookConfig.tipWholeBookPageAndProgress,
+    )
+}
+
+internal data class FullBookPageTipSelection(
+    val value: Int,
+    val customTemplate: String,
+)
+
+internal fun hasActiveFullBookPageTip(
+    selections: List<FullBookPageTipSelection>,
+    customTipValue: Int,
+    wholeBookPageTipValue: Int,
+    wholeBookPageAndProgressTipValue: Int,
+): Boolean = selections.any { selection ->
+    when (selection.value) {
+        wholeBookPageTipValue, wholeBookPageAndProgressTipValue -> true
+        customTipValue -> CustomTipPlaceholder.extractPlaceholders(selection.customTemplate).any {
             it == CustomTipPlaceholder.FULL_PAGE_INDEX.key ||
                 it == CustomTipPlaceholder.FULL_PAGE_SIZE.key
         }
-    }
+        else -> false
     }
 }

@@ -857,6 +857,8 @@ class ReadBookController(
                         }
                         ConfigUpdateAction.RebuildWholeBookPageIndex ->
                             ReadBook.requestWholeBookPageEstimate()
+                        ConfigUpdateAction.UpdateWholeBookPageDemand ->
+                            ReadBook.updateWholeBookPageDemand()
                         ConfigUpdateAction.SubmitRenderTask -> r.readView.submitRenderTask()
                         ConfigUpdateAction.UpdatePageAnim -> r.readView.upPageAnim()
                     }
