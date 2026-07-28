@@ -120,8 +120,15 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var inBookshelf = false
     var chapterSize = 0
     var simulatedChapterSize = 0
+    // 主线程写（翻页/换章/进度跳转），IO 线程读——layoutLoadedChapter 在
+    // Dispatchers.IO 上用它们判断当前页是否已排版（见 when(chapter.index - durChapterIndex)
+    // 与 page.containPos(durChapterPos)）。没有 @Volatile 时 IO 侧可能读到陈旧值，
+    // 表现为「排版完了但没刷新到当前页」。
+    @Volatile
     var durChapterIndex = 0
         private set
+
+    @Volatile
     var durChapterPos = 0
         private set
     var isLocalBook = true

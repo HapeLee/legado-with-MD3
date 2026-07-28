@@ -118,30 +118,35 @@ class TextChapterLayout(
     @Volatile
     private var listener: LayoutProgressListener? = textChapter
 
-    private val paddingLeft = ChapterProvider.paddingLeft
-    private val paddingTop = ChapterProvider.paddingTop
+    // 一次取到整组排版度量：ChapterProvider 的快照是单个 volatile 字段，读一次即得到
+    // 内部自洽的一组值。逐字段读会拿到「新 viewWidth 配旧 paddingLeft」这种撕裂组合
+    // ——本类在 IO 线程构造，而度量由主线程写入。
+    private val metrics = ChapterProvider.layoutMetrics()
 
-    private val titlePaint = ChapterProvider.titlePaint
-    private val titlePaintTextHeight = ChapterProvider.titlePaintTextHeight
-    private val titlePaintFontMetrics = ChapterProvider.titlePaintFontMetrics
+    private val paddingLeft = metrics.paddingLeft
+    private val paddingTop = metrics.paddingTop
 
-    private val contentPaint = ChapterProvider.contentPaint
-    private val contentPaintTextHeight = ChapterProvider.contentPaintTextHeight
-    private val contentPaintFontMetrics = ChapterProvider.contentPaintFontMetrics
+    private val titlePaint = metrics.titlePaint
+    private val titlePaintTextHeight = metrics.titlePaintTextHeight
+    private val titlePaintFontMetrics = metrics.titlePaintFontMetrics
 
-    private val titleTopSpacing = ChapterProvider.titleTopSpacing
-    private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
-    private val titleLineSpacingExtra = ChapterProvider.titleLineSpacingExtra
-    private val titleLineSpacingSub = ChapterProvider.titleLineSpacingSub
-    private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
-    private val paragraphSpacing = ChapterProvider.paragraphSpacing
+    private val contentPaint = metrics.contentPaint
+    private val contentPaintTextHeight = metrics.contentPaintTextHeight
+    private val contentPaintFontMetrics = metrics.contentPaintFontMetrics
 
-    internal val visibleHeight = ChapterProvider.visibleHeight
-    internal val visibleWidth = ChapterProvider.visibleWidth
+    private val titleTopSpacing = metrics.titleTopSpacing
+    private val titleBottomSpacing = metrics.titleBottomSpacing
+    private val titleLineSpacingExtra = metrics.titleLineSpacingExtra
+    private val titleLineSpacingSub = metrics.titleLineSpacingSub
+    private val lineSpacingExtra = metrics.lineSpacingExtra
+    private val paragraphSpacing = metrics.paragraphSpacing
 
-    private val viewWidth = ChapterProvider.viewWidth
-    private val doublePage = ChapterProvider.doublePage
-    private val indentCharWidth = ChapterProvider.indentCharWidth
+    internal val visibleHeight = metrics.visibleHeight
+    internal val visibleWidth = metrics.visibleWidth
+
+    private val viewWidth = metrics.viewWidth
+    private val doublePage = metrics.doublePage
+    private val indentCharWidth = metrics.indentCharWidth
     private val stringBuilder = StringBuilder()
 
     private val paragraphIndent = ReadBookConfig.paragraphIndent

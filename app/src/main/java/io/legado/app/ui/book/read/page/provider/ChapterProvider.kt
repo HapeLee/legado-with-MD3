@@ -58,105 +58,135 @@ object ChapterProvider {
 
     var dashEffect = DashPathEffect(floatArrayOf(dottedBase, dottedRatio), 0f)
 
-    @JvmStatic
-    var viewWidth = 0
-        private set
+    /**
+     * 排版度量的不可变快照。
+     *
+     * 这些值由主线程写入（[upStyle] / [upLayout] / [notifyViewSizeChange]），由 IO 线程上
+     * 构造的 [TextChapterLayout] 与绘制路径读取。逐字段的可变静态量既无 happens-before、
+     * 也无组内原子性——排版协程可能读到「新的 viewWidth 配旧的 paddingLeft」这种撕裂组合，
+     * 表现为偶发排版错乱。收进一个不可变对象后，一次 volatile 写发布整组、一次 volatile
+     * 读取得整组，两个问题一并消除。
+     *
+     * 注意：[titlePaint] / [contentPaint] 是可变对象，这里持有的是引用。[upThemeColors]
+     * 仍会就地改它们的颜色——颜色不参与测量，故不影响排版结果；真要根治需让排版任务持有
+     * 自己的 Paint 副本，属 Track D2 范围。
+     */
+    internal data class LayoutMetrics(
+        val viewWidth: Int = 0,
+        val viewHeight: Int = 0,
+        val paddingLeft: Int = 0,
+        val paddingTop: Int = 0,
+        val paddingRight: Int = 0,
+        val paddingBottom: Int = 0,
+        val visibleWidth: Int = 0,
+        val visibleHeight: Int = 0,
+        val visibleRight: Int = 0,
+        val visibleBottom: Int = 0,
+        val lineSpacingExtra: Float = 0f,
+        val titleLineSpacingExtra: Float = 0f,
+        val titleLineSpacingSub: Float = 0f,
+        val paragraphSpacing: Int = 0,
+        val titleTopSpacing: Int = 0,
+        val titleBottomSpacing: Int = 0,
+        val indentCharWidth: Float = 0f,
+        val titlePaintTextHeight: Float = 0f,
+        val contentPaintTextHeight: Float = 0f,
+        val titlePaintFontMetrics: FontMetrics = FontMetrics(),
+        val contentPaintFontMetrics: FontMetrics = FontMetrics(),
+        val typeface: Typeface? = Typeface.DEFAULT,
+        val titlePaint: TextPaint = TextPaint(),
+        val contentPaint: TextPaint = TextPaint(),
+        val doublePage: Boolean = false,
+        val visibleRect: RectF = RectF(),
+    )
+
+    @Volatile
+    private var metrics = LayoutMetrics()
+
+    /**
+     * 原子地取整组排版度量。需要多个度量彼此自洽的调用方（典型是排版任务）用它，
+     * 而不是逐个读下面的便捷访问器。
+     */
+    internal fun layoutMetrics(): LayoutMetrics = metrics
 
     @JvmStatic
-    var viewHeight = 0
-        private set
+    val viewWidth get() = metrics.viewWidth
 
     @JvmStatic
-    var paddingLeft = 0
-        private set
+    val viewHeight get() = metrics.viewHeight
 
     @JvmStatic
-    var paddingTop = 0
-        private set
+    val paddingLeft get() = metrics.paddingLeft
 
     @JvmStatic
-    var paddingRight = 0
-        private set
+    val paddingTop get() = metrics.paddingTop
 
     @JvmStatic
-    var paddingBottom = 0
-        private set
+    val paddingRight get() = metrics.paddingRight
 
     @JvmStatic
-    var visibleWidth = 0
-        private set
+    val paddingBottom get() = metrics.paddingBottom
 
     @JvmStatic
-    var visibleHeight = 0
-        private set
+    val visibleWidth get() = metrics.visibleWidth
 
     @JvmStatic
-    var visibleRight = 0
-        private set
+    val visibleHeight get() = metrics.visibleHeight
 
     @JvmStatic
-    var visibleBottom = 0
-        private set
+    val visibleRight get() = metrics.visibleRight
 
     @JvmStatic
-    var lineSpacingExtra = 0f
-        private set
-
-    var titleLineSpacingExtra = 0f
-        private set
-
-    var titleLineSpacingSub = 0f
-        private set
+    val visibleBottom get() = metrics.visibleBottom
 
     @JvmStatic
-    var paragraphSpacing = 0
-        private set
+    val lineSpacingExtra get() = metrics.lineSpacingExtra
+
+    val titleLineSpacingExtra get() = metrics.titleLineSpacingExtra
+
+    val titleLineSpacingSub get() = metrics.titleLineSpacingSub
 
     @JvmStatic
-    var titleTopSpacing = 0
-        private set
+    val paragraphSpacing get() = metrics.paragraphSpacing
 
     @JvmStatic
-    var titleBottomSpacing = 0
-        private set
+    val titleTopSpacing get() = metrics.titleTopSpacing
 
     @JvmStatic
-    var indentCharWidth = 0f
-        private set
+    val titleBottomSpacing get() = metrics.titleBottomSpacing
 
     @JvmStatic
-    var titlePaintTextHeight = 0f
-        private set
+    val indentCharWidth get() = metrics.indentCharWidth
 
     @JvmStatic
-    var contentPaintTextHeight = 0f
-        private set
+    val titlePaintTextHeight get() = metrics.titlePaintTextHeight
 
     @JvmStatic
-    var titlePaintFontMetrics = FontMetrics()
+    val contentPaintTextHeight get() = metrics.contentPaintTextHeight
 
     @JvmStatic
-    var contentPaintFontMetrics = FontMetrics()
+    val titlePaintFontMetrics get() = metrics.titlePaintFontMetrics
 
     @JvmStatic
-    var typeface: Typeface? = Typeface.DEFAULT
-        private set
+    val contentPaintFontMetrics get() = metrics.contentPaintFontMetrics
 
     @JvmStatic
-    var titlePaint: TextPaint = TextPaint()
+    val typeface get() = metrics.typeface
 
     @JvmStatic
-    var contentPaint: TextPaint = TextPaint()
+    val titlePaint get() = metrics.titlePaint
+
+    @JvmStatic
+    val contentPaint get() = metrics.contentPaint
 
     @JvmStatic
     var reviewPaint: TextPaint = TextPaint()
 
     @JvmStatic
-    var doublePage = false
-        private set
+    val doublePage get() = metrics.doublePage
 
     @JvmStatic
-    var visibleRect = RectF()
+    val visibleRect get() = metrics.visibleRect
 
     private val handler by lazy {
         buildMainHandler()
@@ -868,27 +898,14 @@ object ChapterProvider {
      * 更新样式
      */
     fun upStyle() {
-        typeface = getTypeface(ReadBookConfig.textFont)
-        getPaints(typeface).let {
-            titlePaint = it.first
-            contentPaint = it.second
-//            reviewPaint.color = contentPaint.color
-//            reviewPaint.textSize = contentPaint.textSize * 0.45f
-//            reviewPaint.textAlign = Paint.Align.CENTER
-        }
+        val typeface = getTypeface(ReadBookConfig.textFont)
+        val (titlePaint, contentPaint) = getPaints(typeface)
         dashEffect = DashPathEffect(
             floatArrayOf(ReadBookConfig.durConfig.dottedBase, ReadBookConfig.durConfig.dottedRatio),
             0f
         )
-        //间距
-        lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
-        titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra / 10f
-        titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub / 10f
-        paragraphSpacing = ReadBookConfig.paragraphSpacing
-        titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx()
-        titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx()
         val bodyIndent = ReadBookConfig.paragraphIndent
-        indentCharWidth = if (bodyIndent.isNotEmpty()) {
+        val indentCharWidth = if (bodyIndent.isNotEmpty()) {
             var indentWidth = StaticLayout.getDesiredWidth(bodyIndent, contentPaint)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 indentWidth += contentPaint.letterSpacing * contentPaint.textSize
@@ -897,11 +914,26 @@ object ChapterProvider {
         } else {
             0f
         }
-        titlePaintTextHeight = titlePaint.textHeight
-        contentPaintTextHeight = contentPaint.textHeight
-        titlePaintFontMetrics = titlePaint.fontMetrics
-        contentPaintFontMetrics = contentPaint.fontMetrics
-        upLayout()
+        // 样式与布局一起算完再发布，避免中间态被排版协程读到
+        metrics = withLayout(
+            metrics.copy(
+                typeface = typeface,
+                titlePaint = titlePaint,
+                contentPaint = contentPaint,
+                //间距
+                lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f,
+                titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra / 10f,
+                titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub / 10f,
+                paragraphSpacing = ReadBookConfig.paragraphSpacing,
+                titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx(),
+                titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx(),
+                indentCharWidth = indentCharWidth,
+                titlePaintTextHeight = titlePaint.textHeight,
+                contentPaintTextHeight = contentPaint.textHeight,
+                titlePaintFontMetrics = titlePaint.fontMetrics,
+                contentPaintFontMetrics = contentPaint.fontMetrics,
+            )
+        )
     }
 
     /** 主题切换只更新绘制颜色，不触发字体加载或正文重排。 */
@@ -1105,9 +1137,7 @@ object ChapterProvider {
     }
 
     private fun notifyViewSizeChange(width: Int, height: Int) {
-        viewWidth = width
-        viewHeight = height
-        upLayout()
+        metrics = withLayout(metrics.copy(viewWidth = width, viewHeight = height))
         ReadBook.requestWholeBookPageEstimate()
         ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.RelayoutContent))
     }
@@ -1116,47 +1146,49 @@ object ChapterProvider {
      * 更新绘制尺寸
      */
     fun upLayout() {
-        when (ReadConfig.doubleHorizontalPage) {
-            "0" -> doublePage = false
-            "1" -> doublePage = true
-            "2" -> {
-                doublePage = (viewWidth > viewHeight)
-                        && ReadBook.pageAnim() != 3
-            }
+        metrics = withLayout(metrics)
+    }
 
-            "3" -> {
-                doublePage = (viewWidth > viewHeight || appCtx.isPad)
-                        && ReadBook.pageAnim() != 3
-            }
+    /**
+     * 由 [base] 的样式与视图尺寸推导全部绘制尺寸，返回新快照。纯函数，不写全局——
+     * 调用方负责一次性发布，保证排版协程读不到中间态。
+     */
+    private fun withLayout(base: LayoutMetrics): LayoutMetrics {
+        val doublePage = when (ReadConfig.doubleHorizontalPage) {
+            "0" -> false
+            "1" -> true
+            "2" -> (base.viewWidth > base.viewHeight) && ReadBook.pageAnim() != 3
+            "3" -> (base.viewWidth > base.viewHeight || appCtx.isPad) && ReadBook.pageAnim() != 3
+            else -> base.doublePage
         }
 
-        if (viewWidth <= 0 || viewHeight <= 0) {
-            return
+        if (base.viewWidth <= 0 || base.viewHeight <= 0) {
+            return base.copy(doublePage = doublePage)
         }
 
-        paddingLeft = ReadBookConfig.paddingLeft.dpToPx()
-        paddingTop = ReadBookConfig.paddingTop.dpToPx()
-        paddingRight = ReadBookConfig.paddingRight.dpToPx()
-        paddingBottom = ReadBookConfig.paddingBottom.dpToPx()
-        visibleWidth = if (doublePage) {
-            viewWidth / 2 - paddingLeft - paddingRight
+        val paddingLeft = ReadBookConfig.paddingLeft.dpToPx()
+        val paddingTop = ReadBookConfig.paddingTop.dpToPx()
+        val paddingRight = ReadBookConfig.paddingRight.dpToPx()
+        val paddingBottom = ReadBookConfig.paddingBottom.dpToPx()
+        val visibleWidth = if (doublePage) {
+            base.viewWidth / 2 - paddingLeft - paddingRight
         } else {
-            viewWidth - paddingLeft - paddingRight
+            base.viewWidth - paddingLeft - paddingRight
         }
         //留1dp画最后一行下划线
-        visibleHeight = viewHeight - paddingTop - paddingBottom
-        visibleRight = viewWidth - paddingRight
-        visibleBottom = paddingTop + visibleHeight
+        val visibleHeight = base.viewHeight - paddingTop - paddingBottom
+        val visibleRight = base.viewWidth - paddingRight
+        val visibleBottom = paddingTop + visibleHeight
 
         val shadowPad = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            (contentPaint.shadowLayerRadius + 2).toInt()
+            (base.contentPaint.shadowLayerRadius + 2).toInt()
         } else {
             20
         }
 
         val italicPad = if (ReadBookConfig.textItalic)  (ReadBookConfig.textSize * 0.25f).spToPx() else 0f
 
-        visibleRect.set(
+        val visibleRect = RectF(
             (paddingLeft - shadowPad - italicPad),
             (paddingTop - shadowPad).toFloat(),
             (visibleRight + shadowPad + italicPad),
@@ -1164,6 +1196,18 @@ object ChapterProvider {
         )
 
         //TODO: 有关测量相关问题
+        return base.copy(
+            doublePage = doublePage,
+            paddingLeft = paddingLeft,
+            paddingTop = paddingTop,
+            paddingRight = paddingRight,
+            paddingBottom = paddingBottom,
+            visibleWidth = visibleWidth,
+            visibleHeight = visibleHeight,
+            visibleRight = visibleRight,
+            visibleBottom = visibleBottom,
+            visibleRect = visibleRect,
+        )
     }
 
 }
