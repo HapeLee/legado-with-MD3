@@ -419,7 +419,7 @@ class PageView(
         val customTypeface = tipTypeface
         val customTextSize = tipTextSize
         for (target in CUSTOM_TIP_TARGETS) {
-            if (target.tipValue != ReadBookConfig.tipCustom) continue
+            if (target.currentTipValue() != ReadBookConfig.tipCustom) continue
             val view = customTipViewFor(target)
             view.tag = ReadBookConfig.tipCustom
             view.typeface = customTypeface
@@ -535,8 +535,8 @@ class PageView(
     fun upCustomTip(textPage: TextPage?) {
         val page = textPage ?: return
         for (target in CUSTOM_TIP_TARGETS) {
-            if (target.tipValue != ReadBookConfig.tipCustom) continue
-            val template = target.customTemplate
+            if (target.currentTipValue() != ReadBookConfig.tipCustom) continue
+            val template = target.currentCustomTemplate()
             val view = customTipViewFor(target)
             if (template.isEmpty()) {
                 view.setTextIfNotEqual("")
@@ -840,4 +840,29 @@ class PageView(
         private val CUSTOM_TIP_TARGETS: Array<CustomTipTarget> = CustomTipTarget.values()
         private val CUSTOM_TIP_PLACEHOLDERS: Array<CustomTipPlaceholder> = CustomTipPlaceholder.values()
     }
+}
+
+/**
+ * 渲染层按位置取当前 tip 类型 / 自定义模板。
+ *
+ * 直读可变全局 [ReadBookConfig]——与本文件其余渲染读取一致，属排版引擎去全局化
+ * （Track E·E5 / Track D2）的范围，不在设置面 UDF 改造内。设置面读的是
+ * `ReadSheetConfigUiState` 快照（`CustomTipTarget.tipValueOf` / `customTemplateOf`）。
+ */
+private fun CustomTipTarget.currentTipValue(): Int = when (this) {
+    CustomTipTarget.HEADER_LEFT -> ReadBookConfig.tipHeaderLeft
+    CustomTipTarget.HEADER_MIDDLE -> ReadBookConfig.tipHeaderMiddle
+    CustomTipTarget.HEADER_RIGHT -> ReadBookConfig.tipHeaderRight
+    CustomTipTarget.FOOTER_LEFT -> ReadBookConfig.tipFooterLeft
+    CustomTipTarget.FOOTER_MIDDLE -> ReadBookConfig.tipFooterMiddle
+    CustomTipTarget.FOOTER_RIGHT -> ReadBookConfig.tipFooterRight
+}
+
+private fun CustomTipTarget.currentCustomTemplate(): String = when (this) {
+    CustomTipTarget.HEADER_LEFT -> ReadBookConfig.customTipHeaderLeft
+    CustomTipTarget.HEADER_MIDDLE -> ReadBookConfig.customTipHeaderMiddle
+    CustomTipTarget.HEADER_RIGHT -> ReadBookConfig.customTipHeaderRight
+    CustomTipTarget.FOOTER_LEFT -> ReadBookConfig.customTipFooterLeft
+    CustomTipTarget.FOOTER_MIDDLE -> ReadBookConfig.customTipFooterMiddle
+    CustomTipTarget.FOOTER_RIGHT -> ReadBookConfig.customTipFooterRight
 }

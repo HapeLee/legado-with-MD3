@@ -92,6 +92,11 @@ data class ReadBookStyleConfig(
     val pageAnimEInk: Int = 4,
     // Layout
     val shareLayout: Boolean = false,
+    // 排版自带的阅读菜单配色，作为 DataStore 里 readMenu*Color 为 0（未自定义）时的回退
+    val menuBgColorDay: Int = 0,
+    val menuBgColorNight: Int = 0,
+    val menuAccentColorDay: Int = 0,
+    val menuAccentColorNight: Int = 0,
     // Config list for style selector
     val configCount: Int = 1,
     val styleItems: ImmutableList<ReadStyleItem> = persistentListOf(),
@@ -158,7 +163,25 @@ data class ReadSheetConfigUiState(
     val headerFontSize: Int = 12,
     val footerFontSize: Int = 12,
     val applyHeaderStyle: Boolean = true,
+    /** -1 表示"跟随主题分割线"，0 表示"跟随正文颜色"。 */
     val tipDividerColor: Int = 0,
+    val headerMode: Int = 0,
+    val footerMode: Int = 0,
+    val showHeaderLine: Boolean = false,
+    val showFooterLine: Boolean = false,
+    val tipHeaderLeft: Int = 0,
+    val tipHeaderMiddle: Int = 0,
+    val tipHeaderRight: Int = 0,
+    val tipFooterLeft: Int = 0,
+    val tipFooterMiddle: Int = 0,
+    val tipFooterRight: Int = 0,
+    val customTipHeaderLeft: String = "",
+    val customTipHeaderMiddle: String = "",
+    val customTipHeaderRight: String = "",
+    val customTipFooterLeft: String = "",
+    val customTipFooterMiddle: String = "",
+    val customTipFooterRight: String = "",
+    /** 0 表示"跟随正文颜色"，展示时回退到 [textColorDay] / [textColorNight]。 */
     val tipHeaderColor: Int = 0,
     val tipHeaderColorNight: Int = 0,
     val tipFooterColor: Int = 0,
