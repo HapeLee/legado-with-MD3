@@ -2240,6 +2240,12 @@
     <string name="eye_protection_intensity_summary">当前强度：%1$d</string>
     <string name="eye_protection_auto_night">深色模式时自动开启</string>
     <string name="eye_protection_auto_night_summary">跟随阅读界面的深色/浅色模式自动切换</string>
+    <string name="color_temperature">色温</string>
+    <string name="color_temperature_summary">当前色温：%1$d</string>
+    <string name="eye_protection_schedule">定时开启</string>
+    <string name="eye_protection_schedule_summary">仅在设定的时间段内生效</string>
+    <string name="eye_protection_start_time">开始时间</string>
+    <string name="eye_protection_end_time">结束时间</string>
 
     <!-- 标签规则 -->
     <string name="highlight_tag_config">标签规则</string>
