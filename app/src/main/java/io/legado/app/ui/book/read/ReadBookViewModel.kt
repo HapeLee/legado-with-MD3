@@ -324,6 +324,13 @@ class ReadBookViewModel(
      *
      * 改由 gateway 的 `publishState()` 统一驱动后，「新增写入路径忘了重建快照」这个
      * 失效类别不再存在：写入必经 gateway，gateway 必发 state，这里必然重建两份快照。
+     *
+     * R1.1 收敛后全 VM 只允许三处重建触发，删任何一处前先确认其路径已被其余覆盖：
+     * 1. 本 collector——一切经 gateway 的排版写入（编辑/预设/删除/导入，repository 必 publishState）；
+     * 2. [collectEventBus] 的 [ReadConfigUpdateBus] collector——不经 gateway 的全局变更
+     *    （日夜切换等，revision 不递增，gateway flow 不会发射）；
+     * 3. [handleConfigUpdate] 尾部 `styleMutation == null` 分支——只写 DataStore 的更新。
+     * `syncFromReadBook` 不再重建（曾经的每翻页兜底会掩盖漏发问题）。
      */
     private fun collectReadStyle() {
         viewModelScope.launch {
@@ -921,11 +928,6 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.RemoveFromBookshelf -> removeFromBookshelf()
-            is ReadBookIntent.OnConfigUpdated -> {
-                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
-                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(intent.actions))
-            }
-
             is ReadBookIntent.UpdateConfig -> {
                 handleConfigUpdate(intent.update)
             }
@@ -2541,8 +2543,6 @@ class ReadBookViewModel(
             delHTag = book?.getDelTag(Book.hTag) ?: false,
             sameTitleRemoved = textChapter?.sameTitleRemoved ?: false,
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
-            styleConfig = buildStyleConfig(),
-            sheetConfig = buildSheetConfig(),
             menuConfig = ReadMenuConfig(
                 titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
                 showTitleBarIcons = ReadBookConfig.showTitleBarIcons,

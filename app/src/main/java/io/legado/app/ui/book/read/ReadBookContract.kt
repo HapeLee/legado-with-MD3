@@ -648,9 +648,6 @@ sealed interface ReadBookIntent {
     // Bookshelf
     data object RemoveFromBookshelf : ReadBookIntent
 
-    // Config update (triggers ReadView upBg/upStyle etc.)
-    data class OnConfigUpdated(val actions: Set<ConfigUpdateAction>) : ReadBookIntent
-
     // Typed config mutation — single entry point for all ReadBookConfig changes
     data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
 
