@@ -665,15 +665,27 @@ class ReadBookViewModel(
                 }
             }
             is ReadBookIntent.OpenBookInfo -> {
-                ReadBook.book?.let { book ->
+                if (ReadBook.book != null) {
                     closeReadMenu()
-                    _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
+                    _uiState.update {
+                        it.copy(
+                            activeSheet = ReadBookSheet.BookNavigation(
+                                io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information
+                            )
+                        )
+                    }
                 }
             }
             is ReadBookIntent.OpenChapterList -> {
-                ReadBook.book?.bookUrl?.let { bookUrl ->
+                if (ReadBook.book != null) {
                     closeReadMenu()
-                    _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
+                    _uiState.update { state ->
+                        state.copy(
+                            activeSheet = ReadBookSheet.BookNavigation(
+                                io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Toc
+                            )
+                        )
+                    }
                 }
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()

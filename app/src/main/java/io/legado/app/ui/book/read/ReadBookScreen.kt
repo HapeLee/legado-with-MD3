@@ -529,6 +529,8 @@ fun ReadBookScreen(
 
         is ReadBookSheet.Bookmark -> Unit
 
+        is ReadBookSheet.BookNavigation -> Unit
+
         is ReadBookSheet.InfoConfig -> {
             // Integrated into ReadStyleSheet's HeaderFooterPage
             LaunchedEffect(state.activeSheet) {

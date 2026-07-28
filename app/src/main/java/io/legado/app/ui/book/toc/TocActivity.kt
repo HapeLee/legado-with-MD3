@@ -18,6 +18,8 @@ class TocActivity : BaseComposeActivity() {
         val context = LocalContext.current
 
         TocRouteScreen(
+            bookUrl = intent.getStringExtra("bookUrl"),
+            initialPage = intent.getIntExtra("initialPage", 0),
             onBackClick = { finish() },
             onChapterClick = { index ->
                 val data = Intent().apply {

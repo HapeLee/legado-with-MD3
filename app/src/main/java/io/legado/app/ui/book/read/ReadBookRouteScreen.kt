@@ -54,10 +54,10 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -173,12 +173,6 @@ fun ReadBookRouteScreen(
     }
 
     // ── ActivityResult Launchers ──────────────────────────────────────
-
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (index, chapterPos, _) ->
-            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
-        }
-    }
 
     val sourceEditLauncher = rememberLauncherForActivityResult(
         StartActivityContract(BookSourceEditActivity::class.java)
@@ -322,18 +316,8 @@ fun ReadBookRouteScreen(
                     try {
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
-                            is ReadBookEffect.OpenChapterList -> {
-                                tocLauncher.launch(effect.bookUrl)
-                            }
                             is ReadBookEffect.OpenSourceEdit -> {
                                 sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
-                            }
-                            is ReadBookEffect.OpenBookInfo -> {
-                                bookInfoLauncher.launch {
-                                    putExtra("name", effect.name)
-                                    putExtra("author", effect.author)
-                                    putExtra("bookUrl", effect.bookUrl)
-                                }
                             }
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
@@ -598,6 +582,28 @@ fun ReadBookRouteScreen(
                 onOpenTextSelectMenuConfig = {
                     viewModel.onIntent(ReadBookIntent.DismissSheet)
                     showSelectMenuConfigSheet = true
+                },
+            )
+            val bookNavigationSheet = state.activeSheet as? ReadBookSheet.BookNavigation
+            ReaderBookSheetRoute(
+                show = bookNavigationSheet != null,
+                bookUrl = state.book?.bookUrl.orEmpty(),
+                initialTab = bookNavigationSheet?.initialTab
+                    ?: io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information,
+                onDismissRequest = { viewModel.onIntent(ReadBookIntent.DismissSheet) },
+                onChapterClick = { index, chapterPos ->
+                    viewModel.onIntent(ReadBookIntent.DismissSheet)
+                    viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
+                },
+                onOpenFullBookInfo = {
+                    state.book?.let { book ->
+                        viewModel.onIntent(ReadBookIntent.DismissSheet)
+                        bookInfoLauncher.launch {
+                            putExtra("name", book.name)
+                            putExtra("author", book.author)
+                            putExtra("bookUrl", book.bookUrl)
+                        }
+                    }
                 },
             )
             TextActionSelectionMenu(

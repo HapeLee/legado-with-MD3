@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.toc
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -133,6 +132,8 @@ import java.util.Locale
 @Composable
 fun TocRouteScreen(
     viewModel: TocViewModel = koinViewModel(),
+    bookUrl: String? = null,
+    initialPage: Int = 0,
     onBackClick: () -> Unit,
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
@@ -140,6 +141,24 @@ fun TocRouteScreen(
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var pendingExportMarkdown by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("*/*")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
+    }
+    val tocRegexLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onIntent(
+                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
+            )
+        }
+    }
+    LaunchedEffect(bookUrl) {
+        bookUrl?.let { viewModel.onIntent(TocIntent.LoadBook(it)) }
+    }
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
@@ -155,6 +174,16 @@ fun TocRouteScreen(
         onChapterClick = onChapterClick,
         onOpenReplaceRule = onOpenReplaceRule,
         onBookmarkClick = onBookmarkClick,
+        onEditLocalTocRule = { regex ->
+            tocRegexLauncher.launch(
+                Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
+            )
+        },
+        onExportBookmarks = { isMarkdown, fileName ->
+            pendingExportMarkdown = isMarkdown
+            exportLauncher.launch(fileName)
+        },
+        initialPage = initialPage,
     )
 }
 
@@ -167,14 +196,15 @@ fun TocScreen(
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    onEditLocalTocRule: (String?) -> Unit,
+    onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
+    initialPage: Int = 0,
 ) {
-
-    val context = LocalContext.current
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val book = uiState.book
     val state = uiState.action
 
-    val pagerState = rememberPagerState { 2 }
+    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, 1)) { 2 }
     val scope = rememberCoroutineScope()
 
     val listState = rememberLazyListState()
@@ -323,24 +353,6 @@ fun TocScreen(
         )
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("*/*")
-    ) { uri: Uri? ->
-        uri?.let {
-            val isActuallyMd = it.toString().endsWith(".md", ignoreCase = true)
-            onIntent(TocIntent.ExportBookmarks(it, isActuallyMd))
-        }
-    }
-
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val newRegex = result.data?.getStringExtra("tocRegex")
-            onIntent(TocIntent.SaveTocRegex(newRegex ?: ""))
-        }
-    }
-
     var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.items, book) {
@@ -463,11 +475,7 @@ fun TocScreen(
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.local_book_toc_rule),
                                     onClick = {
-                                        val intent =
-                                            Intent(context, TxtTocRuleActivity::class.java).apply {
-                                                putExtra("tocRegex", book?.tocUrl)
-                                            }
-                                        tocRegexLauncher.launch(intent)
+                                        onEditLocalTocRule(book?.tocUrl)
                                         dismiss()
                                     }
                                 )
@@ -492,7 +500,7 @@ fun TocScreen(
                                     ).format(Date())
                                     val initialName =
                                         "${book?.name ?: bookmarkDefaultFileName}_$dateFormat.json"
-                                    exportLauncher.launch(initialName)
+                                    onExportBookmarks(false, initialName)
                                     dismiss()
                                 }
                             )
@@ -505,7 +513,7 @@ fun TocScreen(
                                     ).format(Date())
                                     val initialName =
                                         "${book?.name ?: bookmarkDefaultFileName}_$dateFormat.md"
-                                    exportLauncher.launch(initialName)
+                                    onExportBookmarks(true, initialName)
                                     dismiss()
                                 }
                             )

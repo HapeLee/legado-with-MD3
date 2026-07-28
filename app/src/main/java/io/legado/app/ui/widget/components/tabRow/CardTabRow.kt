@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components.tabRow
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ fun CardTabRow(
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    tabEndContent: (@Composable (Int) -> Unit)? = null,
 ) {
     var lastSelectedTabIndex by remember { mutableIntStateOf(selectedTabIndex) }
     val isSelectionChanged = selectedTabIndex != lastSelectedTabIndex
@@ -74,18 +76,29 @@ fun CardTabRow(
                 contentColor = contentColor,
                 cornerRadius = 12.dp
             ) {
-                AppText(
-                    text = title,
-                    style = LegadoTheme.typography.labelMediumEmphasized,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = contentColor,
-                    maxLines = 1,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp)
-                        .align(Alignment.CenterHorizontally),
-                    textAlign = TextAlign.Center,
-                )
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppText(
+                        text = title,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        color = contentColor,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = if (tabEndContent == null) 0.dp else 20.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    if (tabEndContent != null) {
+                        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                            tabEndContent(index)
+                        }
+                    }
+                }
             }
         }
     }

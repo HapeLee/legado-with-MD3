@@ -105,9 +105,11 @@ data class TocUiState(
     val collapsedVolumes: ImmutableSet<Int> = persistentSetOf(),
     val bookmarks: ImmutableList<TocBookmarkItemUi> = persistentListOf(),
     val isSplitLongChapter: Boolean = false,
+    val isReverse: Boolean = false,
 )
 
 sealed interface TocIntent {
+    data class LoadBook(val bookUrl: String) : TocIntent
     data class SetSearchMode(val enabled: Boolean) : TocIntent
     data class SetSearchQuery(val query: String) : TocIntent
     data class ToggleVolume(val id: Int) : TocIntent
@@ -214,7 +216,7 @@ class TocViewModel(
     initialState = TocActionState()
 ) {
 
-    private val bookUrlFlow = savedStateHandle.getStateFlow<String?>("bookUrl", null)
+    private val bookUrlFlow = MutableStateFlow(savedStateHandle.get<String>("bookUrl"))
     val bookState = bookUrlFlow
         .filterNotNull()
         .flatMapLatest { url ->
@@ -309,6 +311,7 @@ class TocViewModel(
                 collapsedVolumes = collapsed.toImmutableSet(),
                 bookmarks = bookmarks.toImmutableList(),
                 isSplitLongChapter = book?.getSplitLongChapter() ?: false,
+                isReverse = book?.getReverseToc() ?: false,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -511,6 +514,13 @@ class TocViewModel(
 
     fun onIntent(intent: TocIntent) {
         when (intent) {
+            is TocIntent.LoadBook -> {
+                if (bookUrlFlow.value != intent.bookUrl) {
+                    clearSelection()
+                    _collapsedVolumes.value = emptySet()
+                    bookUrlFlow.value = intent.bookUrl
+                }
+            }
             is TocIntent.SetSearchMode -> setSearchMode(intent.enabled)
             is TocIntent.SetSearchQuery -> setSearchKey(intent.query)
             is TocIntent.ToggleVolume -> toggleVolume(intent.id)

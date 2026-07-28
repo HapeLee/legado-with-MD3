@@ -20,6 +20,7 @@ import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import kotlinx.collections.immutable.ImmutableList
@@ -888,8 +889,6 @@ sealed interface ReadBookEffect {
     // Source actions
     data class ShowLogin(val sourceUrl: String) : ReadBookEffect
     data class OpenSourceEdit(val sourceUrl: String) : ReadBookEffect
-    data class OpenBookInfo(val name: String, val author: String, val bookUrl: String) : ReadBookEffect
-    data class OpenChapterList(val bookUrl: String) : ReadBookEffect
     data class OpenWebView(
         val title: String,
         val url: String,
@@ -975,6 +974,7 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
+    data class BookNavigation(val initialTab: ReaderBookSheetTab) : ReadBookSheet
     data object PageAnim : ReadBookSheet
     data object Download : ReadBookSheet
     data object Charset : ReadBookSheet
