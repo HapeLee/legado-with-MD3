@@ -184,7 +184,7 @@ fun ReadBookScreen(
         onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
         onNavigateToTextEffects = {
             onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TypographyConfig))
         },
         onOpenContentProcesses = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
@@ -532,7 +532,7 @@ fun ReadBookScreen(
         is ReadBookSheet.BookNavigation -> Unit
 
         is ReadBookSheet.InfoConfig -> {
-            // Integrated into ReadStyleSheet's HeaderFooterPage
+            // Integrated into TypographyPage
             LaunchedEffect(state.activeSheet) {
                 onIntent(ReadBookIntent.DismissSheet)
             }

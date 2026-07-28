@@ -58,11 +58,9 @@ data class ReadBookMenuState(
 sealed interface ReadBookMenuRoute {
     data object Main : ReadBookMenuRoute
     data object ReadStyle : ReadBookMenuRoute
-    data object TextTitle : ReadBookMenuRoute
     data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
-    data object PaddingConfig : ReadBookMenuRoute
-    data object HeaderFooterConfig : ReadBookMenuRoute
+    data object TypographyConfig : ReadBookMenuRoute
 }
 
 @Stable
@@ -154,6 +152,19 @@ data class ReadSheetConfigUiState(
     val footerPaddingBottom: Int = 0,
     val footerPaddingLeft: Int = 0,
     val footerPaddingRight: Int = 0,
+    // 页眉页脚字体
+    val headerFont: String = "",
+    val footerFont: String = "",
+    val headerFontSize: Int = 12,
+    val footerFontSize: Int = 12,
+    val applyHeaderStyle: Boolean = true,
+    val tipDividerColor: Int = 0,
+    val tipHeaderColor: Int = 0,
+    val tipHeaderColorNight: Int = 0,
+    val tipFooterColor: Int = 0,
+    val tipFooterColorNight: Int = 0,
+    val textFullJustify: Boolean = true,
+    val textBottomJustify: Boolean = true,
     val configNames: ImmutableList<String> = persistentListOf(),
 )
 
@@ -1192,6 +1203,15 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class HeaderFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFont(val path: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class ApplyHeaderStyle(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipHeaderColor(val color: Int) : ConfigUpdate {

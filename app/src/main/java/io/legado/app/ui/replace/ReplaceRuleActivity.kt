@@ -33,13 +33,16 @@ class ReplaceRuleActivity : BaseComposeActivity() {
 
     companion object {
         const val EXTRA_START_ROUTE = "start_route"
+        const val EXTRA_BOOK_URL = "book_url"
         fun startIntent(
             context: Context,
-            editRoute: ReplaceEditRoute? = null
+            editRoute: ReplaceEditRoute? = null,
+            bookUrl: String? = null
         ): Intent = Intent(context, ReplaceRuleActivity::class.java).apply {
             editRoute?.let {
                 putExtra(EXTRA_START_ROUTE, Json.encodeToString(it))
             }
+            bookUrl?.let { putExtra(EXTRA_BOOK_URL, it) }
         }
     }
 
@@ -55,6 +58,7 @@ class ReplaceRuleActivity : BaseComposeActivity() {
             action()
         }
             val startRouteJson = intent.getStringExtra(EXTRA_START_ROUTE)
+            val bookUrl = intent.getStringExtra(EXTRA_BOOK_URL)
             val backStack = rememberNavBackStack(
                 remember(startRouteJson) {
                     resolveStartRoute(startRouteJson)
@@ -149,6 +153,7 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                 entryProvider = entryProvider {
                     entry<ReplaceRuleRoute> {
                         ReplaceRuleRouteScreen(
+                            bookUrl = bookUrl,
                             onBackClick = { leaveScreen { finish() } },
                             onNavigateToEdit = { route -> backStack.add(route) }
                         )

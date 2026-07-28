@@ -2501,6 +2501,18 @@ class ReadBookViewModel(
         footerPaddingBottom = ReadBookConfig.footerPaddingBottom,
         footerPaddingLeft = ReadBookConfig.footerPaddingLeft,
         footerPaddingRight = ReadBookConfig.footerPaddingRight,
+        headerFont = ReadBookConfig.headerFont,
+        footerFont = ReadBookConfig.footerFont,
+        headerFontSize = ReadBookConfig.headerFontSize,
+        footerFontSize = ReadBookConfig.footerFontSize,
+        applyHeaderStyle = ReadBookConfig.applyHeaderStyle,
+        tipDividerColor = ReadBookConfig.tipDividerColor,
+        tipHeaderColor = ReadBookConfig.tipHeaderColor,
+        tipHeaderColorNight = ReadBookConfig.tipHeaderColorNight,
+        tipFooterColor = ReadBookConfig.tipFooterColor,
+        tipFooterColorNight = ReadBookConfig.tipFooterColorNight,
+        textFullJustify = readSettingsRepository.currentSettings.textFullJustify,
+        textBottomJustify = readSettingsRepository.currentSettings.textBottomJustify,
         configNames = readBookStyleConfigRepository.currentState.items.map { it.name }
             .filter { it.isNotBlank() }
             .toImmutableList(),
@@ -4981,6 +4993,9 @@ class ReadBookViewModel(
             is ConfigUpdate.CustomTipFooterRight,
             is ConfigUpdate.HeaderFont,
             is ConfigUpdate.HeaderFontSize,
+            is ConfigUpdate.FooterFont,
+            is ConfigUpdate.FooterFontSize,
+            is ConfigUpdate.ApplyHeaderStyle,
             is ConfigUpdate.TipHeaderColor,
             is ConfigUpdate.TipHeaderColorNight,
             is ConfigUpdate.TipFooterColor,
@@ -5639,6 +5654,7 @@ class ReadBookViewModel(
         is ConfigUpdate.TipFooterMiddle -> intMutation(ReadStyleIntKey.TipFooterMiddle, value)
         is ConfigUpdate.TipFooterRight -> intMutation(ReadStyleIntKey.TipFooterRight, value)
         is ConfigUpdate.HeaderFont -> stringMutation(ReadStyleStringKey.HeaderFont, path)
+        is ConfigUpdate.FooterFont -> stringMutation(ReadStyleStringKey.FooterFont, path)
         is ConfigUpdate.CustomTipHeaderLeft ->
             stringMutation(ReadStyleStringKey.CustomTipHeaderLeft, value)
         is ConfigUpdate.CustomTipHeaderMiddle ->
@@ -5652,6 +5668,8 @@ class ReadBookViewModel(
         is ConfigUpdate.CustomTipFooterRight ->
             stringMutation(ReadStyleStringKey.CustomTipFooterRight, value)
         is ConfigUpdate.HeaderFontSize -> intMutation(ReadStyleIntKey.HeaderFontSize, value)
+        is ConfigUpdate.FooterFontSize -> intMutation(ReadStyleIntKey.FooterFontSize, value)
+        is ConfigUpdate.ApplyHeaderStyle -> booleanMutation(ReadStyleBooleanKey.ApplyHeaderStyle, value)
         is ConfigUpdate.TipHeaderColor -> colorMutation(ReadStyleColorKey.TipHeader, color)
         is ConfigUpdate.TipHeaderColorNight ->
             colorMutation(ReadStyleColorKey.TipHeaderNight, color)
