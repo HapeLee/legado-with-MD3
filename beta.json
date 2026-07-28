@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.7",
-  "name": "Pre-release 3.26.16-beta.7",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 一些优化\n* fix: restore TXT TOC volume collapse\n* fix(reader): 开书不再闪一帧加载数据中\n* fix(cache): 对齐图片缓存成功判定，并完善多书 FIFO 独占调度\n* 修复几个遗留问题",
+  "tag_name": "3.26.16-beta.8",
+  "name": "Pre-release 3.26.16-beta.8",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* fix(cache): 缓存文字书正文插图\n* feat: 小容器背景喵喵喵\n* feat: 简单的替换\n* feat: 目录Sheet\n* fix(book): 简介统一段首缩进并过滤书籍信息字段\n* feat(reader): 优化全文页码计算与页眉页脚展示",
   "prerelease": true,
-  "created_at": "2026-07-26T15:59:31Z",
+  "created_at": "2026-07-28T20:21:15Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.7/legado-3.26.16-beta.7-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.8/legado-3.26.16-beta.8-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-26T16:21:36Z",
+      "created_at": "2026-07-28T20:38:14Z",
       "download_count": 0,
-      "id": 490496191,
-      "name": "legado-3.26.16-beta.7-arm64-v8a.apk",
+      "id": 493172355,
+      "name": "legado-3.26.16-beta.8-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/490496191"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/493172355"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.7/legado-3.26.16-beta.7-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.8/legado-3.26.16-beta.8-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-26T16:21:36Z",
+      "created_at": "2026-07-28T20:38:14Z",
       "download_count": 0,
-      "id": 490496189,
-      "name": "legado-3.26.16-beta.7-armeabi-v7a.apk",
+      "id": 493172352,
+      "name": "legado-3.26.16-beta.8-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/490496189"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/493172352"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.7/legado-3.26.16-beta.7.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.8/legado-3.26.16-beta.8.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-26T16:21:36Z",
+      "created_at": "2026-07-28T20:38:14Z",
       "download_count": 0,
-      "id": 490496190,
-      "name": "legado-3.26.16-beta.7.apk",
+      "id": 493172350,
+      "name": "legado-3.26.16-beta.8.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/490496190"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/493172350"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.7/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.8/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-07-26T16:21:36Z",
+      "created_at": "2026-07-28T20:38:14Z",
       "download_count": 0,
-      "id": 490496192,
+      "id": 493172357,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/490496192"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/493172357"
     }
   ]
 }
