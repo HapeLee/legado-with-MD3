@@ -619,7 +619,7 @@ class CacheBookModel(
         content: String? = null,
     ) {
         task.onSuccess(IO) {
-            if (chainImagesAfterContent && book.isImage && !repository.hasImageContent(book, chapter)) {
+            if (chainImagesAfterContent && !repository.hasImageContent(book, chapter)) {
                 startImageCacheTask(scope, context, chapter, chapterIndex, it as String)
                 return@onSuccess
             }
@@ -721,7 +721,7 @@ class CacheBookModel(
     }
 
     private suspend fun ensureChapterImagesCached(chapter: BookChapter) {
-        if (!book.isImage || repository.hasImageContent(book, chapter)) return
+        if (repository.hasImageContent(book, chapter)) return
         reportImageDownloadProgress(chapter, completed = 0)
         repository.saveCachedImagesAwait(
             bookSource = bookSource,

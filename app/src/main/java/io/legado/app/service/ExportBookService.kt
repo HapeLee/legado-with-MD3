@@ -729,8 +729,8 @@ class ExportBookService : BaseService(), KoinComponent {
             var text1 = text
             val matcher = AppPattern.imgPattern.matcher(text)
             while (matcher.find()) {
-                matcher.group(1)?.let {
-                    val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
+                matcher.group(1)?.let { rawSrc ->
+                    val src = NetworkUtils.getAbsoluteURL(chapter.url, rawSrc)
                     val originalHref =
                         "${MD5Utils.md5Encode16(src)}.${BookHelp.getImageSuffix(src)}"
                     val href =
@@ -741,7 +741,7 @@ class ExportBookService : BaseService(), KoinComponent {
                         val img = LazyResource(fp, href, originalHref)
                         resources.add(img)
                     }
-                    text1 = text1.replace(src, "../${href}")
+                    text1 = text1.replace(rawSrc, "../${href}")
                 }
             }
             data.append(text1).append("\n")

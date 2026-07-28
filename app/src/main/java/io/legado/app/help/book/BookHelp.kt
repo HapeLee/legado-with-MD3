@@ -522,10 +522,17 @@ object BookHelp {
     /**
      * 检测该章节是否下载
      */
-    fun countImageCachedChapters(book: Book): Int {
-        if (!book.isImage) return 0
+    fun countCachedChapters(book: Book): Int {
         return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
-            chapter.isVolume || hasImageFilesCached(book, chapter)
+            chapter.isVolume || isChapterCacheComplete(book, chapter)
+        }
+    }
+
+    fun isChapterCacheComplete(book: Book, bookChapter: BookChapter): Boolean {
+        return if (book.isLocal) {
+            hasContent(book, bookChapter)
+        } else {
+            hasImageFilesCached(book, bookChapter)
         }
     }
 
@@ -599,13 +606,16 @@ object BookHelp {
             bookChapter.getFileName()
         )
         if (file.exists()) {
-            forEachImageSrc(file, action)
+            forEachImageSrc(file) { src ->
+                action(NetworkUtils.getAbsoluteURL(bookChapter.url, src))
+            }
             return
         }
         getContent(book, bookChapter)?.let { content ->
             val matcher = AppPattern.imgPattern.matcher(content)
             while (matcher.find()) {
-                action(matcher.group(1) ?: continue)
+                val src = matcher.group(1) ?: continue
+                action(NetworkUtils.getAbsoluteURL(bookChapter.url, src))
             }
         }
     }
