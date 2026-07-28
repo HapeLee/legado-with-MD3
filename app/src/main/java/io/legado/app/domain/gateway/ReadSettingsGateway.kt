@@ -8,9 +8,11 @@ interface ReadSettingsGateway {
     val settings: Flow<ReadSettings>
 
     /**
-     * 仅持久化 gateway 实现映射声明的 45 个配置键。
-     * [ReadSettings] 是包含遗留阅读菜单/样式字段的读模型超集；未纳入 gateway 映射的字段
-     * 仍须通过对应的遗留 Repository setter 写入，不能在此处 copy 后期待自动落盘。
+     * 持久化 [ReadSettings] 的任意字段：transform 里 copy 谁，谁就落盘。
+     *
+     * R1.5 之前只覆盖 46/102 个键，copy 到未覆盖的字段会被静默丢弃；现在实现侧的映射
+     * 与 [ReadSettings] 一一对应，由 `ReadSettingsGatewayCoverageTest` 把关。
+     * 只有被 transform 改动的键会产生写入。
      */
     suspend fun update(transform: (ReadSettings) -> ReadSettings)
 }

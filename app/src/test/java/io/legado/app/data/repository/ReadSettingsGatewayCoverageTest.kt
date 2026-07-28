@@ -8,16 +8,15 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * Track E · E0 —— `ReadSettingsGateway.update {}` 的持久化覆盖面不变式。
+ * Track E · E0 / R1.5 —— `ReadSettingsGateway.update {}` 的持久化覆盖面不变式。
  *
- * `ReadSettings` 是 101 字段的**读模型超集**，而 `update {}` 只落盘
- * `toGatewayPrefMap()` 声明的那 45 个键——这是 `ReadSettingsGateway.update` 的 KDoc
- * 明确记录的设计：其余字段须走各自的遗留 setter 写入。
+ * `ReadSettings` 的每个字段都必须能经 `update {}` 落盘。做不到的字段是**静默丢写**：
+ * 调用方 copy 了新值、`update {}` 也不报错，但重启后值回退。
  *
- * 所以本测试**不要求** 101 == 45（那会推翻既定设计），而是把「哪些字段走不通 `update {}`」
- * 冻结成基线，形成双向棘轮：
- * - 新增字段忘了接线 ⇒ 基线变大 ⇒ 红。作者必须显式选择「进 map」还是「加进基线并走 setter」。
- * - 字段补进了 map 却忘了从基线移除 ⇒ 红。
+ * R1.5 之前 `toGatewayPrefMap()` 只覆盖 46/102，其余 56 个靠各自的遗留 setter 兜底，
+ * 这些字段的名字冻结在下面的基线里。现在映射已补全，基线清空——它继续作为双向棘轮：
+ * - 新增字段忘了接线 ⇒ 基线要变大 ⇒ 红。
+ * - 字段补进 map 却忘了从基线移除 ⇒ 红。
  *
  * 判定方式是行为性的：改一个字段的值，看 `toGatewayPrefMap()` 的输出是否随之变化。
  */
@@ -90,67 +89,9 @@ class ReadSettingsGatewayCoverageTest {
 
     private companion object {
         /**
-         * 只能通过遗留 setter 写入、走不通 `update {}` 的字段。基线只允许下调。
-         * 主体是阅读菜单/标题栏外观一族（它们在 `ConfigUpdate` 侧也是同一个「无渲染副作用」
-         * 集群，见 `ConfigUpdateActionsInvariantTest`）。
+         * 走不通 `update {}` 的字段。R1.5 补全映射后已清零，基线只允许下调——
+         * 新增条目意味着又出现了一个静默丢写的字段，应当补映射而不是加进这里。
          */
-        val UNPERSISTED_BASELINE = setOf(
-            "menuAlpha",
-            "expandTextMenu",
-            "showSelectMenuIcon",
-            "autoReadSpeed",
-            "tocUiUseReplace",
-            "tocCountWords",
-            "readStyleSelect",
-            "comicStyleSelect",
-            "shareLayout",
-            "readBarStyleFollowPage",
-            "readBarStyle",
-            "clickActionTL",
-            "clickActionTC",
-            "clickActionTR",
-            "clickActionML",
-            "clickActionMC",
-            "clickActionMR",
-            "clickActionBL",
-            "clickActionBC",
-            "clickActionBR",
-            "readMenuBgColor",
-            "readMenuAccentColor",
-            "readMenuContainerColor",
-            "readMenuBgColorNight",
-            "readMenuAccentColorNight",
-            "readMenuContainerColorNight",
-            "readMenuTextColor",
-            "readMenuTextColorNight",
-            "readMenuColorMode",
-            "readMenuIconShowText",
-            "readMenuIconStyle",
-            "titleBarIconStyle",
-            "readMenuIconItemsPerRow",
-            "readMenuIconRowCount",
-            "readMenuBottomCornerRadius",
-            "readMenuFloatingBottomBar",
-            "readMenuTopBarBlurMode",
-            "readMenuBottomBarBlurMode",
-            "readMenuTopBarLiquidGlassButtons",
-            "readMenuTopBarTitleCapsule",
-            "readMenuBottomBarLiquidGlassButtons",
-            "readMenuTopBarBlurStyle",
-            "readMenuBottomBarBlurStyle",
-            "readMenuBlurRadius",
-            "readMenuBlurColor",
-            "readMenuBlurColorNight",
-            "readMenuPaletteStyle",
-            "readMenuLensRadius",
-            "readMenuBorderWidth",
-            "readMenuBorderColor",
-            "readMenuBorderColorNight",
-            "readMenuCustomIcons",
-            "titleBarCustomIcons",
-            "titleBarIconPosition",
-            "showTitleBarIcons",
-            "chineseConverterType",
-        )
+        val UNPERSISTED_BASELINE = emptySet<String>()
     }
 }
