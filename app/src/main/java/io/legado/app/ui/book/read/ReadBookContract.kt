@@ -252,12 +252,7 @@ data class ReadBookUiState(
     val sameTitleRemoved: Boolean = false,
     val isReadingProgressSyncConfigured: Boolean = false,
     // Content edit
-    val contentEditLoading: Boolean = false,
-    val contentEditText: String = "",
-    val contentEditTitle: String = "",
-    val contentEditCursorOffset: Int = 0,
-    val contentEditIsLocalTxt: Boolean = false,
-    val contentEditSaveToSource: Boolean = false,
+    // 正文编辑域状态见 ContentEditUiState —— 由 ReadContentEditDelegate 独立持有
     val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
     val selectedTtsEngine: String? = null,
     val speakEngineName: String = "",

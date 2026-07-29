@@ -219,7 +219,7 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     )
     legacyDaoInjectionBaseline.set(
         mapOf(
-            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 35,
+            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 33,
             // 护栏缺席期间（MAD-3 未合并窗口）main 新增的直连，随合并冻结，清理归 Track A/F2
             "io/legado/app/ui/book/readaloud/cloudtts/CloudTtsViewModel.kt" to 13,
         )

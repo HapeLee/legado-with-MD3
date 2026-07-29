@@ -305,6 +305,23 @@ class ReadBookViewModel(
 
     val highlightRuleState = highlightRuleDelegate.uiState
 
+    // --- 正文编辑域 ---
+
+    private val contentEditDelegate = ReadContentEditDelegate(
+        scope = viewModelScope,
+        host = object : ReadContentEditDelegate.Host {
+            override fun setActiveSheet(sheet: ReadBookSheet?) {
+                _uiState.update { it.copy(activeSheet = sheet) }
+            }
+
+            override fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter? =
+                appDb.bookChapterDao.getChapter(bookUrl, chapterIndex)
+        },
+        readSettingsRepository = readSettingsRepository,
+    )
+
+    val contentEditState = contentEditDelegate.uiState
+
     private val sysEngines: List<TextToSpeech.EngineInfo> by lazy {
         val tts = TextToSpeech(context, null)
         val engines = tts.engines
@@ -317,8 +334,6 @@ class ReadBookViewModel(
 
     private var changeSourceCoroutine: Coroutine<*>? = null
     private var pendingBooksDirReloadChapterList: Boolean = false
-    private var pendingContentEditCursorOffset: Int? = null
-    private var pendingContentEditAnchor: String? = null
     private var translationStatusJob: Job? = null
     private var observedTranslationKey: TranslationChapterKey? = null
 
@@ -684,20 +699,13 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.DismissSheet -> {
                 aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
-                if (_uiState.value.activeSheet is ReadBookSheet.HighlightRuleConfig) {
-                    highlightRuleDelegate.onSheetDismissed()
+                when (_uiState.value.activeSheet) {
+                    is ReadBookSheet.HighlightRuleConfig -> highlightRuleDelegate.onSheetDismissed()
+                    is ReadBookSheet.ContentEdit -> contentEditDelegate.onSheetDismissed()
+                    else -> Unit
                 }
                 _uiState.update {
-                    if (it.activeSheet is ReadBookSheet.ContentEdit) {
-                        it.copy(
-                            activeSheet = null,
-                            contentEditText = "",
-                            contentEditTitle = "",
-                            contentEditCursorOffset = 0,
-                            contentEditLoading = false,
-                            contentEditSaveToSource = false,
-                        )
-                    } else if (it.activeSheet is ReadBookSheet.ContentProcesses) {
+                    if (it.activeSheet is ReadBookSheet.ContentProcesses) {
                         it.copy(
                             activeSheet = null,
                             contentProcessConfig = ContentProcessConfigUiState(),
@@ -770,16 +778,14 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
             is ReadBookIntent.SourceCustomButton -> runSourceCustomButton(intent.longClick)
             is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
-            is ReadBookIntent.OpenContentEdit -> openContentEdit()
-            is ReadBookIntent.LoadContentEdit -> loadContentEdit()
-            is ReadBookIntent.SaveContentEdit -> saveContentEdit(intent.content, intent.saveToSource)
-            is ReadBookIntent.ResetContentEdit -> resetContentEdit()
-            is ReadBookIntent.SetContentEditText -> {
-                _uiState.update { it.copy(contentEditText = intent.text) }
-            }
-            is ReadBookIntent.SetContentEditSaveToSource -> {
-                _uiState.update { it.copy(contentEditSaveToSource = intent.value) }
-            }
+            is ReadBookIntent.OpenContentEdit -> contentEditDelegate.open()
+            is ReadBookIntent.LoadContentEdit -> contentEditDelegate.load()
+            is ReadBookIntent.SaveContentEdit ->
+                contentEditDelegate.save(intent.content, intent.saveToSource)
+            is ReadBookIntent.ResetContentEdit -> contentEditDelegate.reset()
+            is ReadBookIntent.SetContentEditText -> contentEditDelegate.setText(intent.text)
+            is ReadBookIntent.SetContentEditSaveToSource ->
+                contentEditDelegate.setSaveToSource(intent.value)
             is ReadBookIntent.RefreshImage -> refreshImage(intent.src)
             is ReadBookIntent.SaveImage -> saveImage(intent.src)
             is ReadBookIntent.ReverseContent -> reverseContent()
@@ -3196,136 +3202,6 @@ class ReadBookViewModel(
                     BookHelp.saveText(book, chapter, content)
                     ReadBook.loadContent(chapterIndex, resetPageOffset = false)
                 }
-        }
-    }
-
-    private fun openContentEdit() {
-        pendingContentEditCursorOffset = currentContentEditOffset()
-        pendingContentEditAnchor = currentContentEditAnchor()
-        _uiState.update { it.copy(activeSheet = ReadBookSheet.ContentEdit) }
-    }
-
-    private fun currentContentEditPage(): TextPage? {
-        return ReadBook.curTextChapter?.getPage(ReadBook.durPageIndex)
-    }
-
-    private fun currentContentEditOffset(): Int {
-        val page = currentContentEditPage()
-        return page?.lines
-            ?.firstOrNull { !it.isTitle && it.text.isNotBlank() }
-            ?.chapterPosition
-            ?: page?.lines
-                ?.firstOrNull { !it.isTitle }
-                ?.chapterPosition
-            ?: ReadBook.durChapterPos
-    }
-
-    private fun currentContentEditAnchor(): String? {
-        return currentContentEditPage()
-            ?.lines
-            ?.firstOrNull { !it.isTitle && it.text.isNotBlank() }
-            ?.text
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-    }
-
-    private fun resolveContentEditCursorOffset(text: String): Int {
-        if (text.isEmpty()) {
-            clearPendingContentEditLocation()
-            return 0
-        }
-        val preferred = (pendingContentEditCursorOffset ?: currentContentEditOffset())
-            .coerceIn(0, text.length)
-        val anchor = pendingContentEditAnchor ?: currentContentEditAnchor()
-        clearPendingContentEditLocation()
-        if (anchor.isNullOrBlank()) {
-            return preferred
-        }
-        val startIndex = (preferred - 200).coerceAtLeast(0)
-        val nearIndex = text.indexOf(anchor, startIndex = startIndex)
-        if (nearIndex >= 0) {
-            return nearIndex
-        }
-        val anyIndex = text.indexOf(anchor)
-        return if (anyIndex >= 0) anyIndex else preferred
-    }
-
-    private fun clearPendingContentEditLocation() {
-        pendingContentEditCursorOffset = null
-        pendingContentEditAnchor = null
-    }
-
-    private fun loadContentEdit() {
-        _uiState.update { it.copy(contentEditLoading = true, contentEditText = "") }
-        execute {
-            val book = ReadBook.book ?: return@execute
-            val chapter = appDb.bookChapterDao
-                .getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                ?: return@execute
-            val title = chapter.getDisplayTitle(
-                chineseConverterType = readSettingsRepository.currentSettings.chineseConverterType
-            )
-            val contentProcessor = ContentProcessor.get(book.name, book.origin)
-            val rawContent = BookHelp.getContent(book, chapter) ?: return@execute
-            val text = contentProcessor.getContent(book, chapter, rawContent, includeTitle = false)
-                .toString()
-            val cursorOffset = resolveContentEditCursorOffset(text)
-            _uiState.update {
-                it.copy(
-                    contentEditText = text,
-                    contentEditTitle = title,
-                    contentEditCursorOffset = cursorOffset,
-                    contentEditIsLocalTxt = book.isLocalTxt,
-                )
-            }
-        }.onFinally {
-            _uiState.update { it.copy(contentEditLoading = false) }
-        }
-    }
-
-    private fun saveContentEdit(content: String, saveToSource: Boolean) {
-        execute {
-            val book = ReadBook.book ?: return@execute
-            val chapter = appDb.bookChapterDao
-                .getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                ?: return@execute
-            BookHelp.saveText(book, chapter, content, saveToSource)
-            ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
-        }
-    }
-
-    private fun resetContentEdit() {
-        _uiState.update { it.copy(contentEditLoading = true) }
-        execute {
-            val book = ReadBook.book ?: return@execute
-            val chapter = appDb.bookChapterDao
-                .getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                ?: return@execute
-            BookHelp.delContent(book, chapter)
-            if (!book.isLocal) {
-                ReadBook.bookSource?.let { bookSource ->
-                    WebBook.getContentAwait(bookSource, book, chapter)
-                }
-            }
-            val contentProcessor = ContentProcessor.get(book.name, book.origin)
-            val rawContent = BookHelp.getContent(book, chapter)
-            val text = if (rawContent != null) {
-                contentProcessor.getContent(book, chapter, rawContent, includeTitle = false)
-                    .toString()
-            } else {
-                ""
-            }
-            val cursorOffset = resolveContentEditCursorOffset(text)
-            _uiState.update {
-                it.copy(
-                    contentEditText = text,
-                    contentEditCursorOffset = cursorOffset,
-                    contentEditLoading = false,
-                )
-            }
-            ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
-        }.onError {
-            _uiState.update { it.copy(contentEditLoading = false) }
         }
     }
 

@@ -117,6 +117,19 @@ class ReadBookDomainSplitBoundaryTest {
                 stateFields = setOf("highlightRuleConfig"),
                 stateTypes = listOf("HighlightRuleConfigUiState"),
             ),
+            DomainSplit(
+                name = "正文编辑",
+                delegateFile = "io/legado/app/ui/book/read/ReadContentEditDelegate.kt",
+                stateFields = setOf(
+                    "contentEditLoading",
+                    "contentEditText",
+                    "contentEditTitle",
+                    "contentEditCursorOffset",
+                    "contentEditIsLocalTxt",
+                    "contentEditSaveToSource",
+                ),
+                stateTypes = listOf("ContentEditUiState"),
+            ),
         )
 
         val APP_DB_DAO = Regex("""\bappDb\.[A-Za-z0-9_]*Dao\b""")
