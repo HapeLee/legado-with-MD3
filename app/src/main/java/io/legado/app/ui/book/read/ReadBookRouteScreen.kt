@@ -137,6 +137,7 @@ fun ReadBookRouteScreen(
     val aiState by viewModel.aiState.collectAsStateWithLifecycle()
     val highlightRuleState by viewModel.highlightRuleState.collectAsStateWithLifecycle()
     val contentEditState by viewModel.contentEditState.collectAsStateWithLifecycle()
+    val contentProcessState by viewModel.contentProcessState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -588,6 +589,7 @@ fun ReadBookRouteScreen(
                 aiState = aiState,
                 highlightRuleState = highlightRuleState,
                 contentEditState = contentEditState,
+                contentProcessState = contentProcessState,
                 preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },

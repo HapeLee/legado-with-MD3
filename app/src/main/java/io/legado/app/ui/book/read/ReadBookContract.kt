@@ -277,7 +277,6 @@ data class ReadBookUiState(
     val sheetConfig: ReadSheetConfigUiState = ReadSheetConfigUiState(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
-    val contentProcessConfig: ContentProcessConfigUiState = ContentProcessConfigUiState(),
     // AI 域状态见 ReadAiUiState —— 由 ReadAiDelegate 独立持有
     val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
 ) {

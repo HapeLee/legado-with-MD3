@@ -153,6 +153,20 @@ class ReadBookDomainSplitBoundaryTest {
                 stateFields = emptySet(),
                 stateTypes = listOf("is ConfigUpdate."),
             ),
+            DomainSplit(
+                name = "正文处理",
+                delegateFile = "io/legado/app/ui/book/read/ReadContentProcessDelegate.kt",
+                stateFields = setOf("contentProcessConfig"),
+                stateTypes = listOf("ContentProcessConfigUiState", "ContentProcessItemUi"),
+            ),
+            // 按钮配置域无自持状态：按钮列表仍在 menuConfig 里，靠 stateTypes 守
+            // 「SharedPreferences 读写和归一化逻辑不回流 VM」
+            DomainSplit(
+                name = "菜单按钮配置",
+                delegateFile = "io/legado/app/ui/book/read/ReadButtonConfigDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf("ReadBookButtonIds", "getSharedPreferences"),
+            ),
         )
 
         val APP_DB_DAO = Regex("""\bappDb\.[A-Za-z0-9_]*Dao\b""")

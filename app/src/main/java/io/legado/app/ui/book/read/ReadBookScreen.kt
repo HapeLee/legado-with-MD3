@@ -69,6 +69,7 @@ fun ReadBookScreen(
     aiState: ReadAiUiState,
     highlightRuleState: HighlightRuleConfigUiState,
     contentEditState: ContentEditUiState,
+    contentProcessState: ContentProcessConfigUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
@@ -198,7 +199,7 @@ fun ReadBookScreen(
     )
     ContentProcessesSheet(
         show = state.activeSheet is ReadBookSheet.ContentProcesses,
-        state = state.contentProcessConfig,
+        state = contentProcessState,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )

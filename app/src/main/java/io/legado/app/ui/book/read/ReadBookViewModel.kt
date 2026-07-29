@@ -18,7 +18,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HttpTTS
@@ -57,8 +56,6 @@ import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.ReadingProgress
-import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
@@ -216,6 +213,21 @@ class ReadBookViewModel(
         _uiState.update { it.copy(menuState = ReadBookMenuState()) }
     }
 
+    // --- 正文处理域 ---
+
+    private val contentProcessDelegate = ReadContentProcessDelegate(
+        context = context,
+        scope = viewModelScope,
+        host = object : ReadContentProcessDelegate.Host {
+            override fun showToast(message: String) {
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }
+        },
+        bookContentProcessGateway = bookContentProcessGateway,
+    )
+
+    val contentProcessState = contentProcessDelegate.uiState
+
     // --- AI 域（摘要 / 净化 / 重写 / 预设）---
 
     private val aiHost = object : ReadAiDelegate.Host {
@@ -239,7 +251,7 @@ class ReadBookViewModel(
             bookUrl: String,
             chapterIndex: Int,
         ) {
-            reloadCurrentChapterAfterContentProcessChanged(bookUrl, chapterIndex)
+            contentProcessDelegate.reloadCurrentChapter(bookUrl, chapterIndex)
         }
 
         override suspend fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter? =
@@ -340,6 +352,22 @@ class ReadBookViewModel(
         readBookStyleConfigRepository = readBookStyleConfigRepository,
     )
 
+    // --- 菜单按钮配置域（无自持状态，按钮列表仍在 menuConfig）---
+
+    private val buttonConfigDelegate = ReadButtonConfigDelegate(
+        context = context,
+        scope = viewModelScope,
+        host = object : ReadButtonConfigDelegate.Host {
+            override fun updateMenuConfig(transform: (ReadMenuConfig) -> ReadMenuConfig) {
+                _uiState.update { it.copy(menuConfig = transform(it.menuConfig)) }
+            }
+
+            override fun applyConfigUpdate(update: ConfigUpdate) {
+                configUpdateDelegate.handle(update)
+            }
+        },
+    )
+
     private val sysEngines: List<TextToSpeech.EngineInfo> by lazy {
         val tts = TextToSpeech(context, null)
         val engines = tts.engines
@@ -402,7 +430,7 @@ class ReadBookViewModel(
         // collect 的挂起点——本行返回时订阅者已注册。
         collectReaderSessionEvents()
         readerSession.attach()
-        refreshButtonConfigs()
+        buttonConfigDelegate.refresh()
         collectReadPreferences()
         collectEyeProtectionSettings()
         collectReadAloudPreferences()
@@ -650,21 +678,13 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenChapterSummary -> aiDelegate.openChapterSummary()
             is ReadBookIntent.OpenAiCurrentChapterRewrite -> aiDelegate.openAiCurrentChapterRewrite()
             is ReadBookIntent.RetryChapterSummary -> aiDelegate.retryChapterSummary()
-            is ReadBookIntent.LoadContentProcesses -> loadContentProcesses()
-            is ReadBookIntent.ToggleContentProcess -> toggleContentProcess(intent.id, intent.enabled)
-            is ReadBookIntent.RequestDeleteContentProcess -> _uiState.update {
-                it.copy(
-                    contentProcessConfig = it.contentProcessConfig.copy(
-                        deleteItem = intent.item
-                    )
-                )
-            }
-            is ReadBookIntent.ConfirmDeleteContentProcess -> deletePendingContentProcess()
-            is ReadBookIntent.DismissDeleteContentProcess -> _uiState.update {
-                it.copy(
-                    contentProcessConfig = it.contentProcessConfig.copy(deleteItem = null)
-                )
-            }
+            is ReadBookIntent.LoadContentProcesses -> contentProcessDelegate.load()
+            is ReadBookIntent.ToggleContentProcess ->
+                contentProcessDelegate.toggle(intent.id, intent.enabled)
+            is ReadBookIntent.RequestDeleteContentProcess ->
+                contentProcessDelegate.requestDelete(intent.item)
+            is ReadBookIntent.ConfirmDeleteContentProcess -> contentProcessDelegate.confirmDelete()
+            is ReadBookIntent.DismissDeleteContentProcess -> contentProcessDelegate.dismissDelete()
             is ReadBookIntent.SelectAiRewritePreset -> aiDelegate.selectAiRewritePreset(intent.presetId)
             is ReadBookIntent.SetAiRewriteTemporaryInstruction ->
                 aiDelegate.setAiRewriteTemporaryInstruction(intent.instruction)
@@ -745,7 +765,7 @@ class ReadBookViewModel(
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 } else if (intent.sheet is ReadBookSheet.ContentProcesses) {
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
-                    loadContentProcesses()
+                    contentProcessDelegate.load()
                 } else if (intent.sheet is ReadBookSheet.AiRewritePresetConfig) {
                     aiDelegate.openAiRewritePresetConfig()
                 } else {
@@ -757,18 +777,10 @@ class ReadBookViewModel(
                 when (_uiState.value.activeSheet) {
                     is ReadBookSheet.HighlightRuleConfig -> highlightRuleDelegate.onSheetDismissed()
                     is ReadBookSheet.ContentEdit -> contentEditDelegate.onSheetDismissed()
+                    is ReadBookSheet.ContentProcesses -> contentProcessDelegate.onSheetDismissed()
                     else -> Unit
                 }
-                _uiState.update {
-                    if (it.activeSheet is ReadBookSheet.ContentProcesses) {
-                        it.copy(
-                            activeSheet = null,
-                            contentProcessConfig = ContentProcessConfigUiState(),
-                        )
-                    } else {
-                        it.copy(activeSheet = null)
-                    }
-                }
+                _uiState.update { it.copy(activeSheet = null) }
             }
             is ReadBookIntent.SetActiveSheet -> _uiState.update {
                 it.copy(activeSheet = intent.sheet)
@@ -1039,16 +1051,20 @@ class ReadBookViewModel(
             is ReadBookIntent.ExportHighlightRulesAsUrl -> highlightRuleDelegate.exportAsUrl()
             is ReadBookIntent.ExportHighlightRulesToFile ->
                 highlightRuleDelegate.exportToFile(intent.uri)
-            is ReadBookIntent.SaveMenuCustomIcon -> saveMenuCustomIcon(intent.id, intent.uri)
-            is ReadBookIntent.SaveTitleBarCustomIcon -> saveTitleBarCustomIcon(intent.id, intent.uri)
+            is ReadBookIntent.SaveMenuCustomIcon ->
+                buttonConfigDelegate.saveMenuCustomIcon(intent.id, intent.uri)
+            is ReadBookIntent.SaveTitleBarCustomIcon ->
+                buttonConfigDelegate.saveTitleBarCustomIcon(intent.id, intent.uri)
             is ReadBookIntent.OpenMenuCustomIconPicker -> {
                 _effects.tryEmit(ReadBookEffect.OpenMenuCustomIconPicker(intent.id))
             }
             is ReadBookIntent.OpenTitleBarCustomIconPicker -> {
                 _effects.tryEmit(ReadBookEffect.OpenTitleBarCustomIconPicker(intent.id))
             }
-            is ReadBookIntent.SaveMenuButtonConfig -> saveMenuButtonConfig(intent.items)
-            is ReadBookIntent.SaveTitleBarButtonConfig -> saveTitleBarButtonConfig(intent.items)
+            is ReadBookIntent.SaveMenuButtonConfig ->
+                buttonConfigDelegate.saveMenuButtons(intent.items)
+            is ReadBookIntent.SaveTitleBarButtonConfig ->
+                buttonConfigDelegate.saveTitleBarButtons(intent.items)
 
             is ReadBookIntent.KeepLightChanged -> {
                 _readPreferences.update { it.copy(keepLight = intent.value) }
@@ -2292,106 +2308,6 @@ class ReadBookViewModel(
         return taskFlow.value.status
     }
 
-    private fun refreshButtonConfigs() {
-        val titleBarButtons = loadButtonConfig(TITLE_BAR_ICON_PREFS, TITLE_BAR_ICON_KEY)
-        val bottomBarButtons = loadButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY)
-        _uiState.update {
-            it.copy(
-                menuConfig = it.menuConfig.copy(
-                    titleBarButtons = titleBarButtons.toImmutableList(),
-                    bottomBarButtons = bottomBarButtons.toImmutableList(),
-                ),
-            )
-        }
-    }
-
-    private fun saveTitleBarButtonConfig(items: List<ReadBookButtonConfigItem>) {
-        val normalized = normalizeButtonConfig(items)
-        saveButtonConfig(TITLE_BAR_ICON_PREFS, TITLE_BAR_ICON_KEY, normalized)
-        _uiState.update {
-            it.copy(
-                menuConfig = it.menuConfig.copy(
-                    titleBarButtons = normalized.toImmutableList(),
-                ),
-            )
-        }
-    }
-
-    private fun saveMenuButtonConfig(items: List<ReadBookButtonConfigItem>) {
-        val normalized = normalizeButtonConfig(items)
-        saveButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY, normalized)
-        _uiState.update {
-            it.copy(
-                menuConfig = it.menuConfig.copy(
-                    bottomBarButtons = normalized.toImmutableList(),
-                ),
-            )
-        }
-    }
-
-    private fun loadButtonConfig(
-        preferenceName: String,
-        key: String,
-    ): List<ReadBookButtonConfigItem> {
-        val prefs = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
-        val raw = prefs.getString(key, null)
-            ?.split(";")
-            ?.mapNotNull { token ->
-                val parts = token.split(",")
-                val id = parts.getOrNull(0)?.takeIf { it in ReadBookButtonIds }
-                val enabled = parts.getOrNull(1)?.toBooleanStrictOrNull()
-                if (id != null && enabled != null) {
-                    ReadBookButtonConfigItem(id, enabled)
-                } else {
-                    null
-                }
-            }
-            ?: emptyList()
-
-        return if (raw.isEmpty()) {
-            ReadBookButtonIds.map { id ->
-                ReadBookButtonConfigItem(
-                    id = id,
-                    enabled = id in DEFAULT_ENABLED_BUTTON_IDS,
-                )
-            }
-        } else {
-            normalizeButtonConfig(raw)
-        }
-    }
-
-    private fun saveButtonConfig(
-        preferenceName: String,
-        key: String,
-        items: List<ReadBookButtonConfigItem>,
-    ) {
-        val value = items.joinToString(";") { "${it.id},${it.enabled}" }
-        context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
-            .edit()
-            .putString(key, value)
-            .apply()
-    }
-
-    private fun normalizeButtonConfig(
-        items: List<ReadBookButtonConfigItem>,
-    ): List<ReadBookButtonConfigItem> {
-        val seen = mutableSetOf<String>()
-        val normalized = items.mapNotNull { item ->
-            val id = item.id
-            if (id in ReadBookButtonIds && seen.add(id)) {
-                ReadBookButtonConfigItem(id, item.enabled)
-            } else {
-                null
-            }
-        }.toMutableList()
-        ReadBookButtonIds.forEach { id ->
-            if (seen.add(id)) {
-                normalized.add(ReadBookButtonConfigItem(id, false))
-            }
-        }
-        return normalized
-    }
-
     private fun calculateSeekProgress(): Int {
         return when (readSettingsRepository.currentSettings.progressBarBehavior) {
             "page" -> ReadBook.durPageIndex
@@ -3007,112 +2923,6 @@ class ReadBookViewModel(
         }
     }
 
-    private fun loadContentProcesses() {
-        val book = ReadBook.book ?: return
-        val chapterIndex = ReadBook.durChapterIndex
-        _uiState.update {
-            it.copy(
-                contentProcessConfig = it.contentProcessConfig.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                )
-            )
-        }
-        viewModelScope.launch(IO) {
-            runCatching {
-                bookContentProcessGateway.getForChapter(book.bookUrl, chapterIndex)
-                    .mapNotNull { it.toContentProcessItemUi() }
-                    .toImmutableList()
-            }.onSuccess { items ->
-                _uiState.update {
-                    it.copy(
-                        contentProcessConfig = it.contentProcessConfig.copy(
-                            isLoading = false,
-                            items = items,
-                            errorMessage = null,
-                        )
-                    )
-                }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        contentProcessConfig = it.contentProcessConfig.copy(
-                            isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.error),
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun toggleContentProcess(id: String, enabled: Boolean) {
-        viewModelScope.launch(IO) {
-            runCatching {
-                bookContentProcessGateway.setEnabled(id, enabled)
-            }.onSuccess {
-                reloadCurrentChapterAfterContentProcessChanged()
-                loadContentProcesses()
-            }.onFailure { error ->
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(error.localizedMessage ?: context.getString(R.string.error))
-                )
-            }
-        }
-    }
-
-    private fun deletePendingContentProcess() {
-        val item = _uiState.value.contentProcessConfig.deleteItem ?: return
-        viewModelScope.launch(IO) {
-            runCatching {
-                bookContentProcessGateway.delete(item.id)
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        contentProcessConfig = it.contentProcessConfig.copy(deleteItem = null)
-                    )
-                }
-                reloadCurrentChapterAfterContentProcessChanged()
-                loadContentProcesses()
-            }.onFailure { error ->
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(error.localizedMessage ?: context.getString(R.string.error))
-                )
-            }
-        }
-    }
-
-    private fun reloadCurrentChapterAfterContentProcessChanged(
-        bookUrl: String? = null,
-        chapterIndex: Int = ReadBook.durChapterIndex,
-    ) {
-        val book = ReadBook.book ?: return
-        if (bookUrl != null && book.bookUrl != bookUrl) return
-        if (ReadBook.durChapterIndex != chapterIndex) return
-        ReadBook.clearTextChapter()
-        for (index in chapterIndex - 1..chapterIndex + 1) {
-            ReadBook.removeLoading(index)
-        }
-        ReadBook.loadContent(resetPageOffset = false)
-    }
-
-    private fun BookContentProcess.toContentProcessItemUi(): ContentProcessItemUi? {
-        val anchor = GSON.fromJsonObject<TextProcessAnchor>(anchorJson).getOrNull()
-            ?: return null
-        val action = GSON.fromJsonObject<TextProcessAction>(actionJson).getOrNull()
-            ?: return null
-        return ContentProcessItemUi(
-            id = id,
-            kind = kind,
-            actionType = action.type,
-            enabled = enabled && status == BookContentProcess.STATUS_ACTIVE,
-            chapterIndex = chapterIndex ?: anchor.chapterIndex,
-            selectedText = anchor.selectedText,
-            replacementText = action.replacement ?: action.text.orEmpty(),
-            createdAt = createdAt,
-        )
-    }
-
     private fun changeReplaceRule(enabled: Boolean) {
         ReadBook.book?.let {
             it.setUseReplaceRule(enabled)
@@ -3186,28 +2996,6 @@ class ReadBookViewModel(
     }
 
     @Suppress("LongMethod")
-    private fun saveMenuCustomIcon(id: String, uri: Uri) {
-        execute {
-            val iconFile = java.io.File(context.filesDir, "read_menu_icons/$id.png")
-            iconFile.parentFile?.mkdirs()
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                iconFile.outputStream().use { output -> input.copyTo(output) }
-            }
-            configUpdateDelegate.handle(ConfigUpdate.MenuCustomIcon(id, iconFile.absolutePath))
-        }
-    }
-
-    private fun saveTitleBarCustomIcon(id: String, uri: Uri) {
-        execute {
-            val iconFile = java.io.File(context.filesDir, "title_bar_icons/$id.png")
-            iconFile.parentFile?.mkdirs()
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                iconFile.outputStream().use { output -> input.copyTo(output) }
-            }
-            configUpdateDelegate.handle(ConfigUpdate.TitleBarCustomIcon(id, iconFile.absolutePath))
-        }
-    }
-
     private fun selectFont(path: String) {
         readBookStyleConfigRepository.updateCurrentStyle(
             stringMutation(ReadStyleStringKey.TextFont, path)
@@ -3797,18 +3585,6 @@ internal fun readStyleExportFileName(styleName: String): String {
         .ifBlank { "readConfig" }
     return "$safeName.zip"
 }
-
-private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
-private const val TITLE_BAR_ICON_KEY = "icons"
-private const val TOOL_BUTTON_PREFS = "tool_button_config"
-private const val TOOL_BUTTON_KEY = "tool_buttons"
-private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
-    "search",
-    "auto_page",
-    "catalog",
-    "read_aloud",
-    "setting",
-)
 
 private const val DARK_LUX_THRESHOLD = 8f
 private const val BRIGHT_LUX_THRESHOLD = 100f
