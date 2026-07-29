@@ -108,6 +108,7 @@ class TextFile(private var book: Book) {
         }
         var tocLevel = 0
         toc.forEach { chapter ->
+            if (chapter.isVolume) tocLevel = 0
             chapter.tocLevel = tocLevel
             if (chapter.isVolume) tocLevel = 1
         }
