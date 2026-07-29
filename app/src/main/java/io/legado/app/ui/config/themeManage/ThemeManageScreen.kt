@@ -1,20 +1,20 @@
 package io.legado.app.ui.config.themeManage
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -22,19 +22,20 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
-import io.legado.app.help.config.ThemePackageManager
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -54,6 +55,11 @@ fun ThemeManageScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val savedThemes = state.savedThemes
+    val filteredSavedThemes = remember(savedThemes, state.searchQuery) {
+        savedThemes.filter { theme ->
+            theme.name.contains(state.searchQuery, ignoreCase = true)
+        }
+    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -67,17 +73,15 @@ fun ThemeManageScreen(
             )
         }
     ) { paddingValues ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
                 bottom = 120.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 SplicedColumnGroup {
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_save_current),
@@ -114,7 +118,18 @@ fun ThemeManageScreen(
             }
 
             if (savedThemes.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
+                item {
+                    SearchBar(
+                        query = state.searchQuery,
+                        onQueryChange = {
+                            onIntent(ThemeManageIntent.UpdateSearchQuery(it))
+                        },
+                        placeholder = stringResource(R.string.search_placeholder),
+                        autoFocus = false,
+                    )
+                }
+
+                item {
                     AppText(
                         text = stringResource(R.string.theme_manage_saved_themes),
                         style = MaterialTheme.typography.titleSmall,
@@ -123,7 +138,7 @@ fun ThemeManageScreen(
                     )
                 }
 
-                items(savedThemes, key = { it.name }) { theme ->
+                items(filteredSavedThemes, key = { it.name }) { theme ->
                     SavedThemeItem(
                         theme = theme,
                         onApply = { onIntent(ThemeManageIntent.OpenApplyDialog(theme)) },
@@ -229,150 +244,88 @@ private fun SavedThemeItem(
     onExport: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val data = theme.data
+    val lightPrimary = data.themeColor.takeIf { it != 0 }?.let(::Color)
+        ?: data.cPrimary.takeIf { it != 0 }?.let(::Color)
+        ?: MaterialTheme.colorScheme.primary
+    val darkPrimary = data.themeColorNight.takeIf { it != 0 }?.let(::Color)
+        ?: data.cNPrimary.takeIf { it != 0 }?.let(::Color)
+        ?: lightPrimary
+    val lightSecondary = data.secondaryThemeColor.takeIf { it != 0 }?.let(::Color)
+        ?: lightPrimary
+    val darkSecondary = data.secondaryThemeColorNight.takeIf { it != 0 }?.let(::Color)
+        ?: lightSecondary
+    val lightSurface = data.themeBackgroundColor.takeIf { it != 0 }?.let(::Color)
+        ?: Color(0xFFF7F2FA)
+    val darkSurface = data.themeBackgroundColorNight.takeIf { it != 0 }?.let(::Color)
+        ?: if (data.enableDeepPersonalization && data.themeBackgroundColor != 0) {
+            Color(data.themeBackgroundColor)
+        } else if (data.isPureBlack) {
+            Color.Black
+        } else {
+            Color(0xFF1C1B1F)
+        }
+
     GlassCard(
         onClick = onApply,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            val lightPrimary = if (theme.data.themeColor != 0) Color(theme.data.themeColor)
-            else if (theme.data.cPrimary != 0) Color(theme.data.cPrimary)
-            else MaterialTheme.colorScheme.primary
-
-            val darkPrimary = if (theme.data.themeColorNight != 0) {
-                Color(theme.data.themeColorNight)
-            } else if (theme.data.cNPrimary != 0) {
-                Color(theme.data.cNPrimary)
-            } else {
-                lightPrimary
-            }
-
-            val lightBg =
-                if (theme.data.themeBackgroundColor != 0) Color(theme.data.themeBackgroundColor)
-                else Color(0xFFF7F2FA)
-
-            val darkBg = if (theme.data.themeBackgroundColorNight != 0) {
-                Color(theme.data.themeBackgroundColorNight)
-            } else if (theme.data.enableDeepPersonalization &&
-                theme.data.themeBackgroundColor != 0
-            ) {
-                Color(theme.data.themeBackgroundColor)
-            } else if (theme.data.isPureBlack) {
-                Color.Black
-            } else {
-                Color(0xFF1C1B1F)
-            }
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.4f)
-            ) {
-                // 日间行
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(lightBg)
-                ) {
-                    AppText(
-                        text = stringResource(R.string.theme_manage_preview_day),
-                        style = MaterialTheme.typography.labelMediumEmphasized,
-                        color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(
-                            alpha = 0.6f
-                        )
-                        else Color.Black.copy(alpha = 0.5f),
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 12.dp)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 16.dp)
-                            .size(28.dp)
-                            .shadow(
-                                elevation = 6.dp,
-                                shape = RoundedCornerShape(6.dp),
-                                ambientColor = lightPrimary,
-                                spotColor = lightPrimary
-                            )
-                            .background(lightPrimary, RoundedCornerShape(6.dp))
-                    )
-                }
-
-                // 夜间行
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(darkBg)
-                ) {
-                    AppText(
-                        text = stringResource(R.string.theme_manage_preview_night),
-                        style = MaterialTheme.typography.labelMediumEmphasized,
-                        color = if (theme.data.primaryTextColorNight != 0) {
-                            Color(theme.data.primaryTextColorNight).copy(alpha = 0.6f)
-                        } else if (theme.data.enableDeepPersonalization &&
-                            theme.data.primaryTextColor != 0
-                        ) {
-                            Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
-                        } else {
-                            Color.White.copy(alpha = 0.5f)
-                        },
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 12.dp)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 16.dp)
-                            .size(28.dp)
-                            .shadow(
-                                elevation = 6.dp,
-                                shape = RoundedCornerShape(6.dp),
-                                ambientColor = darkPrimary,
-                                spotColor = darkPrimary
-                            )
-                            .background(darkPrimary, RoundedCornerShape(6.dp))
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 AppText(
                     text = theme.name,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.titleSmallEmphasized,
                     maxLines = 1
                 )
-
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    SmallPlainButton(
-                        onClick = onEdit,
-                        icon = Icons.Default.Edit,
-                        contentDescription = stringResource(R.string.edit)
-                    )
-                    SmallPlainButton(
-                        onClick = onExport,
-                        icon = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.share)
-                    )
-                    SmallPlainButton(
-                        onClick = onDelete,
-                        icon = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete)
-                    )
+                    ThemeColorGroup(lightPrimary, lightSecondary, lightSurface)
+                    Spacer(Modifier.width(8.dp))
+                    ThemeColorGroup(darkPrimary, darkSecondary, darkSurface)
                 }
             }
+            SmallPlainButton(
+                onClick = onEdit,
+                icon = Icons.Default.Edit,
+                contentDescription = stringResource(R.string.edit)
+            )
+            SmallPlainButton(
+                onClick = onExport,
+                icon = Icons.Default.Share,
+                contentDescription = stringResource(R.string.share)
+            )
+            SmallPlainButton(
+                onClick = onDelete,
+                icon = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.delete)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeColorGroup(
+    primary: Color,
+    secondary: Color,
+    surface: Color,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        listOf(primary, secondary, surface).forEach { color ->
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(color, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            )
         }
     }
 }

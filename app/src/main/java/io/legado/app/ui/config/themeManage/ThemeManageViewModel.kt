@@ -6,8 +6,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.help.config.SavedTheme
 import io.legado.app.domain.model.settings.ThemeExportData
+import io.legado.app.help.config.SavedTheme
 import io.legado.app.help.config.ThemePackageManager
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -51,6 +51,9 @@ class ThemeManageViewModel(
             is ThemeManageIntent.UpdateSaveName -> _uiState.update { state ->
                 val dialog = state.dialog as? ThemeManageDialog.Save ?: return@update state
                 state.copy(dialog = dialog.copy(name = intent.value))
+            }
+            is ThemeManageIntent.UpdateSearchQuery -> _uiState.update {
+                it.copy(searchQuery = intent.value)
             }
             is ThemeManageIntent.OpenApplyDialog ->
                 _uiState.update { it.copy(dialog = ThemeManageDialog.Apply(intent.theme)) }
@@ -239,6 +242,7 @@ class ThemeManageViewModel(
 data class ThemeManageUiState(
     val loading: Boolean = false,
     val savedThemes: ImmutableList<SavedTheme> = persistentListOf(),
+    val searchQuery: String = "",
     val hasLegacyThemes: Boolean = false,
     val dialog: ThemeManageDialog? = null,
 )
@@ -273,6 +277,7 @@ sealed interface ThemeManageIntent {
     data object MigrateLegacyThemes : ThemeManageIntent
     data object OpenSaveDialog : ThemeManageIntent
     data class UpdateSaveName(val value: String) : ThemeManageIntent
+    data class UpdateSearchQuery(val value: String) : ThemeManageIntent
     data class OpenApplyDialog(val theme: SavedTheme) : ThemeManageIntent
     data class OpenDeleteDialog(val theme: SavedTheme) : ThemeManageIntent
     data class OpenEditSheet(val theme: SavedTheme) : ThemeManageIntent
