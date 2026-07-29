@@ -324,14 +324,16 @@ class ReadBookController(
         }
     }
 
-    // ── ReadView.CallBack ─────────────────────────────────────────────
+    // ── ReadView 协作面 ────────────────────────────────────────────────
+    // override 的四项是 ReadView.CallBack（瞬时 UI 副作用 + 首帧门闩）；
+    // private 的几项是 ReaderEvent 的落点，只由下面的 onEvent 调用。
 
     // initData 还没跑完时, 只要 ReadBook 里已有本书可用的章节就让 ReadView 直接画正文,
     // 否则首帧必然是 "加载数据中" 占位页
     override val isInitFinish: Boolean
         get() = viewModel.uiState.value.isInitFinish || viewModel.isCachedChapterUsable()
 
-    override fun showActionMenu() {
+    private fun showActionMenu() {
         val state = viewModel.uiState.value
         when {
             BaseReadAloudService.isRun -> viewModel.onIntent(
@@ -379,19 +381,19 @@ class ReadBookController(
         }
     }
 
-    override fun autoPageStop() {
+    private fun autoPageStop() {
         viewModel.onIntent(ReadBookIntent.StopAutoPage)
     }
 
-    override fun openChapterList() {
+    private fun openChapterList() {
         viewModel.onIntent(ReadBookIntent.OpenChapterList)
     }
 
-    override fun openContentEdit() {
+    private fun openContentEdit() {
         viewModel.onIntent(ReadBookIntent.OpenContentEdit)
     }
 
-    override fun addBookmark() {
+    private fun addBookmark() {
         val book = ReadBook.book
         val page = ReadBook.curTextChapter?.getPage(ReadBook.durPageIndex)
         if (book != null && page != null) {
@@ -405,11 +407,11 @@ class ReadBookController(
         }
     }
 
-    override fun changeReplaceRuleState() {
+    private fun changeReplaceRuleState() {
         viewModel.onIntent(ReadBookIntent.MenuEnableReplace)
     }
 
-    override fun openSearchActivity(searchWord: String?) {
+    private fun openSearchActivity(searchWord: String?) {
         viewModel.onIntent(ReadBookIntent.OpenSearch(searchWord))
     }
 
@@ -418,7 +420,7 @@ class ReadBookController(
         upSystemUiVisibility(isInMultiWindowModeCompat, !state.menuVisible)
     }
 
-    override fun sureNewProgress(progress: BookProgress) {
+    private fun sureNewProgress(progress: BookProgress) {
         viewModel.onIntent(ReadBookIntent.SureNewProgress(progress))
     }
 
@@ -426,6 +428,13 @@ class ReadBookController(
 
     override fun onEvent(event: ReaderEvent) {
         when (event) {
+            ReaderEvent.ShowActionMenu -> showActionMenu()
+            ReaderEvent.AutoPageStop -> autoPageStop()
+            ReaderEvent.OpenChapterList -> openChapterList()
+            ReaderEvent.OpenContentEdit -> openContentEdit()
+            ReaderEvent.OpenSearch -> openSearchActivity(null)
+            ReaderEvent.AddBookmark -> addBookmark()
+            ReaderEvent.ChangeReplaceRuleState -> changeReplaceRuleState()
             ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
             ReaderEvent.PrevChapter -> viewModel.onIntent(ReadBookIntent.PrevChapter)
             ReaderEvent.ReadAloudPrevParagraph ->

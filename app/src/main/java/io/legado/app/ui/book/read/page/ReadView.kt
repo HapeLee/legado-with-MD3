@@ -16,7 +16,6 @@ import android.widget.FrameLayout
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
@@ -54,15 +53,13 @@ import kotlin.math.abs
 class ReadView(
     context: Context,
     attrs: AttributeSet? = null,
-    callBack: CallBack? = null,
+    private val callBack: CallBack,
     contentCallBack: ContentTextView.CallBack? = null,
     private val eventListener: ReaderEventListener,
 ) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    private var injectedCallBack: CallBack? = callBack
-    val callBack: CallBack get() = injectedCallBack ?: activity as CallBack
     var pageFactory: TextPageFactory = TextPageFactory(this)
     var pageDelegate: PageDelegate? = null
         private set(value) {
@@ -322,7 +319,7 @@ class ReadView(
             AccessibilityNodeInfo.ACTION_CLICK -> {
                 performClick()
                 pageDelegate?.dismissSnackBar()
-                callBack.showActionMenu()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
                 true
             }
 
@@ -501,7 +498,7 @@ class ReadView(
         when (action) {
             0 -> {
                 pageDelegate?.dismissSnackBar()
-                callBack.showActionMenu()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
             }
 
             1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
@@ -510,11 +507,11 @@ class ReadView(
             4 -> eventListener.onEvent(ReaderEvent.PrevChapter)
             5 -> eventListener.onEvent(ReaderEvent.ReadAloudPrevParagraph)
             6 -> eventListener.onEvent(ReaderEvent.ReadAloudNextParagraph)
-            7 -> callBack.addBookmark()
-            8 -> callBack.openContentEdit()
-            9 -> callBack.changeReplaceRuleState()
-            10 -> callBack.openChapterList()
-            11 -> callBack.openSearchActivity(null)
+            7 -> eventListener.onEvent(ReaderEvent.AddBookmark)
+            8 -> eventListener.onEvent(ReaderEvent.OpenContentEdit)
+            9 -> eventListener.onEvent(ReaderEvent.ChangeReplaceRuleState)
+            10 -> eventListener.onEvent(ReaderEvent.OpenChapterList)
+            11 -> eventListener.onEvent(ReaderEvent.OpenSearch)
             12 -> eventListener.onEvent(ReaderEvent.SyncProgress)
             13 -> eventListener.onEvent(ReaderEvent.ToggleReadAloudPause)
         }
@@ -783,6 +780,14 @@ class ReadView(
         }
     }
 
+    /**
+     * 供 [io.legado.app.ui.book.read.page.delegate.PageDelegate] 在翻到尽头时出站——
+     * 翻页委托不持有 eventListener，经这里转发（Track D·D1）。
+     */
+    internal fun requestAutoPageStop() {
+        eventListener.onEvent(ReaderEvent.AutoPageStop)
+    }
+
     fun onScrollAnimStart() {
         autoPager.pause()
     }
@@ -834,18 +839,16 @@ class ReadView(
         return ReadBook.durChapterIndex > 0
     }
 
+    /**
+     * 与宿主的**瞬时 UI 副作用**协作面（Track D·D1）。
+     *
+     * 业务意图一律走 [ReaderEvent]；这里只留不属于业务状态、由 View 直接驱动宿主的那几项，
+     * 外加首帧放行门闩 `isInitFinish`（入站状态查询，随 D2 数据面一起处理）。
+     */
     interface CallBack {
         val isInitFinish: Boolean
-        fun showActionMenu()
         fun screenOffTimerStart()
         fun showTextActionMenu()
-        fun autoPageStop()
-        fun openChapterList()
-        fun openContentEdit()
-        fun addBookmark()
-        fun changeReplaceRuleState()
-        fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
-        fun sureNewProgress(progress: BookProgress)
     }
 }

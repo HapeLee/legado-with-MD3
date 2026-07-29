@@ -11,6 +11,20 @@ package io.legado.app.ui.book.read.page
  */
 sealed interface ReaderEvent {
 
+    data object ShowActionMenu : ReaderEvent
+
+    data object AutoPageStop : ReaderEvent
+
+    data object OpenChapterList : ReaderEvent
+
+    data object OpenContentEdit : ReaderEvent
+
+    data object OpenSearch : ReaderEvent
+
+    data object AddBookmark : ReaderEvent
+
+    data object ChangeReplaceRuleState : ReaderEvent
+
     data object NextChapter : ReaderEvent
 
     data object PrevChapter : ReaderEvent

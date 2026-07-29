@@ -70,7 +70,60 @@ class ReadViewOutboundBoundaryTest {
         )
     }
 
+    @Test
+    fun `ReadView CallBack 只剩瞬时 UI 副作用`() {
+        val source = stripComments(readViewSource())
+        val body = Regex("""interface\s+CallBack\s*\{([\s\S]*?)\n\s{4}\}""")
+            .find(source)
+            ?.groupValues
+            ?.get(1)
+            ?: error("找不到 ReadView.CallBack 的声明")
+
+        val members = Regex("""\b(?:fun|val|var)\s+(\w+)""")
+            .findAll(body)
+            .map { it.groupValues[1] }
+            .toList()
+
+        val businessLeaks = members.filterNot { it in CALLBACK_UI_SIDE_EFFECTS }
+        assertTrue(
+            "ReadView.CallBack 又混进了非瞬时副作用的成员：${businessLeaks.joinToString()}。\n" +
+                "业务/导航意图请走 ReaderEvent；CallBack 只留 " +
+                "${CALLBACK_UI_SIDE_EFFECTS.joinToString()}——" +
+                "前三者是 View 直接驱动宿主的瞬时副作用，isInitFinish 是首帧放行门闩。",
+            businessLeaks.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `callBack 也必须构造期注入且无 activity 兜底`() {
+        val source = stripComments(readViewSource())
+        val violations = buildList {
+            if (Regex("""as\s+CallBack""").containsMatchIn(source)) {
+                add("出现了 activity as CallBack 兜底")
+            }
+            if (!Regex("""private\s+val\s+callBack\s*:\s*CallBack\s*(?![?=])""")
+                    .containsMatchIn(source)
+            ) {
+                add("callBack 不再是构造期注入的非空 private val")
+            }
+        }
+        assertTrue(
+            "${violations.joinToString()}。\n" +
+                "宿主协作面漏接线必须是编译错误；activity as CallBack 还会把 ReadView " +
+                "钉死在「宿主必须是实现了该接口的 Activity」上，JVM 里就构造不出来。",
+            violations.isEmpty(),
+        )
+    }
+
     private companion object {
+        /** CallBack 允许保留的成员：三项瞬时 UI 副作用 + 首帧放行门闩 */
+        val CALLBACK_UI_SIDE_EFFECTS = listOf(
+            "isInitFinish",
+            "screenOffTimerStart",
+            "showTextActionMenu",
+            "upSystemUiVisibility",
+        )
+
         /** D2（入站数据面）的范围，D1 不动 */
         val READ_BOOK_DATA_PLANE_ALLOWLIST = listOf(
             "textChapter",
