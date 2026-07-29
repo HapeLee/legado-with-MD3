@@ -1,6 +1,7 @@
 package io.legado.app.ui.replace
 
 import android.content.ClipData
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -65,6 +66,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.showHelp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -388,7 +390,7 @@ fun ReplaceRuleScreen(
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.help),
-                onClick = { /*TODO*/ dismiss() }
+                onClick = { dismiss(); (context as? AppCompatActivity)?.showHelp("replaceRuleHelp") }
             )
             PillDivider()
             RoundDropdownMenuItem(

@@ -756,6 +756,8 @@
     <string name="import_default_rule">导入默认规则</string>
     <string name="name">名称</string>
     <string name="regex">正则</string>
+    <string name="chapter_rule">章节正则</string>
+    <string name="volume_rule">分卷正则</string>
     <string name="highlight_rule_config">高亮规则</string>
     <string name="new_rule">新增规则</string>
     <string name="edit_rule">编辑规则</string>

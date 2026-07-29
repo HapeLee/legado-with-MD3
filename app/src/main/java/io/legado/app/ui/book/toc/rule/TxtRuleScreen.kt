@@ -224,7 +224,7 @@ fun TxtRuleScreen(
         onConfirm = { onIntent(TxtTocRuleIntent.SaveImportedRules) },
         itemTitle = { rule -> rule.name },
         itemSubtitle = { rule ->
-            rule.rule.takeIf { it.isNotBlank() }
+            rule.chapterRule.takeIf { it.isNotBlank() }
         }
     )
 
@@ -252,8 +252,9 @@ fun TxtRuleScreen(
         show = showEditSheet,
         rule = editingRule,
         title = stringResource(R.string.txt_toc_rule),
-        label1 = stringResource(R.string.regex),
+        label1 = stringResource(R.string.chapter_rule),
         label2 = stringResource(R.string.example),
+        label3 = stringResource(R.string.volume_rule),
         onDismissRequest = {
             showEditSheet = false
             editingRule = null
@@ -265,12 +266,12 @@ fun TxtRuleScreen(
                     return@RuleEditSheet
                 }
 
-                updatedRule.rule.isBlank() -> {
+                updatedRule.chapterRule.isBlank() -> {
                     context.toastOnUi(R.string.cannot_empty)
                     return@RuleEditSheet
                 }
 
-                runCatching { Regex(updatedRule.rule) }.isFailure -> {
+                runCatching { Regex(updatedRule.chapterRule) }.isFailure -> {
                     context.toastOnUi(R.string.invalid_format)
                     return@RuleEditSheet
                 }
@@ -284,18 +285,21 @@ fun TxtRuleScreen(
         toFields = { r ->
             RuleEditFields(
                 name = r?.name ?: "",
-                rule1 = r?.rule ?: "",
-                rule2 = r?.example ?: ""
+                rule1 = r?.chapterRule ?: "",
+                rule2 = r?.example ?: "",
+                rule3 = r?.volumeRule ?: ""
             )
         },
         fromFields = { fields, old ->
             old?.copy(
                 name = fields.name,
-                rule = fields.rule1,
+                chapterRule = fields.rule1,
+                volumeRule = fields.rule3,
                 example = fields.rule2
             ) ?: TxtTocRule(
                 name = fields.name,
-                rule = fields.rule1,
+                chapterRule = fields.rule1,
+                volumeRule = fields.rule3,
                 example = fields.rule2
             )
         },
@@ -393,7 +397,7 @@ fun TxtRuleScreen(
                 items(rules, key = { it.id }) { item ->
 
                     val isItemHighLighted = if (isPickMode) {
-                        item.rule.rule == initialRule
+                        item.rule.chapterRule == initialRule
                     } else {
                         selectedIds.contains(item.id)
                     }
@@ -424,7 +428,7 @@ fun TxtRuleScreen(
                         inSelectionMode = inSelectionMode,
                         onToggleSelection = {
                             if (isPickMode) {
-                                onPickRule.invoke(item.rule.rule)
+                                onPickRule.invoke(item.rule.chapterRule)
                                 onBackClick()
                             } else {
                                 onIntent(TxtTocRuleIntent.ToggleSelection(item.id))
