@@ -14,7 +14,6 @@ import io.legado.app.base.BaseComposeActivity
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
@@ -26,7 +25,6 @@ import io.legado.app.utils.getClipText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.share
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -89,8 +87,6 @@ class BookSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
                         negativeButton(R.string.no)
                     }
 
-                    BookSourceEditEffect.OpenLog -> showDialogFragment<AppLogDialog>()
-                    BookSourceEditEffect.OpenHelp -> showHelp("ruleHelp")
                     is BookSourceEditEffect.OpenVariable -> openVariable(effect.sourceUrl)
                     is BookSourceEditEffect.ShowMessage -> toastOnUi(effect.message)
                 }

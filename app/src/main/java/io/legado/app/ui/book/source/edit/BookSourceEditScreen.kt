@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.about.MarkdownSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
@@ -45,6 +46,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -169,6 +171,17 @@ fun BookSourceEditScreen(
         onValueChange = { path, value ->
             onIntent(BookSourceEditIntent.UpdateField(path, value))
         },
+    )
+    AppLogSheet(
+        show = state.activeSheet is BookSourceEditSheet.Log,
+        onDismissRequest = { onIntent(BookSourceEditIntent.DismissSheet) },
+    )
+    val helpSheet = state.activeSheet as? BookSourceEditSheet.Help
+    MarkdownSheet(
+        show = helpSheet != null,
+        title = stringResource(R.string.help),
+        content = helpSheet?.content.orEmpty(),
+        onDismissRequest = { onIntent(BookSourceEditIntent.DismissSheet) },
     )
 }
 

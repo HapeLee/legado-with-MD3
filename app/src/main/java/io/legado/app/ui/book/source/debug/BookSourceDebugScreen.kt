@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -29,6 +27,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.model.Debug
+import io.legado.app.ui.about.MarkdownSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppFloatingActionButton
@@ -37,8 +36,6 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -143,20 +140,12 @@ fun BookSourceDebugScreen(
         }
     }
     val selectedEntry = state.entries.firstOrNull { it.id == state.selectedEntryId }
-    AppModalBottomSheet(
+    MarkdownSheet(
         show = selectedEntry != null,
+        title = selectedEntry?.kind?.title.orEmpty(),
+        content = selectedEntry?.message.orEmpty(),
         onDismissRequest = { onIntent(BookSourceDebugIntent.DismissEntry) },
-        title = selectedEntry?.kind?.title,
-        animateContentSize = false,
-    ) {
-        selectedEntry?.let {
-            AppText(
-                text = it.message,
-                modifier = Modifier.fillMaxWidth(),
-                style = LegadoTheme.typography.bodyMedium,
-            )
-        }
-    }
+    )
 }
 
 @Composable

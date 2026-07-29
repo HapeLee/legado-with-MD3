@@ -18,15 +18,16 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import io.legado.app.model.Debug
+import io.legado.app.ui.about.MarkdownSheet
 import io.legado.app.ui.book.source.debug.BookSourceDebugFilter
 import io.legado.app.ui.book.source.debug.BookSourceDebugStatus
-import io.legado.app.ui.book.source.debug.DebugEntryCard
 import io.legado.app.ui.book.source.debug.DebugChipRow
+import io.legado.app.ui.book.source.debug.DebugEntryCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
@@ -34,8 +35,6 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -172,12 +171,12 @@ fun RssSourceDebugScreen(
         }
     }
     val selected = state.entries.firstOrNull { it.id == state.selectedEntryId }
-    AppModalBottomSheet(
-        selected != null,
-        { onIntent(RssSourceDebugIntent.DismissEntry) },
+    MarkdownSheet(
+        show = selected != null,
         title = "日志详情",
-        animateContentSize = false
-    ) { selected?.let { AppText(it.message, Modifier.fillMaxWidth()) } }
+        content = selected?.message.orEmpty(),
+        onDismissRequest = { onIntent(RssSourceDebugIntent.DismissEntry) },
+    )
 }
 
 private val RssSourceDebugTarget.label

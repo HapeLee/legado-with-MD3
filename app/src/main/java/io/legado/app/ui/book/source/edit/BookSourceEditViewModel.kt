@@ -89,8 +89,9 @@ class BookSourceEditViewModel(application: Application) : AndroidViewModel(appli
 
             BookSourceEditIntent.Paste -> _effects.tryEmit(BookSourceEditEffect.ReadClipboard)
             BookSourceEditIntent.ClearCookie -> clearCookie()
-            BookSourceEditIntent.ShowLog -> _effects.tryEmit(BookSourceEditEffect.OpenLog)
-            BookSourceEditIntent.ShowHelp -> _effects.tryEmit(BookSourceEditEffect.OpenHelp)
+            BookSourceEditIntent.ShowLog -> _uiState.update { it.copy(activeSheet = BookSourceEditSheet.Log) }
+            BookSourceEditIntent.ShowHelp -> showHelp()
+            BookSourceEditIntent.DismissSheet -> _uiState.update { it.copy(activeSheet = null) }
             BookSourceEditIntent.SaveAndSetVariable -> save { BookSourceEditEffect.OpenVariable(it) }
             BookSourceEditIntent.RequestBack -> if (_uiState.value.dirty) {
                 _effects.tryEmit(BookSourceEditEffect.ConfirmDiscard)
@@ -106,6 +107,14 @@ class BookSourceEditViewModel(application: Application) : AndroidViewModel(appli
             applySource(source, asOriginal = true)
             if (sourceUrl == null) originalSource = null
         }
+    }
+
+    private fun showHelp() = viewModelScope.launch(Dispatchers.IO) {
+        val content = getApplication<Application>().assets
+            .open("web/help/md/ruleHelp.md")
+            .bufferedReader()
+            .use { it.readText() }
+        _uiState.update { it.copy(activeSheet = BookSourceEditSheet.Help(content)) }
     }
 
     private fun applySource(source: BookSource, asOriginal: Boolean = false) {

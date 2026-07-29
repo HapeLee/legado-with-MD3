@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.SnackbarHostState
@@ -188,7 +187,7 @@ fun BookSourceScreen(
         topBarActions = {
             TopBarActionButton(
                 onClick = { showGroupFilterSheet = true },
-                imageVector = Icons.Default.Folder,
+                imageVector = Icons.Outlined.Sell,
                 contentDescription = stringResource(R.string.menu_action_group),
             )
         },
@@ -437,8 +436,6 @@ private fun BookSourceGroupFilterSheet(
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.height(420.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
@@ -461,7 +458,6 @@ private fun BookSourceGroupFilterSheet(
                     GroupFilterItem(label, value, state.activeFilter, onSelect)
                 }
             }
-            Spacer(Modifier.height(12.dp))
         }
     }
 }

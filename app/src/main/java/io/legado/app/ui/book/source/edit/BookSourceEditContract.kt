@@ -38,7 +38,13 @@ data class BookSourceEditUiState(
     val bookSourceType: Int = 0,
     val autoComplete: Boolean = false,
     val dirty: Boolean = false,
+    val activeSheet: BookSourceEditSheet? = null,
 )
+
+sealed interface BookSourceEditSheet {
+    data object Log : BookSourceEditSheet
+    data class Help(val content: String) : BookSourceEditSheet
+}
 
 sealed interface BookSourceEditIntent {
     data class Load(val sourceUrl: String?) : BookSourceEditIntent
@@ -62,6 +68,7 @@ sealed interface BookSourceEditIntent {
     data object ClearCookie : BookSourceEditIntent
     data object ShowLog : BookSourceEditIntent
     data object ShowHelp : BookSourceEditIntent
+    data object DismissSheet : BookSourceEditIntent
     data object SaveAndSetVariable : BookSourceEditIntent
     data object RequestBack : BookSourceEditIntent
     data object DiscardChanges : BookSourceEditIntent
@@ -76,8 +83,6 @@ sealed interface BookSourceEditEffect {
     data class ShareText(val text: String) : BookSourceEditEffect
     data object ReadClipboard : BookSourceEditEffect
     data object ConfirmDiscard : BookSourceEditEffect
-    data object OpenLog : BookSourceEditEffect
-    data object OpenHelp : BookSourceEditEffect
     data class OpenVariable(val sourceUrl: String) : BookSourceEditEffect
     data class ShowMessage(val message: String) : BookSourceEditEffect
 }

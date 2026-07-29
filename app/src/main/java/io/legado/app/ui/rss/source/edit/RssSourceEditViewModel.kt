@@ -3,21 +3,27 @@ package io.legado.app.ui.rss.source.edit
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.*
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import io.legado.app.R
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.*
-import io.legado.app.help.config.SourceConfig
+import io.legado.app.help.AppCacheManager
+import io.legado.app.help.RuleComplete
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.model.SharedJsScope
 import io.legado.app.ui.book.source.edit.BookSourceEditFieldUi
 import io.legado.app.utils.GSON
-import kotlinx.collections.immutable.*
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class RssSourceEditViewModel(app: Application) : AndroidViewModel(app) {
@@ -35,10 +41,30 @@ class RssSourceEditViewModel(app: Application) : AndroidViewModel(app) {
         RssSourceEditIntent.SaveLogin -> save { RssSourceEditEffect.Login(it) }; RssSourceEditIntent.Copy -> _effects.tryEmit(RssSourceEditEffect.Copy(GSON.toJson(current())))
         RssSourceEditIntent.Paste -> _effects.tryEmit(RssSourceEditEffect.ReadClipboard); is RssSourceEditIntent.Import -> import(i.text)
         RssSourceEditIntent.Share -> _effects.tryEmit(RssSourceEditEffect.Share(GSON.toJson(current()))); RssSourceEditIntent.ClearCookie -> viewModelScope.launch(Dispatchers.IO){ CookieStore.removeCookie(current().sourceUrl) }
-        RssSourceEditIntent.SetVariable -> save { RssSourceEditEffect.Variable(it) }; RssSourceEditIntent.ShowLog -> _effects.tryEmit(RssSourceEditEffect.Log)
-        RssSourceEditIntent.Help -> _effects.tryEmit(RssSourceEditEffect.Help); RssSourceEditIntent.Back -> _effects.tryEmit(RssSourceEditEffect.Finish(""))
+        RssSourceEditIntent.SetVariable -> save { RssSourceEditEffect.Variable(it) }; RssSourceEditIntent.ShowLog -> _uiState.update {
+            it.copy(
+                activeSheet = RssSourceEditSheet.Log
+            )
+        }
+
+        RssSourceEditIntent.Help -> showHelp(); RssSourceEditIntent.DismissSheet -> _uiState.update {
+            it.copy(
+                activeSheet = null
+            )
+        }; RssSourceEditIntent.Back -> _effects.tryEmit(RssSourceEditEffect.Finish(""))
     } }
     private fun load(url:String?)=viewModelScope.launch(Dispatchers.IO){ apply(url?.let{appDb.rssSourceDao.getByKey(it)}?:RssSource(),true) }
+    private fun showHelp() = viewModelScope.launch(Dispatchers.IO) {
+        val content =
+            getApplication<Application>().assets.open("web/help/md/ruleHelp.md").bufferedReader()
+                .use { it.readText() }; _uiState.update {
+        it.copy(
+            activeSheet = RssSourceEditSheet.Help(
+                content
+            )
+        )
+    }
+    }
     private fun apply(s:RssSource, asOriginal:Boolean=false){ if(asOriginal){original=s;baseline=GSON.toJson(s)};json=JsonParser.parseString(GSON.toJson(s)).asJsonObject;_uiState.value=RssSourceEditUiState(false,fields=groups(),enabled=s.enabled,singleUrl=s.singleUrl,cookieJar=s.enabledCookieJar==true,preload=s.preload,type=s.type,articleStyle=s.articleStyle) }
     private fun update(k:String,v:String){ if(v.isBlank())json.remove(k) else json.addProperty(k,v);_uiState.update{st->st.copy(fields=st.fields.mapValues{(_,fs)->fs.map{if(it.path==k)it.copy(value=v)else it}.toImmutableList()}.toImmutableMap(),dirty=true)} }
     private fun flag(f:RssSourceEditUiState.()->RssSourceEditUiState)=_uiState.update{f(it).copy(dirty=true)}
