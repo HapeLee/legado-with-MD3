@@ -744,7 +744,7 @@
     <string name="refresh_cover">Refresh cover</string>
     <string name="change_cover_source">Change origin</string>
     <string name="select_local_image">Local image</string>
-    <string name="book_type">Type:</string>
+    <string name="book_type">Type</string>
     <string name="to_backstage">Background</string>
     <string name="importing">Importing</string>
     <string name="exporting">Exporting</string>
@@ -1350,6 +1350,7 @@
     <string name="clear_webview_data">Clear WebView Data</string>
     <string name="clear_webview_data_summary">Clear all data in WebView</string>
     <string name="source_tab_list">List</string>
+    <string name="source_tab_web_view">Web view</string>
     <string name="source_tab_start">Startup</string>
     <string name="r_startHtml">Startup page HTML text</string>
     <string name="r_startStyle">Startup page style text</string>
