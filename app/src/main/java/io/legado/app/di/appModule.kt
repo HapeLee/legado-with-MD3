@@ -68,6 +68,7 @@ import io.legado.app.data.repository.ReadAloudVoiceRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.ReadStyleConfigStore
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
@@ -369,6 +370,7 @@ val appModule = module {
     singleOf(::HighlightRuleRepository)
     singleOf(::HighlightTagRuleRepository)
     singleOf(::ReadStyleRepository)
+    singleOf(::ReadStyleConfigStore)
     singleOf(::ReadBookStyleConfigRepository)
     single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
     singleOf(::ExploreBooksUseCase)

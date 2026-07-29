@@ -12,7 +12,7 @@ import java.io.File
  *
  * 原实现是「先 `FileUtils.delete`，再 `createFileIfNotExist().writeText()`」：两步之间目标
  * 文件根本不存在，进程在此时被杀，用户的整套排版方案就没了。两条保存通道
- * （`ReadBookConfig.save()` 与 `ReadStyleSaveQueue`）还会并发落到同一个文件上。
+ * （`ReadStyleConfigStore.save()` 与 `ReadStyleSaveQueue`）还会并发落到同一个文件上。
  */
 class FileUtilsAtomicWriteTest {
 

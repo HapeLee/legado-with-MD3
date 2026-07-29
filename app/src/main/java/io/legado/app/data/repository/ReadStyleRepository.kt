@@ -58,7 +58,7 @@ class ReadStyleRepository(
         configs: List<ReadBookConfig.Config>,
         shareConfig: ReadBookConfig.Config
     ) {
-        // 原子写：两条保存通道（ReadBookConfig.save 与 ReadStyleSaveQueue）会并发落到这里，
+        // 原子写：两条保存通道（ReadStyleConfigStore.save 与 ReadStyleSaveQueue）会并发落到这里，
         // 「删掉再写」既有杀进程丢配置的窗口，也会让两者互相看到对方写了一半的文件。
         FileUtils.writeTextAtomic(configFilePath, GSON.toJson(configs))
         FileUtils.writeTextAtomic(shareConfigFilePath, GSON.toJson(shareConfig))

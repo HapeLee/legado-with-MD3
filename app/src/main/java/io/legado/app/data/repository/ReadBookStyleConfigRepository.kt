@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong
 class ReadBookStyleConfigRepository(
     private val readStyleRepository: ReadStyleRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
+    private val configStore: ReadStyleConfigStore,
 ) : ReadStyleGateway {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val saveQueue = ReadStyleSaveQueue(
@@ -48,8 +49,8 @@ class ReadBookStyleConfigRepository(
     override val currentState: ReadStyleState get() = _state.value
 
     override fun refresh() {
-        ReadBookConfig.initConfigs()
-        ReadBookConfig.initShareConfig()
+        configStore.initConfigs()
+        configStore.initShareConfig()
         publishState()
     }
 
@@ -61,8 +62,8 @@ class ReadBookStyleConfigRepository(
         publishState()
         saveQueue.submit(
             ReadStyleSaveSnapshot(
-                configs = ReadBookConfig.configsSnapshot(),
-                shareConfig = ReadBookConfig.shareConfigSnapshot(),
+                configs = configStore.configsSnapshot(),
+                shareConfig = configStore.shareConfigSnapshot(),
             )
         )
     }
@@ -95,14 +96,15 @@ class ReadBookStyleConfigRepository(
     }
 
     override fun addStyle(): Int {
-        val index = ReadBookConfig.addConfig(ReadBookConfig.Config())
+        val index = configStore.addConfig(ReadBookConfig.Config())
         save()
         return index
     }
 
     override fun deleteCurrentStyle(): Boolean {
         val deletedConfigName = ReadBookConfig.durConfig.name
-        val removedIndex = ReadBookConfig.deleteDur()
+        val removedIndex = ReadBookConfig.styleSelect
+            .takeIf { configStore.deleteConfigAt(it) }
         if (removedIndex != null) {
             val readIndex = AppConfigStore.getInt(PreferKey.readStyleSelect) ?: 0
             val comicIndex = AppConfigStore.getInt(PreferKey.comicStyleSelect) ?: readIndex
@@ -128,7 +130,7 @@ class ReadBookStyleConfigRepository(
     }
 
     override fun importOrReplaceStyle(bytes: ByteArray): String {
-        val name = ReadBookConfig.importOrReplaceConfig(readStyleRepository.import(bytes))
+        val name = configStore.importOrReplaceConfig(readStyleRepository.import(bytes))
         save()
         return name
     }
@@ -159,9 +161,15 @@ class ReadBookStyleConfigRepository(
         save()
     }
 
-    override fun exportConfigsJson(): String = GSON.toJson(ReadBookConfig.configsSnapshot())
+    override fun exportConfigsJson(): String = GSON.toJson(configStore.configsSnapshot())
 
-    override fun exportShareConfigJson(): String = GSON.toJson(ReadBookConfig.shareConfigSnapshot())
+    override fun exportShareConfigJson(): String = GSON.toJson(configStore.shareConfigSnapshot())
+
+    override fun allBackgroundImagePaths(): List<String> = configStore.allPicBgStr()
+
+    override fun clearUnusedBackgrounds() {
+        configStore.clearBgAndCache()
+    }
 
     private fun publishState() {
         _state.value = buildState()
@@ -284,7 +292,7 @@ class ReadBookStyleConfigRepository(
 
     private fun buildState(): ReadStyleState = ReadStyleState(
         revision = stateRevision.incrementAndGet(),
-        items = ReadBookConfig.configsSnapshot().map { config ->
+        items = configStore.configsSnapshot().map { config ->
             ReadStyleItem(
                 name = config.name,
                 bgType = config.bgType,

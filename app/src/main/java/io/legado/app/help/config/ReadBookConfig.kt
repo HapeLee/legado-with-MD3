@@ -9,17 +9,14 @@ import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.ReadTipType
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.repository.ReadStyleRepository
+import io.legado.app.data.repository.ReadStyleConfigStore
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.help.DefaultData
-import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import splitties.init.appCtx
-import java.io.InputStream
 
 /**
  * 阅读界面配置
@@ -27,58 +24,33 @@ import java.io.InputStream
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
-    private lateinit var readStyleRepository: ReadStyleRepository
+    private lateinit var configStore: ReadStyleConfigStore
     private lateinit var readSettingsGateway: ReadSettingsGateway
     private val readSettings get() = readSettingsGateway.currentSettings
 
     internal fun initialize(
-        readStyleRepository: ReadStyleRepository,
+        configStore: ReadStyleConfigStore,
         readSettingsGateway: ReadSettingsGateway,
     ) {
-        this.readStyleRepository = readStyleRepository
+        this.configStore = configStore
         this.readSettingsGateway = readSettingsGateway
-        initConfigs()
-        initShareConfig()
+        configStore.initConfigs()
+        configStore.initShareConfig()
     }
 
 
     const val configFileName = "readConfig.json"
     const val shareConfigFileName = "shareReadConfig.json"
-    val configFilePath: String get() = readStyleRepository.configFilePath
-    val shareConfigFilePath: String get() = readStyleRepository.shareConfigFilePath
-    private val configList: ArrayList<Config> = arrayListOf()
-    private lateinit var shareConfig: Config
+    val configFilePath: String get() = configStore.configFilePath
+    val shareConfigFilePath: String get() = configStore.shareConfigFilePath
 
-    internal fun configsSnapshot(): List<Config> = synchronized(this) {
-        configList.map { it.copy() }
-    }
+    /** 共享排版那一份，`config` 与 `getExportConfig()` 要用。 */
+    private val shareConfig: Config get() = configStore.shareConfig
 
-    internal fun shareConfigSnapshot(): Config = synchronized(this) { shareConfig.copy() }
-
-    internal fun addConfig(config: Config): Int = synchronized(this) {
-        configList.add(config)
-        configList.lastIndex
-    }
-
-    internal fun importOrReplaceConfig(config: Config): String = synchronized(this) {
-        val index = configList.indexOfFirst { it.name == config.name }
-        if (index >= 0) {
-            configList[index] = config
-        } else {
-            configList.add(config)
-        }
-        config.name
-    }
-
-    internal val configCount: Int get() = synchronized(this) { configList.size }
-    internal fun configNames(): List<String> = synchronized(this) { configList.map { it.name } }
     var durConfig
-        get() = getConfig(styleSelect)
+        get() = configStore.configAt(styleSelect)
         set(value) {
-            configList[styleSelect] = value
-            if (shareLayout) {
-                shareConfig = value
-            }
+            configStore.replaceConfigAt(styleSelect, value, alsoShare = shareLayout)
         }
 
     val textColor: Int get() = durConfig.curTextColor()
@@ -91,57 +63,6 @@ object ReadBookConfig {
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
     val menuColor: Int get() = readMenuAccentColor
-    @Synchronized
-    fun getConfig(index: Int): Config {
-        if (configList.size < 5) {
-            resetAll()
-        }
-        return configList.getOrNull(index) ?: configList[0]
-    }
-
-    fun initConfigs() {
-        readStyleRepository.readConfigs().let {
-            configList.clear()
-            configList.addAll(it)
-        }
-    }
-
-    fun initShareConfig() {
-        shareConfig = readStyleRepository.readShareConfig(configList.getOrNull(5) ?: Config())
-    }
-
-    fun save() {
-        Coroutine.async {
-            synchronized(this) {
-                readStyleRepository.save(configList, shareConfig)
-            }
-        }
-    }
-
-    fun getAllPicBgStr(): ArrayList<String> {
-        return readStyleRepository.getAllPicBgStr(configList)
-    }
-
-    internal fun deleteDur(): Int? {
-        if (configList.size > 5) {
-            val removeIndex = styleSelect
-            configList.removeAt(removeIndex)
-            return removeIndex
-        }
-        return null
-    }
-
-    fun clearBgAndCache() {
-        readStyleRepository.clearBgAndCache(configList)
-    }
-
-    private fun resetAll() {
-        DefaultData.readConfigs.let {
-            configList.clear()
-            configList.addAll(it)
-            save()
-        }
-    }
 
     // DataStore 标量已归入 ReadSettings；这里仅保留旧渲染层所需的同步只读快照。
     val readBodyToLh get() = readSettings.readBodyToLh
@@ -623,18 +544,6 @@ object ReadBookConfig {
             exportConfig.bgAlpha = shareConfig.bgAlpha
         }
         return exportConfig
-    }
-
-    fun export(): ByteArray {
-        return readStyleRepository.export(getExportConfig())
-    }
-
-    fun import(byteArray: ByteArray): Config {
-        return readStyleRepository.import(byteArray)
-    }
-
-    fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String {
-        return readStyleRepository.saveBackgroundImage(inputStream, displayName)
     }
 
     @Keep

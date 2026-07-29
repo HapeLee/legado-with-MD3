@@ -13,7 +13,7 @@ import java.io.File
  * 谁是权威就说不清了，也让两边都没法单独测。
  *
  * 现在方向是单向的：消费方（`ChapterProvider`）直接找 gateway，`ReadBookConfig` 只向下
- * 依赖 `ReadStyleRepository`（文件读写）。
+ * 依赖 `ReadStyleConfigStore`（状态本体，R4.5 之前是 `ReadStyleRepository`）。
  *
  * 注意 `readSettingsGateway` 不在此列——那是**只读**上游设置，不构成环。
  *
@@ -68,7 +68,35 @@ class ReadBookConfigDependencyDirectionTest {
         )
     }
 
+    @Test
+    fun `ReadBookConfig 不再持有排版状态本体`() {
+        val source = stripComments(readBookConfigSource())
+        val violations = buildList {
+            Regex("""^    (?:private )?(?:val|var) (\w+)\s*:\s*(?:Array|Mutable)?List<Config>""", MULTILINE)
+                .findAll(source)
+                .forEach { add("${it.groupValues[1]}（配置列表）") }
+            Regex("""^    (?:private )?lateinit var (\w+)\s*:\s*Config\b""", MULTILINE)
+                .findAll(source)
+                .forEach { add("${it.groupValues[1]}（共享排版那一份）") }
+            Regex("""^    (?:private )?(?:val|var) (\w+)\s*=\s*(?:arrayListOf|mutableListOf|mutableMapOf|hashMapOf)""", MULTILINE)
+                .findAll(source)
+                .forEach { add("${it.groupValues[1]}（可变集合）") }
+        }
+
+        assertTrue(
+            "ReadBookConfig 又把排版状态本体收回去了：${violations.joinToString()}。\n" +
+                "R4.5 已经把 configList / shareConfig 连同那把锁一起搬进 ReadStyleConfigStore——" +
+                "状态和保护它的锁必须待在一起，否则下一个人只会照着现成的字段继续往这个全局 " +
+                "object 上堆。ReadBookConfig 只做两件事：按设置解析出「选哪一份」，以及把 " +
+                "Config 的字段投影成只读属性。\n" +
+                "需要新的排版状态，请加在 ReadStyleConfigStore 上。",
+            violations.isEmpty(),
+        )
+    }
+
     private companion object {
+        val MULTILINE = RegexOption.MULTILINE
+
         /** `durConfig` 是整份配置的替换入口（应用预设 / 导入），只有 gateway 实现用得到。 */
         val WRITABLE_ALLOWLIST = setOf("durConfig")
 

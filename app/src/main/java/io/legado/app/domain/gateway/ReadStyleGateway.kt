@@ -35,4 +35,10 @@ interface ReadStyleGateway {
     fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean)
     fun exportConfigsJson(): String
     fun exportShareConfigJson(): String
+
+    /** 备份要把所有排版引用到的背景图一起带走。 */
+    fun allBackgroundImagePaths(): List<String>
+
+    /** 清掉没有任何排版引用的背景图，以及导入导出留下的缓存。 */
+    fun clearUnusedBackgrounds()
 }

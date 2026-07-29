@@ -34,6 +34,7 @@ import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
@@ -341,7 +342,6 @@ object Restore : KoinComponent {
                 it.exists()
             }?.runCatching {
                 FileUtils.copyFileAtomic(this, ReadBookConfig.configFilePath)
-                ReadBookConfig.initConfigs()
             }?.onFailure {
                 AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
             }
@@ -349,10 +349,12 @@ object Restore : KoinComponent {
                 it.exists()
             }?.runCatching {
                 FileUtils.copyFileAtomic(this, ReadBookConfig.shareConfigFilePath)
-                ReadBookConfig.initShareConfig()
             }?.onFailure {
                 AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
             }
+            // 两个文件都落地后再整体重读：分开重读会让 shareConfig 的兜底
+            // （configList[5]）取到还没被覆盖的旧列表。refresh 顺带发布 state。
+            get<ReadStyleGateway>().refresh()
         }
         // 恢复配置文件 (手动解析 XML，替代反射逻辑)
         val configFile = File(path, "config.xml")
