@@ -14,18 +14,18 @@
   - `legacyDaoInjectionBaseline` —— ViewModel 主线
   - `legacyUiDaoAccessBaseline` —— 非 ViewModel 的 UI 层文件（第二条线）
 - **F1 部分**：`app/lint-baseline.xml` 已建并接入 `lint {}`；`verifyConfigArchitecture` 已在 CI 传递触发；单测 **272 全绿**。
-- **F2 清零（已提交 13 批）**：关联导入 → RSS → 书籍导入 → 书源管理 → 换源+目录（`77d38b8`…`04161fa`）；随后清完 8 个可清 VM（Web/BookInfoEdit/ChangeCover/TagGroupRule/SourceLogin/AudioPlay/ReadManga/BookInfo）+ `ReadBookViewModel` 非阅读态子集。**主线基线从 ~247 → 130 → 36**（仅剩 `ReadBookViewModel` 的 book/chapter 阅读态访问，留给 Track A）。
+- **F2 清零（已提交 13 批）**：关联导入 → RSS → 书籍导入 → 书源管理 → 换源+目录（`77d38b8`…`04161fa`）；随后清完 8 个可清 VM（Web/BookInfoEdit/ChangeCover/TagGroupRule/SourceLogin/AudioPlay/ReadManga/BookInfo）+ `ReadBookViewModel` 非阅读态子集。**主线基线从 ~247 → 130 → 36 → 0**（`ReadBookViewModel` 的 book/chapter 阅读态访问已随 R2.1 溶解进 `BookRepository`）。
 - **数据层事务加固**：目录替换（`replaceChaptersAndUpdateBook`）、换序 move（`BookSourceDao.moveToTop/Bottom`）已改原子事务。
 
 ### 待续（新窗口从这里接）
 
-**① F2 主线还剩 36，全部在 `ReadBookViewModel`**（`build.gradle.kts` 的 `legacyDaoInjectionBaseline`）：
+**① F2 主线已清零**（`build.gradle.kts` 的 `legacyDaoInjectionBaseline`）：
 
 | VM | 直连数 | 备注 |
 |---|---:|---|
-| `ReadBookViewModel` | 36 | 剩 24× `bookChapterDao` + 12× `bookDao`，**均为阅读态，不要手工硬清**，随 Track A 溶解 |
+| `ReadBookViewModel` | 0 | 原 24× `bookChapterDao` + 12× `bookDao` 已于 R2.1 全部改走 `BookRepository`；棘轮保留 0 值条目继续盯这个文件 |
 
-> `ReadBookViewModel` 的 book/chapter 访问会被 Track A（`ReaderSession` 接管阅读状态）**溶解**，因此已在本轮清掉与阅读状态无关的部分（httpTTS/bookSource/bookmark 共 16 处，走 `HttpTtsRepository`/`BookSourceRepository`/`BookmarkRepository`），其余 36 处留给 Track A，别在 6400+ 行里硬拆。
+> R2.1 已把余下 33 处改走 `BookRepository`。计划书原文写的是「随 `ReaderSession` 溶解」，实际没这么做：`ReaderSession` 的契约明写「调用方只拿到只读快照，拿不到可变领域对象（Book/TextChapter）」，往里加 `getChapter(): BookChapter?` 正好破掉这条不变式，而 `BookRepository` 早已具备所需的全部方法。
 >
 > 清 8 个可清 VM 时给若干仓库补了无聊方法：`BookRepository`（`getAll`/`getLastReadBook`/`getChapter`/`delete`）、`BookSourceRepository`（`has`/`getAllTextEnabledPart`）、`SearchRepository`（`getEnableHasCover`/`getSearchBook`）、`BookGroupRepository`（`getIdsSum`/`getGroupNames`）、`HighlightTagRuleRepository`（`getEnabled`，并在 Koin 注册）、`HttpTtsRepository`（`getAll`/`getAllSync`/`getNameSync`/`delete`）。宿主 `by viewModels()` → Koin `by viewModel()` 已同步改（Web/BookInfoEdit/ChangeCover/SourceLogin/AudioPlay）。
 
@@ -76,7 +76,7 @@
 | `upContentAwait` 是 `suspend`，模型反向等待视图 | `model/ReadBook.kt`（CallBack 定义内） |
 | VM 是 `CallBack` 唯一实现者 | 全仓仅 `ReadBookViewModel` 声明 `: ReadBook.CallBack` |
 | Effect 通道带订阅握手 | `_effects.subscriptionCount.first { it > 0 }`（`ReadBookViewModel.kt:210-223`） |
-| UI→DAO 直连是系统性模式 | 计划撰写时约 33 个 VM 构造注入 DAO；**现已冻结并清零 8 个可清 VM + ReadBook 非阅读态子集，主线余 36**（全在 ReadBookViewModel，均阅读态，留给 Track A；见进度快照） |
+| UI→DAO 直连是系统性模式 | 计划撰写时约 33 个 VM 构造注入 DAO；**现已冻结并清零 8 个可清 VM + `ReadBookViewModel` 全部访问，主线余 0**（见进度快照） |
 | CI 门禁 | lint 基线与架构护栏已就位；**仍缺显式 CI test/lint job**（见进度快照 ③） |
 | 已有架构护栏 + 基线机制 | `VerifyConfigArchitectureTask` + 三条基线（`legacyPreferenceCallBaseline` / `legacyDaoInjectionBaseline` / `legacyUiDaoAccessBaseline`），已 `dependsOn` assemble/compile |
 
@@ -142,7 +142,7 @@ Track E  阅读设置的 SSOT 与 UDF —— 与 D 正交、可并行，无前�
 系统性问题。按功能逐批，不预造大仓库。
 
 **冻结已落地** ✅：`VerifyConfigArchitectureTask` 里实际统计 `daoImport + appDbDaoAccess` 两种形式，双向棘轮 + 陈旧检测，覆盖两条线：
-- `legacyDaoInjectionBaseline` —— `ui/**` 里**含 `ViewModel`** 的文件（主线，当前 **36**，全在 `ReadBookViewModel`）
+- `legacyDaoInjectionBaseline` —— `ui/**` 里**含 `ViewModel`** 的文件（主线，当前 **0**；`ReadBookViewModel` 保留 0 值条目防回退，另有 `CloudTtsViewModel` 13 处为护栏缺席期冻结的历史债）
 - `legacyUiDaoAccessBaseline` —— `ui/**` 里**非 `ViewModel`** 的文件（第二线，当前 **26 文件 / 62 处**，只冻不修）
 
 > 第二条线是后加的：清 VM 时发现护栏只看 `*ViewModel*`，而 `BookSourceActivity` 这类兄弟文件里还有直连 DAO。故把范围扩到整个 `ui/**`、给非 VM 文件建了第二基线，防止"清了半个 UI 层还以为清干净了"。
