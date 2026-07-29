@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,7 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.constant.ReadTipType
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -625,8 +626,8 @@ internal fun TypographyHeaderTab(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val tipNames = remember { ReadBookConfig.tipNames }
-    val tipValues = remember { ReadBookConfig.tipValues }
+    val tipNames = stringArrayResource(R.array.read_tip).toList()
+    val tipValues = tipTypeValues
 
     Column(
         modifier = modifier
@@ -635,7 +636,7 @@ internal fun TypographyHeaderTab(
     ) {
         // 内容组
         SectionTitle(title = stringResource(R.string.content))
-        val headerModes = ReadBookConfig.getHeaderModes(context)
+        val headerModes = headerModes(context)
         TinyDropdownSettingItem(
             title = stringResource(R.string.header),
             selectedValue = headerMode.toString(),
@@ -733,8 +734,8 @@ internal fun TypographyFooterTab(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val tipNames = remember { ReadBookConfig.tipNames }
-    val tipValues = remember { ReadBookConfig.tipValues }
+    val tipNames = stringArrayResource(R.array.read_tip).toList()
+    val tipValues = tipTypeValues
 
     Column(
         modifier = modifier
@@ -743,7 +744,7 @@ internal fun TypographyFooterTab(
     ) {
         // 内容组
         SectionTitle(title = stringResource(R.string.content))
-        val footerModes = ReadBookConfig.getFooterModes(context)
+        val footerModes = footerModes(context)
         TinyDropdownSettingItem(
             title = stringResource(R.string.footer),
             selectedValue = footerMode.toString(),
@@ -1139,3 +1140,31 @@ private fun applyTipValue(
 }
 
 // endregion
+
+/**
+ * 页眉页脚每个位置的可选项取值。**顺序必须与 `R.array.read_tip` 一致**——
+ * 下拉项的显示名从那个数组取、取值从这里取，两者按下标配对。
+ *
+ * 放在唯一消费方旁边而不是 `ReadBookConfig` 里：它是静态选项表，不是配置状态，
+ * 留在那个全局 object 上会让「弹层不得直读 ReadBookConfig」的护栏被迫开白名单。
+ */
+private val tipTypeValues = with(ReadTipType) {
+    arrayOf(
+        tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
+        tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon,
+        tipBatteryPercentage, tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal,
+        tipTimeBattery, tipTimeBatteryClassic, tipTimeBatteryPercentage, tipWholeBookPage,
+        tipWholeBookPageAndProgress, tipCustom
+    )
+}
+
+private fun headerModes(context: Context): LinkedHashMap<Int, String> = linkedMapOf(
+    Pair(0, context.getString(R.string.hide_when_status_bar_show)),
+    Pair(1, context.getString(R.string.show)),
+    Pair(2, context.getString(R.string.hide))
+)
+
+private fun footerModes(context: Context): LinkedHashMap<Int, String> = linkedMapOf(
+    Pair(0, context.getString(R.string.show)),
+    Pair(1, context.getString(R.string.hide))
+)

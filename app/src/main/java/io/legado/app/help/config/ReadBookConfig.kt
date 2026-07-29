@@ -1,6 +1,5 @@
 package io.legado.app.help.config
 
-import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
@@ -443,34 +442,8 @@ object ReadBookConfig {
     val tipDividerColor: Int
         get() = config.tipDividerColor
 
-    /** 与 `R.array.read_tip` 一一对应的展示顺序，故留在配置侧而不是 [ReadTipType]。 */
-    val tipValues = with(ReadTipType) {
-        arrayOf(
-            tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
-            tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon,
-            tipBatteryPercentage, tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal,
-            tipTimeBattery, tipTimeBatteryClassic, tipTimeBatteryPercentage, tipWholeBookPage,
-            tipWholeBookPageAndProgress, tipCustom
-        )
-    }
-    val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
     val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
     val tipDividerColorNames get() = appCtx.resources.getStringArray(R.array.tip_divider_color).toList()
-
-    fun getHeaderModes(context: Context): LinkedHashMap<Int, String> {
-        return linkedMapOf(
-            Pair(0, context.getString(R.string.hide_when_status_bar_show)),
-            Pair(1, context.getString(R.string.show)),
-            Pair(2, context.getString(R.string.hide))
-        )
-    }
-
-    fun getFooterModes(context: Context): LinkedHashMap<Int, String> {
-        return linkedMapOf(
-            Pair(0, context.getString(R.string.show)),
-            Pair(1, context.getString(R.string.hide))
-        )
-    }
 
     // endregion
 

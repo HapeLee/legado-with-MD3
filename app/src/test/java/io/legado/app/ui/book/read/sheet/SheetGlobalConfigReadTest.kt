@@ -11,24 +11,31 @@ import java.io.File
  * 否则会出现「改完关掉再打开还是旧值」——组合期直读 `ReadBookConfig` 的可变字段时，
  * 上游变化不会触发重组；即使 seed 进 `remember` 也只在首次组合读一次。
  *
- * 例外是编译期常量与静态枚举元数据（tip 类型码、下拉项名称/取值），它们不随配置变化，
- * 见 [ALLOWED_MEMBERS]。
+ * R4.6 之前这条断言留了白名单，装的全是静态选项表（tip 取值表、页眉页脚模式枚举）——
+ * 它们不随配置变化，读了不会陈旧，但挂在 `ReadBookConfig` 上就逼着护栏开口子。
+ * 现在它们已搬到唯一消费方旁边，**本断言不再有例外**。
  */
 class SheetGlobalConfigReadTest {
 
     @Test
     fun `设置弹层不直读可变的 ReadBookConfig 字段`() {
         val offenders = sheetSources().flatMap { file ->
-            GLOBAL_ACCESS.findAll(file.readText())
-                .map { it.groupValues[1] }
-                .filterNot { it in ALLOWED_MEMBERS }
-                .map { "${file.name} → ReadBookConfig.$it" }
+            val text = file.readText()
+            val qualified = GLOBAL_ACCESS.findAll(text)
+                .map { "${file.name} → ReadBookConfig.${it.groupValues[1]}" }
+            // 单独抓 import：`import ...ReadBookConfig.tipNames` 之后成员可以裸写，
+            // 上面那条按 `ReadBookConfig.` 找的正则一个都看不见。
+            val imported = CONFIG_IMPORT.findAll(text)
+                .map { "${file.name} → import ${it.groupValues[0].removePrefix("import ")}" }
+            (qualified + imported).toList()
         }.distinct().sorted()
 
         assertEquals(
-            "以下弹层代码直读了可变全局配置，请改从 state.sheetConfig / state.styleConfig 取值" +
-                "（若确为常量或静态元数据，加进 ALLOWED_MEMBERS 并说明理由）：\n" +
-                offenders.joinToString("\n") { "  - $it" },
+            "以下弹层代码引用了全局排版配置，请改从 state.sheetConfig / state.styleConfig 取值：\n" +
+                offenders.joinToString("\n") { "  - $it" } + "\n" +
+                "静态选项表（下拉项的取值/显示名、模式枚举）不要往 ReadBookConfig 上挂——" +
+                "R4.6 已经把它们搬到唯一消费方旁边（HeaderFooterPage.kt 底部的 tipTypeValues/" +
+                "headerModes/footerModes），本断言不再留白名单。",
             emptyList<String>(),
             offenders,
         )
@@ -54,15 +61,9 @@ class SheetGlobalConfigReadTest {
 
     private companion object {
         val GLOBAL_ACCESS = Regex("""\bReadBookConfig\.([A-Za-z][A-Za-z0-9_]*)""")
-
-        /** 编译期常量与静态元数据——不随配置变化，读它们不会产生陈旧显示。 */
-        val ALLOWED_MEMBERS = setOf(
-            "tipNone",
-            "tipCustom",
-            "tipNames",
-            "tipValues",
-            "getHeaderModes",
-            "getFooterModes",
+        val CONFIG_IMPORT = Regex(
+            """^import io\.legado\.app\.help\.config\.ReadBookConfig\b.*$""",
+            RegexOption.MULTILINE,
         )
     }
 }
