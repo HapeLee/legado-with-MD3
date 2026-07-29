@@ -18,10 +18,8 @@ import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
-import io.legado.app.service.BaseReadAloudService
 
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
@@ -44,7 +42,6 @@ import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.invisible
-import io.legado.app.utils.longToastOnUi
 
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
@@ -59,6 +56,7 @@ class ReadView(
     attrs: AttributeSet? = null,
     callBack: CallBack? = null,
     contentCallBack: ContentTextView.CallBack? = null,
+    private val eventListener: ReaderEventListener,
 ) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
@@ -508,26 +506,17 @@ class ReadView(
 
             1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
             2 -> pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
-            3 -> ReadBook.moveToNextChapter(true)
-            4 -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
-            5 -> ReadAloud.prevParagraph(context)
-            6 -> ReadAloud.nextParagraph(context)
+            3 -> eventListener.onEvent(ReaderEvent.NextChapter)
+            4 -> eventListener.onEvent(ReaderEvent.PrevChapter)
+            5 -> eventListener.onEvent(ReaderEvent.ReadAloudPrevParagraph)
+            6 -> eventListener.onEvent(ReaderEvent.ReadAloudNextParagraph)
             7 -> callBack.addBookmark()
             8 -> callBack.openContentEdit()
             9 -> callBack.changeReplaceRuleState()
             10 -> callBack.openChapterList()
             11 -> callBack.openSearchActivity(null)
-            12 -> ReadBook.syncProgress(
-                { progress -> callBack.sureNewProgress(progress) },
-                { context.longToastOnUi(context.getString(R.string.upload_book_success)) },
-                { context.longToastOnUi(context.getString(R.string.sync_book_progress_success)) })
-            13 -> {
-                if (BaseReadAloudService.isPlay()) {
-                    ReadAloud.pause(context)
-                } else {
-                    ReadAloud.resume(context)
-                }
-            }
+            12 -> eventListener.onEvent(ReaderEvent.SyncProgress)
+            13 -> eventListener.onEvent(ReaderEvent.ToggleReadAloudPause)
         }
     }
 
@@ -753,20 +742,10 @@ class ReadView(
     }
 
     /**
-     * 从选择位置开始朗读
+     * 当前页内 行/列 对应的章节内位置（渲染面查询，翻页推进由外层负责）
      */
-    suspend fun aloudStartSelect(selectStartPos: TextPos) {
-        var pagePos = selectStartPos.relativePagePos
-        val line = selectStartPos.lineIndex
-        val column = selectStartPos.columnIndex
-        while (pagePos > 0) {
-            if (!ReadBook.moveToNextPage()) {
-                ReadBook.moveToNextChapterAwait(false)
-            }
-            pagePos--
-        }
-        val startPos = curPage.textPage.getPosByLineColumn(line, column)
-        ReadBook.readAloud(startPos = startPos)
+    fun posByLineColumn(line: Int, column: Int): Int {
+        return curPage.textPage.getPosByLineColumn(line, column)
     }
 
     /**

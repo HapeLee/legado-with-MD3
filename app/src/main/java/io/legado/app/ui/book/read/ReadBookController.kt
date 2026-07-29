@@ -43,8 +43,11 @@ import io.legado.app.receiver.TimeBatteryReceiver
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
+import io.legado.app.ui.book.read.page.ReaderEvent
+import io.legado.app.ui.book.read.page.ReaderEventListener
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextPage
+import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -417,6 +420,54 @@ class ReadBookController(
 
     override fun sureNewProgress(progress: BookProgress) {
         viewModel.onIntent(ReadBookIntent.SureNewProgress(progress))
+    }
+
+    // ── ReaderEventListener（Track D·D1：ReadView 的出站业务意图）─────────
+
+    override fun onEvent(event: ReaderEvent) {
+        when (event) {
+            ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
+            ReaderEvent.PrevChapter -> viewModel.onIntent(ReadBookIntent.PrevChapter)
+            ReaderEvent.ReadAloudPrevParagraph ->
+                viewModel.onIntent(ReadBookIntent.ReadAloudPrevParagraph)
+
+            ReaderEvent.ReadAloudNextParagraph ->
+                viewModel.onIntent(ReadBookIntent.ReadAloudNextParagraph)
+
+            // 只做暂停/续读，与菜单栏的 toggleReadAloud()（含"朗读未启动则启动"编排）不同，
+            // 保持点击区原语义：朗读没开着时这个手势是空操作。
+            ReaderEvent.ToggleReadAloudPause -> if (BaseReadAloudService.isPlay()) {
+                ReadAloud.pause(activity)
+            } else {
+                ReadAloud.resume(activity)
+            }
+
+            ReaderEvent.SyncProgress -> ReadBook.syncProgress(
+                { progress -> sureNewProgress(progress) },
+                { activity.longToastOnUi(activity.getString(R.string.upload_book_success)) },
+                { activity.longToastOnUi(activity.getString(R.string.sync_book_progress_success)) }
+            )
+        }
+    }
+
+    /**
+     * 从选择位置开始朗读：先把阅读位置推进到所选页，再按行/列换算章内位置起读。
+     * 原先在 ReadView 内（Track D·D1 迁出——ReadView 不下达业务命令）。
+     */
+    private suspend fun aloudStartSelect(selectStartPos: TextPos) {
+        val readView = refs?.readView ?: return
+        var pagePos = selectStartPos.relativePagePos
+        while (pagePos > 0) {
+            if (!ReadBook.moveToNextPage()) {
+                ReadBook.moveToNextChapterAwait(false)
+            }
+            pagePos--
+        }
+        val startPos = readView.posByLineColumn(
+            selectStartPos.lineIndex,
+            selectStartPos.columnIndex
+        )
+        ReadBook.readAloud(startPos = startPos)
     }
 
     // ── ContentTextView.CallBack ──────────────────────────────────────
@@ -1031,7 +1082,7 @@ class ReadBookController(
             is ReadBookEffect.StopAutoPage -> onStopAutoPage?.invoke() ?: stopAutoPage()
             is ReadBookEffect.TextActionAloudSelect -> {
                 activity.lifecycleScope.launch {
-                    refs?.readView?.aloudStartSelect(effect.selectStartPos.copy())
+                    aloudStartSelect(effect.selectStartPos.copy())
                 }
             }
 

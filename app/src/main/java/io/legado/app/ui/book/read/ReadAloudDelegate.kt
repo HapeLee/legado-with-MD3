@@ -153,16 +153,6 @@ class ReadAloudDelegate(
         }
     }
 
-    fun togglePause() {
-        if (host.uiState.isReadAloudPaused) {
-            ReadAloud.resume(context)
-            host.updateState { it.copy(isReadAloudPaused = false) }
-        } else {
-            ReadAloud.pause(context)
-            host.updateState { it.copy(isReadAloudPaused = true) }
-        }
-    }
-
     fun stop() {
         ReadAloud.stop(context)
         host.updateState { it.copy(isReadAloudRunning = false, isReadAloudPaused = false) }

@@ -55,6 +55,7 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
+import io.legado.app.ui.book.read.page.ReaderEventListener
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
@@ -92,6 +93,7 @@ data class ReadBookViewRefs(
 interface ReadBookRouteHost :
     View.OnTouchListener,
     ReadView.CallBack,
+    ReaderEventListener,
     ContentTextView.CallBack {
 
     val isInMultiWindowModeCompat: Boolean
@@ -531,6 +533,7 @@ fun ReadBookRouteScreen(
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
                 readViewCallBack = controller,
+                readerEventListener = controller,
                 contentTextViewCallBack = controller,
                 isDarkTheme = isDarkTheme,
                 onThemeChanged = controller::onAppThemeChanged,
@@ -664,6 +667,7 @@ private fun ReadBookViewLayer(
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
+    readerEventListener: ReaderEventListener,
     contentTextViewCallBack: ContentTextView.CallBack,
     isDarkTheme: Boolean,
     onThemeChanged: (Boolean) -> Unit,
@@ -678,6 +682,7 @@ private fun ReadBookViewLayer(
                     context = context,
                     callBack = readViewCallBack,
                     contentCallBack = contentTextViewCallBack,
+                    eventListener = readerEventListener,
                 ).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
