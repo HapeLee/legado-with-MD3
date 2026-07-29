@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -153,7 +154,7 @@ fun BookSourceEditScreen(
                     key = { it.path },
                     contentType = { "field" },
                 ) { field ->
-                    BookSourceFieldCard(
+                    SourceEditFieldCard(
                         field = field,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { editingFieldPath = field.path },
@@ -162,7 +163,7 @@ fun BookSourceEditScreen(
             }
         }
     }
-    BookSourceFieldEditSheet(
+    SourceEditFieldSheet(
         field = editingField,
         onDismissRequest = { editingFieldPath = null },
         onValueChange = { path, value ->
@@ -172,7 +173,7 @@ fun BookSourceEditScreen(
 }
 
 @Composable
-private fun BookSourceFieldCard(
+fun SourceEditFieldCard(
     field: BookSourceEditFieldUi,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -199,7 +200,7 @@ private fun BookSourceFieldCard(
 }
 
 @Composable
-private fun BookSourceFieldEditSheet(
+fun SourceEditFieldSheet(
     field: BookSourceEditFieldUi?,
     onDismissRequest: () -> Unit,
     onValueChange: (String, String) -> Unit,
@@ -242,7 +243,7 @@ private fun BookSourceOptions(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                BookSourceOptionCard(
+                SourceEditOptionCard(
                     title = stringResource(R.string.book_type),
                     subtitle = sourceTypes.getOrNull(state.bookSourceType),
                     onClick = { typeMenuExpanded = true },
@@ -263,13 +264,13 @@ private fun BookSourceOptions(
                     }
                 }
             }
-            BookSourceOptionCard(
+            SourceEditOptionCard(
                 title = stringResource(R.string.is_enable),
                 checked = state.enabled,
                 modifier = Modifier.weight(1f),
                 onClick = { onIntent(BookSourceEditIntent.SetEnabled(!state.enabled)) },
             )
-            BookSourceOptionCard(
+            SourceEditOptionCard(
                 title = stringResource(R.string.discovery),
                 checked = state.enabledExplore,
                 modifier = Modifier.weight(1f),
@@ -277,19 +278,19 @@ private fun BookSourceOptions(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BookSourceOptionCard(
+            SourceEditOptionCard(
                 title = stringResource(R.string.auto_save_cookie),
                 checked = state.enabledCookieJar,
                 modifier = Modifier.weight(1f),
                 onClick = { onIntent(BookSourceEditIntent.SetCookieJarEnabled(!state.enabledCookieJar)) },
             )
-            BookSourceOptionCard(
+            SourceEditOptionCard(
                 title = stringResource(R.string.is_event_listener),
                 checked = state.eventListener,
                 modifier = Modifier.weight(1f),
                 onClick = { onIntent(BookSourceEditIntent.SetEventListener(!state.eventListener)) },
             )
-            BookSourceOptionCard(
+            SourceEditOptionCard(
                 title = stringResource(R.string.custom_button),
                 checked = state.customButton,
                 modifier = Modifier.weight(1f),
@@ -300,34 +301,49 @@ private fun BookSourceOptions(
 }
 
 @Composable
-private fun BookSourceOptionCard(
+fun SourceEditOptionCard(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     checked: Boolean? = null,
 ) {
-    GlassCard(modifier = modifier, onClick = onClick) {
+    GlassCard(
+        modifier = modifier,
+        onClick = onClick
+    ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             AppText(
-                text = subtitle?.let { "$title $it" } ?: title,
+                text = title,
                 maxLines = 1,
                 modifier = Modifier
                     .weight(1f)
+                    .padding(vertical = 8.dp)
                     .basicMarquee(),
                 style = LegadoTheme.typography.labelSmall,
             )
+            AnimatedVisibility(
+                visible = !subtitle.isNullOrBlank()
+            ) {
+                TextCard(
+                    text = subtitle,
+                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    cornerRadius = 16.dp
+                )
+            }
             AnimatedVisibility(
                 visible = checked == true
             ) {
                 AppIcon(
                     imageVector = AppIcons.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(16.dp),
                     tint = LegadoTheme.colorScheme.primary,
                 )
             }
