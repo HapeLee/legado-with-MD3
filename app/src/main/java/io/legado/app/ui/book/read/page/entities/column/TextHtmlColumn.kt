@@ -31,6 +31,12 @@ data class TextHtmlColumn(
     override val bgImageFit: Int = 0,
     override val bgImageScale: Float = 1f,
     override val fontPath: String = "",
+    override val fontWeight: Int = 400,
+    override val isItalic: Boolean = false,
+    override val npLeft: Float = 0.1f,
+    override val npRight: Float = 0.1f,
+    override val npTop: Float = 0.1f,
+    override val npBottom: Float = 0.1f,
 ) : TextBaseColumn {
 
     override val textColor: Int? get() = mTextColor

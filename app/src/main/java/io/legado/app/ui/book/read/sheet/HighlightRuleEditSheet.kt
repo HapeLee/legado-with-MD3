@@ -1,15 +1,19 @@
 package io.legado.app.ui.book.read.sheet
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -124,6 +129,17 @@ fun HighlightRuleEditSheet(
     var bgImageScale by remember(show, rule) { mutableFloatStateOf(initial.bgImageScale) }
     var hasBgImage by remember(show, rule) { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
 
+    // Font weight state
+    var fontWeight by remember(show, rule) { mutableIntStateOf(initial.fontWeight) }
+    var isItalic by remember(show, rule) { mutableStateOf(initial.isItalic) }
+
+    // Nine-slice state
+    var npLeft by remember(show, rule) { mutableFloatStateOf(initial.npLeft) }
+    var npRight by remember(show, rule) { mutableFloatStateOf(initial.npRight) }
+    var npTop by remember(show, rule) { mutableFloatStateOf(initial.npTop) }
+    var npBottom by remember(show, rule) { mutableFloatStateOf(initial.npBottom) }
+    var showNinePatchEditor by remember(show, rule) { mutableStateOf(false) }
+
     // Config binding state — empty set = global (applies to all configs)
     var configNames by remember(show, rule) {
         mutableStateOf(initial.configName.orEmpty().configNames().toSet())
@@ -142,9 +158,9 @@ fun HighlightRuleEditSheet(
     // Validation
     var patternError by remember(show, rule) { mutableStateOf<String?>(null) }
 
-    // System photo picker, with the contract's built-in fallback on older devices.
+    // File picker for background images (uses OpenDocument to avoid MediaStore transcoding)
     val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             coroutineScope.launch {
@@ -228,6 +244,12 @@ fun HighlightRuleEditSheet(
                             bgImageScale = bgImageScale,
                             configName = if (configNames.isEmpty()) null else configNames.toList().toJsonArray(),
                             fontPath = if (hasFont) fontPath.ifBlank { null } else null,
+                            fontWeight = fontWeight,
+                            isItalic = isItalic,
+                            npLeft = npLeft,
+                            npRight = npRight,
+                            npTop = npTop,
+                            npBottom = npBottom,
                         )
                     )
                 },
@@ -246,6 +268,16 @@ fun HighlightRuleEditSheet(
             SectionTitle(stringResource(R.string.rule_info))
 
             AppTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = stringResource(R.string.rule_name),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            AppTextField(
                 value = pattern,
                 onValueChange = {
                     pattern = it
@@ -258,16 +290,6 @@ fun HighlightRuleEditSheet(
                 supportingText = patternError?.let {
                     { AppText(it, color = MaterialTheme.colorScheme.error) }
                 },
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            AppTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = stringResource(R.string.rule_name),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(Modifier.height(8.dp))
@@ -312,6 +334,23 @@ fun HighlightRuleEditSheet(
                     onClick = { showTextColorPicker = true },
                 )
             }
+
+            // Font weight — three options: Regular(400), Bold(700), Light(300)
+            val weightEntries = stringArrayResource(R.array.text_font_weight)
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.font_weight_text),
+                selectedValue = fontWeight.toString(),
+                displayEntries = weightEntries,
+                entryValues = arrayOf("400", "700", "300"),
+                onValueChange = { fontWeight = it.toIntOrNull() ?: 400 },
+            )
+
+            // Italic
+            TinySwitchSettingItem(
+                title = stringResource(R.string.read_config_italic),
+                checked = isItalic,
+                onCheckedChange = { isItalic = it },
+            )
 
             // Underline
             TinySwitchSettingItem(
@@ -402,7 +441,7 @@ fun HighlightRuleEditSheet(
                     title = stringResource(R.string.highlight_bg_image),
                     description = bgImage.ifBlank { null }?.let { File(it).name },
                     onClick = {
-                        imagePicker.launch("image/*")
+                        imagePicker.launch(arrayOf("image/*"))
                     },
                 )
             }
@@ -412,14 +451,21 @@ fun HighlightRuleEditSheet(
                         stringResource(R.string.bg_fit_tile),
                         stringResource(R.string.bg_fit_stretch),
                         stringResource(R.string.bg_fit_crop),
+                        stringResource(R.string.bg_fit_nine_patch),
                     )
-                    val fitValues = arrayOf("0", "1", "2")
+                    val fitValues = arrayOf("0", "1", "2", "3")
                     TinyDropdownSettingItem(
                         title = stringResource(R.string.bg_image_fit),
                         selectedValue = bgImageFit.toString(),
                         displayEntries = fitEntries,
                         entryValues = fitValues,
-                        onValueChange = { bgImageFit = it.toIntOrNull() ?: 0 },
+                        onValueChange = {
+                            val newFit = it.toIntOrNull() ?: 0
+                            bgImageFit = newFit
+                            if (newFit == 3) {
+                                showNinePatchEditor = true
+                            }
+                        },
                     )
 
                     TinySliderSettingItem(
@@ -551,6 +597,24 @@ fun HighlightRuleEditSheet(
         onColorSelected = { color ->
             underlineColor = color
             showUnderlineColorPicker = false
+        },
+    )
+
+    // Nine-patch editor
+    NinePatchEditorDialog(
+        show = showNinePatchEditor,
+        imagePath = bgImage,
+        initialLeft = npLeft,
+        initialRight = npRight,
+        initialTop = npTop,
+        initialBottom = npBottom,
+        onDismissRequest = { showNinePatchEditor = false },
+        onSave = { left, right, top, bottom ->
+            npLeft = left
+            npRight = right
+            npTop = top
+            npBottom = bottom
+            showNinePatchEditor = false
         },
     )
 
@@ -692,6 +756,134 @@ private fun HighlightRulePreview(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NinePatchEditorDialog(
+    show: Boolean,
+    imagePath: String,
+    initialLeft: Float,
+    initialRight: Float,
+    initialTop: Float,
+    initialBottom: Float,
+    onDismissRequest: () -> Unit,
+    onSave: (left: Float, right: Float, top: Float, bottom: Float) -> Unit,
+) {
+    var left by remember(show, imagePath) { mutableFloatStateOf(initialLeft) }
+    var right by remember(show, imagePath) { mutableFloatStateOf(initialRight) }
+    var top by remember(show, imagePath) { mutableFloatStateOf(initialTop) }
+    var bottom by remember(show, imagePath) { mutableFloatStateOf(initialBottom) }
+
+    val bitmap = remember(imagePath) {
+        runCatching {
+            val file = File(imagePath)
+            if (file.exists()) {
+                BitmapFactory.decodeFile(imagePath)
+            } else null
+        }.getOrNull()
+    }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.nine_patch_editor),
+        endAction = {
+            MediumTonalButton(
+                onClick = { onSave(left, right, top, bottom) },
+                icon = Icons.Default.Done,
+                contentDescription = stringResource(R.string.save),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // Image preview with split lines — use single Canvas to avoid coordinate mismatch
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .padding(8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                if (bitmap != null) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        val bw = bitmap.width.toFloat()
+                        val bh = bitmap.height.toFloat()
+                        val imageAspect = bw / bh
+                        val canvasAspect = canvasWidth / canvasHeight
+                        val (imageW, imageH, offsetX, offsetY) = if (imageAspect > canvasAspect) {
+                            val w = canvasWidth
+                            val h = canvasWidth / imageAspect
+                            listOf(w, h, 0f, (canvasHeight - h) / 2f)
+                        } else {
+                            val h = canvasHeight
+                            val w = canvasHeight * imageAspect
+                            listOf(w, h, (canvasWidth - w) / 2f, 0f)
+                        }
+
+                        // Draw bitmap
+                        drawImage(
+                            image = bitmap.asImageBitmap(),
+                            dstOffset = androidx.compose.ui.unit.IntOffset(offsetX.toInt(), offsetY.toInt()),
+                            dstSize = androidx.compose.ui.unit.IntSize(imageW.toInt(), imageH.toInt()),
+                        )
+
+                        val lineColor = Color.Red
+                        val lineWidth = 2.dp.toPx()
+
+                        // Left line
+                        val lx = offsetX + imageW * left
+                        drawLine(lineColor, Offset(lx, offsetY), Offset(lx, offsetY + imageH), lineWidth)
+                        // Right line
+                        val rx = offsetX + imageW * (1f - right)
+                        drawLine(lineColor, Offset(rx, offsetY), Offset(rx, offsetY + imageH), lineWidth)
+                        // Top line
+                        val ty = offsetY + imageH * top
+                        drawLine(lineColor, Offset(offsetX, ty), Offset(offsetX + imageW, ty), lineWidth)
+                        // Bottom line
+                        val by = offsetY + imageH * (1f - bottom)
+                        drawLine(lineColor, Offset(offsetX, by), Offset(offsetX + imageW, by), lineWidth)
+                    }
+                }
+            }
+
+            // Sliders
+            TinySliderSettingItem(
+                title = stringResource(R.string.nine_patch_split_left),
+                value = left,
+                valueRange = 0f..0.5f,
+                description = String.format("%.0f%%", left * 100),
+                onValueChange = { left = (it * 100).toInt() / 100f },
+            )
+            TinySliderSettingItem(
+                title = stringResource(R.string.nine_patch_split_right),
+                value = right,
+                valueRange = 0f..0.5f,
+                description = String.format("%.0f%%", right * 100),
+                onValueChange = { right = (it * 100).toInt() / 100f },
+            )
+            TinySliderSettingItem(
+                title = stringResource(R.string.nine_patch_split_top),
+                value = top,
+                valueRange = 0f..0.5f,
+                description = String.format("%.0f%%", top * 100),
+                onValueChange = { top = (it * 100).toInt() / 100f },
+            )
+            TinySliderSettingItem(
+                title = stringResource(R.string.nine_patch_split_bottom),
+                value = bottom,
+                valueRange = 0f..0.5f,
+                description = String.format("%.0f%%", bottom * 100),
+                onValueChange = { bottom = (it * 100).toInt() / 100f },
+            )
         }
     }
 }
