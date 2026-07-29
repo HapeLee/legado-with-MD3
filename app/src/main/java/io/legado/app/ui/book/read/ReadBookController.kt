@@ -45,7 +45,9 @@ import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.ReaderEvent
 import io.legado.app.ui.book.read.page.ReaderEventListener
+import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
@@ -423,6 +425,19 @@ class ReadBookController(
     private fun sureNewProgress(progress: BookProgress) {
         viewModel.onIntent(ReadBookIntent.SureNewProgress(progress))
     }
+
+    // ── ReaderPageSource（Track D·D2：喂给 ReadView 的只读页数据）────────
+
+    override val durChapterIndex: Int get() = ReadBook.durChapterIndex
+
+    override val durPageIndex: Int get() = ReadBook.durPageIndex
+
+    override val simulatedChapterSize: Int get() = ReadBook.simulatedChapterSize
+
+    override val pageAnim: Int get() = ReadBook.pageAnim()
+
+    override fun textChapter(chapterOnDur: Int): TextChapter? =
+        ReadBook.textChapter(chapterOnDur)
 
     // ── ReaderEventListener（Track D·D1：ReadView 的出站业务意图）─────────
 

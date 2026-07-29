@@ -17,7 +17,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
 
 import io.legado.app.ui.book.read.page.api.DataSource
@@ -56,6 +55,7 @@ class ReadView(
     private val callBack: CallBack,
     contentCallBack: ContentTextView.CallBack? = null,
     private val eventListener: ReaderEventListener,
+    private val pageSource: ReaderPageSource,
 ) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
@@ -572,9 +572,9 @@ class ReadView(
      * 更新翻页动画
      */
     fun upPageAnim(upRecorder: Boolean = false) {
-        isScroll = ReadBook.pageAnim() == 3
+        isScroll = pageSource.pageAnim == 3
         ChapterProvider.upLayout()
-        when (ReadBook.pageAnim()) {
+        when (pageSource.pageAnim) {
             PageAnim.coverPageAnim -> if (pageDelegate !is CoverPageDelegate) {
                 pageDelegate = CoverPageDelegate(this)
             }
@@ -816,27 +816,29 @@ class ReadView(
         upProgressThrottle.invoke()
     }
 
+    override val pageIndex: Int get() = pageSource.durPageIndex
+
     override val currentChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(0) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(0) else null
         }
 
     override val nextChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(1) else null
         }
 
     override val prevChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(-1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(-1) else null
         }
 
     override fun hasNextChapter(): Boolean {
-        return ReadBook.durChapterIndex < ReadBook.simulatedChapterSize - 1
+        return pageSource.durChapterIndex < pageSource.simulatedChapterSize - 1
     }
 
     override fun hasPrevChapter(): Boolean {
-        return ReadBook.durChapterIndex > 0
+        return pageSource.durChapterIndex > 0
     }
 
     /**

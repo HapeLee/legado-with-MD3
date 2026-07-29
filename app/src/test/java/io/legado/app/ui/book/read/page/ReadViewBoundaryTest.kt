@@ -5,28 +5,27 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Track D·D1 —— `ReadView` 只做绘制/手势/动画，不下达业务命令。
+ * Track D·D1/D2 —— `ReadView` 只做绘制/手势/动画，两个方向都不认识业务单例。
  *
- * 手势判定出的业务意图经 [ReaderEvent] 出站，由 `ReadBookController` 翻译成 Intent 或会话调用。
- * 两条会悄悄失效的边界：
+ * - 出站（D1）：手势判定出的业务意图经 [ReaderEvent] 发出，由 `ReadBookController` 翻译。
+ * - 入站（D2）：页数据经 [ReaderPageSource] 喂进来，不再直接问 `ReadBook`。
  *
- * 1. 有人图省事在 `ReadView` 里直呼 `ReadBook`/`ReadAloud`/`BaseReadAloudService`——
- *    出站回边被绕过，View 又长回业务层。
- * 2. `eventListener` 被改成可空或加 `activity as` 兜底——漏接线从**编译错误**退化成
- *    **静默失效的点击**（点了没反应，真机上极难归因）。
+ * 会悄悄失效的边界：
  *
- * 只读取页数据的 `ReadBook` 成员是 D2 的范围（入站数据面），D1 不动，见白名单。
+ * 1. 有人图省事在 `ReadView` 或 `DataSource` 里直接摸 `ReadBook`/`ReadAloud`——
+ *    两条回边被绕过，View 又长回业务层。
+ * 2. 三个协作面（`callBack`/`eventListener`/`pageSource`）被改成可空或加 `activity as`
+ *    兜底——漏接线从**编译错误**退化成**静默失效**（点了没反应、页面空白），真机上极难归因。
  */
-class ReadViewOutboundBoundaryTest {
+class ReadViewBoundaryTest {
 
     @Test
-    fun `ReadView 不直呼业务单例下达命令`() {
+    fun `ReadView 不引用业务单例`() {
         val source = stripComments(readViewSource())
 
         val readBookViolations = Regex("""\bReadBook\.(\w+)""")
             .findAll(source)
             .map { it.groupValues[1] }
-            .filterNot { it in READ_BOOK_DATA_PLANE_ALLOWLIST }
             .distinct()
             .map { "ReadBook.$it" }
             .toList()
@@ -39,9 +38,9 @@ class ReadViewOutboundBoundaryTest {
 
         val violations = readBookViolations + aloudViolations
         assertTrue(
-            "ReadView 又直接下达业务命令了：${violations.joinToString()}。\n" +
-                "业务意图请加进 ReaderEvent 并由 ReadBookController.onEvent 翻译；\n" +
-                "只读页数据（${READ_BOOK_DATA_PLANE_ALLOWLIST.joinToString()}）属 Track D·D2，暂留。",
+            "ReadView 又直接摸业务单例了：${violations.joinToString()}。\n" +
+                "业务意图请加进 ReaderEvent 由 ReadBookController.onEvent 翻译；\n" +
+                "要读的页数据请加进 ReaderPageSource 由宿主喂进来。",
             violations.isEmpty(),
         )
     }
@@ -115,6 +114,39 @@ class ReadViewOutboundBoundaryTest {
         )
     }
 
+    @Test
+    fun `DataSource 接口不内嵌 ReadBook`() {
+        val source = stripComments(
+            mainSourceFile("io/legado/app/ui/book/read/page/api/DataSource.kt").readText()
+        )
+        assertTrue(
+            "DataSource 又把 ReadBook 写进默认实现了。\n" +
+                "接口带着单例默认值，等于谁实现它谁就绑死在全局状态上——" +
+                "页内位置请由实现方从 ReaderPageSource 取。",
+            !Regex("""\bReadBook\b""").containsMatchIn(source),
+        )
+    }
+
+    @Test
+    fun `pageSource 必须构造期注入且不可为空`() {
+        val source = stripComments(readViewSource())
+        val violations = buildList {
+            if (!Regex("""private\s+val\s+pageSource\s*:\s*ReaderPageSource\s*(?![?=])""")
+                    .containsMatchIn(source)
+            ) {
+                add("pageSource 不再是构造期注入的非空 val")
+            }
+            if (Regex("""pageSource\s*\?""").containsMatchIn(source)) {
+                add("pageSource 出现了可空调用")
+            }
+        }
+        assertTrue(
+            "${violations.joinToString()}。\n" +
+                "页数据入口漏接线必须是编译错误，而不是正文空白。",
+            violations.isEmpty(),
+        )
+    }
+
     private companion object {
         /** CallBack 允许保留的成员：三项瞬时 UI 副作用 + 首帧放行门闩 */
         val CALLBACK_UI_SIDE_EFFECTS = listOf(
@@ -122,14 +154,6 @@ class ReadViewOutboundBoundaryTest {
             "screenOffTimerStart",
             "showTextActionMenu",
             "upSystemUiVisibility",
-        )
-
-        /** D2（入站数据面）的范围，D1 不动 */
-        val READ_BOOK_DATA_PLANE_ALLOWLIST = listOf(
-            "textChapter",
-            "durChapterIndex",
-            "simulatedChapterSize",
-            "pageAnim",
         )
 
         fun readViewSource(): String =
