@@ -667,25 +667,40 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenBookInfo -> {
                 if (ReadBook.book != null) {
                     closeReadMenu()
-                    _uiState.update {
-                        it.copy(
-                            activeSheet = ReadBookSheet.BookNavigation(
-                                io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information
+                    if (readSettingsRepository.currentSettings.useNewTocSheet) {
+                        _uiState.update {
+                            it.copy(
+                                activeSheet = ReadBookSheet.BookNavigation(
+                                    io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information
+                                )
                             )
-                        )
+                        }
+                    } else{
+                        ReadBook.book?.let { book ->
+                            _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
+                        }
                     }
+
                 }
             }
             is ReadBookIntent.OpenChapterList -> {
                 if (ReadBook.book != null) {
                     closeReadMenu()
-                    _uiState.update { state ->
-                        state.copy(
-                            activeSheet = ReadBookSheet.BookNavigation(
-                                io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Toc
+                    if (readSettingsRepository.currentSettings.useNewTocSheet)
+                    {
+                        _uiState.update { state ->
+                            state.copy(
+                                activeSheet = ReadBookSheet.BookNavigation(
+                                    io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Toc
+                                )
                             )
-                        )
+                        }
+                    }else{
+                        ReadBook.book?.bookUrl?.let { bookUrl ->
+                            _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
+                        }
                     }
+
                 }
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()

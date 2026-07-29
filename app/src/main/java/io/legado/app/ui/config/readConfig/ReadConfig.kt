@@ -76,6 +76,7 @@ object ReadConfig {
     val volumeKeyPageOnPlay get() = read.volumeKeyPageOnPlay
     val keyPageOnLongPress get() = read.keyPageOnLongPress
     val sliderVibrator get() = read.sliderVibrator
+    val useNewTocSheet get() = read.useNewTocSheet
     val selectVibrator get() = read.selectVibrator
 
     val speechRatePlay get() = if (aloud.ttsFollowSys) 5 else aloud.ttsSpeechRate

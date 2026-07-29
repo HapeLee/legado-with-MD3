@@ -31,6 +31,7 @@ data class ReadSettings(
     val keyPageOnLongPress: Boolean = false,
     val pageTouchSlop: Int = 0,
     val sliderVibrator: Boolean = false,
+    val useNewTocSheet: Boolean = true,
     val selectVibrator: Boolean = false,
     val autoChangeSource: Boolean = true,
     val autoSuggestDayNight: Boolean = false,

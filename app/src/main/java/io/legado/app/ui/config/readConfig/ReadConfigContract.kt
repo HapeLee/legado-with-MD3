@@ -32,6 +32,7 @@ data class ReadConfigUiState(
     val keyPageOnLongPress: Boolean = false,
     val pageTouchSlop: Int = 0,
     val sliderVibrator: Boolean = false,
+    val useNewTocSheet: Boolean = true,
     val selectVibrator: Boolean = false,
     val autoChangeSource: Boolean = true,
     val autoSuggestDayNight: Boolean = false,
@@ -92,6 +93,7 @@ sealed interface ReadConfigIntent {
     data class KeyPageOnLongPressChanged(val value: Boolean) : ReadConfigIntent
     data class PageTouchSlopChanged(val value: Int) : ReadConfigIntent
     data class SliderVibratorChanged(val value: Boolean) : ReadConfigIntent
+    data class UseNewTocSheetChanged(val value: Boolean) : ReadConfigIntent
     data class SelectVibratorChanged(val value: Boolean) : ReadConfigIntent
     data class AutoChangeSourceChanged(val value: Boolean) : ReadConfigIntent
     data class SelectTextChanged(val value: Boolean) : ReadConfigIntent
