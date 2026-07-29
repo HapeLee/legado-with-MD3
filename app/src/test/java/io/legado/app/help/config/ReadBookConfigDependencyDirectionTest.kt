@@ -94,8 +94,47 @@ class ReadBookConfigDependencyDirectionTest {
         )
     }
 
+    @Test
+    fun `ReadBookConfig 只从 store 读，不调它的写方法`() {
+        val source = stripComments(readBookConfigSource())
+        val called = STORE_WRITES.filter { Regex("""\bconfigStore\.$it\s*\(""").containsMatchIn(source) }
+            .filterNot { it in INITIALIZE_ONLY && initializeBody(source).contains("$it(") }
+
+        assertTrue(
+            "ReadBookConfig 调了 ReadStyleConfigStore 的写方法：${called.joinToString()}。\n" +
+                "它持有 store 只是为了把当前选中那份投影成只读属性——一旦从这里改状态，" +
+                "改动既不落盘也不发 publishState，弹层和渲染都收不到通知，" +
+                "而且 build.gradle.kts 那条「ReadBookConfig 写入必须经过 ReadStyleGateway」" +
+                "的正则完全看不见（它只认 `ReadBookConfig.x = `）。\n" +
+                "写请走 ReadStyleGateway 的实现（ReadBookStyleConfigRepository）。\n" +
+                "例外：durConfig 的整份替换 setter 用 replaceConfigAt，initialize 用两个 init*。",
+            called.isEmpty(),
+        )
+    }
+
     private companion object {
         val MULTILINE = RegexOption.MULTILINE
+
+        /** [ReadStyleConfigStore] 上会改状态的方法。 */
+        val STORE_WRITES = listOf(
+            "updateEffective",
+            "updateStyleAt",
+            "addConfig",
+            "deleteConfigAt",
+            "importOrReplaceConfig",
+            "initConfigs",
+            "initShareConfig",
+        )
+
+        /** 只允许出现在 `initialize()` 里的两个——首帧之前得先把配置读进来。 */
+        val INITIALIZE_ONLY = setOf("initConfigs", "initShareConfig")
+
+        fun initializeBody(source: String): String {
+            val start = source.indexOf("internal fun initialize(")
+            if (start < 0) return ""
+            val end = source.indexOf("\n    }", start)
+            return if (end < 0) source.substring(start) else source.substring(start, end)
+        }
 
         /** `durConfig` 是整份配置的替换入口（应用预设 / 导入），只有 gateway 实现用得到。 */
         val WRITABLE_ALLOWLIST = setOf("durConfig")

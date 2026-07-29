@@ -76,7 +76,7 @@ class ReadBookStyleConfigRepository(
             is ReadStyleMutation.StringValue -> updateString(mutation.key, mutation.value)
             is ReadStyleMutation.ColorValue -> updateColor(mutation.key, mutation.value)
             is ReadStyleMutation.Background ->
-                ReadBookConfig.durConfig.setCurBg(mutation.type, mutation.value)
+                mutateCurrentStyle { it.withCurBg(mutation.type, mutation.value) }
         }
         publishState()
     }
@@ -146,17 +146,17 @@ class ReadBookStyleConfigRepository(
         readStyleRepository.saveBackgroundImage(inputStream, displayName)
 
     override fun setCurrentBackgroundImage(path: String) {
-        ReadBookConfig.durConfig.setCurBg(2, path)
+        mutateCurrentStyle { it.withCurBg(2, path) }
         save()
     }
 
     override fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean) {
-        if (isNight) {
-            ReadBookConfig.durConfig.bgTypeNight = 2
-            ReadBookConfig.durConfig.bgStrNight = path
-        } else {
-            ReadBookConfig.durConfig.bgType = 2
-            ReadBookConfig.durConfig.bgStr = path
+        mutateCurrentStyle {
+            if (isNight) {
+                it.copy(bgTypeNight = 2, bgStrNight = path)
+            } else {
+                it.copy(bgType = 2, bgStr = path)
+            }
         }
         save()
     }
@@ -175,118 +175,153 @@ class ReadBookStyleConfigRepository(
         _state.value = buildState()
     }
 
+    /** 改当前**生效**的那一份（共享排版开着时是共享那份）。 */
+    private inline fun mutateEffective(
+        crossinline transform: (ReadBookConfig.Config) -> ReadBookConfig.Config,
+    ) = configStore.updateEffective(
+        index = ReadBookConfig.styleSelect,
+        useShare = ReadBookConfig.shareLayout,
+        transform = { transform(it) },
+    )
+
+    /**
+     * 改当前**样式**那一份，共享排版开着时也不动共享那份。
+     * 背景、虚线、状态栏图标、样式名这些按样式独立的项走这里——与 R4.7 之前
+     * 写 `ReadBookConfig.durConfig.x` 的那些分支一一对应。
+     */
+    private inline fun mutateCurrentStyle(
+        crossinline transform: (ReadBookConfig.Config) -> ReadBookConfig.Config,
+    ) = configStore.updateStyleAt(
+        index = ReadBookConfig.styleSelect,
+        transform = { transform(it) },
+    )
+
     private fun updateInt(key: ReadStyleIntKey, value: Int) {
-        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleIntKey.TextSize -> config.textSize = value
-            ReadStyleIntKey.LineSpacing -> config.lineSpacingExtra = value
-            ReadStyleIntKey.ParagraphSpacing -> config.paragraphSpacing = value
-            ReadStyleIntKey.TextBold -> config.textBold = value
-            ReadStyleIntKey.TitleMode -> config.titleMode = value
-            ReadStyleIntKey.TitleBold -> config.titleBold = value
-            ReadStyleIntKey.TitleLineSpacingExtra -> config.titleLineSpacingExtra = value
-            ReadStyleIntKey.TitleLineSpacingSub -> config.titleLineSpacingSub = value
-            ReadStyleIntKey.TitleSize -> config.titleSize = value
-            ReadStyleIntKey.TitleTopSpacing -> config.titleTopSpacing = value
-            ReadStyleIntKey.TitleBottomSpacing -> config.titleBottomSpacing = value
-            ReadStyleIntKey.TitleSegType -> config.titleSegType = value
-            ReadStyleIntKey.TitleSegDistance -> config.titleSegDistance = value
-            ReadStyleIntKey.HeaderMode -> config.headerMode = value
-            ReadStyleIntKey.FooterMode -> config.footerMode = value
-            ReadStyleIntKey.TipHeaderLeft -> config.tipHeaderLeft = value
-            ReadStyleIntKey.TipHeaderMiddle -> config.tipHeaderMiddle = value
-            ReadStyleIntKey.TipHeaderRight -> config.tipHeaderRight = value
-            ReadStyleIntKey.TipFooterLeft -> config.tipFooterLeft = value
-            ReadStyleIntKey.TipFooterMiddle -> config.tipFooterMiddle = value
-            ReadStyleIntKey.TipFooterRight -> config.tipFooterRight = value
-            ReadStyleIntKey.HeaderFontSize -> config.headerFontSize = value
-            ReadStyleIntKey.FooterFontSize -> config.footerFontSize = value
-            ReadStyleIntKey.PageAnim -> config.setCurPageAnim(value)
-            ReadStyleIntKey.UnderlineHeight -> config.underlineHeight = value
-            ReadStyleIntKey.UnderlinePadding -> config.underlinePadding = value
-            ReadStyleIntKey.PaddingTop -> config.paddingTop = value
-            ReadStyleIntKey.PaddingBottom -> config.paddingBottom = value
-            ReadStyleIntKey.PaddingLeft -> config.paddingLeft = value
-            ReadStyleIntKey.PaddingRight -> config.paddingRight = value
-            ReadStyleIntKey.HeaderPaddingTop -> config.headerPaddingTop = value
-            ReadStyleIntKey.HeaderPaddingBottom -> config.headerPaddingBottom = value
-            ReadStyleIntKey.HeaderPaddingLeft -> config.headerPaddingLeft = value
-            ReadStyleIntKey.HeaderPaddingRight -> config.headerPaddingRight = value
-            ReadStyleIntKey.FooterPaddingTop -> config.footerPaddingTop = value
-            ReadStyleIntKey.FooterPaddingBottom -> config.footerPaddingBottom = value
-            ReadStyleIntKey.FooterPaddingLeft -> config.footerPaddingLeft = value
-            ReadStyleIntKey.FooterPaddingRight -> config.footerPaddingRight = value
-            ReadStyleIntKey.BgType -> ReadBookConfig.durConfig.bgType = value
-            ReadStyleIntKey.BgTypeNight -> ReadBookConfig.durConfig.bgTypeNight = value
-            ReadStyleIntKey.BgTypeEInk -> ReadBookConfig.durConfig.bgTypeEInk = value
-            ReadStyleIntKey.BgAlpha -> config.bgAlpha = value
+            ReadStyleIntKey.TextSize -> mutateEffective { it.copy(textSize = value) }
+            ReadStyleIntKey.LineSpacing -> mutateEffective { it.copy(lineSpacingExtra = value) }
+            ReadStyleIntKey.ParagraphSpacing -> mutateEffective { it.copy(paragraphSpacing = value) }
+            ReadStyleIntKey.TextBold -> mutateEffective { it.copy(textBold = value) }
+            ReadStyleIntKey.TitleMode -> mutateEffective { it.copy(titleMode = value) }
+            ReadStyleIntKey.TitleBold -> mutateEffective { it.copy(titleBold = value) }
+            ReadStyleIntKey.TitleLineSpacingExtra ->
+                mutateEffective { it.copy(titleLineSpacingExtra = value) }
+            ReadStyleIntKey.TitleLineSpacingSub ->
+                mutateEffective { it.copy(titleLineSpacingSub = value) }
+            ReadStyleIntKey.TitleSize -> mutateEffective { it.copy(titleSize = value) }
+            ReadStyleIntKey.TitleTopSpacing -> mutateEffective { it.copy(titleTopSpacing = value) }
+            ReadStyleIntKey.TitleBottomSpacing ->
+                mutateEffective { it.copy(titleBottomSpacing = value) }
+            ReadStyleIntKey.TitleSegType -> mutateEffective { it.copy(titleSegType = value) }
+            ReadStyleIntKey.TitleSegDistance -> mutateEffective { it.copy(titleSegDistance = value) }
+            ReadStyleIntKey.HeaderMode -> mutateEffective { it.copy(headerMode = value) }
+            ReadStyleIntKey.FooterMode -> mutateEffective { it.copy(footerMode = value) }
+            ReadStyleIntKey.TipHeaderLeft -> mutateEffective { it.copy(tipHeaderLeft = value) }
+            ReadStyleIntKey.TipHeaderMiddle -> mutateEffective { it.copy(tipHeaderMiddle = value) }
+            ReadStyleIntKey.TipHeaderRight -> mutateEffective { it.copy(tipHeaderRight = value) }
+            ReadStyleIntKey.TipFooterLeft -> mutateEffective { it.copy(tipFooterLeft = value) }
+            ReadStyleIntKey.TipFooterMiddle -> mutateEffective { it.copy(tipFooterMiddle = value) }
+            ReadStyleIntKey.TipFooterRight -> mutateEffective { it.copy(tipFooterRight = value) }
+            ReadStyleIntKey.HeaderFontSize -> mutateEffective { it.copy(headerFontSize = value) }
+            ReadStyleIntKey.FooterFontSize -> mutateEffective { it.copy(footerFontSize = value) }
+            ReadStyleIntKey.PageAnim -> mutateEffective { it.withCurPageAnim(value) }
+            ReadStyleIntKey.UnderlineHeight -> mutateEffective { it.copy(underlineHeight = value) }
+            ReadStyleIntKey.UnderlinePadding -> mutateEffective { it.copy(underlinePadding = value) }
+            ReadStyleIntKey.PaddingTop -> mutateEffective { it.copy(paddingTop = value) }
+            ReadStyleIntKey.PaddingBottom -> mutateEffective { it.copy(paddingBottom = value) }
+            ReadStyleIntKey.PaddingLeft -> mutateEffective { it.copy(paddingLeft = value) }
+            ReadStyleIntKey.PaddingRight -> mutateEffective { it.copy(paddingRight = value) }
+            ReadStyleIntKey.HeaderPaddingTop -> mutateEffective { it.copy(headerPaddingTop = value) }
+            ReadStyleIntKey.HeaderPaddingBottom ->
+                mutateEffective { it.copy(headerPaddingBottom = value) }
+            ReadStyleIntKey.HeaderPaddingLeft ->
+                mutateEffective { it.copy(headerPaddingLeft = value) }
+            ReadStyleIntKey.HeaderPaddingRight ->
+                mutateEffective { it.copy(headerPaddingRight = value) }
+            ReadStyleIntKey.FooterPaddingTop -> mutateEffective { it.copy(footerPaddingTop = value) }
+            ReadStyleIntKey.FooterPaddingBottom ->
+                mutateEffective { it.copy(footerPaddingBottom = value) }
+            ReadStyleIntKey.FooterPaddingLeft ->
+                mutateEffective { it.copy(footerPaddingLeft = value) }
+            ReadStyleIntKey.FooterPaddingRight ->
+                mutateEffective { it.copy(footerPaddingRight = value) }
+            ReadStyleIntKey.BgAlpha -> mutateEffective { it.copy(bgAlpha = value) }
+            ReadStyleIntKey.BgType -> mutateCurrentStyle { it.copy(bgType = value) }
+            ReadStyleIntKey.BgTypeNight -> mutateCurrentStyle { it.copy(bgTypeNight = value) }
+            ReadStyleIntKey.BgTypeEInk -> mutateCurrentStyle { it.copy(bgTypeEInk = value) }
         }
     }
 
     private fun updateFloat(key: ReadStyleFloatKey, value: Float) {
-        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleFloatKey.LetterSpacing -> config.letterSpacing = value
-            ReadStyleFloatKey.TitleSegScaling -> config.titleSegScaling = value
-            ReadStyleFloatKey.ShadowRadius -> config.shadowRadius = value
-            ReadStyleFloatKey.ShadowDx -> config.shadowDx = value
-            ReadStyleFloatKey.ShadowDy -> config.shadowDy = value
-            ReadStyleFloatKey.DottedBase -> ReadBookConfig.durConfig.dottedBase = value
-            ReadStyleFloatKey.DottedRatio -> ReadBookConfig.durConfig.dottedRatio = value
+            ReadStyleFloatKey.LetterSpacing -> mutateEffective { it.copy(letterSpacing = value) }
+            ReadStyleFloatKey.TitleSegScaling -> mutateEffective { it.copy(titleSegScaling = value) }
+            ReadStyleFloatKey.ShadowRadius -> mutateEffective { it.copy(shadowRadius = value) }
+            ReadStyleFloatKey.ShadowDx -> mutateEffective { it.copy(shadowDx = value) }
+            ReadStyleFloatKey.ShadowDy -> mutateEffective { it.copy(shadowDy = value) }
+            ReadStyleFloatKey.DottedBase -> mutateCurrentStyle { it.copy(dottedBase = value) }
+            ReadStyleFloatKey.DottedRatio -> mutateCurrentStyle { it.copy(dottedRatio = value) }
         }
     }
 
     private fun updateBoolean(key: ReadStyleBooleanKey, value: Boolean) {
-        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleBooleanKey.TextItalic -> config.textItalic = value
-            ReadStyleBooleanKey.TextShadow -> config.textShadow = value
-            ReadStyleBooleanKey.Underline -> config.underline = value
-            ReadStyleBooleanKey.DottedLine -> config.dottedLine = value
-            ReadStyleBooleanKey.UnderlineExtend -> config.underlineExtend = value
-            ReadStyleBooleanKey.ShowHeaderLine -> config.showHeaderLine = value
-            ReadStyleBooleanKey.ShowFooterLine -> config.showFooterLine = value
-            ReadStyleBooleanKey.ApplyHeaderStyle -> config.applyHeaderStyle = value
-            ReadStyleBooleanKey.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(value)
+            ReadStyleBooleanKey.TextItalic -> mutateEffective { it.copy(textItalic = value) }
+            ReadStyleBooleanKey.TextShadow -> mutateEffective { it.copy(textShadow = value) }
+            ReadStyleBooleanKey.Underline -> mutateEffective { it.copy(underline = value) }
+            ReadStyleBooleanKey.DottedLine -> mutateEffective { it.copy(dottedLine = value) }
+            ReadStyleBooleanKey.UnderlineExtend -> mutateEffective { it.copy(underlineExtend = value) }
+            ReadStyleBooleanKey.ShowHeaderLine -> mutateEffective { it.copy(showHeaderLine = value) }
+            ReadStyleBooleanKey.ShowFooterLine -> mutateEffective { it.copy(showFooterLine = value) }
+            ReadStyleBooleanKey.ApplyHeaderStyle ->
+                mutateEffective { it.copy(applyHeaderStyle = value) }
+            ReadStyleBooleanKey.StatusIconDark ->
+                mutateCurrentStyle { it.withCurStatusIconDark(value) }
         }
     }
 
     private fun updateString(key: ReadStyleStringKey, value: String) {
-        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleStringKey.TextFont -> config.textFont = value
-            ReadStyleStringKey.ParagraphIndent -> config.paragraphIndent = value
-            ReadStyleStringKey.TitleFont -> config.titleFont = value
-            ReadStyleStringKey.TitleSegFlag -> config.titleSegFlag = value
-            ReadStyleStringKey.HeaderFont -> config.headerFont = value
-            ReadStyleStringKey.FooterFont -> config.footerFont = value
-            ReadStyleStringKey.CustomTipHeaderLeft -> config.customTipHeaderLeft = value
-            ReadStyleStringKey.CustomTipHeaderMiddle -> config.customTipHeaderMiddle = value
-            ReadStyleStringKey.CustomTipHeaderRight -> config.customTipHeaderRight = value
-            ReadStyleStringKey.CustomTipFooterLeft -> config.customTipFooterLeft = value
-            ReadStyleStringKey.CustomTipFooterMiddle -> config.customTipFooterMiddle = value
-            ReadStyleStringKey.CustomTipFooterRight -> config.customTipFooterRight = value
-            ReadStyleStringKey.BgStr -> ReadBookConfig.durConfig.bgStr = value
-            ReadStyleStringKey.BgStrNight -> ReadBookConfig.durConfig.bgStrNight = value
-            ReadStyleStringKey.BgStrEInk -> ReadBookConfig.durConfig.bgStrEInk = value
-            ReadStyleStringKey.StyleName -> ReadBookConfig.durConfig.name = value
+            ReadStyleStringKey.TextFont -> mutateEffective { it.copy(textFont = value) }
+            ReadStyleStringKey.ParagraphIndent -> mutateEffective { it.copy(paragraphIndent = value) }
+            ReadStyleStringKey.TitleFont -> mutateEffective { it.copy(titleFont = value) }
+            ReadStyleStringKey.TitleSegFlag -> mutateEffective { it.copy(titleSegFlag = value) }
+            ReadStyleStringKey.HeaderFont -> mutateEffective { it.copy(headerFont = value) }
+            ReadStyleStringKey.FooterFont -> mutateEffective { it.copy(footerFont = value) }
+            ReadStyleStringKey.CustomTipHeaderLeft ->
+                mutateEffective { it.copy(customTipHeaderLeft = value) }
+            ReadStyleStringKey.CustomTipHeaderMiddle ->
+                mutateEffective { it.copy(customTipHeaderMiddle = value) }
+            ReadStyleStringKey.CustomTipHeaderRight ->
+                mutateEffective { it.copy(customTipHeaderRight = value) }
+            ReadStyleStringKey.CustomTipFooterLeft ->
+                mutateEffective { it.copy(customTipFooterLeft = value) }
+            ReadStyleStringKey.CustomTipFooterMiddle ->
+                mutateEffective { it.copy(customTipFooterMiddle = value) }
+            ReadStyleStringKey.CustomTipFooterRight ->
+                mutateEffective { it.copy(customTipFooterRight = value) }
+            ReadStyleStringKey.BgStr -> mutateCurrentStyle { it.copy(bgStr = value) }
+            ReadStyleStringKey.BgStrNight -> mutateCurrentStyle { it.copy(bgStrNight = value) }
+            ReadStyleStringKey.BgStrEInk -> mutateCurrentStyle { it.copy(bgStrEInk = value) }
+            ReadStyleStringKey.StyleName -> mutateCurrentStyle { it.copy(name = value) }
         }
     }
 
     private fun updateColor(key: ReadStyleColorKey, value: Int) {
-        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleColorKey.Text -> ReadBookConfig.durConfig.setCurTextColor(value)
-            ReadStyleColorKey.TextAccent -> ReadBookConfig.durConfig.setCurTextAccentColor(value)
-            ReadStyleColorKey.Title -> config.titleColor = value
-            ReadStyleColorKey.TitleNight -> config.titleColorNight = value
-            ReadStyleColorKey.TipHeader -> config.tipHeaderColor = value
-            ReadStyleColorKey.TipHeaderNight -> config.tipHeaderColorNight = value
-            ReadStyleColorKey.TipFooter -> config.tipFooterColor = value
-            ReadStyleColorKey.TipFooterNight -> config.tipFooterColorNight = value
-            ReadStyleColorKey.TipDivider -> config.tipDividerColor = value
-            ReadStyleColorKey.Shadow -> ReadBookConfig.durConfig.setCurShadColor(value)
-            ReadStyleColorKey.Underline -> ReadBookConfig.durConfig.setUnderlineColor(value)
+            ReadStyleColorKey.Title -> mutateEffective { it.copy(titleColor = value) }
+            ReadStyleColorKey.TitleNight -> mutateEffective { it.copy(titleColorNight = value) }
+            ReadStyleColorKey.TipHeader -> mutateEffective { it.copy(tipHeaderColor = value) }
+            ReadStyleColorKey.TipHeaderNight ->
+                mutateEffective { it.copy(tipHeaderColorNight = value) }
+            ReadStyleColorKey.TipFooter -> mutateEffective { it.copy(tipFooterColor = value) }
+            ReadStyleColorKey.TipFooterNight ->
+                mutateEffective { it.copy(tipFooterColorNight = value) }
+            ReadStyleColorKey.TipDivider -> mutateEffective { it.copy(tipDividerColor = value) }
+            ReadStyleColorKey.Text -> mutateCurrentStyle { it.withCurTextColor(value) }
+            ReadStyleColorKey.TextAccent -> mutateCurrentStyle { it.withCurTextAccentColor(value) }
+            ReadStyleColorKey.Shadow -> mutateCurrentStyle { it.withCurShadowColor(value) }
+            ReadStyleColorKey.Underline -> mutateCurrentStyle { it.withCurUnderlineColor(value) }
         }
     }
 

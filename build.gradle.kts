@@ -52,6 +52,15 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
         val readBookConfigMutationCall = Regex(
             """\bReadBookConfig\.durConfig\.set[A-Za-z0-9_]*\s*\("""
         )
+        // R4.7：Config 的值字段已是 val，字段写入由编译器拦；剩下的唯一写入口是
+        // ReadStyleConfigStore 的列表操作。它是 Koin 单例，谁 inject 谁就能绕过 gateway
+        // 改配置且不触发 save/publishState——所以限定只有下面这几个文件能提到这个类型。
+        val configStoreOwners = setOf(
+            "io/legado/app/data/repository/ReadStyleConfigStore.kt",
+            "io/legado/app/data/repository/ReadBookStyleConfigRepository.kt",
+            "io/legado/app/help/config/ReadBookConfig.kt",
+            "io/legado/app/di/appModule.kt",
+        )
         val settingsUpdateDeclaration = Regex(
             """\b(?:class|interface|object|typealias)\s+[A-Za-z0-9_]*SettingsUpdate\b"""
         )
@@ -96,6 +105,10 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
                     readBookConfigMutationCall.containsMatchIn(text))
             ) {
                 violations += "$displayPath: ReadBookConfig 写入必须经过 ReadStyleGateway"
+            }
+            if (relativePath !in configStoreOwners && "ReadStyleConfigStore" in text) {
+                violations += "$displayPath: 排版配置的写入口只对 ReadStyleGateway 的实现开放，" +
+                    "不要注入 ReadStyleConfigStore"
             }
             if (relativePath in injectedConfigFiles && "GlobalContext" in text) {
                 violations += "$displayPath: 配置所有者必须显式注入依赖，禁止 GlobalContext"

@@ -449,94 +449,94 @@ object ReadBookConfig {
 
     fun getExportConfig(): Config {
         val exportConfig = durConfig.copy(highlightRules = arrayListOf())
-        if (shareLayout) {
-            exportConfig.textFont = shareConfig.textFont
-            exportConfig.titleFont = shareConfig.titleFont
-            exportConfig.headerFont = shareConfig.headerFont
-            exportConfig.footerFont = shareConfig.footerFont
-            exportConfig.headerFontSize = shareConfig.headerFontSize
-            exportConfig.footerFontSize = shareConfig.footerFontSize
-            exportConfig.applyHeaderStyle = shareConfig.applyHeaderStyle
-            exportConfig.textBold = shareConfig.textBold
-            exportConfig.textSize = shareConfig.textSize
-            exportConfig.letterSpacing = shareConfig.letterSpacing
-            exportConfig.lineSpacingExtra = shareConfig.lineSpacingExtra
-            exportConfig.paragraphSpacing = shareConfig.paragraphSpacing
-            exportConfig.titleMode = shareConfig.titleMode
-            exportConfig.titleSize = shareConfig.titleSize
-            exportConfig.titleTopSpacing = shareConfig.titleTopSpacing
-            exportConfig.titleBottomSpacing = shareConfig.titleBottomSpacing
-            exportConfig.titleColor = shareConfig.titleColor
-            exportConfig.titleColorNight = shareConfig.titleColorNight
-            exportConfig.paddingBottom = shareConfig.paddingBottom
-            exportConfig.paddingLeft = shareConfig.paddingLeft
-            exportConfig.paddingRight = shareConfig.paddingRight
-            exportConfig.paddingTop = shareConfig.paddingTop
-            exportConfig.headerPaddingBottom = shareConfig.headerPaddingBottom
-            exportConfig.headerPaddingLeft = shareConfig.headerPaddingLeft
-            exportConfig.headerPaddingRight = shareConfig.headerPaddingRight
-            exportConfig.headerPaddingTop = shareConfig.headerPaddingTop
-            exportConfig.footerPaddingBottom = shareConfig.footerPaddingBottom
-            exportConfig.footerPaddingLeft = shareConfig.footerPaddingLeft
-            exportConfig.footerPaddingRight = shareConfig.footerPaddingRight
-            exportConfig.footerPaddingTop = shareConfig.footerPaddingTop
-            exportConfig.showHeaderLine = shareConfig.showHeaderLine
-            exportConfig.showFooterLine = shareConfig.showFooterLine
-            exportConfig.tipHeaderLeft = shareConfig.tipHeaderLeft
-            exportConfig.tipHeaderMiddle = shareConfig.tipHeaderMiddle
-            exportConfig.tipHeaderRight = shareConfig.tipHeaderRight
-            exportConfig.tipFooterLeft = shareConfig.tipFooterLeft
-            exportConfig.tipFooterMiddle = shareConfig.tipFooterMiddle
-            exportConfig.tipFooterRight = shareConfig.tipFooterRight
-            exportConfig.tipHeaderColor = shareConfig.tipHeaderColor
-            exportConfig.tipHeaderColorNight = shareConfig.tipHeaderColorNight
-            exportConfig.tipFooterColor = shareConfig.tipFooterColor
-            exportConfig.tipFooterColorNight = shareConfig.tipFooterColorNight
-            exportConfig.headerMode = shareConfig.headerMode
-            // MD3专有属性
-            exportConfig.footerMode = shareConfig.footerMode
-            exportConfig.textItalic = shareConfig.textItalic
-            exportConfig.textShadow = shareConfig.textShadow
-            exportConfig.shadowRadius = shareConfig.shadowRadius
-            exportConfig.shadowDx = shareConfig.shadowDx
-            exportConfig.shadowDy = shareConfig.shadowDy
-            exportConfig.titleBold = shareConfig.titleBold
-            exportConfig.titleLineSpacingExtra = shareConfig.titleLineSpacingExtra
-            exportConfig.titleLineSpacingSub = shareConfig.titleLineSpacingSub
-            exportConfig.titleSegType = shareConfig.titleSegType
-            exportConfig.titleSegScaling = shareConfig.titleSegScaling
-            exportConfig.titleSegDistance = shareConfig.titleSegDistance
-            exportConfig.titleSegFlag = shareConfig.titleSegFlag
-            exportConfig.paragraphIndent = shareConfig.paragraphIndent
-            exportConfig.underline = shareConfig.underline
-            exportConfig.underlineHeight = shareConfig.underlineHeight
-            exportConfig.underlinePadding = shareConfig.underlinePadding
-            exportConfig.dottedLine = shareConfig.dottedLine
-            exportConfig.dottedBase = shareConfig.dottedBase
-            exportConfig.dottedRatio = shareConfig.dottedRatio
-            exportConfig.bgAlpha = shareConfig.bgAlpha
-        }
-        return exportConfig
+        if (!shareLayout) return exportConfig
+        // 共享排版开着时导出的是「当前样式的背景 + 共享那份的排版」，故只覆盖排版项。
+        return exportConfig.copy(
+            textFont = shareConfig.textFont,
+            titleFont = shareConfig.titleFont,
+            headerFont = shareConfig.headerFont,
+            footerFont = shareConfig.footerFont,
+            headerFontSize = shareConfig.headerFontSize,
+            footerFontSize = shareConfig.footerFontSize,
+            applyHeaderStyle = shareConfig.applyHeaderStyle,
+            textBold = shareConfig.textBold,
+            textSize = shareConfig.textSize,
+            letterSpacing = shareConfig.letterSpacing,
+            lineSpacingExtra = shareConfig.lineSpacingExtra,
+            paragraphSpacing = shareConfig.paragraphSpacing,
+            titleMode = shareConfig.titleMode,
+            titleSize = shareConfig.titleSize,
+            titleTopSpacing = shareConfig.titleTopSpacing,
+            titleBottomSpacing = shareConfig.titleBottomSpacing,
+            titleColor = shareConfig.titleColor,
+            titleColorNight = shareConfig.titleColorNight,
+            paddingBottom = shareConfig.paddingBottom,
+            paddingLeft = shareConfig.paddingLeft,
+            paddingRight = shareConfig.paddingRight,
+            paddingTop = shareConfig.paddingTop,
+            headerPaddingBottom = shareConfig.headerPaddingBottom,
+            headerPaddingLeft = shareConfig.headerPaddingLeft,
+            headerPaddingRight = shareConfig.headerPaddingRight,
+            headerPaddingTop = shareConfig.headerPaddingTop,
+            footerPaddingBottom = shareConfig.footerPaddingBottom,
+            footerPaddingLeft = shareConfig.footerPaddingLeft,
+            footerPaddingRight = shareConfig.footerPaddingRight,
+            footerPaddingTop = shareConfig.footerPaddingTop,
+            showHeaderLine = shareConfig.showHeaderLine,
+            showFooterLine = shareConfig.showFooterLine,
+            tipHeaderLeft = shareConfig.tipHeaderLeft,
+            tipHeaderMiddle = shareConfig.tipHeaderMiddle,
+            tipHeaderRight = shareConfig.tipHeaderRight,
+            tipFooterLeft = shareConfig.tipFooterLeft,
+            tipFooterMiddle = shareConfig.tipFooterMiddle,
+            tipFooterRight = shareConfig.tipFooterRight,
+            tipHeaderColor = shareConfig.tipHeaderColor,
+            tipHeaderColorNight = shareConfig.tipHeaderColorNight,
+            tipFooterColor = shareConfig.tipFooterColor,
+            tipFooterColorNight = shareConfig.tipFooterColorNight,
+            headerMode = shareConfig.headerMode,
+            footerMode = shareConfig.footerMode,
+            textItalic = shareConfig.textItalic,
+            textShadow = shareConfig.textShadow,
+            shadowRadius = shareConfig.shadowRadius,
+            shadowDx = shareConfig.shadowDx,
+            shadowDy = shareConfig.shadowDy,
+            titleBold = shareConfig.titleBold,
+            titleLineSpacingExtra = shareConfig.titleLineSpacingExtra,
+            titleLineSpacingSub = shareConfig.titleLineSpacingSub,
+            titleSegType = shareConfig.titleSegType,
+            titleSegScaling = shareConfig.titleSegScaling,
+            titleSegDistance = shareConfig.titleSegDistance,
+            titleSegFlag = shareConfig.titleSegFlag,
+            paragraphIndent = shareConfig.paragraphIndent,
+            underline = shareConfig.underline,
+            underlineHeight = shareConfig.underlineHeight,
+            underlinePadding = shareConfig.underlinePadding,
+            dottedLine = shareConfig.dottedLine,
+            dottedBase = shareConfig.dottedBase,
+            dottedRatio = shareConfig.dottedRatio,
+            bgAlpha = shareConfig.bgAlpha
+        )
     }
 
     @Keep
     data class Config(
-        var name: String = "",
-        var bgStr: String = "#EEEEEE",//白天背景
-        var bgStrNight: String = "#000000",//夜间背景
+        val name: String = "",
+        val bgStr: String = "#EEEEEE",//白天背景
+        val bgStrNight: String = "#000000",//夜间背景
         @Transient
-        var menuBgColor: String = "#EEEFE3",
+        val menuBgColor: String = "#EEEFE3",
         @Transient
-        var menuAcColor: String = "#EEEFE3",
+        val menuAcColor: String = "#EEEFE3",
         @Transient
-        var menuBgColorNight: String = "#BFCBAD",
+        val menuBgColorNight: String = "#BFCBAD",
         @Transient
-        var menuAcColorNight: String = "#586249",
-        var bgStrEInk: String = "#FFFFFF",//EInk背景
-        var bgAlpha: Int = 100,//背景透明度
-        var bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
-        var bgTypeNight: Int = 0,//夜间背景类型
-        var bgTypeEInk: Int = 0,//EInk背景类型
+        val menuAcColorNight: String = "#586249",
+        val bgStrEInk: String = "#FFFFFF",//EInk背景
+        val bgAlpha: Int = 100,//背景透明度
+        val bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
+        val bgTypeNight: Int = 0,//夜间背景类型
+        val bgTypeEInk: Int = 0,//EInk背景类型
         private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
         private var darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
         private var darkStatusIconEInk: Boolean = true,
@@ -548,96 +548,96 @@ object ReadBookConfig {
         private var textAccentColorEInk: String = "#000000",
         private var pageAnim: Int = 0,//翻页动画
         private var pageAnimEInk: Int = 4,
-        var textFont: String = "",//字体
-        var titleFont: String = "",//标题字体
-        var headerFont: String = "",//页眉字体
-        var footerFont: String = "",//页脚字体
-        var headerFontSize: Int = 12,//页眉字号
-        var footerFontSize: Int = 12,//页脚字号
-        var applyHeaderStyle: Boolean = true,//页脚是否应用页眉字体样式
-        var textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
-        var textSize: Int = 20,//文字大小
-        var textItalic: Boolean = false,// 是否启用斜体
-        var textShadow: Boolean = false,// 是否启用阴影
-        var shadowRadius: Float = 16f,// 阴影模糊半径
-        var shadowDx: Float = 1f,// 阴影x偏移
-        var shadowDy: Float = 1f,// 阴影y偏移
+        val textFont: String = "",//字体
+        val titleFont: String = "",//标题字体
+        val headerFont: String = "",//页眉字体
+        val footerFont: String = "",//页脚字体
+        val headerFontSize: Int = 12,//页眉字号
+        val footerFontSize: Int = 12,//页脚字号
+        val applyHeaderStyle: Boolean = true,//页脚是否应用页眉字体样式
+        val textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
+        val textSize: Int = 20,//文字大小
+        val textItalic: Boolean = false,// 是否启用斜体
+        val textShadow: Boolean = false,// 是否启用阴影
+        val shadowRadius: Float = 16f,// 阴影模糊半径
+        val shadowDx: Float = 1f,// 阴影x偏移
+        val shadowDy: Float = 1f,// 阴影y偏移
         private var shadowColor: String = "#3E3D3B",
         private var shadowColorN: String = "#3E3D3B",
-        var letterSpacing: Float = 0.1f,//字间距
-        var lineSpacingExtra: Int = 12,//行间距
-        var paragraphSpacing: Int = 2,//段距
-        var titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
-        var titleSize: Int = 0,
-        var titleTopSpacing: Int = 0,
-        var titleBottomSpacing: Int = 0,
-        var titleColor: Int = 0,
-        var titleColorNight: Int = 0,
-        var titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
-        var titleLineSpacingExtra: Int = 12,
-        var titleLineSpacingSub: Int = 12,
-        var titleSegType: Int = 0,//分段模式
-        var titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
-        var titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
-        var titleSegFlag: String = "",//分段判断，碰到指定值时分段
-        var paragraphIndent: String = "　　",//段落缩进
-        var underline: Boolean = false, //下划线
-        var underlinePadding: Int = 10,
-        var underlineHeight: Int = 1,
-        var underlineExtend: Boolean = false, //下划线延伸
-        var underlineColor: String = "#3E3D3B",
-        var underlineColorNight: String = "#ADADAD",
-        var dottedLine: Boolean = false, //虚线
-        var dottedBase: Float = 6f, //长度
-        var dottedRatio: Float = 6f,
-        var paddingBottom: Int = 6,
-        var paddingLeft: Int = 16,
-        var paddingRight: Int = 16,
-        var paddingTop: Int = 6,
-        var headerPaddingBottom: Int = 0,
-        var headerPaddingLeft: Int = 16,
-        var headerPaddingRight: Int = 16,
-        var headerPaddingTop: Int = 0,
-        var footerPaddingBottom: Int = 6,
-        var footerPaddingLeft: Int = 16,
-        var footerPaddingRight: Int = 16,
-        var footerPaddingTop: Int = 6,
-        var showHeaderLine: Boolean = false,
-        var showFooterLine: Boolean = true,
-        var tipHeaderLeft: Int = ReadTipType.tipTime,
-        var tipHeaderMiddle: Int = ReadTipType.tipNone,
-        var tipHeaderRight: Int = ReadTipType.tipBattery,
-        var tipFooterLeft: Int = ReadTipType.tipChapterTitle,
-        var tipFooterMiddle: Int = ReadTipType.tipNone,
-        var tipFooterRight: Int = ReadTipType.tipPageAndTotal,
-        var customTipHeaderLeft: String = "",
-        var customTipHeaderMiddle: String = "",
-        var customTipHeaderRight: String = "",
-        var customTipFooterLeft: String = "",
-        var customTipFooterMiddle: String = "",
-        var customTipFooterRight: String = "",
-        var tipHeaderColor: Int = 0,
-        var tipHeaderColorNight: Int = 0,
-        var tipFooterColor: Int = 0,
-        var tipFooterColorNight: Int = 0,
-        var tipDividerColor: Int = -1,
-        var headerMode: Int = 0,
-        var footerMode: Int = 0,
+        val letterSpacing: Float = 0.1f,//字间距
+        val lineSpacingExtra: Int = 12,//行间距
+        val paragraphSpacing: Int = 2,//段距
+        val titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
+        val titleSize: Int = 0,
+        val titleTopSpacing: Int = 0,
+        val titleBottomSpacing: Int = 0,
+        val titleColor: Int = 0,
+        val titleColorNight: Int = 0,
+        val titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
+        val titleLineSpacingExtra: Int = 12,
+        val titleLineSpacingSub: Int = 12,
+        val titleSegType: Int = 0,//分段模式
+        val titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
+        val titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
+        val titleSegFlag: String = "",//分段判断，碰到指定值时分段
+        val paragraphIndent: String = "　　",//段落缩进
+        val underline: Boolean = false, //下划线
+        val underlinePadding: Int = 10,
+        val underlineHeight: Int = 1,
+        val underlineExtend: Boolean = false, //下划线延伸
+        val underlineColor: String = "#3E3D3B",
+        val underlineColorNight: String = "#ADADAD",
+        val dottedLine: Boolean = false, //虚线
+        val dottedBase: Float = 6f, //长度
+        val dottedRatio: Float = 6f,
+        val paddingBottom: Int = 6,
+        val paddingLeft: Int = 16,
+        val paddingRight: Int = 16,
+        val paddingTop: Int = 6,
+        val headerPaddingBottom: Int = 0,
+        val headerPaddingLeft: Int = 16,
+        val headerPaddingRight: Int = 16,
+        val headerPaddingTop: Int = 0,
+        val footerPaddingBottom: Int = 6,
+        val footerPaddingLeft: Int = 16,
+        val footerPaddingRight: Int = 16,
+        val footerPaddingTop: Int = 6,
+        val showHeaderLine: Boolean = false,
+        val showFooterLine: Boolean = true,
+        val tipHeaderLeft: Int = ReadTipType.tipTime,
+        val tipHeaderMiddle: Int = ReadTipType.tipNone,
+        val tipHeaderRight: Int = ReadTipType.tipBattery,
+        val tipFooterLeft: Int = ReadTipType.tipChapterTitle,
+        val tipFooterMiddle: Int = ReadTipType.tipNone,
+        val tipFooterRight: Int = ReadTipType.tipPageAndTotal,
+        val customTipHeaderLeft: String = "",
+        val customTipHeaderMiddle: String = "",
+        val customTipHeaderRight: String = "",
+        val customTipFooterLeft: String = "",
+        val customTipFooterMiddle: String = "",
+        val customTipFooterRight: String = "",
+        val tipHeaderColor: Int = 0,
+        val tipHeaderColorNight: Int = 0,
+        val tipFooterColor: Int = 0,
+        val tipFooterColorNight: Int = 0,
+        val tipDividerColor: Int = -1,
+        val headerMode: Int = 0,
+        val footerMode: Int = 0,
         @Transient
-        var menuIconShowText: Boolean = true,
+        val menuIconShowText: Boolean = true,
         @Transient
-        var menuIconStyle: Int = 0,
+        val menuIconStyle: Int = 0,
         @Transient
-        var menuIconItemsPerRow: Int = 5,
+        val menuIconItemsPerRow: Int = 5,
         @Transient
-        var menuIconRowCount: Int = 1,
+        val menuIconRowCount: Int = 1,
         @Transient
-        var menuBottomCornerRadius: Int = 0,
+        val menuBottomCornerRadius: Int = 0,
         @Transient
-        var menuBottomHorizontalMargin: Int = 0,
+        val menuBottomHorizontalMargin: Int = 0,
         @Transient
-        var menuBottomBottomMargin: Int = 0,
-        var highlightRules: ArrayList<HighlightRule> = arrayListOf()
+        val menuBottomBottomMargin: Int = 0,
+        val highlightRules: ArrayList<HighlightRule> = arrayListOf()
     ) {
 
         @Transient
@@ -767,18 +767,6 @@ object ReadBookConfig {
             return ReadStyleResolver.backgroundPath(this, bgIndex)
         }
 
-        private inline fun updateCurrentMode(
-            eInk: () -> Unit,
-            night: () -> Unit,
-            day: () -> Unit
-        ) {
-            when (ReadStyleResolver.currentMode()) {
-                ReadStyleResolver.ReadStyleMode.EInk -> eInk()
-                ReadStyleResolver.ReadStyleMode.Night -> night()
-                ReadStyleResolver.ReadStyleMode.Day -> day()
-            }
-        }
-
         private inline fun <T> currentModeValue(
             eInk: () -> T,
             night: () -> T,
@@ -788,17 +776,6 @@ object ReadBookConfig {
                 ReadStyleResolver.ReadStyleMode.EInk -> eInk()
                 ReadStyleResolver.ReadStyleMode.Night -> night()
                 ReadStyleResolver.ReadStyleMode.Day -> day()
-            }
-        }
-
-        private inline fun updateNightTheme(
-            night: () -> Unit,
-            day: () -> Unit
-        ) {
-            if (ReadStyleResolver.isNightTheme()) {
-                night()
-            } else {
-                day()
             }
         }
 
@@ -845,20 +822,12 @@ object ReadBookConfig {
             initAccentColorInt = true
         }
 
-        fun setCurTextAccentColor(color: Int) {
-            updateCurrentMode(
-                eInk = {
-                    textAccentColorEInk = "#${color.hexString}"
-                    textAccentColorIntEInk = color
-                },
-                night = {
-                    textAccentColorNight = "#${color.hexString}"
-                    textAccentColorIntNight = color
-                },
-                day = {
-                    textAccentColor = "#${color.hexString}"
-                    textAccentColorInt = color
-                }
+        fun withCurTextAccentColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return currentModeValue(
+                eInk = { copy(textAccentColorEInk = hex) },
+                night = { copy(textAccentColorNight = hex) },
+                day = { copy(textAccentColor = hex) }
             )
         }
 
@@ -871,33 +840,20 @@ object ReadBookConfig {
             )
         }
 
-        fun setCurShadColor(color: Int){
-            updateNightTheme(
-                night = {
-                    shadowColorN = "#${color.hexString}"
-                    shadowColorNightInt = color
-                },
-                day = {
-                    shadowColor = "#${color.hexString}"
-                    shadowColorInt = color
-                }
+        fun withCurShadowColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return nightThemeValue(
+                night = { copy(shadowColorN = hex) },
+                day = { copy(shadowColor = hex) }
             )
         }
 
-        fun setCurTextColor(color: Int) {
-            updateCurrentMode(
-                eInk = {
-                    textColorEInk = "#${color.hexString}"
-                    textColorIntEInk = color
-                },
-                night = {
-                    textColorNight = "#${color.hexString}"
-                    textColorIntNight = color
-                },
-                day = {
-                    textColor = "#${color.hexString}"
-                    textColorInt = color
-                }
+        fun withCurTextColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return currentModeValue(
+                eInk = { copy(textColorEInk = hex) },
+                night = { copy(textColorNight = hex) },
+                day = { copy(textColor = hex) }
             )
         }
 
@@ -918,13 +874,11 @@ object ReadBookConfig {
             )
         }
 
-        fun setCurStatusIconDark(isDark: Boolean) {
-            updateCurrentMode(
-                eInk = { darkStatusIconEInk = isDark },
-                night = { darkStatusIconNight = isDark },
-                day = { darkStatusIcon = isDark }
-            )
-        }
+        fun withCurStatusIconDark(isDark: Boolean): Config = currentModeValue(
+            eInk = { copy(darkStatusIconEInk = isDark) },
+            night = { copy(darkStatusIconNight = isDark) },
+            day = { copy(darkStatusIcon = isDark) }
+        )
 
         fun curStatusIconDark(): Boolean {
             return currentModeValue(
@@ -934,13 +888,11 @@ object ReadBookConfig {
             )
         }
 
-        fun setCurPageAnim(@PageAnim.Anim anim: Int) {
-            updateCurrentMode(
-                eInk = { pageAnimEInk = anim },
-                night = { pageAnim = anim },
-                day = { pageAnim = anim }
-            )
-        }
+        fun withCurPageAnim(@PageAnim.Anim anim: Int): Config = currentModeValue(
+            eInk = { copy(pageAnimEInk = anim) },
+            night = { copy(pageAnim = anim) },
+            day = { copy(pageAnim = anim) }
+        )
 
         fun curPageAnim(): Int {
             return currentModeValue(
@@ -960,9 +912,8 @@ object ReadBookConfig {
         fun getPageAnim(): Int = pageAnim
         fun getPageAnimEInk(): Int = pageAnimEInk
 
-        fun setCurBg(bgType: Int, bg: String) {
-            ReadStyleResolver.setCurrentBackground(this, bgType, bg)
-        }
+        fun withCurBg(bgType: Int, bg: String): Config =
+            ReadStyleResolver.withCurrentBackground(this, bgType, bg)
 
         fun curBgStr(): String {
             return ReadStyleResolver.currentBackground(this).value
@@ -981,16 +932,11 @@ object ReadBookConfig {
             return if (isNight) menuBgColorNightInt else menuBgColorInt
         }
 
-        fun setMenuCurBg(bg: Int) {
-            updateNightTheme(
-                night = {
-                    menuBgColorNight = "#${bg.hexString}"
-                    menuBgColorNightInt = bg
-                },
-                day = {
-                    menuBgColor = "#${bg.hexString}"
-                    menuBgColorInt = bg
-                }
+        fun withMenuCurBg(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(menuBgColorNight = hex) },
+                day = { copy(menuBgColor = hex) }
             )
         }
 
@@ -1007,16 +953,11 @@ object ReadBookConfig {
             return if (isNight) menuAcColorNightInt else menuAcColorInt
         }
 
-        fun setMenuCurAc(bg: Int) {
-            updateNightTheme(
-                night = {
-                    menuAcColorNight = "#${bg.hexString}"
-                    menuAcColorNightInt = bg
-                },
-                day = {
-                    menuAcColor = "#${bg.hexString}"
-                    menuAcColorInt = bg
-                }
+        fun withMenuCurAc(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(menuAcColorNight = hex) },
+                day = { copy(menuAcColor = hex) }
             )
         }
 
@@ -1028,16 +969,11 @@ object ReadBookConfig {
             )
         }
 
-        fun setUnderlineColor(bg: Int) {
-            updateNightTheme(
-                night = {
-                    underlineColorNight = "#${bg.hexString}"
-                    underlineColorNightInt = bg
-                },
-                day = {
-                    underlineColor = "#${bg.hexString}"
-                    underlineColorInt = bg
-                }
+        fun withCurUnderlineColor(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(underlineColorNight = hex) },
+                day = { copy(underlineColor = hex) }
             )
         }
 

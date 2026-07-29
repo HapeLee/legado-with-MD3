@@ -24,10 +24,7 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     val configFilePath: String get() = readStyleRepository.configFilePath
     val shareConfigFilePath: String get() = readStyleRepository.shareConfigFilePath
 
-    /**
-     * 共享排版那一份。返回的是本体不是副本——gateway 实现就地改它的字段，
-     * 发一份副本出去会让写入落到空气里。
-     */
+    /** 共享排版那一份。 */
     val shareConfig: ReadBookConfig.Config get() = shareConfigRef
 
     fun initConfigs() {
@@ -61,11 +58,42 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
         }
     }
 
-    fun configsSnapshot(): List<ReadBookConfig.Config> = synchronized(lock) {
-        configList.map { it.copy() }
+    /**
+     * 改**当前样式**那一份的字段。共享排版开着时也只动这一份——背景、虚线、状态栏图标
+     * 这些按样式独立的项走这里。
+     *
+     * 下标解析与 [configAt] 保持一致（含配置文件缺斤少两时先恢复默认、越界回落到 0），
+     * 否则「读得到、写不进」会成为一类静默失效。
+     */
+    fun updateStyleAt(index: Int, transform: (ReadBookConfig.Config) -> ReadBookConfig.Config) {
+        synchronized(lock) {
+            if (configList.size < 5) {
+                resetAllLocked()
+            }
+            val target = if (index in configList.indices) index else 0
+            configList[target] = transform(configList[target])
+        }
     }
 
-    fun shareConfigSnapshot(): ReadBookConfig.Config = shareConfigRef.copy()
+    /** 改**当前生效**那一份：共享排版开着时是共享那份，否则就是当前样式。 */
+    fun updateEffective(
+        index: Int,
+        useShare: Boolean,
+        transform: (ReadBookConfig.Config) -> ReadBookConfig.Config,
+    ) {
+        if (useShare) {
+            synchronized(lock) { shareConfigRef = transform(shareConfigRef) }
+        } else {
+            updateStyleAt(index, transform)
+        }
+    }
+
+    /** `Config` 的值字段不可变，快照直接共享实例即可。 */
+    fun configsSnapshot(): List<ReadBookConfig.Config> = synchronized(lock) {
+        configList.toList()
+    }
+
+    fun shareConfigSnapshot(): ReadBookConfig.Config = shareConfigRef
 
     fun addConfig(config: ReadBookConfig.Config): Int = synchronized(lock) {
         configList.add(config)
