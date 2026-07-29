@@ -2,7 +2,6 @@ package io.legado.app.ui.book.source.manage
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -13,10 +12,13 @@ import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 data class BookSourceItemUi(
-    val source: BookSourcePart,
+    override val id: String,
     val domain: String,
+    val name: String,
+    val group: String?,
+    val enabled: Boolean,
+    val customOrder: Int,
 ) : SelectableItem<String> {
-    override val id get() = source.bookSourceUrl
 }
 
 @Stable

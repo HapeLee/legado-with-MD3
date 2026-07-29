@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -67,7 +66,7 @@ fun BookSourceRouteScreen(
     viewModel: BookSourceViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
-    onEditSource: (BookSourcePart) -> Unit,
+    onEditSource: (String) -> Unit,
     onImportLocal: () -> Unit,
     onImportOnline: (String) -> Unit,
 ) {
@@ -90,7 +89,7 @@ fun BookSourceScreen(
     onIntent: (BookSourceIntent) -> Unit,
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
-    onEditSource: (BookSourcePart) -> Unit,
+    onEditSource: (String) -> Unit,
     onImportLocal: () -> Unit,
     onImportOnline: (String) -> Unit,
 ) {
@@ -339,9 +338,9 @@ fun BookSourceScreen(
                                     )
                                 }
                             },
-                            title = item.source.bookSourceName,
-                            subtitle = item.source.bookSourceGroup,
-                            isEnabled = item.source.enabled,
+                            title = item.name,
+                            subtitle = item.group,
+                            isEnabled = item.enabled,
                             isSelected = item.id in selectedIds,
                             canReorder = state.sort == BookSourceSort.Default && !state.groupByDomain,
                             inSelectionMode = selectedIds.isNotEmpty(),
@@ -354,7 +353,7 @@ fun BookSourceScreen(
                                     )
                                 )
                             },
-                            onClickEdit = { onEditSource(item.source) },
+                            onClickEdit = { onEditSource(item.id) },
                             trailingAction = {
                                 SmallPlainButton(
                                     icon = Icons.Default.Delete,

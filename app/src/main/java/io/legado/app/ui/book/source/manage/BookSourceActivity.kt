@@ -20,12 +20,9 @@ class BookSourceActivity : BaseComposeActivity() {
         BookSourceRouteScreen(
             onBackClick = ::finish,
             onAddSource = { startActivity<BookSourceEditActivity>() },
-            onEditSource = { source ->
+            onEditSource = { sourceUrl ->
                 startActivity<BookSourceEditActivity> {
-                    putExtra(
-                        "sourceUrl",
-                        source.bookSourceUrl
-                    )
+                    putExtra("sourceUrl", sourceUrl)
                 }
             },
             onImportLocal = {

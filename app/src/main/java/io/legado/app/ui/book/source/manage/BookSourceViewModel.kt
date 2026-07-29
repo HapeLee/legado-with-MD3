@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,6 +40,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
     private val sortAscending = MutableStateFlow(true)
     private val groupByDomain = MutableStateFlow(false)
     private val localItems = MutableStateFlow<List<BookSourcePart>?>(null)
+    private val enabledOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
     val uiState = combine(
         dao.flowAll(),
@@ -49,7 +51,8 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         sort,
         sortAscending,
         groupByDomain,
-        localItems
+        localItems,
+        enabledOverrides,
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         val sourceItems = (values[0] as List<BookSourcePart>)
@@ -61,13 +64,22 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         val ascending = values[6] as Boolean
         val byDomain = values[7] as Boolean
         val local = values[8] as List<BookSourcePart>?
-        val visible = local ?: sourceItems.filterFor(activeFilter, query)
-            .sortFor(activeSort, ascending, byDomain)
+        val pendingEnabled = values[9] as Map<String, Boolean>
+        val visible = if (local == null) {
+            sourceItems.filterFor(activeFilter, query).sortFor(activeSort, ascending, byDomain)
+        } else {
+            val latestById = sourceItems.associateBy { it.bookSourceUrl }
+            local.mapNotNull { latestById[it.bookSourceUrl] }
+        }
         BookSourceUiState(
             items = visible.map { source ->
                 BookSourceItemUi(
-                    source = source,
+                    id = source.bookSourceUrl,
                     domain = NetworkUtils.getSubDomainOrNull(source.bookSourceUrl) ?: "#",
+                    name = source.bookSourceName,
+                    group = source.bookSourceGroup,
+                    enabled = pendingEnabled[source.bookSourceUrl] ?: source.enabled,
+                    customOrder = source.customOrder,
                 )
             }.toImmutableList(),
             selectedIds = selected.intersect(visible.map { it.bookSourceUrl }.toSet())
@@ -112,7 +124,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
                 localItems.value = null; groupByDomain.update { !it }
             }
 
-            is BookSourceIntent.SetEnabled -> launch { dao.enable(intent.id, intent.enabled) }
+            is BookSourceIntent.SetEnabled -> setEnabled(intent.id, intent.enabled)
             is BookSourceIntent.SetEnabledForSelection -> launch {
                 dao.enable(
                     intent.enabled,
@@ -136,6 +148,19 @@ class BookSourceViewModel(application: Application) : ViewModel() {
 
     private fun launch(block: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) { block() }
+
+    private fun setEnabled(id: String, enabled: Boolean) {
+        enabledOverrides.update { it + (id to enabled) }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                dao.enable(id, enabled)
+                dao.flowAll().first { sources ->
+                    sources.firstOrNull { it.bookSourceUrl == id }?.enabled == enabled
+                }
+            }
+            enabledOverrides.update { it - id }
+        }
+    }
 
     private fun parts(ids: Set<String>) = dao.allPart.filter { it.bookSourceUrl in ids }
     private fun updateExplore(ids: Set<String>, enabled: Boolean) =
@@ -166,7 +191,9 @@ class BookSourceViewModel(application: Application) : ViewModel() {
 
     private fun moveItem(from: Int, to: Int) {
         if (sort.value != BookSourceSort.Default || groupByDomain.value) return
-        val moved = (localItems.value ?: uiState.value.items.map { it.source }).toMutableList()
+        val moved = (localItems.value ?: uiState.value.items.map { item ->
+            BookSourcePart(bookSourceUrl = item.id, customOrder = item.customOrder)
+        }).toMutableList()
         if (from !in moved.indices || to !in moved.indices) return
         moved.add(to, moved.removeAt(from)); localItems.value = moved
     }
