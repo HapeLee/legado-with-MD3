@@ -59,6 +59,22 @@ class ReadBookDomainSplitBoundaryTest {
         }
     }
 
+    /**
+     * R2 的终态验收线。不是为了追行数好看——超过这个数就说明又有新的域直接长在 VM 里，
+     * 而不是长成一个 delegate。要放宽必须先说明新增的是哪个域、为什么不能摘。
+     */
+    @Test
+    fun `ReadBookViewModel 不超过 R2 验收的 2500 行`() {
+        val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
+            .readLines().size
+        assertTrue(
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2500。\n" +
+                "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
+                "并在本测试的 DOMAINS 里加一条边界。",
+            lineCount <= 2500,
+        )
+    }
+
     @Test
     fun `各 delegate 不自带 DAO 直连`() {
         DOMAINS.forEach { domain ->
@@ -158,6 +174,51 @@ class ReadBookDomainSplitBoundaryTest {
                 delegateFile = "io/legado/app/ui/book/read/ReadContentProcessDelegate.kt",
                 stateFields = setOf("contentProcessConfig"),
                 stateTypes = listOf("ContentProcessConfigUiState", "ContentProcessItemUi"),
+            ),
+            // 开书域无自持状态：isInitFinish 是 ReadView 首帧的放行门闩，必须留在 UiState
+            DomainSplit(
+                name = "开书/换源",
+                delegateFile = "io/legado/app/ui/book/read/ReadBookLoadDelegate.kt",
+                stateFields = emptySet(),
+                // 用「调用点」而不是「依赖名」当标记：依赖名在 VM 的 delegate 装配处
+                // 本来就会出现，那是正当接线，不是逻辑回流。
+                stateTypes = listOf(
+                    "changeBookSourceUseCase.changeTo",
+                    "WebBook.getChapterListAwait",
+                    "uploadReadingProgressUseCase.execute",
+                ),
+            ),
+            DomainSplit(
+                name = "书签",
+                delegateFile = "io/legado/app/ui/book/read/ReadBookmarkDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf("bookmarkRepository.save", "bookmarkRepository.delete"),
+            ),
+            // 样式域无自持状态：styleConfig 的重建由 VM 的 collectReadStyle() 统一驱动，
+            // activeReminder / eyeProtection 被菜单栏直读；靠 stateTypes 守
+            // 「取色、日夜提醒判定、样式导入导出不回流 VM」
+            DomainSplit(
+                name = "阅读样式",
+                delegateFile = "io/legado/app/ui/book/read/ReadStyleDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "ReadBookColorPickerIds",
+                    "ReminderType.DayNightReminder",
+                    "importCurrentStyle",
+                    "saveBackgroundImage",
+                ),
+            ),
+            // 朗读域无自持状态：20 来个朗读字段被四个 composable 直读，搬出去要改四处入参；
+            // 靠 stateTypes 守「设置写入与合成管线重启逻辑不回流 VM」
+            DomainSplit(
+                name = "朗读",
+                delegateFile = "io/legado/app/ui/book/read/ReadAloudDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "readAloudSettingsRepository.update",
+                    "VoiceCatalogEntry",
+                    "refreshReadAloudClass",
+                ),
             ),
             // 按钮配置域无自持状态：按钮列表仍在 menuConfig 里，靠 stateTypes 守
             // 「SharedPreferences 读写和归一化逻辑不回流 VM」

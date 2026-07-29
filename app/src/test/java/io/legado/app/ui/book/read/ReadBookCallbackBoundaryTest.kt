@@ -23,13 +23,12 @@ class ReadBookCallbackBoundaryTest {
         val source = stripComments(
             mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt").readText()
         )
+        // 只查超类型和注册调用，不查 `override fun upMenuView` 之类的方法名：
+        // Kotlin 里没有超类型就写不出 override，方法名检查是多余的；而各 delegate 的
+        // Host 完全可以有同名方法（VM 确实实现了 ReadBookLoadDelegate.Host.sureNewProgress），
+        // 查方法名会把这种正当写法误报成回归。
         val violations = buildList {
             if (CALLBACK_SUPERTYPE.containsMatchIn(source)) add("声明了 ReadBook.CallBack 超类型")
-            CALLBACK_METHODS.forEach { method ->
-                if (Regex("""\boverride\s+fun\s+$method\s*\(""").containsMatchIn(source)) {
-                    add("override fun $method")
-                }
-            }
             if (Regex("""\bReadBook\.(?:register|unregister)\s*\(\s*this\s*\)""")
                     .containsMatchIn(source)
             ) {
@@ -63,13 +62,6 @@ class ReadBookCallbackBoundaryTest {
     }
 
     private companion object {
-        val CALLBACK_METHODS = listOf(
-            "upMenuView",
-            "loadChapterList",
-            "notifyBookChanged",
-            "sureNewProgress",
-        )
-
         val CONTROLLER_LOCAL_EFFECTS = listOf(
             "PageChanged",
             "ContentLoadFinish",
