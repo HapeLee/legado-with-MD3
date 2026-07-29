@@ -709,7 +709,7 @@
     <string name="refresh_cover">刷新封面</string>
     <string name="change_cover_source">封面换源</string>
     <string name="select_local_image">选择本地图片</string>
-    <string name="book_type">类型：</string>
+    <string name="book_type">类型 :</string>
     <string name="to_backstage">后台</string>
     <string name="importing">正在导入</string>
     <string name="exporting">正在导出</string>
