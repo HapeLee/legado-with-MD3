@@ -130,6 +130,13 @@ class ReadBookDomainSplitBoundaryTest {
                 ),
                 stateTypes = listOf("ContentEditUiState"),
             ),
+            // 配置分发域无自持状态：stateFields 为空，靠 stateTypes 守「158 分支不回流 VM」
+            DomainSplit(
+                name = "配置更新分发",
+                delegateFile = "io/legado/app/ui/book/read/ReadConfigUpdateDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf("is ConfigUpdate."),
+            ),
         )
 
         val APP_DB_DAO = Regex("""\bappDb\.[A-Za-z0-9_]*Dao\b""")
