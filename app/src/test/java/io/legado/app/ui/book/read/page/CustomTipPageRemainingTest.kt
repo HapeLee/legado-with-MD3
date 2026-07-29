@@ -6,48 +6,44 @@ import org.junit.Test
 class CustomTipPageRemainingTest {
 
     @Test
-    fun `completed chapter shows chapter complete on last page`() {
+    fun `最后一页也只出数字不出本章完`() {
         val display = formatCustomTipPageRemaining(
             pageSize = 10,
             pageIndex = 9,
             isChapterCompleted = true,
-            chapterCompleteText = "本章完",
-        )
-
-        assertEquals("本章完", display)
-    }
-
-    @Test
-    fun `completed chapter keeps remaining page count before last page`() {
-        val display = formatCustomTipPageRemaining(
-            pageSize = 10,
-            pageIndex = 5,
-            isChapterCompleted = true,
-            chapterCompleteText = "本章完",
-        )
-
-        assertEquals("4", display)
-    }
-
-    @Test
-    fun `incomplete chapter omits approximation marker without reporting chapter complete`() {
-        val display = formatCustomTipPageRemaining(
-            pageSize = 10,
-            pageIndex = 9,
-            isChapterCompleted = false,
-            chapterCompleteText = "本章完",
         )
 
         assertEquals("0", display)
     }
 
     @Test
-    fun `incomplete chapter without pages keeps unknown marker`() {
+    fun `排完的章节给出剩余页数`() {
+        val display = formatCustomTipPageRemaining(
+            pageSize = 10,
+            pageIndex = 5,
+            isChapterCompleted = true,
+        )
+
+        assertEquals("4", display)
+    }
+
+    @Test
+    fun `未排完的章节最后一页同样出数字`() {
+        val display = formatCustomTipPageRemaining(
+            pageSize = 10,
+            pageIndex = 9,
+            isChapterCompleted = false,
+        )
+
+        assertEquals("0", display)
+    }
+
+    @Test
+    fun `未排完且页数未知时出未知标记`() {
         val display = formatCustomTipPageRemaining(
             pageSize = 0,
             pageIndex = 0,
             isChapterCompleted = false,
-            chapterCompleteText = "本章完",
         )
 
         assertEquals("-", display)

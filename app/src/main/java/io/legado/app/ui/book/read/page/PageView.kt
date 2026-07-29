@@ -529,7 +529,6 @@ class PageView(
             pageSize = textPage.pageSize,
             pageIndex = textPage.index,
             isChapterCompleted = textPage.textChapter.isCompleted,
-            chapterCompleteText = context.getString(R.string.chapter_complete),
         )
         val readProgressDisplay = textPage.readProgress
         val wholeBookPage = ReadBook.getWholeBookPageState(textPage.chapterIndex, textPage.index)
