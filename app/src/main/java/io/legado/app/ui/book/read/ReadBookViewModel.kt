@@ -6,15 +6,12 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
-import android.util.Base64
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewModelScope
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
@@ -85,12 +82,8 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.http.decompressed
-import io.legado.app.help.http.newCallResponseBody
-import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
 import io.legado.app.help.source.getSourceType
-import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -110,25 +103,16 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.searchContent.SearchResult
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
-import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.StringUtils
-import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isDataUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toStringArray
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -1060,17 +1044,9 @@ class ReadBookViewModel(
             is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()
 
             is ReadBookIntent.ShowReadAloudConfig -> {
-                _uiState.update {
-                    it.copy(
-                        speakEngineName = computeSpeakEngineName(),
-                        activeSheet = ReadBookSheet.ReadAloudConfig,
-                    )
-                }
-                loadTtsEngineItems()
-            }
-
-            is ReadBookIntent.SelectSpeakEngine -> {
-                showSpeakEngineConfig()
+                _uiState.update { it.copy(activeSheet = ReadBookSheet.ReadAloudConfig) }
+                // 朗读引擎可能在 cloudtts 页被改过，开弹层时刷一次声音目录
+                execute { syncConfiguredTtsVoices() }
             }
 
             is ReadBookIntent.OpenPreDownloadNumPicker -> {
@@ -1109,21 +1085,6 @@ class ReadBookViewModel(
                             readAloudSettingsRepository.currentSettings.audioCacheCleanTime,
                         activeSheet = ReadBookSheet.AudioCacheCleanConfig,
                     )
-                }
-            }
-
-            is ReadBookIntent.ApplySpeakEngine -> {
-                ReadBook.book?.setTtsEngine(null)
-                viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    readAloudSettingsRepository.update { it.copy(ttsEngine = intent.value) }
-                    ReadAloud.upReadAloudClass()
-                    _uiState.update {
-                        it.copy(
-                            selectedTtsEngine = ReadAloud.ttsEngine,
-                            speakEngineName = computeSpeakEngineName(),
-                            activeSheet = ReadBookSheet.ReadAloudConfig,
-                        )
-                    }
                 }
             }
 
@@ -1179,141 +1140,6 @@ class ReadBookViewModel(
                     )
                 }
             }
-
-            is ReadBookIntent.EditHttpTts -> {
-                if (intent.engineId == null) {
-                    _uiState.update {
-                        it.copy(
-                            editingHttpTts = HttpTTS(),
-                            activeSheet = ReadBookSheet.HttpTtsEdit(),
-                        )
-                    }
-                } else {
-                    execute {
-                        httpTtsRepository.findById(intent.engineId)
-                    }.onSuccess { tts ->
-                        _uiState.update {
-                            it.copy(
-                                editingHttpTts = tts,
-                                activeSheet = ReadBookSheet.HttpTtsEdit(intent.engineId),
-                            )
-                        }
-                    }
-                }
-            }
-
-            is ReadBookIntent.DeleteHttpTts -> {
-                execute {
-                    httpTtsRepository.findById(intent.engineId)?.let { tts ->
-                        httpTtsRepository.delete(tts)
-                    }
-                }.onSuccess {
-                    loadTtsEngineItems()
-                    if (ReadAloud.ttsEngine == intent.engineId.toString()) {
-                        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                            readAloudSettingsRepository.update { it.copy(ttsEngine = null) }
-                            ReadAloud.upReadAloudClass()
-                        }
-                    }
-                }
-            }
-
-            is ReadBookIntent.SaveHttpTts -> {
-                execute {
-                    httpTtsRepository.insert(intent.httpTTS)
-                }.onSuccess {
-                    loadTtsEngineItems()
-                    _uiState.update {
-                        it.copy(
-                            editingHttpTts = null,
-                            activeSheet = ReadBookSheet.SpeakEngineConfig,
-                        )
-                    }
-                }
-            }
-
-            is ReadBookIntent.ApplySpeakEnginePerBook -> {
-                ReadBook.book?.setTtsEngine(intent.value)
-                ReadAloud.upReadAloudClass()
-                _uiState.update {
-                    it.copy(
-                        selectedTtsEngine = ReadAloud.ttsEngine,
-                        speakEngineName = computeSpeakEngineName(),
-                        activeSheet = ReadBookSheet.ReadAloudConfig,
-                    )
-                }
-            }
-
-            is ReadBookIntent.OpenHttpTtsLogin -> {
-                _effects.tryEmit(ReadBookEffect.OpenHttpTtsLogin(intent.engineId))
-            }
-
-            is ReadBookIntent.ImportHttpTtsJson -> {
-                importHttpTtsSource(intent.json)
-            }
-
-            is ReadBookIntent.ImportHttpTtsSource -> {
-                importHttpTtsSource(intent.text)
-            }
-
-            is ReadBookIntent.ExportAllHttpTts -> {
-                _effects.tryEmit(ReadBookEffect.OpenHttpTtsExportPicker)
-            }
-
-            is ReadBookIntent.ExportAllHttpTtsAsUrl -> {
-                execute {
-                    val json = exportHttpTtsJson()
-                    uploadRepository.upload(
-                        fileName = "httpTTS.json",
-                        file = json,
-                        contentType = "application/json"
-                    )
-                }.onSuccess { url ->
-                    context.sendToClip(url)
-                    _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.copy_url)))
-                }
-            }
-
-            is ReadBookIntent.ExportHttpTtsToFile -> {
-                execute {
-                    val json = exportHttpTtsJson()
-                    context.contentResolver.openOutputStream(intent.uri)?.use { os ->
-                        os.write(json.toByteArray())
-                    }
-                }.onSuccess {
-                    _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.export_success)))
-                }
-            }
-
-            is ReadBookIntent.ImportHttpTtsFile -> {
-                _effects.tryEmit(ReadBookEffect.OpenHttpTtsImportPicker)
-            }
-
-            is ReadBookIntent.ImportHttpTtsFileSelected -> {
-                execute<String?> {
-                    val text = context.contentResolver.openInputStream(intent.uri)
-                        ?.use { it.reader().readText() }
-                    text
-                }.onSuccess { text ->
-                    if (!text.isNullOrBlank()) importHttpTtsSource(text)
-                }
-            }
-
-            ReadBookIntent.CancelHttpTtsImport -> cancelHttpTtsImport()
-
-            is ReadBookIntent.ToggleHttpTtsImportSelection -> {
-                toggleHttpTtsImportSelection(intent.index)
-            }
-
-            is ReadBookIntent.ToggleHttpTtsImportAll -> {
-                toggleHttpTtsImportAll(intent.isSelected)
-            }
-
-            is ReadBookIntent.UpdateHttpTtsImportItem -> {
-                updateHttpTtsImportItem(intent.index, intent.httpTTS)
-            }
-
-            ReadBookIntent.SaveImportedHttpTts -> saveImportedHttpTts()
 
             is ReadBookIntent.SetReadAloudIgnoreAudioFocus -> {
                 viewModelScope.launch {
@@ -1781,48 +1607,6 @@ class ReadBookViewModel(
         ReadBook.cancelPreDownloadTask()
     }
 
-    private fun showSpeakEngineConfig() {
-        loadTtsEngineItems {
-            _uiState.update { it.copy(activeSheet = ReadBookSheet.SpeakEngineConfig) }
-        }
-    }
-
-    private fun loadTtsEngineItems(onSuccess: (() -> Unit)? = null) {
-        execute {
-            val systemTtsLabel = context.getString(R.string.system_tts)
-            val httpTtsList = httpTtsRepository.getAll()
-            syncConfiguredTtsVoices(systemTtsLabel, httpTtsList)
-            buildList {
-                add(ReadBookTtsEngineItem(systemTtsLabel, null))
-                sysEngines.forEach { engine ->
-                    add(
-                        ReadBookTtsEngineItem(
-                            title = engine.label,
-                            value = GSON.toJson(SelectItem(engine.label, engine.name)),
-                        )
-                    )
-                }
-                httpTtsList.forEach { httpTts ->
-                    add(
-                        ReadBookTtsEngineItem(
-                            title = httpTts.name,
-                            value = httpTts.id.toString(),
-                            loginUrl = httpTts.loginUrl,
-                        )
-                    )
-                }
-            }
-        }.onSuccess { items ->
-            _uiState.update {
-                it.copy(
-                    ttsEngineItems = items.toImmutableList(),
-                    selectedTtsEngine = ReadAloud.ttsEngine,
-                )
-            }
-            onSuccess?.invoke()
-        }
-    }
-
     private suspend fun syncConfiguredTtsVoices(
         systemTtsLabel: String = context.getString(R.string.system_tts),
         httpTtsList: List<HttpTTS> = httpTtsRepository.getAllSync(),
@@ -1861,179 +1645,6 @@ class ReadBookViewModel(
         )
     }
 
-    private fun importHttpTtsSource(text: String) {
-        _uiState.update {
-            it.copy(httpTtsImportState = BaseImportUiState.Loading)
-        }
-        execute {
-            val list = importHttpTtsSourceAwait(text.trim())
-            val items = list.map { httpTTS ->
-                val old = httpTtsRepository.findById(httpTTS.id)
-                val status = when {
-                    old == null -> ImportStatus.New
-                    httpTTS.lastUpdateTime > old.lastUpdateTime -> ImportStatus.Update
-                    else -> ImportStatus.Existing
-                }
-                ImportItemWrapper(
-                    data = httpTTS,
-                    oldData = old,
-                    status = status,
-                    isSelected = status != ImportStatus.Existing,
-                )
-            }
-            if (items.isEmpty()) {
-                throw NoStackTraceException(context.getString(R.string.wrong_format))
-            }
-            BaseImportUiState.Success(
-                source = text,
-                items = items,
-            )
-        }.onSuccess { importState ->
-            _uiState.update {
-                it.copy(httpTtsImportState = importState)
-            }
-        }.onError {
-            AppLog.put("导入朗读引擎失败\n${it.localizedMessage}", it, true)
-            _uiState.update { state ->
-                state.copy(
-                    httpTtsImportState = BaseImportUiState.Error(
-                        it.localizedMessage ?: context.getString(R.string.wrong_format)
-                    )
-                )
-            }
-        }
-    }
-
-    private suspend fun importHttpTtsSourceAwait(text: String): List<HttpTTS> {
-        return when {
-            text.isHttpTtsImportUri() -> {
-                val src = Uri.parse(text).getQueryParameter("src")
-                    ?: throw NoStackTraceException(context.getString(R.string.wrong_format))
-                importHttpTtsSourceAwait(src)
-            }
-            text.isJsonObject() -> listOf(HttpTTS.fromJson(text).getOrThrow())
-            text.isJsonArray() -> HttpTTS.fromJsonArray(text).getOrThrow()
-            text.isDataUrl() -> {
-                val data = AppPattern.dataUriRegex.find(text)?.groupValues?.getOrNull(1)
-                    ?: throw NoStackTraceException(context.getString(R.string.wrong_format))
-                val body = Base64.decode(data, Base64.DEFAULT).toString(Charsets.UTF_8)
-                importHttpTtsSourceAwait(body)
-            }
-            text.isAbsUrl() -> {
-                val body = okHttpClient.newCallResponseBody {
-                    if (text.endsWith("#requestWithoutUA")) {
-                        url(text.substringBeforeLast("#requestWithoutUA"))
-                        header(AppConst.UA_NAME, "null")
-                    } else {
-                        url(text)
-                    }
-                }.decompressed().text()
-                importHttpTtsSourceAwait(body)
-            }
-            else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
-        }
-    }
-
-    private fun cancelHttpTtsImport() {
-        _uiState.update {
-            it.copy(
-                httpTtsImportState = BaseImportUiState.Idle,
-                activeSheet = ReadBookSheet.SpeakEngineConfig,
-            )
-        }
-    }
-
-    private fun toggleHttpTtsImportSelection(index: Int) {
-        val importState = _uiState.value.httpTtsImportState
-            as? BaseImportUiState.Success<HttpTTS> ?: return
-        if (index !in importState.items.indices) return
-        val items = importState.items.toMutableList()
-        val item = items[index]
-        items[index] = item.copy(isSelected = !item.isSelected)
-        _uiState.update {
-            it.copy(httpTtsImportState = importState.copy(items = items))
-        }
-    }
-
-    private fun toggleHttpTtsImportAll(isSelected: Boolean) {
-        val importState = _uiState.value.httpTtsImportState
-            as? BaseImportUiState.Success<HttpTTS> ?: return
-        _uiState.update {
-            it.copy(
-                httpTtsImportState = importState.copy(
-                    items = importState.items.map { item ->
-                        item.copy(isSelected = isSelected)
-                    }
-                )
-            )
-        }
-    }
-
-    private fun updateHttpTtsImportItem(index: Int, httpTTS: HttpTTS) {
-        val importState = _uiState.value.httpTtsImportState
-            as? BaseImportUiState.Success<HttpTTS> ?: return
-        if (index !in importState.items.indices) return
-        val items = importState.items.toMutableList()
-        items[index] = items[index].copy(data = httpTTS)
-        _uiState.update {
-            it.copy(
-                httpTtsImportState = importState.copy(
-                    items = items,
-                    version = importState.version + 1,
-                )
-            )
-        }
-    }
-
-    private fun saveImportedHttpTts() {
-        val importState = _uiState.value.httpTtsImportState
-            as? BaseImportUiState.Success<HttpTTS> ?: return
-        val selected = importState.items
-            .filter { it.isSelected }
-            .map { it.data }
-        if (selected.isEmpty()) return
-        execute {
-            httpTtsRepository.insert(*selected.toTypedArray())
-        }.onSuccess {
-            loadTtsEngineItems()
-            _uiState.update {
-                it.copy(
-                    httpTtsImportState = BaseImportUiState.Idle,
-                    activeSheet = ReadBookSheet.SpeakEngineConfig,
-                )
-            }
-            _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.success)))
-        }.onError {
-            AppLog.put("保存朗读引擎失败\n${it.localizedMessage}", it, true)
-            _uiState.update { state ->
-                state.copy(
-                    httpTtsImportState = BaseImportUiState.Error(
-                        it.localizedMessage ?: context.getString(R.string.wrong_format)
-                    )
-                )
-            }
-        }
-    }
-
-    private fun exportHttpTtsJson(): String {
-        return GSON.toJson(httpTtsRepository.getAllSync())
-    }
-
-    private fun computeSpeakEngineName(): String {
-        val ttsEngine = ReadAloud.ttsEngine
-            ?: return context.getString(R.string.system_tts)
-        if (StringUtils.isNumeric(ttsEngine)) {
-            return httpTtsRepository.getNameSync(ttsEngine.toLong())
-                ?: context.getString(R.string.system_tts)
-        }
-        return GSON.fromJsonObject<SelectItem<String>>(ttsEngine)
-            .getOrNull()?.title
-            ?: context.getString(R.string.system_tts)
-    }
-
-    /**
-     * Called from the network changed listener (registered by route).
-     */
     fun onNetworkChanged() {
         if (
             backupSettingsGateway.currentSettings.syncBookProgressPlus &&
@@ -2348,7 +1959,6 @@ class ReadBookViewModel(
                         speechAnalysisMode = prefs.speechAnalysisMode,
                         useMultiSpeaker = prefs.useMultiSpeaker,
                         defaultReadAloudInterface = prefs.defaultInterface,
-                        selectedTtsEngine = prefs.ttsEngine,
                         preDownloadNum = _readPreferences.value.preDownloadNum,
                         audioCacheCleanTime = prefs.audioCacheCleanTime,
                         readAloudParagraphInterval = prefs.ttsParagraphInterval,

@@ -11,7 +11,6 @@ import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.model.readaloud.SpeechRoleType
@@ -22,7 +21,6 @@ import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -253,11 +251,6 @@ data class ReadBookUiState(
     val isReadingProgressSyncConfigured: Boolean = false,
     // Content edit
     // 正文编辑域状态见 ContentEditUiState —— 由 ReadContentEditDelegate 独立持有
-    val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
-    val selectedTtsEngine: String? = null,
-    val speakEngineName: String = "",
-    val editingHttpTts: HttpTTS? = null,
-    val httpTtsImportState: BaseImportUiState<HttpTTS> = BaseImportUiState.Idle,
     val preDownloadNum: Int = 10,
     val preSynthesisConcurrency: Int = 3,
     val audioCacheCleanTime: Int = 10,
@@ -368,13 +361,6 @@ data class ReadMenuConfig(
     val brightnessAuto: Boolean = true,
     val showMenuIcon: Boolean = false,
     val titleBarCompact: Boolean = false,
-)
-
-@Immutable
-data class ReadBookTtsEngineItem(
-    val title: String,
-    val value: String?,
-    val loginUrl: String? = null,
 )
 
 @Immutable
@@ -687,33 +673,14 @@ sealed interface ReadBookIntent {
 
     // Read aloud config (needs Activity for DialogFragment)
     data object ShowReadAloudConfig : ReadBookIntent
-    data object SelectSpeakEngine : ReadBookIntent
     data object OpenPreDownloadNumPicker : ReadBookIntent
     data object OpenPreSynthesisConcurrencyPicker : ReadBookIntent
     data object OpenParagraphIntervalPicker : ReadBookIntent
     data object OpenCacheCleanTimePicker : ReadBookIntent
-    data class ApplySpeakEngine(val value: String?) : ReadBookIntent
     data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
     data class ApplyPreSynthesisConcurrency(val value: Int) : ReadBookIntent
     data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
     data class ApplyParagraphInterval(val value: Int) : ReadBookIntent
-    data class EditHttpTts(val engineId: Long? = null) : ReadBookIntent
-    data class DeleteHttpTts(val engineId: Long) : ReadBookIntent
-    data class SaveHttpTts(val httpTTS: HttpTTS) : ReadBookIntent
-    data class ApplySpeakEnginePerBook(val value: String?) : ReadBookIntent
-    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookIntent
-    data class ImportHttpTtsJson(val json: String) : ReadBookIntent
-    data class ImportHttpTtsSource(val text: String) : ReadBookIntent
-    data object ImportHttpTtsFile : ReadBookIntent
-    data class ImportHttpTtsFileSelected(val uri: Uri) : ReadBookIntent
-    data object CancelHttpTtsImport : ReadBookIntent
-    data class ToggleHttpTtsImportSelection(val index: Int) : ReadBookIntent
-    data class ToggleHttpTtsImportAll(val isSelected: Boolean) : ReadBookIntent
-    data class UpdateHttpTtsImportItem(val index: Int, val httpTTS: HttpTTS) : ReadBookIntent
-    data object SaveImportedHttpTts : ReadBookIntent
-    data object ExportAllHttpTts : ReadBookIntent
-    data object ExportAllHttpTtsAsUrl : ReadBookIntent
-    data class ExportHttpTtsToFile(val uri: Uri) : ReadBookIntent
     data class SetReadAloudIgnoreAudioFocus(val value: Boolean) : ReadBookIntent
     data class SetReadAloudPauseOnPhoneCall(val value: Boolean) : ReadBookIntent
     data class SetReadAloudWakeLock(val value: Boolean) : ReadBookIntent
@@ -885,9 +852,6 @@ sealed interface ReadBookEffect {
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect
-    data object OpenHttpTtsImportPicker : ReadBookEffect
-    data object OpenHttpTtsExportPicker : ReadBookEffect
-    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
     data object OpenTtsEnginesAndVoices : ReadBookEffect
     data object OpenTtsCache : ReadBookEffect
     data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
@@ -945,8 +909,6 @@ sealed interface ReadBookSheet {
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
     data object ReadAloudPlayer : ReadBookSheet
-    data object SpeakEngineConfig : ReadBookSheet
-    data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet
     data object PreSynthesisConcurrencyConfig : ReadBookSheet
     data object AudioCacheCleanConfig : ReadBookSheet

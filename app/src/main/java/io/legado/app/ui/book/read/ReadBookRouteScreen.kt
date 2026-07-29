@@ -278,18 +278,6 @@ fun ReadBookRouteScreen(
         }
     }
 
-    val importHttpTtsPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ImportHttpTtsFileSelected(it)) }
-    }
-
-    val exportHttpTtsPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ExportHttpTtsToFile(it)) }
-    }
-
     val importHighlightRulePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -344,14 +332,6 @@ fun ReadBookRouteScreen(
                                 context.startActivity(
                                     Intent(context, SourceLoginActivity::class.java).apply {
                                         putExtra("bookType", BookType.text)
-                                    }
-                                )
-                            }
-                            is ReadBookEffect.OpenHttpTtsLogin -> {
-                                context.startActivity(
-                                    Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("type", "httpTts")
-                                        putExtra("key", effect.engineId.toString())
                                     }
                                 )
                             }
@@ -455,19 +435,6 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.TtsCacheCleared -> {
                                 context.toastOnUi(effect.message)
                             }
-                            is ReadBookEffect.OpenHttpTtsImportPicker -> {
-                                importHttpTtsPicker.launch(
-                                    arrayOf(
-                                        "application/json",
-                                        "text/plain"
-                                    )
-                                )
-                            }
-
-                            is ReadBookEffect.OpenHttpTtsExportPicker -> {
-                                exportHttpTtsPicker.launch("httpTTS.json")
-                            }
-
                             is ReadBookEffect.OpenHighlightRuleImportPicker -> {
                                 importHighlightRulePicker.launch(
                                     arrayOf(
