@@ -84,7 +84,7 @@
             app:max="30"
             app:min="8"
             app:orientation="horizontal"
-            app:title="@string/title_font_size" />
+            app:title="@string/font_size" />
 
     </LinearLayout>
 
@@ -99,14 +99,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-            android:text="@string/title_color" />
+            android:text="@string/color" />
 
         <io.legado.app.ui.widget.AccentColorButton
             android:id="@+id/btn_footer_color"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-            android:text="@string/title_color" />
+            android:text="@string/color" />
 
         <io.legado.app.ui.widget.AccentColorButton
             android:id="@+id/btn_divider_color"
