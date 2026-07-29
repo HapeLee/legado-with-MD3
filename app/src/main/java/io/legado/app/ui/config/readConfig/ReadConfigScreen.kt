@@ -298,6 +298,14 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.use_new_toc_sheet),
+                    checked = settings.useNewTocSheet,
+                    onCheckedChange = {
+                        onIntent(ReadConfigIntent.UseNewTocSheetChanged(it))
+                    }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.enable_select_vibrator),
                     checked = settings.selectVibrator,
                     onCheckedChange = {

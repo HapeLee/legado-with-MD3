@@ -1802,6 +1802,7 @@
     <string name="cover_show_stroke">Show Font Stroke</string>
     <string name="default_color">Use Default Font Color</string>
     <string name="enable_slider_vibrator">Vibrate While Sliding Progress Bar</string>
+    <string name="use_new_toc_sheet">Use New TOC Sheet</string>
     <string name="edit_remark">Edit remark</string>
     <string name="book_remark">Book Alias</string>
     <string name="save_to_local">Save to local</string>

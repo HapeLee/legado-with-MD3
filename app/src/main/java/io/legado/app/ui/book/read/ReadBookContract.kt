@@ -889,6 +889,8 @@ sealed interface ReadBookEffect {
     // Source actions
     data class ShowLogin(val sourceUrl: String) : ReadBookEffect
     data class OpenSourceEdit(val sourceUrl: String) : ReadBookEffect
+    data class OpenBookInfo(val name: String, val author: String, val bookUrl: String) : ReadBookEffect
+    data class OpenChapterList(val bookUrl: String) : ReadBookEffect
     data class OpenWebView(
         val title: String,
         val url: String,
