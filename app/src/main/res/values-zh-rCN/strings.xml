@@ -670,6 +670,8 @@
     <string name="group_manage">分组管理</string>
     <string name="group_add">新建分组</string>
     <string name="group_select">分组选择</string>
+    <string name="book_source_default_groups">默认分组</string>
+    <string name="book_source_other_groups">其他分组</string>
     <string name="group_edit">编辑分组</string>
     <string name="move_to_group">移入分组</string>
     <string name="add_group">添加分组</string>
@@ -710,7 +712,7 @@
     <string name="refresh_cover">刷新封面</string>
     <string name="change_cover_source">封面换源</string>
     <string name="select_local_image">选择本地图片</string>
-    <string name="book_type">类型：</string>
+    <string name="book_type">"类型 "</string>
     <string name="to_backstage">后台</string>
     <string name="importing">正在导入</string>
     <string name="exporting">正在导出</string>
@@ -787,6 +789,12 @@
     <string name="bg_fit_tile">平铺</string>
     <string name="bg_fit_stretch">拉伸填充</string>
     <string name="bg_fit_crop">居中裁剪</string>
+    <string name="bg_fit_nine_patch">九宫格</string>
+    <string name="nine_patch_editor">九宫格切图</string>
+    <string name="nine_patch_split_left">左切分线</string>
+    <string name="nine_patch_split_right">右切分线</string>
+    <string name="nine_patch_split_top">上切分线</string>
+    <string name="nine_patch_split_bottom">下切分线</string>
     <string name="preview_effect">预览效果</string>
     <string name="sample_text">示例文本</string>
     <string name="sure_delete">确定要删除吗？</string>
@@ -1408,6 +1416,7 @@
     <string name="record_heap_dump_s">当应用发生OOM崩溃时保存堆转储</string>
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
+    <string name="font_weight">字重</string>
     <string name="keep_swipe_tip">继续滑动以加载下一章…</string>
     <string name="enable_optimize_render">启用绘制优化</string>
     <string name="ignore_battery_permission_rationale">阅读需要请求后台权限以保持服务正常运行，拒绝后不再弹出。如有需要可至高级设置中再次申请。</string>

@@ -3,7 +3,6 @@ package io.legado.app.ui.theme
 import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
-import android.os.Build
 import android.util.LruCache
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -83,6 +82,8 @@ fun MiuixThemeWrapper(
     // AppTheme has already resolved system mode to an explicit light/dark value.
     // Do not pass System/MonetSystem to Miuix here: MainActivity handles uiMode
     // changes without recreation, so Miuix must not read a second, stale system mode.
+    // Miuix only applies keyColor in Monet modes. Keep its built-in Light/Dark
+    // palette until the user explicitly enables useMiuixMonet.
     val miuixColorSchemeMode = remember(darkTheme, useMiuixMonet) {
         when {
             useMiuixMonet && darkTheme -> ColorSchemeMode.MonetDark
@@ -98,14 +99,7 @@ fun MiuixThemeWrapper(
         ThemeResolver.resolveMiuixColorSpec(materialVersion, paletteStyleValue)
     }
 
-    val keyColor = if (useMiuixMonet &&
-        themeColors.useDynamicColor &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    ) {
-        Color(0xFF6750A4) // 默认颜色，因为 colorResource 只能在 Composable 中
-    } else {
-        themeColors.seedColor
-    }
+    val keyColor = themeColors.seedColor
 
     val controller = remember(
         miuixColorSchemeMode,

@@ -2,302 +2,278 @@ package io.legado.app.ui.book.source.manage
 
 import android.app.Application
 import android.text.TextUtils
-import io.legado.app.R
-import io.legado.app.base.BaseViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.data.entities.toBookSource
 import io.legado.app.help.source.SourceHelp
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.GSON
-import io.legado.app.utils.cnCompare
-import io.legado.app.utils.normalizeFileName
-import io.legado.app.utils.outputStream
+import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
-import io.legado.app.utils.stackTraceStr
-import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.writeToOutputStream
-import splitties.init.appCtx
-import java.io.File
-import java.util.Date
-import java.util.Locale
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-/**
- * 书源管理数据修改
- * 修改数据要copy,直接修改会导致界面不刷新
- */
-class BookSourceViewModel(application: Application) : BaseViewModel(application) {
+class BookSourceViewModel(application: Application) : ViewModel() {
+    companion object {
+        const val FILTER_ENABLED = "@enabled"
+        const val FILTER_DISABLED = "@disabled"
+        const val FILTER_LOGIN = "@login"
+        const val FILTER_NO_GROUP = "@noGroup"
+        const val FILTER_ENABLED_EXPLORE = "@enabledExplore"
+        const val FILTER_DISABLED_EXPLORE = "@disabledExplore"
+        const val PREFIX_GROUP = "group:"
+    }
 
-    fun topSource(vararg sources: BookSourcePart) {
-        execute {
-            sources.sortBy { it.customOrder }
-            val minOrder = appDb.bookSourceDao.minOrder - 1
-            val array = sources.mapIndexed { index, it ->
-                it.copy(customOrder = minOrder - index)
+    private val dao = appDb.bookSourceDao
+    private val searchKey = MutableStateFlow("")
+    private val isSearchMode = MutableStateFlow(false)
+    private val filter = MutableStateFlow<String?>(null)
+    private val selectedIds = MutableStateFlow<Set<String>>(emptySet())
+    private val sort = MutableStateFlow(BookSourceSort.Default)
+    private val sortAscending = MutableStateFlow(true)
+    private val groupByDomain = MutableStateFlow(false)
+    private val localItems = MutableStateFlow<List<BookSourcePart>?>(null)
+    private val enabledOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+
+    val uiState = combine(
+        dao.flowAll(),
+        dao.flowGroups(),
+        searchKey,
+        isSearchMode,
+        filter,
+        selectedIds,
+        sort,
+        sortAscending,
+        groupByDomain,
+        localItems,
+        enabledOverrides,
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val sourceItems = (values[0] as List<BookSourcePart>)
+        val groups = values[1] as List<String>
+        val query = values[2] as String
+        val searchMode = values[3] as Boolean
+        val activeFilter = values[4] as String?
+        val selected = values[5] as Set<String>
+        val activeSort = values[6] as BookSourceSort
+        val ascending = values[7] as Boolean
+        val byDomain = values[8] as Boolean
+        val local = values[9] as List<BookSourcePart>?
+        val pendingEnabled = values[10] as Map<String, Boolean>
+        val visible = if (local == null) {
+            sourceItems.filterFor(activeFilter, query).sortFor(activeSort, ascending, byDomain)
+        } else {
+            val latestById = sourceItems.associateBy { it.bookSourceUrl }
+            local.mapNotNull { latestById[it.bookSourceUrl] }
+        }
+        BookSourceUiState(
+            items = visible.map { source ->
+                BookSourceItemUi(
+                    id = source.bookSourceUrl,
+                    domain = NetworkUtils.getSubDomainOrNull(source.bookSourceUrl) ?: "#",
+                    name = source.bookSourceName,
+                    group = source.bookSourceGroup,
+                    enabled = pendingEnabled[source.bookSourceUrl] ?: source.enabled,
+                    customOrder = source.customOrder,
+                )
+            }.toImmutableList(),
+            selectedIds = selected.intersect(visible.map { it.bookSourceUrl }.toSet())
+                .toImmutableSet(),
+            searchKey = query,
+            groupFilterName = activeFilter?.displayName(application),
+            activeFilter = activeFilter,
+            groups = groups.toImmutableList(),
+            sort = activeSort,
+            sortAscending = ascending,
+            groupByDomain = byDomain,
+            interaction = io.legado.app.ui.widget.components.list.InteractionState(isSearchMode = searchMode),
+        )
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookSourceUiState())
+
+    fun onIntent(intent: BookSourceIntent) {
+        when (intent) {
+            is BookSourceIntent.SetSearchMode -> {
+                isSearchMode.value = intent.enabled
+                if (!intent.enabled) searchKey.value = ""
             }
-            appDb.bookSourceDao.upOrder(array)
-        }
-    }
 
-    fun bottomSource(vararg sources: BookSourcePart) {
-        execute {
-            sources.sortBy { it.customOrder }
-            val maxOrder = appDb.bookSourceDao.maxOrder + 1
-            val array = sources.mapIndexed { index, it ->
-                it.copy(customOrder = maxOrder + index)
+            is BookSourceIntent.SetSearchQuery -> {
+                localItems.value = null; searchKey.value = intent.query
             }
-            appDb.bookSourceDao.upOrder(array)
+
+            is BookSourceIntent.SetSelection -> selectedIds.value = intent.ids
+            is BookSourceIntent.ToggleSelection -> selectedIds.update { if (intent.id in it) it - intent.id else it + intent.id }
+            is BookSourceIntent.SetFilter -> {
+                localItems.value = null; filter.value = intent.filter
+            }
+
+            is BookSourceIntent.SetSort -> {
+                localItems.value = null; sort.value = intent.sort
+            }
+
+            BookSourceIntent.ToggleSortDirection -> {
+                localItems.value = null; sortAscending.update { !it }
+            }
+
+            BookSourceIntent.ToggleGroupByDomain -> {
+                localItems.value = null; groupByDomain.update { !it }
+            }
+
+            is BookSourceIntent.SetEnabled -> setEnabled(intent.id, intent.enabled)
+            is BookSourceIntent.SetEnabledForSelection -> launch {
+                dao.enable(
+                    intent.enabled,
+                    parts(intent.ids)
+                )
+            }
+
+            is BookSourceIntent.SetExploreEnabled -> updateExplore(intent.ids, intent.enabled)
+            is BookSourceIntent.Delete -> launch { SourceHelp.deleteBookSourceParts(parts(intent.ids)); selectedIds.update { it - intent.ids } }
+            is BookSourceIntent.MoveToEdge -> moveToEdge(intent.ids, intent.toTop)
+            is BookSourceIntent.MoveItem -> moveItem(intent.from, intent.to)
+            BookSourceIntent.SaveSortOrder -> saveSortOrder()
+            is BookSourceIntent.CommitSortOrder -> commitSortOrder(intent.ids, intent.ascending)
+            is BookSourceIntent.AddToGroup -> updateGroups(intent.ids, intent.group, true)
+            is BookSourceIntent.RemoveFromGroup -> updateGroups(intent.ids, intent.group, false)
+            is BookSourceIntent.UpdateGroup -> updateGroup(intent.old, intent.new)
+            is BookSourceIntent.DeleteGroup -> updateGroup(intent.group, "")
+            is BookSourceIntent.CheckSelectedInterval -> checkInterval(intent.ids)
         }
     }
 
-    fun del(sources: List<BookSourcePart>) {
-        execute {
-            SourceHelp.deleteBookSourceParts(sources)
-        }
-    }
+    private fun launch(block: suspend () -> Unit) =
+        viewModelScope.launch(Dispatchers.IO) { block() }
 
-    fun update(vararg bookSource: BookSource) {
-        execute { appDb.bookSourceDao.update(*bookSource) }
-    }
-
-    fun upOrder(items: List<BookSourcePart>) {
-        if (items.isEmpty()) return
-        execute {
-            appDb.bookSourceDao.upOrder(items)
-        }
-    }
-
-    fun enable(enable: Boolean, items: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enable(enable, items)
-        }
-    }
-
-    fun enableSelection(sources: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enable(true, sources)
-        }
-    }
-
-    fun disableSelection(sources: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enable(false, sources)
-        }
-    }
-
-    fun enableExplore(enable: Boolean, items: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enableExplore(enable, items)
-        }
-    }
-
-    fun enableSelectExplore(sources: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enableExplore(true, sources)
-        }
-    }
-
-    fun disableSelectExplore(sources: List<BookSourcePart>) {
-        execute {
-            appDb.bookSourceDao.enableExplore(false, sources)
-        }
-    }
-
-    fun selectionAddToGroups(sources: List<BookSourcePart>, groups: String) {
-        execute {
-            val array = sources.map {
-                it.copy().apply {
-                    addGroup(groups)
+    private fun setEnabled(id: String, enabled: Boolean) {
+        enabledOverrides.update { it + (id to enabled) }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                dao.enable(id, enabled)
+                dao.flowAll().first { sources ->
+                    sources.firstOrNull { it.bookSourceUrl == id }?.enabled == enabled
                 }
             }
-            appDb.bookSourceDao.upGroup(array)
+            enabledOverrides.update { it - id }
         }
     }
 
-    fun selectionRemoveFromGroups(sources: List<BookSourcePart>, groups: String) {
-        execute {
-            val array = sources.map {
-                it.copy().apply {
-                    removeGroup(groups)
-                }
-            }
-            appDb.bookSourceDao.upGroup(array)
+    private fun parts(ids: Set<String>) = dao.allPart.filter { it.bookSourceUrl in ids }
+    private fun updateExplore(ids: Set<String>, enabled: Boolean) =
+        launch { dao.enableExplore(enabled, parts(ids)) }
+
+    private fun updateGroups(ids: Set<String>, group: String, add: Boolean) = launch {
+        val changed = parts(ids).map { part ->
+            part.copy().apply { if (add) addGroup(group) else removeGroup(group) }
+        }
+        dao.upGroup(changed)
+    }
+
+    private fun updateGroup(old: String, new: String) = launch {
+        val sources = dao.getByGroup(old)
+        sources.forEach { source ->
+            source.bookSourceGroup?.splitNotBlank(",")?.toHashSet()
+                ?.apply { remove(old); if (new.isNotBlank()) add(new) }
+                ?.let { source.bookSourceGroup = TextUtils.join(",", it) }
+        }
+        dao.update(*sources.toTypedArray())
+    }
+
+    private fun moveToEdge(ids: Set<String>, toTop: Boolean) = launch {
+        val selected = parts(ids).sortedBy { it.customOrder }
+        val start = if (toTop) dao.minOrder - selected.size else dao.maxOrder + 1
+        dao.upOrder(selected.mapIndexed { index, part -> part.copy(customOrder = start + index) })
+    }
+
+    private fun moveItem(from: Int, to: Int) {
+        if (sort.value != BookSourceSort.Default || groupByDomain.value) return
+        val moved = (localItems.value ?: uiState.value.items.map { item ->
+            BookSourcePart(bookSourceUrl = item.id, customOrder = item.customOrder)
+        }).toMutableList()
+        if (from !in moved.indices || to !in moved.indices) return
+        moved.add(to, moved.removeAt(from)); localItems.value = moved
+    }
+
+    private fun saveSortOrder() {
+        val items = localItems.value ?: return
+        launch {
+            dao.upOrder(items.mapIndexed { index, item -> item.copy(customOrder = index + 1) }); localItems.value =
+            null
         }
     }
 
-    private fun saveToFile(
-        sources: List<BookSource>,
-        name: String,
-        success: (file: File, name: String) -> Unit
-    ) {
-        execute {
-            val path = "${context.filesDir}/shareBookSource.json"
-            FileUtils.delete(path)
-            val file = FileUtils.createFileWithReplace(path)
-            file.outputStream().buffered().use {
-                GSON.writeToOutputStream(it, sources)
-            }
-            file
-        }.onSuccess {
-            success.invoke(it, name)
-        }.onError {
-            context.toastOnUi(it.stackTraceStr)
+    private fun commitSortOrder(ids: List<String>, ascending: Boolean) = launch {
+        val sourcesById = dao.allPart.associateBy { it.bookSourceUrl }
+        val orderSlots = ids.mapNotNull { sourcesById[it]?.customOrder }
+            .let { if (ascending) it.sorted() else it.sortedDescending() }
+        val ordered = ids.mapIndexedNotNull { index, id ->
+            sourcesById[id]?.copy(
+                customOrder = orderSlots.getOrNull(index) ?: return@mapIndexedNotNull null
+            )
         }
+        dao.upOrder(ordered)
     }
 
-    fun saveToFile(
-        adapter: BookSourceAdapter,
-        searchKey: String?,
-        sortAscending: Boolean,
-        sort: BookSourceSort,
-        success: (file: File, name: String) -> Unit
-    ) {
-        execute {
-            val selection = adapter.selection
-            val selectionSize = selection.size
-            val selectedRate = selectionSize.toFloat() / adapter.itemCount.toFloat()
-            val sources = if (selectedRate == 1f) {
-                getBookSources(searchKey, sortAscending, sort)
-            } else if (selectedRate < 0.3) {
-                selection.toBookSource()
-            } else {
-                val keys = selection.map { it.bookSourceUrl }.toHashSet()
-                val bookSources = getBookSources(searchKey, sortAscending, sort)
-                bookSources.filter {
-                    keys.contains(it.bookSourceUrl)
-                }
-            }
-            val name = if (selectionSize == 1) {
-                "bookSource_${selection.first().bookSourceName.normalizeFileName()}.json"
-            } else {
-                val timestamp =
-                    java.text.SimpleDateFormat("yyyyMMddHHmm", Locale.getDefault()).format(Date())
-                "bookSource_$timestamp.json"
-            }
-            saveToFile(sources, name, success)
+    private fun checkInterval(ids: Set<String>) {
+        val items = uiState.value.items
+        val positions = items.mapIndexedNotNull { index, item -> index.takeIf { item.id in ids } }
+        if (positions.isNotEmpty()) selectedIds.value =
+            items.subList(positions.min(), positions.max() + 1).map { it.id }.toSet()
+    }
+}
+
+private fun List<BookSourcePart>.filterFor(filter: String?, query: String): List<BookSourcePart> =
+    filter { source ->
+        val filterMatch = when (filter) {
+            null -> true; BookSourceViewModel.FILTER_ENABLED -> source.enabled; BookSourceViewModel.FILTER_DISABLED -> !source.enabled
+            BookSourceViewModel.FILTER_LOGIN -> source.hasLoginUrl; BookSourceViewModel.FILTER_NO_GROUP -> source.bookSourceGroup.isNullOrBlank()
+            BookSourceViewModel.FILTER_ENABLED_EXPLORE -> source.enabledExplore; BookSourceViewModel.FILTER_DISABLED_EXPLORE -> !source.enabledExplore
+            else -> filter.startsWith(BookSourceViewModel.PREFIX_GROUP) && source.bookSourceGroup?.split(
+                ","
+            )?.contains(filter.removePrefix(BookSourceViewModel.PREFIX_GROUP)) == true
         }
+        filterMatch && (query.isBlank() || listOf(
+            source.bookSourceName,
+            source.bookSourceUrl,
+            source.bookSourceGroup
+        ).any { it?.contains(query, true) == true })
     }
 
-    private fun getBookSources(
-        searchKey: String?,
-        sortAscending: Boolean,
-        sort: BookSourceSort
-    ): List<BookSource> {
-        return when {
-            searchKey.isNullOrEmpty() -> {
-                appDb.bookSourceDao.all
-            }
-
-            searchKey == appCtx.getString(R.string.enabled) -> {
-                appDb.bookSourceDao.allEnabled
-            }
-
-            searchKey == appCtx.getString(R.string.disabled) -> {
-                appDb.bookSourceDao.allDisabled
-            }
-
-            searchKey == appCtx.getString(R.string.need_login) -> {
-                appDb.bookSourceDao.allLogin
-            }
-
-            searchKey == appCtx.getString(R.string.no_group) -> {
-                appDb.bookSourceDao.allNoGroup
-            }
-
-            searchKey == appCtx.getString(R.string.enabled_explore) -> {
-                appDb.bookSourceDao.allEnabledExplore
-            }
-
-            searchKey == appCtx.getString(R.string.disabled_explore) -> {
-                appDb.bookSourceDao.allDisabledExplore
-            }
-
-            searchKey.startsWith("group:") -> {
-                val key = searchKey.substringAfter("group:")
-                appDb.bookSourceDao.groupSearch(key)
-            }
-
-            else -> {
-                appDb.bookSourceDao.search(searchKey)
-            }
-        }.let { data ->
-            if (sortAscending) when (sort) {
-                BookSourceSort.Weight -> data.sortedBy { it.weight }
-                BookSourceSort.Name -> data.sortedWith { o1, o2 ->
-                    o1.bookSourceName.cnCompare(o2.bookSourceName)
-                }
-
-                BookSourceSort.Url -> data.sortedBy { it.bookSourceUrl }
-                BookSourceSort.Update -> data.sortedByDescending { it.lastUpdateTime }
-                BookSourceSort.Respond -> data.sortedBy { it.respondTime }
-                BookSourceSort.Enable -> data.sortedWith { o1, o2 ->
-                    var sortNum = -o1.enabled.compareTo(o2.enabled)
-                    if (sortNum == 0) {
-                        sortNum = o1.bookSourceName.cnCompare(o2.bookSourceName)
-                    }
-                    sortNum
-                }
-
-                else -> data
-            }
-            else when (sort) {
-                BookSourceSort.Weight -> data.sortedByDescending { it.weight }
-                BookSourceSort.Name -> data.sortedWith { o1, o2 ->
-                    o2.bookSourceName.cnCompare(o1.bookSourceName)
-                }
-
-                BookSourceSort.Url -> data.sortedByDescending { it.bookSourceUrl }
-                BookSourceSort.Update -> data.sortedBy { it.lastUpdateTime }
-                BookSourceSort.Respond -> data.sortedByDescending { it.respondTime }
-                BookSourceSort.Enable -> data.sortedWith { o1, o2 ->
-                    var sortNum = o1.enabled.compareTo(o2.enabled)
-                    if (sortNum == 0) {
-                        sortNum = o1.bookSourceName.cnCompare(o2.bookSourceName)
-                    }
-                    sortNum
-                }
-
-                else -> data.reversed()
-            }
-        }
+private fun List<BookSourcePart>.sortFor(
+    sort: BookSourceSort,
+    ascending: Boolean,
+    byDomain: Boolean
+): List<BookSourcePart> {
+    if (byDomain) {
+        val domains = associateWith { NetworkUtils.getSubDomainOrNull(it.bookSourceUrl) ?: "#" }
+        return sortedWith(compareBy<BookSourcePart> { domains.getValue(it) == "#" }
+            .thenBy { domains.getValue(it) }
+            .thenByDescending { it.lastUpdateTime })
     }
-
-    fun addGroup(group: String) {
-        execute {
-            val sources = appDb.bookSourceDao.noGroup
-            sources.forEach { source ->
-                source.bookSourceGroup = group
-            }
-            appDb.bookSourceDao.update(*sources.toTypedArray())
-        }
+    val comparator = when (sort) {
+        BookSourceSort.Name -> compareBy<BookSourcePart> { it.bookSourceName }
+        BookSourceSort.Url -> compareBy { it.bookSourceUrl }; BookSourceSort.Weight -> compareBy { it.weight }
+        BookSourceSort.Update -> compareByDescending<BookSourcePart> { it.lastUpdateTime }; BookSourceSort.Respond -> compareBy { it.respondTime }
+        BookSourceSort.Enable -> compareByDescending<BookSourcePart> { it.enabled }.thenBy { it.bookSourceName }
+        BookSourceSort.Default -> compareBy { it.customOrder }
     }
+    return if (ascending) sortedWith(comparator) else sortedWith(comparator.reversed())
+}
 
-    fun upGroup(oldGroup: String, newGroup: String?) {
-        execute {
-            val sources = appDb.bookSourceDao.getByGroup(oldGroup)
-            sources.forEach { source ->
-                source.bookSourceGroup?.splitNotBlank(",")?.toHashSet()?.let {
-                    it.remove(oldGroup)
-                    if (!newGroup.isNullOrEmpty())
-                        it.add(newGroup)
-                    source.bookSourceGroup = TextUtils.join(",", it)
-                }
-            }
-            appDb.bookSourceDao.update(*sources.toTypedArray())
-        }
-    }
-
-    fun delGroup(group: String) {
-        execute {
-            execute {
-                val sources = appDb.bookSourceDao.getByGroup(group)
-                sources.forEach { source ->
-                    source.removeGroup(group)
-                }
-                appDb.bookSourceDao.update(*sources.toTypedArray())
-            }
-        }
-    }
-
+private fun String.displayName(application: Application) = when (this) {
+    BookSourceViewModel.FILTER_ENABLED -> application.getString(io.legado.app.R.string.enabled)
+    BookSourceViewModel.FILTER_DISABLED -> application.getString(io.legado.app.R.string.disabled)
+    BookSourceViewModel.FILTER_LOGIN -> application.getString(io.legado.app.R.string.need_login)
+    BookSourceViewModel.FILTER_NO_GROUP -> application.getString(io.legado.app.R.string.no_group)
+    BookSourceViewModel.FILTER_ENABLED_EXPLORE -> application.getString(io.legado.app.R.string.enabled_explore)
+    BookSourceViewModel.FILTER_DISABLED_EXPLORE -> application.getString(io.legado.app.R.string.disabled_explore)
+    else -> removePrefix(BookSourceViewModel.PREFIX_GROUP)
 }

@@ -31,6 +31,12 @@ data class TextColumn(
     override val bgImageFit: Int = 0,
     override val bgImageScale: Float = 1f,
     override val fontPath: String = "",
+    override val fontWeight: Int = 400,
+    override val isItalic: Boolean = false,
+    override val npLeft: Float = 0.1f,
+    override val npRight: Float = 0.1f,
+    override val npTop: Float = 0.1f,
+    override val npBottom: Float = 0.1f,
 ) : TextBaseColumn {
 
     override var textLine: TextLine = emptyTextLine
@@ -113,21 +119,34 @@ data class TextColumn(
     }
 
     private fun getCustomTypeface(): Typeface? {
-        return getTypeface(fontPath)
+        return getTypeface(fontPath, fontWeight, isItalic)
     }
 
     companion object {
         private val typefaceCache = HashMap<String, Typeface>()
         private val failedTypefaceLoads = ResourceLoadFailureCache<String>()
 
-        internal fun getTypeface(fontPath: String): Typeface? {
-            if (fontPath.isEmpty()) return null
-            typefaceCache[fontPath]?.let { return it }
+        internal fun getTypeface(fontPath: String, fontWeight: Int = 400, isItalic: Boolean = false): Typeface? {
+            if (fontPath.isEmpty()) {
+                return applyStyleTypeface(null, fontWeight, isItalic)
+            }
+            typefaceCache[fontPath]?.let { return applyStyleTypeface(it, fontWeight, isItalic) }
             return failedTypefaceLoads.load(fontPath) {
                 loadTypeface(fontPath)?.also { typeface ->
                     typefaceCache[fontPath] = typeface
                 }
+            }?.let { applyStyleTypeface(it, fontWeight, isItalic) }
+        }
+
+        private fun applyStyleTypeface(typeface: Typeface?, fontWeight: Int, isItalic: Boolean): Typeface? {
+            if (fontWeight == 400 && !isItalic) return typeface
+            val style = when {
+                isItalic && fontWeight == 700 -> Typeface.BOLD_ITALIC
+                isItalic -> Typeface.ITALIC
+                fontWeight == 700 -> Typeface.BOLD
+                else -> Typeface.NORMAL // 300 (Light) falls back to NORMAL via Typeface.create
             }
+            return Typeface.create(typeface ?: Typeface.DEFAULT, style)
         }
 
         private fun loadTypeface(fontPath: String): Typeface? {

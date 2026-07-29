@@ -701,6 +701,8 @@
     <string name="group_manage">Group Management</string>
     <string name="group_add">New Group</string>
     <string name="group_select">Group selection</string>
+    <string name="book_source_default_groups">Default groups</string>
+    <string name="book_source_other_groups">Other groups</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>
@@ -741,7 +743,7 @@
     <string name="refresh_cover">Refresh cover</string>
     <string name="change_cover_source">Change origin</string>
     <string name="select_local_image">Local image</string>
-    <string name="book_type">Type:</string>
+    <string name="book_type">Type</string>
     <string name="to_backstage">Background</string>
     <string name="importing">Importing</string>
     <string name="exporting">Exporting</string>
@@ -818,6 +820,12 @@
     <string name="bg_fit_tile">Tile</string>
     <string name="bg_fit_stretch">Stretch</string>
     <string name="bg_fit_crop">Center Crop</string>
+    <string name="bg_fit_nine_patch">9-Slice</string>
+    <string name="nine_patch_editor">9-Slice Editor</string>
+    <string name="nine_patch_split_left">Left Split</string>
+    <string name="nine_patch_split_right">Right Split</string>
+    <string name="nine_patch_split_top">Top Split</string>
+    <string name="nine_patch_split_bottom">Bottom Split</string>
     <string name="preview_effect">Preview</string>
     <string name="sample_text">Sample Text</string>
     <string name="sure_delete">Are you sure you want to delete?</string>
@@ -1350,6 +1358,7 @@
     <string name="clear_webview_data">Clear WebView Data</string>
     <string name="clear_webview_data_summary">Clear all data in WebView</string>
     <string name="source_tab_list">List</string>
+    <string name="source_tab_web_view">Web view</string>
     <string name="source_tab_start">Startup</string>
     <string name="r_startHtml">Startup page HTML text</string>
     <string name="r_startStyle">Startup page style text</string>
@@ -1468,6 +1477,7 @@
     <string name="record_heap_dump_s">Saving a heap dump when the application crashes by OOM</string>
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
+    <string name="font_weight">Font Weight</string>
     <string name="keep_swipe_tip">Keep swiping to load the next chapter…</string>
     <string name="enable_optimize_render">Enable Render Optimization</string>
     <string name="ignore_battery_permission_rationale">Reading requires requesting background permission to keep the service running properly</string>

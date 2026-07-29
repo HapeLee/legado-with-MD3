@@ -170,10 +170,16 @@ class HighlightRuleRepository(
                 .coerceIn(0f, 20f),
             underlineSvgPath = runCatching { rule.underlineSvgPath }.getOrNull(),
             bgImage = runCatching { rule.bgImage }.getOrNull()?.takeIf { it.isNotBlank() },
-            bgImageFit = runCatching { rule.bgImageFit }.getOrDefault(0).coerceIn(0, 2),
+            bgImageFit = runCatching { rule.bgImageFit }.getOrDefault(0).coerceIn(0, 3),
             bgImageScale = runCatching { rule.bgImageScale }.getOrDefault(1f).coerceIn(0.1f, 5f),
             configName = runCatching { rule.configName }.getOrNull()?.takeIf { it.isNotBlank() },
             fontPath = runCatching { rule.fontPath }.getOrNull()?.takeIf { it.isNotBlank() },
+            fontWeight = runCatching { rule.fontWeight }.getOrDefault(400).coerceIn(300, 700),
+            isItalic = runCatching { rule.isItalic }.getOrDefault(false),
+            npLeft = runCatching { rule.npLeft }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
+            npRight = runCatching { rule.npRight }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
+            npTop = runCatching { rule.npTop }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
+            npBottom = runCatching { rule.npBottom }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
         )
     }
 

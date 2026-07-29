@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -40,11 +44,15 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppSlider
+import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.CustomTipDialog
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -81,15 +89,74 @@ private fun FontWeightSetting(
     value: Int,
     onValueChange: (Int) -> Unit,
 ) {
+    var showVariableWeight by remember { mutableStateOf(false) }
+    var sliderValue by remember(value) {
+        mutableFloatStateOf(
+            when (value) {
+                2 -> 300f
+                0 -> 400f
+                1 -> 900f
+                else -> value.coerceIn(100, 900).toFloat()
+            }
+        )
+    }
     val weightEntries = stringArrayResource(R.array.text_font_weight)
-    val weightValues = remember { arrayOf("0", "1", "2") }
-    TinyDropdownSettingItem(
-        title = stringResource(R.string.font_weight_text),
-        selectedValue = value.toString(),
-        displayEntries = weightEntries,
-        entryValues = weightValues,
-        onValueChange = { onValueChange(it.toInt()) },
-    )
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.font_weight_text),
+                    selectedValue = value.toString(),
+                    displayEntries = arrayOf(weightEntries[2], weightEntries[0], weightEntries[1]),
+                    entryValues = arrayOf("2", "0", "1"),
+                    onValueChange = { onValueChange(it.toInt()) },
+                )
+            }
+            NormalCard(
+                onClick = { showVariableWeight = !showVariableWeight },
+                modifier = Modifier.padding(bottom = 4.dp).height(56.dp).aspectRatio(1f),
+                containerColor = if (showVariableWeight) LegadoTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.surfaceContainerLow,
+                contentColor = if (showVariableWeight) LegadoTheme.colorScheme.onSecondaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
+                cornerRadius = 12.dp,
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Tune, stringResource(R.string.font_weight_text))
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = showVariableWeight) {
+            NormalCard(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp).height(56.dp),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp,
+            ) {
+                ValueStepper(
+                    value = sliderValue,
+                    displayValue = sliderValue,
+                    valueRange = 100f..900f,
+                    onValueChange = {
+                        sliderValue = it
+                        onValueChange(it.toInt())
+                    },
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    content = {
+                        AppSlider(
+                            value = sliderValue,
+                            onValueChange = { sliderValue = it },
+                            onValueChangeFinished = { onValueChange(sliderValue.toInt()) },
+                            valueRange = 100f..900f,
+                            modifier = Modifier.weight(1f),
+                        )
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -34,11 +34,11 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -297,7 +297,7 @@ fun <T> RuleEditSheet(
                         onClick = { runTest() },
                         tooltipText = stringResource(R.string.test),
                         icon = Icons.Default.RunningWithErrors,
-                        containerColor = LegadoTheme.colorScheme.secondaryContainer,
+                        containerColor = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 AppFloatingActionButton(
