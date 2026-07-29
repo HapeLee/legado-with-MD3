@@ -42,7 +42,6 @@ fun ReadStyleContent(
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenShadowSet: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     onPageChanged: (Int) -> Unit = {},
@@ -98,7 +97,6 @@ fun ReadStyleContent(
                         eyeProtectionEnabled = eyeProtectionEnabled,
                         onOpenBgTextConfig = onOpenBgTextConfig,
                         onOpenUnderlineConfig = onOpenUnderlineConfig,
-                        onOpenShadowSet = onOpenShadowSet,
                         onShareLayoutChange = { shareLayout ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
                         },

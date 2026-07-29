@@ -25,10 +25,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Tablet
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
@@ -80,7 +78,6 @@ fun GlobalThemePage(
     eyeProtectionEnabled: Boolean,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenShadowSet: () -> Unit,
     onShareLayoutChange: (Boolean) -> Unit,
     onStyleSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -94,7 +91,6 @@ fun GlobalThemePage(
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
     val isNightTheme = LegadoTheme.isDark
-    val chineseConverterType = preferences.chineseConverterType
     val doubleHorizontalPage = preferences.doubleHorizontalPage
 
     val configList = styleConfig.styleItems
@@ -133,25 +129,6 @@ fun GlobalThemePage(
                     Icon(
                         imageVector = Icons.Default.FormatUnderlined,
                         contentDescription = stringResource(R.string.use_underline),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            NormalCard(
-                onClick = onOpenShadowSet,
-                modifier = Modifier
-                    .height(56.dp)
-                    .aspectRatio(1f),
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                cornerRadius = 12.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Layers,
-                        contentDescription = stringResource(R.string.text_shadow_set),
                         tint = LegadoTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -380,56 +357,6 @@ fun GlobalThemePage(
                             onClick = {
                                 ReadBook.book?.setPageAnim(-1)
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
-                                dismiss()
-                            },
-                        )
-                    }
-                }
-            }
-            // 中文简繁互转 — dropdown menu
-            Box {
-                var showChineseConvertMenu by remember { mutableStateOf(false) }
-                val chineseConvertEntries = stringArrayResource(R.array.chinese_mode)
-                val chineseConvertValues = remember { arrayOf("0", "1", "2") }
-                NormalCard(
-                    onClick = { showChineseConvertMenu = true },
-                    modifier = Modifier
-                        .height(56.dp)
-                        .aspectRatio(1f),
-                    containerColor = if (chineseConverterType > 0) {
-                        LegadoTheme.colorScheme.secondaryContainer
-                    } else {
-                        LegadoTheme.colorScheme.surfaceContainerLow
-                    },
-                    cornerRadius = 12.dp
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Translate,
-                            contentDescription = stringResource(R.string.chinese_converter),
-                            tint = if (chineseConverterType > 0) {
-                                LegadoTheme.colorScheme.onSecondaryContainer
-                            } else {
-                                LegadoTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
-                }
-                RoundDropdownMenu(
-                    expanded = showChineseConvertMenu,
-                    onDismissRequest = { showChineseConvertMenu = false },
-                ) { dismiss ->
-                    chineseConvertEntries.forEachIndexed { index, display ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            isSelected = chineseConvertValues[index] == chineseConverterType.toString(),
-                            onClick = {
-                                onIntent(ReadBookIntent.UpdateConfig(
-                                    ConfigUpdate.ChineseConverterType(chineseConvertValues[index].toInt())
-                                ))
                                 dismiss()
                             },
                         )
