@@ -444,6 +444,13 @@ fun TocScreen(
                                     onIntent(TocIntent.ReverseToc)
                                 }
                             )
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.update_toc),
+                                onClick = {
+                                    dismiss()
+                                    onIntent(TocIntent.UpdateToc)
+                                }
+                            )
                             PillDivider()
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.replace_rule_title),

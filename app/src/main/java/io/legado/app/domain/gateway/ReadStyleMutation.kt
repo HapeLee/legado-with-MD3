@@ -32,6 +32,7 @@ enum class ReadStyleIntKey {
     TipFooterMiddle,
     TipFooterRight,
     HeaderFontSize,
+    FooterFontSize,
     PageAnim,
     UnderlineHeight,
     UnderlinePadding,
@@ -71,6 +72,7 @@ enum class ReadStyleBooleanKey {
     UnderlineExtend,
     ShowHeaderLine,
     ShowFooterLine,
+    ApplyHeaderStyle,
     StatusIconDark,
 }
 
@@ -80,6 +82,7 @@ enum class ReadStyleStringKey {
     TitleFont,
     TitleSegFlag,
     HeaderFont,
+    FooterFont,
     CustomTipHeaderLeft,
     CustomTipHeaderMiddle,
     CustomTipHeaderRight,

@@ -2,11 +2,16 @@ package io.legado.app.ui.replace
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.ui.book.read.ContentProcessConfigUiState
+import io.legado.app.ui.book.read.ContentProcessItemUi
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Immutable
 data class ReplaceRuleItemUi(
@@ -41,13 +46,23 @@ data class ReplaceRuleItemUi(
     )
 }
 
+@Stable
 data class ReplaceRuleUiState(
     override val items: List<ReplaceRuleItemUi> = emptyList(),
     override val selectedIds: Set<Long> = emptySet(),
     override val searchKey: String = "",
     val sortMode: String = "desc",
     val selectedGroup: String? = null,
-    val interaction: InteractionState = InteractionState()
+    val interaction: InteractionState = InteractionState(),
+    // Book-specific state (only active when bookUrl is provided)
+    val bookUrl: String? = null,
+    val replaceEnabled: Boolean = false,
+    val effectiveRules: ImmutableList<ReplaceRule> = persistentListOf(),
+    val chineseConvertActive: Boolean = false,
+    val reSegmentActive: Boolean = false,
+    val contentProcessState: ContentProcessConfigUiState = ContentProcessConfigUiState(),
+    val showEffectiveReplaces: Boolean = false,
+    val showContentProcesses: Boolean = false,
 ) : ListUiState<ReplaceRuleItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isUploading
@@ -87,6 +102,22 @@ sealed interface ReplaceRuleIntent {
     data class AddGroup(val group: String) : ReplaceRuleIntent
     data class DeleteGroup(val group: String) : ReplaceRuleIntent
     data class UpGroup(val oldGroup: String, val newGroup: String?) : ReplaceRuleIntent
+    // Book-specific intents (only when bookUrl is provided)
+    data class InitBookData(val bookUrl: String) : ReplaceRuleIntent
+    data object ToggleReplaceEnable : ReplaceRuleIntent
+    data object ShowEffectiveReplaces : ReplaceRuleIntent
+    data object ShowContentProcesses : ReplaceRuleIntent
+    data object DismissEffectiveReplaces : ReplaceRuleIntent
+    data object DismissContentProcesses : ReplaceRuleIntent
+    data class DisableEffectiveRule(val rule: ReplaceRule) : ReplaceRuleIntent
+    data object DisableChineseConverter : ReplaceRuleIntent
+    data object DisableReSegment : ReplaceRuleIntent
+    data class ToggleContentProcess(val id: String, val enabled: Boolean) : ReplaceRuleIntent
+    data class RequestDeleteContentProcess(val item: ContentProcessItemUi) : ReplaceRuleIntent
+    data object ConfirmDeleteContentProcess : ReplaceRuleIntent
+    data object DismissDeleteContentProcess : ReplaceRuleIntent
 }
 
-sealed interface ReplaceRuleEffect
+sealed interface ReplaceRuleEffect {
+    data class OpenReplaceEditor(val id: Long, val pattern: String?) : ReplaceRuleEffect
+}

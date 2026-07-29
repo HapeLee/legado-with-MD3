@@ -1721,7 +1721,7 @@
       },
       {
         "tableName": "txtTocRules",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `rule` TEXT NOT NULL, `example` TEXT, `serialNumber` INTEGER NOT NULL, `enable` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `chapterRule` TEXT NOT NULL, `volumeRule` TEXT NOT NULL, `example` TEXT, `serialNumber` INTEGER NOT NULL, `enable` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -1736,8 +1736,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "rule",
-            "columnName": "rule",
+            "fieldPath": "chapterRule",
+            "columnName": "chapterRule",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "volumeRule",
+            "columnName": "volumeRule",
             "affinity": "TEXT",
             "notNull": true
           },

@@ -418,6 +418,18 @@ class PageView(
             view.textSize = customTextSize
             view.batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
+
+        // 当页脚不应用页眉字体样式时，覆盖页脚视图的字体和字号
+        if (!ReadBookConfig.applyHeaderStyle) {
+            val footerTypeface = loadTypeface(ReadBookConfig.footerFont) ?: tipTypeface
+            val footerTextSize = ReadBookConfig.footerFontSize.toFloat()
+            listOf(tvFooterLeft, tvFooterMiddle, tvFooterRight).forEach { view ->
+                if (view.tag != null) {
+                    view.typeface = footerTypeface
+                    view.textSize = footerTextSize
+                }
+            }
+        }
     }
 
     /**

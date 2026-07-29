@@ -72,20 +72,11 @@ fun MoreConfigSheet(
                 onReadBodyToLhChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ReadBodyToLh(it)))
                 },
-                onTextFullJustifyChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextFullJustify(it)))
-                },
-                onTextBottomJustifyChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextBottomJustify(it)))
-                },
                 onAdaptSpecialStyleChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.AdaptSpecialStyle(it)))
                 },
                 onUseZhLayoutChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseZhLayout(it)))
-                },
-                onUseUnderlineChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseUnderlineGlobal(it)))
                 },
                 onOpenEyeProtectionConfig = {
                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EyeProtection))
@@ -96,9 +87,6 @@ fun MoreConfigSheet(
             SectionTitle(stringResource(R.string.page_control))
             PageControlSettings(
                 preferences = preferences,
-                onDoubleHorizontalPageChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DoubleHorizontalPage(it)))
-                },
                 onProgressBarBehaviorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ProgressBarBehavior(it)))
                 },
@@ -173,11 +161,8 @@ private fun ScreenSettings(
     onHideNavigationBarChange: (Boolean) -> Unit,
     onPaddingDisplayCutoutsChange: (Boolean) -> Unit,
     onReadBodyToLhChange: (Boolean) -> Unit,
-    onTextFullJustifyChange: (Boolean) -> Unit,
-    onTextBottomJustifyChange: (Boolean) -> Unit,
     onAdaptSpecialStyleChange: (Boolean) -> Unit,
     onUseZhLayoutChange: (Boolean) -> Unit,
-    onUseUnderlineChange: (Boolean) -> Unit,
     onOpenEyeProtectionConfig:() -> Unit,
 ) {
     val screenDirectionEntries = stringArrayResource(R.array.screen_direction_title)
@@ -220,16 +205,6 @@ private fun ScreenSettings(
         onCheckedChange = onReadBodyToLhChange,
     )
     TinySwitchSettingItem(
-        title = stringResource(R.string.text_full_justify),
-        checked = preferences.textFullJustify,
-        onCheckedChange = onTextFullJustifyChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.text_bottom_justify),
-        checked = preferences.textBottomJustify,
-        onCheckedChange = onTextBottomJustifyChange,
-    )
-    TinySwitchSettingItem(
         title = stringResource(R.string.adapt_special_style),
         checked = preferences.adaptSpecialStyle,
         onCheckedChange = onAdaptSpecialStyleChange,
@@ -238,11 +213,6 @@ private fun ScreenSettings(
         title = stringResource(R.string.use_zh_layout),
         checked = preferences.useZhLayout,
         onCheckedChange = onUseZhLayoutChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.use_underline),
-        checked = preferences.useUnderline,
-        onCheckedChange = onUseUnderlineChange,
     )
     TinyClickableSettingItem(
         title = stringResource(R.string.eye_protection),
@@ -253,25 +223,15 @@ private fun ScreenSettings(
 @Composable
 private fun PageControlSettings(
     preferences: ReadPreferences,
-    onDoubleHorizontalPageChange: (String) -> Unit,
     onProgressBarBehaviorChange: (String) -> Unit,
     onMouseWheelPageChange: (Boolean) -> Unit,
     onVolumeKeyPageChange: (Boolean) -> Unit,
     onVolumeKeyPageOnPlayChange: (Boolean) -> Unit,
     onKeyPageOnLongPressChange: (Boolean) -> Unit,
 ) {
-    val doublePageEntries = stringArrayResource(R.array.double_page_title)
-    val doublePageValues = stringArrayResource(R.array.double_page_value)
     val progressBarEntries = stringArrayResource(R.array.progress_bar_behavior_title)
     val progressBarValues = stringArrayResource(R.array.progress_bar_behavior_value)
 
-    TinyDropdownSettingItem(
-        title = stringResource(R.string.double_page_horizontal),
-        selectedValue = preferences.doubleHorizontalPage,
-        displayEntries = doublePageEntries,
-        entryValues = doublePageValues,
-        onValueChange = onDoubleHorizontalPageChange,
-    )
     TinyDropdownSettingItem(
         title = stringResource(R.string.progress_bar_behavior),
         selectedValue = preferences.progressBarBehavior,

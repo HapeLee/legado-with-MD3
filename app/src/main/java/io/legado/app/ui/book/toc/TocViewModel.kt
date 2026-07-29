@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -18,12 +19,17 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isMobi
 import io.legado.app.help.bookmark.BookmarkExporter
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
+import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.MobiFile
+import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -132,6 +138,7 @@ sealed interface TocIntent {
     data object ToggleSplitLongChapter : TocIntent
     data object ExpandAllVolumes : TocIntent
     data object CollapseAllVolumes : TocIntent
+    data object UpdateToc : TocIntent
 }
 
 sealed interface TocEffect {
@@ -543,6 +550,7 @@ class TocViewModel(
             TocIntent.ToggleSplitLongChapter -> toggleSplitLongChapter()
             TocIntent.ExpandAllVolumes -> expandAllVolumes()
             TocIntent.CollapseAllVolumes -> collapseAllVolumes()
+            TocIntent.UpdateToc -> updateToc()
         }
     }
 
@@ -553,6 +561,48 @@ class TocViewModel(
         val newBook = currentBook.copy(readConfig = newConfig)
         appDb.bookDao.update(newBook)
         //bookState.value = newBook
+    }
+
+    fun updateToc() = execute {
+        val book = bookState.value ?: return@execute
+        if (book.isLocal) {
+            if (book.isEpub) {
+                BookHelp.clearCache(book)
+                EpubFile.clear()
+            }
+            if (book.isMobi) {
+                MobiFile.clear()
+            }
+            kotlin.runCatching {
+                LocalBook.getChapterList(book).let {
+                    appDb.bookChapterDao.delByBook(book.bookUrl)
+                    appDb.bookChapterDao.insert(*it.toTypedArray())
+                    appDb.bookDao.update(book)
+                }
+            }.onFailure {
+                AppLog.put("LoadTocError:${it.localizedMessage}", it)
+                _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
+            }
+        } else {
+            val source = appDb.bookSourceDao.getBookSource(book.origin)
+            source?.let {
+                val oldBook = book.copy()
+                WebBook.getChapterListAwait(it, book, true)
+                    .onSuccess { cList ->
+                        if (oldBook.bookUrl == book.bookUrl) {
+                            appDb.bookDao.update(book)
+                        } else {
+                            appDb.bookDao.replace(oldBook, book)
+                            BookHelp.updateCacheFolder(oldBook, book)
+                        }
+                        appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+                        appDb.bookChapterDao.insert(*cList.toTypedArray())
+                    }.onFailure {
+                        AppLog.put("LoadTocError:${it.localizedMessage}", it)
+                        _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
+                    }
+            }
+        }
     }
 
     fun toggleUseReplace() {

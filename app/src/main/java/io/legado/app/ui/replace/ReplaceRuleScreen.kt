@@ -1,6 +1,7 @@
 package io.legado.app.ui.replace
 
 import android.content.ClipData
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -44,6 +45,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.sheet.ContentProcessesSheet
+import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -62,6 +66,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.showHelp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -74,12 +79,19 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun ReplaceRuleRouteScreen(
     viewModel: ReplaceRuleViewModel = koinViewModel(),
+    bookUrl: String? = null,
     onBackClick: () -> Unit,
     onNavigateToEdit: (ReplaceEditRoute) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
     val groups by viewModel.allGroups.collectAsStateWithLifecycle()
+
+    LaunchedEffect(bookUrl) {
+        if (!bookUrl.isNullOrBlank()) {
+            viewModel.onIntent(ReplaceRuleIntent.InitBookData(bookUrl))
+        }
+    }
 
     ReplaceRuleScreen(
         state = uiState,
@@ -351,6 +363,23 @@ fun ReplaceRuleScreen(
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
+            // Book-specific items (only when bookUrl is provided)
+            if (state.bookUrl != null) {
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.replace_purify),
+                    isSelected = state.replaceEnabled,
+                    onClick = { onIntent(ReplaceRuleIntent.ToggleReplaceEnable) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.effective_replaces),
+                    onClick = { dismiss(); onIntent(ReplaceRuleIntent.ShowEffectiveReplaces) }
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.content_processes),
+                    onClick = { dismiss(); onIntent(ReplaceRuleIntent.ShowContentProcesses) }
+                )
+                PillDivider()
+            }
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() }
@@ -361,7 +390,7 @@ fun ReplaceRuleScreen(
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.help),
-                onClick = { /*TODO*/ dismiss() }
+                onClick = { dismiss(); (context as? AppCompatActivity)?.showHelp("replaceRuleHelp") }
             )
             PillDivider()
             RoundDropdownMenuItem(
@@ -500,4 +529,49 @@ fun ReplaceRuleScreen(
             }
         }
     }
+
+    // Book-specific sheets
+    EffectiveReplacesSheet(
+        show = state.showEffectiveReplaces,
+        effectiveRules = state.effectiveRules,
+        chineseConvertActive = state.chineseConvertActive,
+        reSegmentActive = state.reSegmentActive,
+        onDismissRequest = { onIntent(ReplaceRuleIntent.DismissEffectiveReplaces) },
+        onOpenReplaceEditor = { id, pattern ->
+            onIntent(ReplaceRuleIntent.DismissEffectiveReplaces)
+            onNavigateToEdit(ReplaceEditRoute(id = id, pattern = pattern))
+        },
+        onReplaceRuleChanged = { /* rules updated via DB flow */ },
+        onNavigateToTextEffects = {
+            onIntent(ReplaceRuleIntent.DismissEffectiveReplaces)
+        },
+        onOpenContentProcesses = {
+            onIntent(ReplaceRuleIntent.DismissEffectiveReplaces)
+            onIntent(ReplaceRuleIntent.ShowContentProcesses)
+        },
+        onDisableRule = { onIntent(ReplaceRuleIntent.DisableEffectiveRule(it)) },
+        onDisableChineseConverter = { onIntent(ReplaceRuleIntent.DisableChineseConverter) },
+        onDisableReSegment = { onIntent(ReplaceRuleIntent.DisableReSegment) },
+    )
+
+    val contentProcessIntent: (ReadBookIntent) -> Unit = { readBookIntent ->
+        when (readBookIntent) {
+            is ReadBookIntent.ToggleContentProcess ->
+                onIntent(ReplaceRuleIntent.ToggleContentProcess(readBookIntent.id, readBookIntent.enabled))
+            is ReadBookIntent.RequestDeleteContentProcess ->
+                onIntent(ReplaceRuleIntent.RequestDeleteContentProcess(readBookIntent.item))
+            ReadBookIntent.ConfirmDeleteContentProcess ->
+                onIntent(ReplaceRuleIntent.ConfirmDeleteContentProcess)
+            ReadBookIntent.DismissDeleteContentProcess ->
+                onIntent(ReplaceRuleIntent.DismissDeleteContentProcess)
+            else -> {}
+        }
+    }
+
+    ContentProcessesSheet(
+        show = state.showContentProcesses,
+        state = state.contentProcessState,
+        onIntent = contentProcessIntent,
+        onDismissRequest = { onIntent(ReplaceRuleIntent.DismissContentProcesses) },
+    )
 }

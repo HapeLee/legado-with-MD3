@@ -180,6 +180,7 @@ class ReadBookStyleConfigRepository(
             ReadStyleIntKey.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = value
             ReadStyleIntKey.TipFooterRight -> ReadBookConfig.tipFooterRight = value
             ReadStyleIntKey.HeaderFontSize -> ReadBookConfig.headerFontSize = value
+            ReadStyleIntKey.FooterFontSize -> ReadBookConfig.footerFontSize = value
             ReadStyleIntKey.PageAnim -> ReadBookConfig.pageAnim = value
             ReadStyleIntKey.UnderlineHeight -> ReadBookConfig.underlineHeight = value
             ReadStyleIntKey.UnderlinePadding -> ReadBookConfig.underlinePadding = value
@@ -223,6 +224,7 @@ class ReadBookStyleConfigRepository(
             ReadStyleBooleanKey.UnderlineExtend -> ReadBookConfig.underlineExtend = value
             ReadStyleBooleanKey.ShowHeaderLine -> ReadBookConfig.showHeaderLine = value
             ReadStyleBooleanKey.ShowFooterLine -> ReadBookConfig.showFooterLine = value
+            ReadStyleBooleanKey.ApplyHeaderStyle -> ReadBookConfig.applyHeaderStyle = value
             ReadStyleBooleanKey.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(value)
         }
     }
@@ -234,6 +236,7 @@ class ReadBookStyleConfigRepository(
             ReadStyleStringKey.TitleFont -> ReadBookConfig.titleFont = value
             ReadStyleStringKey.TitleSegFlag -> ReadBookConfig.titleSegFlag = value
             ReadStyleStringKey.HeaderFont -> ReadBookConfig.headerFont = value
+            ReadStyleStringKey.FooterFont -> ReadBookConfig.footerFont = value
             ReadStyleStringKey.CustomTipHeaderLeft -> ReadBookConfig.customTipHeaderLeft = value
             ReadStyleStringKey.CustomTipHeaderMiddle -> ReadBookConfig.customTipHeaderMiddle = value
             ReadStyleStringKey.CustomTipHeaderRight -> ReadBookConfig.customTipHeaderRight = value

@@ -146,7 +146,7 @@ class TxtTocRulePreviewViewModel(
         if (book == null) return TocRulePreviewItem(rule = tocRule)
         return try {
             val pattern = try {
-                tocRule.rule.toPattern(Pattern.MULTILINE)
+                tocRule.chapterRule.toPattern(Pattern.MULTILINE)
             } catch (e: PatternSyntaxException) {
                 return TocRulePreviewItem(rule = tocRule, totalCount = 0)
             }
@@ -164,12 +164,12 @@ class TxtTocRulePreviewViewModel(
 
     private suspend fun saveRuleAndRefresh(updatedRule: TxtTocRule) {
         // Validate
-        if (updatedRule.name.isBlank() || updatedRule.rule.isBlank()) {
+        if (updatedRule.name.isBlank() || updatedRule.chapterRule.isBlank()) {
             _effects.tryEmit(TxtTocRulePreviewEffect.ShowToast(context.getString(R.string.cannot_empty)))
             _uiState.update { it.copy(editingRule = null) }
             return
         }
-        if (runCatching { updatedRule.rule.toPattern(Pattern.MULTILINE) }.isFailure) {
+        if (runCatching { updatedRule.chapterRule.toPattern(Pattern.MULTILINE) }.isFailure) {
             _effects.tryEmit(TxtTocRulePreviewEffect.ShowToast(context.getString(R.string.invalid_format)))
             _uiState.update { it.copy(editingRule = null) }
             return
@@ -219,7 +219,7 @@ class TxtTocRulePreviewViewModel(
             repository.insert(*defaultRules.toTypedArray())
             rules = repository.all()
         }
-        return rules.filter { it.rule.isNotBlank() }.sortedBy { it.serialNumber }
+        return rules.filter { it.chapterRule.isNotBlank() }.sortedBy { it.serialNumber }
     }
 
     private suspend fun analyzeWithPattern(book: Book, pattern: Pattern): Pair<List<String>, Int> {

@@ -912,6 +912,10 @@ private fun ReaderBookTocMenu(
         )
     }
     RoundDropdownMenuItem(
+        text = stringResource(R.string.update_toc),
+        onClick = { dispatch(TocIntent.UpdateToc) },
+    )
+    RoundDropdownMenuItem(
         text = stringResource(R.string.replace_rule_title),
         onClick = {
             onDismiss()

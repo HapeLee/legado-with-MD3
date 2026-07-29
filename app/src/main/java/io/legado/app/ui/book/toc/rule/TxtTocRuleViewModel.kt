@@ -161,7 +161,10 @@ class TxtTocRuleViewModel(
     }
 
     override fun hasChanged(newRule: TxtTocRule, oldRule: TxtTocRule): Boolean {
-        return newRule.name != oldRule.name || newRule.rule != oldRule.rule || newRule.enable != oldRule.enable
+        return newRule.name != oldRule.name ||
+            newRule.chapterRule != oldRule.chapterRule ||
+            newRule.volumeRule != oldRule.volumeRule ||
+            newRule.enable != oldRule.enable
     }
 
     override suspend fun findOldRule(newRule: TxtTocRule): TxtTocRule? {

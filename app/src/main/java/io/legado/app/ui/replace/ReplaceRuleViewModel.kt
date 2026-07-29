@@ -7,24 +7,39 @@ import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.help.ReplaceAnalyzer
+import io.legado.app.help.config.AppConfig
+import io.legado.app.model.ReadBook
+import io.legado.app.ui.book.read.ContentProcessConfigUiState
+import io.legado.app.ui.book.read.ContentProcessItemUi
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.splitNotBlank
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -36,7 +51,9 @@ import kotlinx.coroutines.withContext
 
 class ReplaceRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val bookContentProcessGateway: BookContentProcessGateway,
+    private val readSettingsRepository: ReadSettingsRepository,
 ) : BaseRuleViewModel<ReplaceRuleItemUi, ReplaceRule, Long, ReplaceRuleUiState>(
     application,
     ReplaceRuleUiState(interaction = InteractionState(isLoading = true)),
@@ -47,6 +64,46 @@ class ReplaceRuleViewModel(
     val sortMode = _sortMode.asStateFlow()
     private val _group = MutableStateFlow<String?>(null)
     val group = _group.asStateFlow()
+
+    private val _effects = MutableSharedFlow<ReplaceRuleEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    private data class BookSpecificState(
+        val bookUrl: String? = null,
+        val replaceEnabled: Boolean = false,
+        val effectiveRules: ImmutableList<ReplaceRule> = persistentListOf(),
+        val chineseConvertActive: Boolean = false,
+        val reSegmentActive: Boolean = false,
+        val contentProcessState: ContentProcessConfigUiState = ContentProcessConfigUiState(),
+        val showEffectiveReplaces: Boolean = false,
+        val showContentProcesses: Boolean = false,
+    )
+
+    private val _bookState = MutableStateFlow(BookSpecificState())
+
+    // Must use `by lazy` — super.uiState depends on rawDataFlow (declared below),
+    // and eager initialization would access it before construction completes.
+    override val uiState: StateFlow<ReplaceRuleUiState> by lazy {
+        combine(
+            super.uiState,
+            _bookState
+        ) { baseState, bookState ->
+            baseState.copy(
+                bookUrl = bookState.bookUrl,
+                replaceEnabled = bookState.replaceEnabled,
+                effectiveRules = bookState.effectiveRules,
+                chineseConvertActive = bookState.chineseConvertActive,
+                reSegmentActive = bookState.reSegmentActive,
+                contentProcessState = bookState.contentProcessState,
+                showEffectiveReplaces = bookState.showEffectiveReplaces,
+                showContentProcesses = bookState.showContentProcesses,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = initialState
+        )
+    }
 
     val allGroups: StateFlow<List<String>> = repository.flowGroups()
         .stateIn(
@@ -105,6 +162,46 @@ class ReplaceRuleViewModel(
             is ReplaceRuleIntent.AddGroup -> addGroup(intent.group)
             is ReplaceRuleIntent.DeleteGroup -> delGroup(intent.group)
             is ReplaceRuleIntent.UpGroup -> upGroup(intent.oldGroup, intent.newGroup)
+            // Book-specific
+            is ReplaceRuleIntent.InitBookData -> initBookData(intent.bookUrl)
+            ReplaceRuleIntent.ToggleReplaceEnable -> toggleReplaceEnable()
+            ReplaceRuleIntent.ShowEffectiveReplaces -> _bookState.update { it.copy(showEffectiveReplaces = true) }
+            ReplaceRuleIntent.ShowContentProcesses -> {
+                _bookState.update { it.copy(showContentProcesses = true) }
+                loadContentProcesses()
+            }
+            ReplaceRuleIntent.DismissEffectiveReplaces -> _bookState.update { it.copy(showEffectiveReplaces = false) }
+            ReplaceRuleIntent.DismissContentProcesses -> _bookState.update { it.copy(showContentProcesses = false) }
+            is ReplaceRuleIntent.DisableEffectiveRule -> viewModelScope.launch {
+                repository.insert(intent.rule.copy(isEnabled = false))
+            }
+            ReplaceRuleIntent.DisableChineseConverter -> {
+                viewModelScope.launch { readSettingsRepository.setChineseConverterType(0) }
+                _bookState.update { it.copy(chineseConvertActive = false) }
+            }
+            ReplaceRuleIntent.DisableReSegment -> {
+                ReadBook.book?.setReSegment(false)
+                ReadBook.loadContent(false)
+                _bookState.update { it.copy(reSegmentActive = false) }
+            }
+            is ReplaceRuleIntent.ToggleContentProcess -> viewModelScope.launch {
+                bookContentProcessGateway.setEnabled(intent.id, intent.enabled)
+            }
+            is ReplaceRuleIntent.RequestDeleteContentProcess -> _bookState.update {
+                it.copy(contentProcessState = it.contentProcessState.copy(deleteItem = intent.item))
+            }
+            ReplaceRuleIntent.ConfirmDeleteContentProcess -> {
+                val deleteItem = _bookState.value.contentProcessState.deleteItem
+                if (deleteItem != null) {
+                    viewModelScope.launch { bookContentProcessGateway.delete(deleteItem.id) }
+                    _bookState.update {
+                        it.copy(contentProcessState = it.contentProcessState.copy(deleteItem = null))
+                    }
+                }
+            }
+            ReplaceRuleIntent.DismissDeleteContentProcess -> _bookState.update {
+                it.copy(contentProcessState = it.contentProcessState.copy(deleteItem = null))
+            }
         }
     }
 
@@ -309,4 +406,84 @@ class ReplaceRuleViewModel(
 
     private fun upGroup(oldGroup: String, newGroup: String?) =
         viewModelScope.launch { repository.upGroup(oldGroup, newGroup) }
+
+    //region Book-specific methods
+
+    fun emitOpenReplaceEditor(id: Long, pattern: String?) {
+        _effects.tryEmit(ReplaceRuleEffect.OpenReplaceEditor(id, pattern))
+    }
+
+    private fun initBookData(bookUrl: String) {
+        val book = ReadBook.book
+        val textChapter = ReadBook.curTextChapter
+        if (book != null && book.bookUrl == bookUrl) {
+            val effectiveRules = textChapter?.effectiveReplaceRules.orEmpty().toImmutableList()
+            val replaceEnabled = book.getUseReplaceRule(AppConfig.replaceEnableDefault)
+            val chineseConvertActive = readSettingsRepository.currentSettings.chineseConverterType > 0
+            val reSegmentActive = book.getReSegment()
+            _bookState.update {
+                it.copy(
+                    bookUrl = bookUrl,
+                    replaceEnabled = replaceEnabled,
+                    effectiveRules = effectiveRules,
+                    chineseConvertActive = chineseConvertActive,
+                    reSegmentActive = reSegmentActive,
+                )
+            }
+        }
+    }
+
+    private fun toggleReplaceEnable() {
+        ReadBook.book?.let { book ->
+            val enabled = !book.getUseReplaceRule(AppConfig.replaceEnableDefault)
+            book.setUseReplaceRule(enabled)
+            ReadBook.saveRead()
+            _bookState.update { it.copy(replaceEnabled = enabled) }
+        }
+    }
+
+    private fun loadContentProcesses() {
+        val book = ReadBook.book ?: return
+        val chapterIndex = ReadBook.durChapterIndex
+        _bookState.update {
+            it.copy(contentProcessState = it.contentProcessState.copy(isLoading = true, errorMessage = null))
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                bookContentProcessGateway.getForChapter(book.bookUrl, chapterIndex)
+                    .mapNotNull { it.toContentProcessItemUi() }
+                    .toImmutableList()
+            }.onSuccess { items ->
+                _bookState.update {
+                    it.copy(contentProcessState = it.contentProcessState.copy(isLoading = false, items = items))
+                }
+            }.onFailure { error ->
+                _bookState.update {
+                    it.copy(contentProcessState = it.contentProcessState.copy(
+                        isLoading = false,
+                        errorMessage = error.localizedMessage
+                    ))
+                }
+            }
+        }
+    }
+
+    private fun BookContentProcess.toContentProcessItemUi(): ContentProcessItemUi? {
+        val anchor = GSON.fromJsonObject<TextProcessAnchor>(anchorJson).getOrNull()
+            ?: return null
+        val action = GSON.fromJsonObject<TextProcessAction>(actionJson).getOrNull()
+            ?: return null
+        return ContentProcessItemUi(
+            id = id,
+            kind = kind,
+            actionType = action.type,
+            enabled = enabled && status == BookContentProcess.STATUS_ACTIVE,
+            chapterIndex = chapterIndex ?: anchor.chapterIndex,
+            selectedText = anchor.selectedText,
+            replacementText = action.replacement ?: action.text.orEmpty(),
+            createdAt = createdAt,
+        )
+    }
+
+    //endregion
 }

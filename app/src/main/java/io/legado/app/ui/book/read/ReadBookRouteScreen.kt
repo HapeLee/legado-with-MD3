@@ -367,7 +367,12 @@ fun ReadBookRouteScreen(
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
                             is ReadBookEffect.MenuSettingReplace -> {
-                                replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
+                                replaceLauncher.launch(
+                                    ReplaceRuleActivity.startIntent(
+                                        context = context,
+                                        bookUrl = ReadBook.book?.bookUrl
+                                    )
+                                )
                             }
                             is ReadBookEffect.TextActionReplace -> {
                                 val scopes = arrayListOf<String>()

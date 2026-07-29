@@ -499,6 +499,28 @@ object DatabaseMigrations {
 
     private val migration_98_99 = object : Migration(98, 99) {
         override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `txtTocRules_new` (
+                    `id` INTEGER NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `chapterRule` TEXT NOT NULL,
+                    `volumeRule` TEXT NOT NULL DEFAULT '',
+                    `example` TEXT,
+                    `serialNumber` INTEGER NOT NULL,
+                    `enable` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                INSERT INTO txtTocRules_new (id, name, chapterRule, volumeRule, example, serialNumber, enable)
+                SELECT id, name, rule, '', example, serialNumber, enable FROM txtTocRules
+                """.trimIndent()
+            )
+            database.execSQL("DROP TABLE txtTocRules")
+            database.execSQL("ALTER TABLE txtTocRules_new RENAME TO txtTocRules")
             database.execSQL("ALTER TABLE highlightRules ADD COLUMN fontWeight INTEGER NOT NULL DEFAULT 400")
             database.execSQL("ALTER TABLE highlightRules ADD COLUMN isItalic INTEGER NOT NULL DEFAULT 0")
             database.execSQL("ALTER TABLE highlightRules ADD COLUMN npLeft REAL NOT NULL DEFAULT 0.1")
