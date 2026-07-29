@@ -1472,6 +1472,7 @@
     <string name="record_heap_dump_s">Saving a heap dump when the application crashes by OOM</string>
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
+    <string name="font_weight">Font Weight</string>
     <string name="keep_swipe_tip">Keep swiping to load the next chapter…</string>
     <string name="enable_optimize_render">Enable Render Optimization</string>
     <string name="ignore_battery_permission_rationale">Reading requires requesting background permission to keep the service running properly</string>
