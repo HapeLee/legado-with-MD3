@@ -844,7 +844,7 @@
     <string name="next_page">下一頁</string>
     <string name="prev_page">上一頁</string>
     <string name="non_action">無操作</string>
-    <string name="body_title">正文標題</string>
+    <string name="body_title">標題</string>
     <string name="show_hide">顯示/隱藏</string>
     <string name="header_footer">頁首<![CDATA[&]]>頁尾</string>
     <string name="rule_subscription">規則訂閱</string>
