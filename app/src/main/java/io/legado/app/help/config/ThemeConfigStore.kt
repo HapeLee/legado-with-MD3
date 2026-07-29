@@ -96,8 +96,7 @@ object ThemeConfigStore {
 
     fun save() {
         val json = GSON.toJson(configList)
-        FileUtils.delete(configFilePath)
-        FileUtils.createFileIfNotExist(configFilePath).writeText(json)
+        FileUtils.writeTextAtomic(configFilePath, json)
     }
 
     fun addConfig(json: String): Boolean {

@@ -62,4 +62,33 @@ class FileUtilsAtomicWriteTest {
             target.readText(),
         )
     }
+
+    @Test
+    fun `原子复制覆盖已有文件`() {
+        val source = folder.newFile("backup.json")
+        source.writeText("备份内容")
+        val target = folder.newFile("themeConfig.json")
+        target.writeText("旧内容")
+
+        FileUtils.copyFileAtomic(source, target.absolutePath)
+
+        assertEquals("备份内容", target.readText())
+        assertFalse("临时文件应已被 rename 掉", File("${target.absolutePath}.tmp").exists())
+    }
+
+    @Test
+    fun `复制失败时目标文件保持旧内容`() {
+        // 源不存在——恢复备份途中备份文件消失
+        val source = File(folder.root, "missing-backup.json")
+        val target = folder.newFile("themeConfig.json")
+        target.writeText("旧内容")
+
+        runCatching { FileUtils.copyFileAtomic(source, target.absolutePath) }
+
+        assertEquals(
+            "恢复备份失败后目标必须还是旧配置——先删后复制会让用户两头空",
+            "旧内容",
+            target.readText(),
+        )
+    }
 }

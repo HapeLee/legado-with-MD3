@@ -321,8 +321,7 @@ object Restore : KoinComponent {
             File(path, ThemeConfigStore.configFileName).takeIf {
                 it.exists()
             }?.runCatching {
-                FileUtils.delete(ThemeConfigStore.configFilePath)
-                copyTo(File(ThemeConfigStore.configFilePath))
+                FileUtils.copyFileAtomic(this, ThemeConfigStore.configFilePath)
                 ThemeConfigStore.upConfig()
             }?.onFailure {
                 AppLog.put("恢复主题出错\n${it.localizedMessage}", it)
@@ -341,8 +340,7 @@ object Restore : KoinComponent {
             File(path, ReadBookConfig.configFileName).takeIf {
                 it.exists()
             }?.runCatching {
-                FileUtils.delete(ReadBookConfig.configFilePath)
-                copyTo(File(ReadBookConfig.configFilePath))
+                FileUtils.copyFileAtomic(this, ReadBookConfig.configFilePath)
                 ReadBookConfig.initConfigs()
             }?.onFailure {
                 AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
@@ -350,8 +348,7 @@ object Restore : KoinComponent {
             File(path, ReadBookConfig.shareConfigFileName).takeIf {
                 it.exists()
             }?.runCatching {
-                FileUtils.delete(ReadBookConfig.shareConfigFilePath)
-                copyTo(File(ReadBookConfig.shareConfigFilePath))
+                FileUtils.copyFileAtomic(this, ReadBookConfig.shareConfigFilePath)
                 ReadBookConfig.initShareConfig()
             }?.onFailure {
                 AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)

@@ -23,12 +23,25 @@ object FileUtils {
      * 注意：不做 fsync，因此只保证**进程被杀**不丢，不保证掉电不丢。
      */
     fun writeTextAtomic(filePath: String, text: String) {
-        val target = File(filePath)
-        val temp = File("$filePath.tmp")
-        createFileIfNotExist(temp.absolutePath).writeText(text)
+        replaceAtomic(filePath) { it.writeText(text) }
+    }
+
+    /**
+     * 原子复制覆盖：理由同 [writeTextAtomic]。恢复备份时用，避免删掉旧配置后
+     * 复制失败或被中断，落得两头空。
+     */
+    fun copyFileAtomic(source: File, targetPath: String) {
+        replaceAtomic(targetPath) { source.copyTo(it, overwrite = true) }
+    }
+
+    private inline fun replaceAtomic(targetPath: String, produce: (File) -> Unit) {
+        val target = File(targetPath)
+        val temp = File("$targetPath.tmp")
+        target.parent?.let { createFolderIfNotExist(it) }
+        produce(temp)
         if (!temp.renameTo(target)) {
             // 个别文件系统的 rename 不覆盖已存在的目标，退回原地写
-            createFileIfNotExist(filePath).writeText(text)
+            produce(target)
             temp.delete()
         }
     }
