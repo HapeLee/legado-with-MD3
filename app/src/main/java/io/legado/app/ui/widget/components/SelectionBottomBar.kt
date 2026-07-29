@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +34,7 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -110,7 +110,7 @@ fun SelectionBottomBar(
                     Box {
                         MiuixIconButton(onClick = { showMenu = true }) {
                             MiuixIcon(
-                                imageVector = Icons.Default.MoreVert,
+                                imageVector = AppIcons.MoreVert,
                                 contentDescription = moreActionsDescription
                             )
                         }
@@ -155,7 +155,7 @@ fun SelectionBottomBar(
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             AppIcon(
-                                imageVector = Icons.Default.MoreVert,
+                                imageVector = AppIcons.MoreVert,
                                 contentDescription = moreActionsDescription
                             )
                         }

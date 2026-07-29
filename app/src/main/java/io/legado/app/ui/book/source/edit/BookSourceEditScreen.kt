@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -106,7 +105,7 @@ fun BookSourceEditScreen(
                         )
                         TopBarActionButton(
                             onClick = { onMenuExpandedChange(true) },
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = AppIcons.MoreVert,
                             contentDescription = stringResource(R.string.more_menu),
                         )
                         BookSourceEditMenu(menuExpanded, onMenuExpandedChange, state, onIntent)

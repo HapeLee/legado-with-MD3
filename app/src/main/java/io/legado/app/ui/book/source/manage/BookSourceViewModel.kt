@@ -15,8 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,6 +34,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
 
     private val dao = appDb.bookSourceDao
     private val searchKey = MutableStateFlow("")
+    private val isSearchMode = MutableStateFlow(false)
     private val filter = MutableStateFlow<String?>(null)
     private val selectedIds = MutableStateFlow<Set<String>>(emptySet())
     private val sort = MutableStateFlow(BookSourceSort.Default)
@@ -46,6 +47,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         dao.flowAll(),
         dao.flowGroups(),
         searchKey,
+        isSearchMode,
         filter,
         selectedIds,
         sort,
@@ -58,13 +60,14 @@ class BookSourceViewModel(application: Application) : ViewModel() {
         val sourceItems = (values[0] as List<BookSourcePart>)
         val groups = values[1] as List<String>
         val query = values[2] as String
-        val activeFilter = values[3] as String?
-        val selected = values[4] as Set<String>
-        val activeSort = values[5] as BookSourceSort
-        val ascending = values[6] as Boolean
-        val byDomain = values[7] as Boolean
-        val local = values[8] as List<BookSourcePart>?
-        val pendingEnabled = values[9] as Map<String, Boolean>
+        val searchMode = values[3] as Boolean
+        val activeFilter = values[4] as String?
+        val selected = values[5] as Set<String>
+        val activeSort = values[6] as BookSourceSort
+        val ascending = values[7] as Boolean
+        val byDomain = values[8] as Boolean
+        val local = values[9] as List<BookSourcePart>?
+        val pendingEnabled = values[10] as Map<String, Boolean>
         val visible = if (local == null) {
             sourceItems.filterFor(activeFilter, query).sortFor(activeSort, ascending, byDomain)
         } else {
@@ -91,7 +94,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
             sort = activeSort,
             sortAscending = ascending,
             groupByDomain = byDomain,
-            interaction = io.legado.app.ui.widget.components.list.InteractionState(isSearchMode = query.isNotEmpty()),
+            interaction = io.legado.app.ui.widget.components.list.InteractionState(isSearchMode = searchMode),
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookSourceUiState())
@@ -99,6 +102,7 @@ class BookSourceViewModel(application: Application) : ViewModel() {
     fun onIntent(intent: BookSourceIntent) {
         when (intent) {
             is BookSourceIntent.SetSearchMode -> {
+                isSearchMode.value = intent.enabled
                 if (!intent.enabled) searchKey.value = ""
             }
 
