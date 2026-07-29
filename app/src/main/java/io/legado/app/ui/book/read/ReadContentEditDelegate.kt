@@ -34,7 +34,7 @@ class ReadContentEditDelegate(
     interface Host {
         fun setActiveSheet(sheet: ReadBookSheet?)
 
-        fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter?
+        suspend fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter?
     }
 
     private val _uiState = MutableStateFlow(ContentEditUiState())

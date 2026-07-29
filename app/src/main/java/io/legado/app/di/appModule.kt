@@ -684,6 +684,7 @@ val appModule = module {
             httpTtsRepository = get(),
             bookSourceRepository = get(),
             bookmarkRepository = get(),
+            bookRepository = get(),
             readerSession = get(),
         )
     }

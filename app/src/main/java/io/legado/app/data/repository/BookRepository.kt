@@ -106,6 +106,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getChapters(bookUrl: String, start: Int, end: Int): List<BookChapter> {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapterList(bookUrl, start, end)
+        }
+    }
+
     suspend fun update(vararg book: Book) {
         withContext(Dispatchers.IO) {
             bookDao.update(*book)

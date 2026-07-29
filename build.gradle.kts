@@ -219,7 +219,9 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
     )
     legacyDaoInjectionBaseline.set(
         mapOf(
-            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 33,
+            // R2.1 已清零：ReadBookViewModel 的书籍/目录读写全部经 BookRepository。
+            // 保留 0 值条目让棘轮继续盯着这个文件——新增一处直连就报红。
+            "io/legado/app/ui/book/read/ReadBookViewModel.kt" to 0,
             // 护栏缺席期间（MAD-3 未合并窗口）main 新增的直连，随合并冻结，清理归 Track A/F2
             "io/legado/app/ui/book/readaloud/cloudtts/CloudTtsViewModel.kt" to 13,
         )

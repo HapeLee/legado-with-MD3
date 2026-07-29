@@ -73,9 +73,9 @@ class ReadAiDelegate(
 
         fun reloadChapterAfterContentProcessChanged(bookUrl: String, chapterIndex: Int)
 
-        fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter?
+        suspend fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter?
 
-        fun listChapters(bookUrl: String): List<BookChapter>
+        suspend fun listChapters(bookUrl: String): List<BookChapter>
     }
 
     private val _uiState = MutableStateFlow(ReadAiUiState())
@@ -514,7 +514,11 @@ class ReadAiDelegate(
         }
     }
 
-    fun openAiTextRewrite(
+    /**
+     * R2.1：章节标题查询改走 `Host` 的挂起方法（背后是 `BookRepository`，在 IO 上执行），
+     * 因此整个打开流程移进 [scope]——原先是在主线程上同步查库。
+     */
+    suspend fun openAiTextRewrite(
         text: String,
         chapterIndex: Int,
         chapterPosition: Int,

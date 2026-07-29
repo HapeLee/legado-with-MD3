@@ -17,7 +17,7 @@ import kotlin.reflect.full.primaryConstructor
  * 3. delegate 自己拿 DAO——`build.gradle.kts` 的 `legacyDaoInjectionBaseline` 只认
  *    **文件名含 `ViewModel`** 的文件，delegate 里的 DAO 直连会掉进宽松的
  *    `legacyUiDaoAccessBaseline`，等于把 VM 棘轮上的债洗白。章节等数据读取必须继续
- *    走各 delegate 的 `Host`，随 R2.1 的 `ReaderSession` 溶解一并清理。
+ *    走各 delegate 的 `Host`——R2.1 之后 Host 背后是 `BookRepository`。
  */
 class ReadBookDomainSplitBoundaryTest {
 
@@ -75,6 +75,22 @@ class ReadBookDomainSplitBoundaryTest {
                 violations.isEmpty(),
             )
         }
+    }
+
+    @Test
+    fun `ReadBookViewModel 不再直连 DAO`() {
+        val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt").readText()
+        val violations = buildList {
+            APP_DB_DAO.findAll(source).forEach { add(it.value) }
+            DAO_IMPORT.findAll(source).forEach { add(it.value) }
+        }
+        assertTrue(
+            "ReadBookViewModel 又出现了 DAO 直连：${violations.joinToString()}。\n" +
+                "R2.1 已把书籍/目录读写全部收进 BookRepository，" +
+                "`legacyDaoInjectionBaseline` 里这个文件的基线是 0——" +
+                "章节读取请用 currentChapter() 或 bookRepository 的方法。",
+            violations.isEmpty(),
+        )
     }
 
     private fun constructorParameterNames(type: KClass<*>): Set<String> =
