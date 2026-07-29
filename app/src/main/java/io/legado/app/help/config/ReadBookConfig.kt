@@ -272,346 +272,181 @@ object ReadBookConfig {
 
     val config get() = if (shareLayout) shareConfig else durConfig
 
-    var bgAlpha: Int
+    val bgAlpha: Int
         get() = config.bgAlpha
-        set(value) {
-            config.bgAlpha = value
-        }
 
-    var pageAnim: Int
+    val pageAnim: Int
         get() = config.curPageAnim()
-        set(@PageAnim.Anim value) {
-            config.setCurPageAnim(value)
-        }
 
-    var textFont: String
+    val textFont: String
         get() = config.textFont
-        set(value) {
-            config.textFont = value
-        }
 
-    var titleFont: String
+    val titleFont: String
         get() = config.titleFont
-        set(value) {
-            config.titleFont = value
-        }
 
-    var headerFont: String
+    val headerFont: String
         get() = config.headerFont
-        set(value) {
-            config.headerFont = value
-        }
 
-    var footerFont: String
+    val footerFont: String
         get() = config.footerFont
-        set(value) {
-            config.footerFont = value
-        }
 
-    var headerFontSize: Int
+    val headerFontSize: Int
         get() = config.headerFontSize.takeIf { it > 0 } ?: 12
-        set(value) {
-            config.headerFontSize = value
-        }
 
-    var footerFontSize: Int
+    val footerFontSize: Int
         get() = config.footerFontSize.takeIf { it > 0 } ?: 12
-        set(value) {
-            config.footerFontSize = value
-        }
 
-    var applyHeaderStyle: Boolean
+    val applyHeaderStyle: Boolean
         get() = config.applyHeaderStyle
-        set(value) {
-            config.applyHeaderStyle = value
-        }
 
-    var textBold: Int
+    val textBold: Int
         get() = config.textBold
-        set(value) {
-            config.textBold = value
-        }
 
-    var titleBold: Int
+    val titleBold: Int
         get() = config.titleBold
-        set(value) {
-            config.titleBold = value
-        }
 
-    var textItalic: Boolean
+    val textItalic: Boolean
         get() = config.textItalic
-        set(value) {
-            config.textItalic = value
-        }
 
-    var textShadow: Boolean
+    val textShadow: Boolean
         get() = config.textShadow
-        set(value) {
-            config.textShadow = value
-        }
 
-    var shadowRadius: Float
+    val shadowRadius: Float
         get() = config.shadowRadius
-        set(value) {
-            config.shadowRadius = value
-        }
 
-    var shadowDx: Float
+    val shadowDx: Float
         get() = config.shadowDx
-        set(value) {
-            config.shadowDx = value
-        }
 
-    var shadowDy: Float
+    val shadowDy: Float
         get() = config.shadowDy
-        set(value) {
-            config.shadowDy = value
-        }
 
-    var textSize: Int
+    val textSize: Int
         get() = config.textSize
-        set(value) {
-            config.textSize = value
-        }
 
-    var letterSpacing: Float
+    val letterSpacing: Float
         get() = config.letterSpacing
-        set(value) {
-            config.letterSpacing = value
-        }
 
-    var lineSpacingExtra: Int
+    val lineSpacingExtra: Int
         get() = config.lineSpacingExtra
-        set(value) {
-            config.lineSpacingExtra = value
-        }
 
-    var titleLineSpacingExtra: Int
+    val titleLineSpacingExtra: Int
         get() = config.titleLineSpacingExtra
-        set(value) {
-            config.titleLineSpacingExtra = value
-        }
 
-    var titleLineSpacingSub: Int
+    val titleLineSpacingSub: Int
         get() = config.titleLineSpacingSub
-        set(value) {
-            config.titleLineSpacingSub = value
-        }
 
-    var paragraphSpacing: Int
+    val paragraphSpacing: Int
         get() = config.paragraphSpacing
-        set(value) {
-            config.paragraphSpacing = value
-        }
 
     /**
      * 标题位置 0:居左 1:居中 2:隐藏
      */
-    var titleMode: Int
+    val titleMode: Int
         get() = config.titleMode
-        set(value) {
-            config.titleMode = value
-        }
-    var titleSize: Int
+    val titleSize: Int
         get() = config.titleSize
-        set(value) {
-            config.titleSize = value
-        }
 
-    var titleSegType: Int
+    val titleSegType: Int
         get() = config.titleSegType
-        set(value) {
-            config.titleSegType = value
-        }
 
-    var titleSegScaling: Float
+    val titleSegScaling: Float
         //旧版本可能存入负值，负值非法，回落到默认比例
         get() = config.titleSegScaling.let { if (it < 0f) 1f else it.coerceAtMost(2f) }
-        set(value) {
-            config.titleSegScaling = value
-        }
 
-    var titleSegDistance: Int
+    val titleSegDistance: Int
         get() = config.titleSegDistance
-        set(value) {
-            config.titleSegDistance = value
-        }
 
-    var titleSegFlag: String
+    val titleSegFlag: String
         get() = config.titleSegFlag
-        set(value) {
-            config.titleSegFlag = value
-        }
 
     /**
      * 是否标题居中
      */
     val isMiddleTitle get() = titleMode == 1
 
-    var titleTopSpacing: Int
+    val titleTopSpacing: Int
         get() = config.titleTopSpacing
-        set(value) {
-            config.titleTopSpacing = value
-        }
 
-    var titleBottomSpacing: Int
+    val titleBottomSpacing: Int
         get() = config.titleBottomSpacing
-        set(value) {
-            config.titleBottomSpacing = value
-        }
 
-    var titleColor: Int
+    val titleColor: Int
         get() = config.titleColor
-        set(value) {
-            config.titleColor = value
-        }
 
-    var titleColorNight: Int
+    val titleColorNight: Int
         get() = config.titleColorNight
-        set(value) {
-            config.titleColorNight = value
-        }
 
     val resolvedTitleColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) titleColorNight else titleColor
 
-    var paragraphIndent: String
+    val paragraphIndent: String
         get() = config.paragraphIndent
-        set(value) {
-            config.paragraphIndent = value
-        }
 
-    var underline: Boolean
+    val underline: Boolean
         get() = config.underline
-        set(value) {
-            config.underline = value
-        }
 
-    var underlineHeight: Int
+    val underlineHeight: Int
         get() = config.underlineHeight
-        set(value) {
-            config.underlineHeight = value
-        }
 
-    var underlinePadding: Int
+    val underlinePadding: Int
         get() = config.underlinePadding
-        set(value) {
-            config.underlinePadding = value
-        }
 
-    var underlineExtend: Boolean
+    val underlineExtend: Boolean
         get() = config.underlineExtend
-        set(value) {
-            config.underlineExtend = value
-        }
 
-    var dottedLine: Boolean
+    val dottedLine: Boolean
         get() = config.dottedLine
-        set(value) {
-            config.dottedLine = value
-        }
 
-    var dottedBase: Float
+    val dottedBase: Float
         get() = config.dottedBase
-        set(value) {
-            config.dottedBase = value
-        }
 
-    var dottedRatio: Float
+    val dottedRatio: Float
         get() = config.dottedRatio
-        set(value) {
-            config.dottedRatio = value
-        }
 
-    var paddingBottom: Int
+    val paddingBottom: Int
         get() = config.paddingBottom
-        set(value) {
-            config.paddingBottom = value
-        }
 
-    var paddingLeft: Int
+    val paddingLeft: Int
         get() = config.paddingLeft
-        set(value) {
-            config.paddingLeft = value
-        }
 
-    var paddingRight: Int
+    val paddingRight: Int
         get() = config.paddingRight
-        set(value) {
-            config.paddingRight = value
-        }
 
-    var paddingTop: Int
+    val paddingTop: Int
         get() = config.paddingTop
-        set(value) {
-            config.paddingTop = value
-        }
 
-    var headerPaddingBottom: Int
+    val headerPaddingBottom: Int
         get() = config.headerPaddingBottom
-        set(value) {
-            config.headerPaddingBottom = value
-        }
 
-    var headerPaddingLeft: Int
+    val headerPaddingLeft: Int
         get() = config.headerPaddingLeft
-        set(value) {
-            config.headerPaddingLeft = value
-        }
 
-    var headerPaddingRight: Int
+    val headerPaddingRight: Int
         get() = config.headerPaddingRight
-        set(value) {
-            config.headerPaddingRight = value
-        }
 
-    var headerPaddingTop: Int
+    val headerPaddingTop: Int
         get() = config.headerPaddingTop
-        set(value) {
-            config.headerPaddingTop = value
-        }
 
-    var footerPaddingBottom: Int
+    val footerPaddingBottom: Int
         get() = config.footerPaddingBottom
-        set(value) {
-            config.footerPaddingBottom = value
-        }
 
-    var footerPaddingLeft: Int
+    val footerPaddingLeft: Int
         get() = config.footerPaddingLeft
-        set(value) {
-            config.footerPaddingLeft = value
-        }
 
-    var footerPaddingRight: Int
+    val footerPaddingRight: Int
         get() = config.footerPaddingRight
-        set(value) {
-            config.footerPaddingRight = value
-        }
 
-    var footerPaddingTop: Int
+    val footerPaddingTop: Int
         get() = config.footerPaddingTop
-        set(value) {
-            config.footerPaddingTop = value
-        }
 
-    var showHeaderLine: Boolean
+    val showHeaderLine: Boolean
         get() = config.showHeaderLine
-        set(value) {
-            config.showHeaderLine = value
-        }
 
-    var showFooterLine: Boolean
+    val showFooterLine: Boolean
         get() = config.showFooterLine
-        set(value) {
-            config.showFooterLine = value
-        }
 
-    var underlineColor: Int
+    val underlineColor: Int
         get() = config.curUnderlineColor()
-        set(value) {
-            config.setUnderlineColor(value)
-        }
 
     val menuBgColor: Int
         get() = readMenuBgColor
@@ -619,133 +454,73 @@ object ReadBookConfig {
     val menuAcColor: Int
         get() = readMenuAccentColor
 
-    var shadowColor: Int
+    val shadowColor: Int
         get() = config.curTextShadowColor()
-        set(value) {
-            config.setCurShadColor(value)
-        }
 
     // region Tip / Header / Footer
 
-    var tipHeaderLeft: Int
+    val tipHeaderLeft: Int
         get() = config.tipHeaderLeft
-        set(value) {
-            config.tipHeaderLeft = value
-        }
 
-    var tipHeaderMiddle: Int
+    val tipHeaderMiddle: Int
         get() = config.tipHeaderMiddle
-        set(value) {
-            config.tipHeaderMiddle = value
-        }
 
-    var tipHeaderRight: Int
+    val tipHeaderRight: Int
         get() = config.tipHeaderRight
-        set(value) {
-            config.tipHeaderRight = value
-        }
 
-    var tipFooterLeft: Int
+    val tipFooterLeft: Int
         get() = config.tipFooterLeft
-        set(value) {
-            config.tipFooterLeft = value
-        }
 
-    var tipFooterMiddle: Int
+    val tipFooterMiddle: Int
         get() = config.tipFooterMiddle
-        set(value) {
-            config.tipFooterMiddle = value
-        }
 
-    var tipFooterRight: Int
+    val tipFooterRight: Int
         get() = config.tipFooterRight
-        set(value) {
-            config.tipFooterRight = value
-        }
 
-    var customTipHeaderLeft: String
+    val customTipHeaderLeft: String
         get() = config.customTipHeaderLeft
-        set(value) {
-            config.customTipHeaderLeft = value
-        }
 
-    var customTipHeaderMiddle: String
+    val customTipHeaderMiddle: String
         get() = config.customTipHeaderMiddle
-        set(value) {
-            config.customTipHeaderMiddle = value
-        }
 
-    var customTipHeaderRight: String
+    val customTipHeaderRight: String
         get() = config.customTipHeaderRight
-        set(value) {
-            config.customTipHeaderRight = value
-        }
 
-    var customTipFooterLeft: String
+    val customTipFooterLeft: String
         get() = config.customTipFooterLeft
-        set(value) {
-            config.customTipFooterLeft = value
-        }
 
-    var customTipFooterMiddle: String
+    val customTipFooterMiddle: String
         get() = config.customTipFooterMiddle
-        set(value) {
-            config.customTipFooterMiddle = value
-        }
 
-    var customTipFooterRight: String
+    val customTipFooterRight: String
         get() = config.customTipFooterRight
-        set(value) {
-            config.customTipFooterRight = value
-        }
 
-    var headerMode: Int
+    val headerMode: Int
         get() = config.headerMode
-        set(value) {
-            config.headerMode = value
-        }
 
-    var footerMode: Int
+    val footerMode: Int
         get() = config.footerMode
-        set(value) {
-            config.footerMode = value
-        }
 
-    var tipHeaderColor: Int
+    val tipHeaderColor: Int
         get() = config.tipHeaderColor
-        set(value) {
-            config.tipHeaderColor = value
-        }
 
-    var tipHeaderColorNight: Int
+    val tipHeaderColorNight: Int
         get() = config.tipHeaderColorNight
-        set(value) {
-            config.tipHeaderColorNight = value
-        }
 
     val resolvedTipHeaderColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) tipHeaderColorNight else tipHeaderColor
 
-    var tipFooterColor: Int
+    val tipFooterColor: Int
         get() = config.tipFooterColor
-        set(value) {
-            config.tipFooterColor = value
-        }
 
-    var tipFooterColorNight: Int
+    val tipFooterColorNight: Int
         get() = config.tipFooterColorNight
-        set(value) {
-            config.tipFooterColorNight = value
-        }
 
     val resolvedTipFooterColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) tipFooterColorNight else tipFooterColor
 
-    var tipDividerColor: Int
+    val tipDividerColor: Int
         get() = config.tipDividerColor
-        set(value) {
-            config.tipDividerColor = value
-        }
 
     /** 与 `R.array.read_tip` 一一对应的展示顺序，故留在配置侧而不是 [ReadTipType]。 */
     val tipValues = with(ReadTipType) {

@@ -16,6 +16,11 @@ import java.io.File
  * 依赖 `ReadStyleRepository`（文件读写）。
  *
  * 注意 `readSettingsGateway` 不在此列——那是**只读**上游设置，不构成环。
+ *
+ * R4.4 又把写面整个搬进了 gateway 实现，`ReadBookConfig` 降为只读投影。这条不变式有两半，
+ * 分别由两处把守：**调用点**那半归 build.gradle.kts 的 `verifyConfigArchitecture`
+ * （「ReadBookConfig 写入必须经过 ReadStyleGateway」，编译期就拦）；**声明点**那半归本文件
+ * ——文件内部写的是 `config.x = value`，绕不过那条正则，只能在这里断言。
  */
 class ReadBookConfigDependencyDirectionTest {
 
@@ -43,7 +48,33 @@ class ReadBookConfigDependencyDirectionTest {
         )
     }
 
+    @Test
+    fun `ReadBookConfig 是只读投影，没有公开可写属性`() {
+        val source = stripComments(readBookConfigSource())
+        val writable = Regex("""^    var (\w+)""", RegexOption.MULTILINE)
+            .findAll(source)
+            .map { it.groupValues[1] }
+            .filterNot { it in WRITABLE_ALLOWLIST }
+            .toList()
+
+        assertTrue(
+            "ReadBookConfig 又长出了公开可写属性：${writable.joinToString()}。\n" +
+                "排版值的写面只属于 ReadStyleGateway 的实现——加一个 setter，" +
+                "就等于给全应用重新开了一条绕过 gateway 改配置、且不会触发 save/publishState " +
+                "的旁路，而且它是静默的：改了不落盘、订阅方收不到通知。\n" +
+                "新增可写排版项请加 ReadStyleMutation 的 key，在 " +
+                "ReadBookStyleConfigRepository 的 dispatch 里写 Config。",
+            writable.isEmpty(),
+        )
+    }
+
     private companion object {
+        /** `durConfig` 是整份配置的替换入口（应用预设 / 导入），只有 gateway 实现用得到。 */
+        val WRITABLE_ALLOWLIST = setOf("durConfig")
+
+        fun readBookConfigSource(): String =
+            mainSourceFile("io/legado/app/help/config/ReadBookConfig.kt").readText()
+
         fun stripComments(text: String): String = text
             .replace(Regex("""/\*[\s\S]*?\*/"""), "")
             .replace(Regex("""//[^\n]*"""), "")

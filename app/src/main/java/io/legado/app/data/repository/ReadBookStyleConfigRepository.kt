@@ -168,92 +168,96 @@ class ReadBookStyleConfigRepository(
     }
 
     private fun updateInt(key: ReadStyleIntKey, value: Int) {
+        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleIntKey.TextSize -> ReadBookConfig.textSize = value
-            ReadStyleIntKey.LineSpacing -> ReadBookConfig.lineSpacingExtra = value
-            ReadStyleIntKey.ParagraphSpacing -> ReadBookConfig.paragraphSpacing = value
-            ReadStyleIntKey.TextBold -> ReadBookConfig.textBold = value
-            ReadStyleIntKey.TitleMode -> ReadBookConfig.titleMode = value
-            ReadStyleIntKey.TitleBold -> ReadBookConfig.titleBold = value
-            ReadStyleIntKey.TitleLineSpacingExtra -> ReadBookConfig.titleLineSpacingExtra = value
-            ReadStyleIntKey.TitleLineSpacingSub -> ReadBookConfig.titleLineSpacingSub = value
-            ReadStyleIntKey.TitleSize -> ReadBookConfig.titleSize = value
-            ReadStyleIntKey.TitleTopSpacing -> ReadBookConfig.titleTopSpacing = value
-            ReadStyleIntKey.TitleBottomSpacing -> ReadBookConfig.titleBottomSpacing = value
-            ReadStyleIntKey.TitleSegType -> ReadBookConfig.titleSegType = value
-            ReadStyleIntKey.TitleSegDistance -> ReadBookConfig.titleSegDistance = value
-            ReadStyleIntKey.HeaderMode -> ReadBookConfig.headerMode = value
-            ReadStyleIntKey.FooterMode -> ReadBookConfig.footerMode = value
-            ReadStyleIntKey.TipHeaderLeft -> ReadBookConfig.tipHeaderLeft = value
-            ReadStyleIntKey.TipHeaderMiddle -> ReadBookConfig.tipHeaderMiddle = value
-            ReadStyleIntKey.TipHeaderRight -> ReadBookConfig.tipHeaderRight = value
-            ReadStyleIntKey.TipFooterLeft -> ReadBookConfig.tipFooterLeft = value
-            ReadStyleIntKey.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = value
-            ReadStyleIntKey.TipFooterRight -> ReadBookConfig.tipFooterRight = value
-            ReadStyleIntKey.HeaderFontSize -> ReadBookConfig.headerFontSize = value
-            ReadStyleIntKey.FooterFontSize -> ReadBookConfig.footerFontSize = value
-            ReadStyleIntKey.PageAnim -> ReadBookConfig.pageAnim = value
-            ReadStyleIntKey.UnderlineHeight -> ReadBookConfig.underlineHeight = value
-            ReadStyleIntKey.UnderlinePadding -> ReadBookConfig.underlinePadding = value
-            ReadStyleIntKey.PaddingTop -> ReadBookConfig.paddingTop = value
-            ReadStyleIntKey.PaddingBottom -> ReadBookConfig.paddingBottom = value
-            ReadStyleIntKey.PaddingLeft -> ReadBookConfig.paddingLeft = value
-            ReadStyleIntKey.PaddingRight -> ReadBookConfig.paddingRight = value
-            ReadStyleIntKey.HeaderPaddingTop -> ReadBookConfig.headerPaddingTop = value
-            ReadStyleIntKey.HeaderPaddingBottom -> ReadBookConfig.headerPaddingBottom = value
-            ReadStyleIntKey.HeaderPaddingLeft -> ReadBookConfig.headerPaddingLeft = value
-            ReadStyleIntKey.HeaderPaddingRight -> ReadBookConfig.headerPaddingRight = value
-            ReadStyleIntKey.FooterPaddingTop -> ReadBookConfig.footerPaddingTop = value
-            ReadStyleIntKey.FooterPaddingBottom -> ReadBookConfig.footerPaddingBottom = value
-            ReadStyleIntKey.FooterPaddingLeft -> ReadBookConfig.footerPaddingLeft = value
-            ReadStyleIntKey.FooterPaddingRight -> ReadBookConfig.footerPaddingRight = value
+            ReadStyleIntKey.TextSize -> config.textSize = value
+            ReadStyleIntKey.LineSpacing -> config.lineSpacingExtra = value
+            ReadStyleIntKey.ParagraphSpacing -> config.paragraphSpacing = value
+            ReadStyleIntKey.TextBold -> config.textBold = value
+            ReadStyleIntKey.TitleMode -> config.titleMode = value
+            ReadStyleIntKey.TitleBold -> config.titleBold = value
+            ReadStyleIntKey.TitleLineSpacingExtra -> config.titleLineSpacingExtra = value
+            ReadStyleIntKey.TitleLineSpacingSub -> config.titleLineSpacingSub = value
+            ReadStyleIntKey.TitleSize -> config.titleSize = value
+            ReadStyleIntKey.TitleTopSpacing -> config.titleTopSpacing = value
+            ReadStyleIntKey.TitleBottomSpacing -> config.titleBottomSpacing = value
+            ReadStyleIntKey.TitleSegType -> config.titleSegType = value
+            ReadStyleIntKey.TitleSegDistance -> config.titleSegDistance = value
+            ReadStyleIntKey.HeaderMode -> config.headerMode = value
+            ReadStyleIntKey.FooterMode -> config.footerMode = value
+            ReadStyleIntKey.TipHeaderLeft -> config.tipHeaderLeft = value
+            ReadStyleIntKey.TipHeaderMiddle -> config.tipHeaderMiddle = value
+            ReadStyleIntKey.TipHeaderRight -> config.tipHeaderRight = value
+            ReadStyleIntKey.TipFooterLeft -> config.tipFooterLeft = value
+            ReadStyleIntKey.TipFooterMiddle -> config.tipFooterMiddle = value
+            ReadStyleIntKey.TipFooterRight -> config.tipFooterRight = value
+            ReadStyleIntKey.HeaderFontSize -> config.headerFontSize = value
+            ReadStyleIntKey.FooterFontSize -> config.footerFontSize = value
+            ReadStyleIntKey.PageAnim -> config.setCurPageAnim(value)
+            ReadStyleIntKey.UnderlineHeight -> config.underlineHeight = value
+            ReadStyleIntKey.UnderlinePadding -> config.underlinePadding = value
+            ReadStyleIntKey.PaddingTop -> config.paddingTop = value
+            ReadStyleIntKey.PaddingBottom -> config.paddingBottom = value
+            ReadStyleIntKey.PaddingLeft -> config.paddingLeft = value
+            ReadStyleIntKey.PaddingRight -> config.paddingRight = value
+            ReadStyleIntKey.HeaderPaddingTop -> config.headerPaddingTop = value
+            ReadStyleIntKey.HeaderPaddingBottom -> config.headerPaddingBottom = value
+            ReadStyleIntKey.HeaderPaddingLeft -> config.headerPaddingLeft = value
+            ReadStyleIntKey.HeaderPaddingRight -> config.headerPaddingRight = value
+            ReadStyleIntKey.FooterPaddingTop -> config.footerPaddingTop = value
+            ReadStyleIntKey.FooterPaddingBottom -> config.footerPaddingBottom = value
+            ReadStyleIntKey.FooterPaddingLeft -> config.footerPaddingLeft = value
+            ReadStyleIntKey.FooterPaddingRight -> config.footerPaddingRight = value
             ReadStyleIntKey.BgType -> ReadBookConfig.durConfig.bgType = value
             ReadStyleIntKey.BgTypeNight -> ReadBookConfig.durConfig.bgTypeNight = value
             ReadStyleIntKey.BgTypeEInk -> ReadBookConfig.durConfig.bgTypeEInk = value
-            ReadStyleIntKey.BgAlpha -> ReadBookConfig.bgAlpha = value
+            ReadStyleIntKey.BgAlpha -> config.bgAlpha = value
         }
     }
 
     private fun updateFloat(key: ReadStyleFloatKey, value: Float) {
+        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleFloatKey.LetterSpacing -> ReadBookConfig.letterSpacing = value
-            ReadStyleFloatKey.TitleSegScaling -> ReadBookConfig.titleSegScaling = value
-            ReadStyleFloatKey.ShadowRadius -> ReadBookConfig.shadowRadius = value
-            ReadStyleFloatKey.ShadowDx -> ReadBookConfig.shadowDx = value
-            ReadStyleFloatKey.ShadowDy -> ReadBookConfig.shadowDy = value
+            ReadStyleFloatKey.LetterSpacing -> config.letterSpacing = value
+            ReadStyleFloatKey.TitleSegScaling -> config.titleSegScaling = value
+            ReadStyleFloatKey.ShadowRadius -> config.shadowRadius = value
+            ReadStyleFloatKey.ShadowDx -> config.shadowDx = value
+            ReadStyleFloatKey.ShadowDy -> config.shadowDy = value
             ReadStyleFloatKey.DottedBase -> ReadBookConfig.durConfig.dottedBase = value
             ReadStyleFloatKey.DottedRatio -> ReadBookConfig.durConfig.dottedRatio = value
         }
     }
 
     private fun updateBoolean(key: ReadStyleBooleanKey, value: Boolean) {
+        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleBooleanKey.TextItalic -> ReadBookConfig.textItalic = value
-            ReadStyleBooleanKey.TextShadow -> ReadBookConfig.textShadow = value
-            ReadStyleBooleanKey.Underline -> ReadBookConfig.underline = value
-            ReadStyleBooleanKey.DottedLine -> ReadBookConfig.dottedLine = value
-            ReadStyleBooleanKey.UnderlineExtend -> ReadBookConfig.underlineExtend = value
-            ReadStyleBooleanKey.ShowHeaderLine -> ReadBookConfig.showHeaderLine = value
-            ReadStyleBooleanKey.ShowFooterLine -> ReadBookConfig.showFooterLine = value
-            ReadStyleBooleanKey.ApplyHeaderStyle -> ReadBookConfig.applyHeaderStyle = value
+            ReadStyleBooleanKey.TextItalic -> config.textItalic = value
+            ReadStyleBooleanKey.TextShadow -> config.textShadow = value
+            ReadStyleBooleanKey.Underline -> config.underline = value
+            ReadStyleBooleanKey.DottedLine -> config.dottedLine = value
+            ReadStyleBooleanKey.UnderlineExtend -> config.underlineExtend = value
+            ReadStyleBooleanKey.ShowHeaderLine -> config.showHeaderLine = value
+            ReadStyleBooleanKey.ShowFooterLine -> config.showFooterLine = value
+            ReadStyleBooleanKey.ApplyHeaderStyle -> config.applyHeaderStyle = value
             ReadStyleBooleanKey.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(value)
         }
     }
 
     private fun updateString(key: ReadStyleStringKey, value: String) {
+        val config = ReadBookConfig.config
         when (key) {
-            ReadStyleStringKey.TextFont -> ReadBookConfig.textFont = value
-            ReadStyleStringKey.ParagraphIndent -> ReadBookConfig.paragraphIndent = value
-            ReadStyleStringKey.TitleFont -> ReadBookConfig.titleFont = value
-            ReadStyleStringKey.TitleSegFlag -> ReadBookConfig.titleSegFlag = value
-            ReadStyleStringKey.HeaderFont -> ReadBookConfig.headerFont = value
-            ReadStyleStringKey.FooterFont -> ReadBookConfig.footerFont = value
-            ReadStyleStringKey.CustomTipHeaderLeft -> ReadBookConfig.customTipHeaderLeft = value
-            ReadStyleStringKey.CustomTipHeaderMiddle -> ReadBookConfig.customTipHeaderMiddle = value
-            ReadStyleStringKey.CustomTipHeaderRight -> ReadBookConfig.customTipHeaderRight = value
-            ReadStyleStringKey.CustomTipFooterLeft -> ReadBookConfig.customTipFooterLeft = value
-            ReadStyleStringKey.CustomTipFooterMiddle -> ReadBookConfig.customTipFooterMiddle = value
-            ReadStyleStringKey.CustomTipFooterRight -> ReadBookConfig.customTipFooterRight = value
+            ReadStyleStringKey.TextFont -> config.textFont = value
+            ReadStyleStringKey.ParagraphIndent -> config.paragraphIndent = value
+            ReadStyleStringKey.TitleFont -> config.titleFont = value
+            ReadStyleStringKey.TitleSegFlag -> config.titleSegFlag = value
+            ReadStyleStringKey.HeaderFont -> config.headerFont = value
+            ReadStyleStringKey.FooterFont -> config.footerFont = value
+            ReadStyleStringKey.CustomTipHeaderLeft -> config.customTipHeaderLeft = value
+            ReadStyleStringKey.CustomTipHeaderMiddle -> config.customTipHeaderMiddle = value
+            ReadStyleStringKey.CustomTipHeaderRight -> config.customTipHeaderRight = value
+            ReadStyleStringKey.CustomTipFooterLeft -> config.customTipFooterLeft = value
+            ReadStyleStringKey.CustomTipFooterMiddle -> config.customTipFooterMiddle = value
+            ReadStyleStringKey.CustomTipFooterRight -> config.customTipFooterRight = value
             ReadStyleStringKey.BgStr -> ReadBookConfig.durConfig.bgStr = value
             ReadStyleStringKey.BgStrNight -> ReadBookConfig.durConfig.bgStrNight = value
             ReadStyleStringKey.BgStrEInk -> ReadBookConfig.durConfig.bgStrEInk = value
@@ -262,16 +266,17 @@ class ReadBookStyleConfigRepository(
     }
 
     private fun updateColor(key: ReadStyleColorKey, value: Int) {
+        val config = ReadBookConfig.config
         when (key) {
             ReadStyleColorKey.Text -> ReadBookConfig.durConfig.setCurTextColor(value)
             ReadStyleColorKey.TextAccent -> ReadBookConfig.durConfig.setCurTextAccentColor(value)
-            ReadStyleColorKey.Title -> ReadBookConfig.titleColor = value
-            ReadStyleColorKey.TitleNight -> ReadBookConfig.titleColorNight = value
-            ReadStyleColorKey.TipHeader -> ReadBookConfig.tipHeaderColor = value
-            ReadStyleColorKey.TipHeaderNight -> ReadBookConfig.tipHeaderColorNight = value
-            ReadStyleColorKey.TipFooter -> ReadBookConfig.tipFooterColor = value
-            ReadStyleColorKey.TipFooterNight -> ReadBookConfig.tipFooterColorNight = value
-            ReadStyleColorKey.TipDivider -> ReadBookConfig.tipDividerColor = value
+            ReadStyleColorKey.Title -> config.titleColor = value
+            ReadStyleColorKey.TitleNight -> config.titleColorNight = value
+            ReadStyleColorKey.TipHeader -> config.tipHeaderColor = value
+            ReadStyleColorKey.TipHeaderNight -> config.tipHeaderColorNight = value
+            ReadStyleColorKey.TipFooter -> config.tipFooterColor = value
+            ReadStyleColorKey.TipFooterNight -> config.tipFooterColorNight = value
+            ReadStyleColorKey.TipDivider -> config.tipDividerColor = value
             ReadStyleColorKey.Shadow -> ReadBookConfig.durConfig.setCurShadColor(value)
             ReadStyleColorKey.Underline -> ReadBookConfig.durConfig.setUnderlineColor(value)
         }
