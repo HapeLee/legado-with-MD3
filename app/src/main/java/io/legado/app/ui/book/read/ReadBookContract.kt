@@ -17,7 +17,6 @@ import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
@@ -760,9 +759,8 @@ sealed interface ReadBookEffect {
     data object UpAloudState : ReadBookEffect
     data object UpSeekBar : ReadBookEffect
     data object UpMenuView : ReadBookEffect
-    data object PageChanged : ReadBookEffect
-    data object ContentLoadFinish : ReadBookEffect
-    data class LayoutPageCompleted(val index: Int, val page: TextPage) : ReadBookEffect
+    // R2.3：PageChanged / ContentLoadFinish / LayoutPageCompleted 已内联进
+    // ReadBookController 的渲染回调——它们只在 controller 内部自产自销，不是 VM 的对外协议。
     data object RefreshBookContent : ReadBookEffect
 
     // Menu / UI actions

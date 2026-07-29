@@ -89,6 +89,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReaderSession
+import io.legado.app.model.ReaderSessionEvent
 import io.legado.app.model.ReadSessionState
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.activeReadAloudProgress
@@ -188,7 +189,7 @@ class ReadBookViewModel(
     private val bookmarkRepository: BookmarkRepository,
     private val bookRepository: BookRepository,
     private val readerSession: ReaderSession,
-) : BaseViewModel(application), ReadBook.CallBack {
+) : BaseViewModel(application) {
 
     // --- MVI State ---
 
@@ -396,7 +397,11 @@ class ReadBookViewModel(
     }
 
     init {
-        ReadBook.register(this)
+        // 订阅必须早于 attach()：会话事件用 tryEmit 投递，没有订阅者会被丢弃。
+        // viewModelScope 是 Main.immediate，VM 在主线程构造，故 launch 会同步跑到
+        // collect 的挂起点——本行返回时订阅者已注册。
+        collectReaderSessionEvents()
+        readerSession.attach()
         refreshButtonConfigs()
         collectReadPreferences()
         collectEyeProtectionSettings()
@@ -447,6 +452,37 @@ class ReadBookViewModel(
         viewModelScope.launch {
             readerSession.state.collect {
                 _uiState.update { state -> syncFromReadBook(state) }
+            }
+        }
+    }
+
+    /**
+     * 消费 [ReaderSession.events]（R2.3）：遗留 [ReadBook.CallBack] 的四个回调。
+     *
+     * VM 不再实现 `ReadBook.CallBack`——`ReadBook.callBack` 现在指向本 VM 持有的
+     * [LegacyReaderSession]。回调体原样搬过来，只是从「在 ReadBook 的调用线程上同步执行」
+     * 变成「在主线程上晚一个派发执行」。
+     */
+    private fun collectReaderSessionEvents() {
+        viewModelScope.launch {
+            readerSession.events.collect { event ->
+                when (event) {
+                    is ReaderSessionEvent.StateInvalidated -> {
+                        _uiState.update { syncFromReadBook(it) }
+                    }
+
+                    is ReaderSessionEvent.ChapterListRequested -> loadChapterList(event.book)
+
+                    is ReaderSessionEvent.BookChanged -> {
+                        _uiState.update { syncFromReadBook(it) }
+                        if (!ReadBook.inBookshelf) {
+                            removeFromBookshelf { _effects.tryEmit(ReadBookEffect.Finish) }
+                        }
+                    }
+
+                    is ReaderSessionEvent.NewProgressAvailable ->
+                        sureNewProgress(event.progress)
+                }
             }
         }
     }
@@ -1734,30 +1770,22 @@ class ReadBookViewModel(
         }
     }
 
-    // --- ReadBook.CallBack Implementation（状态子集）---
+    // --- ReadBook 回调（已全部离开本 ViewModel）---
     //
-    // Track B2 起：渲染子集（upContent/upContentAwait/pageChanged/contentLoadFinish/
-    // upPageAnim/cancelSelect/onLayoutPageCompleted）已下沉到 UI 层渲染控制器
-    // （ReadBook.renderCallBack），不再穿过本 ViewModel。业务状态刷新改由
-    // collectReaderSession() 反应式收集 ReadBook.snapshot 驱动。
+    // Track B2：渲染子集（upContent/upContentAwait/pageChanged/contentLoadFinish/
+    // upPageAnim/cancelSelect/onLayoutPageCompleted）下沉到 UI 层渲染控制器
+    // （ReadBook.renderCallBack）。
+    // R2.3：状态子集（upMenuView/loadChapterList/notifyBookChanged/sureNewProgress）
+    // 迁入 LegacyReaderSession，本 VM 改为订阅 collectReaderSessionEvents()。
+    // 业务状态刷新另有 collectReaderSession() 反应式收集 ReadBook.snapshot 驱动。
+    // 下面两个不再是 override——除了会话事件，VM 自己也在若干处直接调用。
 
-    override fun upMenuView() {
-        _uiState.update { syncFromReadBook(it) }
-    }
-
-    override fun loadChapterList(book: Book) {
+    private fun loadChapterList(book: Book) {
         ReadBook.upMsg(context.getString(R.string.toc_updateing))
         doLoadChapterList(book)
     }
 
-    override fun notifyBookChanged() {
-        _uiState.update { syncFromReadBook(it) }
-        if (!ReadBook.inBookshelf) {
-            removeFromBookshelf { _effects.tryEmit(ReadBookEffect.Finish) }
-        }
-    }
-
-    override fun sureNewProgress(progress: BookProgress) {
+    private fun sureNewProgress(progress: BookProgress) {
         _uiState.update {
             it.copy(activeDialog = ReadBookDialog.ConfirmRestoreProgress(progress))
         }
@@ -3639,7 +3667,7 @@ class ReadBookViewModel(
         if (BaseReadAloudService.isRun && BaseReadAloudService.pause) {
             ReadAloud.stop(context)
         }
-        ReadBook.unregister(this)
+        readerSession.detach()
     }
 
     fun addToBookshelf(book: Book, toc: List<BookChapter>, success: (() -> Unit)? = null) {

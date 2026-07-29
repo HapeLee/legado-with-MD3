@@ -867,14 +867,27 @@ class ReadBookController(
         }
     }
 
+    // R2.3：pageChanged / contentLoadFinish / onLayoutPageCompleted 的 Effect 只有本类
+    // 自产自销（postRender → 本类 handleEffect），从不经过 ViewModel 的 _effects。
+    // 它们不属于 VM 的对外协议，故内联到渲染方法里，三个 Effect 类型随之从
+    // ReadBookEffect 删除。仍在 postRender 上的 UpContent/UpPageAnim/CancelSelect
+    // 有 VM/delegate 侧的生产者，必须留在 Effect 里。
+
     override fun pageChanged() {
-        postRender(ReadBookEffect.PageChanged)
+        handler.post {
+            this.pageChanged = true
+            refs?.readView?.onPageChange()
+            viewModel.startBackupJob()
+        }
     }
 
     override fun contentLoadFinish() {
         // isInitFinish 是纯业务/UI 标志（决定 ReadView 是否放行前后章排版），不属于渲染
         viewModel.markInitFinished()
-        postRender(ReadBookEffect.ContentLoadFinish)
+        handler.post {
+            viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
+            onStartContentLoadFinish?.invoke()
+        }
     }
 
     override fun upPageAnim(upRecorder: Boolean) {
@@ -886,7 +899,11 @@ class ReadBookController(
     }
 
     override fun onLayoutPageCompleted(index: Int, page: TextPage) {
-        postRender(ReadBookEffect.LayoutPageCompleted(index, page))
+        handler.post {
+            layoutController.publishPageLayout(index)
+            upSeekBarThrottle.invoke()
+            refs?.readView?.onLayoutPageCompleted(index, page)
+        }
     }
 
     // ── Effect handling ───────────────────────────────────────────────
@@ -992,23 +1009,6 @@ class ReadBookController(
                 ReadBook.curTextChapter = null
                 refs?.readView?.upContent()
                 ReadBook.book?.let { viewModel.refreshContentDur(it) }
-            }
-
-            is ReadBookEffect.PageChanged -> {
-                pageChanged = true
-                refs?.readView?.onPageChange()
-                viewModel.startBackupJob()
-            }
-
-            is ReadBookEffect.LayoutPageCompleted -> {
-                layoutController.publishPageLayout(effect.index)
-                upSeekBarThrottle.invoke()
-                refs?.readView?.onLayoutPageCompleted(effect.index, effect.page)
-            }
-
-            is ReadBookEffect.ContentLoadFinish -> {
-                viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
-                onStartContentLoadFinish?.invoke()
             }
 
             is ReadBookEffect.UpScreenTimeOut -> {

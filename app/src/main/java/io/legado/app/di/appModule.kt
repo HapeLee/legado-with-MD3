@@ -358,7 +358,10 @@ val appModule = module {
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     singleOf(::ReadAloudSettingsRepository)
     singleOf(::ReadAloudSessionStore)
-    single<ReaderSession> { LegacyReaderSession() }
+    // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
+    // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
+    // 发 notifyBookChanged——单例会把两个 ReadBookViewModel 的注册身份混成一个。
+    factory<ReaderSession> { LegacyReaderSession() }
     single<HttpTtsEngineGateway> { HttpTtsEngineRepository(get()) }
     single<ReadAloudSettingsGateway> { get<ReadAloudSettingsRepository>() }
     singleOf(::HttpTtsRepository)
