@@ -20,8 +20,6 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.AiArtifact
-import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
@@ -120,7 +118,6 @@ import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
-import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.fromJsonArray
@@ -138,7 +135,6 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toStringArray
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -166,8 +162,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.FileNotFoundException
-import java.util.Date
-import java.util.UUID
 import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import androidx.core.graphics.ColorUtils as AndroidColorUtils
@@ -239,6 +233,53 @@ class ReadBookViewModel(
         _uiState.update { it.copy(menuState = ReadBookMenuState()) }
     }
 
+    // --- AI 域（摘要 / 净化 / 重写 / 预设）---
+
+    private val aiHost = object : ReadAiDelegate.Host {
+        override val activeSheet: ReadBookSheet? get() = _uiState.value.activeSheet
+
+        override val chapterName: String get() = _uiState.value.chapterName
+
+        override fun setActiveSheet(sheet: ReadBookSheet?) {
+            _uiState.update { it.copy(activeSheet = sheet) }
+        }
+
+        override fun closeReadMenu() {
+            this@ReadBookViewModel.closeReadMenu()
+        }
+
+        override fun showToast(message: String) {
+            _effects.tryEmit(ReadBookEffect.ShowToast(message))
+        }
+
+        override fun reloadChapterAfterContentProcessChanged(
+            bookUrl: String,
+            chapterIndex: Int,
+        ) {
+            reloadCurrentChapterAfterContentProcessChanged(bookUrl, chapterIndex)
+        }
+
+        override fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter? =
+            appDb.bookChapterDao.getChapter(bookUrl, chapterIndex)
+
+        override fun listChapters(bookUrl: String): List<BookChapter> =
+            appDb.bookChapterDao.getChapterList(bookUrl)
+    }
+
+    private val aiDelegate = ReadAiDelegate(
+        context = context,
+        scope = viewModelScope,
+        host = aiHost,
+        generateChapterSummaryUseCase = generateChapterSummaryUseCase,
+        cleanSelectedTextUseCase = cleanSelectedTextUseCase,
+        aiTextFactoryUseCase = aiTextFactoryUseCase,
+        saveBookContentProcessUseCase = saveBookContentProcessUseCase,
+        aiArtifactGateway = aiArtifactGateway,
+        aiPromptPresetGateway = aiPromptPresetGateway,
+    )
+
+    val aiState = aiDelegate.uiState
+
     private val sysEngines: List<TextToSpeech.EngineInfo> by lazy {
         val tts = TextToSpeech(context, null)
         val engines = tts.engines
@@ -253,11 +294,6 @@ class ReadBookViewModel(
     private var pendingBooksDirReloadChapterList: Boolean = false
     private var pendingContentEditCursorOffset: Int? = null
     private var pendingContentEditAnchor: String? = null
-    private var chapterSummaryJob: Job? = null
-    private var aiTextCleanJob: Job? = null
-    private var aiTextRewriteJob: Job? = null
-    private var pendingAiTextCleanRequest: PendingAiTextCleanRequest? = null
-    private var pendingAiTextRewriteRequest: PendingAiTextRewriteRequest? = null
     private var translationStatusJob: Job? = null
     private var observedTranslationKey: TranslationChapterKey? = null
 
@@ -516,9 +552,9 @@ class ReadBookViewModel(
                 _uiState.update { it.copy(reSegment = false) }
             }
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
-            is ReadBookIntent.OpenChapterSummary -> openChapterSummary()
-            is ReadBookIntent.OpenAiCurrentChapterRewrite -> openAiCurrentChapterRewrite()
-            is ReadBookIntent.RetryChapterSummary -> retryChapterSummary()
+            is ReadBookIntent.OpenChapterSummary -> aiDelegate.openChapterSummary()
+            is ReadBookIntent.OpenAiCurrentChapterRewrite -> aiDelegate.openAiCurrentChapterRewrite()
+            is ReadBookIntent.RetryChapterSummary -> aiDelegate.retryChapterSummary()
             is ReadBookIntent.LoadContentProcesses -> loadContentProcesses()
             is ReadBookIntent.ToggleContentProcess -> toggleContentProcess(intent.id, intent.enabled)
             is ReadBookIntent.RequestDeleteContentProcess -> _uiState.update {
@@ -534,49 +570,29 @@ class ReadBookViewModel(
                     contentProcessConfig = it.contentProcessConfig.copy(deleteItem = null)
                 )
             }
-            is ReadBookIntent.SelectAiRewritePreset -> selectAiRewritePreset(intent.presetId)
-            is ReadBookIntent.SetAiRewriteTemporaryInstruction -> setAiRewriteTemporaryInstruction(
-                intent.instruction
-            )
-            is ReadBookIntent.SelectAiRewriteHistory -> selectAiRewriteHistory(intent.artifactId)
-            is ReadBookIntent.GenerateAiTextRewrite -> generateSelectedAiTextRewrite()
-            is ReadBookIntent.RetryAiTextRewrite -> retryAiTextRewrite()
-            is ReadBookIntent.ConfirmAiTextRewrite -> confirmAiTextRewrite()
-            is ReadBookIntent.OpenAiRewritePresetConfig -> openAiRewritePresetConfig()
-            is ReadBookIntent.CloseAiRewritePresetConfig -> closeAiRewritePresetConfig()
-            is ReadBookIntent.AddAiRewritePreset -> startAddAiRewritePreset()
-            is ReadBookIntent.EditAiRewritePreset -> startEditAiRewritePreset(intent.preset)
-            is ReadBookIntent.SetAiRewritePresetName -> _uiState.update {
-                it.copy(
-                    aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                        editingName = intent.name,
-                        errorMessage = null,
-                    )
-                )
-            }
-            is ReadBookIntent.SetAiRewritePresetInstruction -> _uiState.update {
-                it.copy(
-                    aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                        editingInstruction = intent.instruction,
-                        errorMessage = null,
-                    )
-                )
-            }
-            is ReadBookIntent.SaveAiRewritePreset -> saveAiRewritePreset()
-            is ReadBookIntent.CancelAiRewritePresetEdit -> clearAiRewritePresetDraft()
-            is ReadBookIntent.RequestDeleteAiRewritePreset -> _uiState.update {
-                it.copy(
-                    aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                        deletePreset = intent.preset
-                    )
-                )
-            }
-            is ReadBookIntent.ConfirmDeleteAiRewritePreset -> deleteAiRewritePreset()
-            is ReadBookIntent.DismissDeleteAiRewritePreset -> _uiState.update {
-                it.copy(
-                    aiRewritePresetConfig = it.aiRewritePresetConfig.copy(deletePreset = null)
-                )
-            }
+            is ReadBookIntent.SelectAiRewritePreset -> aiDelegate.selectAiRewritePreset(intent.presetId)
+            is ReadBookIntent.SetAiRewriteTemporaryInstruction ->
+                aiDelegate.setAiRewriteTemporaryInstruction(intent.instruction)
+            is ReadBookIntent.SelectAiRewriteHistory ->
+                aiDelegate.selectAiRewriteHistory(intent.artifactId)
+            is ReadBookIntent.GenerateAiTextRewrite -> aiDelegate.generateSelectedAiTextRewrite()
+            is ReadBookIntent.RetryAiTextRewrite -> aiDelegate.retryAiTextRewrite()
+            is ReadBookIntent.ConfirmAiTextRewrite -> aiDelegate.confirmAiTextRewrite()
+            is ReadBookIntent.OpenAiRewritePresetConfig -> aiDelegate.openAiRewritePresetConfig()
+            is ReadBookIntent.CloseAiRewritePresetConfig -> aiDelegate.closeAiRewritePresetConfig()
+            is ReadBookIntent.AddAiRewritePreset -> aiDelegate.startAddAiRewritePreset()
+            is ReadBookIntent.EditAiRewritePreset -> aiDelegate.startEditAiRewritePreset(intent.preset)
+            is ReadBookIntent.SetAiRewritePresetName ->
+                aiDelegate.setAiRewritePresetName(intent.name)
+            is ReadBookIntent.SetAiRewritePresetInstruction ->
+                aiDelegate.setAiRewritePresetInstruction(intent.instruction)
+            is ReadBookIntent.SaveAiRewritePreset -> aiDelegate.saveAiRewritePreset()
+            is ReadBookIntent.CancelAiRewritePresetEdit -> aiDelegate.clearAiRewritePresetDraft()
+            is ReadBookIntent.RequestDeleteAiRewritePreset ->
+                aiDelegate.requestDeleteAiRewritePreset(intent.preset)
+            is ReadBookIntent.ConfirmDeleteAiRewritePreset -> aiDelegate.deleteAiRewritePreset()
+            is ReadBookIntent.DismissDeleteAiRewritePreset ->
+                aiDelegate.dismissDeleteAiRewritePreset()
             is ReadBookIntent.ChangeSourceBook -> changeTo(intent.book)
             is ReadBookIntent.ChangeSource -> changeTo(intent.book, intent.toc)
             is ReadBookIntent.AddSourceAsNewBook -> addToBookshelf(intent.book, intent.toc)
@@ -636,39 +652,15 @@ class ReadBookViewModel(
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                     loadContentProcesses()
                 } else if (intent.sheet is ReadBookSheet.AiRewritePresetConfig) {
-                    openAiRewritePresetConfig()
+                    aiDelegate.openAiRewritePresetConfig()
                 } else {
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 }
             }
             is ReadBookIntent.DismissSheet -> {
-                when (_uiState.value.activeSheet) {
-                    is ReadBookSheet.ChapterSummary -> chapterSummaryJob?.cancel()
-                    is ReadBookSheet.AiTextClean -> {
-                        aiTextCleanJob?.cancel()
-                        pendingAiTextCleanRequest = null
-                    }
-                    else -> Unit
-                }
+                aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
                 _uiState.update {
-                    if (it.activeSheet is ReadBookSheet.ChapterSummary) {
-                        it.copy(
-                            activeSheet = null,
-                            chapterSummary = ChapterSummaryUiState(),
-                        )
-                    } else if (it.activeSheet is ReadBookSheet.AiTextClean) {
-                        it.copy(
-                            activeSheet = null,
-                            aiTextClean = AiTextCleanUiState(),
-                        )
-                    } else if (it.activeSheet is ReadBookSheet.AiTextRewrite) {
-                        it.copy(activeSheet = null)
-                    } else if (it.activeSheet is ReadBookSheet.AiRewritePresetConfig) {
-                        it.copy(
-                            activeSheet = null,
-                            aiRewritePresetConfig = AiRewritePresetConfigUiState(),
-                        )
-                    } else if (it.activeSheet is ReadBookSheet.ContentEdit) {
+                    if (it.activeSheet is ReadBookSheet.ContentEdit) {
                         it.copy(
                             activeSheet = null,
                             contentEditText = "",
@@ -1642,18 +1634,18 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.OpenAiTextClean -> {
-                openAiTextClean(
+                aiDelegate.openAiTextClean(
                     text = intent.text,
                     chapterIndex = intent.chapterIndex,
                     chapterPosition = intent.chapterPosition,
                 )
             }
 
-            is ReadBookIntent.RetryAiTextClean -> retryAiTextClean()
-            is ReadBookIntent.ConfirmAiTextClean -> confirmAiTextClean()
+            is ReadBookIntent.RetryAiTextClean -> aiDelegate.retryAiTextClean()
+            is ReadBookIntent.ConfirmAiTextClean -> aiDelegate.confirmAiTextClean()
 
             is ReadBookIntent.OpenAiTextRewrite -> {
-                openAiTextRewrite(
+                aiDelegate.openAiTextRewrite(
                     text = intent.text,
                     chapterIndex = intent.chapterIndex,
                     chapterPosition = intent.chapterPosition,
@@ -3209,1189 +3201,6 @@ class ReadBookViewModel(
                 BookHelp.clearCache(book)
                 ReadBook.loadContent(false)
             }
-        }
-    }
-
-    private fun openChapterSummary() {
-        val book = ReadBook.book ?: return
-        val chapterIndex = ReadBook.durChapterIndex
-        val chapterTitle = _uiState.value.chapterName
-        closeReadMenu()
-        _uiState.update {
-            it.copy(
-                activeSheet = ReadBookSheet.ChapterSummary,
-                chapterSummary = ChapterSummaryUiState(
-                    bookUrl = book.bookUrl,
-                    chapterIndex = chapterIndex,
-                    chapterTitle = chapterTitle,
-                    isLoading = true,
-                ),
-            )
-        }
-        generateChapterSummary(book.bookUrl, chapterIndex)
-    }
-
-    private fun retryChapterSummary() {
-        val summary = _uiState.value.chapterSummary
-        if (summary.bookUrl.isBlank() || summary.chapterIndex < 0) return
-        _uiState.update {
-            it.copy(
-                chapterSummary = summary.copy(
-                    isLoading = true,
-                    summary = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    errorMessage = null,
-                )
-            )
-        }
-        generateChapterSummary(summary.bookUrl, summary.chapterIndex)
-    }
-
-    private fun generateChapterSummary(bookUrl: String, chapterIndex: Int) {
-        chapterSummaryJob?.cancel()
-        chapterSummaryJob = viewModelScope.launch {
-            val book = ReadBook.book
-            if (book == null || book.bookUrl != bookUrl) {
-                updateChapterSummaryError(
-                    bookUrl,
-                    chapterIndex,
-                    context.getString(R.string.ai_chapter_changed),
-                )
-                return@launch
-            }
-            val chapter = withContext(IO) {
-                appDb.bookChapterDao.getChapter(bookUrl, chapterIndex)
-            }
-            if (chapter == null) {
-                updateChapterSummaryError(
-                    bookUrl,
-                    chapterIndex,
-                    context.getString(R.string.no_chapter),
-                )
-                return@launch
-            }
-            val content = withContext(IO) {
-                getEffectiveChapterContent(book, chapter)
-            }
-            if (content.isBlank()) {
-                updateChapterSummaryError(
-                    bookUrl,
-                    chapterIndex,
-                    context.getString(R.string.ai_chapter_content_unavailable),
-                )
-                return@launch
-            }
-            try {
-                withContext(IO) {
-                    generateChapterSummaryUseCase.start(
-                        book = book,
-                        bookChapter = chapter,
-                        contentOverride = content,
-                    )
-                }
-                generateChapterSummaryUseCase.observeTask(bookUrl, chapterIndex).collect { task ->
-                    if (!isCurrentChapterSummary(
-                            bookUrl,
-                            chapterIndex
-                        ) || task == null
-                    ) return@collect
-                    _uiState.update { state ->
-                        val summary = state.chapterSummary
-                        when (task.status) {
-                            AiArtifact.STATUS_RUNNING -> state.copy(
-                                chapterSummary = summary.copy(
-                                    isLoading = true,
-                                    summary = task.output.orEmpty(),
-                                    reasoningText = task.reasoning,
-                                    errorMessage = null,
-                                ),
-                            )
-
-                            AiArtifact.STATUS_SUCCESS -> state.copy(
-                                chapterSummary = summary.copy(
-                                    isLoading = false,
-                                    summary = task.output.orEmpty(),
-                                    reasoningText = task.reasoning,
-                                    errorMessage = null,
-                                ),
-                            )
-
-                            AiArtifact.STATUS_FAILED -> state.copy(
-                                chapterSummary = summary.copy(
-                                    isLoading = false,
-                                    errorMessage = task.errorMessage
-                                        ?: context.getString(R.string.load_failed),
-                                ),
-                            )
-
-                            else -> state
-                        }
-                    }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                updateChapterSummaryError(
-                    bookUrl,
-                    chapterIndex,
-                    aiErrorMessage(error),
-                )
-            }
-        }
-    }
-
-    private fun getEffectiveChapterContent(book: Book, chapter: BookChapter): String {
-        val sourceContent = if (book.getTranslationMode()) {
-            TranslationManager.getCachedTranslation(book, chapter)
-                ?: BookHelp.getContent(book, chapter)
-        } else {
-            BookHelp.getContent(book, chapter)
-        } ?: return ""
-        return ContentProcessor.get(book)
-            .getContent(book, chapter, sourceContent, includeTitle = false)
-            .toString()
-    }
-
-    private fun isCurrentChapterSummary(bookUrl: String, chapterIndex: Int): Boolean {
-        val state = _uiState.value
-        return state.activeSheet is ReadBookSheet.ChapterSummary &&
-                state.chapterSummary.bookUrl == bookUrl &&
-                state.chapterSummary.chapterIndex == chapterIndex
-    }
-
-    private fun updateChapterSummaryError(
-        bookUrl: String,
-        chapterIndex: Int,
-        message: String,
-    ) {
-        if (!isCurrentChapterSummary(bookUrl, chapterIndex)) return
-        _uiState.update {
-            it.copy(
-                chapterSummary = it.chapterSummary.copy(
-                    isLoading = false,
-                    errorMessage = message,
-                )
-            )
-        }
-    }
-
-    private fun openAiTextClean(
-        text: String,
-        chapterIndex: Int,
-        chapterPosition: Int,
-    ) {
-        val book = ReadBook.book ?: return
-        if (text.isBlank()) {
-            _effects.tryEmit(
-                ReadBookEffect.ShowToast(context.getString(R.string.ai_text_clean_empty_selection))
-            )
-            return
-        }
-        if (chapterIndex != ReadBook.durChapterIndex) {
-            _effects.tryEmit(
-                ReadBookEffect.ShowToast(context.getString(R.string.ai_chapter_changed))
-            )
-            return
-        }
-        val chapterTitle = _uiState.value.chapterName
-        val visibleContent = ReadBook.curTextChapter?.getContent().orEmpty()
-        val (contextBefore, contextAfter) = buildSelectionContext(
-            content = visibleContent,
-            selectedText = text,
-            approximatePosition = chapterPosition,
-        )
-        val request = PendingAiTextCleanRequest(
-            bookUrl = book.bookUrl,
-            chapterIndex = chapterIndex,
-            chapterTitle = chapterTitle,
-            chapterPosition = chapterPosition,
-            originalText = text,
-            contextBefore = contextBefore,
-            contextAfter = contextAfter,
-        )
-        pendingAiTextCleanRequest = request
-        closeReadMenu()
-        _uiState.update {
-            it.copy(
-                activeSheet = ReadBookSheet.AiTextClean,
-                aiTextClean = AiTextCleanUiState(
-                    bookUrl = request.bookUrl,
-                    chapterIndex = request.chapterIndex,
-                    chapterTitle = request.chapterTitle,
-                    isLoading = true,
-                    originalText = request.originalText,
-                ),
-            )
-        }
-        generateAiTextClean(request)
-    }
-
-    private fun retryAiTextClean() {
-        val request = pendingAiTextCleanRequest ?: return
-        _uiState.update {
-            it.copy(
-                aiTextClean = it.aiTextClean.copy(
-                    isLoading = true,
-                    replacementText = "",
-                    streamingText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    errorMessage = null,
-                )
-            )
-        }
-        generateAiTextClean(request)
-    }
-
-    private fun generateAiTextClean(request: PendingAiTextCleanRequest) {
-        aiTextCleanJob?.cancel()
-        aiTextCleanJob = viewModelScope.launch {
-            try {
-                val taskId = withContext(IO) {
-                    cleanSelectedTextUseCase.start(
-                        bookUrl = request.bookUrl,
-                        chapterIndex = request.chapterIndex,
-                        chapterTitle = request.chapterTitle,
-                        selectedText = request.originalText,
-                        contextBefore = request.contextBefore,
-                        contextAfter = request.contextAfter,
-                    )
-                }
-                cleanSelectedTextUseCase.observeTaskById(taskId).collect { task ->
-                    val snapshot = task ?: return@collect
-                    if (!isCurrentAiTextClean(request)) return@collect
-                    val clean = _uiState.value.aiTextClean
-                    when (snapshot.status) {
-                        AiArtifact.STATUS_RUNNING -> _uiState.update {
-                            it.copy(
-                                aiTextClean = clean.copy(
-                                    isLoading = true,
-                                    streamingText = snapshot.output.orEmpty(),
-                                    reasoningText = snapshot.reasoning,
-                                    errorMessage = null,
-                                )
-                            )
-                        }
-
-                        AiArtifact.STATUS_SUCCESS -> _uiState.update {
-                            it.copy(
-                                aiTextClean = clean.copy(
-                                    isLoading = false,
-                                    replacementText = snapshot.output.orEmpty(),
-                                    streamingText = "",
-                                    reasoningText = snapshot.reasoning,
-                                    errorMessage = null,
-                                )
-                            )
-                        }
-
-                        AiArtifact.STATUS_FAILED -> _uiState.update {
-                            it.copy(
-                                aiTextClean = clean.copy(
-                                    isLoading = false,
-                                    errorMessage = snapshot.errorMessage
-                                        ?: context.getString(R.string.load_failed),
-                                )
-                            )
-                        }
-
-                        else -> Unit
-                    }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                if (isCurrentAiTextClean(request)) {
-                    _uiState.update {
-                        it.copy(
-                            aiTextClean = it.aiTextClean.copy(
-                                isLoading = false,
-                                errorMessage = aiErrorMessage(error),
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private fun confirmAiTextClean() {
-        val cleanState = _uiState.value.aiTextClean
-        val book = ReadBook.book ?: return
-        if (cleanState.isLoading || cleanState.isApplying || cleanState.errorMessage != null) return
-        if (book.bookUrl != cleanState.bookUrl ||
-            ReadBook.durChapterIndex != cleanState.chapterIndex
-        ) {
-            _uiState.update {
-                it.copy(
-                    aiTextClean = it.aiTextClean.copy(
-                        errorMessage = context.getString(R.string.ai_chapter_changed)
-                    )
-                )
-            }
-            return
-        }
-        val pattern = normalizeAiReplacementText(cleanState.originalText)
-        val replacement = normalizeAiReplacementText(cleanState.replacementText)
-        if (pattern.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    aiTextClean = it.aiTextClean.copy(
-                        errorMessage = context.getString(R.string.ai_text_clean_empty_selection)
-                    )
-                )
-            }
-            return
-        }
-        if (pattern == replacement) {
-            _uiState.update {
-                it.copy(
-                    aiTextClean = it.aiTextClean.copy(
-                        errorMessage = context.getString(R.string.ai_text_clean_no_change)
-                    )
-                )
-            }
-            return
-        }
-
-        _uiState.update {
-            it.copy(aiTextClean = it.aiTextClean.copy(isApplying = true))
-        }
-        viewModelScope.launch {
-            try {
-                saveBookContentProcessUseCase.saveReplacement(
-                    bookUrl = cleanState.bookUrl,
-                    chapterIndex = cleanState.chapterIndex,
-                    chapterPosition = pendingAiTextCleanRequest?.chapterPosition ?: 0,
-                    selectedText = pattern,
-                    contextBefore = pendingAiTextCleanRequest?.contextBefore.orEmpty(),
-                    contextAfter = pendingAiTextCleanRequest?.contextAfter.orEmpty(),
-                    replacementText = replacement,
-                ).getOrThrow()
-                reloadCurrentChapterAfterContentProcessChanged(
-                    bookUrl = cleanState.bookUrl,
-                    chapterIndex = cleanState.chapterIndex,
-                )
-                pendingAiTextCleanRequest = null
-                _uiState.update {
-                    it.copy(
-                        activeSheet = null,
-                        aiTextClean = AiTextCleanUiState(),
-                    )
-                }
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(
-                        context.getString(R.string.ai_text_clean_rule_created)
-                    )
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                _uiState.update {
-                    it.copy(
-                        aiTextClean = it.aiTextClean.copy(
-                            isApplying = false,
-                            errorMessage = error.localizedMessage
-                                ?: context.getString(R.string.error),
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun openAiCurrentChapterRewrite() {
-        val book = ReadBook.book ?: return
-        val chapter = ReadBook.curTextChapter?.chapter ?: return
-        viewModelScope.launch {
-            val text = withContext(IO) {
-                getEffectiveChapterContent(book, chapter).trim()
-            }
-            if (text.isBlank()) {
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(context.getString(R.string.ai_chapter_content_unavailable))
-                )
-                return@launch
-            }
-            openAiTextRewrite(
-                text = text,
-                chapterIndex = ReadBook.durChapterIndex,
-                chapterPosition = 0,
-            )
-        }
-    }
-
-    private fun openAiTextRewrite(
-        text: String,
-        chapterIndex: Int,
-        chapterPosition: Int,
-    ) {
-        val book = ReadBook.book ?: return
-        val chapterTitle = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex)?.title
-            ?: _uiState.value.chapterName
-        val visibleContent = ReadBook.curTextChapter?.getContent().orEmpty()
-        val (contextBefore, contextAfter) = buildSelectionContext(
-            content = visibleContent,
-            selectedText = text,
-            approximatePosition = chapterPosition,
-        )
-        val presets = loadAiRewritePresets()
-        val selectedPresetId = _uiState.value.aiTextRewrite.selectedPresetId
-            .takeIf { id -> presets.any { it.id == id } }
-            ?: presets.firstOrNull()?.id.orEmpty()
-        val request = PendingAiTextRewriteRequest(
-            bookUrl = book.bookUrl,
-            chapterIndex = chapterIndex,
-            chapterTitle = chapterTitle,
-            chapterPosition = chapterPosition,
-            originalText = text,
-            sourceContentHash = buildAiRewriteSourceContentHash(text),
-            contextBefore = contextBefore,
-            contextAfter = contextAfter,
-        )
-        pendingAiTextRewriteRequest = request
-        closeReadMenu()
-        val currentRewriteState = _uiState.value.aiTextRewrite
-        val isSameRewriteTarget = currentRewriteState.bookUrl == request.bookUrl &&
-                currentRewriteState.chapterIndex == request.chapterIndex &&
-                currentRewriteState.originalText == request.originalText
-        if (!isSameRewriteTarget) {
-            aiTextRewriteJob?.cancel()
-        }
-        _uiState.update {
-            it.copy(
-                activeSheet = ReadBookSheet.AiTextRewrite,
-                aiTextRewrite = if (isSameRewriteTarget) {
-                    it.aiTextRewrite.copy(
-                        chapterTitle = request.chapterTitle,
-                        selectedPresetId = selectedPresetId,
-                        presets = presets.toImmutableList(),
-                    )
-                } else {
-                    AiTextRewriteUiState(
-                        bookUrl = request.bookUrl,
-                        chapterIndex = request.chapterIndex,
-                        chapterTitle = request.chapterTitle,
-                        originalText = request.originalText,
-                        selectedPresetId = selectedPresetId,
-                        presets = presets.toImmutableList(),
-                    )
-                },
-            )
-        }
-        loadAiRewriteHistory(request, selectLatest = !isSameRewriteTarget)
-    }
-
-    private fun selectAiRewritePreset(presetId: String) {
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    selectedPresetId = presetId,
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun setAiRewriteTemporaryInstruction(instruction: String) {
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    temporaryInstruction = instruction,
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun selectAiRewriteHistory(artifactId: String) {
-        val historyItem = _uiState.value.aiTextRewrite.history
-            .firstOrNull { it.artifactId == artifactId }
-            ?: return
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    rewrittenText = historyItem.text,
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun loadAiRewriteHistory(
-        request: PendingAiTextRewriteRequest,
-        selectLatest: Boolean,
-    ) {
-        viewModelScope.launch {
-            val history = withContext(IO) {
-                aiArtifactGateway.getArtifactsByContentHash(
-                    bookUrl = request.bookUrl,
-                    chapterIndex = request.chapterIndex,
-                    taskType = AiTaskType.REWRITE_TEXT,
-                    contentHash = request.sourceContentHash,
-                ).mapNotNull { artifact ->
-                    val text = artifact.output?.takeIf { it.isNotBlank() }
-                        ?: return@mapNotNull null
-                    AiRewriteHistoryUi(
-                        artifactId = artifact.id,
-                        text = text,
-                        timeText = formatAiRewriteHistoryTime(artifact.updatedAt),
-                    )
-                }
-            }
-            val latest = history.firstOrNull()
-            _uiState.update { state ->
-                if (
-                    state.aiTextRewrite.bookUrl != request.bookUrl ||
-                    state.aiTextRewrite.chapterIndex != request.chapterIndex ||
-                    state.aiTextRewrite.originalText != request.originalText
-                ) {
-                    state
-                } else {
-                    state.copy(
-                        aiTextRewrite = state.aiTextRewrite.copy(
-                            history = history.toImmutableList(),
-                            rewrittenText = if (
-                                selectLatest &&
-                                !state.aiTextRewrite.isLoading &&
-                                state.aiTextRewrite.rewrittenText.isBlank() &&
-                                latest != null
-                            ) {
-                                latest.text
-                            } else {
-                                state.aiTextRewrite.rewrittenText
-                            },
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun formatAiRewriteHistoryTime(timestamp: Long): String {
-        val date = Date(timestamp)
-        val dateText = android.text.format.DateFormat.getDateFormat(context).format(date)
-        val timeText = android.text.format.DateFormat.getTimeFormat(context).format(date)
-        return "$dateText $timeText"
-    }
-
-    private fun buildAiRewriteSourceContentHash(text: String): String {
-        return MD5Utils.md5Encode(normalizeAiReplacementText(text))
-    }
-
-    private fun generateSelectedAiTextRewrite() {
-        val state = _uiState.value.aiTextRewrite
-        val preset = state.presets.firstOrNull { it.id == state.selectedPresetId }
-        if (preset == null) {
-            _uiState.update {
-                it.copy(
-                    aiTextRewrite = it.aiTextRewrite.copy(
-                        errorMessage = context.getString(R.string.ai_rewrite_no_preset)
-                    )
-                )
-            }
-            return
-        }
-        val request = pendingAiTextRewriteRequest ?: return
-        generateAiTextRewrite(
-            request = request,
-            preset = preset,
-            temporaryInstruction = state.temporaryInstruction,
-        )
-    }
-
-    private fun retryAiTextRewrite() {
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    isLoading = false,
-                    rewrittenText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    referenceCount = 0,
-                    errorMessage = null,
-                )
-            )
-        }
-        generateSelectedAiTextRewrite()
-    }
-
-    private fun generateAiTextRewrite(
-        request: PendingAiTextRewriteRequest,
-        preset: AiRewritePresetUi,
-        temporaryInstruction: String,
-    ) {
-        aiTextRewriteJob?.cancel()
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    isLoading = true,
-                    rewrittenText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    referenceCount = 0,
-                    errorMessage = null,
-                )
-            )
-        }
-        aiTextRewriteJob = viewModelScope.launch {
-            try {
-                val referenceContext = buildAiRewriteReferenceContext(request)
-                val aiRequest = AiTextFactoryUseCase.Request(
-                        bookUrl = request.bookUrl,
-                        chapterIndex = request.chapterIndex,
-                        chapterTitle = request.chapterTitle,
-                        inputText = request.originalText,
-                        taskType = AiTaskType.REWRITE_TEXT,
-                        userInstruction = buildAiRewriteInstruction(
-                            preset.instruction,
-                            temporaryInstruction,
-                        ),
-                        referenceText = referenceContext.text,
-                        skipCache = true,
-                        artifactContentHash = request.sourceContentHash,
-                    )
-                val taskId = withContext(IO) { aiTextFactoryUseCase.start(aiRequest) }
-                aiTextFactoryUseCase.observeTaskById(taskId).collect { task ->
-                    val snapshot = task ?: return@collect
-                    if (!isCurrentAiTextRewrite(request)) return@collect
-                    val rewrite = _uiState.value.aiTextRewrite
-                    when (snapshot.status) {
-                        AiArtifact.STATUS_RUNNING -> _uiState.update {
-                            it.copy(
-                                aiTextRewrite = rewrite.copy(
-                                    isLoading = true,
-                                    rewrittenText = snapshot.output.orEmpty(),
-                                    reasoningText = snapshot.reasoning,
-                                    referenceCount = referenceContext.count,
-                                    errorMessage = null,
-                                )
-                            )
-                        }
-
-                        AiArtifact.STATUS_SUCCESS -> {
-                            _uiState.update {
-                                it.copy(
-                                    aiTextRewrite = rewrite.copy(
-                                        isLoading = false,
-                                        rewrittenText = snapshot.output.orEmpty(),
-                                        reasoningText = snapshot.reasoning,
-                                        referenceCount = referenceContext.count,
-                                        errorMessage = null,
-                                    )
-                                )
-                            }
-                            loadAiRewriteHistory(request, selectLatest = false)
-                        }
-
-                        AiArtifact.STATUS_FAILED -> _uiState.update {
-                            it.copy(
-                                aiTextRewrite = rewrite.copy(
-                                    isLoading = false,
-                                    errorMessage = snapshot.errorMessage
-                                        ?: context.getString(R.string.load_failed),
-                                )
-                            )
-                        }
-
-                        else -> Unit
-                    }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                if (isCurrentAiTextRewrite(request)) {
-                    _uiState.update {
-                        it.copy(
-                            aiTextRewrite = it.aiTextRewrite.copy(
-                                isLoading = false,
-                                errorMessage = aiErrorMessage(error),
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private fun confirmAiTextRewrite() {
-        val rewriteState = _uiState.value.aiTextRewrite
-        val book = ReadBook.book ?: return
-        if (rewriteState.isLoading || rewriteState.isApplying || rewriteState.errorMessage != null) return
-        if (book.bookUrl != rewriteState.bookUrl ||
-            ReadBook.durChapterIndex != rewriteState.chapterIndex
-        ) {
-            _uiState.update {
-                it.copy(
-                    aiTextRewrite = it.aiTextRewrite.copy(
-                        errorMessage = context.getString(R.string.ai_chapter_changed)
-                    )
-                )
-            }
-            return
-        }
-        val pattern = normalizeAiReplacementText(rewriteState.originalText)
-        val replacement = normalizeAiReplacementText(rewriteState.rewrittenText)
-        if (pattern.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    aiTextRewrite = it.aiTextRewrite.copy(
-                        errorMessage = context.getString(R.string.ai_text_clean_empty_selection)
-                    )
-                )
-            }
-            return
-        }
-        if (replacement.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    aiTextRewrite = it.aiTextRewrite.copy(
-                        errorMessage = context.getString(R.string.ai_rewrite_empty_result)
-                    )
-                )
-            }
-            return
-        }
-        if (pattern == replacement) {
-            _uiState.update {
-                it.copy(
-                    aiTextRewrite = it.aiTextRewrite.copy(
-                        errorMessage = context.getString(R.string.ai_text_clean_no_change)
-                    )
-                )
-            }
-            return
-        }
-
-        _uiState.update {
-            it.copy(aiTextRewrite = it.aiTextRewrite.copy(isApplying = true))
-        }
-        viewModelScope.launch {
-            try {
-                saveBookContentProcessUseCase.saveReplacement(
-                    bookUrl = rewriteState.bookUrl,
-                    chapterIndex = rewriteState.chapterIndex,
-                    chapterPosition = pendingAiTextRewriteRequest?.chapterPosition ?: 0,
-                    selectedText = pattern,
-                    contextBefore = pendingAiTextRewriteRequest?.contextBefore.orEmpty(),
-                    contextAfter = pendingAiTextRewriteRequest?.contextAfter.orEmpty(),
-                    replacementText = replacement,
-                    kind = BookContentProcess.KIND_AI_REWRITE,
-                ).getOrThrow()
-                reloadCurrentChapterAfterContentProcessChanged(
-                    bookUrl = rewriteState.bookUrl,
-                    chapterIndex = rewriteState.chapterIndex,
-                )
-                pendingAiTextRewriteRequest = null
-                _uiState.update {
-                    it.copy(
-                        activeSheet = null,
-                        aiTextRewrite = AiTextRewriteUiState(),
-                    )
-                }
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(
-                        context.getString(R.string.ai_text_rewrite_saved)
-                    )
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                _uiState.update {
-                    it.copy(
-                        aiTextRewrite = it.aiTextRewrite.copy(
-                            isApplying = false,
-                            errorMessage = error.localizedMessage
-                                ?: context.getString(R.string.error),
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun openAiRewritePresetConfig() {
-        val presets = loadAiRewritePresets()
-        _uiState.update {
-            it.copy(
-                activeSheet = ReadBookSheet.AiRewritePresetConfig,
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                    editing = false,
-                    presets = presets.toImmutableList(),
-                    errorMessage = null,
-                ),
-            )
-        }
-    }
-
-    private fun closeAiRewritePresetConfig() {
-        val nextSheet = if (pendingAiTextRewriteRequest != null) {
-            ReadBookSheet.AiTextRewrite
-        } else {
-            null
-        }
-        _uiState.update {
-            it.copy(
-                activeSheet = nextSheet,
-                aiRewritePresetConfig = AiRewritePresetConfigUiState(),
-            )
-        }
-    }
-
-    private fun startAddAiRewritePreset() {
-        _uiState.update {
-            it.copy(
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                    editing = true,
-                    editingPresetId = null,
-                    editingName = "",
-                    editingInstruction = "",
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun startEditAiRewritePreset(preset: AiRewritePresetUi) {
-        _uiState.update {
-            it.copy(
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                    editing = true,
-                    editingPresetId = preset.id,
-                    editingName = preset.name,
-                    editingInstruction = preset.instruction,
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun saveAiRewritePreset() {
-        val config = _uiState.value.aiRewritePresetConfig
-        val name = config.editingName.trim()
-        val instruction = config.editingInstruction.trim()
-        if (name.isBlank() || instruction.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                        errorMessage = context.getString(R.string.ai_rewrite_preset_empty)
-                    )
-                )
-            }
-            return
-        }
-        val editingId = config.editingPresetId
-        val savedPresets = if (editingId == null) {
-            config.presets + AiRewritePresetUi(
-                id = UUID.randomUUID().toString(),
-                name = name,
-                instruction = instruction,
-            )
-        } else {
-            config.presets.map { preset ->
-                if (preset.id == editingId) {
-                    preset.copy(name = name, instruction = instruction)
-                } else {
-                    preset
-                }
-            }
-        }
-        saveAiRewritePresets(savedPresets)
-        syncAiRewritePresets(savedPresets)
-        clearAiRewritePresetDraft()
-    }
-
-    private fun clearAiRewritePresetDraft() {
-        _uiState.update {
-            it.copy(
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                    editing = false,
-                    editingPresetId = null,
-                    editingName = "",
-                    editingInstruction = "",
-                    errorMessage = null,
-                )
-            )
-        }
-    }
-
-    private fun deleteAiRewritePreset() {
-        val deletePreset = _uiState.value.aiRewritePresetConfig.deletePreset ?: return
-        val savedPresets = _uiState.value.aiRewritePresetConfig.presets
-            .filterNot { it.id == deletePreset.id }
-        aiPromptPresetGateway.deletePresetSync(deletePreset.id)
-        syncAiRewritePresets(savedPresets)
-        _uiState.update {
-            it.copy(
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(deletePreset = null)
-            )
-        }
-    }
-
-    private fun syncAiRewritePresets(presets: List<AiRewritePresetUi>) {
-        val selected = _uiState.value.aiTextRewrite.selectedPresetId
-            .takeIf { id -> presets.any { it.id == id } }
-            ?: presets.firstOrNull()?.id.orEmpty()
-        _uiState.update {
-            it.copy(
-                aiTextRewrite = it.aiTextRewrite.copy(
-                    presets = presets.toImmutableList(),
-                    selectedPresetId = selected,
-                    rewrittenText = "",
-                    reasoningText = "",
-                    thinkingDuration = 0,
-                    referenceCount = 0,
-                    errorMessage = null,
-                ),
-                aiRewritePresetConfig = it.aiRewritePresetConfig.copy(
-                    presets = presets.toImmutableList(),
-                ),
-            )
-        }
-    }
-
-    private fun loadAiRewritePresets(): List<AiRewritePresetUi> {
-        if (aiPromptPresetGateway.countByTaskTypeSync(AiTaskType.REWRITE_TEXT) == 0) {
-            aiPromptPresetGateway.savePresetsSync(
-                defaultAiRewritePresets().mapIndexed { index, preset ->
-                    preset.toAiPromptPreset(index)
-                }
-            )
-        }
-        return aiPromptPresetGateway.getEnabledByTaskType(AiTaskType.REWRITE_TEXT)
-            .map { it.toAiRewritePresetUi() }
-    }
-
-    private fun saveAiRewritePresets(presets: List<AiRewritePresetUi>) {
-        aiPromptPresetGateway.savePresetsSync(
-            presets.mapIndexed { index, preset ->
-                preset.toAiPromptPreset(index)
-            }
-        )
-    }
-
-    private fun defaultAiRewritePresets(): List<AiRewritePresetUi> {
-        return listOf(
-            AiRewritePresetUi(
-                id = "default_polish",
-                name = context.getString(R.string.ai_rewrite_preset_polish_name),
-                instruction = context.getString(R.string.ai_rewrite_preset_polish_instruction),
-            ),
-            AiRewritePresetUi(
-                id = "default_concise",
-                name = context.getString(R.string.ai_rewrite_preset_concise_name),
-                instruction = context.getString(R.string.ai_rewrite_preset_concise_instruction),
-            ),
-            AiRewritePresetUi(
-                id = "default_dialogue",
-                name = context.getString(R.string.ai_rewrite_preset_dialogue_name),
-                instruction = context.getString(R.string.ai_rewrite_preset_dialogue_instruction),
-            ),
-        )
-    }
-
-    private fun AiRewritePresetUi.toAiPromptPreset(sortNumber: Int): AiPromptPreset {
-        val now = System.currentTimeMillis()
-        return AiPromptPreset(
-            id = id,
-            taskType = AiTaskType.REWRITE_TEXT,
-            name = name,
-            instruction = instruction,
-            builtIn = id.startsWith("default_"),
-            sortNumber = sortNumber,
-            createdAt = now,
-            updatedAt = now,
-        )
-    }
-
-    private fun AiPromptPreset.toAiRewritePresetUi(): AiRewritePresetUi {
-        return AiRewritePresetUi(
-            id = id,
-            name = name,
-            instruction = instruction,
-        )
-    }
-
-    private fun buildAiRewriteInstruction(
-        presetInstruction: String,
-        temporaryInstruction: String,
-    ): String {
-        val temporary = temporaryInstruction.trim()
-        if (temporary.isBlank()) return presetInstruction
-        return buildString {
-            append(presetInstruction)
-            append("\n\nTemporary instruction for this rewrite only:\n")
-            append(temporary)
-        }
-    }
-
-    private suspend fun buildAiRewriteReferenceContext(
-        request: PendingAiTextRewriteRequest,
-    ): AiRewriteReferenceContext = withContext(IO) {
-        val book = ReadBook.book
-            ?.takeIf { it.bookUrl == request.bookUrl }
-            ?: return@withContext AiRewriteReferenceContext()
-        val terms = extractAiRewriteReferenceTerms(request.originalText)
-        if (terms.isEmpty()) return@withContext AiRewriteReferenceContext()
-
-        val chapters = appDb.bookChapterDao.getChapterList(request.bookUrl)
-            .asSequence()
-            .filter { it.index != request.chapterIndex }
-            .sortedWith(
-                compareBy<BookChapter> { kotlin.math.abs(it.index - request.chapterIndex) }
-                    .thenBy { it.index }
-            )
-            .take(AI_REWRITE_REFERENCE_SCAN_CHAPTERS)
-            .toList()
-
-        val excerpts = mutableListOf<String>()
-        for (chapter in chapters) {
-            coroutineContext.ensureActive()
-            val content = BookHelp.getContent(book, chapter) ?: continue
-            val term = terms.firstOrNull { term ->
-                chapter.title.contains(term) || content.contains(term)
-            } ?: continue
-            val excerpt = extractAiRewriteReferenceExcerpt(content, term)
-            if (excerpt.isBlank()) continue
-            excerpts += buildString {
-                append("Chapter ")
-                append(chapter.index + 1)
-                if (chapter.title.isNotBlank()) {
-                    append(": ")
-                    append(chapter.title)
-                }
-                append("\nKeyword: ")
-                append(term)
-                append("\n")
-                append(excerpt)
-            }
-            if (excerpts.size >= AI_REWRITE_REFERENCE_MAX_EXCERPTS) break
-        }
-
-        if (excerpts.isEmpty()) {
-            AiRewriteReferenceContext()
-        } else {
-            AiRewriteReferenceContext(
-                text = excerpts.joinToString("\n\n---\n\n"),
-                count = excerpts.size,
-            )
-        }
-    }
-
-    private fun extractAiRewriteReferenceTerms(text: String): List<String> {
-        val stopWords = setOf(
-            "自己", "他们", "她们", "你们", "我们", "这个", "那个", "什么", "只是", "没有",
-            "不是", "已经", "知道", "起来", "一下", "心里", "眼前", "声音", "时候", "突然",
-            "微微", "终于", "如果", "因为", "所以", "但是", "然后", "似乎", "仿佛", "开始",
-        )
-        val counts = linkedMapOf<String, Int>()
-        fun addTerm(term: String) {
-            val normalized = term.trim()
-            if (normalized.length < 2 || normalized in stopWords) return
-            counts[normalized] = (counts[normalized] ?: 0) + 1
-        }
-
-        Regex("""([\u4e00-\u9fa5]{2,4})(?:说|问|道|喊|叫|笑|答|叹|想|看|望|皱眉|点头|摇头)""")
-            .findAll(text)
-            .forEach { match -> addTerm(match.groupValues[1]) }
-        Regex("""\b[A-Z][A-Za-z]{2,}\b""")
-            .findAll(text)
-            .forEach { match -> addTerm(match.value) }
-
-        return counts.entries
-            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-            .map { it.key }
-            .take(6)
-    }
-
-    private fun extractAiRewriteReferenceExcerpt(content: String, term: String): String {
-        val paragraphs = content.lines()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-        val paragraphIndex = paragraphs.indexOfFirst { it.contains(term) }
-        if (paragraphIndex >= 0) {
-            val start = (paragraphIndex - 1).coerceAtLeast(0)
-            val end = (paragraphIndex + 2).coerceAtMost(paragraphs.size)
-            return trimAiRewriteReferenceExcerpt(
-                paragraphs.subList(start, end).joinToString("\n"),
-                term,
-            )
-        }
-        return trimAiRewriteReferenceExcerpt(content, term)
-    }
-
-    private fun trimAiRewriteReferenceExcerpt(text: String, term: String): String {
-        if (text.length <= AI_REWRITE_REFERENCE_EXCERPT_CHARS) return text.trim()
-        val index = text.indexOf(term).takeIf { it >= 0 } ?: 0
-        val start = (index - AI_REWRITE_REFERENCE_EXCERPT_CHARS / 2).coerceAtLeast(0)
-        val end = (start + AI_REWRITE_REFERENCE_EXCERPT_CHARS).coerceAtMost(text.length)
-        return text.substring(start, end).trim()
-    }
-
-    private fun isCurrentAiTextClean(request: PendingAiTextCleanRequest): Boolean {
-        val state = _uiState.value
-        return state.activeSheet is ReadBookSheet.AiTextClean &&
-                state.aiTextClean.bookUrl == request.bookUrl &&
-                state.aiTextClean.chapterIndex == request.chapterIndex &&
-                state.aiTextClean.originalText == request.originalText
-    }
-
-    private fun isCurrentAiTextRewrite(request: PendingAiTextRewriteRequest): Boolean {
-        val state = _uiState.value
-        return state.aiTextRewrite.bookUrl == request.bookUrl &&
-                state.aiTextRewrite.chapterIndex == request.chapterIndex &&
-                state.aiTextRewrite.originalText == request.originalText
-    }
-
-    private fun buildSelectionContext(
-        content: String,
-        selectedText: String,
-        approximatePosition: Int,
-    ): Pair<String, String> {
-        if (content.isBlank()) return "" to ""
-        val start = findClosestOccurrence(content, selectedText, approximatePosition)
-        if (start < 0) return "" to ""
-        val end = start + selectedText.length
-        return content.substring((start - AI_TEXT_CONTEXT_CHARS).coerceAtLeast(0), start) to
-                content.substring(end, (end + AI_TEXT_CONTEXT_CHARS).coerceAtMost(content.length))
-    }
-
-    private fun findClosestOccurrence(
-        content: String,
-        selectedText: String,
-        approximatePosition: Int,
-    ): Int {
-        var match = content.indexOf(selectedText)
-        if (match < 0) return -1
-        var closest = match
-        var closestDistance = kotlin.math.abs(match - approximatePosition)
-        while (match >= 0) {
-            val distance = kotlin.math.abs(match - approximatePosition)
-            if (distance < closestDistance) {
-                closest = match
-                closestDistance = distance
-            }
-            match = content.indexOf(selectedText, match + 1)
-        }
-        return closest
-    }
-
-    private fun normalizeAiReplacementText(text: String): String {
-        val indent = ReadBookConfig.paragraphIndent
-        return text.lines()
-            .joinToString("\n") { line -> line.removePrefix(indent).trim() }
-            .trim()
-    }
-
-    private fun aiErrorMessage(error: Throwable): String {
-        return when {
-            error.message?.contains("No AI model configured", ignoreCase = true) == true ->
-                context.getString(R.string.ai_model_not_configured)
-
-            else -> error.localizedMessage ?: context.getString(R.string.error)
         }
     }
 
@@ -6648,10 +5457,6 @@ private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
 private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
 private const val TOOL_BUTTON_KEY = "tool_buttons"
-private const val AI_TEXT_CONTEXT_CHARS = 1000
-private const val AI_REWRITE_REFERENCE_SCAN_CHAPTERS = 80
-private const val AI_REWRITE_REFERENCE_MAX_EXCERPTS = 6
-private const val AI_REWRITE_REFERENCE_EXCERPT_CHARS = 600
 private val DEFAULT_ENABLED_BUTTON_IDS = setOf(
     "search",
     "auto_page",
@@ -6669,32 +5474,6 @@ private data class SearchTextPoint(
     val pageIndex: Int,
     val lineIndex: Int,
     val charIndex: Int,
-)
-
-private data class PendingAiTextCleanRequest(
-    val bookUrl: String,
-    val chapterIndex: Int,
-    val chapterTitle: String,
-    val chapterPosition: Int,
-    val originalText: String,
-    val contextBefore: String,
-    val contextAfter: String,
-)
-
-private data class PendingAiTextRewriteRequest(
-    val bookUrl: String,
-    val chapterIndex: Int,
-    val chapterTitle: String,
-    val chapterPosition: Int,
-    val originalText: String,
-    val sourceContentHash: String,
-    val contextBefore: String,
-    val contextAfter: String,
-)
-
-private data class AiRewriteReferenceContext(
-    val text: String = "",
-    val count: Int = 0,
 )
 
 private fun Int.coerceSearchResultIndex(resultSize: Int): Int {

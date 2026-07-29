@@ -134,6 +134,7 @@ fun ReadBookRouteScreen(
     onOpenTtsCache: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val aiState by viewModel.aiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -615,6 +616,7 @@ fun ReadBookRouteScreen(
             }
             ReadBookScreen(
                 state = state,
+                aiState = aiState,
                 preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },

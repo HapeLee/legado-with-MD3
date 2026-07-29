@@ -192,77 +192,6 @@ data class ReadSheetConfigUiState(
 )
 
 @Stable
-data class ChapterSummaryUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val summary: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiTextCleanUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val isApplying: Boolean = false,
-    val originalText: String = "",
-    val replacementText: String = "",
-    val streamingText: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiRewritePresetUi(
-    val id: String,
-    val name: String,
-    val instruction: String,
-)
-
-@Stable
-data class AiRewriteHistoryUi(
-    val artifactId: String,
-    val text: String,
-    val timeText: String,
-)
-
-@Stable
-data class AiTextRewriteUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val isApplying: Boolean = false,
-    val originalText: String = "",
-    val rewrittenText: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val selectedPresetId: String = "",
-    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
-    val temporaryInstruction: String = "",
-    val history: ImmutableList<AiRewriteHistoryUi> = persistentListOf(),
-    val referenceCount: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiRewritePresetConfigUiState(
-    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
-    val editing: Boolean = false,
-    val editingPresetId: String? = null,
-    val editingName: String = "",
-    val editingInstruction: String = "",
-    val deletePreset: AiRewritePresetUi? = null,
-    val errorMessage: String? = null,
-)
-
-@Stable
 data class ReadBookUiState(
     val book: Book? = null,
     val bookSource: BookSource? = null,
@@ -363,10 +292,7 @@ data class ReadBookUiState(
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
     val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
     val contentProcessConfig: ContentProcessConfigUiState = ContentProcessConfigUiState(),
-    val chapterSummary: ChapterSummaryUiState = ChapterSummaryUiState(),
-    val aiTextClean: AiTextCleanUiState = AiTextCleanUiState(),
-    val aiTextRewrite: AiTextRewriteUiState = AiTextRewriteUiState(),
-    val aiRewritePresetConfig: AiRewritePresetConfigUiState = AiRewritePresetConfigUiState(),
+    // AI 域状态见 ReadAiUiState —— 由 ReadAiDelegate 独立持有
     val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
 ) {
     val menuVisible: Boolean
