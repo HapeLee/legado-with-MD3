@@ -10,9 +10,6 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ReadStyleGateway
-import io.legado.app.domain.gateway.ReadStyleMutation
-import io.legado.app.domain.gateway.ReadStyleStringKey
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ReadSessionState
@@ -30,7 +27,6 @@ import java.io.InputStream
 @Keep
 object ReadBookConfig {
     private lateinit var readStyleRepository: ReadStyleRepository
-    private lateinit var readStyleGateway: ReadStyleGateway
     private lateinit var readSettingsGateway: ReadSettingsGateway
     private val readSettings get() = readSettingsGateway.currentSettings
 
@@ -42,10 +38,6 @@ object ReadBookConfig {
         this.readSettingsGateway = readSettingsGateway
         initConfigs()
         initShareConfig()
-    }
-
-    internal fun attachGateway(readStyleGateway: ReadStyleGateway) {
-        this.readStyleGateway = readStyleGateway
     }
 
     // region Tip position constants
@@ -146,13 +138,6 @@ object ReadBookConfig {
                 readStyleRepository.save(configList, shareConfig)
             }
         }
-    }
-
-    fun clearMissingTextFont() {
-        readStyleGateway.updateCurrentStyle(
-            ReadStyleMutation.StringValue(ReadStyleStringKey.TextFont, "")
-        )
-        readStyleGateway.save()
     }
 
     fun getAllPicBgStr(): ArrayList<String> {

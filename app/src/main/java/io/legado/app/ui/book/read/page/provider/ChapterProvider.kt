@@ -14,6 +14,7 @@ import androidx.core.os.postDelayed
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookContent
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedBase
 import io.legado.app.help.config.ReadBookConfig.dottedRatio
@@ -29,6 +30,7 @@ import io.legado.app.utils.isPad
 import io.legado.app.utils.spToPx
 import io.legado.app.utils.textHeight
 import kotlinx.coroutines.CoroutineScope
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.File
 
@@ -987,7 +989,7 @@ object ChapterProvider {
                 }
             }
         }.getOrElse {
-            ReadBookConfig.clearMissingTextFont()
+            GlobalContext.get().get<ReadStyleGateway>().clearMissingTextFont()
             Typeface.SANS_SERIF
         } ?: Typeface.DEFAULT
     }

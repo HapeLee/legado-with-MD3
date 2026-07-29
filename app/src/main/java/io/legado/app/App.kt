@@ -123,7 +123,6 @@ class App : Application(), ImageLoaderFactory {
             readStyleRepository = get(),
             readSettingsGateway = get(),
         )
-        ReadBookConfig.attachGateway(get())
         if (legacyLanguage != null) {
             get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
         }

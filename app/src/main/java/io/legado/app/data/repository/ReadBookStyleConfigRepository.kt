@@ -80,6 +80,11 @@ class ReadBookStyleConfigRepository(
         publishState()
     }
 
+    override fun clearMissingTextFont() {
+        updateCurrentStyle(ReadStyleMutation.StringValue(ReadStyleStringKey.TextFont, ""))
+        save()
+    }
+
     override fun applyPreset(index: Int): Boolean {
         val preset = DefaultData.readConfigs.getOrNull(index) ?: return false
         val copy = GSON.fromJsonObject<ReadBookConfig.Config>(GSON.toJson(preset)).getOrNull()
