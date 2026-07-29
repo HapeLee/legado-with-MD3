@@ -16,7 +16,6 @@ import android.widget.FrameLayout
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadSessionState
 
 import io.legado.app.ui.book.read.page.api.DataSource

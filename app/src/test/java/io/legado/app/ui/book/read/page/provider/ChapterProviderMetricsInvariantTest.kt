@@ -84,10 +84,12 @@ class ChapterProviderMetricsInvariantTest {
 
         /**
          * 允许保留可变的成员：
-         * - `dashEffect` / `reviewPaint`：绘制期读取的 Paint 类对象，本身可变，
+         * - `dashEffect` / `reviewPaint` / `linePaint`：绘制期读取的 Paint 类对象，本身可变，
          *   放进不可变快照没有意义（根治要让排版任务持有自己的副本，属 Track D2）。
+         *   `linePaint` 原本是 `by lazy`，因此躲过了本断言，代价是改下划线粗细/字体后
+         *   永远沿用首帧那份；改成 `upStyle()` 重建后才落进这一类。
          * - `upViewSizeRunnable`：主线程去抖用的 Runnable 句柄，不跨线程。
          */
-        val ALLOWED_MUTABLE = setOf("dashEffect", "reviewPaint", "upViewSizeRunnable")
+        val ALLOWED_MUTABLE = setOf("dashEffect", "reviewPaint", "linePaint", "upViewSizeRunnable")
     }
 }

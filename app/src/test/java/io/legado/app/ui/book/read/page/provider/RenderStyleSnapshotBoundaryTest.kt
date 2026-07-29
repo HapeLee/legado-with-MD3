@@ -46,6 +46,22 @@ class RenderStyleSnapshotBoundaryTest {
     }
 
     @Test
+    fun `绘制画笔不得用 by lazy 定型`() {
+        val lazyPaints = Regex("""\bval\s+(\w*[Pp]aint)\s*:\s*\w*Paint\s+by\s+lazy""")
+            .findAll(stripComments(mainSource(CHAPTER_PROVIDER)))
+            .map { it.groupValues[1] }
+            .toList()
+
+        assertTrue(
+            "以下画笔用 by lazy 定型：${lazyPaints.joinToString()}。\n" +
+                "`by lazy` 只在首次取用时算一次，此后改字体/字号/下划线粗细都不会反映到它上面，" +
+                "而 upThemeColors() 又会就地改它的 color——于是它「颜色跟得上、其余永远是首帧那份」，" +
+                "看起来像是生效了，最难归因。画笔请和 titlePaint/contentPaint 一样由 upStyle() 重建。",
+            lazyPaints.isEmpty(),
+        )
+    }
+
+    @Test
     fun `upRenderStyle 覆盖 RenderStyle 的每个字段`() {
         assertAllFieldsAssigned(
             source = mainSource(CHAPTER_PROVIDER),
