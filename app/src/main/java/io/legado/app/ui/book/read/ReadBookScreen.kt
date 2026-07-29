@@ -67,6 +67,7 @@ import io.legado.app.model.BookCover as BookCoverModel
 fun ReadBookScreen(
     state: ReadBookUiState,
     aiState: ReadAiUiState,
+    highlightRuleState: HighlightRuleConfigUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
@@ -264,7 +265,7 @@ fun ReadBookScreen(
     )
     HighlightRuleConfigSheet(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
-        state = state.highlightRuleConfig,
+        state = highlightRuleState,
         allConfigNames = state.sheetConfig.configNames,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,

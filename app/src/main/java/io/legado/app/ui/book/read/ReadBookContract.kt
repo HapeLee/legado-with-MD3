@@ -290,7 +290,6 @@ data class ReadBookUiState(
     val sheetConfig: ReadSheetConfigUiState = ReadSheetConfigUiState(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
-    val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
     val contentProcessConfig: ContentProcessConfigUiState = ContentProcessConfigUiState(),
     // AI 域状态见 ReadAiUiState —— 由 ReadAiDelegate 独立持有
     val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
@@ -312,15 +311,6 @@ data class EyeProtectionUiState(
     val configured: Boolean
         get() = enabled || autoNight
 }
-
-@Stable
-data class HighlightRuleConfigUiState(
-    val rules: ImmutableList<HighlightRule> = persistentListOf(),
-    val editingRule: HighlightRule? = null,
-    val showNewRule: Boolean = false,
-    val deleteRule: HighlightRule? = null,
-    val importState: BaseImportUiState<HighlightRule> = BaseImportUiState.Idle,
-)
 
 @Stable
 data class ContentProcessConfigUiState(
