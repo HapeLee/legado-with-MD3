@@ -667,6 +667,8 @@
     <string name="group_manage">分组管理</string>
     <string name="group_add">新建分组</string>
     <string name="group_select">分组选择</string>
+    <string name="book_source_default_groups">默认分组</string>
+    <string name="book_source_other_groups">其他分组</string>
     <string name="group_edit">编辑分组</string>
     <string name="move_to_group">移入分组</string>
     <string name="add_group">添加分组</string>

@@ -702,6 +702,8 @@
     <string name="group_manage">Group Management</string>
     <string name="group_add">New Group</string>
     <string name="group_select">Group selection</string>
+    <string name="book_source_default_groups">Default groups</string>
+    <string name="book_source_other_groups">Other groups</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>

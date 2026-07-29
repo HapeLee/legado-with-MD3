@@ -598,6 +598,8 @@
     <string name="select_image">選擇圖片</string>
     <string name="group_manage">分組管理</string>
     <string name="group_select">分組選擇</string>
+    <string name="book_source_default_groups">預設分組</string>
+    <string name="book_source_other_groups">其他分組</string>
     <string name="group_edit">編輯分組</string>
     <string name="move_to_group">移入分組</string>
     <string name="add_group">添加分組</string>
