@@ -1584,6 +1584,12 @@
     <string name="backup_error">備份失敗</string>
     <string name="be_swiped">頁面仍可滑動</string>
     <string name="bg_fit_crop">中央裁剪</string>
+    <string name="bg_fit_nine_patch">九宮格</string>
+    <string name="nine_patch_editor">九宮格切圖</string>
+    <string name="nine_patch_split_left">左切分線</string>
+    <string name="nine_patch_split_right">右切分線</string>
+    <string name="nine_patch_split_top">上切分線</string>
+    <string name="nine_patch_split_bottom">下切分線</string>
     <string name="bg_fit_stretch">拉伸</string>
     <string name="bg_fit_tile">平鋪</string>
     <string name="bg_image_fit">背景適配</string>

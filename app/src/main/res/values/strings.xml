@@ -817,6 +817,12 @@
     <string name="bg_fit_tile">Tile</string>
     <string name="bg_fit_stretch">Stretch</string>
     <string name="bg_fit_crop">Center Crop</string>
+    <string name="bg_fit_nine_patch">9-Slice</string>
+    <string name="nine_patch_editor">9-Slice Editor</string>
+    <string name="nine_patch_split_left">Left Split</string>
+    <string name="nine_patch_split_right">Right Split</string>
+    <string name="nine_patch_split_top">Top Split</string>
+    <string name="nine_patch_split_bottom">Bottom Split</string>
     <string name="preview_effect">Preview</string>
     <string name="sample_text">Sample Text</string>
     <string name="sure_delete">Are you sure you want to delete?</string>

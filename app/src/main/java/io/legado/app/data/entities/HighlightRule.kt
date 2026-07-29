@@ -26,6 +26,12 @@ data class HighlightRule(
     var bgImageScale: Float = 1f,
     var configName: String? = null,
     var fontPath: String? = null,
+    var fontWeight: Int = 400,
+    var isItalic: Boolean = false,
+    var npLeft: Float = 0.1f,
+    var npRight: Float = 0.1f,
+    var npTop: Float = 0.1f,
+    var npBottom: Float = 0.1f,
 ) {
 
     fun styleSummary(): String {
@@ -54,6 +60,7 @@ data class HighlightRule(
                 when (bgImageFit) {
                     1 -> "背景图(拉伸)"
                     2 -> "背景图(裁剪)"
+                    3 -> "背景图(九宫格)"
                     else -> "背景图(平铺)"
                 }
             )

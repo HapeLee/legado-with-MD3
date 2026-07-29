@@ -782,6 +782,12 @@
     <string name="bg_fit_tile">平铺</string>
     <string name="bg_fit_stretch">拉伸填充</string>
     <string name="bg_fit_crop">居中裁剪</string>
+    <string name="bg_fit_nine_patch">九宫格</string>
+    <string name="nine_patch_editor">九宫格切图</string>
+    <string name="nine_patch_split_left">左切分线</string>
+    <string name="nine_patch_split_right">右切分线</string>
+    <string name="nine_patch_split_top">上切分线</string>
+    <string name="nine_patch_split_bottom">下切分线</string>
     <string name="preview_effect">预览效果</string>
     <string name="sample_text">示例文本</string>
     <string name="sure_delete">确定要删除吗？</string>

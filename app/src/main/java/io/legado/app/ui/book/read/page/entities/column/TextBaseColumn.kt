@@ -18,6 +18,12 @@ interface TextBaseColumn : BaseColumn {
     val bgImageFit: Int
     val bgImageScale: Float
     val fontPath: String
+    val fontWeight: Int
+    val isItalic: Boolean
+    val npLeft: Float
+    val npRight: Float
+    val npTop: Float
+    val npBottom: Float
     var selected: Boolean
     var isSearchResult: Boolean
 }

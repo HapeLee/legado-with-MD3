@@ -1519,6 +1519,12 @@
     <string name="bg_fit_tile">並排</string>
     <string name="bg_fit_stretch">延伸</string>
     <string name="bg_fit_crop">置中裁切</string>
+    <string name="bg_fit_nine_patch">九宮格</string>
+    <string name="nine_patch_editor">九宮格切圖</string>
+    <string name="nine_patch_split_left">左切分線</string>
+    <string name="nine_patch_split_right">右切分線</string>
+    <string name="nine_patch_split_top">上切分線</string>
+    <string name="nine_patch_split_bottom">下切分線</string>
     <string name="preview_effect">預覽</string>
     <string name="sample_text">範例文字</string>
     <string name="sure_delete">確定要刪除嗎？</string>
