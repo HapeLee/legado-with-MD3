@@ -111,6 +111,52 @@ object ChapterProvider {
      */
     internal fun layoutMetrics(): LayoutMetrics = metrics
 
+    /**
+     * 绘制期用到的排版取值快照。
+     *
+     * 这些项过去由 `TextLine` / `TextColumn` / `TextHtmlColumn` / `TextPage` 在 `draw()`
+     * 里逐个直读 [ReadBookConfig]。每次直读都要走
+     * `config → durConfig → getConfig(styleSelect)`，而 `getConfig` 是 `@Synchronized`
+     * ——等于**每行每列每帧**都去抢一次 `ReadBookConfig` 的监视器锁。收进快照后绘制路径
+     * 只剩一次 volatile 读，且一帧内的颜色/下划线参数必定同属一份配置。
+     *
+     * 由 [upRenderStyle] 重建；配置是它唯一的输入，所以只要「配置可能变了」就重建一次即可
+     * （[upStyle] / [upThemeColors] / `ReadBookController` 处理任何配置更新 effect 时）。
+     */
+    internal data class RenderStyle(
+        val textColor: Int = 0,
+        val textAccentColor: Int = 0,
+        /** 已按日夜模式解析；0 表示「未单独设置标题色，跟随正文色」。 */
+        val titleColor: Int = 0,
+        val underline: Boolean = false,
+        val dottedLine: Boolean = false,
+        val underlineExtend: Boolean = false,
+        val underlineColor: Int = 0,
+        val underlineHeight: Int = 1,
+        val underlinePadding: Int = 10,
+        val textBottomJustify: Boolean = false,
+    )
+
+    @Volatile
+    internal var renderStyle = RenderStyle()
+        private set
+
+    /** 重建 [renderStyle]。纯派生、幂等，重复调用只是多读十几个字段。 */
+    fun upRenderStyle() {
+        renderStyle = RenderStyle(
+            textColor = ReadBookConfig.textColor,
+            textAccentColor = ReadBookConfig.textAccentColor,
+            titleColor = ReadBookConfig.resolvedTitleColor,
+            underline = ReadBookConfig.underline,
+            dottedLine = ReadBookConfig.dottedLine,
+            underlineExtend = ReadBookConfig.underlineExtend,
+            underlineColor = ReadBookConfig.durConfig.curUnderlineColor(),
+            underlineHeight = ReadBookConfig.underlineHeight,
+            underlinePadding = ReadBookConfig.durConfig.underlinePadding,
+            textBottomJustify = ReadBookConfig.textBottomJustify,
+        )
+    }
+
     @JvmStatic
     val viewWidth get() = metrics.viewWidth
 
@@ -900,6 +946,7 @@ object ChapterProvider {
      * 更新样式
      */
     fun upStyle() {
+        upRenderStyle()
         val typeface = getTypeface(ReadBookConfig.textFont)
         val (titlePaint, contentPaint) = getPaints(typeface)
         dashEffect = DashPathEffect(
@@ -940,6 +987,7 @@ object ChapterProvider {
 
     /** 主题切换只更新绘制颜色，不触发字体加载或正文重排。 */
     fun upThemeColors() {
+        upRenderStyle()
         val textColor = ReadBookConfig.textColor
         titlePaint.color = textColor
         contentPaint.color = textColor

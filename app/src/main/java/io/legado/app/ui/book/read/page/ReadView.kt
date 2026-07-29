@@ -35,6 +35,7 @@ import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -672,6 +673,7 @@ class ReadView(
      */
     fun upStyle() {
         ChapterProvider.upStyle()
+        TipStyleProvider.upTipStyle()
         curPage.upStyle()
         prevPage.upStyle()
         nextPage.upStyle()
@@ -683,6 +685,7 @@ class ReadView(
      */
     fun applyThemeColors() {
         ChapterProvider.upThemeColors()
+        TipStyleProvider.upTipStyle()
         invalidateTextPage()
         ReadSessionState.updateBackground(width, height)
         curPage.apply {

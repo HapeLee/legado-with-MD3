@@ -51,6 +51,7 @@ import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginJsExtensions
@@ -993,6 +994,11 @@ class ReadBookController(
             is ReadBookEffect.Finish -> closeReadBook()
             is ReadBookEffect.UpdateReadViewConfig -> {
                 val r = refs ?: return
+                // 两份快照都是配置的纯派生，在分发具体 action 之前先重建：下划线/虚线/下划线颜色
+                // 等项的 action 集里并没有 UpdateStyle，靠 upStyle() 顺带重建会漏；而且
+                // actions 是集合，无法保证「重建」排在 InvalidateTextPage/SubmitRenderTask 之前。
+                ChapterProvider.upRenderStyle()
+                TipStyleProvider.upTipStyle()
                 effect.actions.forEach { action ->
                     when (action) {
                         ConfigUpdateAction.UpdateSystemUi -> upSystemUiVisibility()

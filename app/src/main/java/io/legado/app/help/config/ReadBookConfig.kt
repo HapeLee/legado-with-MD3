@@ -7,6 +7,7 @@ import androidx.annotation.Keep
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
+import io.legado.app.constant.ReadTipType
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.domain.gateway.ReadSettingsGateway
@@ -40,29 +41,6 @@ object ReadBookConfig {
         initShareConfig()
     }
 
-    // region Tip position constants
-    const val tipNone = 0
-    const val tipChapterTitle = 1
-    const val tipTime = 2
-    const val tipBattery = 3
-    const val tipBatteryPercentage = 10
-    const val tipPage = 4
-    const val tipTotalProgress = 5
-    const val tipPageAndTotal = 6
-    const val tipBookName = 7
-    const val tipTimeBattery = 8
-    const val tipTimeBatteryPercentage = 9
-    const val tipTotalProgress1 = 11
-    const val tipChapterTitleArrow = 12
-    const val tipBatteryInside = 13
-    const val tipBatteryIcon = 14
-    const val tipBatteryClassic = 15
-    const val tipTimeBatteryClassic = 16
-    const val tipChapterTitleArrowClassic = 17
-    const val tipCustom = 18
-    const val tipWholeBookPage = 19
-    const val tipWholeBookPageAndProgress = 20
-    // endregion
 
     const val configFileName = "readConfig.json"
     const val shareConfigFileName = "shareReadConfig.json"
@@ -769,13 +747,16 @@ object ReadBookConfig {
             config.tipDividerColor = value
         }
 
-    val tipValues = arrayOf(
-        tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
-        tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon, tipBatteryPercentage,
-        tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
-        tipTimeBatteryClassic, tipTimeBatteryPercentage, tipWholeBookPage,
-        tipWholeBookPageAndProgress, tipCustom
-    )
+    /** 与 `R.array.read_tip` 一一对应的展示顺序，故留在配置侧而不是 [ReadTipType]。 */
+    val tipValues = with(ReadTipType) {
+        arrayOf(
+            tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
+            tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon,
+            tipBatteryPercentage, tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal,
+            tipTimeBattery, tipTimeBatteryClassic, tipTimeBatteryPercentage, tipWholeBookPage,
+            tipWholeBookPageAndProgress, tipCustom
+        )
+    }
     val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
     val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
     val tipDividerColorNames get() = appCtx.resources.getStringArray(R.array.tip_divider_color).toList()
@@ -966,12 +947,12 @@ object ReadBookConfig {
         var footerPaddingTop: Int = 6,
         var showHeaderLine: Boolean = false,
         var showFooterLine: Boolean = true,
-        var tipHeaderLeft: Int = tipTime,
-        var tipHeaderMiddle: Int = tipNone,
-        var tipHeaderRight: Int = tipBattery,
-        var tipFooterLeft: Int = tipChapterTitle,
-        var tipFooterMiddle: Int = tipNone,
-        var tipFooterRight: Int = tipPageAndTotal,
+        var tipHeaderLeft: Int = ReadTipType.tipTime,
+        var tipHeaderMiddle: Int = ReadTipType.tipNone,
+        var tipHeaderRight: Int = ReadTipType.tipBattery,
+        var tipFooterLeft: Int = ReadTipType.tipChapterTitle,
+        var tipFooterMiddle: Int = ReadTipType.tipNone,
+        var tipFooterRight: Int = ReadTipType.tipPageAndTotal,
         var customTipHeaderLeft: String = "",
         var customTipHeaderMiddle: String = "",
         var customTipHeaderRight: String = "",

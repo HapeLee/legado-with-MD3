@@ -9,7 +9,6 @@ import androidx.annotation.Keep
 import androidx.core.graphics.withTranslation
 import io.legado.app.R
 import io.legado.app.help.PaintPool
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextChapter.Companion.emptyTextChapter
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
@@ -96,7 +95,7 @@ data class TextPage(
      * 底部对齐更新行位置
      */
     fun upLinesPosition() {
-        if (!ReadBookConfig.textBottomJustify) return
+        if (!ChapterProvider.renderStyle.textBottomJustify) return
         if (textLines.size <= 1) return
         if (leftLineSize == 0) {
             leftLineSize = lineSize
@@ -368,8 +367,9 @@ data class TextPage(
     }
 
     fun upRenderHeight() {
-        val underlineExtraHeight = if (ReadBookConfig.underline) {
-            (ReadBookConfig.durConfig.underlinePadding + ReadBookConfig.underlineHeight).dpToPx().toInt()
+        val renderStyle = ChapterProvider.renderStyle
+        val underlineExtraHeight = if (renderStyle.underline) {
+            (renderStyle.underlinePadding + renderStyle.underlineHeight).dpToPx().toInt()
         } else {
             0
         }

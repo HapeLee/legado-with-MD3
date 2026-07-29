@@ -5,7 +5,6 @@ import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.Keep
 import androidx.core.net.toUri
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
@@ -67,13 +66,14 @@ data class TextColumn(
         } else {
             ChapterProvider.contentPaint
         }
+        val renderStyle = ChapterProvider.renderStyle
         val drawColor = if (textLine.isReadAloud || isSearchResult) {
-            ReadBookConfig.textAccentColor
+            renderStyle.textAccentColor
         } else {
-            textColor ?: if (textLine.isTitle && ReadBookConfig.resolvedTitleColor != 0) {
-                ReadBookConfig.resolvedTitleColor
+            textColor ?: if (textLine.isTitle && renderStyle.titleColor != 0) {
+                renderStyle.titleColor
             } else {
-                ReadBookConfig.textColor
+                renderStyle.textColor
             }
         }
         val needRestoreSize = textLine.titleTextSize != null

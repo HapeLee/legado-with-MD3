@@ -4,7 +4,6 @@ import android.graphics.Canvas
 import android.os.Build
 import android.text.TextPaint
 import androidx.annotation.Keep
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
@@ -72,9 +71,10 @@ data class TextHtmlColumn(
 
     override fun draw(view: ContentTextView, canvas: Canvas) {
         val y = textLine.lineBase - textLine.lineTop
+        val renderStyle = ChapterProvider.renderStyle
         if (linkUrl != null) {
             textPaint.run {
-                color = ReadBookConfig.textAccentColor
+                color = renderStyle.textAccentColor
                 isUnderlineText = true
             }
             drawText(view, canvas, y, textPaint)
@@ -82,9 +82,9 @@ data class TextHtmlColumn(
         }
         textPaint.run {
             color = if (textLine.isReadAloud || isSearchResult) {
-                ReadBookConfig.textAccentColor
+                renderStyle.textAccentColor
             } else {
-                mTextColor ?: ReadBookConfig.textColor
+                mTextColor ?: renderStyle.textColor
             }
             isUnderlineText = false
         }
