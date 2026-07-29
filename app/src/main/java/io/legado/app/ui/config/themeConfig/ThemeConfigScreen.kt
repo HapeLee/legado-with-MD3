@@ -71,8 +71,8 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
@@ -206,12 +206,16 @@ fun ThemeConfigScreen(
                         )
 
                         if (theme.useMiuixMonet) {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.dynamic_colors),
-                                description = stringResource(R.string.dynamic_colors_summary),
-                                checked = theme.appTheme == "0",
-                                onCheckedChange = {
-                                    onIntent(ThemeConfigIntent.SetDynamicColors(it))
+                            val visibleThemes = themes.filter { (_, value) ->
+                                value != "4" || state.showEInkTheme
+                            }
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.theme),
+                                selectedValue = theme.appTheme,
+                                displayEntries = visibleThemes.map { it.first }.toTypedArray(),
+                                entryValues = visibleThemes.map { it.second }.toTypedArray(),
+                                onValueChange = { value ->
+                                    onIntent(ThemeConfigIntent.SelectTheme(value))
                                 }
                             )
                         }
@@ -219,9 +223,7 @@ fun ThemeConfigScreen(
                         ThemeModeSelector(
                             selectedMode = appShell.themeMode,
                             onModeSelected = { mode ->
-                                onIntent(
-                                    ThemeConfigIntent.SetThemeMode(mode)
-                                )
+                                onIntent(ThemeConfigIntent.SetThemeMode(mode))
                             }
                         )
                     }
@@ -1098,42 +1100,25 @@ fun ThemeModeSelector(
         .coerceAtLeast(0)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(
-            ButtonGroupDefaults.ConnectedSpaceBetween
-        )
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
         val modifiers = listOf(Modifier.weight(1.2f), Modifier.weight(1f), Modifier.weight(1f))
 
         modes.forEachIndexed { index, (value, label, icon) ->
-            val checked = selectedIndex == index
             ToggleButton(
-                checked = checked,
+                checked = selectedIndex == index,
                 onCheckedChange = { onModeSelected(value) },
-                modifier = modifiers[index]
-                    .semantics {
-                        role = Role.RadioButton
-                    },
-
+                modifier = modifiers[index].semantics { role = Role.RadioButton },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 }
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null
-                )
-
+                Icon(imageVector = icon, contentDescription = null)
                 Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
-
-                Text(
-                    text = label,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1
-                )
+                Text(text = label, overflow = TextOverflow.Ellipsis, maxLines = 1)
             }
         }
     }
