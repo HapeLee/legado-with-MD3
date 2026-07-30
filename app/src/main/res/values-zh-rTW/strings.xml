@@ -895,7 +895,7 @@
     <string name="show_unread">顯示未讀標誌</string>
     <string name="use_default_cover">總是使用預設封面</string>
     <string name="use_default_cover_s">總是顯示預設封面，不顯示網路封面</string>
-    <string name="title_font_size">字號</string>
+    <string name="font_size">字號</string>
     <string name="title_margin_top">上邊距</string>
     <string name="title_margin_bottom">下邊距</string>
     <string name="show">顯示</string>
@@ -1557,7 +1557,7 @@
     <string name="image_style_full">全螢幕</string>
     <string name="image_style_text">文字吸附</string>
     <string name="image_style_single">單頁</string>
-    <string name="title_color">標題顏色</string>
+    <string name="color">顏色</string>
     <string name="reset_to_body_color">重置為正文顏色</string>
     <string name="export_file_name_template_hint">{name} - {author}</string>
     <string name="export_file_name_template_help">可用變數：{name} 書名、{author} 作者、{group} 分組、{source} 來源、{remark} 備註。

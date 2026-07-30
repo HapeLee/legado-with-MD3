@@ -711,9 +711,6 @@ private fun ReadBookMenuSurface(
                                 onOpenUnderlineConfig = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.UnderlineConfig))
                                 },
-                                onOpenShadowSet = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ShadowSet))
-                                },
                                 onOpenFontSelect = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
                                 },

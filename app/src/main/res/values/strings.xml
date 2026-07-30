@@ -1070,8 +1070,8 @@
     <string name="toc_src">Chapters source code</string>
     <string name="content_src">Content source code</string>
     <string name="list_src">List source code</string>
-    <string name="title_font_size">Font Size</string>
-    <string name="title_color">Color</string>
+    <string name="font_size">Font Size</string>
+    <string name="color">Color</string>
     <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>
     <string name="title_margin_bottom">Margin Bottom</string>
