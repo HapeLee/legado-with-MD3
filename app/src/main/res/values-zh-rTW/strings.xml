@@ -1131,6 +1131,7 @@
     <string name="clear_webview_data">清除 WebView 数据</string>
     <string name="clear_webview_data_summary">清除内置浏览器所有数据</string>
     <string name="source_tab_list">列表</string>
+    <string name="source_tab_web_view">網頁</string>
     <string name="layout_type">布局</string>
     <string name="dict_rule">字典规则</string>
     <string name="config_dict_rule">配置字典规则</string>
@@ -1597,7 +1598,6 @@
     <string name="placeholder_page_index">當前頁碼</string>
     <string name="placeholder_page_size">本章頁數</string>
     <string name="placeholder_page_remaining">本章剩餘頁數</string>
-    <string name="chapter_complete">本章完</string>
     <string name="placeholder_read_progress">閱讀進度</string>
     <string name="cover_selected_images_count">已選擇 %1$d 張圖片</string>
     <string name="confirm_skip_to_chapter">是否跳轉到此章節？</string>
@@ -2169,6 +2169,12 @@
     <string name="eye_protection_intensity_summary">目前強度：%1$d</string>
     <string name="eye_protection_auto_night">深色閱讀模式時自動開啟</string>
     <string name="eye_protection_auto_night_summary">跟隨閱讀介面的深色/淺色模式自動切換</string>
+    <string name="color_temperature">色溫</string>
+    <string name="color_temperature_summary">目前色溫：%1$d</string>
+    <string name="eye_protection_schedule">定時開啟</string>
+    <string name="eye_protection_schedule_summary">僅在設定的時間範圍內生效</string>
+    <string name="eye_protection_start_time">開始時間</string>
+    <string name="eye_protection_end_time">結束時間</string>
     <string name="highlight_tag_config">標籤規則</string>
     <string name="import_highlight_tag_rule">匯入標籤規則</string>
     <string name="highlight_tag_title">標題</string>

@@ -7,8 +7,8 @@ import android.net.Uri
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.applyTagGroupRulesForBook
@@ -48,14 +48,17 @@ data class BookInfoEditUiState(
     val book: Book? = null,
 )
 
-class BookInfoEditViewModel(application: Application) : BaseViewModel(application) {
+class BookInfoEditViewModel(
+    application: Application,
+    private val bookRepository: BookRepository,
+) : BaseViewModel(application) {
     var book: Book? = null
     private val _uiState = MutableStateFlow(BookInfoEditUiState())
     val uiState: StateFlow<BookInfoEditUiState> = _uiState.asStateFlow()
 
     fun loadBook(bookUrl: String) {
         execute {
-            book = appDb.bookDao.getBook(bookUrl)
+            book = bookRepository.getBook(bookUrl)
             book?.let {
                 val selectedType = when {
                     it.isImage -> BookInfoEditType.IMAGE
@@ -144,10 +147,10 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 applyTagGroupRulesForBook(book)
                 BookHelp.updateCacheFolder(oldBook, book)
 
-                if (ReadBook.book?.bookUrl == book.bookUrl) {
-                    ReadBook.book = book
+                if (ReadBook.isCurrentBook(book.bookUrl)) {
+                    ReadBook.replaceCurrentBook(book)
                 }
-                appDb.bookDao.update(book)
+                bookRepository.update(book)
             }
         }.onSuccess {
             onSuccess.invoke()

@@ -5,9 +5,10 @@ import android.graphics.Bitmap
 import android.util.DisplayMetrics
 import androidx.annotation.Keep
 import androidx.core.graphics.toColorInt
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.DefaultData
@@ -22,7 +23,6 @@ import io.legado.app.utils.getFile
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.stackBlur
 import splitties.init.appCtx
@@ -45,7 +45,7 @@ object ThemeConfigStore {
 
     fun applyDayNight(context: Context) {
         initNightMode()
-        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+        ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.UpdateStyle))
     }
 
     /**
@@ -54,7 +54,7 @@ object ThemeConfigStore {
      */
     fun applyDayNightLive() {
         initNightMode()
-        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+        ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.UpdateStyle))
     }
 
     fun applyDayNightInit(context: Context) {
@@ -96,8 +96,7 @@ object ThemeConfigStore {
 
     fun save() {
         val json = GSON.toJson(configList)
-        FileUtils.delete(configFilePath)
-        FileUtils.createFileIfNotExist(configFilePath).writeText(json)
+        FileUtils.writeTextAtomic(configFilePath, json)
     }
 
     fun addConfig(json: String): Boolean {

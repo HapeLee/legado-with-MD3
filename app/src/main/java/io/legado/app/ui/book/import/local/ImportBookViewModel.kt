@@ -13,14 +13,12 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.model.settings.ImportBookSettings
 import io.legado.app.domain.model.settings.OtherSettings
-import io.legado.app.help.book.BookHelp
-import io.legado.app.help.book.canSafelyRebindTo
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -118,6 +116,7 @@ class ImportBookViewModel(
     application: Application,
     private val importBookSettingsGateway: ImportBookSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
+    private val repository: BookImportRepository,
 ) : BaseViewModel(application) {
 
     private enum class SourceMode {
@@ -191,7 +190,7 @@ class ImportBookViewModel(
 
     val uiState = combine(
         _state,
-        appDb.bookDao.flowLocal(),
+        repository.flowLocalBooks(),
         importBookSettingsGateway.settings,
     ) { state, localBooks, settings ->
         val localFileNames = localBooks.asSequence().map { it.originName }.toSet()
@@ -605,19 +604,10 @@ class ImportBookViewModel(
 
     private fun onImportedFileClick(fileDoc: FileDoc) {
         if (!ArchiveUtils.isArchive(fileDoc.name)) {
-            appDb.bookDao.getBookByFileName(fileDoc.name)?.let { book ->
-                val filePath = fileDoc.toString()
-                val bookToOpen = if (book.bookUrl != filePath && book.canSafelyRebindTo(filePath)) {
-                    val reboundBook = book.copy(bookUrl = filePath)
-                    appDb.runInTransaction {
-                        appDb.bookDao.replace(book, reboundBook)
-                        BookHelp.updateCacheFolder(book, reboundBook)
-                    }
-                    reboundBook
-                } else {
-                    book
+            viewModelScope.launch {
+                repository.findAndRebind(fileDoc.name, fileDoc.toString())?.let { book ->
+                    _effects.tryEmit(ImportBookEffect.OpenBook(book))
                 }
-                _effects.tryEmit(ImportBookEffect.OpenBook(bookToOpen))
             }
             return
         }
@@ -635,9 +625,13 @@ class ImportBookViewModel(
     }
 
     private fun onArchiveEntrySelected(fileDoc: FileDoc, fileName: String) {
-        appDb.bookDao.getBookByFileName(fileName)?.let {
-            _effects.tryEmit(ImportBookEffect.OpenBook(it))
-        } ?: _effects.tryEmit(ImportBookEffect.ShowImportArchiveDialog(fileDoc, fileName))
+        viewModelScope.launch {
+            val book = repository.findByFileName(fileName)
+            _effects.tryEmit(
+                book?.let(ImportBookEffect::OpenBook)
+                    ?: ImportBookEffect.ShowImportArchiveDialog(fileDoc, fileName)
+            )
+        }
     }
 
     private fun addArchiveToBookShelf(fileDoc: FileDoc, fileName: String) {

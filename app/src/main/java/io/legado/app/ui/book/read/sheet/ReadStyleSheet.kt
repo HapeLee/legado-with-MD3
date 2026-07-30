@@ -113,6 +113,7 @@ fun ReadStyleContent(
 
                     1 -> SystemMenuPage(
                         preferences = preferences,
+                        styleConfig = styleConfig,
                         customIcons = readMenuCustomIcons,
                         bottomBarButtons = bottomBarButtons,
                         onIntent = onIntent,

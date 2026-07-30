@@ -3,8 +3,8 @@ package io.legado.app.ui.book.source.debug
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.Debug
 import kotlinx.collections.immutable.toImmutableList
@@ -19,7 +19,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
-class BookSourceDebugViewModel(application: Application) : AndroidViewModel(application) {
+class BookSourceDebugViewModel(
+    application: Application,
+    private val repository: BookSourceRepository,
+) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(BookSourceDebugUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<BookSourceDebugEffect>(extraBufferCapacity = 16)
@@ -47,7 +50,7 @@ class BookSourceDebugViewModel(application: Application) : AndroidViewModel(appl
 
     private fun load(sourceUrl: String?) = viewModelScope.launch {
         val loaded: BookSource? = withContext(Dispatchers.IO) {
-            sourceUrl?.let { appDb.bookSourceDao.getBookSource(it) }
+            sourceUrl?.let { repository.getBookSource(it) }
         }
         source = loaded
         if (loaded == null) {

@@ -66,6 +66,10 @@ import io.legado.app.model.BookCover as BookCoverModel
 @Composable
 fun ReadBookScreen(
     state: ReadBookUiState,
+    aiState: ReadAiUiState,
+    highlightRuleState: HighlightRuleConfigUiState,
+    contentEditState: ContentEditUiState,
+    contentProcessState: ContentProcessConfigUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
@@ -195,7 +199,7 @@ fun ReadBookScreen(
     )
     ContentProcessesSheet(
         show = state.activeSheet is ReadBookSheet.ContentProcesses,
-        state = state.contentProcessConfig,
+        state = contentProcessState,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )
@@ -263,38 +267,38 @@ fun ReadBookScreen(
     )
     HighlightRuleConfigSheet(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
-        state = state.highlightRuleConfig,
+        state = highlightRuleState,
         allConfigNames = state.sheetConfig.configNames,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
     ContentEditSheet(
         show = state.activeSheet is ReadBookSheet.ContentEdit,
-        state = state,
+        state = contentEditState,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )
     ChapterSummarySheet(
         show = state.activeSheet is ReadBookSheet.ChapterSummary,
-        state = state.chapterSummary,
+        state = aiState.chapterSummary,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )
     AiTextCleanSheet(
         show = state.activeSheet is ReadBookSheet.AiTextClean,
-        state = state.aiTextClean,
+        state = aiState.aiTextClean,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )
     AiTextRewriteSheet(
         show = state.activeSheet is ReadBookSheet.AiTextRewrite,
-        state = state.aiTextRewrite,
+        state = aiState.aiTextRewrite,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )
     AiRewritePresetConfigSheet(
         show = state.activeSheet is ReadBookSheet.AiRewritePresetConfig,
-        state = state.aiRewritePresetConfig,
+        state = aiState.aiRewritePresetConfig,
         onIntent = onIntent,
         onDismissRequest = { onIntent(ReadBookIntent.CloseAiRewritePresetConfig) },
     )

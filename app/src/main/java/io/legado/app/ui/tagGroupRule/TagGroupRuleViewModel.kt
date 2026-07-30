@@ -4,8 +4,8 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.TagGroupRule
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.book.applyTagGroupRules
@@ -29,7 +29,8 @@ import kotlinx.coroutines.withContext
 
 class TagGroupRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val bookRepository: BookRepository,
 ) : BaseRuleViewModel<TagGroupRuleItemUi, TagGroupRule, Long, TagGroupRuleUiState>(
     application,
     TagGroupRuleUiState(interaction = InteractionState(isLoading = true)),
@@ -200,8 +201,8 @@ class TagGroupRuleViewModel(
 
     private suspend fun autoApplyRules() {
         withContext(Dispatchers.IO) {
-            val books = appDb.bookDao.getAll()
-            val rules = appDb.tagGroupRuleDao.getAll()
+            val books = bookRepository.getAll()
+            val rules = repository.getAll()
             applyTagGroupRules(books, rules)
         }
     }
@@ -226,8 +227,8 @@ class TagGroupRuleViewModel(
 
     private fun syncGroups() {
         viewModelScope.launch(Dispatchers.IO) {
-            val books = appDb.bookDao.getAll()
-            val rules = appDb.tagGroupRuleDao.getAll()
+            val books = bookRepository.getAll()
+            val rules = repository.getAll()
             applyTagGroupRules(books, rules)
             withContext(Dispatchers.Main) {
                 context.toastOnUi(R.string.tag_group_sync_complete)

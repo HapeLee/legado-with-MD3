@@ -2,6 +2,8 @@ package io.legado.app.ui.config.readConfig
 
 import io.legado.app.constant.EventBus
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.postEvent
 
@@ -12,7 +14,9 @@ class ApplyReadSettingUseCase {
         when (intent) {
             is ReadConfigIntent.HideStatusBarChanged,
             is ReadConfigIntent.HideNavigationBarChanged -> {
-                postEvent(EventBus.UP_CONFIG, arrayListOf(0, 2))
+                ReadConfigUpdateBus.post(
+                    setOf(ConfigUpdateAction.UpdateSystemUi, ConfigUpdateAction.UpdateStyle)
+                )
             }
 
             is ReadConfigIntent.ReadMenuBlurAlphaChanged,
@@ -32,23 +36,25 @@ class ApplyReadSettingUseCase {
             }
 
             is ReadConfigIntent.PageTouchSlopChanged -> {
-                postEvent(EventBus.UP_CONFIG, arrayListOf(4))
+                ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.UpdatePageSlopSquare))
             }
 
-            is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.callBack?.upPageAnim()
+            is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.renderCallBack?.upPageAnim()
             is ReadConfigIntent.OptimizeRenderChanged -> updateStyle()
             else -> Unit
         }
     }
 
     private fun updateLayout() {
+        // textBottomJustify 属于 RenderStyle 快照，重排前得先重建，否则排版读到旧值
+        ChapterProvider.upRenderStyle()
         ChapterProvider.upLayout()
         ReadBook.loadContent(false)
     }
 
     private fun updateStyle() {
         ChapterProvider.upStyle()
-        ReadBook.callBack?.upPageAnim(true)
+        ReadBook.renderCallBack?.upPageAnim(true)
         ReadBook.loadContent(false)
     }
 }

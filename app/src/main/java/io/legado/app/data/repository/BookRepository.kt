@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.GroupBookCount
@@ -12,8 +13,17 @@ import kotlinx.coroutines.withContext
 
 class BookRepository(
     private val bookDao: BookDao,
-    private val bookChapterDao: BookChapterDao
+    private val bookChapterDao: BookChapterDao,
+    private val appDb: AppDatabase,
 ) {
+    fun flowBook(bookUrl: String): Flow<Book?> {
+        return bookDao.flowGetBook(bookUrl)
+    }
+
+    fun flowChapters(bookUrl: String): Flow<List<BookChapter>> {
+        return bookChapterDao.getChapterListFlow(bookUrl)
+    }
+
     fun getAllBooks(): Flow<List<Book>> {
         return bookDao.flowAll()
     }
@@ -46,6 +56,12 @@ class BookRepository(
         }
     }
 
+    suspend fun getShelfBookConflict(name: String, author: String): Book? {
+        return withContext(Dispatchers.IO) {
+            bookDao.getShelfBookConflict(name, author)
+        }
+    }
+
     fun flowBookShelfByGroup(groupId: Long): Flow<List<BookShelfItem>> {
         return bookDao.flowBookShelfByGroup(groupId)
     }
@@ -66,6 +82,12 @@ class BookRepository(
         return bookDao.flowGroupPreview(groupId)
     }
 
+    suspend fun getChapter(bookUrl: String, index: Int): BookChapter? {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapter(bookUrl, index)
+        }
+    }
+
     suspend fun getChapterCount(bookUrl: String): Int {
         return withContext(Dispatchers.IO) {
             bookChapterDao.getChapterCount(bookUrl)
@@ -75,6 +97,18 @@ class BookRepository(
     suspend fun getVolumeCount(bookUrl: String): Int {
         return withContext(Dispatchers.IO) {
             bookChapterDao.getVolumeCount(bookUrl)
+        }
+    }
+
+    suspend fun getChapters(bookUrl: String): List<BookChapter> {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapterList(bookUrl)
+        }
+    }
+
+    suspend fun getChapters(bookUrl: String, start: Int, end: Int): List<BookChapter> {
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapterList(bookUrl, start, end)
         }
     }
 
@@ -108,15 +142,43 @@ class BookRepository(
         }
     }
 
+    suspend fun getAll(): List<Book> {
+        return withContext(Dispatchers.IO) {
+            bookDao.getAll()
+        }
+    }
+
+    suspend fun getLastReadBook(): Book? {
+        return withContext(Dispatchers.IO) {
+            bookDao.lastReadBook
+        }
+    }
+
     suspend fun replace(oldBook: Book, newBook: Book) {
         withContext(Dispatchers.IO) {
             bookDao.replace(oldBook, newBook)
         }
     }
 
+    suspend fun delete(vararg book: Book) {
+        withContext(Dispatchers.IO) {
+            bookDao.delete(*book)
+        }
+    }
+
     suspend fun deleteChaptersByBook(bookUrl: String) {
         withContext(Dispatchers.IO) {
             bookChapterDao.delByBook(bookUrl)
+        }
+    }
+
+    suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
+        withContext(Dispatchers.IO) {
+            appDb.runInTransaction {
+                bookChapterDao.delByBook(book.bookUrl)
+                bookChapterDao.insert(*chapters.toTypedArray())
+                bookDao.update(book)
+            }
         }
     }
 

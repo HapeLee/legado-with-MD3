@@ -7,11 +7,13 @@ import android.webkit.URLUtil
 import androidx.lifecycle.viewModelScope
 import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.config.AppConfig
 import io.legado.app.data.entities.RssStar
+import io.legado.app.data.repository.RssArticleRepository
+import io.legado.app.data.repository.RssFavoriteRepository
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.exception.NoStackTraceException
@@ -50,6 +52,9 @@ class ReadRssViewModel(
     application: Application,
     appShellSettingsGateway: AppShellSettingsGateway,
     downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
+    private val rssRepository: RssRepository,
+    private val articleRepository: RssArticleRepository,
+    private val favoriteRepository: RssFavoriteRepository,
 ) : BaseViewModel(application) {
     val settings = combine(
         appShellSettingsGateway.settings,
@@ -92,7 +97,7 @@ class ReadRssViewModel(
 
     fun initData(args: ReadRssArgs) {
         execute {
-            rssSource = appDb.rssSourceDao.getByKey(args.origin)
+            rssSource = rssRepository.getByKey(args.origin)
             headerMap = runScriptWithContext {
                 rssSource?.getHeaderMap(AppConfig.userAgent) ?: emptyMap()
             }
@@ -104,8 +109,9 @@ class ReadRssViewModel(
 
             val link = args.link
             if (!link.isNullOrBlank()) {
-                _rssStarState.value = appDb.rssStarDao.get(args.origin, link)
-                rssArticle = _rssStarState.value?.toRssArticle() ?: appDb.rssArticleDao.getByLink(args.origin, link)
+                _rssStarState.value = favoriteRepository.find(args.origin, link)
+                rssArticle = _rssStarState.value?.toRssArticle()
+                    ?: articleRepository.findByLink(args.origin, link)
                 val article = rssArticle ?: return@execute
                 if (!article.description.isNullOrBlank()) {
                     _contentState.value = article.description!!
@@ -177,10 +183,10 @@ class ReadRssViewModel(
         Rss.getContent(viewModelScope, rssArticle, ruleContent, source)
             .onSuccess(IO) { body ->
                 rssArticle.description = body
-                appDb.rssArticleDao.insert(rssArticle)
+                articleRepository.insert(rssArticle)
                 _rssStarState.value?.let {
                     it.description = body
-                    appDb.rssStarDao.insert(it)
+                    favoriteRepository.insert(it)
                 }
                 _contentState.value = body
             }.onError {
@@ -207,7 +213,7 @@ class ReadRssViewModel(
     fun addFavorite() {
         execute {
             _rssStarState.value ?: rssArticle?.toStar()?.let {
-                appDb.rssStarDao.insert(it)
+                favoriteRepository.insert(it)
                 _rssStarState.value = it
             }
         }
@@ -224,7 +230,7 @@ class ReadRssViewModel(
         }
         execute {
             rssArticle?.toStar()?.let {
-                appDb.rssStarDao.update(it)
+                favoriteRepository.update(it)
                 _rssStarState.value = it
             }
         }
@@ -233,7 +239,7 @@ class ReadRssViewModel(
     fun delFavorite() {
         execute {
             _rssStarState.value?.let {
-                appDb.rssStarDao.delete(it.origin, it.link)
+                favoriteRepository.delete(it)
                 _rssStarState.value = null
             }
         }
@@ -357,7 +363,7 @@ class ReadRssViewModel(
 
     fun updateRssSourceRedirectPolicy(sourceUrl: String, redirectPolicy: String) {
         execute {
-            appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
+            rssRepository.updateRedirectPolicy(sourceUrl, redirectPolicy)
             rssSource?.redirectPolicy = redirectPolicy
         }.onError {
             appCtx.toastOnUi("保存失败: ${it.localizedMessage}")

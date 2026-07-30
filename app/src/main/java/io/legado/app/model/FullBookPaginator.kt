@@ -1,5 +1,6 @@
 package io.legado.app.model
 
+import io.legado.app.constant.ReadTipType
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.help.config.ReadBookConfig
@@ -68,9 +69,9 @@ object FullBookPaginator {
                 ReadBookConfig.customTipFooterRight,
             ),
         ),
-        customTipValue = ReadBookConfig.tipCustom,
-        wholeBookPageTipValue = ReadBookConfig.tipWholeBookPage,
-        wholeBookPageAndProgressTipValue = ReadBookConfig.tipWholeBookPageAndProgress,
+        customTipValue = ReadTipType.tipCustom,
+        wholeBookPageTipValue = ReadTipType.tipWholeBookPage,
+        wholeBookPageAndProgressTipValue = ReadTipType.tipWholeBookPageAndProgress,
     )
 }
 

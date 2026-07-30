@@ -12,7 +12,6 @@ import android.os.Build
 import androidx.annotation.Keep
 import io.legado.app.help.PaintPool
 import io.legado.app.help.book.isImage
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ResourceLoadFailureCache
@@ -192,8 +191,9 @@ data class TextLine(
 
         drawStyledUnderlines(canvas)
 
-        if (ReadBookConfig.underline && !isImage && ReadBook.book?.isImage != true) {
-            drawUnderline(canvas, ReadBookConfig.dottedLine)
+        val renderStyle = ChapterProvider.renderStyle
+        if (renderStyle.underline && !isImage && ReadBook.book?.isImage != true) {
+            drawUnderline(canvas, renderStyle)
         }
     }
 
@@ -204,12 +204,13 @@ data class TextLine(
         } else {
             ChapterProvider.contentPaint
         }
+        val renderStyle = ChapterProvider.renderStyle
         val textColor = if (isReadAloud) {
-            ReadBookConfig.textAccentColor
-        } else if (isTitle && ReadBookConfig.resolvedTitleColor != 0) {
-            ReadBookConfig.resolvedTitleColor
+            renderStyle.textAccentColor
+        } else if (isTitle && renderStyle.titleColor != 0) {
+            renderStyle.titleColor
         } else {
-            ReadBookConfig.textColor
+            renderStyle.textColor
         }
         if (textPaint.color != textColor) {
             textPaint.color = textColor
@@ -238,30 +239,30 @@ data class TextLine(
     /**
      * 绘制下划线
      */
-    private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
+    private fun drawUnderline(canvas: Canvas, renderStyle: ChapterProvider.RenderStyle) {
         val paint = PaintPool.obtain()
         paint.set(ChapterProvider.contentPaint)
         paint.clearShadowLayer()
-        paint.color = ReadBookConfig.durConfig.curUnderlineColor()
-        paint.strokeWidth = ReadBookConfig.underlineHeight.toFloat()
+        paint.color = renderStyle.underlineColor
+        paint.strokeWidth = renderStyle.underlineHeight.toFloat()
         paint.style = Paint.Style.STROKE
-        paint.pathEffect = if (dottedLine && !ReadConfig.isEInkMode)
+        paint.pathEffect = if (renderStyle.dottedLine && !ReadConfig.isEInkMode)
             ChapterProvider.dashEffect
         else
             null
 
-        val lineY = height + (ReadBookConfig.durConfig.underlinePadding - 10).dpToPx()
+        val lineY = height + (renderStyle.underlinePadding - 10).dpToPx()
         val pageOffset = if (textPage.doublePage && !isLeftLine) {
             ChapterProvider.viewWidth / 2f
         } else {
             0f
         }
-        val startX = if (ReadBookConfig.underlineExtend) {
+        val startX = if (renderStyle.underlineExtend) {
             pageOffset + ChapterProvider.paddingLeft
         } else {
             lineStart + indentWidth
         }
-        val endX = if (ReadBookConfig.underlineExtend) {
+        val endX = if (renderStyle.underlineExtend) {
             pageOffset + ChapterProvider.paddingLeft + ChapterProvider.visibleWidth
         } else {
             lineEnd
@@ -384,7 +385,7 @@ data class TextLine(
             val currentMode = textColumn?.underlineMode ?: 0
             val currentColor = textColumn?.underlineColor
                 ?: textColumn?.textColor
-                ?: ReadBookConfig.textColor
+                ?: ChapterProvider.renderStyle.textColor
             val currentWidth = textColumn?.underlineWidth ?: 1f
             val currentOffset = textColumn?.underlineOffset ?: 2f
             val currentSvgPath = textColumn?.underlineSvgPath ?: ""

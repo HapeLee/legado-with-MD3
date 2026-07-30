@@ -9,8 +9,8 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.decompressed
@@ -29,7 +29,10 @@ import io.legado.app.utils.readText
 import io.legado.app.utils.splitNotBlank
 import splitties.init.appCtx
 
-class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
+class ImportRssSourceViewModel(
+    app: Application,
+    private val repository: RssRepository,
+) : BaseViewModel(app) {
     var isAddGroup = false
     var groupName: String? = null
     val errorLiveData = MutableLiveData<String>()
@@ -186,7 +189,7 @@ class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
     private fun comparisonSource() {
         execute {
             allSources.forEach {
-                val has = appDb.rssSourceDao.getByKey(it.sourceUrl)
+                val has = repository.getByKey(it.sourceUrl)
                 checkSources.add(has)
                 selectStatus.add(has == null || has.lastUpdateTime < it.lastUpdateTime)
             }

@@ -36,6 +36,7 @@ fun LabConfigRouteScreen(
     viewModel: LabConfigViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
+    val shareTitle = stringResource(R.string.lab_page_estimate_diagnostics_share_title)
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
@@ -44,12 +45,7 @@ fun LabConfigRouteScreen(
                         putExtra(Intent.EXTRA_TEXT, effect.text)
                         type = "text/plain"
                     }
-                    context.startActivity(
-                        Intent.createChooser(
-                            sendIntent,
-                            context.getString(R.string.lab_page_estimate_diagnostics_share_title),
-                        )
-                    )
+                    context.startActivity(Intent.createChooser(sendIntent, shareTitle))
                 }
             }
         }

@@ -26,7 +26,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.constant.ReadTipType
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
@@ -73,79 +73,49 @@ fun TypographyPage(
     var activeFooterFontSelect by remember { mutableStateOf(false) }
     var activeCustomTip by remember { mutableStateOf<CustomTipTarget?>(null) }
 
-    // Lifted tip state — shared between Header Tab and Footer Tab for cross-tab clearRepeat.
-    // Keys ensure re-initialization when ReadBookConfig changes from external sources.
-    var headerMode by remember(ReadBookConfig.headerMode) { mutableIntStateOf(ReadBookConfig.headerMode) }
-    var headerLeft by remember(ReadBookConfig.tipHeaderLeft) { mutableIntStateOf(ReadBookConfig.tipHeaderLeft) }
-    var headerMiddle by remember(ReadBookConfig.tipHeaderMiddle) { mutableIntStateOf(ReadBookConfig.tipHeaderMiddle) }
-    var headerRight by remember(ReadBookConfig.tipHeaderRight) { mutableIntStateOf(ReadBookConfig.tipHeaderRight) }
-    var footerMode by remember(ReadBookConfig.footerMode) { mutableIntStateOf(ReadBookConfig.footerMode) }
-    var footerLeft by remember(ReadBookConfig.tipFooterLeft) { mutableIntStateOf(ReadBookConfig.tipFooterLeft) }
-    var footerMiddle by remember(ReadBookConfig.tipFooterMiddle) { mutableIntStateOf(ReadBookConfig.tipFooterMiddle) }
-    var footerRight by remember(ReadBookConfig.tipFooterRight) { mutableIntStateOf(ReadBookConfig.tipFooterRight) }
-    var showHeaderLine by remember(ReadBookConfig.showHeaderLine) { mutableStateOf(ReadBookConfig.showHeaderLine) }
-    var showFooterLine by remember(ReadBookConfig.showFooterLine) { mutableStateOf(ReadBookConfig.showFooterLine) }
-
+    /**
+     * 同一个 tip 只能占一个位置：换到新位置前先把旧位置清空。
+     *
+     * 位置取值一律从 [config] 快照读，不镜像本地 state——镜像进 `remember` 只在首次组合
+     * 读一次，上游改动（另一 Tab、外部改配置）不会重新 seed，弹层就会显示旧值。
+     */
     fun clearRepeat(repeat: Int) {
-        if (repeat == ReadBookConfig.tipNone) return
-        if (headerLeft == repeat) {
-            headerLeft = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(ReadBookConfig.tipNone)))
+        if (repeat == ReadTipType.tipNone) return
+        if (config.tipHeaderLeft == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(ReadTipType.tipNone)))
         }
-        if (headerMiddle == repeat) {
-            headerMiddle = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(ReadBookConfig.tipNone)))
+        if (config.tipHeaderMiddle == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(ReadTipType.tipNone)))
         }
-        if (headerRight == repeat) {
-            headerRight = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(ReadBookConfig.tipNone)))
+        if (config.tipHeaderRight == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(ReadTipType.tipNone)))
         }
-        if (footerLeft == repeat) {
-            footerLeft = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(ReadBookConfig.tipNone)))
+        if (config.tipFooterLeft == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(ReadTipType.tipNone)))
         }
-        if (footerMiddle == repeat) {
-            footerMiddle = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(ReadBookConfig.tipNone)))
+        if (config.tipFooterMiddle == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(ReadTipType.tipNone)))
         }
-        if (footerRight == repeat) {
-            footerRight = ReadBookConfig.tipNone
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(ReadBookConfig.tipNone)))
+        if (config.tipFooterRight == repeat) {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(ReadTipType.tipNone)))
         }
     }
 
     fun handleTipChange(target: CustomTipTarget, value: Int) {
-        if (value == ReadBookConfig.tipCustom) {
+        if (value == ReadTipType.tipCustom) {
             activeCustomTip = target
             return
         }
         clearRepeat(value)
-        when (target) {
-            CustomTipTarget.HEADER_LEFT -> {
-                headerLeft = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderLeft(value)))
-            }
-            CustomTipTarget.HEADER_MIDDLE -> {
-                headerMiddle = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderMiddle(value)))
-            }
-            CustomTipTarget.HEADER_RIGHT -> {
-                headerRight = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderRight(value)))
-            }
-            CustomTipTarget.FOOTER_LEFT -> {
-                footerLeft = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterLeft(value)))
-            }
-            CustomTipTarget.FOOTER_MIDDLE -> {
-                footerMiddle = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterMiddle(value)))
-            }
-            CustomTipTarget.FOOTER_RIGHT -> {
-                footerRight = value
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterRight(value)))
-            }
+        val update = when (target) {
+            CustomTipTarget.HEADER_LEFT -> ConfigUpdate.TipHeaderLeft(value)
+            CustomTipTarget.HEADER_MIDDLE -> ConfigUpdate.TipHeaderMiddle(value)
+            CustomTipTarget.HEADER_RIGHT -> ConfigUpdate.TipHeaderRight(value)
+            CustomTipTarget.FOOTER_LEFT -> ConfigUpdate.TipFooterLeft(value)
+            CustomTipTarget.FOOTER_MIDDLE -> ConfigUpdate.TipFooterMiddle(value)
+            CustomTipTarget.FOOTER_RIGHT -> ConfigUpdate.TipFooterRight(value)
         }
+        onIntent(ReadBookIntent.UpdateConfig(update))
     }
 
     val childPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
@@ -222,18 +192,16 @@ fun TypographyPage(
                         onOpenHeaderFontSelect = { activeHeaderFontSelect = true },
                         onOpenColorPicker = { activeColorPicker = it },
                         onOpenCustomTip = { target: CustomTipTarget -> activeCustomTip = target },
-                        headerMode = headerMode,
-                        headerLeft = headerLeft,
-                        headerMiddle = headerMiddle,
-                        headerRight = headerRight,
+                        headerMode = config.headerMode,
+                        headerLeft = config.tipHeaderLeft,
+                        headerMiddle = config.tipHeaderMiddle,
+                        headerRight = config.tipHeaderRight,
                         onHeaderModeChange = {
-                            headerMode = it
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderMode(it)))
                         },
                         onTipChange = ::handleTipChange,
-                        showHeaderLine = showHeaderLine,
+                        showHeaderLine = config.showHeaderLine,
                         onShowHeaderLineChange = {
-                            showHeaderLine = it
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowHeaderLine(it)))
                         },
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -245,18 +213,16 @@ fun TypographyPage(
                         onOpenFooterFontSelect = { activeFooterFontSelect = true },
                         onOpenColorPicker = { activeColorPicker = it },
                         onOpenCustomTip = { target: CustomTipTarget -> activeCustomTip = target },
-                        footerMode = footerMode,
-                        footerLeft = footerLeft,
-                        footerMiddle = footerMiddle,
-                        footerRight = footerRight,
+                        footerMode = config.footerMode,
+                        footerLeft = config.tipFooterLeft,
+                        footerMiddle = config.tipFooterMiddle,
+                        footerRight = config.tipFooterRight,
                         onFooterModeChange = {
-                            footerMode = it
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterMode(it)))
                         },
                         onTipChange = ::handleTipChange,
-                        showFooterLine = showFooterLine,
+                        showFooterLine = config.showFooterLine,
                         onShowFooterLineChange = {
-                            showFooterLine = it
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowFooterLine(it)))
                         },
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -306,6 +272,7 @@ fun TypographyPage(
     activeCustomTip?.let { target ->
         TypographyCustomTipDialog(
             target = target,
+            config = config,
             onDismiss = { activeCustomTip = null },
             onIntent = onIntent,
         )

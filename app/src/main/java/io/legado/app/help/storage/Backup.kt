@@ -308,7 +308,7 @@ object Backup {
         FileUtils.delete(backupPath)
         FileUtils.delete(zipFilePath)
         currentCoroutineContext().ensureActive()
-        ReadBookConfig.getAllPicBgStr().map {
+        readStyleGateway.allBackgroundImagePaths().map {
             if (it.contains(File.separator)) {
                 File(it)
             } else {

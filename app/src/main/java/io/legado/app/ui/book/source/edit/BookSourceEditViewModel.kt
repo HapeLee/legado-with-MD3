@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.legado.app.R
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ConcurrentRateLimiter.Companion.concurrentRecordMap
 import io.legado.app.help.RuleComplete
@@ -37,7 +37,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class BookSourceEditViewModel(application: Application) : AndroidViewModel(application) {
+class BookSourceEditViewModel(
+    application: Application,
+    private val repository: BookSourceRepository,
+) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(BookSourceEditUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<BookSourceEditEffect>(extraBufferCapacity = 16)
@@ -102,7 +105,7 @@ class BookSourceEditViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private fun load(sourceUrl: String?) = viewModelScope.launch(Dispatchers.IO) {
-        val source = sourceUrl?.let { appDb.bookSourceDao.getBookSource(it) } ?: BookSource()
+        val source = sourceUrl?.let { repository.getBookSource(it) } ?: BookSource()
         withContext(Dispatchers.Main) {
             applySource(source, asOriginal = true)
             if (sourceUrl == null) originalSource = null
@@ -205,17 +208,17 @@ class BookSourceEditViewModel(application: Application) : AndroidViewModel(appli
             }
                 val old = originalSource ?: BookSource()
                 if (!source.equal(old)) {
-                source.lastUpdateTime = System.currentTimeMillis()
+                    source.lastUpdateTime = System.currentTimeMillis()
                     if (old.exploreUrl != source.exploreUrl) old.clearExploreKindsCache()
                     if (old.jsLib != source.jsLib) SharedJsScope.remove(old.jsLib)
                 }
                 originalSource?.let {
                     if (it.bookSourceUrl != source.bookSourceUrl) SourceHelp.deleteBookSource(it.bookSourceUrl)
                     else {
-                        appDb.bookSourceDao.delete(it); SourceConfig.removeSource(it.bookSourceUrl)
+                        repository.delete(it); SourceConfig.removeSource(it.bookSourceUrl)
                     }
             }
-            appDb.bookSourceDao.insert(source)
+            repository.insert(source)
             concurrentRecordMap.remove(source.bookSourceUrl)
                 originalSource = source
                 baselineJson = GSON.toJson(source)

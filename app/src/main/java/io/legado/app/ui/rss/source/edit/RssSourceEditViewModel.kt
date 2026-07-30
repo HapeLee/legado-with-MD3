@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.legado.app.R
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssSourceEditRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppCacheManager
 import io.legado.app.help.RuleComplete
@@ -26,7 +26,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RssSourceEditViewModel(app: Application) : AndroidViewModel(app) {
+class RssSourceEditViewModel(
+    app: Application,
+    private val repository: RssSourceEditRepository,
+) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(RssSourceEditUiState()); val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<RssSourceEditEffect>(extraBufferCapacity = 16); val effects = _effects.asSharedFlow()
     private var original: RssSource? = null; private var json = JsonObject(); private var baseline = ""
@@ -53,7 +56,7 @@ class RssSourceEditViewModel(app: Application) : AndroidViewModel(app) {
             )
         }; RssSourceEditIntent.Back -> _effects.tryEmit(RssSourceEditEffect.Finish(""))
     } }
-    private fun load(url:String?)=viewModelScope.launch(Dispatchers.IO){ apply(url?.let{appDb.rssSourceDao.getByKey(it)}?:RssSource(),true) }
+    private fun load(url:String?)=viewModelScope.launch(Dispatchers.IO){ apply(url?.let{repository.findByUrl(it)}?:RssSource(),true) }
     private fun showHelp() = viewModelScope.launch(Dispatchers.IO) {
         val content =
             getApplication<Application>().assets.open("web/help/md/ruleHelp.md").bufferedReader()
@@ -69,7 +72,7 @@ class RssSourceEditViewModel(app: Application) : AndroidViewModel(app) {
     private fun update(k:String,v:String){ if(v.isBlank())json.remove(k) else json.addProperty(k,v);_uiState.update{st->st.copy(fields=st.fields.mapValues{(_,fs)->fs.map{if(it.path==k)it.copy(value=v)else it}.toImmutableList()}.toImmutableMap(),dirty=true)} }
     private fun flag(f:RssSourceEditUiState.()->RssSourceEditUiState)=_uiState.update{f(it).copy(dirty=true)}
     private fun current():RssSource=GSON.fromJson(json,RssSource::class.java).apply{val s=_uiState.value;enabled=s.enabled;singleUrl=s.singleUrl;enabledCookieJar=s.cookieJar;preload=s.preload;type=s.type;articleStyle=s.articleStyle;if(s.autoComplete){ruleNextPage=RuleComplete.autoComplete(ruleNextPage,ruleArticles,2);ruleTitle=RuleComplete.autoComplete(ruleTitle,ruleArticles);rulePubDate=RuleComplete.autoComplete(rulePubDate,ruleArticles);ruleDescription=RuleComplete.autoComplete(ruleDescription,ruleArticles);ruleImage=RuleComplete.autoComplete(ruleImage,ruleArticles,3);ruleLink=RuleComplete.autoComplete(ruleLink,ruleArticles);ruleContent=RuleComplete.autoComplete(ruleContent,ruleArticles)}}
-    private fun save(effect:(String)->RssSourceEditEffect)=viewModelScope.launch(Dispatchers.IO){runCatching{val s=current();if(s.sourceName.isBlank()||s.sourceUrl.isBlank())throw NoStackTraceException(getApplication<Application>().getString(R.string.non_null_name_url));val old=original?:RssSource();if(!s.equal(old)){s.lastUpdateTime=System.currentTimeMillis();if(old.sortUrl!=s.sortUrl)old.removeSortCache();if(old.jsLib!=s.jsLib)SharedJsScope.remove(old.jsLib)};original?.let{appDb.rssSourceDao.delete(it);if(it.sourceUrl!=s.sourceUrl){appDb.rssStarDao.updateOrigin(s.sourceUrl,it.sourceUrl);appDb.rssArticleDao.updateOrigin(s.sourceUrl,it.sourceUrl);appDb.cacheDao.deleteSourceVariables(it.sourceUrl);AppCacheManager.clearSourceVariables()}};appDb.rssSourceDao.insert(s);original=s;baseline=GSON.toJson(s);s.sourceUrl}.onSuccess{_uiState.update{s->s.copy(dirty=false)};_effects.emit(effect(it))}.onFailure{_effects.emit(RssSourceEditEffect.Message(it.localizedMessage?:"Error"))}}
+    private fun save(effect:(String)->RssSourceEditEffect)=viewModelScope.launch(Dispatchers.IO){runCatching{val s=current();if(s.sourceName.isBlank()||s.sourceUrl.isBlank())throw NoStackTraceException(getApplication<Application>().getString(R.string.non_null_name_url));val old=original?:RssSource();if(!s.equal(old)){s.lastUpdateTime=System.currentTimeMillis();if(old.sortUrl!=s.sortUrl)old.removeSortCache();if(old.jsLib!=s.jsLib)SharedJsScope.remove(old.jsLib)};if(repository.save(original,s))AppCacheManager.clearSourceVariables();original=s;baseline=GSON.toJson(s);s.sourceUrl}.onSuccess{_uiState.update{s->s.copy(dirty=false)};_effects.emit(effect(it))}.onFailure{_effects.emit(RssSourceEditEffect.Message(it.localizedMessage?:"Error"))}}
     private fun import(text:String)=runCatching{GSON.fromJson(text,RssSource::class.java)}.onSuccess{apply(it);_uiState.update{s->s.copy(dirty=true)}}.onFailure{_effects.tryEmit(RssSourceEditEffect.Message(it.localizedMessage?:"格式不对"))}
     private data class F(val k:String,val r:Int?=null,val l:String?=null)
     private fun groups()=SPECS.mapValues{(_,v)->v.map{BookSourceEditFieldUi(it.k,it.r,it.l,json.get(it.k)?.takeUnless{e->e.isJsonNull}?.asString.orEmpty())}.toImmutableList()}.toImmutableMap()

@@ -151,7 +151,22 @@ android {
     }
 
     lint {
+        baseline = file("lint-baseline.xml")
         checkDependencies = true
+        // UnusedResources 在基线里占 1223/1621 条、12218 行（全文件的 75%），几乎全是
+        // 跟随上游时留下的资源；release 本来就开了精确资源压缩，它们不会进 APK。
+        // 关掉它让基线只剩真正值得盯的那部分，新增问题照样报红。
+        disable += "UnusedResources"
+    }
+
+    testOptions {
+        unitTests {
+            // 阅读器核心在构造期就读字符串资源（TextPageFactory 的 keepSwipeTip、
+            // TextPage 的默认 text/title、ReadView 的无障碍动作名）。不打开这个，
+            // Robolectric 下取任何 R.string 都是 Resources$NotFoundException，
+            // 整条阅读器测试线（Track D·D1c）就起不来。
+            isIncludeAndroidResources = true
+        }
     }
 }
 

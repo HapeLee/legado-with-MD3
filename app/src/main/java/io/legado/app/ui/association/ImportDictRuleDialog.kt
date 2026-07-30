@@ -6,7 +6,6 @@ import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
@@ -20,6 +19,7 @@ import io.legado.app.ui.widget.dialog.CodeDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import splitties.views.onClick
 
 class ImportDictRuleDialog() : BaseDialogFragment(R.layout.dialog_recycler_view),
@@ -33,7 +33,7 @@ class ImportDictRuleDialog() : BaseDialogFragment(R.layout.dialog_recycler_view)
     }
 
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
-    private val viewModel by viewModels<ImportDictRuleViewModel>()
+    private val viewModel by viewModel<ImportDictRuleViewModel>()
     private val adapter by lazy { SourcesAdapter(requireContext()) }
 
     override fun onStart() {

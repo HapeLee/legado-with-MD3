@@ -1,14 +1,14 @@
 package io.legado.app.data.repository
 
-import io.legado.app.data.appDb
+import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.entities.DictRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class DictRuleRepository {
-
-    private val dao = appDb.dictRuleDao
+class DictRuleRepository(
+    private val dao: DictRuleDao,
+) {
 
     fun flowAll(): Flow<List<DictRule>> {
         return dao.flowAll()

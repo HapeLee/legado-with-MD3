@@ -41,26 +41,15 @@ object ReadStyleResolver {
         return ReadSessionState.isDarkThemeOverride ?: ReadConfig.isNightTheme
     }
 
-    fun setCurrentBackground(
+    fun withCurrentBackground(
         config: ReadBookConfig.Config,
         bgType: Int,
         bg: String
-    ) {
-        when (currentMode()) {
-            ReadStyleMode.EInk -> {
-                config.bgTypeEInk = bgType
-                config.bgStrEInk = bg
-            }
-
-            ReadStyleMode.Night -> {
-                config.bgTypeNight = bgType
-                config.bgStrNight = bg
-            }
-
-            ReadStyleMode.Day -> {
-                config.bgType = bgType
-                config.bgStr = bg
-            }
+    ): ReadBookConfig.Config {
+        return when (currentMode()) {
+            ReadStyleMode.EInk -> config.copy(bgTypeEInk = bgType, bgStrEInk = bg)
+            ReadStyleMode.Night -> config.copy(bgTypeNight = bgType, bgStrNight = bg)
+            ReadStyleMode.Day -> config.copy(bgType = bgType, bgStr = bg)
         }
     }
 

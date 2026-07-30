@@ -35,6 +35,8 @@ import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
@@ -65,6 +67,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.isActive
@@ -82,15 +86,51 @@ import kotlin.math.max
 import kotlin.math.min
 
 
+/**
+ * ReadBook 会话的权威只读快照。
+ *
+ * 只承载 ReadBook **自己拥有、并在受控 mutator 中重新发布**的会话字段，全部为廉价标量，
+ * 不含可变 Book / TextChapter / List / Map，滚动高频路径也不会深拷贝章节。
+ *
+ * 刻意不含 `isReadingAloud` / `isLoading`：前者真实来源是 `BaseReadAloudService.isRun`
+ * （独立服务，ReadBook 变更不会触发其重发），后者只有 `msg`/`loadingChapters` 间接信号；
+ * 塞进来会得到静默陈旧字段。需要时应让其来源方参与发布，另行引入。
+ */
+data class LegacyReaderSnapshot(
+    val bookUrl: String? = null,
+    val bookName: String? = null,
+    val chapterIndex: Int = 0,
+    val chapterPos: Int = 0,
+    val chapterCount: Int = 0,
+    val simulatedChapterCount: Int = 0,
+    val isLocalBook: Boolean = true,
+)
+
 @Suppress("MemberVisibilityCanBePrivate")
 object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var book: Book? = null
+        private set
     var callBack: CallBack? = null
+
+    /**
+     * 渲染回调槽位（Track B2）：由 UI 层渲染控制器实现，承接指令式渲染协议。
+     * 与状态槽位 [callBack] 分离，使指令式渲染不再穿过 ViewModel。
+     */
+    var renderCallBack: ReaderRenderCallback? = null
     var inBookshelf = false
     var chapterSize = 0
     var simulatedChapterSize = 0
+    // 主线程写（翻页/换章/进度跳转），IO 线程读——layoutLoadedChapter 在
+    // Dispatchers.IO 上用它们判断当前页是否已排版（见 when(chapter.index - durChapterIndex)
+    // 与 page.containPos(durChapterPos)）。没有 @Volatile 时 IO 侧可能读到陈旧值，
+    // 表现为「排版完了但没刷新到当前页」。
+    @Volatile
     var durChapterIndex = 0
+        private set
+
+    @Volatile
     var durChapterPos = 0
+        private set
     var isLocalBook = true
     var chapterChanged = false
     @Volatile
@@ -156,6 +196,58 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     private const val MIN_READ_DURATION = 10 * 1000L
 
+    // region 会话所有权：外部只能通过下列语义化命令改写会话字段（book/durChapterIndex/durChapterPos
+    // 已 private set）。判定用意图化谓词替代裸实体比较，避免调用方直接持有可变 Book。
+
+    private val _snapshot = MutableStateFlow(LegacyReaderSnapshot())
+
+    /** 权威会话快照。每个受控 mutator 在一次原子状态转移完成后 [publishSnapshot]。 */
+    val snapshot: StateFlow<LegacyReaderSnapshot> = _snapshot.asStateFlow()
+
+    private fun buildSnapshot() = LegacyReaderSnapshot(
+        bookUrl = book?.bookUrl,
+        bookName = book?.name,
+        chapterIndex = durChapterIndex,
+        chapterPos = durChapterPos,
+        chapterCount = chapterSize,
+        simulatedChapterCount = simulatedChapterSize,
+        isLocalBook = isLocalBook,
+    )
+
+    /**
+     * 在一次原子状态转移**完成后**调用（而非每次单字段赋值后），只发一次、不暴露中间态。
+     * 过发无害（StateFlow 对相等值去重），漏发才会导致快照陈旧。
+     */
+    private fun publishSnapshot() {
+        _snapshot.value = buildSnapshot()
+    }
+
+    /** 当前会话是否正指向该 URL 的书。 */
+    fun isCurrentBook(bookUrl: String): Boolean = book?.bookUrl == bookUrl
+
+    /** 当前会话是否正指向与 [other] 同名同作者的书。 */
+    fun isCurrentBook(other: Book): Boolean = book?.isSameNameAuthor(other) == true
+
+    /** 用同一本书的新实例替换当前会话持有的 Book（仅替换引用，不重置章节/进度）。 */
+    fun replaceCurrentBook(book: Book) {
+        this.book = book
+        publishSnapshot()
+    }
+
+    /** 清空当前会话持有的 Book（仅置空引用，不动章节/进度状态）。 */
+    fun clearCurrentBook() {
+        book = null
+        publishSnapshot()
+    }
+
+    /** 更新当前章节内的阅读位置。 */
+    fun updateReadingPosition(position: Int) {
+        durChapterPos = position
+        publishSnapshot()
+    }
+
+    // endregion
+
     fun resetData(book: Book) {
         wholeBookPageCoordinator.clear()
         ReadBook.book = book
@@ -173,9 +265,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         durChapterPos = book.durChapterPos
         isLocalBook = book.isLocal
         clearTextChapter()
-        callBack?.upContent()
+        renderCallBack?.upContent()
         callBack?.upMenuView()
-        callBack?.upPageAnim()
+        renderCallBack?.upPageAnim()
         upWebBook(book)
         lastBookProgress = null
         webBookProgress = null
@@ -186,6 +278,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             downloadedChapters.clear()
             downloadFailChapters.clear()
         }
+        publishSnapshot()
     }
 
     fun upData(book: Book) {
@@ -219,6 +312,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             downloadFailChapters.clear()
         }
         requestWholeBookPageEstimate()
+        publishSnapshot()
     }
 
     fun requestWholeBookPageEstimate() {
@@ -362,7 +456,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 layoutGeneration = layoutGeneration,
             )
             val textChapter = ChapterProvider.getTextChapterAsync(
-                this, book, chapter, displayTitle, processed, chapters.size,
+                this, book, bookSource, chapter, displayTitle, processed, chapters.size,
             )
             try {
                 var pageCount = 0
@@ -472,7 +566,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val oldIndex = ReadBookConfig.styleSelect
         ReadSessionState.isComic = book.isImage
         if (oldIndex != ReadBookConfig.styleSelect) {
-            postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+            ReadConfigUpdateBus.post(
+                setOf(
+                    ConfigUpdateAction.UpdateBackground,
+                    ConfigUpdateAction.UpdateStyle,
+                    ConfigUpdateAction.ReloadContent,
+                    ConfigUpdateAction.RebuildWholeBookPageIndex,
+                )
+            )
             if (ReadConfig.readBarStyleFollowPage) {
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
@@ -486,9 +587,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         ) {
             durChapterIndex = progress.durChapterIndex
             durChapterPos = progress.durChapterPos
+            publishSnapshot()
             saveRead()
             clearTextChapter()
-            callBack?.upContent()
+            renderCallBack?.upContent()
             loadContent(resetPageOffset = true)
         }
     }
@@ -711,7 +813,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     fun upMsg(msg: String?) {
         if (ReadBook.msg != msg) {
             ReadBook.msg = msg
-            callBack?.upContent()
+            renderCallBack?.upContent()
+            // msg 参与 syncFromReadBook；渲染已下沉后靠快照驱动 VM 状态刷新
+            publishSnapshot()
         }
     }
 
@@ -723,9 +827,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 hasNextPage = true
                 it.getPage(durPageIndex)?.removePageAloudSpan()
                 durChapterPos = nextPagePos
-                callBack?.cancelSelect()
-                callBack?.upContent()
+                renderCallBack?.cancelSelect()
+                renderCallBack?.upContent()
                 saveRead(true)
+                publishSnapshot()
             }
         }
         return hasNextPage
@@ -738,8 +843,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             if (prevPagePos >= 0) {
                 hasPrevPage = true
                 durChapterPos = prevPagePos
-                callBack?.upContent()
+                renderCallBack?.upContent()
                 saveRead(true)
+                publishSnapshot()
             }
         }
         return hasPrevPage
@@ -755,17 +861,18 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             nextTextChapter = null
             if (curTextChapter == null) {
                 AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
-                if (upContentInPlace) callBack?.upContent()
+                if (upContentInPlace) renderCallBack?.upContent()
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
                 AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
-                callBack?.upContent()
+                renderCallBack?.upContent()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
             saveRead()
             callBack?.upMenuView()
             AppLog.putDebug("moveToNextChapter-curPageChanged()")
             curPageChanged()
+            publishSnapshot()
             return true
         } else {
             AppLog.putDebug("跳转下一章失败,没有下一章")
@@ -786,17 +893,18 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             nextTextChapter = null
             if (curTextChapter == null) {
                 AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
-                if (upContentInPlace) callBack?.upContentAwait()
+                if (upContentInPlace) renderCallBack?.upContentAwait()
                 loadContentAwait(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
                 AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
-                callBack?.upContentAwait()
+                renderCallBack?.upContentAwait()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
             saveRead()
             callBack?.upMenuView()
             AppLog.putDebug("moveToNextChapter-curPageChanged()")
             curPageChanged()
+            publishSnapshot()
             return true
         } else {
             AppLog.putDebug("跳转下一章失败,没有下一章")
@@ -817,15 +925,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = prevTextChapter
             prevTextChapter = null
             if (curTextChapter == null) {
-                if (upContentInPlace) callBack?.upContent()
+                if (upContentInPlace) renderCallBack?.upContent()
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                callBack?.upContent()
+                renderCallBack?.upContent()
             }
             loadContent(durChapterIndex.minus(1), upContent, false)
             saveRead()
             callBack?.upMenuView()
             curPageChanged()
+            publishSnapshot()
             return true
         } else {
             return false
@@ -834,11 +943,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun skipToPage(index: Int, success: (() -> Unit)? = null) {
         durChapterPos = curTextChapter?.getReadLength(index) ?: index
-        callBack?.upContent {
+        renderCallBack?.upContent {
             success?.invoke()
         }
         curPageChanged()
         saveRead(true)
+        publishSnapshot()
     }
 
     fun setPageIndex(index: Int) {
@@ -846,6 +956,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         durChapterPos = curTextChapter?.getReadLength(index) ?: index
         saveRead(true)
         curPageChanged(true)
+        publishSnapshot()
     }
 
     fun recycleRecorders(beforeIndex: Int, afterIndex: Int) {
@@ -871,9 +982,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     ) {
         if (index < chapterSize) {
             clearTextChapter()
-            if (upContent) callBack?.upContent()
+            if (upContent) renderCallBack?.upContent()
             durChapterIndex = index
             ReadBook.durChapterPos = durChapterPos
+            publishSnapshot()
             saveRead()
             loadContent(resetPageOffset = true) {
                 success?.invoke()
@@ -888,7 +1000,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         pageChanged: Boolean = false,
         preserveReadAloudPosition: Boolean = false,
     ) {
-        callBack?.pageChanged()
+        renderCallBack?.pageChanged()
         curTextChapter?.let {
             if (BaseReadAloudService.isRun && it.isCompleted) {
                 if (shouldRestartReadAloudAfterContentLoad(
@@ -925,8 +1037,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     fun syncReadAloudPage(chapterIndex: Int, chapterPos: Int) {
         if (durChapterIndex != chapterIndex || durChapterPos == chapterPos) return
         durChapterPos = chapterPos
-        callBack?.upContent(resetPageOffset = false)
+        renderCallBack?.upContent(resetPageOffset = false)
         saveRead(pageChanged = true)
+        publishSnapshot()
     }
 
     /**
@@ -1035,7 +1148,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 success?.invoke()
             }
         } else {
-            callBack?.upContent()
+            renderCallBack?.upContent()
+            publishSnapshot()
         }
         val nextChapter = nextTextChapter
         if (nextChapter == null || !nextChapter.isLayoutSizeMatch()) {
@@ -1331,7 +1445,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             layoutGeneration = pageEstimateGeneration,
         )
         val textChapter = ChapterProvider.getTextChapterAsync(
-            this, book, chapter, displayTitle, contents, simulatedChapterSize
+            this, book, bookSource, chapter, displayTitle, contents, simulatedChapterSize
         ).apply {
             this.pageEstimateGeneration = pageEstimateGeneration
         }
@@ -1347,23 +1461,26 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     val index = page.index
                     if (!available && page.containPos(durChapterPos)) {
                         if (upContent) {
-                            callBack?.upContent(offset, resetPageOffset)
+                            renderCallBack?.upContent(offset, resetPageOffset)
                         }
                         available = true
                     }
                     if (upContent && isScroll) {
                         if (max(index - 3, 0) < durPageIndex) {
-                            callBack?.upContent(offset, false)
+                            renderCallBack?.upContent(offset, false)
                         }
                     }
-                    callBack?.onLayoutPageCompleted(index, page)
+                    renderCallBack?.onLayoutPageCompleted(index, page)
                 }
                 if (layoutCompleted) correctWholeBookPageCount(textChapter)
-                if (upContent) callBack?.upContent(offset, !available && resetPageOffset)
+                if (upContent) renderCallBack?.upContent(offset, !available && resetPageOffset)
                 curPageChanged(
                     preserveReadAloudPosition = preserveReadAloudPosition,
                 )
-                callBack?.contentLoadFinish()
+                renderCallBack?.contentLoadFinish()
+                // 布局全部完成后发一次：seekMax 依赖 curTextChapter.pages.size，
+                // 渲染下沉后靠快照驱动 VM 的进度/章节状态刷新
+                publishSnapshot()
             }
 
             -1 -> prevChapterLoadingLock.withLock {
@@ -1374,7 +1491,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 if (collectLayoutPages(textChapter) {}) {
                     correctWholeBookPageCount(textChapter)
                 }
-                if (upContent) callBack?.upContent(offset, resetPageOffset)
+                if (upContent) renderCallBack?.upContent(offset, resetPageOffset)
             }
 
             1 -> nextChapterLoadingLock.withLock {
@@ -1384,7 +1501,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 }
                 val layoutCompleted = collectLayoutPages(textChapter) { page ->
                     if (page.index > 1) return@collectLayoutPages
-                    if (upContent) callBack?.upContent(offset, resetPageOffset)
+                    if (upContent) renderCallBack?.upContent(offset, resetPageOffset)
                 }
                 if (layoutCompleted) correctWholeBookPageCount(textChapter)
             }
@@ -1473,6 +1590,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 saveRead()
                 chapterSize = cList.size
                 simulatedChapterSize = book.simulatedTotalChapterNum()
+                publishSnapshot()
                 nextTextChapter ?: loadContent(durChapterIndex + 1)
             }
         }
@@ -1569,6 +1687,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 durChapterIndex = simulatedChapterSize - 1
             }
             requestWholeBookPageEstimate()
+            publishSnapshot()
             if (callBack == null) {
                 clearTextChapter()
             } else {
@@ -1609,6 +1728,26 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
 
     /**
+     * 注册渲染回调（UI 层渲染控制器）。视图就绪后立即同步一次当前内容，
+     * 避免在注册前已完成的内容加载导致首帧漏渲染。
+     */
+    fun registerRender(cb: ReaderRenderCallback) {
+        renderCallBack = cb
+        if (curTextChapter != null) {
+            cb.upContent()
+        }
+    }
+
+    /**
+     * 取消注册渲染回调
+     */
+    fun unregisterRender(cb: ReaderRenderCallback) {
+        if (renderCallBack === cb) {
+            renderCallBack = null
+        }
+    }
+
+    /**
      * 取消注册回调
      */
     fun unregister(cb: CallBack) {
@@ -1629,11 +1768,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    interface CallBack : LayoutProgressListener {
-        fun upMenuView()
-
-        fun loadChapterList(book: Book)
-
+    /**
+     * 渲染子集回调（Track B）：指令式渲染协议——重绘、分页、动画、选择取消、
+     * 排版进度。**只应由 UI 层的渲染控制器实现**，不得穿过 ViewModel/业务层。
+     */
+    interface ReaderRenderCallback : LayoutProgressListener {
         fun upContent(
             relativePosition: Int = 0,
             resetPageOffset: Boolean = true,
@@ -1652,11 +1791,24 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
         fun upPageAnim(upRecorder: Boolean = false)
 
+        fun cancelSelect()
+    }
+
+    /**
+     * 业务/UI 状态回调子集：菜单刷新、目录加载、换书通知、进度确认。
+     *
+     * Track B2 起本接口已与渲染子集解耦——不再穿过任何指令式渲染方法。
+     * 渲染走独立的 [renderCallBack]（由 UI 层渲染控制器实现），业务状态刷新
+     * 走 [snapshot] → ViewModel 的反应式收集。由 ReadBookViewModel 实现。
+     */
+    interface CallBack {
+        fun upMenuView()
+
+        fun loadChapterList(book: Book)
+
         fun notifyBookChanged()
 
         fun sureNewProgress(progress: BookProgress)
-
-        fun cancelSelect()
     }
 
 }

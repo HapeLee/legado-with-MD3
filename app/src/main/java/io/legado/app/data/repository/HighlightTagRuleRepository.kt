@@ -14,6 +14,10 @@ class HighlightTagRuleRepository {
         return dao.flowAll()
     }
 
+    suspend fun getEnabled(): List<HighlightTagRule> = withContext(Dispatchers.IO) {
+        dao.getEnabled()
+    }
+
     suspend fun insert(vararg rule: HighlightTagRule) {
         withContext(Dispatchers.IO) {
             dao.insert(*rule)

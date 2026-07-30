@@ -6,17 +6,28 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.HttpTtsRepository
+import io.legado.app.data.repository.RssRepository
+import io.legado.app.data.repository.SearchRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.toastOnUi
 
-class SourceLoginViewModel(application: Application) : BaseViewModel(application) {
+class SourceLoginViewModel(
+    application: Application,
+    private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
+    private val rssRepository: RssRepository,
+    private val httpTtsRepository: HttpTtsRepository,
+    private val searchRepository: SearchRepository,
+) : BaseViewModel(application) {
 
     var source: BaseSource? = null
     var headerMap: Map<String, String> = emptyMap()
@@ -33,7 +44,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     source = ReadBook.bookSource
                     book = ReadBook.book?.also {
                         chapter =
-                            appDb.bookChapterDao.getChapter(it.bookUrl, ReadBook.durChapterIndex)
+                            bookRepository.getChapter(it.bookUrl, ReadBook.durChapterIndex)
                     }
                 }
 
@@ -48,14 +59,14 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                         ?: throw NoStackTraceException("没有参数")
                     val type = intent.getStringExtra("type")
                     source = when (type) {
-                        "bookSource" -> appDb.bookSourceDao.getBookSource(sourceKey)
-                        "rssSource" -> appDb.rssSourceDao.getByKey(sourceKey)
-                        "httpTts" -> appDb.httpTTSDao.get(sourceKey.toLong())
+                        "bookSource" -> bookSourceRepository.getBookSource(sourceKey)
+                        "rssSource" -> rssRepository.getByKey(sourceKey)
+                        "httpTts" -> httpTtsRepository.findById(sourceKey.toLong())
                         else -> null
                     }
                     val bookUrl = intent.getStringExtra("bookUrl")
                     book = bookUrl?.let {
-                        appDb.bookDao.getBook(it) ?: appDb.searchBookDao.getSearchBook(it)?.toBook()
+                        bookRepository.getBook(it) ?: searchRepository.getSearchBook(it)?.toBook()
                     }
                 }
             }

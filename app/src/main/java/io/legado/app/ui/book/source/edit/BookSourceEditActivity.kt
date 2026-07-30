@@ -11,7 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.data.appDb
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.entities.BookSource
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.book.search.SearchActivity
@@ -31,9 +31,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 
 class BookSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
+
+    private val sourceRepository by inject<BookSourceRepository>()
 
     @Composable
     override fun Content() {
@@ -104,7 +107,7 @@ class BookSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
     private fun openVariable(sourceUrl: String) {
         lifecycleScope.launch {
             val source =
-                withContext(Dispatchers.IO) { appDb.bookSourceDao.getBookSource(sourceUrl) }
+                sourceRepository.getBookSource(sourceUrl)
                     ?: return@launch
             val comment =
                 source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
@@ -122,7 +125,7 @@ class BookSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     override fun setVariable(key: String, variable: String?) {
         lifecycleScope.launch(Dispatchers.IO) {
-            appDb.bookSourceDao.getBookSource(key)?.setVariable(variable)
+            sourceRepository.getBookSource(key)?.setVariable(variable)
         }
     }
 }

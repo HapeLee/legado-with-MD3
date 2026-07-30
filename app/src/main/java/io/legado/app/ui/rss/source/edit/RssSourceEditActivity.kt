@@ -7,7 +7,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.data.appDb
+import io.legado.app.data.repository.RssSourceEditRepository
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.rss.source.debug.RssSourceDebugActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
@@ -21,9 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 
 class RssSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
+ private val sourceRepository by inject<RssSourceEditRepository>()
  @Composable override fun Content(){val vm=koinViewModel<RssSourceEditViewModel>();val state=vm.uiState.collectAsStateWithLifecycle().value
   LaunchedEffect(Unit){vm.onIntent(RssSourceEditIntent.Load(intent.getStringExtra("sourceUrl")));vm.effects.collectLatest{e->when(e){
    is RssSourceEditEffect.Finish->{if(e.url.isNotEmpty())setResult(RESULT_OK,Intent().putExtra("origin",e.url));finish()}
@@ -36,6 +38,6 @@ class RssSourceEditActivity : BaseComposeActivity(), VariableDialog.Callback {
   }}}
   RssSourceEditScreen(state,vm::onIntent){vm.onIntent(RssSourceEditIntent.Back)}
  }
- private fun openVariable(url:String)=lifecycleScope.launch{val s=withContext(Dispatchers.IO){appDb.rssSourceDao.getByKey(url)}?:return@launch;showDialogFragment(VariableDialog(getString(R.string.set_source_variable),s.getKey(),withContext(Dispatchers.IO){s.getVariable()},s.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")))}
- override fun setVariable(key:String,variable:String?){lifecycleScope.launch(Dispatchers.IO){appDb.rssSourceDao.getByKey(key)?.setVariable(variable)}}
+ private fun openVariable(url:String)=lifecycleScope.launch{val s=sourceRepository.findByUrl(url)?:return@launch;showDialogFragment(VariableDialog(getString(R.string.set_source_variable),s.getKey(),withContext(Dispatchers.IO){s.getVariable()},s.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")))}
+ override fun setVariable(key:String,variable:String?){lifecycleScope.launch(Dispatchers.IO){sourceRepository.findByUrl(key)?.setVariable(variable)}}
 }

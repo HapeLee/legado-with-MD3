@@ -16,12 +16,7 @@ import android.widget.FrameLayout
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.data.entities.BookProgress
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadAloud
-import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
-import io.legado.app.service.BaseReadAloudService
 
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
@@ -39,12 +34,12 @@ import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.invisible
-import io.legado.app.utils.longToastOnUi
 
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
@@ -57,15 +52,15 @@ import kotlin.math.abs
 class ReadView(
     context: Context,
     attrs: AttributeSet? = null,
-    callBack: CallBack? = null,
+    private val callBack: CallBack,
     contentCallBack: ContentTextView.CallBack? = null,
+    private val eventListener: ReaderEventListener,
+    private val pageSource: ReaderPageSource,
 ) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    private var injectedCallBack: CallBack? = callBack
-    val callBack: CallBack get() = injectedCallBack ?: activity as CallBack
-    var pageFactory: TextPageFactory = TextPageFactory(this)
+    var pageFactory: TextPageFactory = TextPageFactory(this, pageSource)
     var pageDelegate: PageDelegate? = null
         private set(value) {
             field?.onDestroy()
@@ -324,7 +319,7 @@ class ReadView(
             AccessibilityNodeInfo.ACTION_CLICK -> {
                 performClick()
                 pageDelegate?.dismissSnackBar()
-                callBack.showActionMenu()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
                 true
             }
 
@@ -503,31 +498,22 @@ class ReadView(
         when (action) {
             0 -> {
                 pageDelegate?.dismissSnackBar()
-                callBack.showActionMenu()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
             }
 
             1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
             2 -> pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
-            3 -> ReadBook.moveToNextChapter(true)
-            4 -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
-            5 -> ReadAloud.prevParagraph(context)
-            6 -> ReadAloud.nextParagraph(context)
-            7 -> callBack.addBookmark()
-            8 -> callBack.openContentEdit()
-            9 -> callBack.changeReplaceRuleState()
-            10 -> callBack.openChapterList()
-            11 -> callBack.openSearchActivity(null)
-            12 -> ReadBook.syncProgress(
-                { progress -> callBack.sureNewProgress(progress) },
-                { context.longToastOnUi(context.getString(R.string.upload_book_success)) },
-                { context.longToastOnUi(context.getString(R.string.sync_book_progress_success)) })
-            13 -> {
-                if (BaseReadAloudService.isPlay()) {
-                    ReadAloud.pause(context)
-                } else {
-                    ReadAloud.resume(context)
-                }
-            }
+            3 -> eventListener.onEvent(ReaderEvent.NextChapter)
+            4 -> eventListener.onEvent(ReaderEvent.PrevChapter)
+            5 -> eventListener.onEvent(ReaderEvent.ReadAloudPrevParagraph)
+            6 -> eventListener.onEvent(ReaderEvent.ReadAloudNextParagraph)
+            7 -> eventListener.onEvent(ReaderEvent.AddBookmark)
+            8 -> eventListener.onEvent(ReaderEvent.OpenContentEdit)
+            9 -> eventListener.onEvent(ReaderEvent.ChangeReplaceRuleState)
+            10 -> eventListener.onEvent(ReaderEvent.OpenChapterList)
+            11 -> eventListener.onEvent(ReaderEvent.OpenSearch)
+            12 -> eventListener.onEvent(ReaderEvent.SyncProgress)
+            13 -> eventListener.onEvent(ReaderEvent.ToggleReadAloudPause)
         }
     }
 
@@ -586,9 +572,9 @@ class ReadView(
      * 更新翻页动画
      */
     fun upPageAnim(upRecorder: Boolean = false) {
-        isScroll = ReadBook.pageAnim() == 3
+        isScroll = pageSource.pageAnim == 3
         ChapterProvider.upLayout()
-        when (ReadBook.pageAnim()) {
+        when (pageSource.pageAnim) {
             PageAnim.coverPageAnim -> if (pageDelegate !is CoverPageDelegate) {
                 pageDelegate = CoverPageDelegate(this)
             }
@@ -686,6 +672,7 @@ class ReadView(
      */
     fun upStyle() {
         ChapterProvider.upStyle()
+        TipStyleProvider.upTipStyle()
         curPage.upStyle()
         prevPage.upStyle()
         nextPage.upStyle()
@@ -697,6 +684,7 @@ class ReadView(
      */
     fun applyThemeColors() {
         ChapterProvider.upThemeColors()
+        TipStyleProvider.upTipStyle()
         invalidateTextPage()
         ReadSessionState.updateBackground(width, height)
         curPage.apply {
@@ -753,20 +741,10 @@ class ReadView(
     }
 
     /**
-     * 从选择位置开始朗读
+     * 当前页内 行/列 对应的章节内位置（渲染面查询，翻页推进由外层负责）
      */
-    suspend fun aloudStartSelect(selectStartPos: TextPos) {
-        var pagePos = selectStartPos.relativePagePos
-        val line = selectStartPos.lineIndex
-        val column = selectStartPos.columnIndex
-        while (pagePos > 0) {
-            if (!ReadBook.moveToNextPage()) {
-                ReadBook.moveToNextChapterAwait(false)
-            }
-            pagePos--
-        }
-        val startPos = curPage.textPage.getPosByLineColumn(line, column)
-        ReadBook.readAloud(startPos = startPos)
+    fun posByLineColumn(line: Int, column: Int): Int {
+        return curPage.textPage.getPosByLineColumn(line, column)
     }
 
     /**
@@ -804,6 +782,14 @@ class ReadView(
         }
     }
 
+    /**
+     * 供 [io.legado.app.ui.book.read.page.delegate.PageDelegate] 在翻到尽头时出站——
+     * 翻页委托不持有 eventListener，经这里转发（Track D·D1）。
+     */
+    internal fun requestAutoPageStop() {
+        eventListener.onEvent(ReaderEvent.AutoPageStop)
+    }
+
     fun onScrollAnimStart() {
         autoPager.pause()
     }
@@ -832,41 +818,41 @@ class ReadView(
         upProgressThrottle.invoke()
     }
 
+    override val pageIndex: Int get() = pageSource.durPageIndex
+
     override val currentChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(0) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(0) else null
         }
 
     override val nextChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(1) else null
         }
 
     override val prevChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(-1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(-1) else null
         }
 
     override fun hasNextChapter(): Boolean {
-        return ReadBook.durChapterIndex < ReadBook.simulatedChapterSize - 1
+        return pageSource.durChapterIndex < pageSource.simulatedChapterSize - 1
     }
 
     override fun hasPrevChapter(): Boolean {
-        return ReadBook.durChapterIndex > 0
+        return pageSource.durChapterIndex > 0
     }
 
+    /**
+     * 与宿主的**瞬时 UI 副作用**协作面（Track D·D1）。
+     *
+     * 业务意图一律走 [ReaderEvent]；这里只留不属于业务状态、由 View 直接驱动宿主的那几项，
+     * 外加首帧放行门闩 `isInitFinish`（入站状态查询，随 D2 数据面一起处理）。
+     */
     interface CallBack {
         val isInitFinish: Boolean
-        fun showActionMenu()
         fun screenOffTimerStart()
         fun showTextActionMenu()
-        fun autoPageStop()
-        fun openChapterList()
-        fun openContentEdit()
-        fun addBookmark()
-        fun changeReplaceRuleState()
-        fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
-        fun sureNewProgress(progress: BookProgress)
     }
 }
