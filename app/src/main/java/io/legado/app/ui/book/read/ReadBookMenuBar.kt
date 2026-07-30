@@ -66,14 +66,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.FindReplace
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -154,7 +151,6 @@ import dev.chrisbanes.haze.HazeState
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
-import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.animation.DampedDragAnimation
@@ -1560,7 +1556,7 @@ private fun MenuTitleBarMergedGlassButton(
                 )
 
                 // Refresh
-                val refreshDescription = stringResource(R.string.menu_refresh_after)
+                val refreshDescription = stringResource(R.string.menu_refresh_dur)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -1569,7 +1565,7 @@ private fun MenuTitleBarMergedGlassButton(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
                             role = Role.Button,
-                            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+                            onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
                             onLongClick = { refreshExpanded = true },
                         )
                         .semantics {
@@ -1826,10 +1822,10 @@ private fun RefreshActionButton(
 
     Box {
         MenuTitleGlassButton(
-            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+            onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
             onLongClick = { expanded = true },
             icon = Icons.Default.Refresh,
-            contentDescription = stringResource(R.string.menu_refresh_after),
+            contentDescription = stringResource(R.string.menu_refresh_dur),
             state = state,
             colors = colors,
             backdrop = backdrop,
@@ -2013,6 +2009,11 @@ private fun OverflowDropdownMenu(
                     text = stringResource(R.string.change_origin),
                     leadingIcon = menuIcon(Icons.Default.SwapHoriz),
                     onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.menu_refresh_dur),
+                    leadingIcon = menuIcon(Icons.Default.Refresh),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshDur) },
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.menu_refresh_after),
