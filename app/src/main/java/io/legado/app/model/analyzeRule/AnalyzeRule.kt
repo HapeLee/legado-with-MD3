@@ -17,6 +17,7 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.JsExtensions
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.getShareScope
@@ -175,7 +176,7 @@ class AnalyzeRule(
                 url = baseUrl,
                 html = content.toString(),
                 javaScript = jsStr,
-                headerMap = getSource()?.getHeaderMap(true),
+                headerMap = getSource()?.getHeaderMap(AppConfig.userAgent, true),
                 tag = getSource()?.getKey(),
                 cacheFirst = true,
                 timeout = 10000,

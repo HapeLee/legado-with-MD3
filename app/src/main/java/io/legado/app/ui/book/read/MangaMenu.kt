@@ -21,6 +21,10 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.gone
@@ -36,6 +40,9 @@ class MangaMenu @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
     private val binding = ViewMangaMenuBinding.inflate(LayoutInflater.from(context), this, true)
     private val callBack: CallBack get() = activity as CallBack
+    private val readSettingsGateway by lazy {
+        GlobalContext.get().get<ReadSettingsGateway>()
+    }
     var canShowMenu: Boolean = false
 
     private val sourceMenu by lazy {
@@ -202,10 +209,10 @@ class MangaMenu @JvmOverloads constructor(
             context.alert(R.string.open_fun) {
                 setMessage(R.string.use_browser_open)
                 okButton {
-                    ReadConfig.readUrlInBrowser = true
+                    updateReadUrlInBrowser(true)
                 }
                 noButton {
-                    ReadConfig.readUrlInBrowser = false
+                    updateReadUrlInBrowser(false)
                 }
             }
             true
@@ -270,6 +277,12 @@ class MangaMenu @JvmOverloads constructor(
             callBack.showScrollModeDialog()
         }
 
+    }
+
+    private fun updateReadUrlInBrowser(enabled: Boolean) {
+        activity?.lifecycleScope?.launch {
+            readSettingsGateway.update { it.copy(readUrlInBrowser = enabled) }
+        }
     }
 
     fun upSeekBar(value: Int, count: Int) {

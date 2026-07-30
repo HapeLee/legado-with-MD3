@@ -311,6 +311,22 @@ interface BookSourceDao {
     @get:Query("select max(customOrder) from book_sources")
     val maxOrder: Int
 
+    @Transaction
+    fun moveToTop(sourceUrl: String): Int? {
+        val source = getBookSource(sourceUrl) ?: return null
+        source.customOrder = minOrder - 1
+        update(source)
+        return source.customOrder
+    }
+
+    @Transaction
+    fun moveToBottom(sourceUrl: String): Int? {
+        val source = getBookSource(sourceUrl) ?: return null
+        source.customOrder = maxOrder + 1
+        update(source)
+        return source.customOrder
+    }
+
     @get:Query(
         """select exists (select 1 
         from book_sources group by customOrder having count(customOrder) > 1)"""

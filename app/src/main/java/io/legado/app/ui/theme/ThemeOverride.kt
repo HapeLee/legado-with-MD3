@@ -2,16 +2,10 @@ package io.legado.app.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 data class ThemeOverrideState(
     val seedColor: Color,
@@ -25,13 +19,14 @@ fun buildThemeOverrideState(
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
     usePureBlack: Boolean,
+    contrastLevel: Double = ThemeResolver.resolveContrastLevel(),
 ): ThemeOverrideState {
     var colorScheme = dynamicColorScheme(
         seedColor = seedColor,
         isDark = isDark,
         isAmoled = false,
         style = paletteStyle,
-        contrastLevel = ThemeResolver.resolveContrastLevel(),
+        contrastLevel = contrastLevel,
         specVersion = ThemeResolver.resolveColorSpecVersion(colorSpec)
     )
 
@@ -56,25 +51,11 @@ fun ProvideThemeOverride(
     theme: ThemeOverrideState?,
     content: @Composable () -> Unit,
 ) {
-    var appliedTheme by remember { mutableStateOf<ThemeOverrideState?>(null) }
-    val baseTheme = LocalLegadoThemeColors.current
-
-    LaunchedEffect(theme) {
-        if (theme == null) {
-            appliedTheme = null
-        } else {
-            withFrameNanos { }
-            appliedTheme = theme
-        }
-    }
-
-    val currentTheme = appliedTheme
-
-    if (currentTheme != null) {
+    if (theme != null) {
         ProvideColorSchemeOverride(
-            colorScheme = currentTheme.colorScheme,
-            seedColor = currentTheme.seedColor,
-            overrideIsDark = currentTheme.isDark,
+            colorScheme = theme.colorScheme,
+            seedColor = theme.seedColor,
+            overrideIsDark = theme.isDark,
             content = content
         )
     } else {
@@ -88,17 +69,20 @@ fun rememberThemeOverride(
 ): ThemeOverrideState? {
     val isDark = LegadoTheme.isDark
     val paletteStyle = LegadoTheme.paletteStyle
-    val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(ThemeConfig.materialVersion)
-    val usePureBlack = ThemeConfig.isPureBlack
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(themeSettings.materialVersion)
+    val usePureBlack = themeSettings.isPureBlack
+    val contrastLevel = ThemeResolver.resolveContrastLevel(themeSettings.customContrast)
 
-    return remember(seedColor, isDark, paletteStyle, colorSpec, usePureBlack) {
+    return remember(seedColor, isDark, paletteStyle, colorSpec, usePureBlack, contrastLevel) {
         seedColor?.let { color ->
             buildThemeOverrideState(
                 seedColor = color,
                 isDark = isDark,
                 paletteStyle = paletteStyle,
                 colorSpec = colorSpec,
-                usePureBlack = usePureBlack
+                usePureBlack = usePureBlack,
+                contrastLevel = contrastLevel,
             )
         }
     }

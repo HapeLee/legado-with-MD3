@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import io.legado.app.constant.AppLog
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
@@ -14,6 +15,7 @@ import io.legado.app.utils.externalFiles
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getFile
+import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import splitties.init.appCtx
 import java.io.File
@@ -56,14 +58,10 @@ class ReadStyleRepository(
         configs: List<ReadBookConfig.Config>,
         shareConfig: ReadBookConfig.Config
     ) {
-        GSON.toJson(configs).let {
-            FileUtils.delete(configFilePath)
-            FileUtils.createFileIfNotExist(configFilePath).writeText(it)
-        }
-        GSON.toJson(shareConfig).let {
-            FileUtils.delete(shareConfigFilePath)
-            FileUtils.createFileIfNotExist(shareConfigFilePath).writeText(it)
-        }
+        // 原子写：两条保存通道（配置 store 的兜底保存与 ReadStyleSaveQueue）会并发落到这里，
+        // 「删掉再写」既有杀进程丢配置的窗口，也会让两者互相看到对方写了一半的文件。
+        FileUtils.writeTextAtomic(configFilePath, GSON.toJson(configs))
+        FileUtils.writeTextAtomic(shareConfigFilePath, GSON.toJson(shareConfig))
     }
 
     fun getAllPicBgStr(configs: List<ReadBookConfig.Config>): ArrayList<String> {
@@ -119,16 +117,26 @@ class ReadStyleRepository(
     fun export(config: ReadBookConfig.Config): ByteArray {
         val exportDir = appCtx.externalCache.getFile("readConfigExport")
         exportDir.createFolderReplace()
-        val exportConfig = config.copy(
+        var exportConfig = config.copy(
             highlightRules = ArrayList(config.highlightRules.map { it.copy() })
         )
         val exportFiles = arrayListOf<File>()
 
-        addBackgroundFile(exportDir, exportConfig, 0, exportFiles)
-        addBackgroundFile(exportDir, exportConfig, 1, exportFiles)
-        addBackgroundFile(exportDir, exportConfig, 2, exportFiles)
-        exportConfig.textFont = addAssetFile(exportDir, exportConfig.textFont, exportFiles)
-        exportConfig.titleFont = addAssetFile(exportDir, exportConfig.titleFont, exportFiles)
+        exportConfig = addBackgroundFile(exportDir, exportConfig, 0, exportFiles)
+        exportConfig = addBackgroundFile(exportDir, exportConfig, 1, exportFiles)
+        exportConfig = addBackgroundFile(exportDir, exportConfig, 2, exportFiles)
+        exportConfig = exportConfig.copy(
+            textFont = addAssetFile(exportDir, exportConfig.textFont, exportFiles),
+            titleFont = addAssetFile(exportDir, exportConfig.titleFont, exportFiles),
+        )
+        HighlightRuleAssetTransfer.prepareExport(
+            rules = exportConfig.highlightRules,
+            exportDir = exportDir,
+            copyAsset = ::copyRuleAsset,
+        ).let { result ->
+            exportConfig = exportConfig.copy(highlightRules = ArrayList(result.rules))
+            exportFiles.addAll(result.files)
+        }
 
         val configFile = exportDir.getFile(ReadBookConfig.configFileName)
         configFile.writeText(GSON.toJson(exportConfig))
@@ -149,70 +157,65 @@ class ReadStyleRepository(
         configDir.createFolderReplace()
         ZipUtils.unZipToPath(zipFile, configDir)
         val configFile = configDir.getFile(ReadBookConfig.configFileName)
-        val config: ReadBookConfig.Config =
+        var config: ReadBookConfig.Config =
             GSON.fromJsonObject<ReadBookConfig.Config>(configFile.readText()).getOrThrow()
 
-        config.textFont = importFont(configDir, config.textFont)
-        config.titleFont = importFont(configDir, config.titleFont)
+        config = config.copy(
+            textFont = importFont(configDir, config.textFont),
+            titleFont = importFont(configDir, config.titleFont),
+            bgStr = importBackground(configDir, config.bgType, config.bgStr),
+            bgStrNight = importBackground(configDir, config.bgTypeNight, config.bgStrNight),
+            bgStrEInk = importBackground(configDir, config.bgTypeEInk, config.bgStrEInk),
+        )
 
-        if (config.bgType == 2) {
-            val bgName = FileUtils.getName(config.bgStr)
-            config.bgStr = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStr = bgPath
-        } else if (config.bgType == 0) {
-            config.bgStr.toColorInt()
-        }
-        if (config.bgTypeNight == 2) {
-            val bgName = FileUtils.getName(config.bgStrNight)
-            config.bgStrNight = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrNight = bgPath
-        } else if (config.bgTypeNight == 0) {
-            config.bgStrNight.toColorInt()
-        }
-        if (config.bgTypeEInk == 2) {
-            val bgName = FileUtils.getName(config.bgStrEInk)
-            config.bgStrEInk = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrEInk = bgPath
-        } else if (config.bgTypeEInk == 0) {
-            config.bgStrEInk.toColorInt()
-        }
-        config.curTextColor()
-        config.curTextAccentColor()
-        config.curTextShadowColor()
         if (config.highlightRules.isNotEmpty()) {
+            val restored = HighlightRuleAssetTransfer.restoreImport(
+                rules = config.highlightRules,
+                importDir = configDir,
+                backgroundDir = File(appCtx.filesDir, "bg_images"),
+                fontDir = appCtx.externalFiles.getFile("font"),
+                isReadableBackgroundReference = appCtx::isReadableHighlightBackground,
+                isReadableFontReference = appCtx::isReadableHighlightFont,
+            )
             val targetConfigName = config.name.ifBlank { null }
-            val highlightRules = config.highlightRules.map { rule ->
+            val highlightRules = restored.map { rule ->
                 if (targetConfigName.isNullOrBlank()) {
                     rule.copy(configName = null)
                 } else {
                     rule.copyWithNewId().copy(configName = listOf(targetConfigName).toJsonArray())
                 }
             }
-            config.highlightRules = ArrayList(highlightRules)
+            config = config.copy(highlightRules = ArrayList(highlightRules))
             highlightRuleRepository.saveForConfig(highlightRules, targetConfigName)
         }
+        // 预热 Config 内部的颜色记忆化缓存，让返回的实例首次绘制时不必再解析一遍字符串。
+        // 必须排在最后一次 copy 之后——copy 会把缓存重置回未初始化。
+        config.curTextColor()
+        config.curTextAccentColor()
+        config.curTextShadowColor()
         return config
+    }
+
+    /**
+     * 背景是图片（type 2）时把它落到 bg 目录并改写成绝对路径；是颜色（type 0）时
+     * 只做一次解析校验——解析不了就让导入整体失败，而不是导进一份显示不出来的配置。
+     */
+    private fun importBackground(configDir: File, bgType: Int, bgStr: String): String {
+        if (bgType != 2) {
+            if (bgType == 0) {
+                bgStr.toColorInt()
+            }
+            return bgStr
+        }
+        val bgName = FileUtils.getName(bgStr)
+        val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
+        if (!FileUtils.exist(bgPath)) {
+            val bgFile = configDir.getFile(bgName)
+            if (bgFile.exists()) {
+                bgFile.copyTo(File(bgPath))
+            }
+        }
+        return bgPath
     }
 
     private fun addBackgroundFile(
@@ -220,16 +223,17 @@ class ReadStyleRepository(
         config: ReadBookConfig.Config,
         bgIndex: Int,
         exportFiles: MutableList<File>
-    ) {
-        val sourcePath = ReadStyleResolver.backgroundPath(config, bgIndex) ?: return
+    ): ReadBookConfig.Config {
+        val sourcePath = ReadStyleResolver.backgroundPath(config, bgIndex) ?: return config
         val exportedName = addAssetFile(exportDir, sourcePath, exportFiles)
         if (exportedName.isBlank()) {
-            return
+            return config
         }
-        when (bgIndex) {
-            0 -> config.bgStr = exportedName
-            1 -> config.bgStrNight = exportedName
-            2 -> config.bgStrEInk = exportedName
+        return when (bgIndex) {
+            0 -> config.copy(bgStr = exportedName)
+            1 -> config.copy(bgStrNight = exportedName)
+            2 -> config.copy(bgStrEInk = exportedName)
+            else -> config
         }
     }
 
@@ -251,6 +255,22 @@ class ReadStyleRepository(
             exportFiles.add(target)
         }
         return target.name
+    }
+
+    private fun copyRuleAsset(sourcePath: String, target: File): Boolean {
+        return runCatching {
+            target.parentFile?.mkdirs()
+            if (sourcePath.isContentScheme()) {
+                appCtx.contentResolver.openInputStream(sourcePath.toUri())?.use { input ->
+                    target.outputStream().use(input::copyTo)
+                } ?: return@runCatching false
+            } else {
+                val source = File(sourcePath)
+                if (!source.isFile) return@runCatching false
+                source.copyTo(target, overwrite = true)
+            }
+            true
+        }.getOrDefault(false)
     }
 
     private fun importFont(configDir: File, fontName: String): String {

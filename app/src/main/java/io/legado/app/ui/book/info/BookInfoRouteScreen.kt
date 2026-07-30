@@ -11,6 +11,8 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -26,8 +28,6 @@ import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
@@ -36,7 +36,10 @@ import io.legado.app.utils.openFileUri
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.collections.immutable.persistentListOf
+import io.legado.app.data.entities.BookGroup
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -53,6 +56,11 @@ fun BookInfoRouteScreen(
     onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
+    onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
+    onOpenCharacterNetwork: (bookUrl: String) -> Unit = {},
+    onOpenCharacterList: (bookUrl: String) -> Unit = {},
+    onOpenKnowledgeList: (bookUrl: String) -> Unit = {},
+    onOpenEventList: (bookUrl: String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -61,13 +69,15 @@ fun BookInfoRouteScreen(
     val context = LocalContext.current
     val activity = context as AppCompatActivity
     val lifecycleOwner = LocalLifecycleOwner.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showMangaUi by rememberUpdatedState(uiState.showMangaUi)
 
     val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
         viewModel.onTocResult(it)
     }
     val localBookTreeSelect = rememberLauncherForActivityResult(HandleFileContract()) {
         it.uri?.let { treeUri ->
-            OtherConfig.defaultBookTreeUri = treeUri.toString()
+            viewModel.onIntent(BookInfoIntent.SetDefaultBookTreeUri(treeUri.toString()))
         }
     }
     val infoEditResult = rememberLauncherForActivityResult(
@@ -122,6 +132,7 @@ fun BookInfoRouteScreen(
     LaunchedEffect(viewModel, activity) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
+                is BookInfoEffect.ShowMessage -> context.toastOnUi(effect.message)
                 is BookInfoEffect.Finish -> {
                     onFinish(effect.resultCode, effect.afterTransition)
                 }
@@ -135,7 +146,7 @@ fun BookInfoRouteScreen(
                 is BookInfoEffect.OpenReader -> {
                     val cls = when {
                         effect.book.isAudio -> AudioPlayActivity::class.java
-                        !effect.book.isLocal && effect.book.isImage && ReadMangaConfig.showMangaUi -> {
+                        !effect.book.isLocal && effect.book.isImage && showMangaUi -> {
                             ReadMangaActivity::class.java
                         }
 
@@ -199,12 +210,34 @@ fun BookInfoRouteScreen(
                 is BookInfoEffect.NavigateToExploreShow -> {
                     onNavigateToExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl)
                 }
+
+                is BookInfoEffect.OpenCharacterDetail -> {
+                    onOpenCharacterDetail(effect.bookUrl, effect.characterId)
+                }
+
+                is BookInfoEffect.OpenCharacterNetwork -> {
+                    onOpenCharacterNetwork(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenKnowledgeList -> {
+                    onOpenKnowledgeList(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenCharacterList -> {
+                    onOpenCharacterList(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenEventList -> {
+                    onOpenEventList(effect.bookUrl)
+                }
             }
         }
     }
 
     BookInfoScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
+        state = uiState,
+        groups = viewModel.allGroups
+            .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
         onIntent = viewModel::onIntent,
         onBack = onBack,
         sharedTransitionScope = sharedTransitionScope,

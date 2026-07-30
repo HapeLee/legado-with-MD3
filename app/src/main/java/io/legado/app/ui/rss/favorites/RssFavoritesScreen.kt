@@ -41,16 +41,33 @@ import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RssFavoritesScreen(
+fun RssFavoritesRouteScreen(
     onBackClick: () -> Unit,
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     viewModel: RssFavoritesViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    val groups by viewModel.groups.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    RssFavoritesScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+        onOpenRead = onOpenRead,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RssFavoritesScreen(
+    state: RssFavoritesUiState,
+    onIntent: (RssFavoritesIntent) -> Unit,
+    onBackClick: () -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+) {
+    val groups = state.groups
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddToGroupDialog by remember { mutableStateOf(false) }
@@ -64,9 +81,8 @@ fun RssFavoritesScreen(
         suggestions = groups,
         onDismissRequest = { showAddToGroupDialog = false },
         onConfirm = { text ->
-            viewModel.selectionAddToGroups(state.selectedIds, text)
+            onIntent(RssFavoritesIntent.AddSelectedToGroup(text))
             showAddToGroupDialog = false
-            viewModel.clearSelection()
         }
     )
 
@@ -77,9 +93,8 @@ fun RssFavoritesScreen(
         suggestions = groups,
         onDismissRequest = { showRemoveFromGroupDialog = false },
         onConfirm = { text ->
-            viewModel.selectionRemoveFromGroups(state.selectedIds, text)
+            onIntent(RssFavoritesIntent.RemoveSelectedFromGroup(text))
             showRemoveFromGroupDialog = false
-            viewModel.clearSelection()
         }
     )
 
@@ -91,7 +106,7 @@ fun RssFavoritesScreen(
         suggestions = groups,
         onDismissRequest = { showSetGroupDialog = null },
         onConfirm = { rssStar, text ->
-            viewModel.updateGroup(rssStar, text)
+            onIntent(RssFavoritesIntent.UpdateGroup(rssStar, text))
             showSetGroupDialog = null
         }
     )
@@ -101,12 +116,12 @@ fun RssFavoritesScreen(
         subtitle = state.currentGroup.ifEmpty { stringResource(R.string.all) },
         state = state,
         onBackClick = onBackClick,
-        onSearchToggle = viewModel::onSearchToggle,
-        onSearchQueryChange = viewModel::onSearchQueryChange,
-        onClearSelection = viewModel::clearSelection,
-        onSelectAll = viewModel::selectAll,
-        onSelectInvert = viewModel::selectInvert,
-        onDeleteSelected = { viewModel.deleteSelected() },
+        onSearchToggle = { onIntent(RssFavoritesIntent.ToggleSearch(it)) },
+        onSearchQueryChange = { onIntent(RssFavoritesIntent.Search(it)) },
+        onClearSelection = { onIntent(RssFavoritesIntent.ClearSelection) },
+        onSelectAll = { onIntent(RssFavoritesIntent.SelectAll) },
+        onSelectInvert = { onIntent(RssFavoritesIntent.InvertSelection) },
+        onDeleteSelected = { onIntent(RssFavoritesIntent.DeleteSelected) },
         snackbarHostState = snackbarHostState,
         selectionSecondaryActions = listOf(
             ActionItem(
@@ -128,7 +143,7 @@ fun RssFavoritesScreen(
                     }
                 },
                 onClick = {
-                    viewModel.onGroupChange("")
+                    onIntent(RssFavoritesIntent.ChangeGroup(""))
                     dismiss()
                 }
             )
@@ -145,7 +160,7 @@ fun RssFavoritesScreen(
                         }
                     },
                     onClick = {
-                        viewModel.onGroupChange(group)
+                        onIntent(RssFavoritesIntent.ChangeGroup(group))
                         dismiss()
                     }
                 )
@@ -159,7 +174,7 @@ fun RssFavoritesScreen(
                     }
                 },
                 onClick = {
-                    viewModel.deleteGroup(state.currentGroup)
+                    onIntent(RssFavoritesIntent.DeleteGroup(state.currentGroup))
                     dismiss()
                 }
             )
@@ -171,7 +186,7 @@ fun RssFavoritesScreen(
                     }
                 },
                 onClick = {
-                    viewModel.deleteAll()
+                    onIntent(RssFavoritesIntent.DeleteAll)
                     dismiss()
                 }
             )
@@ -211,7 +226,7 @@ fun RssFavoritesScreen(
                         isSelected = isSelected,
                         inSelectionMode = state.selectedIds.isNotEmpty(),
                         onToggleSelection = {
-                            viewModel.toggleSelection(rssStar)
+                            onIntent(RssFavoritesIntent.ToggleSelection(rssStar))
                         },
                         leadingContent = if (!rssStar.image.isNullOrBlank()) {
                             {
@@ -246,7 +261,7 @@ fun RssFavoritesScreen(
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.delete),
                                 onClick = {
-                                    viewModel.deleteStar(rssStar)
+                                    onIntent(RssFavoritesIntent.DeleteStar(rssStar))
                                     dismiss()
                                 }
                             )

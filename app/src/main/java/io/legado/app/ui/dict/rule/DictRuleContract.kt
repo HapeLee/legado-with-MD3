@@ -63,7 +63,9 @@ sealed interface DictRuleIntent {
     data object SaveImportedRules : DictRuleIntent
 }
 
-sealed interface DictRuleEffect
+sealed interface DictRuleEffect {
+    data class ShowMessage(val message: String) : DictRuleEffect
+}
 
 data class DictRuleRenderState(
     val uiState: DictRuleUiState,

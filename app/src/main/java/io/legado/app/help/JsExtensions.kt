@@ -231,7 +231,7 @@ interface JsExtensions : JsEncodeUtils {
                 url = url,
                 html = html,
                 javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
+                headerMap = getSource()?.getHeaderMap(AppConfig.userAgent, true),
                 tag = getSource()?.getKey()
             ).getStrResponse().body
         }
@@ -270,7 +270,7 @@ interface JsExtensions : JsEncodeUtils {
                 url = url,
                 html = html,
                 javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
+                headerMap = getSource()?.getHeaderMap(AppConfig.userAgent, true),
                 tag = getSource()?.getKey(),
                 sourceRegex = sourceRegex,
                 delayTime = delayTime
@@ -316,7 +316,7 @@ interface JsExtensions : JsEncodeUtils {
                 url = url,
                 html = html,
                 javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
+                headerMap = getSource()?.getHeaderMap(AppConfig.userAgent, true),
                 tag = getSource()?.getKey(),
                 overrideUrlRegex = overrideUrlRegex,
                 delayTime = delayTime

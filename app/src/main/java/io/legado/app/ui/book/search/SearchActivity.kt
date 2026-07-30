@@ -31,7 +31,7 @@ class SearchActivity : BaseComposeActivity() {
 
     @Composable
     override fun Content() {
-        SearchScreen(
+        SearchRouteScreen(
             viewModel = viewModel,
             onBack = { finish() },
             onOpenBookInfo = { name, author, bookUrl, origin, coverPath, _ ->

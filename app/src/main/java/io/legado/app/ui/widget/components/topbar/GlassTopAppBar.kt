@@ -2,7 +2,11 @@ package io.legado.app.ui.widget.components.topbar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,7 +22,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GlassTopAppBar(
     title: String,
@@ -46,11 +50,16 @@ fun GlassTopAppBar(
 
     Column(modifier = finalModifier) {
         if (isMiuix) {
+            // Reserve constant status-bar space (ignoring visibility) like
+            // Material3's TopAppBar, so content doesn't reflow when the status
+            // bar is re-shown (e.g. returning from a reader that hid it).
             MiuixTopAppBar(
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility),
                 title = title,
                 navigationIcon = navigationIcon,
                 actions = actions,
-                color = Color.Transparent
+                color = Color.Transparent,
+                defaultWindowInsetsPadding = false
             )
         } else {
             TopAppBar(

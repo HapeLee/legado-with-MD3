@@ -24,7 +24,7 @@ data class TxtTocRulePreviewUiState(
         else rules.filter {
             it.rule.name.contains(searchQuery, ignoreCase = true) ||
                     it.rule.example?.contains(searchQuery, ignoreCase = true) == true ||
-                    it.rule.rule.contains(searchQuery, ignoreCase = true)
+                    it.rule.chapterRule.contains(searchQuery, ignoreCase = true)
         }.toImmutableList()
 }
 

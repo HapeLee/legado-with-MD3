@@ -8,8 +8,10 @@ import io.legado.app.constant.EventBus
 import io.legado.app.service.WebService
 import io.legado.app.utils.eventBus.FlowEventBus
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -32,6 +34,12 @@ sealed class PrefClickEvent {
     object ExitApp : PrefClickEvent()
 }
 
+sealed interface MyIntent {
+    data object ToggleWebService : MyIntent
+}
+
+sealed interface MyEffect
+
 class MyViewModel(
     application: Application
 ) : BaseViewModel(application) {
@@ -43,6 +51,8 @@ class MyViewModel(
         )
     )
     val uiState: StateFlow<MyUiState> = _uiState.asStateFlow()
+    private val _effects = MutableSharedFlow<MyEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -58,9 +68,9 @@ class MyViewModel(
         }
     }
 
-    fun onEvent(event: PrefClickEvent) {
-        when (event) {
-            PrefClickEvent.ToggleWebService -> {
+    fun onIntent(intent: MyIntent) {
+        when (intent) {
+            MyIntent.ToggleWebService -> {
                 val currentIsRun = _uiState.value.isWebServiceRun
 
                 if (!currentIsRun) {
@@ -71,7 +81,6 @@ class MyViewModel(
                 }
 
             }
-            else -> Unit
         }
     }
 

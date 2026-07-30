@@ -4,15 +4,19 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.annotation.Keep
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import io.legado.app.R
+import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.model.CoverAlbumImageInput
+import io.legado.app.domain.model.settings.ThemeExportData
 import io.legado.app.domain.usecase.CoverAlbumUseCase
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -29,7 +33,15 @@ import java.util.zip.ZipOutputStream
 class ThemePackageManager(
     private val context: Context,
     private val coverAlbumUseCase: CoverAlbumUseCase,
+    private val themePackageSettingsGateway: ThemePackageSettingsGateway,
 ) {
+
+    private val stateTransaction = ThemeStateTransaction(
+        exportSettings = themePackageSettingsGateway::exportCurrent,
+        currentAlbumId = { coverAlbumUseCase.selection.value.albumId },
+        applySettings = ::applyThemeSettings,
+        selectAlbum = coverAlbumUseCase::selectAlbum,
+    )
 
     companion object {
         const val FILE_EXTENSION = "zip"
@@ -42,6 +54,10 @@ class ThemePackageManager(
 
         private const val ASSET_BACKGROUND_LIGHT = "background.light"
         private const val ASSET_BACKGROUND_DARK = "background.dark"
+        private const val ASSET_CONTAINER_LARGE_LIGHT = "container.large.light"
+        private const val ASSET_CONTAINER_LARGE_DARK = "container.large.dark"
+        private const val ASSET_CONTAINER_ITEM_LIGHT = "container.item.light"
+        private const val ASSET_CONTAINER_ITEM_DARK = "container.item.dark"
         private const val ASSET_NAV_HOME = "navigation.home"
         private const val ASSET_NAV_BOOKSHELF = "navigation.bookshelf"
         private const val ASSET_NAV_EXPLORE = "navigation.explore"
@@ -63,9 +79,7 @@ class ThemePackageManager(
                 return@runSuspendCatching
             }
 
-            val rawConfig = themeData ?: ThemeImportExport.exportFromCurrent(
-                includeEmbeddedAssets = false
-            )
+            val rawConfig = themeData ?: themePackageSettingsGateway.exportCurrent()
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 ZipOutputStream(BufferedOutputStream(output)).use { zip ->
                     val assetEntries = exportAssets(zip, rawConfig)
@@ -122,31 +136,39 @@ class ThemePackageManager(
                     manifest.coverSelection.albumRef,
                     albumIdMap,
                 )
-                ThemeImportExport.applyToThemeConfig(
-                    manifest.config.copy(
-                        bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
-                        bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
-                        navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
-                        navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
-                        navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
-                        navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
-                        navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
-                        appFontPath = localAssets[ASSET_FONT],
-                        coverDefaultImage = "",
-                        coverDefaultImageDark = "",
-                        assets = null,
+                stateTransaction.run {
+                    applyThemeSettings(
+                        manifest.config.copy(
+                            bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
+                            bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                            largeContainerBackgroundImageLight =
+                                localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                            largeContainerBackgroundImageDark =
+                                localAssets[ASSET_CONTAINER_LARGE_DARK],
+                            itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                            itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
+                            navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
+                            navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
+                            navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
+                            navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
+                            navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
+                            appFontPath = localAssets[ASSET_FONT],
+                            coverDefaultImage = "",
+                            coverDefaultImageDark = "",
+                            assets = null,
+                        )
                     )
-                )
-                coverAlbumUseCase.selectAlbum(selectedAlbumId)
-                saveImportedTheme(
-                    name = importedThemeName(uri, manifest.name),
-                    selectedCoverAlbumId = selectedAlbumId,
-                )
-            } catch (error: CancellationException) {
-                throw error
+                    coverAlbumUseCase.selectAlbum(selectedAlbumId)
+                    saveImportedTheme(
+                        name = importedThemeName(uri, manifest.name),
+                        selectedCoverAlbumId = selectedAlbumId,
+                    )
+                }
             } catch (error: Exception) {
-                importedAlbumIds.forEach { id ->
-                    runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                withContext(NonCancellable) {
+                    importedAlbumIds.forEach { id ->
+                        runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                    }
                 }
                 copiedAssets.forEach(File::delete)
                 throw error
@@ -161,17 +183,31 @@ class ThemePackageManager(
             val json = context.contentResolver.openInputStream(uri)?.use {
                 it.bufferedReader().readText()
             } ?: error("无法读取旧主题配置")
-            val appliedAssets = ThemeImportExport.importFromJsonWithAssets(json)
+            val preparedTheme = ThemeImportExport.prepareLegacyJson(json)
                 ?: error("旧主题配置格式无效或字段已被混淆")
-            val name = importedThemeName(uri)
-            val selectedCoverAlbumId = importLegacyCoverAlbums(
-                albumName = name,
-                appliedAssets = appliedAssets,
-            )
-            saveImportedTheme(
-                name = name,
-                selectedCoverAlbumId = selectedCoverAlbumId,
-            )
+            var selectedCoverAlbumId: String? = null
+            try {
+                stateTransaction.run {
+                    applyThemeSettings(preparedTheme.data)
+                    val name = importedThemeName(uri)
+                    selectedCoverAlbumId = importLegacyCoverAlbums(
+                        albumName = name,
+                        appliedAssets = preparedTheme.appliedAssets,
+                    )
+                    saveImportedTheme(
+                        name = name,
+                        selectedCoverAlbumId = selectedCoverAlbumId,
+                    )
+                }
+            } catch (error: Exception) {
+                withContext(NonCancellable) {
+                    selectedCoverAlbumId?.let { id ->
+                        runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                    }
+                    preparedTheme.appliedAssets.createdFiles.forEach(File::delete)
+                }
+                throw error
+            }
         }
     }
 
@@ -185,11 +221,39 @@ class ThemePackageManager(
             .mapNotNull(::readSavedThemeFolder)
     }
 
+    suspend fun hasLegacySavedThemes(): Boolean = withContext(Dispatchers.IO) {
+        savedThemesRoot.listFiles().orEmpty().any { it.isFile && it.extension == "json" }
+    }
+
+    suspend fun migrateLegacySavedThemes(): LegacyThemeMigrationResult =
+        withContext(Dispatchers.IO) {
+            var migratedCount = 0
+            var failedCount = 0
+            savedThemesRoot.listFiles().orEmpty()
+                .filter { it.isFile && it.extension == "json" }
+                .forEach { file ->
+                    runCatching {
+                        val data = ThemeImportExport.parseLegacyThemeData(file.readText())
+                            ?: error("Unsupported legacy theme: ${file.name}")
+                        saveTheme(
+                            name = uniqueSavedThemeName(file.nameWithoutExtension),
+                            data = data,
+                        )
+                        check(file.delete()) { "Unable to remove migrated theme: ${file.name}" }
+                    }.onSuccess {
+                        migratedCount++
+                    }.onFailure {
+                        failedCount++
+                    }
+                }
+            LegacyThemeMigrationResult(migratedCount, failedCount)
+        }
+
     suspend fun saveTheme(
         name: String,
         data: ThemeExportData? = null,
     ): SavedTheme = withContext(Dispatchers.IO) {
-        val themeData = data ?: ThemeImportExport.exportFromCurrent(includeEmbeddedAssets = false)
+        val themeData = data ?: themePackageSettingsGateway.exportCurrent()
         val selectedCoverAlbumId = themeData.selectedCoverAlbumId
             ?: coverAlbumUseCase.selection.value.albumId
         saveThemeFolder(
@@ -223,7 +287,9 @@ class ThemePackageManager(
                 require(packageRoot.isDirectory) {
                     "Saved theme folder does not exist: ${theme.name}"
                 }
-                applySavedThemeFolder(theme, packageRoot, packageManifest)
+                stateTransaction.run {
+                    applySavedThemeFolder(theme, packageRoot, packageManifest)
+                }
             }
         }
 
@@ -243,6 +309,10 @@ class ThemePackageManager(
             val data = manifest.config.copy(
                 bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
                 bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                largeContainerBackgroundImageLight = localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                largeContainerBackgroundImageDark = localAssets[ASSET_CONTAINER_LARGE_DARK],
+                itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
                 navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
                 navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
                 navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
@@ -324,48 +394,72 @@ class ThemePackageManager(
         root: File,
         manifest: ThemePackageManifest,
     ) {
-        val localAssets = resolveSavedAssets(root, manifest.assets)
+        val copiedAssets = mutableListOf<File>()
+        val localAssets = importAssets(
+            root = root,
+            entries = manifest.assets,
+            copiedFiles = copiedAssets,
+        )
         val savedAlbumId = theme.data.selectedCoverAlbumId
             ?.takeIf { id -> coverAlbumUseCase.albums.value.any { it.id == id } }
-        val selectedAlbumId = if (savedAlbumId != null) {
-            coverAlbumUseCase.selectAlbum(savedAlbumId)
-            savedAlbumId
-        } else {
-            importSavedCoverAlbum(root, manifest)
-        }
-        ThemeImportExport.applyToThemeConfig(
-            data = manifest.config.copy(
-                bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
-                bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
-                navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
-                navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
-                navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
-                navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
-                navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
-                appFontPath = localAssets[ASSET_FONT],
-                coverDefaultImage = "",
-                coverDefaultImageDark = "",
-                selectedCoverAlbumId = selectedAlbumId,
-                assets = null,
-            ),
-            applyEmbeddedCoverAssets = false,
-        )
-        coverAlbumUseCase.selectAlbum(selectedAlbumId)
-        if (selectedAlbumId != manifest.config.selectedCoverAlbumId) {
-            writeSavedManifest(
-                root = root,
-                manifest = manifest.copy(
-                    config = manifest.config.copy(selectedCoverAlbumId = selectedAlbumId),
+        var importedAlbumIds = emptyList<String>()
+        try {
+            val selectedAlbumId = if (savedAlbumId != null) {
+                coverAlbumUseCase.selectAlbum(savedAlbumId)
+                savedAlbumId
+            } else {
+                importSavedCoverAlbum(root, manifest).also {
+                    importedAlbumIds = it.createdAlbumIds
+                }.selectedAlbumId
+            }
+            applyThemeSettings(
+                data = manifest.config.copy(
+                    bgImageLight = localAssets[ASSET_BACKGROUND_LIGHT],
+                    bgImageDark = localAssets[ASSET_BACKGROUND_DARK],
+                    largeContainerBackgroundImageLight =
+                        localAssets[ASSET_CONTAINER_LARGE_LIGHT],
+                    largeContainerBackgroundImageDark =
+                        localAssets[ASSET_CONTAINER_LARGE_DARK],
+                    itemBackgroundImageLight = localAssets[ASSET_CONTAINER_ITEM_LIGHT],
+                    itemBackgroundImageDark = localAssets[ASSET_CONTAINER_ITEM_DARK],
+                    navIconHome = localAssets[ASSET_NAV_HOME].orEmpty(),
+                    navIconBookshelf = localAssets[ASSET_NAV_BOOKSHELF].orEmpty(),
+                    navIconExplore = localAssets[ASSET_NAV_EXPLORE].orEmpty(),
+                    navIconRss = localAssets[ASSET_NAV_RSS].orEmpty(),
+                    navIconMy = localAssets[ASSET_NAV_MY].orEmpty(),
+                    appFontPath = localAssets[ASSET_FONT],
+                    coverDefaultImage = "",
+                    coverDefaultImageDark = "",
+                    selectedCoverAlbumId = selectedAlbumId,
+                    assets = null,
                 ),
             )
+            coverAlbumUseCase.selectAlbum(selectedAlbumId)
+            if (selectedAlbumId != manifest.config.selectedCoverAlbumId) {
+                writeSavedManifest(
+                    root = root,
+                    manifest = manifest.copy(
+                        config = manifest.config.copy(selectedCoverAlbumId = selectedAlbumId),
+                    ),
+                )
+            }
+        } catch (error: Exception) {
+            withContext(NonCancellable) {
+                importedAlbumIds.forEach { id ->
+                    runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                }
+            }
+            copiedAssets.forEach(File::delete)
+            throw error
         }
     }
 
     private suspend fun importSavedCoverAlbum(
         root: File,
         manifest: ThemePackageManifest,
-    ): String? {
-        val albumRef = manifest.coverSelection.albumRef ?: return null
+    ): SavedCoverAlbumImport {
+        val albumRef = manifest.coverSelection.albumRef
+            ?: return SavedCoverAlbumImport(selectedAlbumId = null)
         val importedIds = mutableListOf<String>()
         return try {
             val albumIdMap = importCoverAlbums(
@@ -373,12 +467,15 @@ class ThemePackageManager(
                 albums = manifest.coverAlbums,
                 importedIds = importedIds,
             )
-            resolveAlbumRef(albumRef, albumIdMap)
-        } catch (error: CancellationException) {
-            throw error
+            SavedCoverAlbumImport(
+                selectedAlbumId = resolveAlbumRef(albumRef, albumIdMap),
+                createdAlbumIds = importedIds.toList(),
+            )
         } catch (error: Exception) {
-            importedIds.forEach { id ->
-                runCatching { coverAlbumUseCase.deleteAlbum(id) }
+            withContext(NonCancellable) {
+                importedIds.forEach { id ->
+                    runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                }
             }
             throw error
         }
@@ -394,10 +491,16 @@ class ThemePackageManager(
             if (path != null) {
                 val extension = sourceExtension(path, source.key)
                 val entryPath = "${source.entryBase}.$extension"
-                openSource(path).use { input ->
-                    input.copyToPackageFile(root, entryPath)
+                val copied = runCatching {
+                    openSource(path).use { input ->
+                        input.copyToPackageFile(root, entryPath)
+                    }
+                }.isSuccess
+                if (copied) {
+                    result[source.key] = entryPath
+                } else if (config.assets?.get(source.legacyAssetKey).isNullOrBlank()) {
+                    error("无法读取主题资源: $path")
                 }
-                result[source.key] = entryPath
             }
         }
         copyEmbeddedAssetsToFolder(root, config, result)
@@ -412,6 +515,26 @@ class ThemePackageManager(
         val sources = mapOf(
             "bgImageLight" to AssetSource(ASSET_BACKGROUND_LIGHT, null, "assets/background/light"),
             "bgImageDark" to AssetSource(ASSET_BACKGROUND_DARK, null, "assets/background/dark"),
+            "largeContainerBackgroundImageLight" to AssetSource(
+                ASSET_CONTAINER_LARGE_LIGHT,
+                null,
+                "assets/container/large/light",
+            ),
+            "largeContainerBackgroundImageDark" to AssetSource(
+                ASSET_CONTAINER_LARGE_DARK,
+                null,
+                "assets/container/large/dark",
+            ),
+            "itemBackgroundImageLight" to AssetSource(
+                ASSET_CONTAINER_ITEM_LIGHT,
+                null,
+                "assets/container/item/light",
+            ),
+            "itemBackgroundImageDark" to AssetSource(
+                ASSET_CONTAINER_ITEM_DARK,
+                null,
+                "assets/container/item/dark",
+            ),
             "navIconHome" to AssetSource(ASSET_NAV_HOME, null, "assets/navigation/home"),
             "navIconBookshelf" to AssetSource(
                 ASSET_NAV_BOOKSHELF,
@@ -575,12 +698,11 @@ class ThemePackageManager(
         return entries.mapNotNull { (key, entryPath) ->
             val source = resolvePackageFile(root, entryPath)
             require(source.isFile) { "主题资源不存在: $entryPath" }
-            val extension = source.extension
-                .lowercase()
-                .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
-                ?: "asset"
+            val extension = sourceExtension(source.absolutePath, key)
             val targetDir = when (key) {
-                ASSET_BACKGROUND_LIGHT, ASSET_BACKGROUND_DARK -> {
+                ASSET_BACKGROUND_LIGHT, ASSET_BACKGROUND_DARK,
+                ASSET_CONTAINER_LARGE_LIGHT, ASSET_CONTAINER_LARGE_DARK,
+                ASSET_CONTAINER_ITEM_LIGHT, ASSET_CONTAINER_ITEM_DARK -> {
                     File(context.getExternalFilesDir(null) ?: context.filesDir, "theme_assets")
                 }
 
@@ -660,11 +782,11 @@ class ThemePackageManager(
             }
             coverAlbumUseCase.selectAlbum(albumId)
             return albumId
-        } catch (error: CancellationException) {
-            throw error
         } catch (error: Exception) {
-            importedIds.forEach { id ->
-                runCatching { coverAlbumUseCase.deleteAlbum(id) }
+            withContext(NonCancellable) {
+                importedIds.forEach { id ->
+                    runCatching { coverAlbumUseCase.deleteAlbum(id) }
+                }
             }
             throw error
         }
@@ -676,10 +798,22 @@ class ThemePackageManager(
     ) {
         saveTheme(
             name = uniqueSavedThemeName(name),
-            data = ThemeImportExport.exportFromCurrent().copy(
+            data = themePackageSettingsGateway.exportCurrent().copy(
                 selectedCoverAlbumId = selectedCoverAlbumId,
             ),
         )
+    }
+
+    private suspend fun applyThemeSettings(data: ThemeExportData) {
+        themePackageSettingsGateway.applyAndAwait(data)
+        withContext(Dispatchers.Main.immediate) {
+            val mode = when (data.themeMode) {
+                "1" -> AppCompatDelegate.MODE_NIGHT_NO
+                "2" -> AppCompatDelegate.MODE_NIGHT_YES
+                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
     }
 
     private fun uniqueSavedThemeName(name: String): String {
@@ -795,6 +929,10 @@ class ThemePackageManager(
     private fun ThemeExportData.toPortableConfig() = copy(
         bgImageLight = null,
         bgImageDark = null,
+        largeContainerBackgroundImageLight = null,
+        largeContainerBackgroundImageDark = null,
+        itemBackgroundImageLight = null,
+        itemBackgroundImageDark = null,
         navIconHome = "",
         navIconBookshelf = "",
         navIconExplore = "",
@@ -814,6 +952,26 @@ class ThemePackageManager(
     private fun assetSources(config: ThemeExportData) = listOf(
         AssetSource(ASSET_BACKGROUND_LIGHT, config.bgImageLight, "assets/background/light"),
         AssetSource(ASSET_BACKGROUND_DARK, config.bgImageDark, "assets/background/dark"),
+        AssetSource(
+            ASSET_CONTAINER_LARGE_LIGHT,
+            config.largeContainerBackgroundImageLight,
+            "assets/container/large/light",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_LARGE_DARK,
+            config.largeContainerBackgroundImageDark,
+            "assets/container/large/dark",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_ITEM_LIGHT,
+            config.itemBackgroundImageLight,
+            "assets/container/item/light",
+        ),
+        AssetSource(
+            ASSET_CONTAINER_ITEM_DARK,
+            config.itemBackgroundImageDark,
+            "assets/container/item/dark",
+        ),
         AssetSource(ASSET_NAV_HOME, config.navIconHome, "assets/navigation/home"),
         AssetSource(
             ASSET_NAV_BOOKSHELF,
@@ -836,10 +994,11 @@ class ThemePackageManager(
     }
 
     private fun sourceExtension(path: String, key: String): String {
-        val candidate = Uri.parse(path).lastPathSegment
-            ?.substringAfterLast('.', "")
-            ?.lowercase()
-            ?.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+        val fileName = Uri.parse(path).lastPathSegment.orEmpty()
+        if (fileName.endsWith(".9.png", ignoreCase = true)) return "9.png"
+        val candidate = fileName.substringAfterLast('.', "")
+            .lowercase()
+            .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
         return candidate ?: if (key == ASSET_FONT) "ttf" else "img"
     }
 
@@ -906,13 +1065,65 @@ class ThemePackageManager(
         val key: String,
         val sourcePath: String?,
         val entryBase: String,
-    )
+    ) {
+        val legacyAssetKey: String
+            get() = when (key) {
+                ASSET_BACKGROUND_LIGHT -> "bgImageLight"
+                ASSET_BACKGROUND_DARK -> "bgImageDark"
+                ASSET_CONTAINER_LARGE_LIGHT -> "largeContainerBackgroundImageLight"
+                ASSET_CONTAINER_LARGE_DARK -> "largeContainerBackgroundImageDark"
+                ASSET_CONTAINER_ITEM_LIGHT -> "itemBackgroundImageLight"
+                ASSET_CONTAINER_ITEM_DARK -> "itemBackgroundImageDark"
+                ASSET_NAV_HOME -> "navIconHome"
+                ASSET_NAV_BOOKSHELF -> "navIconBookshelf"
+                ASSET_NAV_EXPLORE -> "navIconExplore"
+                ASSET_NAV_RSS -> "navIconRss"
+                ASSET_NAV_MY -> "navIconMy"
+                ASSET_FONT -> "appFontPath"
+                else -> key
+            }
+    }
 
     private data class ExportedCoverData(
         val albums: List<ThemePackageCoverAlbum>,
         val selection: ThemePackageCoverSelection,
     )
+
+    private data class SavedCoverAlbumImport(
+        val selectedAlbumId: String?,
+        val createdAlbumIds: List<String> = emptyList(),
+    )
 }
+
+internal class ThemeStateTransaction(
+    private val exportSettings: () -> ThemeExportData,
+    private val currentAlbumId: () -> String?,
+    private val applySettings: suspend (ThemeExportData) -> Unit,
+    private val selectAlbum: suspend (String?) -> Unit,
+) {
+    suspend fun <T> run(block: suspend () -> T): T {
+        val previousSettings = exportSettings()
+        val previousAlbumId = currentAlbumId()
+        return try {
+            block()
+        } catch (error: Exception) {
+            withContext(NonCancellable) {
+                runCatching { applySettings(previousSettings) }
+                    .exceptionOrNull()
+                    ?.let(error::addSuppressed)
+                runCatching { selectAlbum(previousAlbumId) }
+                    .exceptionOrNull()
+                    ?.let(error::addSuppressed)
+            }
+            throw error
+        }
+    }
+}
+
+data class LegacyThemeMigrationResult(
+    val migratedCount: Int,
+    val failedCount: Int,
+)
 
 @Keep
 data class ThemePackageManifest(

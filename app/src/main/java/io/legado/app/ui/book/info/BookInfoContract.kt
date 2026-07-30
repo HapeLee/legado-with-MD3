@@ -33,6 +33,9 @@ data class BookInfoUiState(
     val inBookshelf: Boolean = false,
     val bookSource: BookInfoSourceUi? = null,
     val relatedBooks: ImmutableList<RelatedBooksUi> = persistentListOf(),
+    val characters: ImmutableList<BookInfoCharacterUi> = persistentListOf(),
+    val knowledgeEntries: ImmutableList<BookInfoKnowledgeUi> = persistentListOf(),
+    val recentEvents: ImmutableList<BookInfoEventUi> = persistentListOf(),
     val isTocLoading: Boolean = false,
     val isBusy: Boolean = false,
     val deleteAlertEnabled: Boolean = true,
@@ -40,6 +43,13 @@ data class BookInfoUiState(
     val showAppLogSheet: Boolean = false,
     val sheet: BookInfoSheet = BookInfoSheet.None,
     val dialog: BookInfoDialog? = null,
+    val bookInfoFollowCoverColor: Boolean = true,
+    val bookInfoNetworkCoverBackground: String = "on",
+    val bookInfoDefaultCoverBackground: String = "on",
+    val loadCoverOnlyOnWifi: Boolean = false,
+    val defaultCover: String = "",
+    val defaultCoverDark: String = "",
+    val showMangaUi: Boolean = true,
 )
 
 @Stable
@@ -70,6 +80,33 @@ data class BookInfoSourceUi(
     val sourceUrl: String,
     val hasLogin: Boolean,
     val hasCustomButton: Boolean,
+)
+
+@Stable
+data class BookInfoCharacterUi(
+    val id: String,
+    val name: String,
+    val avatarUri: String?,
+    val role: String,
+    val tags: String,
+    val summary: String,
+)
+
+@Stable
+data class BookInfoKnowledgeUi(
+    val id: String,
+    val type: String,
+    val title: String,
+    val summary: String,
+)
+
+@Stable
+data class BookInfoEventUi(
+    val id: String,
+    val chapterTitle: String,
+    val eventTimeText: String,
+    val content: String,
+    val characterName: String,
 )
 
 sealed interface BookInfoSheet {
@@ -167,9 +204,18 @@ sealed interface BookInfoIntent {
 
     data class RelatedBookClick(val book: SearchBook) : BookInfoIntent
     data class RelatedBooksMore(val title: String, val url: String) : BookInfoIntent
+    data class CharacterClick(val characterId: String) : BookInfoIntent
+    data object AddCharacterClick : BookInfoIntent
+    data object CharacterNetworkClick : BookInfoIntent
+    data object CharacterListClick : BookInfoIntent
+    data object KnowledgeListClick : BookInfoIntent
+    data object EventListClick : BookInfoIntent
+    data class SetDefaultBookTreeUri(val value: String) : BookInfoIntent
 }
 
 sealed interface BookInfoEffect {
+    data class ShowMessage(val message: String) : BookInfoEffect
+
     data class Finish(
         val resultCode: Int? = null,
         val afterTransition: Boolean = false,
@@ -210,6 +256,27 @@ sealed interface BookInfoEffect {
         val title: String?,
         val sourceUrl: String,
         val exploreUrl: String?,
+    ) : BookInfoEffect
+
+    data class OpenCharacterDetail(
+        val bookUrl: String,
+        val characterId: String?,
+    ) : BookInfoEffect
+
+    data class OpenCharacterNetwork(
+        val bookUrl: String,
+    ) : BookInfoEffect
+
+    data class OpenCharacterList(
+        val bookUrl: String,
+    ) : BookInfoEffect
+
+    data class OpenKnowledgeList(
+        val bookUrl: String,
+    ) : BookInfoEffect
+
+    data class OpenEventList(
+        val bookUrl: String,
     ) : BookInfoEffect
 }
 

@@ -8,8 +8,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -29,28 +29,34 @@ object HazeLegado {
     @ReadOnlyComposable
     fun ultraThin(
         containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
-    ): HazeStyle = hazeLegado(
-        containerColor = containerColor,
-        lightAlpha = ThemeConfig.topBarBlurAlpha / 100f * 0.35f / 0.73f,
-        darkAlpha = ThemeConfig.topBarBlurAlpha / 100f * 0.55f / 0.8f,
-    )
+    ): HazeStyle {
+        val blurAlpha = LocalAppUiConfiguration.current.theme.topBarBlurAlpha / 100f
+        return hazeLegado(
+            containerColor = containerColor,
+            lightAlpha = blurAlpha * 0.35f / 0.73f,
+            darkAlpha = blurAlpha * 0.55f / 0.8f,
+        )
+    }
 
     @Composable
     @ReadOnlyComposable
     fun regular(
         containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
-    ): HazeStyle = hazeLegado(
-        containerColor = containerColor,
-        lightAlpha = ThemeConfig.topBarBlurAlpha / 100f,
-        darkAlpha = ThemeConfig.topBarBlurAlpha / 100f,
-    )
+    ): HazeStyle {
+        val blurAlpha = LocalAppUiConfiguration.current.theme.topBarBlurAlpha / 100f
+        return hazeLegado(
+            containerColor = containerColor,
+            lightAlpha = blurAlpha,
+            darkAlpha = blurAlpha,
+        )
+    }
 
     @Composable
     @ReadOnlyComposable
     fun custom(
         containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
-        blurRadius: Int = ThemeConfig.topBarBlurRadius,
-        blurAlpha: Int = ThemeConfig.topBarBlurAlpha,
+        blurRadius: Int = LocalAppUiConfiguration.current.theme.topBarBlurRadius,
+        blurAlpha: Int = LocalAppUiConfiguration.current.theme.topBarBlurAlpha,
     ): HazeStyle = hazeLegado(
         containerColor = containerColor,
         blurRadius = blurRadius,

@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,7 +16,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SmallAnimatedButton(
     checked: Boolean,
@@ -44,34 +42,34 @@ fun SmallAnimatedButton(
         }
     }
 
-    SmallNoMinTouchTarget {
-        SeriesButton(
-            onClick = {
-                onCheckedChange(!checked)
-                showText = true
-            },
-            modifier = if (text == null) modifier else modifier.height(36.dp),
-            enabled = enabled,
-            selected = checked,
-            onLongClick = onLongClick,
-            size = if (text == null) smallContainerSize() else null,
-            style = SeriesIconButtonStyle.Tonal,
+    SeriesButton(
+        onClick = {
+            onCheckedChange(!checked)
+            showText = true
+        },
+        modifier = if (text == null) modifier else modifier.height(36.dp),
+        enabled = enabled,
+        selected = checked,
+        onLongClick = onLongClick,
+        size = if (text == null) smallContainerSize() else null,
+        enforceMinimumInteractiveSize = false,
+        shape = SmallButtonShape,
+        style = SeriesIconButtonStyle.Tonal,
+        contentColor = contentColor,
+        containerColor = containerColor,
+        selectedContainerColor = selectedContainerColor,
+        selectedContentColor = selectedContentColor
+    ) { contentColor ->
+        SeriesAnimatedButtonContent(
+            icon = currentIcon,
+            text = text,
+            contentDescription = if (text == null) contentDescription else null,
+            showText = showText,
+            iconSize = smallIconSize,
+            textStyle = LegadoTheme.typography.labelSmall,
             contentColor = contentColor,
-            containerColor = containerColor,
-            selectedContainerColor = selectedContainerColor,
-            selectedContentColor = selectedContentColor
-        ) { contentColor ->
-            SeriesAnimatedButtonContent(
-                icon = currentIcon,
-                text = text,
-                contentDescription = if (text == null) contentDescription else null,
-                showText = showText,
-                iconSize = smallIconSize,
-                textStyle = LegadoTheme.typography.labelSmall,
-                contentColor = contentColor,
-                padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                spacing = 6.dp
-            )
-        }
+            padding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            spacing = 6.dp
+        )
     }
 }

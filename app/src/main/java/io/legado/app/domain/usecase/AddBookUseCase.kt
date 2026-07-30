@@ -3,6 +3,8 @@ package io.legado.app.domain.usecase
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
@@ -10,7 +12,9 @@ import kotlinx.coroutines.withContext
 
 class AddBookUseCase(
     private val bookRepository: BookRepository,
-    private val bookSourceRepository: BookSourceRepository
+    private val bookSourceRepository: BookSourceRepository,
+    private val otherSettingsGateway: OtherSettingsGateway,
+    private val readSettingsGateway: ReadSettingsGateway,
 ) {
     suspend fun execute(
         bookUrls: String,
@@ -55,7 +59,12 @@ class AddBookUseCase(
                 val dbBook = bookRepository.getBook(bookInfo.name, bookInfo.author)
                 if (dbBook != null) {
                     val toc = WebBook.getChapterListAwait(bookSource, bookInfo).getOrThrow()
-                    dbBook.migrateTo(bookInfo, toc)
+                    dbBook.migrateTo(
+                        bookInfo,
+                        toc,
+                        otherSettingsGateway.currentSettings.replaceEnableDefault,
+                        readSettingsGateway.currentSettings.chineseConverterType,
+                    )
                     bookRepository.insert(bookInfo)
                     bookRepository.insertChapters(*toc.toTypedArray())
                 } else {

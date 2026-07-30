@@ -180,6 +180,7 @@ fun AiModelEditScreen(
                         valueRange = TranslationConstants.MIN_TEMPERATURE..TranslationConstants.MAX_TEMPERATURE,
                         steps = 19,
                         description = state.temperature.toString(),
+                        decimal = true,
                         onValueChange = { onIntent(AiModelEditIntent.UpdateTemperature(it)) }
                     )
                 }

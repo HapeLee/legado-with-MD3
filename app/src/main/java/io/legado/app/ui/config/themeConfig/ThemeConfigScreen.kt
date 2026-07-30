@@ -2,11 +2,6 @@ package io.legado.app.ui.config.themeConfig
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
-import android.os.Handler
-import android.os.Looper
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -14,7 +9,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,11 +44,7 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,18 +56,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.base.AppContextWrapper
-import io.legado.app.constant.EventBus
-import io.legado.app.help.LauncherIconHelp
-import io.legado.app.help.config.ThemeConfigStore
-import io.legado.app.ui.config.labConfig.LabConfig
+import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -87,9 +71,11 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.dialog.TimePickerDialog
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -99,55 +85,25 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.postEvent
-import io.legado.app.utils.restart
-import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ThemeConfigScreen(
+    state: ThemeConfigUiState,
+    onIntent: (ThemeConfigIntent) -> Unit,
     onBackClick: () -> Unit,
     onNavigateToCustomTheme: () -> Unit,
     onNavigateToThemeManage: () -> Unit,
-    viewModel: ThemeConfigViewModel = koinViewModel()
 ) {
+    val appShell = state.appShell
+    val theme = state.theme
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    var manageKey by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
-
-    var selectedThemeMode by remember { mutableStateOf(ThemeConfig.themeMode) }
-    var selectedTheme by remember { mutableStateOf(ThemeConfig.appTheme) }
-    var useMiuixMonet by remember { mutableStateOf(ThemeConfig.useMiuixMonet) }
-    var showRestartDialog by remember { mutableStateOf(false) }
-    var showLauncherIconPicker by remember { mutableStateOf(false) }
-    var showBorderColorPicker by remember { mutableStateOf(false) }
-    var showNavIconSheet by remember { mutableStateOf(false) }
-    var showMainNavigationSheet by remember { mutableStateOf(false) }
-    var showFontSheet by remember { mutableStateOf(false) }
-    val showThemeRefactorTip by viewModel.showThemeRefactorTip.collectAsStateWithLifecycle()
-
-    val fontFolder by viewModel.fontFolder.collectAsStateWithLifecycle()
-    val fontFolderState = remember(fontFolder) {
-        val folder = fontFolder
-        if (folder == null) {
-            FontFolderState.Loading
-        } else {
-            FontFolderState.Loaded(folder.takeIf { it.isNotEmpty() }?.toUri())
-        }
+    fun updateTheme(transform: (ThemeSettings) -> ThemeSettings) =
+        onIntent(ThemeConfigIntent.UpdateTheme(transform))
+    val fontFolderState = remember(state.fontFolder) {
+        FontFolderState.Loaded(state.fontFolder.takeIf { it.isNotEmpty() }?.let(android.net.Uri::parse))
     }
-
-    val fontFolderLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            uri.takePersistablePermissionSafely(context, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            viewModel.setFontFolder(uri.toString())
-        }
-    }
-
-    val fontScaleValue = remember { mutableFloatStateOf(ThemeConfig.fontScale.toFloat()) }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -169,15 +125,11 @@ fun ThemeConfigScreen(
             )
         ) {
             item {
-                val composeEngine = ThemeConfig.composeEngine
+                val composeEngine = appShell.composeEngine
                 val isMiuixEngine = remember(composeEngine) {
                     ThemeResolver.isMiuixEngine(composeEngine)
                 }
-                val isDarkTheme = when (selectedThemeMode) {
-                    "1" -> false
-                    "2" -> true
-                    else -> isSystemInDarkTheme()
-                }
+                val isDarkTheme = LegadoTheme.isDark
 
                 if (!isMiuixEngine) {
                     Column(
@@ -186,12 +138,12 @@ fun ThemeConfigScreen(
                     ) {
                         ThemeCard(
                             context = context,
-                            value = selectedTheme,
+                            value = theme.appTheme,
                             isDark = isDarkTheme,
-                            isAmoled = ThemeConfig.isPureBlack,
-                            paletteStyle = ThemeConfig.paletteStyle,
-                            customLightSeedColor = ThemeConfig.cPrimary,
-                            customNightSeedColor = ThemeConfig.cNPrimary
+                            isAmoled = theme.isPureBlack,
+                            paletteStyle = theme.paletteStyle,
+                            customLightSeedColor = theme.customPrimary,
+                            customNightSeedColor = theme.customNightPrimary
                         )
                     }
                 }
@@ -204,7 +156,7 @@ fun ThemeConfigScreen(
                     themeItems.zip(themeValues).toList()
                 }
 
-                AnimatedVisibility(visible = showThemeRefactorTip) {
+                AnimatedVisibility(visible = theme.showRefactorTip) {
                     GlassCard(
                         cornerRadius = 16.dp,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -220,9 +172,9 @@ fun ThemeConfigScreen(
                             )
                             SmallPlainButton(
                                 icon = AppIcons.Close,
-                                contentDescription = "关闭",
+                                contentDescription = stringResource(R.string.close),
                                 onClick = {
-                                    viewModel.setShowThemeRefactorTip(false)
+                                    onIntent(ThemeConfigIntent.DismissRefactorTip)
                                 }
                             )
                         }
@@ -234,53 +186,44 @@ fun ThemeConfigScreen(
                     if (isMiuixEngine) {
                         DropdownListSettingItem(
                             title = stringResource(R.string.theme_mode),
-                            selectedValue = selectedThemeMode,
+                            selectedValue = appShell.themeMode,
                             displayEntries = stringArrayResource(R.array.theme_mode),
                             entryValues = stringArrayResource(R.array.theme_mode_v),
                             onValueChange = { mode ->
-                                selectedThemeMode = mode
-                                ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                onIntent(
+                                    ThemeConfigIntent.SetThemeMode(mode)
+                                )
                             }
                         )
 
                         SwitchSettingItem(
                             title = stringResource(R.string.miuix_monet),
                             description = stringResource(R.string.miuix_monet_summary),
-                            checked = useMiuixMonet,
+                            checked = theme.useMiuixMonet,
                             onCheckedChange = {
-                                useMiuixMonet = it
-                                ThemeConfig.useMiuixMonet = it
-                                if (it && selectedTheme != "0" && selectedTheme != "12") {
-                                    selectedTheme = "0"
-                                    ThemeConfig.appTheme = "0"
-                                }
+                                onIntent(ThemeConfigIntent.SetMiuixMonet(it))
                             }
                         )
 
-                        if (useMiuixMonet) {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.dynamic_colors),
-                                description = stringResource(R.string.dynamic_colors_summary),
-                                checked = selectedTheme == "0",
-                                onCheckedChange = { checked ->
-                                    val newTheme = if (checked) "0" else "12"
-                                    val oldTheme = selectedTheme
-                                    selectedTheme = newTheme
-                                    ThemeConfig.appTheme = newTheme
-                                    if (oldTheme != newTheme) {
-                                        showRestartDialog = true
-                                    }
+                        if (theme.useMiuixMonet) {
+                            val visibleThemes = themes.filter { (_, value) ->
+                                value != "4" || state.showEInkTheme
+                            }
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.theme),
+                                selectedValue = theme.appTheme,
+                                displayEntries = visibleThemes.map { it.first }.toTypedArray(),
+                                entryValues = visibleThemes.map { it.second }.toTypedArray(),
+                                onValueChange = { value ->
+                                    onIntent(ThemeConfigIntent.SelectTheme(value))
                                 }
                             )
                         }
                     } else {
                         ThemeModeSelector(
-                            selectedMode = selectedThemeMode,
+                            selectedMode = appShell.themeMode,
                             onModeSelected = { mode ->
-                                selectedThemeMode = mode
-                                ThemeConfig.themeMode = mode
-                                ThemeConfigStore.applyDayNight(context)
+                                onIntent(ThemeConfigIntent.SetThemeMode(mode))
                             }
                         )
                     }
@@ -289,37 +232,19 @@ fun ThemeConfigScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val visibleThemes = themes.filter { (_, value) ->
-                            value != "4" || (LabConfig.labEnabled && LabConfig.eInkDisplay)
+                            value != "4" || state.showEInkTheme
                         }
                         ThemeColorSelector(
                             context = context,
                             themes = visibleThemes,
-                            selectedTheme = selectedTheme,
+                            selectedTheme = theme.appTheme,
                             isDark = isDarkTheme,
-                            isAmoled = ThemeConfig.isPureBlack,
-                            paletteStyle = ThemeConfig.paletteStyle,
-                            customLightSeedColor = ThemeConfig.cPrimary,
-                            customNightSeedColor = ThemeConfig.cNPrimary,
-                            onThemeSelected = { theme ->
-                                if (theme == "13") {
-                                    val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
-                                    val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
-                                    if (!hasLightBg || !hasDarkBg) {
-                                        context.toastOnUi(R.string.transparent_theme_alarm)
-                                        return@ThemeColorSelector
-                                    } else {
-                                        ThemeConfig.containerOpacity = 0
-                                    }
-                                }
-                                val oldTheme = selectedTheme
-                                selectedTheme = theme
-                                ThemeConfig.appTheme = theme
-                                val isDynamicSwitch = (oldTheme == "12" || theme == "12")
-                                if (isDynamicSwitch) {
-                                    showRestartDialog = true
-                                } else {
-                                    postEvent(EventBus.RECREATE, "")
-                                }
+                            isAmoled = theme.isPureBlack,
+                            paletteStyle = theme.paletteStyle,
+                            customLightSeedColor = theme.customPrimary,
+                            customNightSeedColor = theme.customNightPrimary,
+                            onThemeSelected = {
+                                onIntent(ThemeConfigIntent.SelectTheme(it))
                             }
                         )
                     }
@@ -328,9 +253,9 @@ fun ThemeConfigScreen(
                 SplicedColumnGroup {
                     ClickableSettingItem(
                         title = stringResource(R.string.font_setting),
-                        onClick = { showFontSheet = true }
+                        onClick = { onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.Font)) }
                     )
-                    if (selectedTheme == "12" && (!isMiuixEngine || useMiuixMonet)) {
+                    if (theme.appTheme == "12" && (!isMiuixEngine || theme.useMiuixMonet)) {
                         ClickableSettingItem(
                             title = stringResource(R.string.custom_theme_colors),
                             onClick = onNavigateToCustomTheme
@@ -338,40 +263,45 @@ fun ThemeConfigScreen(
                     }
                     DropdownListSettingItem(
                         title = stringResource(R.string.compose_engine),
-                        selectedValue = ThemeConfig.composeEngine,
+                        selectedValue = appShell.composeEngine,
                         displayEntries = stringArrayResource(R.array.composeEngine),
                         entryValues = stringArrayResource(R.array.composeEngine_value),
                         onValueChange = {
-                            ThemeConfig.composeEngine = it
+                            onIntent(
+                                ThemeConfigIntent.SetComposeEngine(it)
+                            )
                         }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.change_icon),
                         description = stringResource(R.string.change_icon_summary),
-                        onClick = { showLauncherIconPicker = true }
+                        onClick = {
+                            onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.LauncherIcon))
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.predictive_back),
                         description = stringResource(R.string.predictive_back_summary),
-                        checked = ThemeConfig.isPredictiveBackEnabled,
+                        checked = appShell.predictiveBackEnabled,
                         onCheckedChange = {
-                            ThemeConfig.isPredictiveBackEnabled = it
-                            context.toastOnUi(R.string.restart_to_apply)
+                            onIntent(
+                                ThemeConfigIntent.SetPredictiveBackEnabled(it)
+                            )
                         }
                     )
                     SliderSettingItem(
                         title = stringResource(R.string.font_scale),
-                        description = stringResource(
-                            R.string.font_scale_summary,
-                            AppContextWrapper.getFontScale(context)
-                        ),
-                        value = fontScaleValue.floatValue,
+                        valueLabel = {
+                            context.getString(R.string.font_scale_summary, it / 10f)
+                        },
+                        value = appShell.fontScale.toFloat(),
                         defaultValue = 10f,
                         valueRange = 8f..16f,
                         steps = 7,
                         onValueChange = { value ->
-                            fontScaleValue.floatValue = value
-                            ThemeConfig.fontScale = value.toInt()
+                            onIntent(
+                                ThemeConfigIntent.SetFontScale(value.toInt())
+                            )
                         }
                     )
                     ClickableSettingItem(
@@ -385,68 +315,97 @@ fun ThemeConfigScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.main_navigation_settings),
                         description = stringResource(R.string.main_navigation_settings_summary),
-                        onClick = { showMainNavigationSheet = true },
+                        onClick = {
+                            onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.MainNavigation))
+                        },
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_status),
-                        checked = ThemeConfig.showStatusBar,
+                        checked = appShell.showStatusBar,
                         onCheckedChange = {
-                            ThemeConfig.showStatusBar = it
-                            postEvent(EventBus.NOTIFY_MAIN, true)
+                            onIntent(
+                                ThemeConfigIntent.SetShowStatusBar(it)
+                            )
                         }
                     )
                     //TODO:这个可以不要了，在删掉原来的设置页以后删
                     SwitchSettingItem(
                         title = stringResource(R.string.show_swipe_animation),
-                        checked = ThemeConfig.swipeAnimation,
-                        onCheckedChange = { ThemeConfig.swipeAnimation = it }
+                        checked = appShell.swipeAnimation,
+                        onCheckedChange = {
+                            onIntent(
+                                ThemeConfigIntent.SetSwipeAnimation(it)
+                            )
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_bottom_nav),
                         description = stringResource(R.string.be_swiped),
-                        checked = ThemeConfig.showBottomView,
-                        onCheckedChange = { ThemeConfig.showBottomView = it }
+                        checked = appShell.showBottomView,
+                        onCheckedChange = {
+                            onIntent(
+                                ThemeConfigIntent.SetShowBottomView(it)
+                            )
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.floating_bottom_bar),
                         description = stringResource(R.string.floating_bottom_bar_summary),
-                        checked = ThemeConfig.useFloatingBottomBar,
-                        onCheckedChange = { ThemeConfig.useFloatingBottomBar = it }
+                        checked = appShell.useFloatingBottomBar,
+                        onCheckedChange = {
+                            onIntent(
+                                ThemeConfigIntent.SetUseFloatingBottomBar(it)
+                            )
+                        }
                     )
-                    AnimatedVisibility(visible = ThemeConfig.useFloatingBottomBar) {
+                    AnimatedVisibility(visible = appShell.useFloatingBottomBar) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             SwitchSettingItem(
                                 title = stringResource(R.string.floating_bottom_bar_liquid_glass),
                                 description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
-                                checked = ThemeConfig.useFloatingBottomBarLiquidGlass,
-                                onCheckedChange = { ThemeConfig.useFloatingBottomBarLiquidGlass = it }
+                                checked = appShell.useFloatingBottomBarLiquidGlass,
+                                onCheckedChange = {
+                                    onIntent(
+                                        ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it)
+                                    )
+                                }
                             )
                             SliderSettingItem(
                                 title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
                                 description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
-                                value = ThemeConfig.bottomBarLensRadius,
+                                value = theme.bottomBarLensRadius,
                                 defaultValue = 24f,
                                 valueRange = 0f..50f,
-                                onValueChange = { ThemeConfig.bottomBarLensRadius = it }
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(bottomBarLensRadius = value) }
+                                }
                             )
                         }
 
                     }
                     DropdownListSettingItem(
                         title = stringResource(R.string.tabletInterface),
-                        selectedValue = ThemeConfig.tabletInterface,
+                        selectedValue = appShell.tabletInterface,
                         displayEntries = stringArrayResource(R.array.tabletInterface),
                         entryValues = stringArrayResource(R.array.tabletInterface_value),
-                        onValueChange = { ThemeConfig.tabletInterface = it }
+                        onValueChange = {
+                            onIntent(
+                                ThemeConfigIntent.SetTabletInterface(it)
+                            )
+                        }
                     )
                     DropdownListSettingItem(
                         title = stringResource(R.string.nav_label_mode),
-                        selectedValue = ThemeConfig.labelVisibilityMode,
+                        selectedValue = appShell.labelVisibilityMode,
                         displayEntries = stringArrayResource(R.array.label_vis_mode),
                         entryValues = stringArrayResource(R.array.label_vis_mode_value),
-                        onValueChange = { ThemeConfig.labelVisibilityMode = it }
+                        onValueChange = {
+                            onIntent(
+                                ThemeConfigIntent.SetLabelVisibilityMode(it)
+                            )
+                        }
                     )
                 }
 
@@ -454,130 +413,99 @@ fun ThemeConfigScreen(
                     SwitchSettingItem(
                         title = stringResource(R.string.book_info_follow_cover_color),
                         description = stringResource(R.string.book_info_follow_cover_color_summary),
-                        checked = ThemeConfig.bookInfoFollowCoverColor,
-                        onCheckedChange = { ThemeConfig.bookInfoFollowCoverColor = it }
+                        checked = theme.bookInfoFollowCoverColor,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(bookInfoFollowCoverColor = value) }
+                        }
                     )
                     DropdownListSettingItem(
                         title = stringResource(R.string.book_info_network_cover_background),
-                        selectedValue = ThemeConfig.bookInfoNetworkCoverBackground,
+                        selectedValue = theme.bookInfoNetworkCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = { ThemeConfig.bookInfoNetworkCoverBackground = it }
+                        onValueChange = { value ->
+                            updateTheme { it.copy(bookInfoNetworkCoverBackground = value) }
+                        }
                     )
                     DropdownListSettingItem(
                         title = stringResource(R.string.book_info_default_cover_background),
-                        selectedValue = ThemeConfig.bookInfoDefaultCoverBackground,
+                        selectedValue = theme.bookInfoDefaultCoverBackground,
                         displayEntries = stringArrayResource(R.array.book_info_background_blur_entries),
                         entryValues = stringArrayResource(R.array.book_info_background_blur_values),
-                        onValueChange = { ThemeConfig.bookInfoDefaultCoverBackground = it }
+                        onValueChange = { value ->
+                            updateTheme { it.copy(bookInfoDefaultCoverBackground = value) }
+                        }
                     )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {
-                    var eyeProtectionEnabled by remember {
-                        mutableStateOf(ThemeConfig.eyeProtectionEnabled)
-                    }
-                    var colorTemperature by remember {
-                        mutableIntStateOf(ThemeConfig.colorTemperature)
-                    }
-                    var eyeProtectionSchedule by remember {
-                        mutableStateOf(ThemeConfig.eyeProtectionSchedule)
-                    }
-                    var eyeProtectionStartTime by remember {
-                        mutableStateOf(ThemeConfig.eyeProtectionStartTime)
-                    }
-                    var eyeProtectionEndTime by remember {
-                        mutableStateOf(ThemeConfig.eyeProtectionEndTime)
-                    }
-
                     SwitchSettingItem(
                         title = stringResource(R.string.eye_protection_enabled),
                         description = stringResource(R.string.eye_protection_enabled_summary),
-                        checked = eyeProtectionEnabled,
-                        onCheckedChange = {
-                            eyeProtectionEnabled = it
-                            ThemeConfig.eyeProtectionEnabled = it
+                        checked = theme.eyeProtectionEnabled,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(eyeProtectionEnabled = value) }
                         }
                     )
 
-                    AnimatedVisibility(visible = eyeProtectionEnabled) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_auto_night),
+                        description = stringResource(R.string.eye_protection_auto_night_summary),
+                        checked = theme.eyeProtectionAutoNight,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(eyeProtectionAutoNight = value) }
+                        }
+                    )
+
+                    AnimatedVisibility(visible = theme.isEyeProtectionConfigured) {
                         Column {
                             SliderSettingItem(
                                 title = stringResource(R.string.color_temperature),
                                 description = stringResource(
                                     R.string.color_temperature_summary,
-                                    colorTemperature
+                                    theme.colorTemperature
                                 ),
-                                value = colorTemperature.toFloat(),
+                                value = theme.colorTemperature.toFloat(),
                                 defaultValue = 50f,
                                 valueRange = 0f..100f,
-                                steps = 99,
-                                onValueChange = {
-                                    colorTemperature = it.toInt()
-                                    ThemeConfig.colorTemperature = it.toInt()
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(colorTemperature = value.toInt()) }
                                 }
                             )
 
                             SwitchSettingItem(
                                 title = stringResource(R.string.eye_protection_schedule),
                                 description = stringResource(R.string.eye_protection_schedule_summary),
-                                checked = eyeProtectionSchedule,
-                                onCheckedChange = {
-                                    eyeProtectionSchedule = it
-                                    ThemeConfig.eyeProtectionSchedule = it
+                                checked = theme.eyeProtectionSchedule,
+                                onCheckedChange = { value ->
+                                    updateTheme { it.copy(eyeProtectionSchedule = value) }
                                 }
                             )
 
-                            AnimatedVisibility(visible = eyeProtectionSchedule) {
+                            AnimatedVisibility(visible = theme.eyeProtectionSchedule) {
                                 Column {
                                     ClickableSettingItem(
                                         title = stringResource(R.string.eye_protection_start_time),
-                                        option = eyeProtectionStartTime,
+                                        option = theme.eyeProtectionStartTime,
                                         onClick = {
-                                            val parts = eyeProtectionStartTime.split(":")
-                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 22
-                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                                            android.app.TimePickerDialog(
-                                                context,
-                                                { _, h, m ->
-                                                    val timeStr = String.format(
-                                                        java.util.Locale.US,
-                                                        "%02d:%02d",
-                                                        h.coerceIn(0, 23),
-                                                        m.coerceIn(0, 59)
-                                                    )
-                                                    eyeProtectionStartTime = timeStr
-                                                    ThemeConfig.eyeProtectionStartTime = timeStr
-                                                },
-                                                hour.coerceIn(0, 23),
-                                                minute.coerceIn(0, 59),
-                                                true
-                                            ).show()
+                                            onIntent(
+                                                ThemeConfigIntent.RequestTimePicker(
+                                                    ThemeTimeField.EyeProtectionStart,
+                                                    theme.eyeProtectionStartTime,
+                                                )
+                                            )
                                         }
                                     )
                                     ClickableSettingItem(
                                         title = stringResource(R.string.eye_protection_end_time),
-                                        option = eyeProtectionEndTime,
+                                        option = theme.eyeProtectionEndTime,
                                         onClick = {
-                                            val parts = eyeProtectionEndTime.split(":")
-                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 7
-                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                                            android.app.TimePickerDialog(
-                                                context,
-                                                { _, h, m ->
-                                                    val timeStr = String.format(
-                                                        java.util.Locale.US,
-                                                        "%02d:%02d",
-                                                        h.coerceIn(0, 23),
-                                                        m.coerceIn(0, 59)
-                                                    )
-                                                    eyeProtectionEndTime = timeStr
-                                                    ThemeConfig.eyeProtectionEndTime = timeStr
-                                                },
-                                                hour.coerceIn(0, 23),
-                                                minute.coerceIn(0, 59),
-                                                true
-                                            ).show()
+                                            onIntent(
+                                                ThemeConfigIntent.RequestTimePicker(
+                                                    ThemeTimeField.EyeProtectionEnd,
+                                                    theme.eyeProtectionEndTime,
+                                                )
+                                            )
                                         }
                                     )
                                 }
@@ -590,63 +518,74 @@ fun ThemeConfigScreen(
                     if (!isMiuixEngine) {
                         SwitchSettingItem(
                             title = stringResource(R.string.pure_black),
-                            checked = ThemeConfig.isPureBlack,
-                            onCheckedChange = { ThemeConfig.isPureBlack = it }
+                            checked = theme.isPureBlack,
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(isPureBlack = value) }
+                            }
                         )
                         SwitchSettingItem(
                             title = stringResource(R.string.use_flexible_top_bar),
-                            checked = ThemeConfig.useFlexibleTopAppBar,
-                            onCheckedChange = { ThemeConfig.useFlexibleTopAppBar = it }
+                            checked = theme.useFlexibleTopAppBar,
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(useFlexibleTopAppBar = value) }
+                            }
                         )
                     }
                     SwitchSettingItem(
                         title = stringResource(R.string.is_blur_enable),
-                        checked = ThemeConfig.enableBlur,
-                        onCheckedChange = {
-                            ThemeConfig.enableBlur = it
-                            if (!it) ThemeConfig.enableProgressiveBlur = false
-                        }
+                        checked = theme.enableBlur,
+                        onCheckedChange = { onIntent(ThemeConfigIntent.SetBlurEnabled(it)) }
                     )
-                    AnimatedVisibility(visible = ThemeConfig.enableBlur) {
+                    AnimatedVisibility(visible = theme.enableBlur) {
                         SwitchSettingItem(
                             title = stringResource(R.string.is_blur_progressive_enable),
-                            checked = ThemeConfig.enableProgressiveBlur,
-                            onCheckedChange = { ThemeConfig.enableProgressiveBlur = it }
+                            checked = theme.enableProgressiveBlur,
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(enableProgressiveBlur = value) }
+                            }
                         )
                     }
-                    if (ThemeConfig.enableBlur) {
+                    if (theme.enableBlur) {
                         SliderSettingItem(
                             title = stringResource(R.string.theme_manage_top_bar_blur_radius),
                             description = stringResource(R.string.theme_config_blur_radius_performance_summary),
-                            value = ThemeConfig.topBarBlurRadius.toFloat(),
+                            value = theme.topBarBlurRadius.toFloat(),
                             defaultValue = 24f,
                             valueRange = 0f..30f,
-                            onValueChange = { ThemeConfig.topBarBlurRadius = it.toInt() }
+                            onValueChange = { value ->
+                                updateTheme { it.copy(topBarBlurRadius = value.toInt()) }
+                            }
                         )
                         SliderSettingItem(
                             title = stringResource(R.string.theme_manage_bottom_bar_blur_radius),
                             description = stringResource(R.string.theme_config_blur_radius_performance_summary),
-                            value = ThemeConfig.bottomBarBlurRadius.toFloat(),
+                            value = theme.bottomBarBlurRadius.toFloat(),
                             defaultValue = 8f,
                             valueRange = 0f..10f,
-                            onValueChange = { ThemeConfig.bottomBarBlurRadius = it.toInt() }
+                            onValueChange = { value ->
+                                updateTheme { it.copy(bottomBarBlurRadius = value.toInt()) }
+                            }
                         )
                         SliderSettingItem(
                             title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
-                            value = ThemeConfig.topBarBlurAlpha.toFloat(),
+                            value = theme.topBarBlurAlpha.toFloat(),
                             defaultValue = 73f,
                             valueRange = 0f..100f,
-                            onValueChange = { ThemeConfig.topBarBlurAlpha = it.toInt() }
+                            onValueChange = { value ->
+                                updateTheme { it.copy(topBarBlurAlpha = value.toInt()) }
+                            }
                         )
                         SliderSettingItem(
                             title = stringResource(R.string.theme_manage_bottom_bar_blur_opacity),
-                            value = ThemeConfig.bottomBarBlurAlpha.toFloat(),
+                            value = theme.bottomBarBlurAlpha.toFloat(),
                             defaultValue = 40f,
                             valueRange = 0f..100f,
-                            onValueChange = { ThemeConfig.bottomBarBlurAlpha = it.toInt() }
+                            onValueChange = { value ->
+                                updateTheme { it.copy(bottomBarBlurAlpha = value.toInt()) }
+                            }
                         )
                     }
-                    AnimatedVisibility(visible = !isMiuixEngine && !ThemeConfig.enableBlur) {
+                    AnimatedVisibility(visible = !isMiuixEngine && !theme.enableBlur) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
@@ -654,87 +593,78 @@ fun ThemeConfigScreen(
                                 title = stringResource(R.string.top_bar_opacity),
                                 description = stringResource(
                                     R.string.top_bar_opacity_summary,
-                                    ThemeConfig.topBarOpacity
+                                    theme.topBarOpacity
                                 ),
-                                value = ThemeConfig.topBarOpacity.toFloat(),
+                                value = theme.topBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                steps = 99,
-                                onValueChange = { ThemeConfig.topBarOpacity = it.toInt() }
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(topBarOpacity = value.toInt()) }
+                                }
                             )
                             SliderSettingItem(
                                 title = stringResource(R.string.bottom_bar_opacity),
                                 description = stringResource(
                                     R.string.bottom_bar_opacity_summary,
-                                    ThemeConfig.bottomBarOpacity
+                                    theme.bottomBarOpacity
                                 ),
-                                value = ThemeConfig.bottomBarOpacity.toFloat(),
+                                value = theme.bottomBarOpacity.toFloat(),
                                 defaultValue = 100f,
                                 valueRange = 0f..100f,
-                                steps = 99,
-                                onValueChange = { ThemeConfig.bottomBarOpacity = it.toInt() }
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(bottomBarOpacity = value.toInt()) }
+                                }
                             )
                         }
                     }
-                    if (!isMiuixEngine) {
-                        SliderSettingItem(
-                            title = stringResource(R.string.container_opacity),
-                            description = stringResource(
-                                R.string.container_opacity_summary,
-                                ThemeConfig.containerOpacity
-                            ),
-                            value = ThemeConfig.containerOpacity.toFloat(),
-                            defaultValue = 100f,
-                            valueRange = 0f..100f,
-                            steps = 99,
-                            onValueChange = { ThemeConfig.containerOpacity = it.toInt() }
-                        )
-                    }
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.day)) {
-                    val hasLightBg = !ThemeConfig.bgImageLight.isNullOrBlank()
+                SplicedColumnGroup(title = stringResource(R.string.background_image)) {
+                    val hasLightBg = !theme.backgroundImageLight.isNullOrBlank()
                     ClickableSettingItem(
-                        title = stringResource(R.string.background_image),
+                        title = stringResource(R.string.day),
                         description = if (hasLightBg) stringResource(R.string.click_to_delete) else stringResource(
                             R.string.select_image
                         ),
-                        onClick = { manageKey = false }
+                        onClick = {
+                            onIntent(
+                                ThemeConfigIntent.ShowSheet(ThemeConfigSheet.Background(false))
+                            )
+                        }
                     )
 
                     if (hasLightBg) {
                         SliderSettingItem(
                             title = stringResource(R.string.background_image_blurring),
-                            value = ThemeConfig.bgImageBlurring.toFloat(),
+                            value = theme.backgroundImageBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            steps = 99,
-                            onValueChange = {
-                                ThemeConfig.bgImageBlurring = it.toInt()
+                            onValueChange = { value ->
+                                updateTheme { it.copy(backgroundImageBlurring = value.toInt()) }
                             }
                         )
                     }
-                }
-
-                SplicedColumnGroup(title = stringResource(R.string.night)) {
-                    val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrBlank()
+                    val hasDarkBg = !theme.backgroundImageDark.isNullOrBlank()
                     ClickableSettingItem(
-                        title = stringResource(R.string.background_image),
+                        title = stringResource(R.string.night),
                         description = if (hasDarkBg) stringResource(R.string.click_to_delete) else stringResource(
                             R.string.select_image
                         ),
-                        onClick = { manageKey = true }
+                        onClick = {
+                            onIntent(
+                                ThemeConfigIntent.ShowSheet(ThemeConfigSheet.Background(true))
+                            )
+                        }
                     )
 
                     if (hasDarkBg) {
                         SliderSettingItem(
                             title = stringResource(R.string.background_image_blurring),
-                            value = ThemeConfig.bgImageNBlurring.toFloat(),
+                            value = theme.backgroundImageDarkBlurring.toFloat(),
                             defaultValue = 0f,
                             valueRange = 0f..100f,
-                            steps = 99,
-                            onValueChange = {
-                                ThemeConfig.bgImageNBlurring = it.toInt()
+                            onValueChange = { value ->
+                                updateTheme { it.copy(backgroundImageDarkBlurring = value.toInt()) }
                             }
                         )
                     }
@@ -745,42 +675,214 @@ fun ThemeConfigScreen(
             item {
                 SplicedColumnGroup(title = stringResource(R.string.theme_manage_section_container)) {
                     SwitchSettingItem(
-                        title = stringResource(R.string.show_divider_line),
-                        checked = ThemeConfig.enableItemDivider,
-                        onCheckedChange = { ThemeConfig.enableItemDivider = it }
+                        title = "容器背景图",
+                        description = "大容器和项目分别使用独立的日间/夜间图片",
+                        checked = theme.enableContainerBackgroundImage,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(enableContainerBackgroundImage = value) }
+                        }
                     )
-                    if (ThemeConfig.enableItemDivider) {
+                    AnimatedVisibility(visible = theme.enableContainerBackgroundImage) {
+                        Column {
+                            ContainerBackgroundSettingItem(
+                                title = "大容器日间背景图片",
+                                path = theme.largeContainerBackgroundImageLight,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.LargeContainer, false))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.LargeContainer, false))
+                                },
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "大容器夜间背景图片",
+                                path = theme.largeContainerBackgroundImageDark,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.LargeContainer, true))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.LargeContainer, true))
+                                },
+                            )
+                            SliderSettingItem(
+                                title = "大容器背景图透明度",
+                                description = "${theme.appColumnBackgroundOpacity}%",
+                                value = theme.appColumnBackgroundOpacity.toFloat(),
+                                defaultValue = 100f,
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(appColumnBackgroundOpacity = value.toInt()) }
+                                }
+                            )
+                            SliderSettingItem(
+                                title = "项目背景图透明度",
+                                description = "${theme.glassCardBackgroundOpacity}%",
+                                value = theme.glassCardBackgroundOpacity.toFloat(),
+                                defaultValue = 100f,
+                                valueRange = 0f..100f,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(glassCardBackgroundOpacity = value.toInt()) }
+                                }
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "项目日间背景图片",
+                                path = theme.itemBackgroundImageLight,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.Item, false))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.Item, false))
+                                },
+                            )
+                            ContainerBackgroundSettingItem(
+                                title = "项目夜间背景图片",
+                                path = theme.itemBackgroundImageDark,
+                                onClick = {
+                                    onIntent(ThemeConfigIntent.RequestContainerBackgroundImage(ContainerBackgroundTarget.Item, true))
+                                },
+                                onRemove = {
+                                    onIntent(ThemeConfigIntent.RemoveContainerBackground(ContainerBackgroundTarget.Item, true))
+                                },
+                            )
+                        }
+                    }
+                    SliderSettingItem(
+                            title = stringResource(R.string.container_opacity),
+                            description = stringResource(
+                                R.string.container_opacity_summary,
+                                theme.containerOpacity
+                            ),
+                            value = theme.containerOpacity.toFloat(),
+                            defaultValue = 100f,
+                            valueRange = 0f..100f,
+                            onValueChange = { value ->
+                                updateTheme { it.copy(containerOpacity = value.toInt()) }
+                            }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.disable_spliced_group_corner_radius),
+                        description = stringResource(R.string.disable_spliced_group_corner_radius_summary),
+                        checked = theme.disableSplicedColumnGroupCornerRadius,
+                        onCheckedChange = { value ->
+                            updateTheme {
+                                it.copy(disableSplicedColumnGroupCornerRadius = value)
+                            }
+                        }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.base_card_corner_radius_override),
+                        description = stringResource(R.string.base_card_override_summary),
+                        checked = theme.overrideBaseCardCornerRadius,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(overrideBaseCardCornerRadius = value) }
+                        }
+                    )
+                    AnimatedVisibility(visible = theme.overrideBaseCardCornerRadius) {
+                        SliderSettingItem(
+                            title = stringResource(R.string.base_card_corner_radius),
+                            description = "${theme.baseCardCornerRadius}dp",
+                            value = theme.baseCardCornerRadius,
+                            defaultValue = 16f,
+                            valueRange = 0f..40f,
+                            steps = 79,
+                            decimal = true,
+                            onValueChange = { value ->
+                                updateTheme { it.copy(baseCardCornerRadius = value) }
+                            }
+                        )
+                    }
+                    SwitchSettingItem(
+                        title = stringResource(R.string.base_card_border_override),
+                        description = stringResource(R.string.base_card_override_summary),
+                        checked = theme.overrideBaseCardBorder,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(overrideBaseCardBorder = value) }
+                        }
+                    )
+                    AnimatedVisibility(visible = theme.overrideBaseCardBorder) {
+                        Column {
+                            SliderSettingItem(
+                                title = stringResource(R.string.border_width),
+                                description = "${theme.baseCardBorderWidth}dp",
+                                value = theme.baseCardBorderWidth,
+                                defaultValue = 1f,
+                                valueRange = 0f..5f,
+                                steps = 49,
+                                decimal = true,
+                                onValueChange = { value ->
+                                    updateTheme { it.copy(baseCardBorderWidth = value) }
+                                }
+                            )
+                            BaseCardBorderColorSettingItem(
+                                title = stringResource(R.string.base_card_border_color_day),
+                                color = theme.baseCardBorderColor,
+                                onClick = {
+                                    onIntent(
+                                        ThemeConfigIntent.ShowSheet(
+                                            ThemeConfigSheet.BaseCardBorderColor(false)
+                                        )
+                                    )
+                                }
+                            )
+                            BaseCardBorderColorSettingItem(
+                                title = stringResource(R.string.base_card_border_color_night),
+                                color = theme.baseCardBorderColorNight,
+                                onClick = {
+                                    onIntent(
+                                        ThemeConfigIntent.ShowSheet(
+                                            ThemeConfigSheet.BaseCardBorderColor(true)
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                    SwitchSettingItem(
+                        title = stringResource(R.string.show_divider_line),
+                        checked = theme.enableItemDivider,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(enableItemDivider = value) }
+                        }
+                    )
+                    if (theme.enableItemDivider) {
                         SliderSettingItem(
                             title = stringResource(R.string.theme_config_divider_width),
-                            description = "${ThemeConfig.itemDividerWidth}dp",
-                            value = ThemeConfig.itemDividerWidth,
+                            description = "${theme.itemDividerWidth}dp",
+                            value = theme.itemDividerWidth,
                             defaultValue = 1f,
                             valueRange = 0f..5f,
                             steps = 49,
-                            onValueChange = { ThemeConfig.itemDividerWidth = it }
+                            decimal = true,
+                            onValueChange = { value ->
+                                updateTheme { it.copy(itemDividerWidth = value) }
+                            }
                         )
                         SliderSettingItem(
                             title = stringResource(R.string.theme_config_divider_length),
-                            description = "${ThemeConfig.itemDividerLength.toInt()}%",
-                            value = ThemeConfig.itemDividerLength,
+                            description = "${theme.itemDividerLength.toInt()}%",
+                            value = theme.itemDividerLength,
                             defaultValue = 80f,
                             valueRange = 30f..100f,
                             steps = 14,
-                            onValueChange = { ThemeConfig.itemDividerLength = it }
+                            onValueChange = { value ->
+                                updateTheme { it.copy(itemDividerLength = value) }
+                            }
                         )
                         ClickableSettingItem(
                             title = stringResource(R.string.tip_divider_color),
-                            option = if (ThemeConfig.itemDividerColor != 0) "#${Integer.toHexString(ThemeConfig.itemDividerColor).uppercase()}" else stringResource(R.string.click_to_select),
+                            option = if (theme.itemDividerColor != 0) "#${Integer.toHexString(theme.itemDividerColor).uppercase()}" else stringResource(R.string.click_to_select),
                             onClick = {
-                                showBorderColorPicker = true
+                                onIntent(
+                                    ThemeConfigIntent.ShowSheet(ThemeConfigSheet.DividerColor)
+                                )
                             },
                             trailingContent = {
-                                if (ThemeConfig.itemDividerColor != 0) {
+                                if (theme.itemDividerColor != 0) {
                                     Box(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(Color(ThemeConfig.itemDividerColor))
+                                            .background(Color(theme.itemDividerColor))
                                             .border(
                                                 1.dp,
                                                 MaterialTheme.colorScheme.outlineVariant,
@@ -794,24 +896,16 @@ fun ThemeConfigScreen(
                 }
             }
 
-            // Nav icon settings
             item {
-                SplicedColumnGroup(title = stringResource(R.string.theme_config_nav_icon_settings)) {
-                    val customCount = listOf(
-                        ThemeConfig.navIconHome,
-                        ThemeConfig.navIconBookshelf,
-                        ThemeConfig.navIconExplore,
-                        ThemeConfig.navIconRss,
-                        ThemeConfig.navIconMy
-                    ).count { it.isNotEmpty() }
+                SplicedColumnGroup {
                     ClickableSettingItem(
-                        title = stringResource(R.string.theme_config_nav_icons),
-                        description = if (customCount > 0) {
-                            stringResource(R.string.theme_config_nav_icons_custom_count, customCount)
-                        } else {
-                            stringResource(R.string.theme_config_nav_icons_default)
-                        },
-                        onClick = { showNavIconSheet = true }
+                        title = stringResource(R.string.theme_config_reset_defaults),
+                        description = stringResource(R.string.theme_config_reset_defaults_summary),
+                        onClick = {
+                            onIntent(
+                                ThemeConfigIntent.ShowDialog(ThemeConfigDialog.ResetDefaults)
+                            )
+                        }
                     )
                 }
             }
@@ -819,79 +913,113 @@ fun ThemeConfigScreen(
         }
     }
 
-
     AppAlertDialog(
-        show = showRestartDialog,
-        onDismissRequest = { showRestartDialog = false },
-        title = stringResource(R.string.restart_required_message),
-        onConfirm = {
-            showRestartDialog = false
-            Handler(Looper.getMainLooper()).postDelayed({
-                context.restart()
-            }, 100)
-        },
-        confirmText = stringResource(R.string.ok),
-        onDismiss = {
-            showRestartDialog = false
-            context.toastOnUi(R.string.restart_later_message)
-        },
-        dismissText = stringResource(R.string.cancel)
+        show = state.activeDialog == ThemeConfigDialog.ResetDefaults,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissDialog) },
+        title = stringResource(R.string.theme_config_reset_defaults),
+        text = stringResource(R.string.theme_config_reset_defaults_confirm),
+        confirmText = stringResource(R.string.reset),
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = { onIntent(ThemeConfigIntent.ResetDefaults) },
+        onDismiss = { onIntent(ThemeConfigIntent.DismissDialog) },
     )
+
+    val timePickerDialog = state.activeDialog as? ThemeConfigDialog.TimePicker
+    if (timePickerDialog != null) {
+        TimePickerDialog(
+            title = stringResource(
+                when (timePickerDialog.field) {
+                    ThemeTimeField.EyeProtectionStart -> R.string.eye_protection_start_time
+                    ThemeTimeField.EyeProtectionEnd -> R.string.eye_protection_end_time
+                }
+            ),
+            currentValue = timePickerDialog.currentValue,
+            onDismissRequest = { onIntent(ThemeConfigIntent.DismissDialog) },
+            onConfirm = { value ->
+                onIntent(ThemeConfigIntent.SetTime(timePickerDialog.field, value))
+                onIntent(ThemeConfigIntent.DismissDialog)
+            },
+        )
+    }
 
 
     BackgroundImageManageSheet(
-        isDarkTheme = manageKey,
-        onDismissRequest = { manageKey = null }
-    )
-
-    NavIconManageSheet(
-        show = showNavIconSheet,
-        onDismissRequest = { showNavIconSheet = false }
+        isDarkTheme = (state.activeSheet as? ThemeConfigSheet.Background)?.dark,
+        currentPath = (state.activeSheet as? ThemeConfigSheet.Background)?.let {
+            if (it.dark) theme.backgroundImageDark else theme.backgroundImageLight
+        },
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onSelectImage = { onIntent(ThemeConfigIntent.RequestBackgroundImage(it)) },
+        onRemoveImage = { onIntent(ThemeConfigIntent.RemoveBackground(it)) },
     )
 
     MainNavigationSettingsSheet(
-        show = showMainNavigationSheet,
-        onDismissRequest = { showMainNavigationSheet = false },
+        show = state.activeSheet == ThemeConfigSheet.MainNavigation,
+        settings = appShell,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onSetVisible = { route, visible ->
+            onIntent(ThemeConfigIntent.SetMainDestinationVisible(route, visible))
+        },
+        onSetOrder = { onIntent(ThemeConfigIntent.SetMainNavigationOrder(it)) },
+        onSetDefault = { onIntent(ThemeConfigIntent.SetDefaultHomePage(it)) },
+        onRequestNavigationIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
+        onClearNavigationIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
     )
 
 
     LauncherIconPickerSheet(
-        show = showLauncherIconPicker,
-        selectedValue = ThemeConfig.launcherIcon,
-        onDismissRequest = { showLauncherIconPicker = false },
-        onValueChange = {
-            ThemeConfig.launcherIcon = it
-            LauncherIconHelp.changeIcon(it)
-        }
+        show = state.activeSheet == ThemeConfigSheet.LauncherIcon,
+        selectedValue = appShell.launcherIcon,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onValueChange = { onIntent(ThemeConfigIntent.SelectLauncherIcon(it)) }
     )
 
     ColorPickerSheet(
-        show = showBorderColorPicker,
-        initialColor = ThemeConfig.itemDividerColor,
-        onDismissRequest = { showBorderColorPicker = false },
-        onColorSelected = {
-            ThemeConfig.itemDividerColor = it
-            showBorderColorPicker = false
+        show = state.activeSheet == ThemeConfigSheet.DividerColor,
+        initialColor = theme.itemDividerColor,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onColorSelected = { value ->
+            updateTheme { it.copy(itemDividerColor = value) }
+            onIntent(ThemeConfigIntent.DismissSheet)
+        }
+    )
+
+    val baseCardBorderColorSheet = state.activeSheet as? ThemeConfigSheet.BaseCardBorderColor
+    ColorPickerSheet(
+        show = baseCardBorderColorSheet != null,
+        initialColor = if (baseCardBorderColorSheet?.dark == true) {
+            theme.baseCardBorderColorNight
+        } else {
+            theme.baseCardBorderColor
+        },
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onColorSelected = { value ->
+            updateTheme {
+                if (baseCardBorderColorSheet?.dark == true) {
+                    it.copy(baseCardBorderColorNight = value)
+                } else {
+                    it.copy(baseCardBorderColor = value)
+                }
+            }
+            onIntent(ThemeConfigIntent.DismissSheet)
         }
     )
 
     FontSelectSheet(
-        show = showFontSheet,
+        show = state.activeSheet == ThemeConfigSheet.Font,
         title = stringResource(R.string.font_setting),
         folderState = fontFolderState,
-        selectedFontPath = ThemeConfig.appFontPath,
-        onDismissRequest = { showFontSheet = false },
-        onSelectFont = { doc ->
-            viewModel.setAppFont(doc)
-        },
-        onOpenFolderPicker = { fontFolderLauncher.launch(null) },
+        selectedFontPath = theme.appFontPath,
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onSelectFont = { onIntent(ThemeConfigIntent.SelectAppFont(it)) },
+        onOpenFolderPicker = { onIntent(ThemeConfigIntent.RequestFontFolder) },
         startAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 icon = Icons.Default.Delete,
                 contentDescription = stringResource(R.string.clear),
                 onClick = {
-                    ThemeConfig.appFontPath = null
-                    showFontSheet = false
+                    onIntent(ThemeConfigIntent.ClearAppFont)
+                    onIntent(ThemeConfigIntent.DismissSheet)
                 }
             )
         },
@@ -900,6 +1028,60 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
+}
+
+@Composable
+private fun ContainerBackgroundSettingItem(
+    title: String,
+    path: String?,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    ClickableSettingItem(
+        title = title,
+        description = if (path.isNullOrBlank()) "选择图片" else "已选择",
+        onClick = onClick,
+        trailingContent = if (path.isNullOrBlank()) {
+            null
+        } else {
+            {
+                SmallPlainButton(
+                    onClick = onRemove,
+                    icon = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.clear),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun BaseCardBorderColorSettingItem(
+    title: String,
+    color: Int,
+    onClick: () -> Unit,
+) {
+    ClickableSettingItem(
+        title = title,
+        option = if (color != 0) {
+            "#${Integer.toHexString(color).uppercase()}"
+        } else {
+            stringResource(R.string.base_card_border_color_default)
+        },
+        onClick = onClick,
+        trailingContent = {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(
+                        color.takeIf { it != 0 }?.let(::Color)
+                            ?: LegadoTheme.colorScheme.outlineVariant
+                    )
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            )
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -918,47 +1100,25 @@ fun ThemeModeSelector(
         .coerceAtLeast(0)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(
-            ButtonGroupDefaults.ConnectedSpaceBetween
-        )
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
         val modifiers = listOf(Modifier.weight(1.2f), Modifier.weight(1f), Modifier.weight(1f))
 
         modes.forEachIndexed { index, (value, label, icon) ->
-            val checked = selectedIndex == index
-            val modeStateDescription = stringResource(
-                if (checked) R.string.a11y_selected else R.string.a11y_not_selected
-            )
-
             ToggleButton(
-                checked = checked,
+                checked = selectedIndex == index,
                 onCheckedChange = { onModeSelected(value) },
-                modifier = modifiers[index]
-                    .semantics {
-                        role = Role.RadioButton
-                        stateDescription = modeStateDescription
-                    },
-
+                modifier = modifiers[index].semantics { role = Role.RadioButton },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 }
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null
-                )
-
+                Icon(imageVector = icon, contentDescription = null)
                 Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
-
-                Text(
-                    text = label,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1
-                )
+                Text(text = label, overflow = TextOverflow.Ellipsis, maxLines = 1)
             }
         }
     }
@@ -1011,15 +1171,20 @@ fun ThemeColorButton(
     customNightSeedColor: Int,
     onClick: () -> Unit
 ) {
-    val colors = getThemeColorPalette(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    // 配色方案由种子色实时生成，开销不小，缓存避免无关重组时重复计算
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColorPalette(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 0.dp,
         label = "borderWidth"
@@ -1112,15 +1277,19 @@ fun ThemeCard(
     customLightSeedColor: Int,
     customNightSeedColor: Int
 ) {
-    val colors = getThemeColors(
-        context = context,
-        value = value,
-        isDark = isDark,
-        isAmoled = isAmoled,
-        paletteStyle = paletteStyle,
-        customLightSeedColor = customLightSeedColor,
-        customNightSeedColor = customNightSeedColor
-    )
+    val colors = remember(
+        value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
+    ) {
+        getThemeColors(
+            context = context,
+            value = value,
+            isDark = isDark,
+            isAmoled = isAmoled,
+            paletteStyle = paletteStyle,
+            customLightSeedColor = customLightSeedColor,
+            customNightSeedColor = customNightSeedColor
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally

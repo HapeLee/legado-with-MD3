@@ -18,6 +18,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,8 @@ fun TextListInputDialog(
     onConfirm: (String) -> Unit
 ) {
     var text by remember(show) { mutableStateOf(initialValue) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     AppAlertDialog(
         show = show,
@@ -77,7 +81,11 @@ fun TextListInputDialog(
             }
         },
         confirmText = stringResource(android.R.string.ok),
-        onConfirm = { onConfirm(text) },
+        onConfirm = {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+            onConfirm(text)
+        },
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = onDismissRequest
     )

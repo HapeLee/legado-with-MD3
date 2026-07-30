@@ -5,8 +5,8 @@ import android.net.Uri
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
@@ -27,7 +27,8 @@ import kotlinx.coroutines.withContext
 class ImportBookshelfUseCase(
     private val context: Context,
     private val bookRepository: BookRepository,
-    private val bookSourceRepository: BookSourceRepository
+    private val bookSourceRepository: BookSourceRepository,
+    private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
 ) {
     suspend fun import(
         str: String,
@@ -69,7 +70,7 @@ class ImportBookshelfUseCase(
     ) {
         onProgress("导入中...")
         val bookSourceParts = bookSourceRepository.getAllEnabledPart()
-        val semaphore = Semaphore(AppConfig.threadCount)
+        val semaphore = Semaphore(downloadCacheSettingsGateway.currentSettings.threadCount)
         val books = GSON.fromJsonArray<Map<String, String?>>(json).getOrThrow()
 
         withContext(Dispatchers.IO) {

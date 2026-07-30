@@ -1,7 +1,7 @@
 package io.legado.app.ui.login
 
 import android.os.Bundle
-import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.data.entities.BaseSource
@@ -13,7 +13,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 class SourceLoginActivity : VMBaseActivity<ActivitySourceLoginBinding, SourceLoginViewModel>() {
 
     override val binding by viewBinding(ActivitySourceLoginBinding::inflate)
-    override val viewModel by viewModels<SourceLoginViewModel>()
+    override val viewModel by viewModel<SourceLoginViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

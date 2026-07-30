@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -67,7 +68,7 @@ fun ClickActionConfigSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.6f))
+            .background(LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.4f))
             .clickable(onClick = onDismissRequest),
     ) {
         Column(
@@ -75,13 +76,9 @@ fun ClickActionConfigSheet(
                 .fillMaxSize()
                 .padding(12.dp),
         ) {
-            AppText(
-                text = stringResource(R.string.click_regional_config),
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 12.dp),
+            Spacer(
+                modifier = Modifier.padding(top = 36.dp)
             )
-
-            // 3x3 grid
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -194,9 +191,9 @@ fun ClickActionConfigSheet(
                                 selectingPrefKey?.let { key ->
                                     scope.launch {
                                         readSettingsRepository.setClickAction(key, selectedAction)
+                                        selectingPrefKey = null
                                     }
                                 }
-                                selectingPrefKey = null
                             }
                             .padding(horizontal = 24.dp, vertical = 12.dp),
                         style = LegadoTheme.typography.bodyLarge,
@@ -216,8 +213,8 @@ private fun ClickAreaCell(
     GlassCard(
         modifier = modifier,
         onClick = onClick,
-        containerColor = LegadoTheme.colorScheme.surfaceVariant
-            .copy(alpha = 0.5f),
+        containerColor = LegadoTheme.colorScheme.surfaceContainer
+            .copy(alpha = 0.9f),
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),

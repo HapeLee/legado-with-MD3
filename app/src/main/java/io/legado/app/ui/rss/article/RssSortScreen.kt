@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.RssReadRecord
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.read.title
 import io.legado.app.ui.theme.LegadoTheme
@@ -55,8 +54,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -93,6 +91,7 @@ fun RssSortScreen(
     showReadRecordSheet: Boolean,
     readRecords: List<RssReadRecord>,
     sourceVariableSheet: RssSourceVariableSheetState?,
+    shouldShowExpandButton: Boolean,
     onBackClick: () -> Unit,
     onSearch: (String) -> Unit,
     onLogin: () -> Unit,
@@ -276,7 +275,7 @@ fun RssSortScreen(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            if (BookshelfConfig.shouldShowExpandButton) {
+                            if (shouldShowExpandButton) {
                                 Box {
                                     SmallToggleButton(
                                         checked = showGroupMenu,
@@ -372,7 +371,7 @@ private fun RssSearchSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.search),
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 onClick = { onSearch(query) },
                 icon = AppIcons.Search,
                 contentDescription = stringResource(R.string.search)
@@ -402,7 +401,7 @@ private fun RssReadRecordSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_record),
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 onClick = onClear,
                 icon = Icons.Default.CleaningServices,
                 contentDescription = stringResource(R.string.clear)
@@ -463,7 +462,7 @@ private fun RssSourceVariableSheet(
         onDismissRequest = onDismissRequest,
         title = state?.title,
         endAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = { onSave(variable) },
                 icon = Icons.Default.Done,
                 contentDescription = stringResource(R.string.ok)

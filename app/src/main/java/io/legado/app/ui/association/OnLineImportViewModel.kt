@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.core.net.toUri
 import io.legado.app.R
 import io.legado.app.constant.AppConst
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
@@ -12,9 +12,12 @@ import io.legado.app.help.http.text
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.externalCache
 import okhttp3.MediaType.Companion.toMediaType
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
 class OnLineImportViewModel(app: Application) : BaseAssociationViewModel(app) {
+
+    private val readStyleGateway: ReadStyleGateway = GlobalContext.get().get()
 
     fun getText(url: String, success: (text: String) -> Unit) {
         execute {
@@ -56,15 +59,7 @@ class OnLineImportViewModel(app: Application) : BaseAssociationViewModel(app) {
 
     fun importReadConfig(bytes: ByteArray, finally: (title: String, msg: String) -> Unit) {
         execute {
-            val config = ReadBookConfig.import(bytes)
-            ReadBookConfig.configList.forEachIndexed { index, c ->
-                if (c.name == config.name) {
-                    ReadBookConfig.configList[index] = config
-                    return@execute config.name
-                }
-                ReadBookConfig.configList.add(config)
-                return@execute config.name
-            }
+            readStyleGateway.importOrReplaceStyle(bytes)
         }.onSuccess {
             finally.invoke(context.getString(R.string.success), "导入排版成功")
         }.onError {

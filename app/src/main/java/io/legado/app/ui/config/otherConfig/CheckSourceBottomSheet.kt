@@ -1,40 +1,31 @@
 package io.legado.app.ui.config.otherConfig
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
-import io.legado.app.ui.widget.components.text.AppText
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckSourceBottomSheet(
     show: Boolean,
-    viewModel: OtherConfigViewModel = koinViewModel(),
-    onDismiss: () -> Unit
+    state: OtherConfigUiState,
+    onIntent: (OtherConfigIntent) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
 
     AppModalBottomSheet(
         show = show,
@@ -50,9 +41,9 @@ fun CheckSourceBottomSheet(
             GlassCard {
                 SliderSettingItem(
                     title = stringResource(R.string.check_source_timeout),
-                    value = viewModel.checkSourceTimeout.toFloat(),
+                    value = state.checkSourceTimeoutSeconds.toFloat(),
                     defaultValue = 180f,
-                    onValueChange = { viewModel.checkSourceTimeout = it.toLong() },
+                    onValueChange = { onIntent(OtherConfigIntent.CheckSourceTimeoutChanged(it.toLong())) },
                     valueRange = 0f..300f,
                 )
             }
@@ -65,57 +56,38 @@ fun CheckSourceBottomSheet(
             ) {
                 CheckboxItem(
                     title = stringResource(R.string.search),
-                    checked = viewModel.checkSearch,
-                    onCheckedChange = {
-                        viewModel.checkSearch = it
-                        if (!it && !viewModel.checkDiscovery) {
-                            viewModel.checkDiscovery = true
-                        }
-                    }
+                    checked = state.checkSearch,
+                    onCheckedChange = { onIntent(OtherConfigIntent.CheckSearchChanged(it)) }
                 )
 
                 CheckboxItem(
                     title = stringResource(R.string.discovery),
-                    checked = viewModel.checkDiscovery,
-                    onCheckedChange = {
-                        viewModel.checkDiscovery = it
-                        if (!it && !viewModel.checkSearch) {
-                            viewModel.checkSearch = true
-                        }
-                    }
+                    checked = state.checkDiscovery,
+                    onCheckedChange = { onIntent(OtherConfigIntent.CheckDiscoveryChanged(it)) }
                 )
 
 
 
                 CheckboxItem(
                     title = stringResource(R.string.source_tab_info),
-                    checked = viewModel.checkInfo,
-                    onCheckedChange = {
-                        viewModel.checkInfo = it
-                        if (!it) {
-                            viewModel.checkCategory = false
-                            viewModel.checkContent = false
-                        }
-                    }
+                    checked = state.checkInfo,
+                    onCheckedChange = { onIntent(OtherConfigIntent.CheckInfoChanged(it)) }
                 )
 
 
                 CheckboxItem(
                     title = stringResource(R.string.chapter_list),
-                    checked = viewModel.checkCategory,
-                    enabled = viewModel.checkInfo,
-                    onCheckedChange = {
-                        viewModel.checkCategory = it
-                        if (!it) viewModel.checkContent = false
-                    }
+                    checked = state.checkCategory,
+                    enabled = state.checkInfo,
+                    onCheckedChange = { onIntent(OtherConfigIntent.CheckCategoryChanged(it)) }
                 )
 
 
                 CheckboxItem(
                     title = stringResource(R.string.source_tab_content),
-                    checked = viewModel.checkContent,
-                    enabled = viewModel.checkCategory,
-                    onCheckedChange = { viewModel.checkContent = it }
+                    checked = state.checkContent,
+                    enabled = state.checkCategory,
+                    onCheckedChange = { onIntent(OtherConfigIntent.CheckContentChanged(it)) }
                 )
             }
 
@@ -124,13 +96,7 @@ fun CheckSourceBottomSheet(
                     .fillMaxWidth()
                     .padding(top = 16.dp),
                 onDismiss = onDismiss,
-                onConfirm = {
-                    if (viewModel.saveCheckSourceConfig()) {
-                        onDismiss()
-                    } else {
-                        Toast.makeText(context, R.string.error, Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onConfirm = { onIntent(OtherConfigIntent.ConfirmCheckSource) },
                 dismissText = stringResource(R.string.cancel),
                 confirmText = stringResource(R.string.ok)
             )

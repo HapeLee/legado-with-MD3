@@ -65,14 +65,31 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun MyScreen(
+fun MyRouteScreen(
     viewModel: MyViewModel = koinViewModel(),
     onOpenSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    MyScreen(
+        state = uiState,
+        onIntent = viewModel::onIntent,
+        onOpenSettings = onOpenSettings,
+        onNavigateToChat = onNavigateToChat,
+        onNavigate = onNavigate,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun MyScreen(
+    state: MyUiState,
+    onIntent: (MyIntent) -> Unit,
+    onOpenSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
+    onNavigate: (PrefClickEvent) -> Unit,
+) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -114,9 +131,9 @@ fun MyScreen(
                 title = ""
             ) {
                 WebServiceSettingBlock(
-                    uiState = uiState,
+                    uiState = state,
                     onToggleWebService = {
-                        viewModel.onEvent(PrefClickEvent.ToggleWebService)
+                        onIntent(MyIntent.ToggleWebService)
                     },
                     onNavigate = onNavigate
                 )

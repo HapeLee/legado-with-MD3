@@ -13,10 +13,9 @@ import splitties.init.appCtx
  * web端书源调试
  */
 class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSession) :
-    CoroutineScope by session,
-    Debug.Callback {
+    CoroutineScope by session {
 
-    private val notPrintState = arrayOf(10, 20, 30, 40)
+    private var debugSession: Debug.Session? = null
 
     suspend fun handle() {
         try {
@@ -38,8 +37,14 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
                             break
                         }
                         appDb.bookSourceDao.getBookSource(tag)?.let {
-                            Debug.callback = this@BookSourceDebugWebSocket
-                            Debug.startDebug(this, it, key)
+                            val current = Debug.startDebug(this, it, key)
+                            debugSession = current
+                            current.events.collect { event ->
+                                if (!event.kind.isSourcePayload) session.send(event.message)
+                                if (event.kind.isTerminal) {
+                                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                                }
+                            }
                         }
                     } else {
                         session.send("数据必须为Json格式")
@@ -51,25 +56,8 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
         } catch (e: Exception) {
             e.printOnDebug()
         } finally {
-            Debug.cancelDebug(true)
+            debugSession?.cancel()
+            debugSession = null
         }
     }
-
-    override fun printLog(state: Int, msg: String) {
-        if (state in notPrintState) {
-            return
-        }
-        launch(Dispatchers.IO) {
-            runCatching {
-                session.send(msg)
-                if (state == -1 || state == 1000) {
-                    Debug.cancelDebug(true)
-                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
-                }
-            }.onFailure {
-                it.printOnDebug()
-            }
-        }
-    }
-
 }

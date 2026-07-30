@@ -14,9 +14,9 @@ import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.databinding.FragmentWebdavAuthBinding
 import io.legado.app.domain.usecase.WebDavBackupUseCase
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.LocalConfig
-import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.dialogs.alert
@@ -39,6 +39,7 @@ import kotlin.coroutines.coroutineContext
 class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     private val webDavBackupUseCase by inject<WebDavBackupUseCase>()
+    private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private var _binding: FragmentWebdavAuthBinding? = null
     private val binding get() = _binding!!
     private var restoreJob: Job? = null
@@ -83,8 +84,9 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
         binding.editUrl.setAdapter(adapter)
 
-        binding.editAccount.setText(BackupConfig.webDavAccount)
-        binding.editPassword.setText(BackupConfig.webDavPassword)
+        val backupSettings = backupSettingsGateway.currentSettings
+        binding.editAccount.setText(backupSettings.webDavAccount)
+        binding.editPassword.setText(backupSettings.webDavPassword)
         binding.editPassword.inputType =
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
 
@@ -100,8 +102,8 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                 account = binding.editAccount.text.toString(),
                 password = binding.editPassword.text.toString()
             )
-            saveWebDavConfig(config)
             lifecycleScope.launch {
+                saveWebDavConfig(config)
                 webDavBackupUseCase.test()
             }
         }
@@ -128,11 +130,14 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     }
 
-    fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
-        BackupConfig.webDavUrl = config.url
-        BackupConfig.webDavAccount = config.account
-        BackupConfig.webDavPassword = config.password
-
+    suspend fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
+        backupSettingsGateway.update {
+            it.copy(
+                webDavUrl = config.url,
+                webDavAccount = config.account,
+                webDavPassword = config.password,
+            )
+        }
         onSaved?.invoke()
     }
 

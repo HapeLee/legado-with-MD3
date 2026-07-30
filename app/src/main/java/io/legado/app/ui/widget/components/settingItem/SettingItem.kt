@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -36,6 +35,8 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.SettingCard
@@ -49,7 +50,7 @@ fun SettingItem(
     painter: Painter? = null,
     imageVector: ImageVector? = null,
     color: Color? = null,
-    shape: Shape = MaterialTheme.shapes.extraSmall,
+    cornerRadius: androidx.compose.ui.unit.Dp = 4.dp,
     title: String,
     description: String? = null,
     option: String? = null,
@@ -60,6 +61,7 @@ fun SettingItem(
     enabled: Boolean = true,
     semanticRole: Role? = null,
     semanticStateDescription: String? = null,
+    semanticToggleState: Boolean? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null
@@ -71,7 +73,7 @@ fun SettingItem(
     SettingCard(
         modifier = modifier
             .fillMaxWidth(),
-        shape = shape,
+        cornerRadius = cornerRadius,
         colors = CardDefaults.cardColors(
             containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
@@ -82,6 +84,9 @@ fun SettingItem(
                     .semantics(mergeDescendants = true) {
                         semanticRole?.let { role = it }
                         semanticStateDescription?.let { stateDescription = it }
+                        semanticToggleState?.let {
+                            toggleableState = if (it) ToggleableState.On else ToggleableState.Off
+                        }
                         if (!enabled) disabled()
                     }
                     .combinedClickable(
@@ -116,12 +121,6 @@ fun SettingItem(
                         }
                     }
                 } else null,
-                headlineContent = {
-                    AppText(
-                        text = title,
-                        style = LegadoTheme.typography.titleMedium
-                    )
-                },
                 supportingContent = if (description != null || option != null) {
                     {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -168,7 +167,12 @@ fun SettingItem(
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleMedium
+                )
+            }
 
             if (isExpandable) {
                 AnimatedVisibility(

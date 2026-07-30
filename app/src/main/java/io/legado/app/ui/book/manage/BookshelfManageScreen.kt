@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmarks
@@ -40,6 +42,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +54,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -78,11 +81,11 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
@@ -101,6 +104,7 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.ACache
@@ -478,7 +482,7 @@ private fun BookshelfManageScreen(
                 TopBarActionButton(
                     onClick = { showGroupMenu = true },
                     imageVector = AppIcons.Filter,
-                    contentDescription = null
+                    contentDescription = stringResource(R.string.a11y_group_filter)
                 )
                 RoundDropdownMenu(
                     expanded = showGroupMenu,
@@ -656,7 +660,7 @@ private fun BookshelfManageScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredBooks, key = { it.bookUrl }) { book ->
+            itemsIndexed(filteredBooks, key = { _, item -> item.bookUrl }) { index, book ->
                 val cacheCount = remember(renderVersion, book.bookUrl) {
                     viewModel.getCacheCount(book.bookUrl) ?: 0
                 }
@@ -687,6 +691,15 @@ private fun BookshelfManageScreen(
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .reorderAccessibility(
+                                index = index,
+                                itemCount = filteredBooks.size,
+                                enabled = canReorderBooks,
+                            ) { from, to ->
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.MoveBookOrder(from, to)
+                                )
+                            }
                             .then(
                                 if (canReorderBooks) {
                                     Modifier.longPressDraggableHandle()
@@ -701,11 +714,13 @@ private fun BookshelfManageScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .adaptiveHorizontalPadding(vertical = 12.dp),
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Column(
@@ -714,14 +729,27 @@ private fun BookshelfManageScreen(
                                 ) {
                                     AppText(
                                         text = book.name,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable {
+                                                viewModel.dispatch(
+                                                    BookshelfManageScreenIntent.OpenBookInfoPreview(
+                                                        book,
+                                                        true
+                                                    )
+                                                )
+                                            }
+                                            .padding(horizontal = 4.dp),
                                         style = LegadoTheme.typography.titleSmallEmphasized,
                                         maxLines = 1
                                     )
                                     AppText(
+                                        modifier = Modifier.padding(horizontal = 4.dp),
                                         text = book.getRealAuthor(),
                                         style = LegadoTheme.typography.bodySmall
                                     )
                                     AppText(
+                                        modifier = Modifier.padding(horizontal = 4.dp),
                                         text = "${groupNameResolver(book)} | ${book.originName.ifBlank { book.origin }}",
                                         style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.primary)
                                     )
@@ -741,27 +769,69 @@ private fun BookshelfManageScreen(
                                     }
                                 )
                             }
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(top = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                if (downloadFailureText != null) {
-                                    AppText(
-                                        text = downloadFailureText,
-                                        modifier = Modifier.weight(1f),
-                                        style = LegadoTheme.typography.labelSmall,
-                                        color = LegadoTheme.colorScheme.error,
-                                        maxLines = 1
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    SmallTonalButton(
+                                        onClick = {
+                                            if (!book.isLocal) {
+                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        icon = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
+                                        text = if (isDownloading) "停止" else "下载",
+                                        contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.8f
+                                        )
+                                    )
+                                    VerticalDivider(
+                                        modifier = Modifier
+                                            .height(16.dp)
+                                            .padding(horizontal = 4.dp),
+                                        color = LegadoTheme.colorScheme.outlineVariant
+                                    )
+                                    SmallTonalButton(
+                                        onClick = { exportBook(book) },
+                                        modifier = Modifier.weight(1f),
+                                        icon = Icons.Default.Upload,
+                                        text = "导出",
+                                        contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.8f
+                                        )
+                                    )
+                                    VerticalDivider(
+                                        modifier = Modifier
+                                            .height(16.dp)
+                                            .padding(horizontal = 4.dp),
+                                        color = LegadoTheme.colorScheme.outlineVariant
+                                    )
+                                    SmallTonalButton(
+                                        onClick = {
+                                            pendingMoveGroupBookUrl = book.bookUrl
+                                            groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
+                                            showGroupSelectSheet = true
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        icon = Icons.Default.Bookmarks,
+                                        text = "分组",
+                                        contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.8f
+                                        )
+                                    )
+                                    VerticalDivider(
+                                        modifier = Modifier
+                                            .height(16.dp)
+                                            .padding(horizontal = 4.dp),
+                                        color = LegadoTheme.colorScheme.outlineVariant
+                                    )
                                     RoundDropdownMenu(
                                         expanded = moreMenuBookUrl == book.bookUrl,
                                         onDismissRequest = { moreMenuBookUrl = null }
@@ -795,32 +865,21 @@ private fun BookshelfManageScreen(
                                         )
                                     }
                                     SmallTonalButton(
-                                        onClick = {
-                                            if (!book.isLocal) {
-                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
-                                            }
-                                        },
-                                        icon = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
-                                        contentDescription = "download"
-                                    )
-                                    SmallTonalButton(
-                                        onClick = { exportBook(book) },
-                                        icon = Icons.Default.Upload,
-                                        contentDescription = "upload"
-                                    )
-                                    SmallTonalButton(
-                                        onClick = {
-                                            pendingMoveGroupBookUrl = book.bookUrl
-                                            groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
-                                            showGroupSelectSheet = true
-                                        },
-                                        icon = Icons.Default.Bookmarks,
-                                        contentDescription = "group"
-                                    )
-                                    SmallTonalButton(
                                         onClick = { moreMenuBookUrl = book.bookUrl },
+                                        modifier = Modifier.weight(1f),
                                         icon = Icons.Default.MoreVert,
-                                        contentDescription = "more"
+                                        text = "更多",
+                                        contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.8f
+                                        )
+                                    )
+                                }
+                                if (downloadFailureText != null) {
+                                    AppText(
+                                        text = downloadFailureText,
+                                        style = LegadoTheme.typography.labelSmall,
+                                        color = LegadoTheme.colorScheme.error,
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -854,6 +913,7 @@ private fun BookshelfManageScreen(
     BookSourcePickerSheet(
         show = showBatchSourcePickerSheet,
         title = "选择目标书源",
+        sources = state.bookSources,
         onDismissRequest = { showBatchSourcePickerSheet = false },
         onConfirm = { sources ->
             pendingBatchSources = sources
@@ -1277,11 +1337,10 @@ private fun BookshelfManageScreen(
 private fun BookSourcePickerSheet(
     show: Boolean,
     title: String,
+    sources: List<BookSourcePart>,
     onDismissRequest: () -> Unit,
     onConfirm: (List<BookSource>) -> Unit,
 ) {
-    val sources by appDb.bookSourceDao.flowEnabled()
-        .collectAsStateWithLifecycle(initialValue = emptyList())
     var searchKey by rememberSaveable(show) { mutableStateOf("") }
     var selectedSources by remember(show) { mutableStateOf<List<BookSourcePart>>(emptyList()) }
     val selectedUrls = remember(selectedSources) {
@@ -1314,12 +1373,12 @@ private fun BookSourcePickerSheet(
         onDismissRequest = onDismissRequest,
         title = title,
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = {
                     onConfirm(selectedSources.mapNotNull { it.getBookSource() })
                 },
                 icon = Icons.Default.PlayArrow,
-                text = stringResource(android.R.string.ok)
+                contentDescription = stringResource(android.R.string.ok)
             )
         }
     ) {
@@ -1349,6 +1408,13 @@ private fun BookSourcePickerSheet(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = source.bookSourceUrl,
+                        reorderIndex = selectedSources.indexOf(source),
+                        reorderItemCount = selectedSources.size,
+                        onMoveItem = { from, to ->
+                            selectedSources = selectedSources.toMutableList().apply {
+                                move(from, to)
+                            }
+                        },
                         title = source.bookSourceName,
                         subtitle = source.bookSourceGroup,
                         isSelected = true,
@@ -1428,17 +1494,17 @@ private fun BatchChangePreviewSheet(
         onDismissRequest = onDismissRequest,
         title = "批量换源预览",
         startAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = onAddAllToShelf,
                 icon = Icons.Default.Add,
-                text = "新增全部"
+                contentDescription = stringResource(R.string.add)
             )
         },
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = onMigrateAll,
                 icon = Icons.Default.PlayArrow,
-                text = "迁移全部"
+                contentDescription = stringResource(R.string.confirm)
             )
         }
     ) { items ->
@@ -1526,7 +1592,8 @@ private fun BatchChangePreviewRow(
             ) {
                 SmallTonalButton(
                     onClick = { onManualSearch(item.oldBook) },
-                    icon = Icons.Default.Search
+                    icon = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.search)
                 )
                 SmallTonalButton(
                     onClick = { onSkip(item.oldBook.bookUrl) },
@@ -1634,7 +1701,7 @@ private fun OtherSourceOptionsSheet(
                         SmallTonalButton(
                             onClick = { onOpenBook(candidate.book) },
                             icon = Icons.Default.Info,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.details),
                         )
                     },
                     containerColor = LegadoTheme.colorScheme.onSheetContent,

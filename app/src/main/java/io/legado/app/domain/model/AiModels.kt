@@ -25,6 +25,8 @@ object AiTaskType {
     const val CLEAN_SELECTION = "clean_selection"
     const val TEXT_FACTORY = "text_factory"
     const val REWRITE_TEXT = "rewrite_text"
+    const val ANALYZE_SPEECH = "analyze_speech"
+    const val IDENTIFY_CHARACTERS = "identify_characters"
 }
 
 object AiPromptTemplate {

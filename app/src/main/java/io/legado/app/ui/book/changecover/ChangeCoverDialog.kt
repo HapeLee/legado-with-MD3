@@ -6,7 +6,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
-import androidx.fragment.app.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -36,7 +36,7 @@ class ChangeCoverDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_change
 
     private val binding by viewBinding(DialogChangeCoverBinding::bind)
     private val callBack: CallBack? get() = activity as? CallBack
-    private val viewModel: ChangeCoverViewModel by viewModels()
+    private val viewModel: ChangeCoverViewModel by viewModel()
     private val adapter by lazy { CoverAdapter(requireContext(), this) }
 
     private val startStopMenuItem: MenuItem?

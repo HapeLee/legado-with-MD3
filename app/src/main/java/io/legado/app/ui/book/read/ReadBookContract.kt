@@ -11,12 +11,15 @@ import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReadAloudSettingsRepository
+import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.domain.model.settings.ReadStyleItem
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -52,11 +55,9 @@ data class ReadBookMenuState(
 sealed interface ReadBookMenuRoute {
     data object Main : ReadBookMenuRoute
     data object ReadStyle : ReadBookMenuRoute
-    data object TextTitle : ReadBookMenuRoute
     data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
-    data object PaddingConfig : ReadBookMenuRoute
-    data object HeaderFooterConfig : ReadBookMenuRoute
+    data object TypographyConfig : ReadBookMenuRoute
 }
 
 @Stable
@@ -88,8 +89,14 @@ data class ReadBookStyleConfig(
     val pageAnimEInk: Int = 4,
     // Layout
     val shareLayout: Boolean = false,
+    // 排版自带的阅读菜单配色，作为 DataStore 里 readMenu*Color 为 0（未自定义）时的回退
+    val menuBgColorDay: Int = 0,
+    val menuBgColorNight: Int = 0,
+    val menuAccentColorDay: Int = 0,
+    val menuAccentColorNight: Int = 0,
     // Config list for style selector
     val configCount: Int = 1,
+    val styleItems: ImmutableList<ReadStyleItem> = persistentListOf(),
 ) {
     // Computed properties for background mode
     val isDayBgImage: Boolean get() = bgType != 0
@@ -97,74 +104,90 @@ data class ReadBookStyleConfig(
 }
 
 @Stable
-data class ChapterSummaryUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val summary: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiTextCleanUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val isApplying: Boolean = false,
-    val originalText: String = "",
-    val replacementText: String = "",
-    val streamingText: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiRewritePresetUi(
-    val id: String,
-    val name: String,
-    val instruction: String,
-)
-
-@Stable
-data class AiRewriteHistoryUi(
-    val artifactId: String,
-    val text: String,
-    val timeText: String,
-)
-
-@Stable
-data class AiTextRewriteUiState(
-    val bookUrl: String = "",
-    val chapterIndex: Int = -1,
-    val chapterTitle: String = "",
-    val isLoading: Boolean = false,
-    val isApplying: Boolean = false,
-    val originalText: String = "",
-    val rewrittenText: String = "",
-    val reasoningText: String = "",
-    val thinkingDuration: Int = 0,
-    val selectedPresetId: String = "",
-    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
-    val temporaryInstruction: String = "",
-    val history: ImmutableList<AiRewriteHistoryUi> = persistentListOf(),
-    val referenceCount: Int = 0,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class AiRewritePresetConfigUiState(
-    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
-    val editing: Boolean = false,
-    val editingPresetId: String? = null,
-    val editingName: String = "",
-    val editingInstruction: String = "",
-    val deletePreset: AiRewritePresetUi? = null,
-    val errorMessage: String? = null,
+data class ReadSheetConfigUiState(
+    /** 标题字号 <8 时按「正文字号 + 偏移」解释，故正文字号也要进弹层快照。 */
+    val textSize: Int = 20,
+    val letterSpacing: Float = 0f,
+    val lineSpacing: Int = 0,
+    val paragraphSpacing: Int = 0,
+    val paragraphIndentCount: Int = 2,
+    val textItalic: Boolean = false,
+    val textBold: Int = 0,
+    val chineseConverterType: Int = 0,
+    val textColor: Int = 0,
+    val textAccentColor: Int = 0,
+    val titleMode: Int = 0,
+    val titleBold: Int = 0,
+    val titleSegType: Int = 0,
+    val titleSegDistance: Int = 0,
+    val titleSegFlag: String = "",
+    val titleSegScaling: Float = 1f,
+    val titleLineSpacingExtra: Int = 0,
+    val titleLineSpacingSub: Int = 0,
+    val titleSize: Int = 0,
+    val titleTopSpacing: Int = 0,
+    val titleBottomSpacing: Int = 0,
+    val titleColor: Int = 0,
+    val titleColorNight: Int = 0,
+    val textColorDay: Int = 0,
+    val textColorNight: Int = 0,
+    val textShadow: Boolean = false,
+    val textShadowColor: Int = 0,
+    val shadowRadius: Float = 0f,
+    val shadowDx: Float = 0f,
+    val shadowDy: Float = 0f,
+    val underline: Boolean = false,
+    val dottedLine: Boolean = false,
+    val underlineExtend: Boolean = false,
+    val underlineColor: Int = 0,
+    val underlineHeight: Int = 0,
+    val underlinePadding: Int = 0,
+    val dottedBase: Float = 0f,
+    val dottedRatio: Float = 0f,
+    val paddingTop: Int = 0,
+    val paddingBottom: Int = 0,
+    val paddingLeft: Int = 0,
+    val paddingRight: Int = 0,
+    val headerPaddingTop: Int = 0,
+    val headerPaddingBottom: Int = 0,
+    val headerPaddingLeft: Int = 0,
+    val headerPaddingRight: Int = 0,
+    val footerPaddingTop: Int = 0,
+    val footerPaddingBottom: Int = 0,
+    val footerPaddingLeft: Int = 0,
+    val footerPaddingRight: Int = 0,
+    // 页眉页脚字体
+    val headerFont: String = "",
+    val footerFont: String = "",
+    val headerFontSize: Int = 12,
+    val footerFontSize: Int = 12,
+    val applyHeaderStyle: Boolean = true,
+    /** -1 表示"跟随主题分割线"，0 表示"跟随正文颜色"。 */
+    val tipDividerColor: Int = 0,
+    val headerMode: Int = 0,
+    val footerMode: Int = 0,
+    val showHeaderLine: Boolean = false,
+    val showFooterLine: Boolean = false,
+    val tipHeaderLeft: Int = 0,
+    val tipHeaderMiddle: Int = 0,
+    val tipHeaderRight: Int = 0,
+    val tipFooterLeft: Int = 0,
+    val tipFooterMiddle: Int = 0,
+    val tipFooterRight: Int = 0,
+    val customTipHeaderLeft: String = "",
+    val customTipHeaderMiddle: String = "",
+    val customTipHeaderRight: String = "",
+    val customTipFooterLeft: String = "",
+    val customTipFooterMiddle: String = "",
+    val customTipFooterRight: String = "",
+    /** 0 表示"跟随正文颜色"，展示时回退到 [textColorDay] / [textColorNight]。 */
+    val tipHeaderColor: Int = 0,
+    val tipHeaderColorNight: Int = 0,
+    val tipFooterColor: Int = 0,
+    val tipFooterColorNight: Int = 0,
+    val textFullJustify: Boolean = true,
+    val textBottomJustify: Boolean = true,
+    val configNames: ImmutableList<String> = persistentListOf(),
 )
 
 @Stable
@@ -191,6 +214,11 @@ data class ReadBookUiState(
     // Read aloud / auto page
     val isReadAloudRunning: Boolean = false,
     val isReadAloudPaused: Boolean = false,
+    val readAloudEngineName: String = "",
+    val readAloudCharacterName: String = "",
+    val readAloudRoleType: SpeechRoleType = SpeechRoleType.Narrator,
+    val readAloudChapterPosition: Int = 0,
+    val readAloudChapterLength: Int = 0,
     val isAutoPage: Boolean = false,
     // Seek bar
     val seekProgress: Int = 0,
@@ -199,8 +227,11 @@ data class ReadBookUiState(
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
     val effectiveContentProcessCount: Int = 0,
+    val effectiveReplaceRules: ImmutableList<ReplaceRule> = persistentListOf(),
+    val chineseConverterActive: Boolean = false,
     // Translation
     val translationMode: Boolean = false,
+    val translationStatus: TranslationChapterStatus = TranslationChapterStatus.Idle,
     // Chapter info
     val curTextChapter: TextChapter? = null,
     // Time / battery (from EventBus)
@@ -220,23 +251,18 @@ data class ReadBookUiState(
     val sameTitleRemoved: Boolean = false,
     val isReadingProgressSyncConfigured: Boolean = false,
     // Content edit
-    val contentEditLoading: Boolean = false,
-    val contentEditText: String = "",
-    val contentEditTitle: String = "",
-    val contentEditCursorOffset: Int = 0,
-    val contentEditIsLocalTxt: Boolean = false,
-    val contentEditSaveToSource: Boolean = false,
-    val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
-    val selectedTtsEngine: String? = null,
-    val speakEngineName: String = "",
-    val editingHttpTts: HttpTTS? = null,
-    val httpTtsImportState: BaseImportUiState<HttpTTS> = BaseImportUiState.Idle,
+    // 正文编辑域状态见 ContentEditUiState —— 由 ReadContentEditDelegate 独立持有
     val preDownloadNum: Int = 10,
+    val preSynthesisConcurrency: Int = 3,
     val audioCacheCleanTime: Int = 10,
     // Read aloud config
     val readAloudIgnoreAudioFocus: Boolean = false,
     val readAloudPauseOnPhoneCall: Boolean = false,
     val readAloudWakeLock: Boolean = false,
+    val showReadAloudCapsule: Boolean = true,
+    val capsuleAutoCollapse: Boolean = true,
+    val readAloudCapsuleOffsetX: Float = 0f,
+    val readAloudCapsuleOffsetY: Float = 0f,
     val readAloudMediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
     val readAloudSystemMediaCompat: Boolean = true,
@@ -244,30 +270,35 @@ data class ReadBookUiState(
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
     val readAloudTtsTimer: Int = 0,
+    val speechAnalysisMode: String = "rule",
+    val useMultiSpeaker: Boolean = true,
+    val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
     val readAloudParagraphInterval: Int = 0,
     // Style config (reactive state for ReadBookConfig)
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
+    val sheetConfig: ReadSheetConfigUiState = ReadSheetConfigUiState(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
-    val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
-    val contentProcessConfig: ContentProcessConfigUiState = ContentProcessConfigUiState(),
-    val chapterSummary: ChapterSummaryUiState = ChapterSummaryUiState(),
-    val aiTextClean: AiTextCleanUiState = AiTextCleanUiState(),
-    val aiTextRewrite: AiTextRewriteUiState = AiTextRewriteUiState(),
-    val aiRewritePresetConfig: AiRewritePresetConfigUiState = AiRewritePresetConfigUiState(),
+    // AI 域状态见 ReadAiUiState —— 由 ReadAiDelegate 独立持有
+    val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
 }
 
+/** 护眼模式设置，来源是 ThemeSettings，与外观设置共用同一份值。 */
 @Stable
-data class HighlightRuleConfigUiState(
-    val rules: ImmutableList<HighlightRule> = persistentListOf(),
-    val editingRule: HighlightRule? = null,
-    val showNewRule: Boolean = false,
-    val deleteRule: HighlightRule? = null,
-    val importState: BaseImportUiState<HighlightRule> = BaseImportUiState.Idle,
-)
+data class EyeProtectionUiState(
+    val enabled: Boolean = false,
+    val intensity: Int = 50,
+    val autoNight: Boolean = false,
+    val schedule: Boolean = false,
+    val startTime: String = "22:00",
+    val endTime: String = "07:00",
+) {
+    val configured: Boolean
+        get() = enabled || autoNight
+}
 
 @Stable
 data class ContentProcessConfigUiState(
@@ -291,18 +322,18 @@ data class ContentProcessItemUi(
 
 @Stable
 data class ReadMenuConfig(
-    val titleBarIconPosition: Int = 0,
+    val titleBarIconPosition: Int = 3,
     val showTitleBarIcons: Boolean = false,
-    val readMenuFloatingBottomBar: Boolean = false,
-    val readMenuBottomCornerRadius: Int = 0,
+    val readMenuFloatingBottomBar: Boolean = true,
+    val readMenuBottomCornerRadius: Int = 32,
     val readMenuIconItemsPerRow: Int = 5,
     val readMenuIconRowCount: Int = 1,
-    val readMenuBorderWidth: Int = 0,
+    val readMenuBorderWidth: Int = 1,
     val readMenuBorderColor: Int = 0,
     val readMenuBorderColorNight: Int = 0,
     val readMenuTextColor: Int = 0,
     val readMenuTextColorNight: Int = 0,
-    val readMenuBlurAlpha: Int = 60,
+    val readMenuBlurAlpha: Int = 100,
     val readMenuBlurColor: Int = 0,
     val readMenuBlurColorNight: Int = 0,
     val readMenuPaletteStyle: String = "",
@@ -313,27 +344,23 @@ data class ReadMenuConfig(
     val readMenuTopBarLiquidGlassButtons: Boolean = false,
     val readMenuTopBarTitleCapsule: Boolean = false,
     val readMenuBottomBarLiquidGlassButtons: Boolean = false,
-    val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
+    val readMenuFloatingIconLiquidGlass: Boolean = false,
+    val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
-    val readMenuIconStyle: Int = 0,
-    val readMenuIconShowText: Boolean = true,
+    val readMenuIconStyle: Int = 1,
+    val titleBarIconStyle: Int = 1,
+    val readMenuIconShowText: Boolean = false,
     val readSliderMode: String = "0",
     val titleBarCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val bottomBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
-    val showBrightnessView: String = "1",
+    val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
     val readBrightness: Int = 100,
-    val brightnessAuto: Boolean = false,
-    val showMenuIcon: Boolean = true,
-)
-
-@Immutable
-data class ReadBookTtsEngineItem(
-    val title: String,
-    val value: String?,
-    val loginUrl: String? = null,
+    val brightnessAuto: Boolean = true,
+    val showMenuIcon: Boolean = false,
+    val titleBarCompact: Boolean = false,
 )
 
 @Immutable
@@ -349,6 +376,7 @@ internal val ReadBookButtonIds = listOf(
     "auto_page",
     "catalog",
     "read_aloud",
+    "eye_protection",
     "setting",
     "addBookmark",
     "theme",
@@ -382,7 +410,10 @@ sealed interface ReadBookIntent {
     data object ReadMenuBack : ReadBookIntent
 
     // Search
-    data class OpenSearch(val word: String?) : ReadBookIntent
+    data class OpenSearch(
+        val word: String?,
+        val autoFocus: Boolean = true,
+    ) : ReadBookIntent
     data object ExitSearch : ReadBookIntent
     data object ShowSearchMenu : ReadBookIntent
     data object HideSearchMenu : ReadBookIntent
@@ -513,6 +544,9 @@ sealed interface ReadBookIntent {
     // Replace editor (needs Activity context for ActivityResult)
     data class OpenReplaceEditor(val id: Long, val pattern: String?) : ReadBookIntent
     data object ReplaceRuleChanged : ReadBookIntent
+    data class DisableEffectiveReplace(val rule: ReplaceRule) : ReadBookIntent
+    data object DisableChineseConverter : ReadBookIntent
+    data object DisableReSegment : ReadBookIntent
 
     // Font folder picker (needs Activity context for ActivityResult)
     data object OpenFontFolderPicker : ReadBookIntent
@@ -533,9 +567,6 @@ sealed interface ReadBookIntent {
 
     // Bookshelf
     data object RemoveFromBookshelf : ReadBookIntent
-
-    // Config update (triggers ReadView upBg/upStyle etc.)
-    data class OnConfigUpdated(val actions: Set<ConfigUpdateAction>) : ReadBookIntent
 
     // Typed config mutation — single entry point for all ReadBookConfig changes
     data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
@@ -579,6 +610,13 @@ sealed interface ReadBookIntent {
 
     // Day/night toggle
     data object ToggleDayNight : ReadBookIntent
+    data object ToggleEyeProtection : ReadBookIntent
+    data class EyeProtectionEnabledChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionIntensityChanged(val value: Int) : ReadBookIntent
+    data class EyeProtectionAutoNightChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionScheduleChanged(val value: Boolean) : ReadBookIntent
+    data class EyeProtectionStartTimeChanged(val value: String) : ReadBookIntent
+    data class EyeProtectionEndTimeChanged(val value: String) : ReadBookIntent
 
     // Default font picker (needs Activity for AlertDialog)
     // Text action menu (moved from Activity)
@@ -635,34 +673,21 @@ sealed interface ReadBookIntent {
 
     // Read aloud config (needs Activity for DialogFragment)
     data object ShowReadAloudConfig : ReadBookIntent
-    data object SelectSpeakEngine : ReadBookIntent
     data object OpenPreDownloadNumPicker : ReadBookIntent
+    data object OpenPreSynthesisConcurrencyPicker : ReadBookIntent
     data object OpenParagraphIntervalPicker : ReadBookIntent
     data object OpenCacheCleanTimePicker : ReadBookIntent
-    data class ApplySpeakEngine(val value: String?) : ReadBookIntent
     data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
+    data class ApplyPreSynthesisConcurrency(val value: Int) : ReadBookIntent
     data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
     data class ApplyParagraphInterval(val value: Int) : ReadBookIntent
-    data class EditHttpTts(val engineId: Long? = null) : ReadBookIntent
-    data class DeleteHttpTts(val engineId: Long) : ReadBookIntent
-    data class SaveHttpTts(val httpTTS: HttpTTS) : ReadBookIntent
-    data class ApplySpeakEnginePerBook(val value: String?) : ReadBookIntent
-    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookIntent
-    data class ImportHttpTtsJson(val json: String) : ReadBookIntent
-    data class ImportHttpTtsSource(val text: String) : ReadBookIntent
-    data object ImportHttpTtsFile : ReadBookIntent
-    data class ImportHttpTtsFileSelected(val uri: Uri) : ReadBookIntent
-    data object CancelHttpTtsImport : ReadBookIntent
-    data class ToggleHttpTtsImportSelection(val index: Int) : ReadBookIntent
-    data class ToggleHttpTtsImportAll(val isSelected: Boolean) : ReadBookIntent
-    data class UpdateHttpTtsImportItem(val index: Int, val httpTTS: HttpTTS) : ReadBookIntent
-    data object SaveImportedHttpTts : ReadBookIntent
-    data object ExportAllHttpTts : ReadBookIntent
-    data object ExportAllHttpTtsAsUrl : ReadBookIntent
-    data class ExportHttpTtsToFile(val uri: Uri) : ReadBookIntent
     data class SetReadAloudIgnoreAudioFocus(val value: Boolean) : ReadBookIntent
     data class SetReadAloudPauseOnPhoneCall(val value: Boolean) : ReadBookIntent
     data class SetReadAloudWakeLock(val value: Boolean) : ReadBookIntent
+    data class SetShowReadAloudCapsule(val value: Boolean) : ReadBookIntent
+    data class SetCapsuleAutoCollapse(val value: Boolean) : ReadBookIntent
+    data object ResetReadAloudCapsulePosition : ReadBookIntent
+    data class SetReadAloudCapsulePosition(val x: Float, val y: Float) : ReadBookIntent
     data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
     data class SetReadAloudByPage(val value: Boolean) : ReadBookIntent
     data class SetReadAloudSystemMediaCompat(val value: Boolean) : ReadBookIntent
@@ -676,8 +701,16 @@ sealed interface ReadBookIntent {
     data class SetReadAloudTtsTimer(val value: Int) : ReadBookIntent
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
+    data class SetSpeechAnalysisMode(val value: String) : ReadBookIntent
+    data class SetUseMultiSpeaker(val value: Boolean) : ReadBookIntent
+    data class SetDefaultReadAloudInterface(val value: String) : ReadBookIntent
     data object OpenSystemTtsSettings : ReadBookIntent
     data object ClearTtsCache : ReadBookIntent
+    data object OpenTtsEnginesAndVoices : ReadBookIntent
+    data object OpenTtsCache : ReadBookIntent
+    data object OpenBookVoiceCasting : ReadBookIntent
+    data object OpenReadAloudPlayer : ReadBookIntent
+    data object OpenClassicReadAloudControls : ReadBookIntent
     data class SelectFont(val path: String) : ReadBookIntent
     data class SelectTitleFont(val path: String) : ReadBookIntent
     data class SelectTitleSystemTypeface(val index: Int) : ReadBookIntent
@@ -713,7 +746,6 @@ sealed interface ReadBookEffect {
 
     // Navigation / lifecycle
     data object Finish : ReadBookEffect
-    data object Recreate : ReadBookEffect
 
     // ReadView operations (require Activity/View reference)
     data class UpdateReadViewConfig(val actions: Set<ConfigUpdateAction>) : ReadBookEffect
@@ -728,9 +760,8 @@ sealed interface ReadBookEffect {
     data object UpAloudState : ReadBookEffect
     data object UpSeekBar : ReadBookEffect
     data object UpMenuView : ReadBookEffect
-    data object PageChanged : ReadBookEffect
-    data object ContentLoadFinish : ReadBookEffect
-    data class LayoutPageCompleted(val index: Int, val page: TextPage) : ReadBookEffect
+    // R2.3：PageChanged / ContentLoadFinish / LayoutPageCompleted 已内联进
+    // ReadBookController 的渲染回调——它们只在 controller 内部自产自销，不是 VM 的对外协议。
     data object RefreshBookContent : ReadBookEffect
 
     // Menu / UI actions
@@ -746,7 +777,11 @@ sealed interface ReadBookEffect {
     data object StopAutoPage : ReadBookEffect
 
     // Search
-    data class OpenSearchActivity(val word: String?, val bookUrl: String) : ReadBookEffect
+    data class OpenSearchActivity(
+        val word: String?,
+        val bookUrl: String,
+        val autoFocus: Boolean = true,
+    ) : ReadBookEffect
     data class NavigateToSearchResult(
         val result: SearchResult,
         val chapterIndex: Int,
@@ -799,7 +834,6 @@ sealed interface ReadBookEffect {
     data class UpTextSelectAble(val enabled: Boolean) : ReadBookEffect
 
     // TTS
-    data class UpTtsAloudSpan(val chapterStart: Int) : ReadBookEffect
 
     // Dialogs (Activity-driven)
     data object ShowConfirmSkipToChapter : ReadBookEffect
@@ -813,13 +847,13 @@ sealed interface ReadBookEffect {
     data object OpenReadStyleImagePicker : ReadBookEffect
     data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
-    data object OpenReadStyleExport : ReadBookEffect
+    data class OpenReadStyleExport(val fileName: String) : ReadBookEffect
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect
-    data object OpenHttpTtsImportPicker : ReadBookEffect
-    data object OpenHttpTtsExportPicker : ReadBookEffect
-    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
+    data object OpenTtsEnginesAndVoices : ReadBookEffect
+    data object OpenTtsCache : ReadBookEffect
+    data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
     data object OpenHighlightRuleImportPicker : ReadBookEffect
     data object OpenHighlightRuleExportPicker : ReadBookEffect
 
@@ -847,12 +881,14 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
+    data class BookNavigation(val initialTab: ReaderBookSheetTab) : ReadBookSheet
     data object PageAnim : ReadBookSheet
     data object Download : ReadBookSheet
     data object Charset : ReadBookSheet
     data object SimulatedReading : ReadBookSheet
     data object ToolButtonConfig : ReadBookSheet
-    data object TitleBarIconConfig : ReadBookSheet
+    data object EyeProtection : ReadBookSheet
+    data object FloatingBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentProcesses : ReadBookSheet
     data object ContentEdit : ReadBookSheet
@@ -871,9 +907,9 @@ sealed interface ReadBookSheet {
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
-    data object SpeakEngineConfig : ReadBookSheet
-    data class HttpTtsEdit(val engineId: Long? = null) : ReadBookSheet
+    data object ReadAloudPlayer : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet
+    data object PreSynthesisConcurrencyConfig : ReadBookSheet
     data object AudioCacheCleanConfig : ReadBookSheet
     data object ParagraphIntervalConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet
@@ -913,16 +949,25 @@ sealed interface ConfigUpdateAction {
     data object UpdateBackgroundAlpha : ConfigUpdateAction
     data object UpdatePageSlopSquare : ConfigUpdateAction
     data object ReloadContent : ConfigUpdateAction
+    data object RelayoutContent : ConfigUpdateAction
     data object UpdateContent : ConfigUpdateAction
     data object UpdateChapterStyle : ConfigUpdateAction
     data object InvalidateTextPage : ConfigUpdateAction
     data object UpdateLayout : ConfigUpdateAction
+    data object RebuildWholeBookPageIndex : ConfigUpdateAction
+    data object UpdateWholeBookPageDemand : ConfigUpdateAction
     data object SubmitRenderTask : ConfigUpdateAction
     data object UpdatePageAnim : ConfigUpdateAction
 }
 
+private val HEADER_FOOTER_TIP_ACTIONS = setOf(
+    ConfigUpdateAction.UpdateStyle,
+    ConfigUpdateAction.UpdateContent,
+    ConfigUpdateAction.UpdateWholeBookPageDemand,
+)
+
 /**
- * Typed config mutations — replaces direct `ReadBookConfig.xxx = value` + `postEvent(UP_CONFIG, ...)`.
+ * Typed config mutations replace direct writes to the legacy ReadBookConfig facade.
  * Each variant carries [actions] that describe which UI updates are needed.
  */
 @Immutable
@@ -960,7 +1005,10 @@ sealed interface ConfigUpdate {
 
     // --- Title style ---
     data class TitleMode(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
+            ConfigUpdateAction.ReloadContent,
+        )
     }
     data class TitleBold(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
@@ -1010,27 +1058,54 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipHeaderLeft(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipHeaderMiddle(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipHeaderRight(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterLeft(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterMiddle(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class TipFooterRight(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipHeaderLeft(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipHeaderMiddle(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipHeaderRight(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipFooterLeft(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipFooterMiddle(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
+    }
+    data class CustomTipFooterRight(val value: String) : ConfigUpdate {
+        override val actions = HEADER_FOOTER_TIP_ACTIONS
     }
     data class HeaderFont(val path: String) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class HeaderFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFont(val path: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class ApplyHeaderStyle(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
     data class TipHeaderColor(val color: Int) : ConfigUpdate {
@@ -1054,6 +1129,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent,
             ConfigUpdateAction.UpdateSystemUi,
             ConfigUpdateAction.UpdatePageAnim
@@ -1063,6 +1139,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent,
             ConfigUpdateAction.UpdatePageAnim
         )
@@ -1071,6 +1148,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdatePageAnim,
+            ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent
         )
     }
@@ -1158,7 +1236,9 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.UpdateLayout)
     }
     data class UnderlineColor(val color: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+        // 对齐兄弟项 Underline/DottedLine：改颜色要重绘已排好的 TextPage，
+        // 仅 UpdateStyle（readView.upStyle()）不会重画下划线。
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
     }
 
     // --- Body padding ---
@@ -1232,7 +1312,10 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackgroundAlpha)
     }
     data class StatusIconDark(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        // 唯一生效路径是 UpdateSystemUi → upSystemUiVisibility() →
+        // setLightStatusBar(curStatusIconDark())（ReadBookController:318）。
+        // 原本的 ReloadContent 只会重新加载正文，与状态栏图标无关。
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
     }
     data class StyleName(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
@@ -1241,6 +1324,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuIconStyle(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class TitleBarIconStyle(val value: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate {
@@ -1268,6 +1355,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuBottomBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuFloatingIconLiquidGlass(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuTopBarBlurSelection(val mode: Int, val style: Int) : ConfigUpdate {
@@ -1307,6 +1397,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
 
+    data class TitleBarCompact(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
     // --- System UI (also updates AppConfig) ---
     data class HideStatusBar(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateSystemUi, ConfigUpdateAction.UpdateStyle)
@@ -1326,22 +1420,22 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class ReadBodyToLh(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class DefaultSourceChangeAll(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class TextFullJustify(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class TextBottomJustify(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class AdaptSpecialStyle(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class UseZhLayout(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
     data class ShowBrightnessView(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
@@ -1382,6 +1476,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class UseNewTocSheet(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SelectVibrator(val value: Boolean) : ConfigUpdate {
@@ -1429,6 +1526,6 @@ sealed interface ConfigUpdate {
 
     // --- Chinese converter ---
     data class ChineseConverterType(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.RebuildWholeBookPageIndex, ConfigUpdateAction.ReloadContent)
     }
 }

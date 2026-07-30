@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readRecord
 
 import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadRecordRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 
+@Stable
 data class ReadRecordOverviewUiState(
     val period: ReadPeriod = ReadPeriod.DAY,
     val referenceDate: LocalDate = LocalDate.now(),
@@ -62,6 +64,14 @@ class ReadRecordOverviewViewModel(
         initialValue = ReadRecordOverviewUiState()
     )
 
+    fun onIntent(intent: ReadRecordOverviewIntent) {
+        when (intent) {
+            is ReadRecordOverviewIntent.SetPeriod -> setPeriod(intent.period)
+            ReadRecordOverviewIntent.NextDate -> nextDate()
+            ReadRecordOverviewIntent.PreviousDate -> prevDate()
+        }
+    }
+
     fun setPeriod(period: ReadPeriod) {
         _period.value = period
     }
@@ -90,3 +100,11 @@ class ReadRecordOverviewViewModel(
 
     suspend fun getBookCover(name: String, author: String) = bookRepository.getBookCoverByNameAndAuthor(name, author)
 }
+
+sealed interface ReadRecordOverviewIntent {
+    data class SetPeriod(val period: ReadPeriod) : ReadRecordOverviewIntent
+    data object NextDate : ReadRecordOverviewIntent
+    data object PreviousDate : ReadRecordOverviewIntent
+}
+
+sealed interface ReadRecordOverviewEffect

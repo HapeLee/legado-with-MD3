@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.update.AppUpdate
@@ -23,22 +24,41 @@ import io.legado.app.utils.list
 import io.legado.app.utils.openInputStream
 import io.legado.app.utils.openOutputStream
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.io.File
 import java.io.FileFilter
 
-class AboutViewModel(application: Application) : BaseViewModel(application) {
+class AboutViewModel(
+    application: Application,
+    otherSettingsGateway: OtherSettingsGateway,
+) : BaseViewModel(application) {
 
-    private val _uiState = MutableStateFlow(AboutUiState())
+    private val _uiState = MutableStateFlow(
+        AboutUiState(updateToVariant = otherSettingsGateway.currentSettings.updateToVariant)
+    )
     val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<AboutEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            otherSettingsGateway.settings
+                .map { it.updateToVariant }
+                .distinctUntilChanged()
+                .collect { updateToVariant ->
+                    _uiState.update { it.copy(updateToVariant = updateToVariant) }
+                }
+        }
+    }
 
     fun onIntent(intent: AboutIntent) {
         when (intent) {

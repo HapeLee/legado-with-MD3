@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.import.remote
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.app.Application
 import androidx.core.net.toUri
 import androidx.compose.runtime.Immutable
@@ -10,16 +9,17 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
+import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.RemoteBookRepository
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
-import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -30,7 +30,6 @@ import io.legado.app.utils.FileDoc
 import io.legado.app.utils.find
 import io.legado.app.utils.isUri
 import io.legado.app.utils.takePersistablePermissionSafely
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,7 +68,7 @@ data class RemoteBookUiState(
     val sortKey: RemoteBookSort = RemoteBookSort.Default,
     val sortAscending: Boolean = false,
     val servers: List<Server> = emptyList(),
-    val selectedServerId: Long = ImportBookConfig.remoteServerId
+    val selectedServerId: Long = AppConst.DEFAULT_WEBDAV_ID
 ) : ListUiState<RemoteBookItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
@@ -85,6 +84,7 @@ sealed interface RemoteBookIntent {
     data class SortToggle(val sort: RemoteBookSort) : RemoteBookIntent
     data object SelectAll : RemoteBookIntent
     data object SelectInvert : RemoteBookIntent
+    data object ClearSelection : RemoteBookIntent
     data class ToggleSelection(val id: String) : RemoteBookIntent
     data class OpenItem(val book: RemoteBook) : RemoteBookIntent
     data object NavigateBack : RemoteBookIntent
@@ -95,6 +95,8 @@ sealed interface RemoteBookIntent {
     data class BookFolderPicked(val uri: android.net.Uri?) : RemoteBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
     data class ImportArchiveConfirmed(val fileDoc: FileDoc, val fileName: String) : RemoteBookIntent
+    data class DeleteServer(val server: Server) : RemoteBookIntent
+    data class SaveServer(val server: Server) : RemoteBookIntent
 }
 
 sealed interface RemoteBookEffect {
@@ -110,7 +112,10 @@ class RemoteBookViewModel(
     application: Application,
     @Suppress("UNUSED_PARAMETER")
     private val savedStateHandle: SavedStateHandle,
-    private val repository: RemoteBookRepository
+    private val repository: RemoteBookRepository,
+    private val bookImportRepository: BookImportRepository,
+    private val importBookSettingsGateway: ImportBookSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseViewModel(application) {
 
     private data class InternalState(
@@ -123,10 +128,14 @@ class RemoteBookViewModel(
         val selectedIds: Set<String> = emptySet(),
         val remoteBookWebDav: RemoteBookWebDav? = null,
         val isDefaultWebdav: Boolean = false,
-        val selectedServerId: Long = ImportBookConfig.remoteServerId
+        val selectedServerId: Long = AppConst.DEFAULT_WEBDAV_ID
     )
 
-    private val _state = MutableStateFlow(InternalState())
+    private val _state = MutableStateFlow(
+        InternalState(
+            selectedServerId = importBookSettingsGateway.currentSettings.remoteServerId,
+        )
+    )
     private val _effects = MutableSharedFlow<RemoteBookEffect>(extraBufferCapacity = 1)
     val effects = _effects.asSharedFlow()
 
@@ -139,6 +148,7 @@ class RemoteBookViewModel(
             is RemoteBookIntent.SortToggle -> toggleSort(intent.sort)
             RemoteBookIntent.SelectAll -> selectAllCheckable()
             RemoteBookIntent.SelectInvert -> invertSelection()
+            RemoteBookIntent.ClearSelection -> clearSelection()
             is RemoteBookIntent.ToggleSelection -> toggleSelection(intent.id)
             is RemoteBookIntent.OpenItem -> onOpenItem(intent.book)
             RemoteBookIntent.NavigateBack -> navigateBack()
@@ -156,13 +166,17 @@ class RemoteBookViewModel(
                 intent.fileDoc,
                 intent.fileName
             )
+            is RemoteBookIntent.DeleteServer -> deleteServer(intent.server)
+            is RemoteBookIntent.SaveServer -> saveServer(intent.server)
         }
     }
 
     private fun onBookFolderPicked(uri: android.net.Uri?) {
         uri ?: return
         uri.takePersistablePermissionSafely(context)
-        OtherConfig.defaultBookTreeUri = uri.toString()
+        viewModelScope.launch {
+            otherSettingsGateway.update { it.copy(defaultBookTreeUri = uri.toString()) }
+        }
     }
 
     val uiState: StateFlow<RemoteBookUiState> = combine(
@@ -213,13 +227,14 @@ class RemoteBookViewModel(
     fun initData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                val webDav = repository.createWebDav(ImportBookConfig.remoteServerId)
+                val selectedServerId = importBookSettingsGateway.currentSettings.remoteServerId
+                val webDav = repository.createWebDav(selectedServerId)
                 if (webDav != null) {
                     _state.update {
                         it.copy(
                             remoteBookWebDav = webDav,
                             isDefaultWebdav = false,
-                            selectedServerId = ImportBookConfig.remoteServerId
+                            selectedServerId = selectedServerId
                         )
                     }
                     onSuccess()
@@ -236,7 +251,7 @@ class RemoteBookViewModel(
                     onSuccess()
                 }
             } catch (e: Exception) {
-                context.toastOnUi("初始化webDav出错:${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("初始化webDav出错:${e.localizedMessage}"))
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
         }
@@ -254,7 +269,7 @@ class RemoteBookViewModel(
                 _state.update { it.copy(remoteBooks = bookList) }
             } catch (e: Exception) {
                 AppLog.put("获取webDav书籍出错\n${e.localizedMessage}", e)
-                context.toastOnUi("获取webDav书籍出错\n${e.localizedMessage}")
+                _effects.tryEmit(RemoteBookEffect.ShowToast("获取webDav书籍出错\n${e.localizedMessage}"))
             } finally {
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
@@ -286,7 +301,7 @@ class RemoteBookViewModel(
             Result.failure(e)
         } catch (e: Exception) {
             AppLog.put("导入出错\n${e.localizedMessage}", e)
-            context.toastOnUi("导入出错\n${e.localizedMessage}")
+            _effects.tryEmit(RemoteBookEffect.ShowToast("导入出错\n${e.localizedMessage}"))
             Result.failure(e)
         } finally {
             _state.update { it.copy(interaction = it.interaction.copy(isUploading = false)) }
@@ -300,9 +315,7 @@ class RemoteBookViewModel(
     }
 
     suspend fun getLocalBook(fileName: String): Book? {
-        return withContext(Dispatchers.IO) {
-            appDb.bookDao.getBookByFileName(fileName)
-        }
+        return bookImportRepository.findByFileName(fileName)
     }
 
     fun navigateToDir(book: RemoteBook) {
@@ -452,10 +465,12 @@ class RemoteBookViewModel(
     }
 
     private fun onArchiveEntrySelected(fileDoc: FileDoc, fileName: String) {
-        appDb.bookDao.getBookByFileName(fileName)?.let { book ->
-            viewModelScope.launch { _effects.emit(RemoteBookEffect.OpenBook(book)) }
-        } ?: viewModelScope.launch {
-            _effects.emit(RemoteBookEffect.ShowImportArchiveDialog(fileDoc, fileName))
+        viewModelScope.launch {
+            val book = bookImportRepository.findByFileName(fileName)
+            _effects.emit(
+                book?.let(RemoteBookEffect::OpenBook)
+                    ?: RemoteBookEffect.ShowImportArchiveDialog(fileDoc, fileName)
+            )
         }
     }
 
@@ -496,7 +511,7 @@ class RemoteBookViewModel(
     }
 
     private fun defaultBookTreeUri(): android.net.Uri? {
-        return OtherConfig.defaultBookTreeUri
+        return otherSettingsGateway.currentSettings.defaultBookTreeUri
             ?.takeIf { it.isUri() }
             ?.toUri()
     }
@@ -505,7 +520,7 @@ class RemoteBookViewModel(
         execute {
             repository.saveServer(server)
         }.onSuccess {
-            if (ImportBookConfig.remoteServerId == server.id) {
+            if (importBookSettingsGateway.currentSettings.remoteServerId == server.id) {
                 initData { loadRemoteBookList() }
             }
         }
@@ -518,8 +533,10 @@ class RemoteBookViewModel(
     }
 
     fun selectServer(serverId: Long) {
-        ImportBookConfig.remoteServerId = serverId
-        _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
-        initData { loadRemoteBookList() }
+        viewModelScope.launch {
+            importBookSettingsGateway.update { it.copy(remoteServerId = serverId) }
+            _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
+            initData { loadRemoteBookList() }
+        }
     }
 }

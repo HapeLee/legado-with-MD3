@@ -6,15 +6,18 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
+import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.usecase.ChangeSourceSearchEvent
 import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.GetChapterContentUseCase
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.primaryStr
@@ -27,8 +30,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Collections
@@ -43,14 +48,24 @@ class ChangeBookSourceComposeViewModel(
     private val changeSourceSearchUseCase: ChangeSourceSearchUseCase,
     private val getChapterContentUseCase: GetChapterContentUseCase,
     private val searchRepository: SearchRepository,
-    private val bookDao: BookDao,
+    private val bookRepository: BookRepository,
+    private val changeSourceSettingsGateway: ChangeSourceSettingsGateway,
 ) : ViewModel() {
 
     // Public state for the sheet
     val enabledGroups = searchRepository.enabledGroups
-    val enabledSources = searchRepository.enabledSources
+    val enabledSources = searchRepository.enabledSources.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList(),
+    )
 
-    private val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+    val settings = changeSourceSettingsGateway.settings.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        changeSourceSettingsGateway.currentSettings,
+    )
+    private val searchScope = SearchScope(settings.value.searchScope)
 
     data class ScopeUiState(
         val isAll: Boolean,
@@ -93,16 +108,16 @@ class ChangeBookSourceComposeViewModel(
 
     fun findShelfConflict(book: Book, onResult: (Book?) -> Unit) {
         viewModelScope.launch(IO) {
-            val conflict = bookDao.getShelfBookConflict(book.name, book.author)
+            val conflict = bookRepository.getShelfBookConflict(book.name, book.author)
             onMain { onResult(conflict) }
         }
     }
 
     // Options
-    val checkAuthor: Boolean get() = ChangeSourceConfig.checkAuthor
-    val loadInfo: Boolean get() = ChangeSourceConfig.loadInfo
-    val loadToc: Boolean get() = ChangeSourceConfig.loadToc
-    val loadWordCount: Boolean get() = ChangeSourceConfig.loadWordCount
+    val checkAuthor: Boolean get() = settings.value.checkAuthor
+    val loadInfo: Boolean get() = settings.value.loadInfo
+    val loadToc: Boolean get() = settings.value.loadToc
+    val loadWordCount: Boolean get() = settings.value.loadWordCount
 
     // Internal state
     private val chapterNumRegex = "^\\[(\\d+)]".toRegex()
@@ -140,12 +155,10 @@ class ChangeBookSourceComposeViewModel(
         }
     }
 
-    private fun getDbSearchBooks(): List<SearchBook> {
-        val scope = SearchScope(ChangeSourceConfig.searchScope)
+    private suspend fun getDbSearchBooks(): List<SearchBook> {
+        val scope = SearchScope(settings.value.searchScope)
         val author = if (checkAuthor) bookAuthor else ""
-        val dbBooks = io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
-            bookName, author, ""
-        )
+        val dbBooks = searchRepository.findChangeSourceBooks(bookName, author)
         if (scope.isAll()) return dbBooks
 
         val allowedOrigins = scope.getBookSourceParts()
@@ -155,15 +168,14 @@ class ChangeBookSourceComposeViewModel(
 
     fun startSearch() {
         startSearch(
-            scope = SearchScope(ChangeSourceConfig.searchScope),
+            scope = SearchScope(settings.value.searchScope),
             replacedOrigins = null,
         )
     }
 
     fun startSearch(origin: String) {
         viewModelScope.launch(IO) {
-            val source = io.legado.app.data.appDb.bookSourceDao
-                .getBookSourcePart(origin) ?: return@launch
+            val source = searchRepository.getBookSourcePart(origin) ?: return@launch
             startSearch(listOf(source))
         }
     }
@@ -205,7 +217,7 @@ class ChangeBookSourceComposeViewModel(
         searchJob = viewModelScope.launch(IO) {
             try {
                 if (removedResults.isNotEmpty()) {
-                    io.legado.app.data.appDb.searchBookDao.delete(*removedResults.toTypedArray())
+                    searchRepository.deleteSearchBooks(removedResults)
                 }
                 collectSearchEvents(
                     events = changeSourceSearchUseCase.search(
@@ -333,7 +345,7 @@ class ChangeBookSourceComposeViewModel(
                 }
             }
         }
-        val comparator = if (ChangeSourceConfig.loadWordCount) {
+        val comparator = if (settings.value.loadWordCount) {
             compareByDescending<SearchBook> { ObservableSourceConfig.getBookScore(it) }
                 .thenByDescending { io.legado.app.help.config.SourceConfig.getSourceScore(it.origin) }
                 .thenByDescending { it.chapterWordCount > 1000 }
@@ -363,16 +375,14 @@ class ChangeBookSourceComposeViewModel(
             try {
                 val cachedToc = tocMap[book.primaryStr()]
                 if (cachedToc != null) {
-                    val source =
-                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = searchRepository.getBookSource(book.origin)
                     if (source != null) {
                         onMain { onSuccess(cachedToc, source) }
                         return@launch
                     }
                 }
                 if (book.isWebFile) {
-                    val source =
-                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = searchRepository.getBookSource(book.origin)
                         ?: throw io.legado.app.exception.NoStackTraceException("书源不存在")
                     onMain { onSuccess(emptyList(), source) }
                     return@launch
@@ -388,28 +398,34 @@ class ChangeBookSourceComposeViewModel(
 
     // Options
     fun onCheckAuthorChange(enabled: Boolean) {
-        if (ChangeSourceConfig.checkAuthor == enabled) return
-        ChangeSourceConfig.checkAuthor = enabled
+        if (settings.value.checkAuthor == enabled) return
+        updateSetting { it.copy(checkAuthor = enabled) }
         refresh()
     }
 
     fun onLoadInfoChange(enabled: Boolean) {
-        if (ChangeSourceConfig.loadInfo == enabled) return
-        ChangeSourceConfig.loadInfo = enabled
+        if (settings.value.loadInfo == enabled) return
+        updateSetting { it.copy(loadInfo = enabled) }
     }
 
     fun onLoadTocChange(enabled: Boolean) {
-        if (ChangeSourceConfig.loadToc == enabled) return
-        ChangeSourceConfig.loadToc = enabled
+        if (settings.value.loadToc == enabled) return
+        updateSetting { it.copy(loadToc = enabled) }
     }
 
     fun onLoadWordCountChange(enabled: Boolean) {
-        if (ChangeSourceConfig.loadWordCount == enabled) return
-        ChangeSourceConfig.loadWordCount = enabled
+        if (settings.value.loadWordCount == enabled) return
+        updateSetting { it.copy(loadWordCount = enabled) }
         if (enabled) {
             refreshMissingWordCounts()
         } else {
             refresh()
+        }
+    }
+
+    fun setMigrationOptions(options: ChangeSourceMigrationOptions) {
+        viewModelScope.launch {
+            changeSourceSettingsGateway.setMigrationOptions(options)
         }
     }
 
@@ -551,7 +567,7 @@ class ChangeBookSourceComposeViewModel(
         if (selectedUrls.isEmpty()) {
             searchScope.update("")
         } else {
-            val selectedSources = io.legado.app.data.appDb.bookSourceDao.allEnabledPart.filter {
+            val selectedSources = enabledSources.value.filter {
                 selectedUrls.contains(it.bookSourceUrl)
             }
             searchScope.updateSources(selectedSources)
@@ -582,7 +598,8 @@ class ChangeBookSourceComposeViewModel(
     }
 
     private fun updateScopeState() {
-        ChangeSourceConfig.searchScope = searchScope.toString()
+        val value = searchScope.toString()
+        updateSetting { it.copy(searchScope = value) }
         _scopeUiState.value = ScopeUiState(
             isAll = searchScope.isAll(),
             isSource = searchScope.isSource(),
@@ -594,6 +611,12 @@ class ChangeBookSourceComposeViewModel(
     private suspend fun onMain(block: () -> Unit) {
         withContext(Main.immediate) {
             block()
+        }
+    }
+
+    private fun updateSetting(transform: (ChangeSourceSettings) -> ChangeSourceSettings) {
+        viewModelScope.launch {
+            changeSourceSettingsGateway.update(transform)
         }
     }
 

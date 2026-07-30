@@ -2,7 +2,6 @@ package io.legado.app.data.repository
 
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.domain.gateway.HomeDashboardGateway
 import io.legado.app.domain.model.DEFAULT_HOME_DASHBOARD_SECTIONS
 import io.legado.app.domain.model.HomeDashboardSection
@@ -12,7 +11,7 @@ import kotlinx.coroutines.flow.map
 
 class HomeDashboardRepository(
     private val readRecordDao: ReadRecordDao,
-    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val localPreferencesRepository: SettingsRepository,
 ) : HomeDashboardGateway {
 
     override fun observeTotalReadBooks(): Flow<Int> =

@@ -21,7 +21,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.widget.components.AppTextFieldSurface
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 
@@ -43,14 +43,14 @@ fun BookmarkEditSheet(
         onDismissRequest = onDismiss,
         title = bookmark.chapterName,
         startAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = { showDeleteConfirmDialog = true },
                 icon = AppIcons.Delete,
                 contentDescription = stringResource(R.string.delete)
             )
         },
         endAction = {
-            SmallTonalButton(
+            MediumTonalButton(
                 onClick = {
                     val newBookmark = bookmark.apply {
                         this.bookText = bookText

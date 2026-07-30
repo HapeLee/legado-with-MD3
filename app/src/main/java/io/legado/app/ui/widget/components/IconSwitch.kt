@@ -11,10 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.semantics
-import io.legado.app.R
+import androidx.compose.ui.state.ToggleableState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
@@ -31,17 +30,13 @@ fun AdaptiveSwitch(
     includeStateSemantics: Boolean = true
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val switchStateDescription = stringResource(
-        if (checked) R.string.a11y_on else R.string.a11y_off
-    )
-
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             modifier = if (includeStateSemantics) {
                 modifier.semantics {
-                    stateDescription = switchStateDescription
+                    toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
                 }
             } else {
                 modifier
@@ -74,10 +69,6 @@ fun TinySwitch(
     includeStateSemantics: Boolean = true
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val switchStateDescription = stringResource(
-        if (checked) R.string.a11y_on else R.string.a11y_off
-    )
-
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixSwitch(
             checked = checked,
@@ -86,7 +77,7 @@ fun TinySwitch(
                 modifier
                     .scale(0.9f)
                     .semantics {
-                        stateDescription = switchStateDescription
+                        toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
                     }
             } else {
                 modifier.scale(0.9f)
@@ -119,14 +110,10 @@ fun IconSwitch(
     colors: SwitchColors = SwitchDefaults.colors(),
     includeStateSemantics: Boolean = true
 ) {
-    val switchStateDescription = stringResource(
-        if (checked) R.string.a11y_on else R.string.a11y_off
-    )
-
     Switch(
         modifier = if (includeStateSemantics) {
             modifier.semantics {
-                stateDescription = switchStateDescription
+                toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
             }
         } else {
             modifier

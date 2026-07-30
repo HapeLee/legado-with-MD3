@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -29,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -46,6 +49,7 @@ internal val SeriesIconSize: Dp
     get() = IconButtonDefaults.mediumIconSize
 internal val MediumSeriesIconButtonSize = DpSize(40.dp, 40.dp)
 internal val MediumSeriesIconSize = SeriesIconSize
+internal val SmallButtonShape = RoundedCornerShape(50)
 
 internal enum class SeriesIconButtonStyle {
     Plain,
@@ -62,6 +66,8 @@ internal fun SeriesButton(
     selected: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     size: DpSize? = null,
+    enforceMinimumInteractiveSize: Boolean = true,
+    shape: Shape = IconButtonDefaults.extraSmallRoundShape,
     style: SeriesIconButtonStyle = SeriesIconButtonStyle.Plain,
     contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,
     containerColor: Color? = null,
@@ -98,12 +104,13 @@ internal fun SeriesButton(
         animationSpec = animSpec,
         label = "SeriesIconContentColor"
     )
-    val shape = IconButtonDefaults.extraSmallRoundShape
     val border = borderStroke(style, enabled)
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .then(if (enforceMinimumInteractiveSize) Modifier.minimumInteractiveComponentSize() else Modifier)
+            .then(modifier)
             .then(if (size != null) Modifier.size(size) else Modifier)
             .clip(shape)
             .background(containerColor, shape)
@@ -144,6 +151,9 @@ internal fun SeriesIconButton(
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
 ) {
+    require(!contentDescription.isNullOrBlank()) {
+        "Icon-only buttons must provide a contentDescription"
+    }
     SeriesButton(
         onClick = onClick,
         modifier = modifier,
@@ -178,6 +188,9 @@ internal fun SeriesButtonContent(
     spacing: Dp
 ) {
     val hasText = text != null
+    require(hasText || !contentDescription.isNullOrBlank()) {
+        "Icon-only buttons must provide a contentDescription"
+    }
     Row(
         modifier = Modifier.padding(if (hasText) padding else PaddingValues(0.dp)),
         horizontalArrangement = Arrangement.spacedBy(

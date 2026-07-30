@@ -7,27 +7,31 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import io.legado.app.data.dao.BookChapterDao
-import io.legado.app.data.dao.BookContentProcessDao
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.dao.BookGroupDao
-import io.legado.app.data.dao.BookSourceDao
-import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.AiArtifactDao
 import io.legado.app.data.dao.AiChatDao
 import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiProfileDao
 import io.legado.app.data.dao.AiPromptPresetDao
+import io.legado.app.data.dao.BookChapterDao
+import io.legado.app.data.dao.BookContentProcessDao
+import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookGroupDao
+import io.legado.app.data.dao.BookKnowledgeDao
+import io.legado.app.data.dao.BookSourceDao
+import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.CacheDao
+import io.legado.app.data.dao.ChapterSpeechDao
+import io.legado.app.data.dao.CloudTtsEngineDao
 import io.legado.app.data.dao.CookieDao
 import io.legado.app.data.dao.DictRuleDao
+import io.legado.app.data.dao.ExactChapterPageCountDao
 import io.legado.app.data.dao.HighlightRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
-import io.legado.app.data.dao.TagGroupRuleDao
 import io.legado.app.data.dao.HomepageCustomSetDao
 import io.legado.app.data.dao.HomepageModuleDao
 import io.legado.app.data.dao.HttpTTSDao
 import io.legado.app.data.dao.KeyboardAssistsDao
+import io.legado.app.data.dao.ReadAloudVoiceDao
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.dao.RssArticleDao
@@ -39,14 +43,8 @@ import io.legado.app.data.dao.SearchBookDao
 import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.data.dao.SearchKeywordDao
 import io.legado.app.data.dao.ServerDao
+import io.legado.app.data.dao.TagGroupRuleDao
 import io.legado.app.data.dao.TxtTocRuleDao
-import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.data.entities.BookGroup
-import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.AiArtifact
 import io.legado.app.data.entities.AiChatConversation
 import io.legado.app.data.entities.AiChatMessage
@@ -55,16 +53,33 @@ import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.AiProviderProfile
 import io.legado.app.data.entities.AiTaskPreset
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookCharacterEvent
+import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.data.entities.BookCharacterRelation
+import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.BookKnowledgeEntry
+import io.legado.app.data.entities.BookOutlineNode
+import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.entities.BookVoiceBindingEntity
+import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.Cache
+import io.legado.app.data.entities.ChapterSpeechAnalysisEntity
+import io.legado.app.data.entities.ChapterSpeechSegmentEntity
+import io.legado.app.data.entities.CloudTtsEngineEntity
 import io.legado.app.data.entities.Cookie
 import io.legado.app.data.entities.DictRule
+import io.legado.app.data.entities.ExactChapterPageCountEntity
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HighlightTagRule
-import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.entities.HomepageCustomSet
 import io.legado.app.data.entities.HomepageModule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
+import io.legado.app.data.entities.ReadAloudVoiceEntity
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
@@ -75,6 +90,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
@@ -94,7 +110,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 94,
+    version = 99,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -106,7 +122,11 @@ val appDb by lazy {
         HighlightRule::class, AiProviderProfile::class, AiModelProfile::class,
         AiTaskPreset::class, AiArtifact::class, AiChatConversation::class,
         AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class,
-        BookContentProcess::class, AiPromptPreset::class],
+        BookContentProcess::class, AiPromptPreset::class, BookCharacterProfile::class,
+        BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
+        BookOutlineNode::class, ReadAloudVoiceEntity::class, BookVoiceBindingEntity::class,
+        ChapterSpeechAnalysisEntity::class, ChapterSpeechSegmentEntity::class,
+        CloudTtsEngineEntity::class, ExactChapterPageCountEntity::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -159,7 +179,11 @@ val appDb by lazy {
         AutoMigration(from = 90, to = 91),
         AutoMigration(from = 91, to = 92),
         AutoMigration(from = 92, to = 93),
-        AutoMigration(from = 93, to = 94)
+        AutoMigration(from = 93, to = 94),
+        AutoMigration(from = 94, to = 95),
+        AutoMigration(from = 95, to = 96),
+        AutoMigration(from = 96, to = 97),
+        AutoMigration(from = 97, to = 98)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -169,6 +193,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val bookSourceDao: BookSourceDao
     abstract val bookChapterDao: BookChapterDao
     abstract val bookContentProcessDao: BookContentProcessDao
+    abstract val bookKnowledgeDao: BookKnowledgeDao
+    abstract val readAloudVoiceDao: ReadAloudVoiceDao
+    abstract val chapterSpeechDao: ChapterSpeechDao
+    abstract val cloudTtsEngineDao: CloudTtsEngineDao
     abstract val replaceRuleDao: ReplaceRuleDao
     abstract val searchBookDao: SearchBookDao
     abstract val searchKeywordDao: SearchKeywordDao
@@ -184,6 +212,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val cacheDao: CacheDao
     abstract val ruleSubDao: RuleSubDao
     abstract val dictRuleDao: DictRuleDao
+    abstract val exactChapterPageCountDao: ExactChapterPageCountDao
     abstract val keyboardAssistsDao: KeyboardAssistsDao
     abstract val serverDao: ServerDao
     abstract val searchContentHistoryDao: SearchContentHistoryDao

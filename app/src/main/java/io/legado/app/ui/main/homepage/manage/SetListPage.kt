@@ -73,6 +73,12 @@ fun SetListPage(
             ReorderableSelectionItem(
                 state = setsReorderableState,
                 key = set.sourceUrl,
+                reorderIndex = localSets.indexOf(set),
+                reorderItemCount = localSets.size,
+                onMoveItem = { from, to ->
+                    localSets = localSets.toMutableList().apply { move(from, to) }
+                    onReorderSets(localSets.map { it.sourceUrl })
+                },
                 title = set.sourceName,
                 subtitle = stringResource(R.string.homepage_n_modules, set.moduleCount),
                 containerColor = LegadoTheme.colorScheme.onSheetContent,
@@ -87,11 +93,13 @@ fun SetListPage(
                 trailingAction = {
                     SmallPlainButton(
                         onClick = { onRenameSet(set.sourceUrl) },
-                        icon = Icons.Default.DriveFileRenameOutline
+                        icon = Icons.Default.DriveFileRenameOutline,
+                        contentDescription = stringResource(R.string.homepage_rename_custom_set)
                     )
                     SmallPlainButton(
                         onClick = { onDeleteSet(set.sourceUrl) },
-                        icon = Icons.Default.Delete
+                        icon = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete)
                     )
                 }
             )

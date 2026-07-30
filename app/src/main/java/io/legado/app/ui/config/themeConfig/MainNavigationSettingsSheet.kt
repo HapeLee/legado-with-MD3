@@ -19,10 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.utils.move
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -30,10 +32,17 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun MainNavigationSettingsSheet(
     show: Boolean,
+    settings: AppShellSettings,
     onDismissRequest: () -> Unit,
+    onSetVisible: (String, Boolean) -> Unit,
+    onSetOrder: (String) -> Unit,
+    onSetDefault: (String) -> Unit,
+    onRequestNavigationIcon: (String) -> Unit,
+    onClearNavigationIcon: (String) -> Unit,
 ) {
+    var showNavigationIcons by remember(show) { mutableStateOf(false) }
     var navigationItems by remember(show) {
-        mutableStateOf(MainDestination.ordered(ThemeConfig.mainNavigationOrder))
+        mutableStateOf(MainDestination.ordered(settings.mainNavigationOrder))
     }
     val navigationListState = rememberLazyListState()
     val reorderableState =
@@ -45,48 +54,31 @@ fun MainNavigationSettingsSheet(
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
-            ThemeConfig.mainNavigationOrder =
-                navigationItems.joinToString(",") { it.route }
-        }
-    }
-
-    fun updateVisibility(
-        route: String,
-        visible: Boolean,
-        update: (Boolean) -> Unit,
-    ) {
-        update(visible)
-        if (!visible && ThemeConfig.defaultHomePage == route) {
-            ThemeConfig.defaultHomePage = MainDestination.Bookshelf.route
+            onSetOrder(navigationItems.joinToString(",") { it.route })
         }
     }
 
     fun isRouteVisible(route: String): Boolean = when (route) {
-        MainDestination.Home.route -> ThemeConfig.showHome
-        MainDestination.Explore.route -> ThemeConfig.showDiscovery
-        MainDestination.Rss.route -> ThemeConfig.showRss
+        MainDestination.Home.route -> settings.showHome
+        MainDestination.Explore.route -> settings.showDiscovery
+        MainDestination.Rss.route -> settings.showRss
         else -> true
     }
 
     fun getVisibilityForRoute(route: String): Boolean = isRouteVisible(route)
 
     fun setVisibilityForRoute(route: String, visible: Boolean) {
-        when (route) {
-            MainDestination.Home.route -> updateVisibility(route, visible) { ThemeConfig.showHome = it }
-            MainDestination.Explore.route -> updateVisibility(route, visible) { ThemeConfig.showDiscovery = it }
-            MainDestination.Rss.route -> updateVisibility(route, visible) { ThemeConfig.showRss = it }
-        }
+        onSetVisible(route, visible)
         if (!visible) {
             val item = navigationItems.find { it.route == route } ?: return
             navigationItems = navigationItems.filter { it.route != route } + item
-            ThemeConfig.mainNavigationOrder =
-                navigationItems.joinToString(",") { it.route }
+            onSetOrder(navigationItems.joinToString(",") { it.route })
         }
     }
 
     val visibleItems = navigationItems.filter { isRouteVisible(it.route) }
     val hiddenItems = navigationItems.filter { !isRouteVisible(it.route) }
-    val selectedDefault = ThemeConfig.defaultHomePage.takeIf { route ->
+    val selectedDefault = settings.defaultHomePage.takeIf { route ->
         visibleItems.any { it.route == route }
     } ?: MainDestination.Bookshelf.route
 
@@ -105,7 +97,24 @@ fun MainNavigationSettingsSheet(
                 selectedValue = selectedDefault,
                 displayEntries = visibleItems.map { stringResource(it.labelId) }.toTypedArray(),
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
-                onValueChange = { ThemeConfig.defaultHomePage = it },
+                onValueChange = onSetDefault,
+            )
+            Spacer(modifier = Modifier.padding(bottom = 4.dp))
+            val customIconCount = listOf(
+                settings.navIconHome,
+                settings.navIconBookshelf,
+                settings.navIconExplore,
+                settings.navIconRss,
+                settings.navIconMy,
+            ).count { it.isNotEmpty() }
+            CompactClickableSettingItem(
+                title = stringResource(R.string.theme_config_nav_icons),
+                description = if (customIconCount > 0) {
+                    stringResource(R.string.theme_config_nav_icons_custom_count, customIconCount)
+                } else {
+                    stringResource(R.string.theme_config_nav_icons_default)
+                },
+                onClick = { showNavigationIcons = true },
             )
             Spacer(modifier = Modifier.padding(bottom = 4.dp))
             LazyColumn(
@@ -122,6 +131,16 @@ fun MainNavigationSettingsSheet(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = destination.route,
+                        reorderIndex = visibleItems.indexOf(destination),
+                        reorderItemCount = visibleItems.size,
+                        onMoveItem = { from, to ->
+                            val fromItem = visibleItems[from]
+                            val toItem = visibleItems[to]
+                            navigationItems = navigationItems.toMutableList().apply {
+                                move(indexOf(fromItem), indexOf(toItem))
+                            }
+                            onSetOrder(navigationItems.joinToString(",") { it.route })
+                        },
                         title = stringResource(destination.labelId),
                         isEnabled = true,
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
@@ -151,4 +170,12 @@ fun MainNavigationSettingsSheet(
             }
         }
     }
+
+    NavIconManageSheet(
+        show = showNavigationIcons,
+        settings = settings,
+        onDismissRequest = { showNavigationIcons = false },
+        onSelectIcon = onRequestNavigationIcon,
+        onClearIcon = onClearNavigationIcon,
+    )
 }

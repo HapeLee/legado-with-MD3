@@ -37,6 +37,7 @@ import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityMangaBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
@@ -69,15 +70,12 @@ import io.legado.app.ui.book.manga.recyclerview.MangaAdapter
 import io.legado.app.ui.book.manga.recyclerview.MangaLayoutManager
 import io.legado.app.ui.book.manga.recyclerview.ScrollTimer
 import io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
-import io.legado.app.ui.book.read.EyeProtectionRefreshScheduler
 import io.legado.app.ui.book.read.MangaMenu
-import io.legado.app.ui.book.read.observeEyeProtectionEvents
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.recycler.LoadMoreView
@@ -116,7 +114,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private val mAdapter: MangaAdapter by lazy {
-        MangaAdapter(this)
+        MangaAdapter(this) { viewModel.mangaSettings.value }
     }
 
     private val mSizeProvider by lazy {
@@ -145,12 +143,9 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private var isRestoredFromSavedState = false
     private var syncDialog: AlertDialog? = null
     private val handler by lazy { buildMainHandler() }
-    private val eyeProtectionScheduler by lazy {
-        EyeProtectionRefreshScheduler(handler) { binding.eyeProtectionOverlay.refresh() }
-    }
     private val mScrollTimer by lazy {
         ScrollTimer(this, binding.recyclerView, lifecycleScope).apply {
-            setSpeed(ReadMangaConfig.mangaAutoPageSpeed)
+            setSpeed(viewModel.mangaSettings.value.autoPageSpeed)
         }
     }
     private var enableAutoScrollPage = false
@@ -224,7 +219,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             ReadManga.loadOrUpContent()
         }
         binding.flLoading.isVisible = !ReadConfig.isEInkMode
-        binding.eyeProtectionOverlay.refresh()
         mAdapter.addFooterView {
             ViewLoadMoreBinding.bind(loadMoreView)
         }
@@ -236,7 +230,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         loadMoreView.gone()
         mMangaFooterConfig =
-            GSON.fromJsonObject<MangaFooterConfig>(ReadMangaConfig.mangaFooterConfig).getOrNull()
+            GSON.fromJsonObject<MangaFooterConfig>(viewModel.mangaSettings.value.footerConfig).getOrNull()
                 ?: MangaFooterConfig()
 
         onBackPressedDispatcher.addCallback(this) {
@@ -300,20 +294,16 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             val item = mAdapter.getItem(binding.recyclerView.findCenterViewPosition())
             upInfoBar(item)
         }
-        observeEyeProtectionEvents(
-            onRefresh = { binding.eyeProtectionOverlay.refresh() },
-            scheduler = eyeProtectionScheduler
-        )
     }
 
     private fun initRecyclerView() {
         val mangaColorFilter =
-            GSON.fromJsonObject<MangaColorFilterConfig>(ReadMangaConfig.mangaColorFilter).getOrNull()
+            GSON.fromJsonObject<MangaColorFilterConfig>(viewModel.mangaSettings.value.colorFilter).getOrNull()
                 ?: MangaColorFilterConfig()
         mAdapter.run {
             setMangaImageColorFilter(mangaColorFilter)
-            enableMangaEInk(ReadMangaConfig.enableMangaEInk, ReadMangaConfig.mangaEInkThreshold)
-            enableGray(ReadMangaConfig.enableMangaGray)
+            enableMangaEInk(viewModel.mangaSettings.value.enableEInk, viewModel.mangaSettings.value.eInkThreshold)
+            enableGray(viewModel.mangaSettings.value.enableGray)
         }
 
         viewModel.initData(intent) {
@@ -326,8 +316,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             itemAnimator = null
             layoutManager = mLayoutManager
             setHasFixedSize(true)
-            setDisableMangaScale(ReadMangaConfig.disableMangaScale)
-            setRecyclerViewPreloader(ReadMangaConfig.mangaPreDownloadNum)
+            setDisableMangaScale(viewModel.mangaSettings.value.disableMangaScale)
+            setRecyclerViewPreloader(viewModel.mangaSettings.value.preDownloadNum)
             setPreScrollListener { _, _, _, position ->
                 if (mAdapter.isNotEmpty()) {
                     val item = mAdapter.getItem(position)
@@ -349,6 +339,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             }
         }
 
+        binding.webtoonFrame.settingsProvider = { viewModel.mangaSettings.value }
         binding.webtoonFrame.actionHandler = object : WebtoonFrame.ClickActionHandler {
             override fun showMenu() {
                 if (!binding.mangaMenu.isVisible && !loadingViewVisible) {
@@ -445,6 +436,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     private fun upInfoBar(page: Any?) {
         if (page !is MangaPage) {
+            binding.webtoonFrame.updateAccessibilityState(getString(R.string.loading))
             return
         }
         val chapterIndex = page.chapterIndex
@@ -452,6 +444,13 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         val chapterPos = page.index
         val imageCount = page.imageCount
         val chapterName = page.mChapterName
+        binding.webtoonFrame.updateAccessibilityState(
+            listOfNotNull(
+                chapterName.takeIf(String::isNotBlank),
+                getString(R.string.a11y_read_progress_page, chapterPos + 1, imageCount),
+                getString(R.string.a11y_read_progress_chapter, chapterIndex + 1, chapterSize),
+            ).joinToString(", ")
+        )
         mMangaFooterConfig.run {
             mLabelBuilder.clear()
             binding.infobar.isGone = hideFooter
@@ -519,13 +518,10 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         ReadManga.initReadTime()
         ReadManga.startAutoSaveSession()
-        binding.eyeProtectionOverlay.refresh()
-        eyeProtectionScheduler.schedule()
     }
 
     override fun onPause() {
         super.onPause()
-        eyeProtectionScheduler.cancel()
         if (ReadManga.inBookshelf) {
             ReadManga.saveRead()
             if (!BuildConfig.DEBUG) {
@@ -548,12 +544,21 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     override fun onColorSelected(dialogId: Int, color: Int){
         if (dialogId == MANGA_B)
         {
-            ReadMangaConfig.mangaBackground = color
-            setBackground()
+            updateMangaSetting(afterUpdate = ::setBackground) { it.copy(background = color) }
         }
     }
 
     override fun onDialogDismissed(dialogId: Int) = Unit
+
+    private fun updateMangaSetting(
+        afterUpdate: () -> Unit = {},
+        transform: (MangaSettings) -> MangaSettings,
+    ) {
+        lifecycleScope.launch {
+            viewModel.updateMangaSettings(transform)
+            afterUpdate()
+        }
+    }
 
     override fun loadFail(msg: String) {
         lifecycleScope.launch {
@@ -751,9 +756,9 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 showNumberPickerDialog(
                     0,
                     getString(R.string.pre_download),
-                    ReadMangaConfig.mangaPreDownloadNum
+                    viewModel.mangaSettings.value.preDownloadNum
                 ) {
-                    ReadMangaConfig.mangaPreDownloadNum = it
+                    updateMangaSetting { settings -> settings.copy(preDownloadNum = it) }
                     item.title = getString(R.string.pre_download_m, it)
                     setRecyclerViewPreloader(it)
                 }
@@ -801,26 +806,26 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             mangaScrollMode = mode
         }
         setScrollMode(mode)
-        updateWebtoonSidePadding(ReadMangaConfig.webtoonSidePaddingDp)
+        updateWebtoonSidePadding(viewModel.mangaSettings.value.webtoonSidePaddingDp)
         setAutoReadEnabled(false)
     }
 
     //点击滑动
     override fun onClickScrollDisabledChanged(disabled: Boolean) {
-        ReadMangaConfig.disableClickScroll = disabled
+        updateMangaSetting { it.copy(disableClickScroll = disabled) }
     }
 
     override fun onScrollAniDisabledChanged(disabled: Boolean) {
-        ReadMangaConfig.disableMangaScrollAnimation = disabled
+        updateMangaSetting { it.copy(disableMangaScrollAnimation = disabled) }
     }
 
     override fun onCrossFadeDisabledChanged(disabled: Boolean) {
-        ReadMangaConfig.disableMangaCrossFade = disabled
+        updateMangaSetting { it.copy(disableMangaCrossFade = disabled) }
     }
 
     //双击缩放
     override fun onMangaScaleDisabledChanged(disabled: Boolean) {
-        ReadMangaConfig.disableMangaScale = disabled
+        updateMangaSetting { it.copy(disableMangaScale = disabled) }
         setDisableMangaScale(disabled)
     }
 
@@ -834,16 +839,15 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     //墨水屏
     override fun updateEpaperMode(enabled: Boolean, threshold: Int) {
-        ReadMangaConfig.enableMangaEInk = enabled
-        ReadMangaConfig.enableMangaGray = false
-        ReadMangaConfig.mangaEInkThreshold = threshold
+        updateMangaSetting {
+            it.copy(enableEInk = enabled, enableGray = false, eInkThreshold = threshold)
+        }
         mAdapter.enableMangaEInk(enabled, threshold)
     }
 
     //灰度
     override fun updateGrayMode(enabled: Boolean) {
-        ReadMangaConfig.enableMangaGray = enabled
-        ReadMangaConfig.enableMangaEInk = false
+        updateMangaSetting { it.copy(enableEInk = false, enableGray = enabled) }
         mAdapter.enableGray(enabled)
     }
 
@@ -861,26 +865,25 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     //自动翻页速度
     override fun onAutoPageSpeedChanged(speed: Int) {
         setAutoReadEnabled(false)
-        ReadMangaConfig.mangaAutoPageSpeed = speed
+        updateMangaSetting { it.copy(autoPageSpeed = speed) }
         mScrollTimer.setSpeed(speed)
         setAutoReadEnabled(enableScroll)
     }
 
     override fun onMangaLongClickChanged(checked: Boolean) {
-        ReadMangaConfig.mangaLongClick = checked
+        updateMangaSetting { it.copy(longClick = checked) }
     }
 
     override fun onVolumeKeyPageChanged(enable: Boolean) {
-        ReadMangaConfig.mangaVolumeKeyPage = enable
+        updateMangaSetting { it.copy(volumeKeyPage = enable) }
     }
 
     override fun onReverseVolumeKeyPageChanged(enable: Boolean) {
-        ReadMangaConfig.reverseVolumeKeyPage = enable
+        updateMangaSetting { it.copy(reverseVolumeKeyPage = enable) }
     }
 
     override fun onHideMangaTitleChanged(hide: Boolean) {
-        ReadMangaConfig.hideMangaTitle = hide
-        ReadManga.loadContent()
+        updateMangaSetting(afterUpdate = ReadManga::loadContent) { it.copy(hideTitle = hide) }
     }
 
     override fun openBookInfoActivity() {
@@ -996,8 +999,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private fun setBackground() {
-        binding.webtoonFrame.setBackgroundColor(ReadMangaConfig.mangaBackground)
-        binding.recyclerView.setBackgroundColor(ReadMangaConfig.mangaBackground)
+        binding.webtoonFrame.setBackgroundColor(viewModel.mangaSettings.value.background)
+        binding.recyclerView.setBackgroundColor(viewModel.mangaSettings.value.background)
         mAdapter.notifyItemRangeChanged(0, mAdapter.itemCount)
     }
 
@@ -1016,7 +1019,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private fun upMenu(menu: Menu) {
         this.mMenu = menu
         menu.findItem(R.id.menu_pre_manga_number).title =
-            getString(R.string.pre_download_m, ReadMangaConfig.mangaPreDownloadNum)
+            getString(R.string.pre_download_m, viewModel.mangaSettings.value.preDownloadNum)
     }
 
     private fun setDisableMangaScale(disable: Boolean) {
@@ -1037,12 +1040,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private fun scrollToNext() {
-        if (!ReadMangaConfig.disableClickScroll)
+        if (!viewModel.mangaSettings.value.disableClickScroll)
             scrollPageTo(1)
     }
 
     private fun scrollToPrev() {
-        if (!ReadMangaConfig.disableClickScroll)
+        if (!viewModel.mangaSettings.value.disableClickScroll)
             scrollPageTo(-1)
     }
 
@@ -1068,7 +1071,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         dx *= direction
         dy *= direction
-        if (!ReadMangaConfig.disableMangaScrollAnimation)
+        if (!viewModel.mangaSettings.value.disableMangaScrollAnimation)
             binding.recyclerView.smoothScrollBy(dx, dy)
         else
             binding.recyclerView.scrollBy(dx, dy)
@@ -1132,11 +1135,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (!ReadMangaConfig.mangaVolumeKeyPage) {
+        if (!viewModel.mangaSettings.value.volumeKeyPage) {
             return super.onKeyDown(keyCode, event)
         }
 
-        val isReverse = ReadMangaConfig.reverseVolumeKeyPage
+        val isReverse = viewModel.mangaSettings.value.reverseVolumeKeyPage
 
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {

@@ -69,12 +69,13 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RssScreen(
+fun RssRouteScreen(
     viewModel: RssViewModel = koinViewModel(),
     onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
     onOpenRead: (
@@ -89,10 +90,6 @@ fun RssScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
-    val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
-        uiState.items.firstOrNull { it.sourceUrl == sourceToDeleteUrl }
-    }
     val currentContext by rememberUpdatedState(context)
     val currentOnOpenSort by rememberUpdatedState(onOpenSort)
     val currentOnOpenRead by rememberUpdatedState(onOpenRead)
@@ -102,6 +99,7 @@ fun RssScreen(
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
+                is RssEffect.ShowMessage -> currentContext.toastOnUi(effect.message)
                 is RssEffect.OpenSort -> {
                     currentOnOpenSort(effect.sourceUrl, effect.sortUrl, effect.key)
                 }
@@ -148,18 +146,35 @@ fun RssScreen(
         }
     }
 
+    RssScreen(
+        state = uiState,
+        onIntent = viewModel::onIntent,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RssScreen(
+    state: RssUiState,
+    onIntent: (RssIntent) -> Unit,
+) {
+    var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    val sourceToDelete = remember(sourceToDeleteUrl, state.items) {
+        state.items.firstOrNull { it.sourceUrl == sourceToDeleteUrl }
+    }
+
     ListScaffold(
             title = stringResource(R.string.rss),
-            state = uiState,
-            subtitle = uiState.group.ifEmpty { stringResource(R.string.all) },
+            state = state,
+            subtitle = state.group.ifEmpty { stringResource(R.string.all) },
             onBackClick = null,
-            onSearchToggle = { viewModel.toggleSearchVisible(it) },
-            onSearchQueryChange = { viewModel.search(it) },
+            onSearchToggle = { onIntent(RssIntent.ToggleSearch(it)) },
+            onSearchQueryChange = { onIntent(RssIntent.Search(it)) },
             searchPlaceholder = stringResource(R.string.search_rss_source),
             dropDownMenuContent = { dismiss ->
                 RoundDropdownMenuItem(
                     onClick = {
-                        viewModel.openSourceManage()
+                        onIntent(RssIntent.OpenSourceManage)
                         dismiss()
                     },
                     text = stringResource(R.string.rss_feed_management),
@@ -168,15 +183,15 @@ fun RssScreen(
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.all),
                     onClick = {
-                        viewModel.setGroup("")
+                        onIntent(RssIntent.SetGroup(""))
                         dismiss()
                     }
                 )
-                uiState.groups.forEach { group ->
+                state.groups.forEach { group ->
                     RoundDropdownMenuItem(
                         text = group,
                         onClick = {
-                            viewModel.setGroup(group)
+                            onIntent(RssIntent.SetGroup(group))
                             dismiss()
                         }
                     )
@@ -208,7 +223,7 @@ fun RssScreen(
                                     contentDescription = ruleSubscriptionLabel
                                     role = Role.Button
                                 },
-                            onClick = { viewModel.openRuleSub() }
+                            onClick = { onIntent(RssIntent.OpenRuleSub) }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -235,7 +250,7 @@ fun RssScreen(
                                     contentDescription = favoriteLabel
                                     role = Role.Button
                                 },
-                            onClick = { viewModel.openFavorites() }
+                            onClick = { onIntent(RssIntent.OpenFavorites) }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -258,16 +273,16 @@ fun RssScreen(
                     }
                 }
 
-                items(uiState.items, key = { it.sourceUrl }) { source ->
+                items(state.items, key = { it.sourceUrl }) { source ->
                     RssSourceGridItem(
                         modifier = Modifier.animateItem(),
                         source = source,
-                        onClick = { viewModel.openSource(source) },
-                        onTop = { viewModel.topSource(source) },
-                        onEdit = { viewModel.openSourceEdit(source) },
+                        onClick = { onIntent(RssIntent.OpenSource(source)) },
+                        onTop = { onIntent(RssIntent.TopSource(source)) },
+                        onEdit = { onIntent(RssIntent.EditSource(source)) },
                         onDelete = { sourceToDeleteUrl = source.sourceUrl },
-                        onDisable = { viewModel.disable(source) },
-                        onLogin = { viewModel.login(source) }
+                        onDisable = { onIntent(RssIntent.DisableSource(source)) },
+                        onLogin = { onIntent(RssIntent.Login(source)) }
                     )
                 }
             }
@@ -279,7 +294,7 @@ fun RssScreen(
         title = stringResource(R.string.draw),
         confirmText = stringResource(R.string.yes),
         onConfirm = { source ->
-            viewModel.del(source)
+            onIntent(RssIntent.DeleteSource(source))
             sourceToDeleteUrl = null
         },
         dismissText = stringResource(R.string.no),

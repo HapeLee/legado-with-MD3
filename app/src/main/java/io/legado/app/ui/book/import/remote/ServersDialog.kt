@@ -16,12 +16,12 @@ import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.constant.AppConst.DEFAULT_WEBDAV_ID
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Server
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemServerSelectBinding
 import io.legado.app.lib.dialogs.alert
 //import io.legado.app.lib.theme.backgroundColor
 //import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.setLayout
@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.android.ext.android.inject
 
 /**
  * 服务器配置
@@ -42,6 +43,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     val binding by viewBinding(DialogRecyclerViewBinding::bind)
     val viewModel by viewModel<ServersViewModel>()
+    private val importBookSettingsGateway by inject<ImportBookSettingsGateway>()
 
     private val callback get() = (activity as? Callback)
     private val adapter by lazy { ServersAdapter(requireContext()) }
@@ -69,8 +71,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         binding.tvFooterLeft.text = getString(R.string.text_default)
         binding.tvFooterLeft.visible()
         binding.tvFooterLeft.setOnClickListener {
-            ImportBookConfig.remoteServerId = DEFAULT_WEBDAV_ID
-            dismissAllowingStateLoss()
+            saveSelectedServer(DEFAULT_WEBDAV_ID)
         }
         binding.tvCancel.visible()
         binding.tvCancel.setOnClickListener {
@@ -78,8 +79,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         }
         binding.tvOk.visible()
         binding.tvOk.setOnClickListener {
-            ImportBookConfig.remoteServerId = adapter.selectServerId
-            dismissAllowingStateLoss()
+            saveSelectedServer(adapter.selectServerId)
         }
     }
 
@@ -90,6 +90,13 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             }.flowOn(IO).collect {
                 adapter.setItems(it)
             }
+        }
+    }
+
+    private fun saveSelectedServer(serverId: Long) {
+        lifecycleScope.launch {
+            importBookSettingsGateway.update { it.copy(remoteServerId = serverId) }
+            dismissAllowingStateLoss()
         }
     }
 
@@ -108,7 +115,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
     inner class ServersAdapter(context: Context) :
         RecyclerAdapter<Server, ItemServerSelectBinding>(context) {
 
-        var selectServerId: Long = ImportBookConfig.remoteServerId
+        var selectServerId: Long = importBookSettingsGateway.currentSettings.remoteServerId
 
         override fun getViewBinding(parent: ViewGroup): ItemServerSelectBinding {
             return ItemServerSelectBinding.inflate(inflater, parent, false)

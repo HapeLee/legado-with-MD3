@@ -6,16 +6,25 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -41,11 +50,15 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
+import io.legado.app.ui.book.read.page.ReaderEventListener
+import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
@@ -54,6 +67,7 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -80,6 +94,8 @@ data class ReadBookViewRefs(
 interface ReadBookRouteHost :
     View.OnTouchListener,
     ReadView.CallBack,
+    ReaderEventListener,
+    ReaderPageSource,
     ContentTextView.CallBack {
 
     val isInMultiWindowModeCompat: Boolean
@@ -116,13 +132,29 @@ fun ReadBookRouteScreen(
     host: ReadBookRouteHost,
     controller: ReadBookController,
     onEffectsReady: () -> Unit = {},
-    onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
+    onOpenSearch: (word: String?, bookUrl: String, autoFocus: Boolean) -> Unit = { _, _, _ -> },
+    onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
+    onOpenTtsEnginesAndVoices: () -> Unit = {},
+    onOpenTtsCache: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val aiState by viewModel.aiState.collectAsStateWithLifecycle()
+    val highlightRuleState by viewModel.highlightRuleState.collectAsStateWithLifecycle()
+    val contentEditState by viewModel.contentEditState.collectAsStateWithLifecycle()
+    val contentProcessState by viewModel.contentProcessState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isDarkTheme = LocalAppUiConfiguration.current.isDarkTheme
+    val eyeProtectionActive = rememberEyeProtectionActive(
+        enabled = state.eyeProtection.enabled,
+        autoNight = state.eyeProtection.autoNight,
+        isDark = isDarkTheme,
+        schedule = state.eyeProtection.schedule,
+        startTime = state.eyeProtection.startTime,
+        endTime = state.eyeProtection.endTime,
+    )
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -133,23 +165,36 @@ fun ReadBookRouteScreen(
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
 
+    DisposableEffect(controller) {
+        onDispose {
+            controller.clearAppThemeOverride()
+        }
+    }
+
     LaunchedEffect(state.menuVisible) {
         controller.onMenuVisibilityChanged(state.menuVisible)
     }
 
-    // ── ActivityResult Launchers ──────────────────────────────────────
-
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (index, chapterPos, _) ->
-            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
+    LaunchedEffect(viewModel, controller, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.readAloudProgress.collect { chapterStart ->
+                chapterStart?.let(controller::updateReadAloudProgress)
+            }
         }
     }
+
+    // ── ActivityResult Launchers ──────────────────────────────────────
 
     val sourceEditLauncher = rememberLauncherForActivityResult(
         StartActivityContract(BookSourceEditActivity::class.java)
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             viewModel.onIntent(ReadBookIntent.SourceEditResult)
+        }
+    }
+    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
+        result?.let { (index, chapterPos, _) ->
+            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
         }
     }
 
@@ -238,18 +283,6 @@ fun ReadBookRouteScreen(
         }
     }
 
-    val importHttpTtsPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ImportHttpTtsFileSelected(it)) }
-    }
-
-    val exportHttpTtsPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ExportHttpTtsToFile(it)) }
-    }
-
     val importHighlightRulePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -287,11 +320,11 @@ fun ReadBookRouteScreen(
                     try {
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
-                            is ReadBookEffect.OpenChapterList -> {
-                                tocLauncher.launch(effect.bookUrl)
-                            }
                             is ReadBookEffect.OpenSourceEdit -> {
                                 sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
+                            }
+                            is ReadBookEffect.OpenChapterList -> {
+                                tocLauncher.launch(effect.bookUrl)
                             }
                             is ReadBookEffect.OpenBookInfo -> {
                                 bookInfoLauncher.launch {
@@ -304,14 +337,6 @@ fun ReadBookRouteScreen(
                                 context.startActivity(
                                     Intent(context, SourceLoginActivity::class.java).apply {
                                         putExtra("bookType", BookType.text)
-                                    }
-                                )
-                            }
-                            is ReadBookEffect.OpenHttpTtsLogin -> {
-                                context.startActivity(
-                                    Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("type", "httpTts")
-                                        putExtra("key", effect.engineId.toString())
                                     }
                                 )
                             }
@@ -340,10 +365,20 @@ fun ReadBookRouteScreen(
                                 }
                             }
                             is ReadBookEffect.OpenSearchActivity -> {
-                                onOpenSearch(effect.word, effect.bookUrl)
+                                onOpenSearch(effect.word, effect.bookUrl, effect.autoFocus)
                             }
+                            is ReadBookEffect.OpenBookVoiceCasting -> {
+                                onOpenVoiceCasting(effect.bookUrl)
+                            }
+                            ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
+                            ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
                             is ReadBookEffect.MenuSettingReplace -> {
-                                replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
+                                replaceLauncher.launch(
+                                    ReplaceRuleActivity.startIntent(
+                                        context = context,
+                                        bookUrl = ReadBook.book?.bookUrl
+                                    )
+                                )
                             }
                             is ReadBookEffect.TextActionReplace -> {
                                 val scopes = arrayListOf<String>()
@@ -389,7 +424,7 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.OpenReadStyleExport -> {
-                                readStyleExportPicker.launch("readConfig.zip")
+                                readStyleExportPicker.launch(effect.fileName)
                             }
                             is ReadBookEffect.OpenMenuCustomIconPicker -> {
                                 pendingMenuCustomIconId = effect.id
@@ -405,19 +440,6 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.TtsCacheCleared -> {
                                 context.toastOnUi(effect.message)
                             }
-                            is ReadBookEffect.OpenHttpTtsImportPicker -> {
-                                importHttpTtsPicker.launch(
-                                    arrayOf(
-                                        "application/json",
-                                        "text/plain"
-                                    )
-                                )
-                            }
-
-                            is ReadBookEffect.OpenHttpTtsExportPicker -> {
-                                exportHttpTtsPicker.launch("httpTTS.json")
-                            }
-
                             is ReadBookEffect.OpenHighlightRuleImportPicker -> {
                                 importHighlightRulePicker.launch(
                                     arrayOf(
@@ -487,39 +509,121 @@ fun ReadBookRouteScreen(
 
     var showSelectMenuConfigSheet by rememberSaveable { mutableStateOf(false) }
 
+    val firstFrameTracker = remember(controller) {
+        val requestedStart = controller.activity.intent.getLongExtra(
+            EXTRA_FIRST_FRAME_STARTED_AT_NANOS,
+            0L,
+        )
+        ReaderFirstFrameTracker(
+            startedAtNanos = requestedStart.takeIf { it > 0L }
+                ?: SystemClock.elapsedRealtimeNanos(),
+        )
+    }
+
     Box(Modifier.fillMaxSize()) {
         key(controller) {
             ReadBookViewLayer(
                 modifier = Modifier
-                    .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
+                    .then(
+                        if (useMenuHazeSource) {
+                            Modifier.hazeSource(menuHazeState)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .layerBackdrop(menuBackdrop),
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
                 readViewCallBack = controller,
+                readerEventListener = controller,
+                readerPageSource = controller,
                 contentTextViewCallBack = controller,
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = controller::onAppThemeChanged,
+                onFirstContentDrawn = firstFrameTracker::report,
             )
         }
         ReadBookColorTheme(
             styleConfig = state.styleConfig,
             preferences = readPreferences,
+            isDarkTheme = isDarkTheme,
         ) {
             ReadBookMenuBar(
                 state = state,
                 preferences = readPreferences,
+                eyeProtectionActive = eyeProtectionActive,
                 onIntent = viewModel::onIntent,
                 onBrightnessPreview = host::previewBrightness,
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
             )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
+            AnimatedVisibility(
+                visible = state.translationStatus == TranslationChapterStatus.Thinking,
+                enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),
+                exit = fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 0.88f),
+            ) {
+                TranslationThinkingCapsule()
+            }
+            AnimatedVisibility(
+                visible = state.isReadAloudRunning &&
+                    state.showReadAloudCapsule &&
+                        !state.menuVisible,
+                enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),
+                exit = fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 0.88f),
+            ) {
+                ReadAloudCapsule(
+                    book = state.book,
+                    isPaused = state.isReadAloudPaused,
+                    offsetXDp = state.readAloudCapsuleOffsetX,
+                    offsetYDp = state.readAloudCapsuleOffsetY,
+                    progress = state.readAloudChapterPosition.toFloat() /
+                        state.readAloudChapterLength.coerceAtLeast(1),
+                    autoCollapse = state.capsuleAutoCollapse,
+                    onPositionChanged = { x, y ->
+                        viewModel.onIntent(ReadBookIntent.SetReadAloudCapsulePosition(x, y))
+                    },
+                    onTogglePause = {
+                        viewModel.onIntent(ReadBookIntent.ReadAloudTogglePause)
+                    },
+                    onStop = { viewModel.onIntent(ReadBookIntent.ReadAloudStop) },
+                    onOpenPlayer = { viewModel.onIntent(ReadBookIntent.OpenReadAloudPlayer) },
+                )
+            }
             ReadBookScreen(
                 state = state,
+                aiState = aiState,
+                highlightRuleState = highlightRuleState,
+                contentEditState = contentEditState,
+                contentProcessState = contentProcessState,
                 preferences = readPreferences,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
                 onOpenTextSelectMenuConfig = {
                     viewModel.onIntent(ReadBookIntent.DismissSheet)
                     showSelectMenuConfigSheet = true
+                },
+            )
+            val bookNavigationSheet = state.activeSheet as? ReadBookSheet.BookNavigation
+            ReaderBookSheetRoute(
+                show = bookNavigationSheet != null,
+                bookUrl = state.book?.bookUrl.orEmpty(),
+                initialTab = bookNavigationSheet?.initialTab
+                    ?: io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information,
+                onDismissRequest = { viewModel.onIntent(ReadBookIntent.DismissSheet) },
+                onChapterClick = { index, chapterPos ->
+                    viewModel.onIntent(ReadBookIntent.DismissSheet)
+                    viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
+                },
+                onOpenFullBookInfo = {
+                    state.book?.let { book ->
+                        viewModel.onIntent(ReadBookIntent.DismissSheet)
+                        bookInfoLauncher.launch {
+                            putExtra("name", book.name)
+                            putExtra("author", book.author)
+                            putExtra("bookUrl", book.bookUrl)
+                        }
+                    }
                 },
             )
             TextActionSelectionMenu(
@@ -566,16 +670,24 @@ private fun ReadBookViewLayer(
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
+    readerEventListener: ReaderEventListener,
+    readerPageSource: ReaderPageSource,
     contentTextViewCallBack: ContentTextView.CallBack,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
+    onFirstContentDrawn: () -> Unit,
 ) {
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
+            onThemeChanged(isDarkTheme)
             FrameLayout(context).apply {
                 val readView = ReadView(
                     context = context,
                     callBack = readViewCallBack,
                     contentCallBack = contentTextViewCallBack,
+                    eventListener = readerEventListener,
+                    pageSource = readerPageSource,
                 ).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -634,7 +746,23 @@ private fun ReadBookViewLayer(
                         navigationBar = navigationBar,
                     )
                 )
+                val root = this
+                val firstDrawListener = object : ViewTreeObserver.OnDrawListener {
+                    override fun onDraw() {
+                        if (readView.curPage.textPage.lines.isEmpty()) return
+                        onFirstContentDrawn()
+                        root.post {
+                            if (root.viewTreeObserver.isAlive) {
+                                root.viewTreeObserver.removeOnDrawListener(this)
+                            }
+                        }
+                    }
+                }
+                viewTreeObserver.addOnDrawListener(firstDrawListener)
             }
+        },
+        update = {
+            onThemeChanged(isDarkTheme)
         },
     )
 }

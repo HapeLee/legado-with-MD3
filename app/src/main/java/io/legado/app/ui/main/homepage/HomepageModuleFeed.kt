@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.HomepageModuleType
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.main.homepage.modules.ButtonGroupModule
@@ -121,7 +121,10 @@ fun HomepageModuleFeed(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
-                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) {
+                bottom = if (
+                    LocalAppUiConfiguration.current.appShell.useFloatingBottomBar ||
+                    LocalAppUiConfiguration.current.theme.enableBlur
+                ) {
                     120.dp
                 } else {
                     8.dp

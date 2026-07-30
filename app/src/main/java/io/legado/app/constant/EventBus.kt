@@ -2,7 +2,6 @@ package io.legado.app.constant
 
 object EventBus {
     const val MEDIA_BUTTON = "mediaButton"
-    const val RECREATE = "RECREATE"
     const val UP_BOOKSHELF = "upBookToc"
     const val BOOKSHELF_REFRESH = "bookshelfRefresh"
     const val ALOUD_STATE = "aloud_state"
@@ -11,7 +10,6 @@ object EventBus {
     const val READ_ALOUD_DS = "readAloudDs"
     const val BATTERY_CHANGED = "batteryChanged"
     const val TIME_CHANGED = "timeChanged"
-    const val UP_CONFIG = "upConfig"
     const val AUDIO_SUB_TITLE = "audioSubTitle"
     const val AUDIO_STATE = "audioState"
     const val AUDIO_PROGRESS = "audioProgress"

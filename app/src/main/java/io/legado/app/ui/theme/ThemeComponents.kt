@@ -1,8 +1,9 @@
 package io.legado.app.ui.theme
 
+import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
-import android.os.Build
+import android.util.LruCache
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
@@ -10,38 +11,59 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.customColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.defaultTextStyles
 
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
-    val context = LocalContext.current
-    return remember(fontPath, context) {
-        if (!fontPath.isNullOrEmpty()) {
-            try {
-                val uri = Uri.parse(fontPath)
-                val typeface: Typeface? = if (uri.scheme == "content") {
-                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                        Typeface.Builder(it.fileDescriptor).build()
-                    }
-                } else {
-                    Typeface.createFromFile(uri.path)
-                }
-                typeface?.let { FontFamily(it) }
-            } catch (e: Exception) {
-                null
+    val context = LocalContext.current.applicationContext
+    val path = fontPath?.takeIf(String::isNotBlank)
+    val cachedFont = remember(path) {
+        path?.let { synchronized(customFontCache) { customFontCache.get(it) } }
+    }
+    // 加载结果跨 path 保留：切换字体时旧字体一直用到新字体就位，
+    // 中途不回落默认字体。
+    var loadedFont by remember(context) { mutableStateOf<FontFamily?>(null) }
+    LaunchedEffect(path, context) {
+        if (path == null || cachedFont != null) return@LaunchedEffect
+        loadedFont = withContext(Dispatchers.IO) {
+            loadCustomFont(context, path)?.also {
+                synchronized(customFontCache) { customFontCache.put(path, it) }
             }
-        } else {
-            null
         }
     }
+    // path 为空即"清除"，必须当帧生效，不能受 loadedFont 影响。
+    return if (path == null) null else cachedFont ?: loadedFont
 }
+
+private val customFontCache = LruCache<String, FontFamily>(4)
+
+private fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
+    runCatching {
+        val uri = Uri.parse(fontPath)
+        val typeface = if (uri.scheme == "content") {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                Typeface.Builder(it.fileDescriptor).build()
+            }
+        } else {
+            Typeface.createFromFile(uri.path)
+        }
+        typeface?.let(::FontFamily)
+    }.getOrNull()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -50,14 +72,25 @@ fun MiuixThemeWrapper(
     customFontFamily: FontFamily?,
     content: @Composable () -> Unit
 ) {
-    val themeModeValue = ThemeConfig.themeMode
-    val useMiuixMonet = ThemeConfig.useMiuixMonet
-    val paletteStyleValue = ThemeConfig.paletteStyle
-    val materialVersion = ThemeConfig.materialVersion
+    val configuration = LocalAppUiConfiguration.current
+    val themeSettings = configuration.theme
+    val useMiuixMonet = themeSettings.useMiuixMonet
+    val paletteStyleValue = themeSettings.paletteStyle
+    val materialVersion = themeSettings.materialVersion
     val darkTheme = themeColors.isDark
-    
-    val miuixColorSchemeMode = remember(themeModeValue, useMiuixMonet) {
-        ThemeResolver.resolveMiuixColorSchemeMode(themeModeValue, useMiuixMonet)
+
+    // AppTheme has already resolved system mode to an explicit light/dark value.
+    // Do not pass System/MonetSystem to Miuix here: MainActivity handles uiMode
+    // changes without recreation, so Miuix must not read a second, stale system mode.
+    // Miuix only applies keyColor in Monet modes. Keep its built-in Light/Dark
+    // palette until the user explicitly enables useMiuixMonet.
+    val miuixColorSchemeMode = remember(darkTheme, useMiuixMonet) {
+        when {
+            useMiuixMonet && darkTheme -> ColorSchemeMode.MonetDark
+            useMiuixMonet -> ColorSchemeMode.MonetLight
+            darkTheme -> ColorSchemeMode.Dark
+            else -> ColorSchemeMode.Light
+        }
     }
     val miuixPaletteStyle = remember(paletteStyleValue) {
         ThemeResolver.resolveMiuixPaletteStyle(paletteStyleValue)
@@ -66,14 +99,7 @@ fun MiuixThemeWrapper(
         ThemeResolver.resolveMiuixColorSpec(materialVersion, paletteStyleValue)
     }
 
-    val keyColor = if (useMiuixMonet &&
-        themeColors.useDynamicColor &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    ) {
-        Color(0xFF6750A4) // 默认颜色，因为 colorResource 只能在 Composable 中
-    } else {
-        themeColors.seedColor
-    }
+    val keyColor = themeColors.seedColor
 
     val controller = remember(
         miuixColorSchemeMode,
@@ -99,7 +125,14 @@ fun MiuixThemeWrapper(
         }
     }
 
-    MiuixTheme(controller = controller) {
+    val miuixTextStyles = remember(customFontFamily) {
+        defaultTextStyles().withFont(customFontFamily)
+    }
+
+    MiuixTheme(
+        controller = controller,
+        textStyles = miuixTextStyles,
+    ) {
         val miuixStyles = MiuixTheme.textStyles
         val legadoTypography = remember(miuixStyles, customFontFamily) {
             miuixStylesToM3Typography(miuixStyles)
@@ -108,13 +141,13 @@ fun MiuixThemeWrapper(
         }
 
         val miuixColorScheme = MiuixTheme.colorScheme
-        val customColors = ThemeConfig.customThemeColors(darkTheme)
-        val isDeepPersonalizationActive = ThemeConfig.isDeepPersonalizationActive
-        val mappedColorScheme = remember(
-            miuixColorScheme,
-            customColors,
-            isDeepPersonalizationActive,
-        ) {
+        val customColors = themeSettings.customColors(darkTheme)
+        val isDeepPersonalizationActive =
+            themeSettings.appTheme == "12" && themeSettings.enableDeepPersonalization
+        // MiuixTheme keeps one Colors instance and updates its state-backed fields in place.
+        // Caching by miuixColorScheme would therefore retain an obsolete LegadoColorScheme
+        // after a light/dark change.
+        val mappedColorScheme = run {
             val customBgColor = if (isDeepPersonalizationActive && customColors.background != 0) {
                 Color(customColors.background)
             } else {
@@ -189,8 +222,8 @@ fun MiuixThemeWrapper(
                 onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f),
                 cardPrimaryContainer = miuixColorScheme.primary.copy(alpha = 0.1f)
                     .compositeOver(miuixColorScheme.surface),
-                surfaceInput = if (ThemeConfig.bookInfoInputColor != 0) {
-                    Color(ThemeConfig.bookInfoInputColor)
+                surfaceInput = if (themeSettings.bookInfoInputColor != 0) {
+                    Color(themeSettings.bookInfoInputColor)
                 } else {
                     Color.Unspecified
                 }
@@ -213,6 +246,7 @@ fun MaterialThemeWrapper(
     customFontFamily: FontFamily?,
     content: @Composable () -> Unit
 ) {
+    val themeSettings = LocalAppUiConfiguration.current.theme
     val darkTheme = themeColors.isDark
     val colorScheme = themeColors.colorScheme
     
@@ -247,12 +281,17 @@ fun MaterialThemeWrapper(
         val legadoTypography = remember(materialTypography, customFontFamily) {
             materialTypography.toLegadoTypography().withFont(customFontFamily)
         }
-        val semanticColors = remember(colorScheme) {
+        val surfaceInput = themeSettings.bookInfoInputColor
+            .takeIf { it != 0 }
+            ?.let(::Color)
+            ?: Color.Unspecified
+        val semanticColors = remember(colorScheme, surfaceInput) {
             colorScheme.toLegadoColorScheme(
                 customBgColor = colorScheme.background,
                 customFontColor = colorScheme.onSurface,
                 customTopBarColor = colorScheme.surface,
-                customNavBarColor = colorScheme.surface
+                customNavBarColor = colorScheme.surface,
+                surfaceInput = surfaceInput,
             )
         }
 

@@ -62,7 +62,7 @@ fun AppFloatingActionButton(
     tooltipText: String? = null,
     icon: ImageVector? = null,
     containerColor: Color = LegadoTheme.colorScheme.primaryContainer,
-    contentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
+    contentColor: Color = LegadoTheme.colorScheme.primary,
     content: (@Composable () -> Unit)? = null
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
@@ -199,7 +199,7 @@ fun AppFloatingActionButtonMenu(
                         MiuixIcon(
                             imageVector = if (expanded) Icons.Filled.Close
                             else Icons.AutoMirrored.Filled.MenuOpen,
-                            contentDescription = "Menu",
+                            contentDescription = stringResource(R.string.menu),
                             tint = Color.White
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -231,7 +231,7 @@ fun AppFloatingActionButtonMenu(
                     }
                     Icon(
                         imageVector = imageVector,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.menu),
                         modifier = Modifier.animateIcon({ checkedProgress }),
                     )
                 }

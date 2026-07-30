@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
 import com.google.android.material.chip.Chip
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
@@ -12,7 +13,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogMangaFooterSettingBinding
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
 import io.legado.app.ui.widget.ReaderInfoBarView
 import io.legado.app.utils.GSON
@@ -20,6 +21,8 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 class MangaFooterSettingDialog :
     BaseBottomSheetDialogFragment(R.layout.dialog_manga_footer_setting) {
@@ -28,7 +31,8 @@ class MangaFooterSettingDialog :
         const val MANGA_B = 1919
     }
 
-    val config = GSON.fromJsonObject<MangaFooterConfig>(ReadMangaConfig.mangaFooterConfig).getOrNull()
+    private val mangaSettingsGateway: MangaSettingsGateway by inject()
+    val config = GSON.fromJsonObject<MangaFooterConfig>(mangaSettingsGateway.currentSettings.footerConfig).getOrNull()
         ?: MangaFooterConfig()
 
     var initialWebtoonSidePadding: Int = 0
@@ -60,18 +64,20 @@ class MangaFooterSettingDialog :
                             mode == MangaScrollMode.WEBTOON_WITH_GAP
                 }
                 setOnLongClickListener {
-                    ReadMangaConfig.mangaScrollMode = mode
+                    lifecycleScope.launch {
+                        mangaSettingsGateway.update { it.copy(scrollMode = mode) }
+                    }
                     toastOnUi("已设置为全局默认模式")
                     true
                 }
             })
         }
 
-        binding.btnBackgroundColor.color = ReadMangaConfig.mangaBackground
+        binding.btnBackgroundColor.color = mangaSettingsGateway.currentSettings.background
         binding.btnBackgroundColor.setOnClickListener {
             dismiss()
             ColorPickerDialog.newBuilder()
-                .setColor(ReadMangaConfig.mangaBackground)
+                .setColor(mangaSettingsGateway.currentSettings.background)
                 .setShowAlphaSlider(false)
                 .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
                 .setDialogId(MANGA_B)
@@ -90,56 +96,56 @@ class MangaFooterSettingDialog :
         }
 
         binding.checkboxDisableClickScroll.apply {
-            isChecked = ReadMangaConfig.disableClickScroll
+            isChecked = mangaSettingsGateway.currentSettings.disableClickScroll
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onClickScrollDisabledChanged(isChecked)
             }
         }
 
         binding.checkboxScrollAnimation.apply {
-            isChecked = ReadMangaConfig.disableMangaScrollAnimation
+            isChecked = mangaSettingsGateway.currentSettings.disableMangaScrollAnimation
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onScrollAniDisabledChanged(isChecked)
             }
         }
 
         binding.checkboxMangaCrossFade.apply {
-            isChecked = ReadMangaConfig.disableMangaCrossFade
+            isChecked = mangaSettingsGateway.currentSettings.disableMangaCrossFade
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onCrossFadeDisabledChanged(isChecked)
             }
         }
 
         binding.checkboxDisableMangaScale.apply {
-            isChecked = ReadMangaConfig.disableMangaScale
+            isChecked = mangaSettingsGateway.currentSettings.disableMangaScale
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onMangaScaleDisabledChanged(isChecked)
             }
         }
 
         binding.checkboxHideMangaTitle.apply {
-            isChecked = ReadMangaConfig.hideMangaTitle
+            isChecked = mangaSettingsGateway.currentSettings.hideTitle
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onHideMangaTitleChanged(isChecked)
             }
         }
 
         binding.checkboxVolumeKeyPage.apply {
-            isChecked = ReadMangaConfig.mangaVolumeKeyPage
+            isChecked = mangaSettingsGateway.currentSettings.volumeKeyPage
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onVolumeKeyPageChanged(isChecked)
             }
         }
 
         binding.reverseVolumeKeyPage.apply {
-            isChecked = ReadMangaConfig.reverseVolumeKeyPage
+            isChecked = mangaSettingsGateway.currentSettings.reverseVolumeKeyPage
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onReverseVolumeKeyPageChanged(isChecked)
             }
         }
 
         binding.checkboxMangaLongClick.apply {
-            isChecked = ReadMangaConfig.mangaLongClick
+            isChecked = mangaSettingsGateway.currentSettings.longClick
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onMangaLongClickChanged(isChecked)
             }
@@ -255,7 +261,9 @@ class MangaFooterSettingDialog :
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        ReadMangaConfig.mangaFooterConfig = GSON.toJson(config)
+        lifecycleScope.launch {
+            mangaSettingsGateway.update { it.copy(footerConfig = GSON.toJson(config)) }
+        }
     }
 
     private fun updateChapterText() {

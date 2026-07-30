@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "long-chapter-v1",
+  "resetPolicy": "replace",
+  "book": {
+    "bookUrl": "legado-debug://fixture/long-chapter-v1",
+    "name": "调试夹具：长章节",
+    "author": "Legado Debug",
+    "pageMode": "simulation",
+    "startChapter": 0,
+    "startPosition": 0
+  },
+  "chapters": [
+    {
+      "title": "第一章 稳定翻页",
+      "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1",
+      "paragraph": "这是用于阅读页翻页调试的固定长章节。每一段都带有稳定编号，用于确认页面内容确实发生变化。天地玄黄，宇宙洪荒；日月盈昃，辰宿列张。",
+      "repeat": 180,
+      "paragraphReviewFixture": "paragraph-review-v1"
+    },
+    {
+      "title": "第二章 边界验证",
+      "readyMarker": "LEGADO_DEBUG_LONG_CHAPTER_V1_CHAPTER_2",
+      "paragraph": "这是第二个固定章节，用于连续翻页越过章节边界后的行为验证。内容完全离线，不依赖书源、网络或设备历史状态。",
+      "repeat": 80
+    }
+  ]
+}

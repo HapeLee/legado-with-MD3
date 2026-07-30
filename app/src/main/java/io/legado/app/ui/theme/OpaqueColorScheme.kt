@@ -6,19 +6,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.hasBackgroundImage
 import io.legado.app.ui.theme.ThemeEngine.getColorScheme
 
 @Composable
 fun rememberOpaqueColorScheme(): ColorScheme {
     val context = LocalContext.current
+    val themeSettings = LocalAppUiConfiguration.current.theme
     val currentTheme = LocalLegadoThemeColors.current
-    val appThemeMode = ThemeResolver.resolveThemeMode(ThemeConfig.appTheme)
+    val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
     val isDark = currentTheme.isDark
-    val isPureBlack = ThemeConfig.isPureBlack
-    val hasImageBg = ThemeConfig.hasImageBg(isDark)
-    val paletteStyle = ThemeConfig.paletteStyle
-    val materialVersion = ThemeConfig.materialVersion
+    val isPureBlack = themeSettings.isPureBlack
+    val hasImageBg = themeSettings.hasBackgroundImage(isDark)
+    val paletteStyle = themeSettings.paletteStyle
+    val materialVersion = themeSettings.materialVersion
     val seedColorInt = currentTheme.seedColor
         .takeUnless { it == Color.Unspecified }
         ?.toArgb()

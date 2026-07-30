@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,8 +52,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.domain.model.settings.BookshelfSettings
+import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -60,7 +61,9 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.toTimeAgo
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * 通用的书架条目布局组件
@@ -69,6 +72,7 @@ import io.legado.app.utils.toTimeAgo
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookshelfItem(
+    settings: BookshelfSettings,
     isGrid: Boolean,
     gridStyle: Int, // 0: Standard, 1: Compact, 2: Cover Only
     isCompact: Boolean, // For List Mode
@@ -96,7 +100,7 @@ fun BookshelfItem(
 ) {
     val isDark = LegadoTheme.isDark
     val bookshelfCardColor =
-        if (isDark) BookshelfConfig.bookshelfCardColorDark else BookshelfConfig.bookshelfCardColor
+        if (isDark) settings.bookshelfCardColorDark else settings.bookshelfCardColor
     val containerColor = if (!isGrid && bookshelfCardColor != 0) {
         Color(bookshelfCardColor)
     } else {
@@ -217,7 +221,7 @@ fun BookshelfItem(
                 ) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Top)
+                            .align(Alignment.CenterVertically)
                             .width(coverWidth.dp)
                     ) {
                         Box(
@@ -252,7 +256,7 @@ fun BookshelfItem(
                             } else {
                                 LegadoTheme.typography.titleMediumEmphasized
                             },
-                            maxLines = BookshelfConfig.bookshelfTitleMaxLines,
+                            maxLines = settings.bookshelfTitleMaxLines,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
@@ -300,7 +304,7 @@ fun BookshelfItem(
                 }
                 bottomContent?.invoke()
             }
-            if (BookshelfConfig.bookshelfShowDivider)
+            if (settings.bookshelfShowDivider)
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     thickness = 0.5.dp,
@@ -312,6 +316,7 @@ fun BookshelfItem(
 
 @Composable
 fun BookGroupCover(
+    settings: BookshelfSettings,
     books: List<BookUiItem>,
     coverPath: String? = null,
     leftBottomText: String? = null,
@@ -332,7 +337,7 @@ fun BookGroupCover(
         } else {
             Box(
                 modifier = Modifier.run {
-                    if (BookshelfConfig.bookshelfCoverShadow) {
+                    if (settings.bookshelfCoverShadow) {
                         background(LegadoTheme.colorScheme.surface)
                     } else {
                         this
@@ -428,6 +433,7 @@ fun BookGroupCover(
 
 @Composable
 fun BookGroupItemGrid(
+    settings: BookshelfSettings,
     group: BookGroupUi,
     previewBooks: List<BookUiItem>,
     countText: String? = null,
@@ -441,11 +447,13 @@ fun BookGroupItemGrid(
     onLongClick: (() -> Unit)?
 ) {
     BookshelfItem(
+        settings = settings,
         isGrid = true,
         gridStyle = gridStyle,
         isCompact = false,
         cover = {
             BookGroupCover(
+                settings = settings,
                 books = previewBooks,
                 coverPath = group.cover,
                 leftBottomText = countText,
@@ -459,7 +467,7 @@ fun BookGroupItemGrid(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        coverWidth = BookshelfConfig.bookshelfGridCoverWidth,
+        coverWidth = settings.bookshelfGridCoverWidth,
         onClick = onClick,
         onLongClick = onLongClick
     )
@@ -467,6 +475,7 @@ fun BookGroupItemGrid(
 
 @Composable
 fun BookGroupItemList(
+    settings: BookshelfSettings,
     group: BookGroupUi,
     previewBooks: List<BookUiItem>,
     onClick: () -> Unit,
@@ -480,8 +489,9 @@ fun BookGroupItemList(
     onLongClick: (() -> Unit)? = null,
     onBookClick: ((BookShelfItem) -> Unit)? = null
 ) {
-    if (BookshelfConfig.bookshelfGroupListStyle == 2) {
+    if (settings.bookshelfGroupListStyle == 2) {
         BookGroupItemHorizontalCovers(
+            settings = settings,
             group = group,
             previewBooks = previewBooks,
             onClick = onClick,
@@ -504,10 +514,18 @@ fun BookGroupItemList(
         null
     }
     BookshelfItem(
+        settings = settings,
         isGrid = false,
         gridStyle = 0,
-        isCompact = BookshelfConfig.bookshelfGroupListStyle == 1 || isCompact,
-        cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
+        isCompact = settings.bookshelfGroupListStyle == 1 || isCompact,
+        cover = {
+            BookGroupCover(
+                settings = settings,
+                books = previewBooks,
+                coverPath = group.cover,
+                modifier = it,
+            )
+        },
         title = group.groupName,
         subTitle = countText,
         descAnnotated = descAnnotated,
@@ -520,7 +538,7 @@ fun BookGroupItemList(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        coverWidth = BookshelfConfig.bookshelfListCoverWidth,
+        coverWidth = settings.bookshelfListCoverWidth,
         modifier = modifier,
         onClick = onClick,
         onLongClick = onLongClick
@@ -529,6 +547,7 @@ fun BookGroupItemList(
 
 @Composable
 fun BookGroupItemHorizontalCovers(
+    settings: BookshelfSettings,
     group: BookGroupUi,
     previewBooks: List<BookUiItem>,
     onClick: () -> Unit,
@@ -540,7 +559,7 @@ fun BookGroupItemHorizontalCovers(
     Column {
         val isDark = LegadoTheme.isDark
         val bookshelfCardColor =
-            if (isDark) BookshelfConfig.bookshelfCardColorDark else BookshelfConfig.bookshelfCardColor
+            if (isDark) settings.bookshelfCardColorDark else settings.bookshelfCardColor
         NormalCard(
             modifier = modifier
                 .fillMaxWidth()
@@ -597,7 +616,7 @@ fun BookGroupItemHorizontalCovers(
                         .padding(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val coverCount = BookshelfConfig.bookshelfGroupCoverCount
+                    val coverCount = settings.bookshelfGroupCoverCount
                     previewBooks.take(coverCount).forEach { bookUi ->
                         val book = bookUi.book
                         Box(
@@ -631,7 +650,7 @@ fun BookGroupItemHorizontalCovers(
                 }
             }
         }
-        if (BookshelfConfig.bookshelfShowDivider)
+        if (settings.bookshelfShowDivider)
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 thickness = 0.5.dp,
@@ -643,6 +662,8 @@ fun BookGroupItemHorizontalCovers(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookItem(
+    settings: BookshelfSettings,
+    customTagColors: ImmutableList<TagColorPair>,
     bookUi: BookUiItem,
     layoutMode: Int,
     modifier: Modifier = Modifier,
@@ -664,9 +685,9 @@ fun BookItem(
 ) {
     val book = bookUi.book
     val unreadCount = book.getUnreadChapterNum()
-    val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
-    val showUpdateBadge = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew
-    val bookTypeLabel = if (BookshelfConfig.showTip) {
+    val unreadText = if (settings.showUnread && unreadCount > 0) unreadCount.toString() else null
+    val showUpdateBadge = settings.showUnread && settings.showUnreadNew && book.isNew
+    val bookTypeLabel = if (settings.showTip) {
         when {
             book.isAudio -> stringResource(R.string.audio)
             book.isImage -> stringResource(R.string.manga)
@@ -688,6 +709,7 @@ fun BookItem(
     }
 
     BookshelfItem(
+        settings = settings,
         isGrid = layoutMode != 0,
         gridStyle = gridStyle,
         isCompact = isCompact,
@@ -732,12 +754,13 @@ fun BookItem(
             book.author
         },
         desc = book.durChapterTitle ?: "",
-        columnContent = if (layoutMode == 0 && !isCompact && BookshelfConfig.showBookIntro) {
+        columnContent = if (layoutMode == 0 && !isCompact && settings.showBookIntro) {
             {
                 val kindList = bookUi.displayTags
-                val intro = book.intro?.takeIf { it.isNotBlank() }
-                val customTagColors = if (ThemeConfig.enableCustomTagColors) ThemeConfig.getCustomTagColors() else emptyList()
-                if (BookshelfConfig.bookshelfShowTag && kindList.isNotEmpty()) {
+                val intro = remember(book.intro) {
+                    HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
+                }
+                if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -764,8 +787,8 @@ fun BookItem(
                         }
                     }
                 }
-                if (BookshelfConfig.bookshelfShowIntro && intro != null) {
-                    val maxLines = if (BookshelfConfig.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else BookshelfConfig.bookshelfIntroMaxLines
+                if (settings.bookshelfShowIntro && intro != null) {
+                    val maxLines = if (settings.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else settings.bookshelfIntroMaxLines
                     AppText(
                         text = intro,
                         style = LegadoTheme.typography.bodySmall,
@@ -780,9 +803,9 @@ fun BookItem(
             }
         } else null,
         bottomContent = null,
-        extra = if (layoutMode == 0 && !isCompact && BookshelfConfig.showBookIntro && BookshelfConfig.bookshelfShowLatestChapter) {
+        extra = if (layoutMode == 0 && !isCompact && settings.showBookIntro && settings.bookshelfShowLatestChapter) {
             {
-                if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
+                if (settings.showLastUpdateTime && !book.isLocal) {
                     AppText(
                         text = book.latestChapterTime.toTimeAgo(),
                         style = LegadoTheme.typography.labelSmallEmphasized,
@@ -814,7 +837,7 @@ fun BookItem(
             matchedSourceLabel,
             bookTypeLabel,
         ),
-        coverWidth = if (layoutMode == 0) BookshelfConfig.bookshelfListCoverWidth else BookshelfConfig.bookshelfGridCoverWidth,
+        coverWidth = if (layoutMode == 0) settings.bookshelfListCoverWidth else settings.bookshelfGridCoverWidth,
         onClick = onClick,
         onLongClick = onLongClick
     )

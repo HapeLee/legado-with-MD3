@@ -4,8 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
@@ -16,20 +14,25 @@ import androidx.core.view.ViewCompat
 import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
-import io.legado.app.lib.dialogs.alert
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.postEvent
-import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.activity
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
 @SuppressLint("ResourceType")
 class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(context, attrs) {
+
+    private val themeSettingsGateway by lazy {
+        GlobalContext.get().get<ThemeSettingsGateway>()
+    }
 
     private var entries: Array<CharSequence> = context.resources.getTextArray(R.array.themes_item)
     private var entryValues: Array<CharSequence> = context.resources.getTextArray(R.array.themes_value).takeIf { it.isNotEmpty() }
@@ -42,7 +45,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
     }
 
     override fun onSetInitialValue(defaultValue: Any?) {
-        currentValue = getPersistedString(defaultValue as? String ?: entryValues.getOrNull(0)?.toString())
+        currentValue = themeSettingsGateway.currentSettings.appTheme
     }
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
@@ -95,32 +98,23 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                             context.toastOnUi(R.string.transparent_theme_alarm)
                             return@setOnClickListener
                         } else {
-                            ThemeConfig.containerOpacity = 0
                         }
                     }
-                    val oldValue = currentValue
                     currentValue = value
-                    persistString(value)
                     callChangeListener(value)
-                    ThemeConfig.appTheme = value
-                    notifyDataSetChanged()
-                    val isDynamicSwitch = (oldValue == "12" || value == "12")
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        if (isDynamicSwitch) {
-                            context.alert(context.getString(R.string.restart_required_message)) {
-                                okButton {
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        context.restart()
-                                    }, 100)
-                                }
-                                cancelButton {
-                                    context.toastOnUi(R.string.restart_later_message)
-                                }
-                            }
-                        } else {
-                            postEvent(EventBus.RECREATE, "")
+                    holder.itemView.activity?.lifecycleScope?.launch {
+                        themeSettingsGateway.update {
+                            it.copy(
+                                appTheme = value,
+                                containerOpacity = if (value == "13") {
+                                    0
+                                } else {
+                                    it.containerOpacity
+                                },
+                            )
                         }
-                    }, 100)
+                    }
+                    notifyDataSetChanged()
                 }
             }
         }
@@ -178,4 +172,3 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
         val background : MaterialCardView = view.findViewById(R.id.cardView)
     }
 }
-

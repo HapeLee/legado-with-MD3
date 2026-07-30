@@ -3,39 +3,54 @@ package io.legado.app.ui.book.toc
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.Immutable
-
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.data.appDb
+import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isMobi
 import io.legado.app.help.bookmark.BookmarkExporter
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
+import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.MobiFile
+import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
-import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -58,6 +73,7 @@ data class TocItemUi(
     val title: String,
     val tag: String?,
     val isVolume: Boolean,
+    val tocLevel: Int,
     val isVip: Boolean,
     val isPay: Boolean,
     val isDur: Boolean,
@@ -77,9 +93,10 @@ data class TocBookmarkItemUi(
     val raw: Bookmark
 )
 
+@Stable
 data class TocActionState(
-    override val items: List<TocItemUi> = emptyList(),
-    override val selectedIds: Set<Int> = emptySet(),
+    override val items: ImmutableList<TocItemUi> = persistentListOf(),
+    override val selectedIds: ImmutableSet<Int> = persistentSetOf(),
     override val searchKey: String = "",
     override val isSearch: Boolean = false,
     override val isLoading: Boolean = false,
@@ -88,6 +105,47 @@ data class TocActionState(
     val showWordCount: Boolean = true,
     val titleReplaceProgress: Float? = null,
 ) : ListUiState<TocItemUi>
+
+@Stable
+data class TocUiState(
+    val action: TocActionState = TocActionState(),
+    val book: Book? = null,
+    val collapsedVolumes: ImmutableSet<Int> = persistentSetOf(),
+    val bookmarks: ImmutableList<TocBookmarkItemUi> = persistentListOf(),
+    val isSplitLongChapter: Boolean = false,
+    val isReverse: Boolean = false,
+)
+
+sealed interface TocIntent {
+    data class LoadBook(val bookUrl: String) : TocIntent
+    data class SetSearchMode(val enabled: Boolean) : TocIntent
+    data class SetSearchQuery(val query: String) : TocIntent
+    data class ToggleVolume(val id: Int) : TocIntent
+    data class ToggleSelection(val id: Int) : TocIntent
+    data class SaveTocRegex(val regex: String) : TocIntent
+    data class ExportBookmarks(val uri: Uri, val isMarkdown: Boolean) : TocIntent
+    data class UpdateBookmark(val bookmark: Bookmark) : TocIntent
+    data class DeleteBookmark(val bookmark: Bookmark) : TocIntent
+    data class DownloadChapter(val id: Int) : TocIntent
+    data object DownloadAll : TocIntent
+    data object DownloadSelected : TocIntent
+    data object SelectAll : TocIntent
+    data object InvertSelection : TocIntent
+    data object ClearSelection : TocIntent
+    data object SelectFromLast : TocIntent
+    data object AddBookmarksForSelected : TocIntent
+    data object ToggleUseReplace : TocIntent
+    data object ToggleShowWordCount : TocIntent
+    data object ReverseToc : TocIntent
+    data object ToggleSplitLongChapter : TocIntent
+    data object ExpandAllVolumes : TocIntent
+    data object CollapseAllVolumes : TocIntent
+    data object UpdateToc : TocIntent
+}
+
+sealed interface TocEffect {
+    data class ShowMessage(val message: String) : TocEffect
+}
 
 data class TocDomainItem(
     val chapter: BookChapter,
@@ -104,7 +162,9 @@ private data class TocUiConfig(
     val collapsedVolumes: Set<Int>,
     val useReplace: Boolean,
     val showWordCount: Boolean,
-    val isReverse: Boolean
+    val isReverse: Boolean,
+    val defaultReplaceEnabled: Boolean,
+    val chineseConverterType: Int,
 )
 
 private data class TocPreferences(
@@ -158,17 +218,21 @@ class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
-    private val readSettingsRepository: ReadSettingsRepository
+    private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
+    private val bookmarkRepository: BookmarkRepository,
+    private val readSettingsRepository: ReadSettingsRepository,
+    private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
 ) {
 
-    private val bookUrlFlow = savedStateHandle.getStateFlow<String?>("bookUrl", null)
+    private val bookUrlFlow = MutableStateFlow(savedStateHandle.get<String>("bookUrl"))
     val bookState = bookUrlFlow
         .filterNotNull()
         .flatMapLatest { url ->
-            appDb.bookDao.flowGetBook(url)
+            bookRepository.flowBook(url)
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -176,6 +240,8 @@ class TocViewModel(
 
     private val _collapsedVolumes = MutableStateFlow<Set<Int>>(emptySet())
     val collapsedVolumes = _collapsedVolumes.asStateFlow()
+    private val _effects = MutableSharedFlow<TocEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     val downloadSummary: StateFlow<String> =
         CacheBook.downloadSummaryFlow
@@ -215,7 +281,7 @@ class TocViewModel(
             book to query
         }
             .flatMapLatest { (book, query) ->
-                appDb.bookmarkDao
+                bookmarkRepository
                     .flowByBook(book.name, book.author)
                     .map { list ->
                         list
@@ -243,6 +309,28 @@ class TocViewModel(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyList()
             )
+
+    val screenState: StateFlow<TocUiState> by lazy {
+        combine(
+            uiState,
+            bookState,
+            collapsedVolumes,
+            bookmarkUiList,
+        ) { action, book, collapsed, bookmarks ->
+            TocUiState(
+                action = action,
+                book = book,
+                collapsedVolumes = collapsed.toImmutableSet(),
+                bookmarks = bookmarks.toImmutableList(),
+                isSplitLongChapter = book?.getSplitLongChapter() ?: false,
+                isReverse = book?.getReverseToc() ?: false,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TocUiState(),
+        )
+    }
 
     private val reverseFlow =
         bookState.map { it?.getReverseToc() ?: false }
@@ -272,9 +360,18 @@ class TocViewModel(
     private val uiConfigFlow = combine(
         _collapsedVolumes,
         tocPreferences,
-        reverseFlow
-    ) { collapsed, tocPreferences, isReverse ->
-        TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, isReverse)
+        reverseFlow,
+        otherSettingsGateway.settings,
+        readSettingsRepository.settings,
+    ) { collapsed, tocPreferences, isReverse, otherSettings, readSettings ->
+        TocUiConfig(
+            collapsedVolumes = collapsed,
+            useReplace = tocPreferences.useReplace,
+            showWordCount = tocPreferences.showWordCount,
+            isReverse = isReverse,
+            defaultReplaceEnabled = otherSettings.replaceEnableDefault,
+            chineseConverterType = readSettings.chineseConverterType,
+        )
     }
 
     private val titleReplaceState = MutableStateFlow(TitleReplaceState())
@@ -283,7 +380,7 @@ class TocViewModel(
 
     override val rawDataFlow: Flow<List<TocDomainItem>> = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged()
-            .flatMapLatest { appDb.bookChapterDao.getChapterListFlow(it) },
+            .flatMapLatest { bookRepository.flowChapters(it) },
         downloadContextFlow,
         uiConfigFlow,
         titleReplaceState
@@ -291,12 +388,14 @@ class TocViewModel(
         val book = bookState.value ?: return@combine emptyList()
 
         val processedChapters = if (config.isReverse) {
-            originalChapters.groupAndReverseVolumes()
+            originalChapters.reverseTocHierarchy()
         } else {
             originalChapters
         }
 
-        val replaceRules = if (config.useReplace && book.getUseReplaceRule()) {
+        val replaceRules = if (
+            config.useReplace && book.getUseReplaceRule(config.defaultReplaceEnabled)
+        ) {
             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules()
         } else emptyList()
 
@@ -304,12 +403,17 @@ class TocViewModel(
             book = book,
             chapters = processedChapters,
             replaceRules = replaceRules,
-            useReplace = config.useReplace
+            useReplace = config.useReplace,
+            defaultReplaceEnabled = config.defaultReplaceEnabled,
+            chineseConverterType = config.chineseConverterType,
         )
 
         if (book.isLocal) {
             return@combine processedChapters.map { chapter ->
-                val baseTitle = chapter.getDisplayTitle(useReplace = false)
+                val baseTitle = chapter.getDisplayTitle(
+                    useReplace = false,
+                    chineseConverterType = config.chineseConverterType,
+                )
                 TocDomainItem(
                     chapter = chapter,
                     displayTitle = titleState.titles[chapter.index] ?: baseTitle,
@@ -330,7 +434,10 @@ class TocViewModel(
                 else -> DownloadState.NONE
             }
 
-            val baseTitle = chapter.getDisplayTitle(useReplace = false)
+            val baseTitle = chapter.getDisplayTitle(
+                useReplace = false,
+                chineseConverterType = config.chineseConverterType,
+            )
             TocDomainItem(
                 chapter,
                 titleState.titles[chapter.index] ?: baseTitle,
@@ -347,19 +454,9 @@ class TocViewModel(
         val collapsed = _collapsedVolumes.value
         val isSearch = key.isNotBlank()
 
-        return buildList {
-            var isCurrentVolumeCollapsed = false
-            for (item in data) {
-                if (item.chapter.isVolume) {
-                    isCurrentVolumeCollapsed = collapsed.contains(item.chapter.index)
-                } else if (isCurrentVolumeCollapsed && !isSearch) {
-                    continue
-                }
-
-                if (!isSearch || item.displayTitle.contains(key, true) || item.chapter.isVolume) {
-                    add(item)
-                }
-            }
+        val visibleItems = if (isSearch) data else filterCollapsedToc(data, collapsed)
+        return visibleItems.filter {
+            !isSearch || it.displayTitle.contains(key, true) || it.chapter.isVolume
         }
     }
 
@@ -381,8 +478,8 @@ class TocViewModel(
         }
 
         return TocActionState(
-            items = updatedItems,
-            selectedIds = selectedIds,
+            items = updatedItems.toImmutableList(),
+            selectedIds = selectedIds.toImmutableSet(),
             searchKey = _searchKey.value,
             isSearch = isSearch,
             isLoading = isUploading,
@@ -407,6 +504,7 @@ class TocViewModel(
             title = displayTitle,
             tag = chapter.tag,
             isVolume = chapter.isVolume,
+            tocLevel = chapter.tocLevel,
             isVip = chapter.isVip,
             isPay = chapter.isPay,
             isDur = false,
@@ -426,13 +524,88 @@ class TocViewModel(
     override suspend fun findOldRule(newRule: TocDomainItem) = null
     override fun saveImportedRules() {}
 
+    fun onIntent(intent: TocIntent) {
+        when (intent) {
+            is TocIntent.LoadBook -> {
+                if (bookUrlFlow.value != intent.bookUrl) {
+                    clearSelection()
+                    _collapsedVolumes.value = emptySet()
+                    bookUrlFlow.value = intent.bookUrl
+                }
+            }
+            is TocIntent.SetSearchMode -> setSearchMode(intent.enabled)
+            is TocIntent.SetSearchQuery -> setSearchKey(intent.query)
+            is TocIntent.ToggleVolume -> toggleVolume(intent.id)
+            is TocIntent.ToggleSelection -> toggleSelection(intent.id)
+            is TocIntent.SaveTocRegex -> saveTocRegex(intent.regex)
+            is TocIntent.ExportBookmarks -> exportCurrentBookBookmarks(intent.uri, intent.isMarkdown)
+            is TocIntent.UpdateBookmark -> updateBookmark(intent.bookmark)
+            is TocIntent.DeleteBookmark -> deleteBookmark(intent.bookmark)
+            is TocIntent.DownloadChapter -> downloadChapter(intent.id)
+            TocIntent.DownloadAll -> downloadAll()
+            TocIntent.DownloadSelected -> downloadSelected()
+            TocIntent.SelectAll -> selectAll()
+            TocIntent.InvertSelection -> invertSelection()
+            TocIntent.ClearSelection -> clearSelection()
+            TocIntent.SelectFromLast -> selectFromLast()
+            TocIntent.AddBookmarksForSelected -> addBookmarksForSelected()
+            TocIntent.ToggleUseReplace -> toggleUseReplace()
+            TocIntent.ToggleShowWordCount -> toggleShowWordCount()
+            TocIntent.ReverseToc -> reverseToc()
+            TocIntent.ToggleSplitLongChapter -> toggleSplitLongChapter()
+            TocIntent.ExpandAllVolumes -> expandAllVolumes()
+            TocIntent.CollapseAllVolumes -> collapseAllVolumes()
+            TocIntent.UpdateToc -> updateToc()
+        }
+    }
+
     fun reverseToc() = execute {
         val currentBook = bookState.value ?: return@execute
         val currentConfig = currentBook.readConfig ?: Book.ReadConfig()
         val newConfig = currentConfig.copy(reverseToc = !currentConfig.reverseToc)
         val newBook = currentBook.copy(readConfig = newConfig)
-        appDb.bookDao.update(newBook)
+        bookRepository.update(newBook)
         //bookState.value = newBook
+    }
+
+    fun updateToc() = execute {
+        val book = bookState.value ?: return@execute
+        if (book.isLocal) {
+            if (book.isEpub) {
+                BookHelp.clearCache(book)
+                EpubFile.clear()
+            }
+            if (book.isMobi) {
+                MobiFile.clear()
+            }
+            kotlin.runCatching {
+                LocalBook.getChapterList(book).let {
+                    bookRepository.replaceChaptersAndUpdateBook(book, it)
+                }
+            }.onFailure {
+                AppLog.put("LoadTocError:${it.localizedMessage}", it)
+                _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
+            }
+        } else {
+            val source = bookSourceRepository.getBookSource(book.origin)
+            source?.let {
+                val oldBook = book.copy()
+                WebBook.getChapterListAwait(it, book, true)
+                    .onSuccess { cList ->
+                        if (oldBook.bookUrl == book.bookUrl) {
+                            bookRepository.update(book)
+                        } else {
+                            bookRepository.replace(oldBook, book)
+                            BookHelp.updateCacheFolder(oldBook, book)
+                        }
+                        bookRepository.deleteChaptersByBook(oldBook.bookUrl)
+                        bookRepository.insertChapters(*cList.toTypedArray())
+                    }.onFailure {
+                        AppLog.put("LoadTocError:${it.localizedMessage}", it)
+                        _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
+                    }
+            }
+        }
     }
 
     fun toggleUseReplace() {
@@ -460,7 +633,7 @@ class TocViewModel(
     fun collapseAllVolumes() = execute {
         val bookUrl = bookState.value?.bookUrl ?: return@execute
         val volumes =
-            appDb.bookChapterDao.getChapterList(bookUrl).filter { it.isVolume }.map { it.index }
+            bookRepository.getChapters(bookUrl).filter { it.isVolume }.map { it.index }
                 .toSet()
         _collapsedVolumes.value = volumes
     }
@@ -491,12 +664,10 @@ class TocViewModel(
         book.tocUrl = newRegex
         upBookTocRule(book) { error ->
             if (error != null) {
-                context.toastOnUi(
-                    context.getString(R.string.toc_rule_update_failed, error.localizedMessage)
-                )
+                showMessage(context.getString(R.string.toc_rule_update_failed, error.localizedMessage))
             }
             else {
-                context.toastOnUi(R.string.toc_rule_updated)
+                showMessage(R.string.toc_rule_updated)
                 if (ReadBook.book?.bookUrl == book.bookUrl) ReadBook.upMsg(null)
             }
         }
@@ -508,9 +679,9 @@ class TocViewModel(
         book.setSplitLongChapter(newState)
         upBookTocRule(book) { error ->
             if (error != null) {
-                context.toastOnUi(context.getString(R.string.setting_failed, error.localizedMessage))
+                showMessage(context.getString(R.string.setting_failed, error.localizedMessage))
             } else {
-                context.toastOnUi(
+                showMessage(
                     if (newState) R.string.split_long_chapters_enabled
                     else R.string.split_long_chapters_disabled
                 )
@@ -521,11 +692,9 @@ class TocViewModel(
     private fun upBookTocRule(book: Book, complete: (Throwable?) -> Unit) {
         _isUploading.value = true
         execute {
-            appDb.bookDao.update(book)
+            bookRepository.update(book)
             LocalBook.getChapterList(book).let { chapters ->
-                appDb.bookChapterDao.delByBook(book.bookUrl)
-                appDb.bookChapterDao.insert(*chapters.toTypedArray())
-                appDb.bookDao.update(book)
+                bookRepository.replaceChaptersAndUpdateBook(book, chapters)
                 ReadBook.onChapterListUpdated(book)
                 //bookState.value = book
             }
@@ -541,26 +710,26 @@ class TocViewModel(
     fun exportCurrentBookBookmarks(fileUri: Uri, isMd: Boolean) = viewModelScope.launch {
         try {
             val book = bookState.value ?: return@launch
-            val bookmarks = appDb.bookmarkDao.getByBook(book.name, book.author)
+            val bookmarks = bookmarkRepository.getByBook(book.name, book.author)
             if (bookmarks.isEmpty()) {
-                context.toastOnUi(R.string.no_bookmarks_to_export)
+                showMessage(R.string.no_bookmarks_to_export)
                 return@launch
             }
             BookmarkExporter.exportToUri(
                 context = getApplication(), fileUri = fileUri, bookmarks = bookmarks,
                 isMd = isMd, bookName = book.name, author = book.author
             )
-            context.toastOnUi(R.string.save_success)
+            showMessage(R.string.save_success)
         } catch (e: Exception) {
-            context.toastOnUi(context.getString(R.string.save_failed_with_error, e.message))
+            showMessage(context.getString(R.string.save_failed_with_error, e.message))
         }
     }
 
     fun updateBookmark(bookmark: Bookmark) =
-        viewModelScope.launch(Dispatchers.IO) { appDb.bookmarkDao.insert(bookmark) }
+        viewModelScope.launch(Dispatchers.IO) { bookmarkRepository.save(bookmark) }
 
     fun deleteBookmark(bookmark: Bookmark) =
-        viewModelScope.launch(Dispatchers.IO) { appDb.bookmarkDao.delete(bookmark) }
+        viewModelScope.launch(Dispatchers.IO) { bookmarkRepository.delete(bookmark) }
 
     fun addBookmarksForSelected() = viewModelScope.launch(Dispatchers.IO) {
         val book = bookState.value ?: return@launch
@@ -571,7 +740,7 @@ class TocViewModel(
             .toList()
 
         if (selectedItems.isEmpty()) {
-            context.toastOnUi(R.string.select_chapters)
+            showMessage(R.string.select_chapters)
             return@launch
         }
 
@@ -587,8 +756,8 @@ class TocViewModel(
             )
         }
 
-        appDb.bookmarkDao.insert(*bookmarks.toTypedArray())
-        context.toastOnUi(context.getString(R.string.bookmarks_added_count, bookmarks.size))
+        bookmarkRepository.saveAll(bookmarks)
+        showMessage(context.getString(R.string.bookmarks_added_count, bookmarks.size))
         withContext(Dispatchers.Main) {
             clearSelection()
         }
@@ -601,9 +770,7 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, indices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi(
-                context.getString(R.string.start_downloading_chapters, count)
-            )
+            showMessage(context.getString(R.string.start_downloading_chapters, count))
             clearSelection()
         }
     }
@@ -613,7 +780,7 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
         }.onSuccess {
-            getApplication<Application>().toastOnUi(R.string.start_downloading_chapter)
+            showMessage(R.string.start_downloading_chapter)
         }
     }
 
@@ -624,40 +791,34 @@ class TocViewModel(
             .map { it.id }
 
         if (targetIndices.isEmpty()) {
-            getApplication<Application>().toastOnUi(R.string.all_chapters_cached)
+            showMessage(R.string.all_chapters_cached)
             return
         }
 
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi(
-                context.getString(R.string.start_downloading_remaining_chapters, count)
-            )
+            showMessage(context.getString(R.string.start_downloading_remaining_chapters, count))
         }
     }
 
-    private fun List<BookChapter>.groupAndReverseVolumes(): List<BookChapter> {
-        return this.fold(mutableListOf<MutableList<BookChapter>>()) { acc, chapter ->
-            if (chapter.isVolume || acc.isEmpty()) acc.add(mutableListOf(chapter))
-            else acc.last().add(chapter)
-            acc
-        }.asReversed().flatMap { group ->
-            if (group.firstOrNull()?.isVolume == true) {
-                listOf(group.first()) + group.drop(1).asReversed()
-            } else {
-                group.asReversed()
-            }
-        }
+    private fun showMessage(resId: Int) = showMessage(context.getString(resId))
+
+    private fun showMessage(message: String) {
+        _effects.tryEmit(TocEffect.ShowMessage(message))
     }
 
     private fun updateTitleReplaceCacheIfNeeded(
         book: Book,
         chapters: List<BookChapter>,
         replaceRules: List<ReplaceRule>,
-        useReplace: Boolean
+        useReplace: Boolean,
+        defaultReplaceEnabled: Boolean,
+        chineseConverterType: Int,
     ) {
-        val shouldUseReplace = useReplace && book.getUseReplaceRule() && replaceRules.isNotEmpty()
+        val shouldUseReplace = useReplace &&
+                book.getUseReplaceRule(defaultReplaceEnabled) &&
+                replaceRules.isNotEmpty()
         if (!shouldUseReplace) {
             titleCacheJob?.cancel()
             titleCacheJob = null
@@ -682,7 +843,7 @@ class TocViewModel(
             bookUrl = book.bookUrl,
             useReplace = true,
             rulesFingerprint = rulesFingerprint,
-            chineseConverterType = AppConfig.chineseConverterType,
+            chineseConverterType = chineseConverterType,
             chapterCount = chapters.size,
             chaptersFingerprint = chapters.fold(0L) { fingerprint, chapter ->
                 fingerprint + 31L * chapter.index + chapter.title.hashCode()
@@ -738,7 +899,13 @@ class TocViewModel(
             chapters.asFlow()
                 .flatMapMerge(concurrency = workerCount) { chapter ->
                     flow {
-                        emit(chapter.index to chapter.getDisplayTitle(replaceRules, true))
+                        emit(
+                            chapter.index to chapter.getDisplayTitle(
+                                replaceRules,
+                                true,
+                                chineseConverterType = chineseConverterType,
+                            )
+                        )
                     }
                 }
                 .collect { (chapterIndex, displayTitle) ->

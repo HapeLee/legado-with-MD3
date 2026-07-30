@@ -129,6 +129,7 @@ fun AiSummaryConfigScreen(
                         valueRange = TranslationConstants.MIN_TEMPERATURE..TranslationConstants.MAX_TEMPERATURE,
                         steps = 19,
                         description = state.temperature.toString(),
+                        decimal = true,
                         onValueChange = { onIntent(AiSummaryConfigIntent.UpdateTemperature(it)) }
                     )
                     InputSettingItem(

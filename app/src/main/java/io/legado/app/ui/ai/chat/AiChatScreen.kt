@@ -56,6 +56,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -145,6 +146,9 @@ fun AiChatScreen(
     var topOverlayHeightPx by remember { mutableIntStateOf(0) }
     var bottomOverlayHeightPx by remember { mutableIntStateOf(0) }
     var initiallyPositionedConversationId by remember { mutableStateOf<String?>(null) }
+    var errorDialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val snackbarActionLabel = stringResource(R.string.details)
+    val errorDialogTitle = stringResource(R.string.error_details)
     val currentConversation = state.conversations.firstOrNull {
         it.id == state.currentConversationId
     } ?: state.conversations.firstOrNull { it.isSelected }
@@ -188,7 +192,15 @@ fun AiChatScreen(
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
-                is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AiChatEffect.ShowMessage -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = effect.message,
+                        actionLabel = snackbarActionLabel
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        errorDialogMessage = effect.message
+                    }
+                }
             }
         }
     }
@@ -562,6 +574,15 @@ fun AiChatScreen(
             }
         }
     }
+
+    AppAlertDialog(
+        show = errorDialogMessage != null,
+        onDismissRequest = { errorDialogMessage = null },
+        title = errorDialogTitle,
+        text = errorDialogMessage,
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { errorDialogMessage = null }
+    )
 }
 
 @Composable

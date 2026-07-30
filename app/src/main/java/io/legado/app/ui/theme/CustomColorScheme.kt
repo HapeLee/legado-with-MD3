@@ -10,9 +10,8 @@ class CustomColorScheme(
     seed: Int,
     style: PaletteStyle,
     colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2021,
+    contrastLevel: Double = ThemeResolver.resolveContrastLevel(),
 ) : BaseColorScheme() {
-
-    private val contrastLevel: Double = ThemeResolver.resolveContrastLevel()
 
     private val specVersion = resolveColorSpecVersion(colorSpec)
 

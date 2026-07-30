@@ -6,6 +6,7 @@ import io.legado.app.utils.FileDoc
 
 @Stable
 data class AboutUiState(
+    val updateToVariant: String = "official_version",
     val sheet: AboutSheet = AboutSheet.None,
     val dialog: AboutDialog? = null,
     val crashLogFiles: List<FileDoc> = emptyList(),

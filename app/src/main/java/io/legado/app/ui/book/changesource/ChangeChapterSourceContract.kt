@@ -15,10 +15,10 @@ data class ChangeChapterSourceUiState(
     val totalSourceCount: Int = 0,
     val searchResults: ImmutableList<SearchBook> = persistentListOf(),
     // Options
-    val checkAuthor: Boolean = ChangeSourceConfig.checkAuthor,
-    val loadInfo: Boolean = ChangeSourceConfig.loadInfo,
-    val loadToc: Boolean = ChangeSourceConfig.loadToc,
-    val loadWordCount: Boolean = ChangeSourceConfig.loadWordCount,
+    val checkAuthor: Boolean = true,
+    val loadInfo: Boolean = true,
+    val loadToc: Boolean = true,
+    val loadWordCount: Boolean = true,
     // TOC view
     val showToc: Boolean = false,
     val selectedSourceName: String = "",

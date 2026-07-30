@@ -52,6 +52,8 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -82,6 +84,7 @@ fun TinySettingItem(
     enabled: Boolean = true,
     semanticRole: Role? = null,
     semanticStateDescription: String? = null,
+    semanticToggleState: Boolean? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -105,6 +108,9 @@ fun TinySettingItem(
             .semantics(mergeDescendants = true) {
                 semanticRole?.let { role = it }
                 semanticStateDescription?.let { stateDescription = it }
+                semanticToggleState?.let {
+                    toggleableState = if (it) ToggleableState.On else ToggleableState.Off
+                }
                 if (!enabled) disabled()
             },
         cornerRadius = 12.dp,
@@ -325,10 +331,6 @@ fun TinySwitchSettingItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    val switchStateDescription = stringResource(
-        if (checked) R.string.a11y_on else R.string.a11y_off
-    )
-
     TinySettingItem(
         title = title,
         description = description,
@@ -337,7 +339,7 @@ fun TinySwitchSettingItem(
         color = color,
         enabled = enabled,
         semanticRole = Role.Switch,
-        semanticStateDescription = switchStateDescription,
+        semanticToggleState = checked,
         trailingContent = {
             TinySwitch(
                 modifier = Modifier.clearAndSetSemantics { },

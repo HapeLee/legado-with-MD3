@@ -45,7 +45,6 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceEffect
-import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
@@ -55,6 +54,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -105,11 +105,12 @@ fun ChangeSourceSheet(
     val enabledSources by viewModel.enabledSources.collectAsStateWithLifecycle(initialValue = emptyList<io.legado.app.data.entities.BookSourcePart>())
     val scopeState by viewModel.scopeUiState.collectAsStateWithLifecycle()
     val emptyScopeName by viewModel.emptyScopeName.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    val checkAuthor = viewModel.checkAuthor
-    val loadInfo = viewModel.loadInfo
-    val loadToc = viewModel.loadToc
-    val loadWordCount = viewModel.loadWordCount
+    val checkAuthor = settings.checkAuthor
+    val loadInfo = settings.loadInfo
+    val loadToc = settings.loadToc
+    val loadWordCount = settings.loadWordCount
     var actionBook by remember { mutableStateOf<SearchBook?>(null) }
     var mismatchBook by remember { mutableStateOf<SearchBook?>(null) }
     var shelfConflict by remember { mutableStateOf<PendingShelfConflict?>(null) }
@@ -177,7 +178,7 @@ fun ChangeSourceSheet(
             onSuccess = { toc, source ->
                 if (replace) {
                     loadingAction = false
-                    onReplace(source, book, toc, ChangeSourceConfig.getMigrationOptions())
+                    onReplace(source, book, toc, settings.migrationOptions())
                     if (!dismissBeforeLoading) {
                         onDismissRequest()
                     }
@@ -219,9 +220,10 @@ fun ChangeSourceSheet(
         startAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box {
-                    MediumPlainButton(
+                    MediumTonalButton(
                         onClick = { showOptionsMenu = true },
-                        icon = Icons.Default.MoreVert
+                icon = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_menu)
                     )
                     RoundDropdownMenu(
                         expanded = showOptionsMenu,
@@ -268,21 +270,24 @@ fun ChangeSourceSheet(
                         )
                     }
                 }
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showMigrationOptions = true },
-                    icon = Icons.Outlined.Settings
+                    icon = Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.setting)
                 )
             }
         },
         endAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { viewModel.startOrStopSearch() },
                     icon = if (isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
+                    contentDescription = stringResource(if (isSearching) R.string.pause else R.string.refresh),
                 )
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showFilterSheet = true },
-                    icon = Icons.Default.FilterList
+                    icon = Icons.Default.FilterList,
+                    contentDescription = stringResource(R.string.screen)
                 )
             }
         }
@@ -339,7 +344,7 @@ fun ChangeSourceSheet(
                                 },
                                 icon = Icons.Default.PushPin,
                                 tint = if (bookScore > 0) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.outline,
-                                contentDescription = null
+                                contentDescription = stringResource(R.string.a11y_pin_source)
                             )
                         },
                         supportingContent = {
@@ -413,7 +418,7 @@ fun ChangeSourceSheet(
                                                 source,
                                                 book,
                                                 toc,
-                                                ChangeSourceConfig.getMigrationOptions()
+                                                settings.migrationOptions()
                                             )
                                         }
                                     }
@@ -469,7 +474,7 @@ fun ChangeSourceSheet(
                 conflict.source,
                 conflict.newBook,
                 conflict.toc,
-                ChangeSourceConfig.getMigrationOptions(),
+                settings.migrationOptions(),
             )
             onDismissRequest()
         },
@@ -554,9 +559,10 @@ fun ChangeSourceSheet(
     ChangeSourceMigrationOptionsSheet(
         show = showMigrationOptions,
         title = "换源选项",
+        initialOptions = settings.migrationOptions(),
         onDismissRequest = { showMigrationOptions = false },
         onConfirm = { options ->
-            ChangeSourceConfig.setMigrationOptions(options)
+            viewModel.setMigrationOptions(options)
             showMigrationOptions = false
         }
     )

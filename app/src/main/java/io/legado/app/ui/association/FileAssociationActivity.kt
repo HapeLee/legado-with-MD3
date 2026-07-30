@@ -1,6 +1,5 @@
 package io.legado.app.ui.association
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.viewModels
@@ -11,6 +10,7 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ActivityTranslucenceBinding
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.exception.InvalidBooksDirException
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
@@ -33,6 +33,7 @@ import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
@@ -40,10 +41,16 @@ import java.io.FileOutputStream
 class FileAssociationActivity :
     VMBaseActivity<ActivityTranslucenceBinding, FileAssociationViewModel>() {
 
+    private val otherSettingsGateway by inject<OtherSettingsGateway>()
+
     private val localBookTreeSelect = registerForActivityResult(HandleFileContract()) {
         intent.data?.let { uri ->
             it.uri?.let { treeUri ->
-                OtherConfig.defaultBookTreeUri = treeUri.toString()
+                lifecycleScope.launch {
+                    otherSettingsGateway.update {
+                        it.copy(defaultBookTreeUri = treeUri.toString())
+                    }
+                }
                 importBook(treeUri, uri)
             } ?: let {
                 val storageHelp = String(assets.open("storageHelp.md").readBytes())
@@ -134,7 +141,7 @@ class FileAssociationActivity :
 
     private fun importBook(uri: Uri) {
         if (uri.isContentScheme()) {
-            val treeUriStr = OtherConfig.defaultBookTreeUri
+            val treeUriStr = otherSettingsGateway.currentSettings.defaultBookTreeUri
             if (treeUriStr.isNullOrEmpty()) {
                 localBookTreeSelect.launch {
                     title = getString(R.string.select_book_folder)

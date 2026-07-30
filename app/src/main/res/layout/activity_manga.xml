@@ -92,13 +92,4 @@
         </LinearLayout>
 
     </FrameLayout>
-
-    <io.legado.app.ui.book.read.EyeProtectionOverlay
-        android:id="@+id/eye_protection_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:focusable="false"
-        android:visibility="gone" />
-
 </FrameLayout>

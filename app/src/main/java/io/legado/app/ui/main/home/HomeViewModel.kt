@@ -4,13 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.model.HomeDashboardSection
 import io.legado.app.domain.model.HomeReadingBook
 import io.legado.app.domain.model.WebDavBackup
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.HomeDashboardUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
-import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.utils.isContentScheme
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -34,6 +34,7 @@ class HomeViewModel(
     private val bookRepository: BookRepository,
     private val webDavBackupUseCase: WebDavBackupUseCase,
     private val backupRestoreUseCase: BackupRestoreUseCase,
+    private val backupSettingsGateway: BackupSettingsGateway,
 ) : ViewModel() {
 
     private val _backupState = MutableStateFlow(HomeBackupState())
@@ -218,7 +219,7 @@ class HomeViewModel(
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val path = BackupConfig.backupPath
+            val path = backupSettingsGateway.currentSettings.backupPath
             if (path.isNullOrBlank()) {
                 _effects.emit(HomeEffect.SelectBackupDirectory(destination))
             } else if (!path.isContentScheme()) {
@@ -245,7 +246,7 @@ class HomeViewModel(
             try {
                 runCatching {
                     if (savePath) {
-                        BackupConfig.backupPath = path
+                        backupSettingsGateway.update { it.copy(backupPath = path) }
                     }
                     if (destination != HomeBackupDestination.Local) {
                         webDavBackupUseCase.refreshConfig()

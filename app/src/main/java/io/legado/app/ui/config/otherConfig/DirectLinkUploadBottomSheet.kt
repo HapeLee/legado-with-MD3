@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,13 +27,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -50,33 +48,31 @@ import io.legado.app.utils.toastOnUi
 @Composable
 fun DirectLinkUploadBottomSheet(
     show: Boolean,
-    viewModel: OtherConfigViewModel,
-    onDismiss: () -> Unit
+    state: OtherConfigUiState,
+    onIntent: (OtherConfigIntent) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
-    var showTestResult by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        viewModel.initDirectLinkRule()
-    }
 
     AppModalBottomSheet(
         show = show,
         title = stringResource(R.string.direct_link_upload_config),
         startAction = {
-            MediumPlainButton(
+            MediumTonalButton(
                 onClick = {
-                    viewModel.testRule { result -> showTestResult = result }
+                    onIntent(OtherConfigIntent.TestDirectLinkRule)
                 },
-                icon = Icons.Default.Checklist
+                icon = Icons.Default.Checklist,
+                contentDescription = stringResource(R.string.test)
             )
         },
         endAction = {
             Box {
-                MediumPlainButton(
+                MediumTonalButton(
                     onClick = { showMenu = true },
-                    icon = Icons.Default.MoreVert
+                icon = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_menu)
                 )
                 RoundDropdownMenu(
                     expanded = showMenu,
@@ -87,8 +83,15 @@ fun DirectLinkUploadBottomSheet(
                         leadingIcon = { Icon(Icons.Default.Download, null) },
                         onClick = {
                             showMenu = false
-                            context.selector(DirectLinkUpload.defaultRules) { _, rule, _ ->
-                                viewModel.upView(rule)
+                            context.selector(state.directRulePresets) { _, rule, _ ->
+                                onIntent(
+                                    OtherConfigIntent.DirectRuleChanged(
+                                        uploadUrl = rule.uploadUrl,
+                                        downloadUrlRule = rule.downloadUrlRule,
+                                        summary = rule.summary,
+                                        compress = rule.compress,
+                                    )
+                                )
                             }
                         }
                     )
@@ -97,11 +100,11 @@ fun DirectLinkUploadBottomSheet(
                         leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                         onClick = {
                             showMenu = false
-                            val rule = DirectLinkUpload.Rule(
-                                viewModel.uploadUrl,
-                                viewModel.downloadUrlRule,
-                                viewModel.summary,
-                                viewModel.compress
+                            val rule = DirectLinkRuleUi(
+                                uploadUrl = state.directUploadUrl,
+                                downloadUrlRule = state.directDownloadUrlRule,
+                                summary = state.directSummary,
+                                compress = state.directCompress,
                             )
                             context.sendToClip(GSON.toJson(rule))
                         }
@@ -114,9 +117,16 @@ fun DirectLinkUploadBottomSheet(
                             runCatching {
                                 context.getClipText()?.let {
                                     val rule =
-                                        GSON.fromJsonObject<DirectLinkUpload.Rule>(it)
+                                        GSON.fromJsonObject<DirectLinkRuleUi>(it)
                                             .getOrThrow()
-                                    viewModel.upView(rule)
+                                    onIntent(
+                                        OtherConfigIntent.DirectRuleChanged(
+                                            uploadUrl = rule.uploadUrl,
+                                            downloadUrlRule = rule.downloadUrlRule,
+                                            summary = rule.summary,
+                                            compress = rule.compress,
+                                        )
+                                    )
                                 }
                             }.onFailure {
                                 context.toastOnUi(R.string.clipboard_empty_or_invalid)
@@ -136,8 +146,8 @@ fun DirectLinkUploadBottomSheet(
                 .verticalScroll(rememberScrollState())
         ) {
             AppTextField(
-                value = viewModel.uploadUrl,
-                onValueChange = { viewModel.uploadUrl = it },
+                value = state.directUploadUrl,
+                onValueChange = { onIntent(OtherConfigIntent.DirectUploadUrlChanged(it)) },
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 label = stringResource(R.string.upload_url),
                 modifier = Modifier.fillMaxWidth(),
@@ -146,8 +156,8 @@ fun DirectLinkUploadBottomSheet(
             Spacer(Modifier.height(16.dp))
 
             AppTextField(
-                value = viewModel.downloadUrlRule,
-                onValueChange = { viewModel.downloadUrlRule = it },
+                value = state.directDownloadUrlRule,
+                onValueChange = { onIntent(OtherConfigIntent.DirectDownloadUrlRuleChanged(it)) },
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 label = stringResource(R.string.download_url_rule),
                 modifier = Modifier.fillMaxWidth(),
@@ -156,8 +166,8 @@ fun DirectLinkUploadBottomSheet(
             Spacer(Modifier.height(16.dp))
 
             AppTextField(
-                value = viewModel.summary,
-                onValueChange = { viewModel.summary = it },
+                value = state.directSummary,
+                onValueChange = { onIntent(OtherConfigIntent.DirectSummaryChanged(it)) },
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 label = stringResource(R.string.summary),
                 modifier = Modifier.fillMaxWidth(),
@@ -168,8 +178,8 @@ fun DirectLinkUploadBottomSheet(
             CheckboxItem(
                 title = stringResource(R.string.is_compress),
                 color = LegadoTheme.colorScheme.onSheetContent,
-                checked = viewModel.compress,
-                onCheckedChange = { viewModel.compress = it }
+                checked = state.directCompress,
+                onCheckedChange = { onIntent(OtherConfigIntent.DirectCompressChanged(it)) }
             )
 
             Spacer(Modifier.height(24.dp))
@@ -177,13 +187,7 @@ fun DirectLinkUploadBottomSheet(
             ConfirmDismissButtonsRow(
                 modifier = Modifier.fillMaxWidth(),
                 onDismiss = onDismiss,
-                onConfirm = {
-                    if (viewModel.saveDirectLinkRule()) {
-                        onDismiss()
-                    } else {
-                        context.toastOnUi(R.string.complete_required_information)
-                    }
-                },
+                onConfirm = { onIntent(OtherConfigIntent.ConfirmDirectLinkRule) },
                 dismissText = stringResource(R.string.cancel),
                 confirmText = stringResource(R.string.ok)
             )
@@ -191,8 +195,8 @@ fun DirectLinkUploadBottomSheet(
     }
 
     AppAlertDialog(
-        data = showTestResult,
-        onDismissRequest = { showTestResult = null },
+        data = state.directTestResult,
+        onDismissRequest = { onIntent(OtherConfigIntent.DismissDirectTestResult) },
         title = "Result",
         content = { result ->
             SelectionContainer {
@@ -201,11 +205,11 @@ fun DirectLinkUploadBottomSheet(
         },
         confirmText = stringResource(R.string.ok),
         onConfirm = {
-            showTestResult = null
+            onIntent(OtherConfigIntent.DismissDirectTestResult)
         },
         dismissText = stringResource(R.string.copy_text),
         onDismiss = {
-            showTestResult?.let { context.sendToClip(it) }
+            state.directTestResult?.let { context.sendToClip(it) }
         }
     )
 }

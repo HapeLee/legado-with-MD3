@@ -1,15 +1,17 @@
 package io.legado.app.ui.rss.source.manage
 
 import android.app.Application
+import android.net.Uri
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.data.appDb
+import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.DefaultData
-import io.legado.app.help.source.SourceHelp
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -21,13 +23,20 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.stackTraceStr
-import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -44,20 +53,61 @@ data class RssSourceItemUi(
     val source: RssSource
 ) : SelectableItem<String>
 
+@Stable
 data class RssSourceUiState(
-    override val items: List<RssSourceItemUi> = emptyList(),
-    override val selectedIds: Set<String> = emptySet(),
+    override val items: ImmutableList<RssSourceItemUi> = persistentListOf(),
+    override val selectedIds: ImmutableSet<String> = persistentSetOf(),
     override val searchKey: String = "",
     val groupFilterName: String? = null,
-    val interaction: InteractionState = InteractionState()
+    val interaction: InteractionState = InteractionState(),
+    val groups: ImmutableList<String> = persistentListOf(),
+    val importState: BaseImportUiState<RssSource> = BaseImportUiState.Idle,
 ) : ListUiState<RssSourceItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isUploading
 }
 
+sealed interface RssSourceIntent {
+    data class SetSearchMode(val enabled: Boolean) : RssSourceIntent
+    data class SetSearchQuery(val query: String) : RssSourceIntent
+    data class SetSelection(val ids: Set<String>) : RssSourceIntent
+    data class ToggleSelection(val id: String) : RssSourceIntent
+    data class SetGroupFilter(val filter: String?) : RssSourceIntent
+    data class MoveItem(val from: Int, val to: Int) : RssSourceIntent
+    data class Import(val text: String) : RssSourceIntent
+    data class Export(val uri: Uri, val items: List<RssSourceItemUi>, val ids: Set<String>) : RssSourceIntent
+    data class Upload(val ids: Set<String>, val items: List<RssSourceItemUi>) : RssSourceIntent
+    data class ToggleImportItem(val index: Int) : RssSourceIntent
+    data class ToggleImportAll(val selected: Boolean) : RssSourceIntent
+    data class UpdateImportItem(val index: Int, val source: RssSource) : RssSourceIntent
+    data class Delete(val source: RssSource) : RssSourceIntent
+    data class DeleteSelection(val ids: Set<String>) : RssSourceIntent
+    data class Update(val source: RssSource) : RssSourceIntent
+    data class EnableSelection(val ids: Set<String>) : RssSourceIntent
+    data class DisableSelection(val ids: Set<String>) : RssSourceIntent
+    data class AddSelectionToGroup(val ids: Set<String>, val group: String) : RssSourceIntent
+    data class RemoveSelectionFromGroup(val ids: Set<String>, val group: String) : RssSourceIntent
+    data class UpdateGroup(val old: String, val new: String) : RssSourceIntent
+    data class DeleteGroup(val group: String) : RssSourceIntent
+    data class CheckSelectedInterval(val ids: Set<String>, val items: List<RssSourceItemUi>) : RssSourceIntent
+    data object CancelImport : RssSourceIntent
+    data object SaveImportedRules : RssSourceIntent
+    data object SaveSortOrder : RssSourceIntent
+    data object ImportDefault : RssSourceIntent
+}
+
+sealed interface RssSourceEffect {
+    data class ShowSnackbar(
+        val message: String,
+        val actionLabel: String? = null,
+        val url: String? = null,
+    ) : RssSourceEffect
+}
+
 class RssSourceViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: RssRepository,
 ) : BaseRuleViewModel<RssSourceItemUi, RssSource, String, RssSourceUiState>(
     application,
     RssSourceUiState(interaction = InteractionState(isLoading = true)),
@@ -71,22 +121,38 @@ class RssSourceViewModel(
         const val PREFIX_GROUP = "group:"
     }
 
-    private val dao = appDb.rssSourceDao
+    override val rawDataFlow: Flow<List<RssSource>> = repository.flowAll()
 
-    override val rawDataFlow: Flow<List<RssSource>> = dao.flowAll()
-
-    val groupsFlow: StateFlow<List<String>> = dao.flowGroups()
+    val groupsFlow: StateFlow<List<String>> = repository.flowGroups()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _groupFilterName = MutableStateFlow<String?>(null)
     val groupFilterName = _groupFilterName.asStateFlow()
+    private val _effects = MutableSharedFlow<RssSourceEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            events.collect { event ->
+                when (event) {
+                    is BaseRuleEvent.ShowSnackbar -> _effects.emit(
+                        RssSourceEffect.ShowSnackbar(event.message, event.actionLabel, event.url)
+                    )
+                }
+            }
+        }
+    }
 
     override val uiState: StateFlow<RssSourceUiState> by lazy {
         combine(
             super.uiState,
-            _groupFilterName
-        ) { baseState, filterName ->
-            baseState.copy(groupFilterName = filterName)
+            _groupFilterName,
+            groupsFlow,
+        ) { baseState, filterName, groups ->
+            baseState.copy(
+                groupFilterName = filterName,
+                groups = groups.toImmutableList(),
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -154,14 +220,15 @@ class RssSourceViewModel(
         importState: BaseImportUiState<RssSource>
     ): RssSourceUiState {
         return RssSourceUiState(
-            items = items,
-            selectedIds = selectedIds,
+            items = items.toImmutableList(),
+            selectedIds = selectedIds.toImmutableSet(),
             searchKey = _searchKey.value,
             interaction = InteractionState(
                 isSearchMode = isSearch,
                 isUploading = isUploading || (importState is BaseImportUiState.Loading),
                 isLoading = false
-            )
+            ),
+            importState = importState,
         )
     }
 
@@ -185,7 +252,7 @@ class RssSourceViewModel(
     }
 
     override suspend fun findOldRule(newRule: RssSource): RssSource? {
-        return withContext(Dispatchers.IO) { dao.getByKey(newRule.sourceUrl) }
+        return repository.getByKey(newRule.sourceUrl)
     }
 
     override fun saveImportedRules() {
@@ -194,20 +261,48 @@ class RssSourceViewModel(
             val rulesToSave = state.items
                 .filter { it.isSelected }
                 .map { it.data }
-            dao.insert(*rulesToSave.toTypedArray())
+            repository.insertSources(*rulesToSave.toTypedArray())
             withContext(Dispatchers.Main) {
                 _importState.value = BaseImportUiState.Idle
             }
         }
     }
 
+    fun onIntent(intent: RssSourceIntent) {
+        when (intent) {
+            is RssSourceIntent.SetSearchMode -> setSearchMode(intent.enabled)
+            is RssSourceIntent.SetSearchQuery -> setSearchKey(intent.query)
+            is RssSourceIntent.SetSelection -> setSelection(intent.ids)
+            is RssSourceIntent.ToggleSelection -> toggleSelection(intent.id)
+            is RssSourceIntent.SetGroupFilter -> setGroupFilter(intent.filter)
+            is RssSourceIntent.MoveItem -> moveItemInList(intent.from, intent.to)
+            is RssSourceIntent.Import -> importSource(intent.text)
+            is RssSourceIntent.Export -> exportToUri(intent.uri, intent.items, intent.ids)
+            is RssSourceIntent.Upload -> uploadSelectedRules(intent.ids, intent.items)
+            is RssSourceIntent.ToggleImportItem -> toggleImportSelection(intent.index)
+            is RssSourceIntent.ToggleImportAll -> toggleImportAll(intent.selected)
+            is RssSourceIntent.UpdateImportItem -> updateImportItem(intent.index, intent.source)
+            is RssSourceIntent.Delete -> del(intent.source)
+            is RssSourceIntent.DeleteSelection -> delSelectionByIds(intent.ids)
+            is RssSourceIntent.Update -> update(intent.source)
+            is RssSourceIntent.EnableSelection -> enableSelectionByIds(intent.ids)
+            is RssSourceIntent.DisableSelection -> disableSelectionByIds(intent.ids)
+            is RssSourceIntent.AddSelectionToGroup -> selectionAddToGroups(intent.ids, intent.group)
+            is RssSourceIntent.RemoveSelectionFromGroup -> selectionRemoveFromGroups(intent.ids, intent.group)
+            is RssSourceIntent.UpdateGroup -> upGroup(intent.old, intent.new)
+            is RssSourceIntent.DeleteGroup -> delGroup(intent.group)
+            is RssSourceIntent.CheckSelectedInterval -> checkSelectedInterval(intent.ids, intent.items)
+            RssSourceIntent.CancelImport -> cancelImport()
+            RssSourceIntent.SaveImportedRules -> saveImportedRules()
+            RssSourceIntent.SaveSortOrder -> saveSortOrder()
+            RssSourceIntent.ImportDefault -> importDefault()
+        }
+    }
+
     fun saveSortOrder() {
         val currentLocal = _localItems.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = currentLocal.mapIndexed { index, item ->
-                item.source.copy(customOrder = index + 1)
-            }
-            dao.update(*sources.toTypedArray())
+            repository.saveOrder(currentLocal.map { it.source })
             withContext(Dispatchers.Main) {
                 _localItems.value = null
             }
@@ -216,65 +311,48 @@ class RssSourceViewModel(
 
     fun topSource(vararg sources: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            val minOrder = dao.minOrder - 1
-            val updated = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
-                source.copy(customOrder = minOrder - index)
-            }
-            dao.update(*updated.toTypedArray())
+            repository.topSources(*sources)
         }
     }
 
     fun bottomSource(vararg sources: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            val maxOrder = dao.maxOrder + 1
-            val updated = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
-                source.copy(customOrder = maxOrder + index)
-            }
-            dao.update(*updated.toTypedArray())
+            repository.bottomSources(*sources)
         }
     }
 
     fun del(vararg rssSource: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            SourceHelp.deleteRssSources(rssSource.toList())
+            repository.deleteSources(rssSource.toList())
         }
     }
 
     fun delSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            SourceHelp.deleteRssSources(sources)
+            repository.deleteByIds(ids)
             _selectedIds.update { it - ids }
         }
     }
 
     fun update(vararg rssSource: RssSource) {
-        viewModelScope.launch(Dispatchers.IO) { dao.update(*rssSource) }
+        viewModelScope.launch(Dispatchers.IO) { repository.updateSources(*rssSource) }
     }
 
     fun upOrder() {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.all
-            for ((index: Int, source: RssSource) in sources.withIndex()) {
-                source.customOrder = index + 1
-            }
-            dao.update(*sources.toTypedArray())
+            repository.normalizeOrder()
         }
     }
 
     fun enableSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy(enabled = true) }
-            dao.update(*updated.toTypedArray())
+            repository.setEnabled(ids, true)
         }
     }
 
     fun disableSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy(enabled = false) }
-            dao.update(*updated.toTypedArray())
+            repository.setEnabled(ids, false)
         }
     }
 
@@ -288,50 +366,31 @@ class RssSourceViewModel(
         }.onSuccess {
             success.invoke(it)
         }.onError {
-            context.toastOnUi(it.stackTraceStr)
+            _effects.tryEmit(RssSourceEffect.ShowSnackbar(it.stackTraceStr))
         }
     }
 
     fun selectionAddToGroups(ids: Set<String>, groups: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy().addGroup(groups) }
-            dao.update(*updated.toTypedArray())
+            repository.addGroup(ids, groups)
         }
     }
 
     fun selectionRemoveFromGroups(ids: Set<String>, groups: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy().removeGroup(groups) }
-            dao.update(*updated.toTypedArray())
+            repository.removeGroup(ids, groups)
         }
     }
 
     fun upGroup(oldGroup: String, newGroup: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getByGroup(oldGroup)
-            sources.forEach { source ->
-                source.sourceGroup?.split(",")?.toHashSet()?.let {
-                    it.remove(oldGroup)
-                    if (newGroup.isNotEmpty()) it.add(newGroup)
-                    source.sourceGroup = it.joinToString(",")
-                }
-            }
-            dao.update(*sources.toTypedArray())
+            repository.renameGroup(oldGroup, newGroup)
         }
     }
 
     fun delGroup(group: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getByGroup(group)
-            sources.forEach { source ->
-                source.sourceGroup?.split(",")?.toHashSet()?.let {
-                    it.remove(group)
-                    source.sourceGroup = it.joinToString(",")
-                }
-            }
-            dao.update(*sources.toTypedArray())
+            repository.deleteGroup(group)
         }
     }
 

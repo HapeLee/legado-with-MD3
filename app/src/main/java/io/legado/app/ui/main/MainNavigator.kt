@@ -3,6 +3,7 @@ package io.legado.app.ui.main
 import android.app.Activity
 import android.content.Intent
 import androidx.navigation3.runtime.NavKey
+import io.legado.app.model.ReadBook
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.read.MainRouteRssRead
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +23,11 @@ object MainNavigator {
     fun navigateToRoute(backStack: MutableList<NavKey>, route: NavKey) {
         val currentRoute = backStack.lastOrNull()
         if (currentRoute == route) return
+
+        // 导航动画和阅读页组合要花几百毫秒, 这段时间足够把正文读出来并排版好
+        if (route is MainRouteReadBook && !route.chapterChanged) {
+            route.bookUrl?.let { ReadBook.prefetchForOpen(it) }
+        }
 
         when (route) {
             MainRouteHome -> {
@@ -60,6 +66,7 @@ object MainNavigator {
             is MainRouteSettingsAiProviderEdit,
             is MainRouteSettingsAiModelEdit,
             MainRouteSettingsAiSummary,
+            MainRouteSettingsAiPrompt,
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
             MainRouteSettingsDownloadCache,
@@ -112,6 +119,38 @@ object MainNavigator {
                     currentRoute is MainRouteSearch ||
                     currentRoute is MainRouteExploreShow ||
                     currentRoute is MainRouteBookInfo
+                ) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            is MainRouteBookCharacterDetail,
+            is MainRouteBookCharacterNetwork,
+            is MainRouteBookCharacterList,
+            is MainRouteBookVoiceCasting,
+            is MainRouteCloudTtsEngines,
+            MainRouteTtsCache,
+            is MainRouteBookKnowledgeList,
+            is MainRouteBookKnowledgeDetail,
+            is MainRouteBookEventList,
+            is MainRouteBookEventDetail -> {
+                if (
+                    currentRoute is MainRouteBookInfo ||
+                    currentRoute is MainRouteBookCharacterDetail ||
+                    currentRoute is MainRouteBookCharacterNetwork ||
+                    currentRoute is MainRouteBookCharacterList ||
+                    currentRoute is MainRouteBookVoiceCasting ||
+                    currentRoute is MainRouteCloudTtsEngines ||
+                    currentRoute == MainRouteTtsCache ||
+                    currentRoute is MainRouteBookKnowledgeList ||
+                    currentRoute is MainRouteBookKnowledgeDetail ||
+                    currentRoute is MainRouteBookEventList ||
+                    currentRoute is MainRouteBookEventDetail ||
+                    currentRoute is MainRouteReadBook
                 ) {
                     backStack.add(route)
                 } else {
@@ -283,6 +322,7 @@ object MainNavigator {
             MainRouteConst.ROUTE_SETTINGS_AI -> MainRouteSettingsAi
             MainRouteConst.ROUTE_AI_CHAT -> MainRouteAiChat
             MainRouteConst.ROUTE_SETTINGS_CUSTOM_THEME -> MainRouteSettingsCustomTheme
+            MainRouteConst.ROUTE_SETTINGS_LAB_CONFIG -> MainRouteSettingsLabConfig
             MainRouteConst.ROUTE_SETTINGS_DOWNLOAD_CACHE -> MainRouteSettingsDownloadCache
             MainRouteConst.ROUTE_SETTINGS_TRANSLATION -> MainRouteSettingsTranslation
             MainRouteConst.ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
@@ -318,6 +358,57 @@ object MainNavigator {
                         bookUrl = bookUrl,
                         origin = intent.getStringExtra(MainIntent.EXTRA_BOOK_ORIGIN),
                         coverPath = intent.getStringExtra(MainIntent.EXTRA_BOOK_COVER)
+                    )
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_CHARACTER_DETAIL -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookCharacterDetail(
+                        bookUrl = bookUrl,
+                        characterId = intent.getStringExtra(MainIntent.EXTRA_CHARACTER_ID),
+                    )
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_CHARACTER_NETWORK -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookCharacterNetwork(bookUrl = bookUrl)
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_CHARACTER_LIST -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookCharacterList(bookUrl = bookUrl)
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_KNOWLEDGE_LIST -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookKnowledgeList(bookUrl = bookUrl)
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_KNOWLEDGE_DETAIL -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookKnowledgeDetail(
+                        bookUrl = bookUrl,
+                        entryId = intent.getStringExtra(MainIntent.EXTRA_ENTRY_ID),
+                    )
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_EVENT_LIST -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookEventList(bookUrl = bookUrl)
+                } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_BOOK_EVENT_DETAIL -> intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { bookUrl ->
+                    MainRouteBookEventDetail(
+                        bookUrl = bookUrl,
+                        eventId = intent.getStringExtra(MainIntent.EXTRA_EVENT_ID),
                     )
                 } ?: MainRouteHome
 

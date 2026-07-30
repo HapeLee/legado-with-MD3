@@ -94,7 +94,7 @@ fun Activity.fullScreen() {
 fun Activity.setStatusBarColorAuto(
     @ColorInt color: Int,
     isTransparent: Boolean,
-    fullScreen: Boolean
+    fullScreen: Boolean = true
 ) {
     val isLightBar = ColorUtils.isColorLight(color)
     if (fullScreen) {

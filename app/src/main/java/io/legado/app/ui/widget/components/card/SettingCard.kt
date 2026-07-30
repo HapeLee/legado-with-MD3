@@ -3,15 +3,13 @@ package io.legado.app.ui.widget.components.card
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Shape
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -23,15 +21,13 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 fun SettingCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    shape: Shape = CardDefaults.shape,
+    cornerRadius: Dp = 4.dp,
     colors: CardColors? = null,
-    elevation: CardElevation = CardDefaults.cardElevation(),
+    elevation: Dp = 0.dp,
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val containerAlpha = ThemeConfig.containerOpacity / 100f
-
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         BasicComponent(
             modifier = modifier,
@@ -44,32 +40,15 @@ fun SettingCard(
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         )
 
-        val finalColors = CardDefaults.cardColors(
-            containerColor = baseColors.containerColor.copy(alpha = containerAlpha),
+        GlassCard(
+            modifier = modifier,
+            onClick = onClick,
+            cornerRadius = cornerRadius,
+            containerColor = baseColors.containerColor,
             contentColor = baseColors.contentColor,
-            disabledContainerColor = baseColors.disabledContainerColor.copy(alpha = containerAlpha),
-            disabledContentColor = baseColors.disabledContentColor
+            elevation = elevation,
+            border = border,
+            content = content,
         )
-
-        if (onClick != null) {
-            Card(
-                onClick = onClick,
-                modifier = modifier,
-                shape = shape,
-                colors = finalColors,
-                elevation = elevation,
-                border = border,
-                content = content
-            )
-        } else {
-            Card(
-                modifier = modifier,
-                shape = shape,
-                colors = finalColors,
-                elevation = elevation,
-                border = border,
-                content = content
-            )
-        }
     }
 }

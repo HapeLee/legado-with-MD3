@@ -66,6 +66,7 @@ fun DictRuleRouteScreen(
         state = uiState,
         importState = importState,
         events = viewModel.events,
+        effects = viewModel.effects,
         onIntent = viewModel::onIntent,
         onPasteRule = viewModel::pasteRule,
         onBackClick = onBackClick,
@@ -78,6 +79,7 @@ fun DictRuleScreen(
     state: DictRuleUiState,
     importState: BaseImportUiState<DictRule>,
     events: Flow<BaseRuleEvent>,
+    effects: Flow<DictRuleEffect>,
     onIntent: (DictRuleIntent) -> Unit,
     onPasteRule: () -> DictRule?,
     onBackClick: () -> Unit,
@@ -129,6 +131,14 @@ fun DictRuleScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is DictRuleEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
@@ -328,23 +338,18 @@ fun DictRuleScreen(
                     val enabledState = stringResource(
                         if (item.isEnabled) R.string.enabled else R.string.disabled
                     )
-                    val selectedState = stringResource(
-                        if (selectedIds.contains(item.id)) {
-                            R.string.a11y_selected
-                        } else {
-                            R.string.a11y_not_selected
-                        }
-                    )
                     val itemDescription = listOfNotNull(
                         item.id,
                         item.urlRule.takeIf { it.isNotBlank() },
                         enabledState,
-                        selectedState,
                         stringResource(R.string.a11y_long_press_reorder)
                     ).joinToString()
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
+                        reorderIndex = rules.indexOf(item),
+                        reorderItemCount = rules.size,
+                        onMoveItem = { from, to -> onIntent(DictRuleIntent.MoveItem(from, to)) },
                         title = item.id,
                         isEnabled = item.isEnabled,
                         isSelected = selectedIds.contains(item.id),
@@ -354,7 +359,6 @@ fun DictRuleScreen(
                             onIntent(DictRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
                         contentDescription = itemDescription,
-                        stateDescription = selectedState,
                         enableSwitchContentDescription = stringResource(
                             R.string.a11y_rule_enabled_switch,
                             item.id

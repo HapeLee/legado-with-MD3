@@ -31,7 +31,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,13 +77,13 @@ fun ExploreKindSelectSheet(
         onDismissRequest = onDismissRequest,
         endAction = {
             if (multiple && selectedTitles.isNotEmpty()) {
-                TopBarActionButton(
+                MediumTonalButton(
                     onClick = {
                         val selectedKinds = kinds.filter { it.title in selectedTitles }
                         onSelected(selectedKinds)
                         onDismissRequest()
                     },
-                    imageVector = Icons.Default.Check,
+                    icon = Icons.Default.Check,
                     contentDescription = stringResource(R.string.confirm)
                 )
             }

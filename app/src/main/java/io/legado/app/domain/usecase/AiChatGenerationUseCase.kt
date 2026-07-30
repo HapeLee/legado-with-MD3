@@ -202,7 +202,7 @@ class AiChatGenerationUseCase(
         val base = """
             You are a helpful AI assistant inside a reading app.
             Render answers in complete Markdown when structure helps.
-            Use local reading tools when the user asks about bookshelf books, current reading progress, chapters, bookmarks, reading statistics, or existing AI notes.
+            Use local reading tools when the user asks about bookshelf books, current reading progress, chapters, bookmarks, reading statistics, existing AI notes, character profiles, relationships, world-book entries, or outlines.
             For requests like summarizing, explaining, or continuing from the current chapter, use the local book and chapter tools before answering.
             If a tool says content is missing or unavailable, state that limitation clearly and do not invent book content.
             Save notes or summaries only when the user explicitly asks to save them.

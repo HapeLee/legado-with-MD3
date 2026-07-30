@@ -47,7 +47,7 @@ fun HeatmapCalendarSection(
 
         Row(modifier = Modifier.fillMaxWidth()) {
             WeekdayLabelsColumn(
-                cellSize = config.cellSize,
+                cellSize = config.interactiveCellSize,
                 cellSpacing = config.cellSpacing
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -78,7 +78,12 @@ fun HeatmapCalendarSection(
                         onModeChanged = {}
                     )
                 }
-                item { NoEarlierDataIndicator(cellSize = config.cellSize) }
+                item {
+                    NoEarlierDataIndicator(
+                        cellSize = config.cellSize,
+                        touchTargetSize = config.interactiveCellSize,
+                    )
+                }
             }
         }
     }

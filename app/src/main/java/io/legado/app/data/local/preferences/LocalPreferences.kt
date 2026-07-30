@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -12,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 val Context.localDataStore: DataStore<Preferences> by preferencesDataStore(name = "local_ui_status")
 
 object LocalPreferencesKeys {
+    val MIGRATED_TO_SETTINGS = booleanPreferencesKey("__local_ui_status_migrated_to_settings")
     val SHOW_THEME_REFACTOR_TIP = booleanPreferencesKey("show_theme_refactor_tip")
     val SEARCH_LAYOUT_MODE = intPreferencesKey("search_layout_mode")
     val SEARCH_SCOPE = stringPreferencesKey("search_scope")
@@ -25,6 +27,8 @@ object LocalPreferencesKeys {
     val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
     val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
     val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
+    val READ_ALOUD_CAPSULE_OFFSET_X = floatPreferencesKey("read_aloud_capsule_offset_x")
+    val READ_ALOUD_CAPSULE_OFFSET_Y = floatPreferencesKey("read_aloud_capsule_offset_y")
 
     // ENABLE_READ_RECORD也许需要换个地方存，但先放这
     val ENABLE_READ_RECORD = booleanPreferencesKey("enableReadRecord")

@@ -5,14 +5,15 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.BookSearchGateway
+import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.releaseHtmlData
-import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.book.changesource.ObservableSourceConfig
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.internString
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,8 @@ sealed interface ChangeSourceSearchEvent {
 
 class ChangeSourceSearchUseCase(
     private val gateway: BookSearchGateway,
+    private val changeSourceSettingsGateway: ChangeSourceSettingsGateway,
+    private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     fun search(
@@ -57,6 +60,7 @@ class ChangeSourceSearchUseCase(
         fromReadBookActivity: Boolean,
     ): Flow<ChangeSourceSearchEvent> = flow {
         val contentProcessor = ContentProcessor.get(oldBook)
+        val settings = changeSourceSettingsGateway.currentSettings
         val bookSourceParts = scope.getBookSourceParts()
         if (bookSourceParts.isEmpty()) {
             throw io.legado.app.exception.NoStackTraceException("启用书源为空")
@@ -67,7 +71,7 @@ class ChangeSourceSearchUseCase(
 
         var processedSources = 0
         var resultCount = 0
-        val concurrency = OtherConfig.threadCount.coerceAtLeast(1)
+        val concurrency = downloadCacheSettingsGateway.currentSettings.threadCount.coerceAtLeast(1)
 
         bookSourceParts.asFlow()
             .mapNotNull { it.getBookSource() }
@@ -77,7 +81,8 @@ class ChangeSourceSearchUseCase(
                         withTimeout(60000L) {
                             searchSource(
                                 source, name, author, oldBook, fromReadBookActivity,
-                                contentProcessor
+                                contentProcessor,
+                                settings,
                             )
                         }
                     } catch (_: Throwable) {
@@ -120,8 +125,9 @@ class ChangeSourceSearchUseCase(
         fromReadBookActivity: Boolean,
     ): Flow<ChangeSourceSearchEvent> = flow {
         val contentProcessor = ContentProcessor.get(oldBook)
+        val settings = changeSourceSettingsGateway.currentSettings
         val totalBooks = books.size
-        val concurrency = OtherConfig.threadCount.coerceAtLeast(1)
+        val concurrency = downloadCacheSettingsGateway.currentSettings.threadCount.coerceAtLeast(1)
         var processedBooks = 0
         var resultCount = 0
 
@@ -136,8 +142,8 @@ class ChangeSourceSearchUseCase(
                                 loadBookInfo(
                                     source = source,
                                     book = searchBook.toBook(),
-                                    loadToc = ChangeSourceConfig.loadToc,
-                                    loadWordCount = ChangeSourceConfig.loadWordCount,
+                                    loadToc = settings.loadToc,
+                                    loadWordCount = settings.loadWordCount,
                                     oldBook = oldBook,
                                     fromReadBookActivity = fromReadBookActivity,
                                     contentProcessor = contentProcessor,
@@ -200,11 +206,12 @@ class ChangeSourceSearchUseCase(
         oldBook: Book,
         fromReadBookActivity: Boolean,
         contentProcessor: ContentProcessor,
+        settings: ChangeSourceSettings,
     ): List<LoadedSearchBook> {
-        val checkAuthor = ChangeSourceConfig.checkAuthor
-        val loadInfo = ChangeSourceConfig.loadInfo
-        val loadToc = ChangeSourceConfig.loadToc
-        val loadWordCount = ChangeSourceConfig.loadWordCount
+        val checkAuthor = settings.checkAuthor
+        val loadInfo = settings.loadInfo
+        val loadToc = settings.loadToc
+        val loadWordCount = settings.loadWordCount
 
         val resultBooks = WebBook.searchBookAwait(
             source, name,

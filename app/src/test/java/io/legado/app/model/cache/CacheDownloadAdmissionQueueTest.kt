@@ -22,6 +22,20 @@ class CacheDownloadAdmissionQueueTest {
     }
 
     @Test
+    fun fifoExclusiveOnlyOneNewBookWhenMaxActiveIsOne() {
+        val queue = CacheDownloadAdmissionQueue(maxActiveBooks = 1)
+        assertTrue(queue.shouldQueue(request("b"), setOf("a")))
+        assertFalse(queue.shouldQueue(request("a"), setOf("a")))
+
+        queue.add(request("b"))
+        queue.add(request("c"))
+
+        assertNull(queue.pollReady(setOf("a")))
+        assertEquals(request("b"), queue.pollReady(emptySet()))
+        assertEquals(request("c"), queue.pollReady(emptySet()))
+    }
+
+    @Test
     fun activeBookRequestCanBypassLimit() {
         val queue = CacheDownloadAdmissionQueue(maxActiveBooks = 1)
         val activeRequest = request("a")
@@ -44,6 +58,21 @@ class CacheDownloadAdmissionQueueTest {
         assertFalse(queue.removeBook("a"))
         assertEquals(request("b"), queue.pollReady(emptySet()))
         assertNull(queue.pollReady(emptySet()))
+    }
+
+    @Test
+    fun drainAllReturnsFifoOrderAndClearsQueue() {
+        val queue = CacheDownloadAdmissionQueue(maxActiveBooks = 1)
+        val a = request("a")
+        val b = request("b")
+        val c = request("c")
+        queue.add(a)
+        queue.add(b)
+        queue.add(c)
+
+        assertEquals(listOf(a, b, c), queue.drainAll())
+        assertTrue(queue.isEmpty())
+        assertEquals(emptyList<CacheDownloadRequest>(), queue.drainAll())
     }
 
     private fun request(bookUrl: String): CacheDownloadRequest {

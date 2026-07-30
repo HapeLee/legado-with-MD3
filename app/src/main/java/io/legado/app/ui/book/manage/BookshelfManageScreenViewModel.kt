@@ -8,9 +8,13 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
+import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.BatchChangeSourceCandidate
 import io.legado.app.domain.usecase.BatchChangeSourcePreviewItem
@@ -43,6 +47,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -81,7 +88,8 @@ data class BookshelfManageScreenUiState(
     val batchChangeOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     val cacheVersion: Long = 0,
     val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
-    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig()
+    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig(),
+    val bookSources: ImmutableList<BookSourcePart> = persistentListOf(),
 )
 
 sealed interface BookshelfManageScreenIntent {
@@ -148,9 +156,11 @@ sealed interface BookshelfManageScreenEffect {
 class BookshelfManageScreenViewModel(
     application: Application,
     private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
     private val bookGroupRepository: BookGroupRepository,
     private val searchRepository: SearchRepository,
     val bookshelfManageScreenConfig: BookshelfManageScreenConfig,
+    private val bookExportSettingsGateway: BookExportSettingsGateway,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,
@@ -178,6 +188,17 @@ class BookshelfManageScreenViewModel(
     private var observersStarted = false
     private val pendingDownloadStatusBookUrls = ConcurrentHashMap.newKeySet<String>()
     private val pendingCacheCountRefreshBookUrls = ConcurrentHashMap.newKeySet<String>()
+
+    init {
+        viewModelScope.launch {
+            bookExportSettingsGateway.settings.collect(::syncExportConfig)
+        }
+        viewModelScope.launch {
+            bookSourceRepository.flowEnabled().collect { sources ->
+                _uiState.update { it.copy(bookSources = sources.toImmutableList()) }
+            }
+        }
+    }
     @Volatile
     private var pendingDownloadRunningRefresh = false
 
@@ -252,55 +273,45 @@ class BookshelfManageScreenViewModel(
             }
 
             is BookshelfManageScreenIntent.SetExportUseReplace -> {
-                bookshelfManageScreenConfig.exportUseReplace = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(exportUseReplace = intent.enabled) }
                 val msg = if (intent.enabled) "替换净化功能已开启" else "替换净化功能已关闭"
                 _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage(msg))
             }
 
             is BookshelfManageScreenIntent.SetEnableCustomExport -> {
-                bookshelfManageScreenConfig.enableCustomExport = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(enableCustomExport = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportNoChapterName -> {
-                bookshelfManageScreenConfig.exportNoChapterName = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(exportNoChapterName = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportToWebDav -> {
-                bookshelfManageScreenConfig.exportToWebDav = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(exportToWebDav = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportPictureFile -> {
-                bookshelfManageScreenConfig.exportPictureFile = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(exportPictureFile = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetParallelExportBook -> {
-                bookshelfManageScreenConfig.parallelExportBook = intent.enabled
-                syncExportConfig()
+                updateExportSetting { it.copy(parallelExportBook = intent.enabled) }
             }
 
             is BookshelfManageScreenIntent.SetExportType -> {
-                bookshelfManageScreenConfig.exportType = intent.type
-                syncExportConfig()
+                updateExportSetting { it.copy(exportType = intent.type) }
             }
 
             is BookshelfManageScreenIntent.SetExportCharset -> {
-                bookshelfManageScreenConfig.exportCharset = intent.charset
-                syncExportConfig()
+                updateExportSetting { it.copy(exportCharset = intent.charset) }
             }
 
             is BookshelfManageScreenIntent.SetBookExportFileName -> {
-                bookshelfManageScreenConfig.bookExportFileName = intent.fileName
-                syncExportConfig()
+                updateExportSetting { it.copy(bookExportFileName = intent.fileName) }
             }
 
             is BookshelfManageScreenIntent.SetEpisodeExportFileName -> {
-                bookshelfManageScreenConfig.episodeExportFileName = intent.fileName
-                syncExportConfig()
+                updateExportSetting { it.copy(episodeExportFileName = intent.fileName) }
             }
         }
     }
@@ -323,7 +334,7 @@ class BookshelfManageScreenViewModel(
 
     private fun initialize(groupId: Long) {
         _uiState.update { it.copy(groupId = groupId) }
-        syncExportConfig()
+        syncExportConfig(bookExportSettingsGateway.currentSettings)
         observeGroups()
         observeBooks(groupId)
         observeDownloadAndExportChanges()
@@ -450,22 +461,28 @@ class BookshelfManageScreenViewModel(
         }
     }
 
-    private fun syncExportConfig() {
+    private fun syncExportConfig(settings: BookExportSettings) {
         _uiState.update {
             it.copy(
                 exportConfig = BookshelfManageScreenExportConfig(
-                    exportUseReplace = bookshelfManageScreenConfig.exportUseReplace,
-                    enableCustomExport = bookshelfManageScreenConfig.enableCustomExport,
-                    exportNoChapterName = bookshelfManageScreenConfig.exportNoChapterName,
-                    exportToWebDav = bookshelfManageScreenConfig.exportToWebDav,
-                    exportPictureFile = bookshelfManageScreenConfig.exportPictureFile,
-                    parallelExportBook = bookshelfManageScreenConfig.parallelExportBook,
-                    exportType = bookshelfManageScreenConfig.exportType,
-                    exportCharset = bookshelfManageScreenConfig.exportCharset,
-                    bookExportFileName = bookshelfManageScreenConfig.bookExportFileName,
-                    episodeExportFileName = bookshelfManageScreenConfig.episodeExportFileName
+                    exportUseReplace = settings.exportUseReplace,
+                    enableCustomExport = settings.enableCustomExport,
+                    exportNoChapterName = settings.exportNoChapterName,
+                    exportToWebDav = settings.exportToWebDav,
+                    exportPictureFile = settings.exportPictureFile,
+                    parallelExportBook = settings.parallelExportBook,
+                    exportType = settings.exportType,
+                    exportCharset = settings.exportCharset,
+                    bookExportFileName = settings.bookExportFileName,
+                    episodeExportFileName = settings.episodeExportFileName,
                 )
             )
+        }
+    }
+
+    private fun updateExportSetting(transform: (BookExportSettings) -> BookExportSettings) {
+        viewModelScope.launch {
+            bookExportSettingsGateway.update(transform)
         }
     }
 

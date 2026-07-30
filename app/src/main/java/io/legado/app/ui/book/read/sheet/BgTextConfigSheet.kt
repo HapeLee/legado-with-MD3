@@ -217,6 +217,7 @@ fun BgTextConfigSheet(
         onDismissRequest = { showEditNameDialog = false },
         onConfirm = { newName ->
             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleName(newName)))
+            onIntent(ReadBookIntent.SaveReadStyleConfig)
             showEditNameDialog = false
         },
     )

@@ -159,6 +159,14 @@ fun SourceBrowseDetailPage(
                             ReorderableSelectionItem(
                                 state = reorderableState,
                                 key = module.id,
+                                reorderIndex = listData.indexOf(module),
+                                reorderItemCount = listData.size,
+                                onMoveItem = { from, to ->
+                                    listData = listData.toMutableList().apply { move(from, to) }
+                                    onReorderModules(
+                                        (listData.map { it.id } + infiniteModules.map { it.id }).distinct()
+                                    )
+                                },
                                 title = module.title,
                                 subtitle = HomepageModuleType.fromKey(module.type).title,
                                 isEnabled = module.isVisible,
@@ -172,11 +180,13 @@ fun SourceBrowseDetailPage(
                                 trailingAction = {
                                     SmallPlainButton(
                                         onClick = { onEditModule(module) },
-                                        icon = Icons.Default.Edit
+                                        icon = Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.edit)
                                     )
                                     SmallPlainButton(
                                         onClick = { onRequestDeleteModule(module.id) },
-                                        icon = Icons.Default.Delete
+                                        icon = Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.delete)
                                     )
                                 }
                             )
@@ -214,11 +224,13 @@ fun SourceBrowseDetailPage(
                                     trailingAction = {
                                         SmallPlainButton(
                                             onClick = { onEditModule(module) },
-                                            icon = Icons.Default.Edit
+                                            icon = Icons.Default.Edit,
+                                            contentDescription = stringResource(R.string.edit)
                                         )
                                         SmallPlainButton(
                                             onClick = { onRequestDeleteModule(module.id) },
-                                            icon = Icons.Default.Delete
+                                            icon = Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.delete)
                                         )
                                     }
                                 )
@@ -339,7 +351,8 @@ fun SourceBrowseDetailPage(
                             if (supportsMultipleKinds && selectedKindTitles.isNotEmpty()) {
                                 SmallPlainButton(
                                     onClick = { onShowAddKindGroupDialog() },
-                                    icon = Icons.Default.Check
+                                    icon = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.confirm)
                                 )
                             }
                         }

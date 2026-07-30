@@ -28,7 +28,7 @@ import androidx.core.graphics.ColorUtils
 import io.legado.app.R
 import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -39,12 +39,14 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 @Composable
 fun LabelColorManageSheet(
     show: Boolean,
+    themeColor: Int,
+    colors: List<TagColorPair>,
+    onColorsChange: (List<TagColorPair>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
     val primaryColor = LegadoTheme.colorScheme.primary
-    val themeColor = ThemeConfig.themeColor
-    val tagColors = remember(show) {
-        ThemeConfig.getCustomTagColors().toMutableStateList()
+    val tagColors = remember(show, colors) {
+        colors.toMutableStateList()
     }
     var showColorPicker by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
@@ -55,26 +57,28 @@ fun LabelColorManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_manage_label_colors),
         startAction = {
-            MediumOutlinedButton(
+            MediumTonalButton(
                 onClick = {
                     val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
                     val generatedColors = TagColorGenerator.generateTagColors(baseColor)
                     tagColors.clear()
                     tagColors.addAll(generatedColors)
-                    ThemeConfig.saveCustomTagColors(tagColors)
+                    onColorsChange(tagColors.toList())
                 },
-                icon = Icons.Default.AutoAwesome
+                icon = Icons.Default.AutoAwesome,
+                contentDescription = stringResource(R.string.ai_generate)
             )
         },
         endAction = {
-            MediumOutlinedButton(
+            MediumTonalButton(
                 onClick = {
                     tagColors.add(TagColorPair(0, 0))
                     editingIndex = tagColors.size - 1
                     editingTextColor = 0
                     showColorPicker = true
                 },
-                icon = Icons.Default.Add
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
             )
         }
     ) {
@@ -116,14 +120,16 @@ fun LabelColorManageSheet(
                                     editingTextColor = colorPair.textColor
                                     showColorPicker = true
                                 },
-                                icon = Icons.Default.Edit
+                                icon = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit)
                             )
                             SmallPlainButton(
                                 onClick = {
                                     tagColors.removeAt(index)
-                                    ThemeConfig.saveCustomTagColors(tagColors)
+                                    onColorsChange(tagColors.toList())
                                 },
-                                icon = Icons.Default.Delete
+                                icon = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete)
                             )
                         }
                     }
@@ -147,7 +153,7 @@ fun LabelColorManageSheet(
                     textColor = selectedColor,
                     bgColor = bgColor
                 )
-                ThemeConfig.saveCustomTagColors(tagColors)
+                onColorsChange(tagColors.toList())
                 showColorPicker = false
             }
         )

@@ -47,6 +47,10 @@ coroutines = "1.11.0"
 lifecycleViewmodelCompose = "2.11.0"
 liveeventbus = "1.8.14"
 navigation3 = "1.1.4"
+# 1.2.0-alpha02 修复了预测式返回手势中 NavigationEventInput.dispatchOnBackProgressed
+# 对已分离输入抛 IllegalStateException 的崩溃（1.1.2 仍会 checkNotNull 抛异常）。
+# 覆盖 navigation3 1.1.4 传递依赖的 1.1.2，等上游发布含该修复的稳定版后可移除。
+navigationevent = "1.2.0-alpha02"
 markwon = "4.6.2"
 material = "1.14.0"
 material3 = "1.5.0-alpha23"
@@ -111,6 +115,8 @@ androidx-compose-foundation = { module = "androidx.compose.foundation:foundation
 androidx-compose-material = { module = "androidx.compose.material:material" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+androidx-navigationevent = { module = "androidx.navigationevent:navigationevent", version.ref = "navigationevent" }
+androidx-navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }

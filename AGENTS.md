@@ -30,6 +30,14 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
 
+### Settings Gateway Conventions
+
+- Ordinary settings gateways mutate state through `update { current -> current.copy(...) }`.
+- Do not introduce `*SettingsUpdate` dispatch types or `updateAll` on settings gateways.
+- Submit related multi-field changes in one `copy(...)` transform so the SSOT can apply them atomically.
+- Keep specialized APIs such as `ReadStyleMutation`, `ThemePackageSettingsGateway.applyAndAwait`,
+  `ThemeStateTransaction`, and `AppUiConfigurationGateway` in their dedicated shapes.
+
 ### Goal-Driven Execution
 
 Transform tasks into verifiable goals:

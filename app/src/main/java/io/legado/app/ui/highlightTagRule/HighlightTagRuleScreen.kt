@@ -53,17 +53,18 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HighlightTagRuleScreen(
+fun HighlightTagRuleRouteScreen(
     viewModel: HighlightTagRuleViewModel = koinViewModel(),
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
 
-    HighlightTagRuleContent(
+    HighlightTagRuleScreen(
         state = uiState,
         importState = importState,
         events = viewModel.events,
+        effects = viewModel.effects,
         onIntent = viewModel::onIntent,
         onPasteRule = viewModel::pasteRule,
         onBackClick = onBackClick,
@@ -72,10 +73,11 @@ fun HighlightTagRuleScreen(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HighlightTagRuleContent(
+fun HighlightTagRuleScreen(
     state: HighlightTagRuleUiState,
     importState: BaseImportUiState<HighlightTagRule>,
     events: Flow<BaseRuleEvent>,
+    effects: Flow<HighlightTagRuleEffect>,
     onIntent: (HighlightTagRuleIntent) -> Unit,
     onPasteRule: () -> HighlightTagRule?,
     onBackClick: () -> Unit,
@@ -127,6 +129,15 @@ private fun HighlightTagRuleContent(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is HighlightTagRuleEffect.ShowMessage ->
+                    snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
@@ -297,18 +308,10 @@ private fun HighlightTagRuleContent(
                     val enabledState = stringResource(
                         if (item.isEnabled) R.string.enabled else R.string.disabled
                     )
-                    val selectedState = stringResource(
-                        if (selectedIds.contains(item.id)) {
-                            R.string.a11y_selected
-                        } else {
-                            R.string.a11y_not_selected
-                        }
-                    )
                     val itemDescription = listOfNotNull(
                         item.displayName,
                         item.pattern.takeIf { it.isNotBlank() },
                         enabledState,
-                        selectedState,
                         if (!inSelectionMode) {
                             stringResource(R.string.a11y_long_press_reorder)
                         } else {
@@ -318,6 +321,11 @@ private fun HighlightTagRuleContent(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
+                        reorderIndex = rules.indexOf(item),
+                        reorderItemCount = rules.size,
+                        onMoveItem = { from, to ->
+                            onIntent(HighlightTagRuleIntent.MoveItem(from, to))
+                        },
                         title = item.displayName,
                         subtitle = item.pattern,
                         isEnabled = item.isEnabled,
@@ -328,7 +336,6 @@ private fun HighlightTagRuleContent(
                             onIntent(HighlightTagRuleIntent.SetRuleEnabled(item.rule, enabled))
                         },
                         contentDescription = itemDescription,
-                        stateDescription = selectedState,
                         enableSwitchContentDescription = stringResource(
                             R.string.a11y_rule_enabled_switch,
                             item.displayName

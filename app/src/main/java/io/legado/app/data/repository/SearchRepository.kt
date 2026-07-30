@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
@@ -25,8 +26,20 @@ interface SearchRepository {
     suspend fun saveSearchKeyword(keyword: String)
     suspend fun deleteSearchKeyword(item: SearchKeyword)
     suspend fun clearSearchKeywords()
+    suspend fun getEnableHasCover(name: String, author: String): List<SearchBook>
+    suspend fun getSearchBook(bookUrl: String): SearchBook?
     suspend fun saveSearchBooks(books: List<SearchBook>)
     suspend fun saveSearchBook(book: SearchBook)
+    suspend fun updateSearchBook(book: SearchBook)
+    suspend fun findChangeSourceBooks(
+        name: String,
+        author: String,
+        screenKey: String = "",
+        group: String = "",
+    ): List<SearchBook>
+    suspend fun deleteSearchBooks(books: List<SearchBook>)
+    suspend fun getBookSourcePart(sourceUrl: String): BookSourcePart?
+    suspend fun getBookSource(sourceUrl: String): BookSource?
 }
 
 class SearchRepositoryImpl(
@@ -105,6 +118,16 @@ class SearchRepositoryImpl(
         appDb.bookSourceDao.getBookSource(sourceUrl)
     }
 
+    override suspend fun getEnableHasCover(name: String, author: String): List<SearchBook> =
+        withContext(Dispatchers.IO) {
+            appDb.searchBookDao.getEnableHasCover(name, author)
+        }
+
+    override suspend fun getSearchBook(bookUrl: String): SearchBook? =
+        withContext(Dispatchers.IO) {
+            appDb.searchBookDao.getSearchBook(bookUrl)
+        }
+
     override suspend fun saveSearchBooks(books: List<SearchBook>): Unit =
         withContext(Dispatchers.IO) {
         if (books.isNotEmpty()) {
@@ -115,4 +138,34 @@ class SearchRepositoryImpl(
     override suspend fun saveSearchBook(book: SearchBook): Unit = withContext(Dispatchers.IO) {
         appDb.searchBookDao.insert(book)
     }
+
+    override suspend fun updateSearchBook(book: SearchBook): Unit = withContext(Dispatchers.IO) {
+        appDb.searchBookDao.update(book)
+    }
+
+    override suspend fun findChangeSourceBooks(
+        name: String,
+        author: String,
+        screenKey: String,
+        group: String,
+    ): List<SearchBook> = withContext(Dispatchers.IO) {
+        if (screenKey.isEmpty()) {
+            appDb.searchBookDao.changeSourceByGroup(name, author, group)
+        } else {
+            appDb.searchBookDao.changeSourceSearch(name, author, screenKey, group)
+        }
+    }
+
+    override suspend fun deleteSearchBooks(books: List<SearchBook>): Unit =
+        withContext(Dispatchers.IO) {
+            if (books.isNotEmpty()) {
+                appDb.searchBookDao.delete(*books.toTypedArray())
+            }
+        }
+
+    override suspend fun getBookSourcePart(sourceUrl: String): BookSourcePart? =
+        withContext(Dispatchers.IO) {
+            appDb.bookSourceDao.getBookSourcePart(sourceUrl)
+        }
+
 }

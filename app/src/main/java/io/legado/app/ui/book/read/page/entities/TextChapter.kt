@@ -5,6 +5,7 @@ import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
@@ -70,6 +71,8 @@ data class TextChapter(
     var listener: LayoutProgressListener? = null
 
     var isCompleted = false
+
+    var pageEstimateGeneration = 0L
 
     val paragraphs by lazy {
         paragraphsInternal
@@ -279,7 +282,12 @@ data class TextChapter(
         }
     }
 
-    fun createLayout(scope: CoroutineScope, book: Book, bookContent: BookContent) {
+    fun createLayout(
+        scope: CoroutineScope,
+        book: Book,
+        bookSource: BookSource?,
+        bookContent: BookContent,
+    ) {
         if (layout != null) {
             throw IllegalStateException("已经排版过了")
         }
@@ -288,12 +296,20 @@ data class TextChapter(
             this,
             textPages,
             book,
+            bookSource,
             bookContent,
         )
         layout = textLayout
         visibleWidth = textLayout.visibleWidth
         visibleHeight = textLayout.visibleHeight
     }
+
+    /**
+     * 排版还在进行中: 已经创建了排版任务, 既没有排完也没有出错/被取消.
+     * 用来区分"还在排"和"排到一半就废了", 前者可以继续用已排出的页.
+     */
+    val isLayoutRunning: Boolean
+        get() = layout?.let { !isCompleted && it.exception == null && !it.isCanceled } ?: false
 
     fun setProgressListener(l: LayoutProgressListener?) {
         if (isCompleted) {

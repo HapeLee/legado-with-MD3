@@ -8,7 +8,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
@@ -20,6 +20,8 @@ import io.legado.app.databinding.DialogCustomGroupBinding
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemSourceImportBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.lib.dialogs.alert
 //import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.dialog.CodeDialog
@@ -27,6 +29,9 @@ import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import splitties.views.onClick
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * 导入rss源弹出窗口
@@ -43,7 +48,8 @@ class ImportRssSourceDialog() : BaseDialogFragment(R.layout.dialog_recycler_view
     }
 
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
-    private val viewModel by viewModels<ImportRssSourceViewModel>()
+    private val viewModel by viewModel<ImportRssSourceViewModel>()
+    private val otherSettingsGateway by inject<OtherSettingsGateway>()
     private val adapter by lazy { SourcesAdapter(requireContext()) }
 
     override fun onStart() {
@@ -152,20 +158,24 @@ class ImportRssSourceDialog() : BaseDialogFragment(R.layout.dialog_recycler_view
             R.id.menu_new_group -> alertCustomGroup(item)
             R.id.menu_keep_original_name -> {
                 item.isChecked = !item.isChecked
-                AppConfig.importKeepName = item.isChecked
+                updateImportSetting { it.copy(importKeepName = item.isChecked) }
             }
 
             R.id.menu_keep_group -> {
                 item.isChecked = !item.isChecked
-                AppConfig.importKeepGroup = item.isChecked
+                updateImportSetting { it.copy(importKeepGroup = item.isChecked) }
             }
 
             R.id.menu_keep_enable -> {
                 item.isChecked = !item.isChecked
-                AppConfig.importKeepEnable = item.isChecked
+                updateImportSetting { it.copy(importKeepEnable = item.isChecked) }
             }
         }
         return false
+    }
+
+    private fun updateImportSetting(transform: (OtherSettings) -> OtherSettings) {
+        lifecycleScope.launch { otherSettingsGateway.update(transform) }
     }
 
     private fun alertCustomGroup(item: MenuItem) {

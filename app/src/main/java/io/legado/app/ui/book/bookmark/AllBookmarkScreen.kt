@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.UnfoldMore
@@ -34,7 +33,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +52,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
@@ -64,10 +64,9 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -75,6 +74,9 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -83,21 +85,58 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
     ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
-fun AllBookmarkScreen(
+fun AllBookmarkRouteScreen(
     viewModel: AllBookmarkViewModel = koinViewModel(),
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var pendingExportIsMd by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.onIntent(AllBookmarkIntent.Export(it, pendingExportIsMd))
+            Toast.makeText(context, context.getString(R.string.export_started), Toast.LENGTH_SHORT).show()
+        }
+    }
 
-    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is AllBookmarkEffect.ShowMessage ->
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    AllBookmarkScreen(
+        state = uiState,
+        onIntent = viewModel::onIntent,
+        onRequestExport = { isMarkdown ->
+            pendingExportIsMd = isMarkdown
+            exportLauncher.launch(null)
+        },
+        onBack = onBack,
+    )
+}
+
+@Composable
+fun AllBookmarkScreen(
+    state: BookmarkUiState,
+    onIntent: (AllBookmarkIntent) -> Unit,
+    onRequestExport: (Boolean) -> Unit,
+    onBack: () -> Unit,
+) {
+
     val contentState = when {
-        uiState.isLoading -> "LOADING"
-        uiState.bookmarks.isEmpty() -> "EMPTY"
+        state.isLoading -> "LOADING"
+        state.bookmarks.isEmpty() -> "EMPTY"
         else -> "CONTENT"
     }
-    val searchText = uiState.searchQuery
-    val collapsedGroups = uiState.collapsedGroups
-    val bookmarksGrouped = uiState.bookmarks
+    val searchText = state.searchQuery
+    val collapsedGroups = state.collapsedGroups
+    val bookmarksGrouped = state.bookmarks
     val bookmarkGroups = remember(bookmarksGrouped) { bookmarksGrouped.entries.toList() }
     val allKeys = bookmarksGrouped.keys
     val isAllCollapsed =
@@ -108,7 +147,6 @@ fun AllBookmarkScreen(
     var showSearch by remember { mutableStateOf(false) }
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
-    var pendingExportIsMd by remember { mutableStateOf(false) }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val stickyGroup by remember(bookmarkGroups, collapsedGroups, listState) {
@@ -126,15 +164,6 @@ fun AllBookmarkScreen(
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.exportBookmark(it, pendingExportIsMd)
-            Toast.makeText(context, context.getString(R.string.export_started), Toast.LENGTH_SHORT).show()
-        }
-    }
-
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -148,7 +177,7 @@ fun AllBookmarkScreen(
                     actions = {
                         if (bookmarksGrouped.isNotEmpty()) {
                             TopBarActionButton(
-                                onClick = { viewModel.toggleAllCollapse(allKeys) },
+                                onClick = { onIntent(AllBookmarkIntent.ToggleAllCollapse(allKeys)) },
                                 imageVector = if (isAllCollapsed) Icons.Default.UnfoldMore else Icons.Default.UnfoldLess,
                                 contentDescription = stringResource(
                                     if (isAllCollapsed) {
@@ -163,7 +192,7 @@ fun AllBookmarkScreen(
                             onClick = {
                                 showSearch = !showSearch
                                 if (!showSearch) {
-                                    viewModel.onSearchQueryChanged("")
+                                    onIntent(AllBookmarkIntent.SetSearchQuery(""))
                                 }
                             },
                             imageVector = Icons.Default.Search,
@@ -171,7 +200,7 @@ fun AllBookmarkScreen(
                         )
                         TopBarActionButton(
                             onClick = { showMenu = true },
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = AppIcons.MoreVert,
                             contentDescription = stringResource(R.string.more_menu)
                         )
                         RoundDropdownMenu(
@@ -182,16 +211,14 @@ fun AllBookmarkScreen(
                                 text = stringResource(R.string.export_bookmarks_json),
                                 onClick = {
                                     showMenu = false
-                                    pendingExportIsMd = false
-                                    exportLauncher.launch(null)
+                                    onRequestExport(false)
                                 }
                             )
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.export_bookmarks_markdown),
                                 onClick = {
                                     showMenu = false
-                                    pendingExportIsMd = true
-                                    exportLauncher.launch(null)
+                                    onRequestExport(true)
                                 }
                             )
                         }
@@ -206,7 +233,7 @@ fun AllBookmarkScreen(
                 ) {
                     SearchBar(
                         query = searchText,
-                        onQueryChange = { viewModel.onSearchQueryChanged(it) },
+                        onQueryChange = { onIntent(AllBookmarkIntent.SetSearchQuery(it)) },
                         placeholder = stringResource(R.string.search),
                         scrollState = listState,
                         scope = scope
@@ -279,7 +306,9 @@ fun AllBookmarkScreen(
                                             title = headerKey.bookName,
                                             subtitle = headerKey.bookAuthor,
                                             isCollapsed = isCollapsed,
-                                            onToggle = { viewModel.toggleGroupCollapse(headerKey) },
+                                            onToggle = {
+                                                onIntent(AllBookmarkIntent.ToggleGroupCollapse(headerKey))
+                                            },
                                             isMiuix = isMiuix
                                         )
 
@@ -350,11 +379,11 @@ fun AllBookmarkScreen(
                 editingBookmark = null
             },
             onSave = { updatedBookmark ->
-                viewModel.updateBookmark(updatedBookmark)
+                onIntent(AllBookmarkIntent.UpdateBookmark(updatedBookmark))
                 showBottomSheet = false
             },
             onDelete = { bookmarkToDelete ->
-                viewModel.deleteBookmark(bookmarkToDelete)
+                onIntent(AllBookmarkIntent.DeleteBookmark(bookmarkToDelete))
                 showBottomSheet = false
             }
         )

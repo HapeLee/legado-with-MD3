@@ -9,7 +9,6 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
-import androidx.core.content.edit
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -18,7 +17,6 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
@@ -38,42 +36,6 @@ inline fun <reified T : DialogFragment> Fragment.showDialogFragment(
 fun Fragment.showDialogFragment(dialogFragment: DialogFragment) {
     dialogFragment.show(childFragmentManager, dialogFragment::class.simpleName)
 }
-
-fun Fragment.getPrefBoolean(key: String, defValue: Boolean = false) =
-    requireContext().defaultSharedPreferences.getBoolean(key, defValue)
-
-fun Fragment.putPrefBoolean(key: String, value: Boolean = false) =
-    requireContext().defaultSharedPreferences.edit { putBoolean(key, value) }
-
-fun Fragment.getPrefInt(key: String, defValue: Int = 0) =
-    requireContext().defaultSharedPreferences.getInt(key, defValue)
-
-fun Fragment.putPrefInt(key: String, value: Int) =
-    requireContext().defaultSharedPreferences.edit { putInt(key, value) }
-
-fun Fragment.getPrefLong(key: String, defValue: Long = 0L) =
-    requireContext().defaultSharedPreferences.getLong(key, defValue)
-
-fun Fragment.putPrefLong(key: String, value: Long) =
-    requireContext().defaultSharedPreferences.edit { putLong(key, value) }
-
-fun Fragment.getPrefString(key: String, defValue: String? = null) =
-    requireContext().defaultSharedPreferences.getString(key, defValue)
-
-fun Fragment.putPrefString(key: String, value: String) =
-    requireContext().defaultSharedPreferences.edit { putString(key, value) }
-
-fun Fragment.getPrefStringSet(
-    key: String,
-    defValue: MutableSet<String>? = null
-): MutableSet<String>? =
-    requireContext().defaultSharedPreferences.getStringSet(key, defValue)
-
-fun Fragment.putPrefStringSet(key: String, value: MutableSet<String>) =
-    requireContext().defaultSharedPreferences.edit { putStringSet(key, value) }
-
-fun Fragment.removePref(key: String) =
-    requireContext().defaultSharedPreferences.edit { remove(key) }
 
 fun Fragment.getCompatColor(@ColorRes id: Int): Int = requireContext().getCompatColor(id)
 

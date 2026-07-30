@@ -4,7 +4,6 @@ package io.legado.app.ui.book.toc.rule
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.ui.theme.AppTheme
 
 class TxtTocRuleActivity : BaseComposeActivity() {
 
@@ -12,19 +11,17 @@ class TxtTocRuleActivity : BaseComposeActivity() {
     override fun Content() {
         val initialRule = intent.getStringExtra("tocRegex")
 
-        AppTheme {
-            TxtRuleRouteScreen(
-                initialRule = initialRule,
-                onPickRule = if (initialRule != null) { rule ->
-                    val data = Intent().apply {
-                        putExtra("tocRegex", rule)
-                    }
-                    setResult(RESULT_OK, data)
-                    finish()
-                } else null,
-                onBackClick = { finish() }
-            )
-        }
+        TxtRuleRouteScreen(
+            initialRule = initialRule,
+            onPickRule = if (initialRule != null) { rule ->
+                val data = Intent().apply {
+                    putExtra("tocRegex", rule)
+                }
+                setResult(RESULT_OK, data)
+                finish()
+            } else null,
+            onBackClick = { finish() }
+        )
     }
 
 }
