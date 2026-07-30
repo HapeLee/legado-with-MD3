@@ -407,23 +407,20 @@ fun BookshelfScreen(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val bookshelfFolderLayoutMode by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutModeLandscape
-            else uiState.settings.bookshelfFolderLayoutModePortrait
-        }
+    val bookshelfFolderLayoutMode = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutModeLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutModePortrait
     }
-    val bookshelfFolderLayoutGrid by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutGridLandscape
-            else uiState.settings.bookshelfFolderLayoutGridPortrait
-        }
+    val bookshelfFolderLayoutGrid = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutGridLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutGridPortrait
     }
-    val bookshelfFolderLayoutList by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutListLandscape
-            else uiState.settings.bookshelfFolderLayoutListPortrait
-        }
+    val bookshelfFolderLayoutList = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutListLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutListPortrait
     }
     val currentMenuGroupId by remember {
         derivedStateOf { if (uiState.isSearch) uiState.selectedGroupId else currentTabGroupId }
@@ -1372,30 +1369,23 @@ fun BookshelfPage(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val bookshelfLayoutMode by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutModeLandscape
-            else uiState.settings.bookshelfLayoutModePortrait
-        }
+    val bookshelfLayoutMode = if (isLandscape) {
+        uiState.settings.bookshelfLayoutModeLandscape
+    } else {
+        uiState.settings.bookshelfLayoutModePortrait
     }
-    val bookshelfLayoutGrid by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutGridLandscape
-            else uiState.settings.bookshelfLayoutGridPortrait
-        }
+    val bookshelfLayoutGrid = if (isLandscape) {
+        uiState.settings.bookshelfLayoutGridLandscape
+    } else {
+        uiState.settings.bookshelfLayoutGridPortrait
     }
-    val bookshelfLayoutList by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutListLandscape
-            else uiState.settings.bookshelfLayoutListPortrait
-        }
+    val bookshelfLayoutList = if (isLandscape) {
+        uiState.settings.bookshelfLayoutListLandscape
+    } else {
+        uiState.settings.bookshelfLayoutListPortrait
     }
-    val columns by remember {
-        derivedStateOf {
-            if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
-        }
-    }
-    val isGridMode by remember { derivedStateOf { bookshelfLayoutMode != 0 } }
+    val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
+    val isGridMode = bookshelfLayoutMode != 0
     val bookItemGridStyle = uiState.settings.bookshelfGridLayout
     val bookItemIsCompact = uiState.settings.bookshelfLayoutCompact
     val bookItemTitleSmallFont = uiState.settings.bookshelfTitleSmallFont
