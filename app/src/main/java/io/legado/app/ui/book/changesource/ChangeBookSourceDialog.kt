@@ -13,7 +13,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isInvisible
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -57,6 +56,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * 换源界面
@@ -75,7 +75,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     private val binding by viewBinding(DialogBookChangeSourceBinding::bind)
     private val groups = linkedSetOf<String>()
     private val callBack: CallBack? get() = activity as? CallBack
-    private val viewModel: ChangeBookSourceViewModel by viewModels()
+    private val viewModel: ChangeBookSourceViewModel by viewModel()
     private val changeSourceSettingsGateway by inject<ChangeSourceSettingsGateway>()
     private val waitDialog by lazy { WaitDialog(requireContext()) }
     private val adapter by lazy { ChangeBookSourceAdapter(requireContext(), viewModel, this) }
@@ -324,7 +324,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                 val enabled = !item.isChecked
                 updateSetting({ it.copy(checkAuthor = enabled) })
                 item.isChecked = enabled
-                viewModel.refresh()
+                lifecycleScope.launch { viewModel.refresh() }
             }
 
             R.id.menu_load_info -> {

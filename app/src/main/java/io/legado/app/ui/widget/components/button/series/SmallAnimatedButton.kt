@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,7 +16,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SmallAnimatedButton(
     checked: Boolean,
@@ -54,6 +52,8 @@ fun SmallAnimatedButton(
         selected = checked,
         onLongClick = onLongClick,
         size = if (text == null) smallContainerSize() else null,
+        enforceMinimumInteractiveSize = false,
+        shape = SmallButtonShape,
         style = SeriesIconButtonStyle.Tonal,
         contentColor = contentColor,
         containerColor = containerColor,

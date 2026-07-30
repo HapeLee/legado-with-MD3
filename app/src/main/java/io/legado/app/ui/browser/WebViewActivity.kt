@@ -17,7 +17,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.addCallback
-import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.core.view.size
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
@@ -49,7 +49,7 @@ import io.legado.app.help.http.CookieManager as AppCookieManager
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
     override val binding by viewBinding(ActivityWebViewBinding::inflate)
-    override val viewModel by viewModels<WebViewModel>()
+    override val viewModel by viewModel<WebViewModel>()
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
     private var webPic: String? = null
     private var isCloudflareChallenge = false

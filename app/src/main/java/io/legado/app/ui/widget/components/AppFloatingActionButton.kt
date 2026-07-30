@@ -62,7 +62,7 @@ fun AppFloatingActionButton(
     tooltipText: String? = null,
     icon: ImageVector? = null,
     containerColor: Color = LegadoTheme.colorScheme.primaryContainer,
-    contentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
+    contentColor: Color = LegadoTheme.colorScheme.primary,
     content: (@Composable () -> Unit)? = null
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)

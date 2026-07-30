@@ -289,7 +289,7 @@ object BookList {
     }
 
     private fun checkExploreJson(bookSource: BookSource) {
-        if (Debug.callback == null) {
+        if (!Debug.hasActiveSession) {
             return
         }
         val json = bookSource.exploreKindsJson()

@@ -9,20 +9,39 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.reflect.full.primaryConstructor
 
 class ReadSettingsMappingTest {
 
     @Test
-    fun `gateway 持久化边界固定为显式声明的 45 键`() {
+    fun `gateway 持久化映射覆盖 ReadSettings 全部 103 个字段`() {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(45, actualKeys.size)
+        assertEquals(103, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 
+    /**
+     * 上面那条比对的是两张手写表，防串键；这条防的是「新增字段忘了加进映射」——
+     * 漏掉的字段走通用 `update {}` 会被静默丢写。字段数由反射得出，不写死。
+     */
     @Test
-    fun `阅读设置 gateway 45 键写读映射逐字段对应`() {
+    fun `新增 ReadSettings 字段必须同时加进 gateway 映射`() {
+        val fieldCount = ReadSettings::class.primaryConstructor!!.parameters.size
+        val mappedCount = ReadSettings().toGatewayPrefMap().size
+
+        assertEquals(
+            "ReadSettings 有 $fieldCount 个字段，toGatewayPrefMap 只映射了 $mappedCount 个。" +
+                "未映射的字段经 update {} 写入会被静默丢弃——请补齐映射与本文件的 " +
+                "expectedGatewayPrefMap。",
+            fieldCount,
+            mappedCount,
+        )
+    }
+
+    @Test
+    fun `阅读设置 gateway 全部键写读映射逐字段对应`() {
         val repository = ReadSettingsRepository(
             settingsRepository = SettingsRepository(),
             preferencesFlow = MutableStateFlow(mutablePreferencesOf()),
@@ -92,6 +111,7 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         keepLight = "keep-light",
         titleBarMode = "title-mode",
         readMenuBlurAlpha = 37,
+        readMenuFloatingIconLiquidGlass = true,
         showBrightnessView = "brightness-view",
         brightnessVwPos = "brightness-pos",
         readBrightness = 73,
@@ -106,8 +126,66 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         fontFolder = "font-folder",
         systemTypefaces = 23,
         preDownloadNum = 29,
+        menuAlpha = 1001,
+        expandTextMenu = true,
+        showSelectMenuIcon = false,
+        autoReadSpeed = 1004,
+        tocUiUseReplace = true,
+        tocCountWords = false,
+        useNewTocSheet = false,
+        readStyleSelect = 1007,
+        comicStyleSelect = 1008,
+        shareLayout = true,
+        readBarStyleFollowPage = true,
+        readBarStyle = 1011,
+        clickActionTL = 1012,
+        clickActionTC = 1013,
+        clickActionTR = 1014,
+        clickActionML = 1015,
+        clickActionMC = 1016,
+        clickActionMR = 1017,
+        clickActionBL = 1018,
+        clickActionBC = 1019,
+        clickActionBR = 1020,
+        readMenuBgColor = 1021,
+        readMenuAccentColor = 1022,
+        readMenuContainerColor = 1023,
+        readMenuBgColorNight = 1024,
+        readMenuAccentColorNight = 1025,
+        readMenuContainerColorNight = 1026,
+        readMenuTextColor = 1027,
+        readMenuTextColorNight = 1028,
+        readMenuColorMode = 1029,
+        readMenuIconShowText = true,
+        readMenuIconStyle = 1031,
+        titleBarIconStyle = 1032,
+        readMenuIconItemsPerRow = 1033,
+        readMenuIconRowCount = 1034,
+        readMenuBottomCornerRadius = 1035,
+        readMenuFloatingBottomBar = false,
+        readMenuTopBarBlurMode = 1037,
+        readMenuBottomBarBlurMode = 1038,
+        readMenuTopBarLiquidGlassButtons = true,
+        readMenuTopBarTitleCapsule = true,
+        readMenuBottomBarLiquidGlassButtons = true,
+        readMenuTopBarBlurStyle = 1042,
+        readMenuBottomBarBlurStyle = 1043,
+        readMenuBlurRadius = 1044,
+        readMenuBlurColor = 1045,
+        readMenuBlurColorNight = 1046,
+        readMenuPaletteStyle = "readMenuPalett-47",
+        readMenuLensRadius = 1048f,
+        readMenuBorderWidth = 1049,
+        readMenuBorderColor = 1050,
+        readMenuBorderColorNight = 1051,
+        readMenuCustomIcons = "readMenuCustom-52",
+        titleBarCustomIcons = "titleBarCustom-53",
+        titleBarIconPosition = 1054,
+        showTitleBarIcons = true,
+        chineseConverterType = 1056,
     )
     return listOf(
+        ReadSettings(),
         base,
         base.copy(hideStatusBar = true),
         base.copy(hideNavigationBar = true),
@@ -146,7 +224,7 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.hideNavigationBar to hideNavigationBar,
     PreferKey.paddingDisplayCutouts to paddingDisplayCutouts,
     PreferKey.titleBarMode to titleBarMode,
-    PreferKey.readMenuBlurAlpha to readMenuBlurAlpha,
+    PreferKey.menuAlpha to menuAlpha,
     PreferKey.readBodyToLh to readBodyToLh,
     PreferKey.defaultSourceChangeAll to defaultSourceChangeAll,
     PreferKey.textFullJustify to textFullJustify,
@@ -175,14 +253,72 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.clickImgWay to clickImgWay,
     PreferKey.optimizeRender to optimizeRender,
     PreferKey.disableReturnKey to disableReturnKey,
-    PreferKey.showReadTitleAddition to showReadTitleAddition,
+    PreferKey.expandTextMenu to expandTextMenu,
+    PreferKey.showSelectMenuIcon to showSelectMenuIcon,
     PreferKey.textSelectMenuConfig to textSelectMenuConfig,
-    PreferKey.readUrlOpenInBrowser to readUrlInBrowser,
-    PreferKey.showMenuIcon to showMenuIcon,
-    PreferKey.titleBarCompact to titleBarCompact,
-    PreferKey.prevKeys to prevKeys,
-    PreferKey.nextKeys to nextKeys,
-    PreferKey.fontFolder to fontFolder,
+    PreferKey.showReadTitleAddition to showReadTitleAddition,
+    PreferKey.autoReadSpeed to autoReadSpeed,
     PreferKey.systemTypefaces to systemTypefaces,
     PreferKey.preDownloadNum to preDownloadNum,
+    PreferKey.prevKeys to prevKeys,
+    PreferKey.nextKeys to nextKeys,
+    PreferKey.tocUiUseReplace to tocUiUseReplace,
+    PreferKey.tocCountWords to tocCountWords,
+    PreferKey.useNewTocSheet to useNewTocSheet,
+    PreferKey.readUrlOpenInBrowser to readUrlInBrowser,
+    PreferKey.readStyleSelect to readStyleSelect,
+    PreferKey.comicStyleSelect to comicStyleSelect,
+    PreferKey.shareLayout to shareLayout,
+    PreferKey.readBarStyleFollowPage to readBarStyleFollowPage,
+    PreferKey.readBarStyle to readBarStyle,
+    PreferKey.clickActionTL to clickActionTL,
+    PreferKey.clickActionTC to clickActionTC,
+    PreferKey.clickActionTR to clickActionTR,
+    PreferKey.clickActionML to clickActionML,
+    PreferKey.clickActionMC to clickActionMC,
+    PreferKey.clickActionMR to clickActionMR,
+    PreferKey.clickActionBL to clickActionBL,
+    PreferKey.clickActionBC to clickActionBC,
+    PreferKey.clickActionBR to clickActionBR,
+    PreferKey.fontFolder to fontFolder,
+    PreferKey.readMenuBgColor to readMenuBgColor,
+    PreferKey.readMenuAccentColor to readMenuAccentColor,
+    PreferKey.readMenuContainerColor to readMenuContainerColor,
+    PreferKey.readMenuBgColorNight to readMenuBgColorNight,
+    PreferKey.readMenuAccentColorNight to readMenuAccentColorNight,
+    PreferKey.readMenuContainerColorNight to readMenuContainerColorNight,
+    PreferKey.readMenuTextColor to readMenuTextColor,
+    PreferKey.readMenuTextColorNight to readMenuTextColorNight,
+    PreferKey.readMenuColorMode to readMenuColorMode,
+    PreferKey.readMenuIconShowText to readMenuIconShowText,
+    PreferKey.readMenuIconStyle to readMenuIconStyle,
+    PreferKey.titleBarIconStyle to titleBarIconStyle,
+    PreferKey.readMenuIconItemsPerRow to readMenuIconItemsPerRow,
+    PreferKey.readMenuIconRowCount to readMenuIconRowCount,
+    PreferKey.readMenuBottomCornerRadius to readMenuBottomCornerRadius,
+    PreferKey.readMenuFloatingBottomBar to readMenuFloatingBottomBar,
+    PreferKey.readMenuTopBarBlurMode to readMenuTopBarBlurMode,
+    PreferKey.readMenuBottomBarBlurMode to readMenuBottomBarBlurMode,
+    PreferKey.readMenuTopBarLiquidGlassButtons to readMenuTopBarLiquidGlassButtons,
+    PreferKey.readMenuTopBarTitleCapsule to readMenuTopBarTitleCapsule,
+    PreferKey.readMenuBottomBarLiquidGlassButtons to readMenuBottomBarLiquidGlassButtons,
+    PreferKey.readMenuFloatingIconLiquidGlass to readMenuFloatingIconLiquidGlass,
+    PreferKey.readMenuTopBarBlurStyle to readMenuTopBarBlurStyle,
+    PreferKey.readMenuBottomBarBlurStyle to readMenuBottomBarBlurStyle,
+    PreferKey.readMenuBlurRadius to readMenuBlurRadius,
+    PreferKey.readMenuBlurAlpha to readMenuBlurAlpha,
+    PreferKey.readMenuBlurColor to readMenuBlurColor,
+    PreferKey.readMenuBlurColorNight to readMenuBlurColorNight,
+    PreferKey.readMenuPaletteStyle to readMenuPaletteStyle,
+    PreferKey.readMenuLensRadius to readMenuLensRadius,
+    PreferKey.readMenuBorderWidth to readMenuBorderWidth,
+    PreferKey.readMenuBorderColor to readMenuBorderColor,
+    PreferKey.readMenuBorderColorNight to readMenuBorderColorNight,
+    PreferKey.readMenuCustomIcons to readMenuCustomIcons,
+    PreferKey.titleBarCustomIcons to titleBarCustomIcons,
+    PreferKey.titleBarIconPosition to titleBarIconPosition,
+    PreferKey.showTitleBarIcons to showTitleBarIcons,
+    PreferKey.chineseConverterType to chineseConverterType,
+    PreferKey.showMenuIcon to showMenuIcon,
+    PreferKey.titleBarCompact to titleBarCompact,
 )

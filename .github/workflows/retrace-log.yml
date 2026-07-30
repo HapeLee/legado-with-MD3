@@ -1,0 +1,104 @@
+name: Retrace Mapped Log
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "APP版本，例如 3.26.15 或 3.26.16-beta.9"
+        required: true
+        type: string
+
+      log:
+        description: "Base64 编码后的日志内容"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+
+jobs:
+  retrace:
+    name: Retrace Log
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          
+      - name: Setup Android SDK Tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+          
+      - name: Check Retrace Accessibility
+        run: |
+          echo "=== 检查 Retrace 可用性 ==="
+          if command -v retrace &> /dev/null; then
+              retrace --help
+              echo "retrace 可用！"
+          else
+              echo "错误：未检测到 retrace"
+              exit 1
+          fi
+      
+      - name: Save Log
+        env:
+            LOG_BASE64: ${{ inputs.log }}
+        run: |
+          mkdir -p logs
+          
+          if ! echo "$LOG_BASE64" | base64 --decode > logs/obfuscated.txt; then
+            echo "日志 Base64 解码失败"
+            exit 1
+          fi
+          
+      - name: Download Mapping File
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p logs
+          echo "获取版本:"
+          echo "$VERSION"
+          
+          gh release download "$VERSION" \
+            --repo "HapeLee/legado-with-MD3" \
+            --pattern "*mapping*.txt" \
+            --dir logs
+            
+          if [ ! -f logs/mapping.txt ]; then
+            FILE=$(find logs -name "*.txt" | head -n 1)
+            if [ -n "$FILE" ]; then
+              mv "$FILE" logs/mapping.txt
+            fi
+          fi
+          
+          if [ ! -f logs/mapping.txt ]; then
+            echo "未找到 mapping 文件"
+            exit 1
+          fi
+          
+          echo "Mapping:"
+          ls -lh logs/mapping.txt
+
+      - name: Run Retrace
+
+        run: |
+          retrace logs/mapping.txt logs/obfuscated.txt 2>&1 | tee logs/recovered.txt
+
+      - name: Upload Result
+
+        uses: actions/upload-artifact@v7
+
+        with:
+          archive: false
+          path:
+            logs/recovered.txt

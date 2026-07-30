@@ -28,7 +28,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.book.read.ContentEditUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -40,7 +40,7 @@ import io.legado.app.ui.widget.components.text.AppText
 @Composable
 fun ContentEditSheet(
     show: Boolean,
-    state: ReadBookUiState,
+    state: ContentEditUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
@@ -54,21 +54,21 @@ fun ContentEditSheet(
         onIntent(ReadBookIntent.LoadContentEdit)
     }
 
-    LaunchedEffect(state.contentEditText, state.contentEditCursorOffset) {
-        if (editorState.text.toString() != state.contentEditText) {
-            editorState.setTextAndSelectAll(state.contentEditText)
+    LaunchedEffect(state.text, state.cursorOffset) {
+        if (editorState.text.toString() != state.text) {
+            editorState.setTextAndSelectAll(state.text)
             editorState.edit {
-                val offset = state.contentEditCursorOffset.coerceIn(0, length)
+                val offset = state.cursorOffset.coerceIn(0, length)
                 selection = TextRange(offset)
                 pendingLocateOffset = offset
             }
         }
     }
 
-    LaunchedEffect(show, state.contentEditLoading, pendingLocateOffset, textLayoutResult) {
+    LaunchedEffect(show, state.loading, pendingLocateOffset, textLayoutResult) {
         val layoutResult = textLayoutResult
         val locateOffset = pendingLocateOffset
-        if (!show || state.contentEditLoading || layoutResult == null || locateOffset == null) {
+        if (!show || state.loading || layoutResult == null || locateOffset == null) {
             return@LaunchedEffect
         }
         val layoutTextLength = layoutResult.layoutInput.text.length
@@ -88,7 +88,7 @@ fun ContentEditSheet(
     LaunchedEffect(editorState) {
         snapshotFlow { editorState.text.toString() }
             .collect { text ->
-                if (text != state.contentEditText) {
+                if (text != state.text) {
                     onIntent(ReadBookIntent.SetContentEditText(text))
                 }
             }
@@ -97,7 +97,7 @@ fun ContentEditSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = state.contentEditTitle,
+        title = state.title,
         startAction = {
             MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ResetContentEdit) },
@@ -111,7 +111,7 @@ fun ContentEditSheet(
                     onIntent(
                         ReadBookIntent.SaveContentEdit(
                             editorState.text.toString(),
-                            state.contentEditSaveToSource,
+                            state.saveToSource,
                         )
                     )
                     onDismissRequest()
@@ -126,7 +126,7 @@ fun ContentEditSheet(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
         ) {
-            if (state.contentEditLoading) {
+            if (state.loading) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,11 +149,11 @@ fun ContentEditSheet(
                 )
             }
 
-            if (state.contentEditIsLocalTxt) {
+            if (state.isLocalTxt) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppCheckbox(
-                        checked = state.contentEditSaveToSource,
+                        checked = state.saveToSource,
                         onCheckedChange = { onIntent(ReadBookIntent.SetContentEditSaveToSource(it)) },
                     )
                     AppText(

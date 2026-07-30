@@ -3,8 +3,8 @@ package io.legado.app.ui.replace.edit
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.utils.GSON
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 class ReplaceEditViewModel(
     private val app: Application,
-    private val replaceRuleDao: ReplaceRuleDao,
+    private val replaceRuleRepository: ReplaceRuleRepository,
     private val route: ReplaceEditRoute
 ) : ViewModel() {
 
@@ -64,7 +64,7 @@ class ReplaceEditViewModel(
             val id = route.id
 
             if (id > 0) {
-                val rule = replaceRuleDao.findById(id)
+                val rule = replaceRuleRepository.findById(id)
                 rule?.let { updateStateFromRule(it) }
             } else {
                 _uiState.update {
@@ -85,7 +85,7 @@ class ReplaceEditViewModel(
 
     private fun observeGroups() {
         viewModelScope.launch {
-            replaceRuleDao.flowGroups().collectLatest { groups ->
+            replaceRuleRepository.flowGroups().collectLatest { groups ->
                 _uiState.update { it.copy(allGroups = listOf("默认") + groups) }
             }
         }
@@ -207,7 +207,7 @@ class ReplaceEditViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
 
-            val existingRule = if (state.id > 0) replaceRuleDao.findById(state.id) else null
+            val existingRule = if (state.id > 0) replaceRuleRepository.findById(state.id) else null
             val rule = (existingRule ?: ReplaceRule()).apply {
                 id = existingRule?.id ?: if (state.id <= 0) System.currentTimeMillis() else state.id
                 name = state.name
@@ -223,10 +223,10 @@ class ReplaceEditViewModel(
             }
 
             if (existingRule == null && rule.order == Int.MIN_VALUE) {
-                rule.order = replaceRuleDao.maxOrder + 1
+                rule.order = replaceRuleRepository.getNextOrder()
             }
 
-            replaceRuleDao.insert(rule)
+            replaceRuleRepository.insert(rule)
 
             _effects.tryEmit(ReplaceEditEffect.NavigateBack)
         }
@@ -235,7 +235,7 @@ class ReplaceEditViewModel(
 
     private fun deleteGroups(groups: List<String>) {
         viewModelScope.launch {
-            replaceRuleDao.clearGroups(groups)
+            replaceRuleRepository.clearGroups(groups)
             toggleGroupDialog(false)
         }
     }

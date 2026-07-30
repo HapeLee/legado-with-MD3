@@ -109,7 +109,7 @@ fun TtsCacheScreen(
                 item {
                     val sizeText = TtsCacheViewModel.formatSize(state.totalSizeBytes)
                     val countText =
-                        context.getString(R.string.tts_cache_file_count, state.files.size)
+                        stringResource(R.string.tts_cache_file_count, state.files.size)
                     TinyClickableSettingItem(
                         title = stringResource(R.string.tts_cache_total),
                         description = "$sizeText · $countText",
@@ -129,7 +129,7 @@ fun TtsCacheScreen(
                     val sizeText = TtsCacheViewModel.formatSize(file.sizeBytes)
                     val dateText = dateFormat.format(Date(file.lastModified))
                     val displayText = file.text.ifEmpty {
-                        context.getString(R.string.tts_cache_unknown_text)
+                        stringResource(R.string.tts_cache_unknown_text)
                     }
                     TinyClickableSettingItem(
                         title = displayText,

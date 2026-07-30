@@ -221,7 +221,7 @@ fun BookshelfItem(
                 ) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Top)
+                            .align(Alignment.CenterVertically)
                             .width(coverWidth.dp)
                     ) {
                         Box(

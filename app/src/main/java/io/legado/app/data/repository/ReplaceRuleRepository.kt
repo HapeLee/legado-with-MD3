@@ -1,7 +1,7 @@
 package io.legado.app.data.repository
 
 import android.text.TextUtils
-import io.legado.app.data.appDb
+import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
@@ -9,100 +9,110 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
-class ReplaceRuleRepository {
+class ReplaceRuleRepository(
+    private val dao: ReplaceRuleDao,
+) {
 
     fun flowGroups(): Flow<List<String>> {
-        return appDb.replaceRuleDao.flowGroups().flowOn(Dispatchers.IO)
+        return dao.flowGroups().flowOn(Dispatchers.IO)
     }
 
     fun flowAll(): Flow<List<ReplaceRule>> {
-        return appDb.replaceRuleDao.flowAll().flowOn(Dispatchers.IO)
+        return dao.flowAll().flowOn(Dispatchers.IO)
     }
 
     fun flowNoGroup(): Flow<List<ReplaceRule>> {
-        return appDb.replaceRuleDao.flowNoGroup().flowOn(Dispatchers.IO)
+        return dao.flowNoGroup().flowOn(Dispatchers.IO)
     }
 
     fun flowGroupSearch(key: String): Flow<List<ReplaceRule>> {
-        return appDb.replaceRuleDao.flowGroupSearch(key).flowOn(Dispatchers.IO)
+        return dao.flowGroupSearch(key).flowOn(Dispatchers.IO)
     }
 
     fun flowSearch(key: String): Flow<List<ReplaceRule>> {
-        return appDb.replaceRuleDao.flowSearch(key).flowOn(Dispatchers.IO)
+        return dao.flowSearch(key).flowOn(Dispatchers.IO)
+    }
+
+    suspend fun findById(id: Long): ReplaceRule? = withContext(Dispatchers.IO) {
+        dao.findById(id)
+    }
+
+    suspend fun getNextOrder(): Int = withContext(Dispatchers.IO) {
+        dao.maxOrder + 1
     }
 
     suspend fun update(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
-            appDb.replaceRuleDao.update(*rule)
+            dao.update(*rule)
         }
     }
 
     suspend fun setEnabled(id: Long, enabled: Boolean) {
         withContext(Dispatchers.IO) {
-            appDb.replaceRuleDao.updateEnabled(id, enabled)
+            dao.updateEnabled(id, enabled)
         }
     }
 
     suspend fun insert(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
-            appDb.replaceRuleDao.insert(*rule)
+            dao.insert(*rule)
         }
     }
 
     suspend fun delete(rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
-            appDb.replaceRuleDao.delete(rule)
+            dao.delete(rule)
         }
     }
 
     suspend fun toTop(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             if (isDesc) {
-                rule.order = appDb.replaceRuleDao.maxOrder + 1
+                rule.order = dao.maxOrder + 1
             } else {
-                rule.order = appDb.replaceRuleDao.minOrder - 1
+                rule.order = dao.minOrder - 1
             }
-            appDb.replaceRuleDao.update(rule)
+            dao.update(rule)
         }
     }
 
     suspend fun toBottom(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             if (isDesc) {
-                rule.order = appDb.replaceRuleDao.minOrder - 1
+                rule.order = dao.minOrder - 1
             } else {
-                rule.order = appDb.replaceRuleDao.maxOrder + 1
+                rule.order = dao.maxOrder + 1
             }
-            appDb.replaceRuleDao.update(rule)
+            dao.update(rule)
         }
     }
 
     suspend fun upOrder() {
         withContext(Dispatchers.IO) {
-            val rules = appDb.replaceRuleDao.all
+            val rules = dao.all
             var normalOrder = 1
             rules.forEach { rule ->
                 if (rule.order >= 0) {
                     rule.order = normalOrder++
                 }
             }
-            appDb.replaceRuleDao.update(*rules.toTypedArray())
+            dao.update(*rules.toTypedArray())
         }
     }
 
     suspend fun addGroup(group: String) {
         withContext(Dispatchers.IO) {
-            val sources = appDb.replaceRuleDao.noGroup
+            val sources = dao.noGroup
             sources.forEach { source ->
                 source.group = group
             }
-            appDb.replaceRuleDao.update(*sources.toTypedArray())
+            dao.update(*sources.toTypedArray())
         }
     }
 
     suspend fun upGroup(oldGroup: String, newGroup: String?) {
         withContext(Dispatchers.IO) {
-            val sources = appDb.replaceRuleDao.getByGroup(oldGroup)
+            val sources = dao.getByGroup(oldGroup)
             sources.forEach { source ->
                 source.group?.splitNotBlank(",")?.toHashSet()?.let {
                     it.remove(oldGroup)
@@ -111,61 +121,65 @@ class ReplaceRuleRepository {
                     source.group = TextUtils.join(",", it)
                 }
             }
-            appDb.replaceRuleDao.update(*sources.toTypedArray())
+            dao.update(*sources.toTypedArray())
         }
     }
 
     suspend fun delGroup(group: String) {
         withContext(Dispatchers.IO) {
-            val sources = appDb.replaceRuleDao.getByGroup(group)
+            val sources = dao.getByGroup(group)
             sources.forEach { source ->
                 source.group?.splitNotBlank(",")?.toHashSet()?.let {
                     it.remove(group)
                     source.group = TextUtils.join(",", it)
                 }
             }
-            appDb.replaceRuleDao.update(*sources.toTypedArray())
+            dao.update(*sources.toTypedArray())
         }
+    }
+
+    suspend fun clearGroups(groups: List<String>) = withContext(Dispatchers.IO) {
+        dao.clearGroups(groups)
     }
 
     suspend fun enableByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
-            appDb.replaceRuleDao.updateEnabled(ids.toList(), true)
+            dao.updateEnabled(ids.toList(), true)
         }
 
     suspend fun disableByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
-            appDb.replaceRuleDao.updateEnabled(ids.toList(), false)
+            dao.updateEnabled(ids.toList(), false)
         }
 
     suspend fun deleteByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
 
-            val rules = appDb.replaceRuleDao.getByIds(ids)
-            appDb.replaceRuleDao.delete(*rules.toTypedArray())
+            val rules = dao.getByIds(ids)
+            dao.delete(*rules.toTypedArray())
         }
 
     suspend fun topByIds(ids: Set<Long>, isDesc: Boolean = false) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
-            val rules = appDb.replaceRuleDao.getByIds(ids)
+            val rules = dao.getByIds(ids)
             if (isDesc) {
-                var maxOrder = appDb.replaceRuleDao.maxOrder
+                var maxOrder = dao.maxOrder
                 val updated = rules.map {
                     maxOrder++
                     it.copy(order = maxOrder)
                 }
-                appDb.replaceRuleDao.update(*updated.toTypedArray())
+                dao.update(*updated.toTypedArray())
             } else {
-                var minOrder = appDb.replaceRuleDao.minOrder
+                var minOrder = dao.minOrder
                 val updated = rules.map {
                     minOrder--
                     it.copy(order = minOrder)
                 }
-                appDb.replaceRuleDao.update(*updated.toTypedArray())
+                dao.update(*updated.toTypedArray())
             }
         }
 
@@ -173,21 +187,21 @@ class ReplaceRuleRepository {
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
 
-            val rules = appDb.replaceRuleDao.getByIds(ids)
+            val rules = dao.getByIds(ids)
             if (isDesc) {
-                var minOrder = appDb.replaceRuleDao.minOrder
+                var minOrder = dao.minOrder
                 val updated = rules.map {
                     minOrder--
                     it.copy(order = minOrder)
                 }
-                appDb.replaceRuleDao.update(*updated.toTypedArray())
+                dao.update(*updated.toTypedArray())
             } else {
-                var maxOrder = appDb.replaceRuleDao.maxOrder
+                var maxOrder = dao.maxOrder
                 val updated = rules.map {
                     maxOrder++
                     it.copy(order = maxOrder)
                 }
-                appDb.replaceRuleDao.update(*updated.toTypedArray())
+                dao.update(*updated.toTypedArray())
             }
         }
 
@@ -198,7 +212,7 @@ class ReplaceRuleRepository {
                 val order = if (isDesc) size - index else index + 1
                 rule.copy(order = order)
             }
-            appDb.replaceRuleDao.update(*updatedRules.toTypedArray())
+            dao.update(*updatedRules.toTypedArray())
         }
     }
 

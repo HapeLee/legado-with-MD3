@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -60,7 +59,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SelectAll
@@ -131,9 +129,9 @@ import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
@@ -409,23 +407,20 @@ fun BookshelfScreen(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val bookshelfFolderLayoutMode by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutModeLandscape
-            else uiState.settings.bookshelfFolderLayoutModePortrait
-        }
+    val bookshelfFolderLayoutMode = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutModeLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutModePortrait
     }
-    val bookshelfFolderLayoutGrid by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutGridLandscape
-            else uiState.settings.bookshelfFolderLayoutGridPortrait
-        }
+    val bookshelfFolderLayoutGrid = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutGridLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutGridPortrait
     }
-    val bookshelfFolderLayoutList by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfFolderLayoutListLandscape
-            else uiState.settings.bookshelfFolderLayoutListPortrait
-        }
+    val bookshelfFolderLayoutList = if (isLandscape) {
+        uiState.settings.bookshelfFolderLayoutListLandscape
+    } else {
+        uiState.settings.bookshelfFolderLayoutListPortrait
     }
     val currentMenuGroupId by remember {
         derivedStateOf { if (uiState.isSearch) uiState.selectedGroupId else currentTabGroupId }
@@ -527,7 +522,7 @@ fun BookshelfScreen(
                         Box {
                             TopBarActionButton(
                                 onClick = { showTopBarMenu = true },
-                                imageVector = Icons.Default.MoreVert,
+                                imageVector = AppIcons.MoreVert,
                                 contentDescription = stringResource(R.string.more_menu)
                             )
                             RoundDropdownMenu(
@@ -1374,30 +1369,23 @@ fun BookshelfPage(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val bookshelfLayoutMode by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutModeLandscape
-            else uiState.settings.bookshelfLayoutModePortrait
-        }
+    val bookshelfLayoutMode = if (isLandscape) {
+        uiState.settings.bookshelfLayoutModeLandscape
+    } else {
+        uiState.settings.bookshelfLayoutModePortrait
     }
-    val bookshelfLayoutGrid by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutGridLandscape
-            else uiState.settings.bookshelfLayoutGridPortrait
-        }
+    val bookshelfLayoutGrid = if (isLandscape) {
+        uiState.settings.bookshelfLayoutGridLandscape
+    } else {
+        uiState.settings.bookshelfLayoutGridPortrait
     }
-    val bookshelfLayoutList by remember(isLandscape) {
-        derivedStateOf {
-            if (isLandscape) uiState.settings.bookshelfLayoutListLandscape
-            else uiState.settings.bookshelfLayoutListPortrait
-        }
+    val bookshelfLayoutList = if (isLandscape) {
+        uiState.settings.bookshelfLayoutListLandscape
+    } else {
+        uiState.settings.bookshelfLayoutListPortrait
     }
-    val columns by remember {
-        derivedStateOf {
-            if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
-        }
-    }
-    val isGridMode by remember { derivedStateOf { bookshelfLayoutMode != 0 } }
+    val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
+    val isGridMode = bookshelfLayoutMode != 0
     val bookItemGridStyle = uiState.settings.bookshelfGridLayout
     val bookItemIsCompact = uiState.settings.bookshelfLayoutCompact
     val bookItemTitleSmallFont = uiState.settings.bookshelfTitleSmallFont

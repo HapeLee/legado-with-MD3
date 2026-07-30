@@ -135,8 +135,9 @@ fun TxtTocRulePreviewScreen(
             show = true,
             rule = rule,
             title = stringResource(R.string.txt_toc_rule),
-            label1 = stringResource(R.string.regex),
+            label1 = stringResource(R.string.chapter_rule),
             label2 = stringResource(R.string.example),
+            label3 = stringResource(R.string.volume_rule),
             onDismissRequest = { onIntent(TxtTocRulePreviewIntent.DismissEditDialog) },
             onSave = { updatedRule ->
                 onIntent(TxtTocRulePreviewIntent.SaveRule(updatedRule))
@@ -146,18 +147,21 @@ fun TxtTocRulePreviewScreen(
             toFields = { r ->
                 RuleEditFields(
                     name = r?.name ?: "",
-                    rule1 = r?.rule ?: "",
-                    rule2 = r?.example ?: ""
+                    rule1 = r?.chapterRule ?: "",
+                    rule2 = r?.example ?: "",
+                    rule3 = r?.volumeRule ?: ""
                 )
             },
             fromFields = { fields, old ->
                 old?.copy(
                     name = fields.name,
-                    rule = fields.rule1,
+                    chapterRule = fields.rule1,
+                    volumeRule = fields.rule3,
                     example = fields.rule2
                 ) ?: TxtTocRule(
                     name = fields.name,
-                    rule = fields.rule1,
+                    chapterRule = fields.rule1,
+                    volumeRule = fields.rule3,
                     example = fields.rule2
                 )
             }
@@ -251,9 +255,9 @@ fun TxtTocRulePreviewScreen(
                     itemsIndexed(displayRules, key = { _, item -> item.rule.id }) { _, item ->
                         RulePreviewCard(
                             item = item,
-                            isSelected = item.rule.rule == state.selectedRule,
+                            isSelected = item.rule.chapterRule == state.selectedRule,
                             onClick = {
-                                onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.rule))
+                                onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.chapterRule))
                                 if (item.totalCount > 0) {
                                     onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
                                 }
@@ -274,9 +278,9 @@ fun TxtTocRulePreviewScreen(
                     itemsIndexed(displayRules, key = { _, item -> item.rule.id }) { _, item ->
                         RulePreviewListItem(
                             item = item,
-                            isSelected = item.rule.rule == state.selectedRule,
+                            isSelected = item.rule.chapterRule == state.selectedRule,
                             onClick = {
-                                onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.rule))
+                                onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.chapterRule))
                                 if (item.totalCount > 0) {
                                     onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
                                 }

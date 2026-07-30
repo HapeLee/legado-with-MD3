@@ -43,8 +43,15 @@ import io.legado.app.receiver.TimeBatteryReceiver
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
+import io.legado.app.ui.book.read.page.ReaderEvent
+import io.legado.app.ui.book.read.page.ReaderEventListener
+import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.ui.book.read.page.entities.TextPage
+import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginJsExtensions
@@ -89,9 +96,15 @@ class ReadBookController(
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadView.CallBack,
-    ContentTextView.CallBack {
+    ContentTextView.CallBack,
+    ReadBook.ReaderRenderCallback {
 
     var refs: ReadBookViewRefs? = null
+
+    internal val layoutController = ReaderLayoutCoordinator(
+        updateLayoutSize = ChapterProvider::upViewSize,
+        relayoutContent = ReadBook::relayoutContent,
+    )
 
     // Fallback handler for effects not yet migrated to controller
     var onUnhandledEffect: (ReadBookEffect) -> Unit = {}
@@ -160,6 +173,7 @@ class ReadBookController(
     }
 
     fun clearTts() {
+        ReadBook.unregisterRender(this)
         tts?.clearTts()
         tts = null
         dismissTextActionMenu()
@@ -203,6 +217,8 @@ class ReadBookController(
         newRefs.readView.upTime()
         newRefs.readView.upBattery(activity.sysBattery)
         refreshActionMenuItems()
+        // 视图就绪后接管渲染回调；registerRender 会在已有内容时立即同步一次，避免首帧漏渲染
+        ReadBook.registerRender(this)
     }
 
     fun onMenuVisibilityChanged(visible: Boolean) {
@@ -311,14 +327,16 @@ class ReadBookController(
         }
     }
 
-    // ── ReadView.CallBack ─────────────────────────────────────────────
+    // ── ReadView 协作面 ────────────────────────────────────────────────
+    // override 的四项是 ReadView.CallBack（瞬时 UI 副作用 + 首帧门闩）；
+    // private 的几项是 ReaderEvent 的落点，只由下面的 onEvent 调用。
 
     // initData 还没跑完时, 只要 ReadBook 里已有本书可用的章节就让 ReadView 直接画正文,
     // 否则首帧必然是 "加载数据中" 占位页
     override val isInitFinish: Boolean
         get() = viewModel.uiState.value.isInitFinish || viewModel.isCachedChapterUsable()
 
-    override fun showActionMenu() {
+    private fun showActionMenu() {
         val state = viewModel.uiState.value
         when {
             BaseReadAloudService.isRun -> viewModel.onIntent(
@@ -366,19 +384,19 @@ class ReadBookController(
         }
     }
 
-    override fun autoPageStop() {
+    private fun autoPageStop() {
         viewModel.onIntent(ReadBookIntent.StopAutoPage)
     }
 
-    override fun openChapterList() {
+    private fun openChapterList() {
         viewModel.onIntent(ReadBookIntent.OpenChapterList)
     }
 
-    override fun openContentEdit() {
+    private fun openContentEdit() {
         viewModel.onIntent(ReadBookIntent.OpenContentEdit)
     }
 
-    override fun addBookmark() {
+    private fun addBookmark() {
         val book = ReadBook.book
         val page = ReadBook.curTextChapter?.getPage(ReadBook.durPageIndex)
         if (book != null && page != null) {
@@ -392,11 +410,11 @@ class ReadBookController(
         }
     }
 
-    override fun changeReplaceRuleState() {
+    private fun changeReplaceRuleState() {
         viewModel.onIntent(ReadBookIntent.MenuEnableReplace)
     }
 
-    override fun openSearchActivity(searchWord: String?) {
+    private fun openSearchActivity(searchWord: String?) {
         viewModel.onIntent(ReadBookIntent.OpenSearch(searchWord))
     }
 
@@ -405,13 +423,95 @@ class ReadBookController(
         upSystemUiVisibility(isInMultiWindowModeCompat, !state.menuVisible)
     }
 
-    override fun sureNewProgress(progress: BookProgress) {
+    private fun sureNewProgress(progress: BookProgress) {
         viewModel.onIntent(ReadBookIntent.SureNewProgress(progress))
+    }
+
+    // ── ReaderPageSource（Track D·D2：喂给渲染层的页数据 + 接下页位置命令）────
+
+    override val durChapterIndex: Int get() = ReadBook.durChapterIndex
+
+    override val durPageIndex: Int get() = ReadBook.durPageIndex
+
+    override val simulatedChapterSize: Int get() = ReadBook.simulatedChapterSize
+
+    override val pageAnim: Int get() = ReadBook.pageAnim()
+
+    override val msg: String? get() = ReadBook.msg
+
+    override fun textChapter(chapterOnDur: Int): TextChapter? =
+        ReadBook.textChapter(chapterOnDur)
+
+    override fun setPageIndex(index: Int) = ReadBook.setPageIndex(index)
+
+    // upContentInPlace = false：取页器在命令返回后自己决定要不要 upContent，别刷两遍
+    override fun moveToNextChapter(upContent: Boolean) {
+        ReadBook.moveToNextChapter(upContent, upContentInPlace = false)
+    }
+
+    override fun moveToPrevChapter(upContent: Boolean) {
+        ReadBook.moveToPrevChapter(upContent, upContentInPlace = false)
+    }
+
+    // ── ReaderEventListener（Track D·D1：ReadView 的出站业务意图）─────────
+
+    override fun onEvent(event: ReaderEvent) {
+        when (event) {
+            ReaderEvent.ShowActionMenu -> showActionMenu()
+            ReaderEvent.AutoPageStop -> autoPageStop()
+            ReaderEvent.OpenChapterList -> openChapterList()
+            ReaderEvent.OpenContentEdit -> openContentEdit()
+            ReaderEvent.OpenSearch -> openSearchActivity(null)
+            ReaderEvent.AddBookmark -> addBookmark()
+            ReaderEvent.ChangeReplaceRuleState -> changeReplaceRuleState()
+            ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
+            ReaderEvent.PrevChapter -> viewModel.onIntent(ReadBookIntent.PrevChapter)
+            ReaderEvent.ReadAloudPrevParagraph ->
+                viewModel.onIntent(ReadBookIntent.ReadAloudPrevParagraph)
+
+            ReaderEvent.ReadAloudNextParagraph ->
+                viewModel.onIntent(ReadBookIntent.ReadAloudNextParagraph)
+
+            // 只做暂停/续读，与菜单栏的 toggleReadAloud()（含"朗读未启动则启动"编排）不同，
+            // 保持点击区原语义：朗读没开着时这个手势是空操作。
+            ReaderEvent.ToggleReadAloudPause -> if (BaseReadAloudService.isPlay()) {
+                ReadAloud.pause(activity)
+            } else {
+                ReadAloud.resume(activity)
+            }
+
+            ReaderEvent.SyncProgress -> ReadBook.syncProgress(
+                { progress -> sureNewProgress(progress) },
+                { activity.longToastOnUi(activity.getString(R.string.upload_book_success)) },
+                { activity.longToastOnUi(activity.getString(R.string.sync_book_progress_success)) }
+            )
+        }
+    }
+
+    /**
+     * 从选择位置开始朗读：先把阅读位置推进到所选页，再按行/列换算章内位置起读。
+     * 原先在 ReadView 内（Track D·D1 迁出——ReadView 不下达业务命令）。
+     */
+    private suspend fun aloudStartSelect(selectStartPos: TextPos) {
+        val readView = refs?.readView ?: return
+        var pagePos = selectStartPos.relativePagePos
+        while (pagePos > 0) {
+            if (!ReadBook.moveToNextPage()) {
+                ReadBook.moveToNextChapterAwait(false)
+            }
+            pagePos--
+        }
+        val startPos = readView.posByLineColumn(
+            selectStartPos.lineIndex,
+            selectStartPos.columnIndex
+        )
+        ReadBook.readAloud(startPos = startPos)
     }
 
     // ── ContentTextView.CallBack ──────────────────────────────────────
 
     override val headerHeight: Int get() = refs?.readView?.curPage?.headerHeight ?: 0
+    override val readerLayoutController: ReaderLayoutController get() = layoutController
     override val imgBgPaddingStart: Int get() = refs?.readView?.curPage?.imgBgPaddingStart ?: 0
     override val pageFactory: TextPageFactory
         get() = refs?.readView?.pageFactory ?: error("ReadView not ready")
@@ -824,6 +924,77 @@ class ReadBookController(
         onMenuActionFinally()
     }
 
+    // ── ReadBook.ReaderRenderCallback（渲染子集，Track B2 从 ViewModel 下沉）──
+    //
+    // ReadBook 在其 IO 协程内调用这些渲染回调（见 contentLoadFinish 的 Coroutine.async
+    // 默认跑在 Dispatchers.IO），而回调最终会触碰 refs.readView。旧路径靠 VM 的
+    // SharedFlow → 生命周期收集器把渲染派发切回主线程；这里用 [postRender] 保留同样的
+    // 异步-切主线程语义，复用既有的 handleEffect 渲染分支，零渲染逻辑漂移。
+
+    private fun postRender(effect: ReadBookEffect) {
+        handler.post { handleEffect(effect) }
+    }
+
+    override fun upContent(
+        relativePosition: Int,
+        resetPageOffset: Boolean,
+        success: (() -> Unit)?
+    ) {
+        postRender(ReadBookEffect.UpContent(relativePosition, resetPageOffset, success))
+    }
+
+    override suspend fun upContentAwait(
+        relativePosition: Int,
+        resetPageOffset: Boolean,
+        success: (() -> Unit)?
+    ) {
+        if (layoutController.awaitViewport() == null) {
+            AppLog.putDebug("upContentAwait 等待 ReaderViewport 超时，继续旧内容更新路径")
+        }
+        withContext(Main.immediate) {
+            handleEffect(ReadBookEffect.UpContent(relativePosition, resetPageOffset, success))
+        }
+    }
+
+    // R2.3：pageChanged / contentLoadFinish / onLayoutPageCompleted 的 Effect 只有本类
+    // 自产自销（postRender → 本类 handleEffect），从不经过 ViewModel 的 _effects。
+    // 它们不属于 VM 的对外协议，故内联到渲染方法里，三个 Effect 类型随之从
+    // ReadBookEffect 删除。仍在 postRender 上的 UpContent/UpPageAnim/CancelSelect
+    // 有 VM/delegate 侧的生产者，必须留在 Effect 里。
+
+    override fun pageChanged() {
+        handler.post {
+            this.pageChanged = true
+            refs?.readView?.onPageChange()
+            viewModel.startBackupJob()
+        }
+    }
+
+    override fun contentLoadFinish() {
+        // isInitFinish 是纯业务/UI 标志（决定 ReadView 是否放行前后章排版），不属于渲染
+        viewModel.markInitFinished()
+        handler.post {
+            viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
+            onStartContentLoadFinish?.invoke()
+        }
+    }
+
+    override fun upPageAnim(upRecorder: Boolean) {
+        postRender(ReadBookEffect.UpPageAnim(upRecorder))
+    }
+
+    override fun cancelSelect() {
+        postRender(ReadBookEffect.CancelSelect)
+    }
+
+    override fun onLayoutPageCompleted(index: Int, page: TextPage) {
+        handler.post {
+            layoutController.publishPageLayout(index)
+            upSeekBarThrottle.invoke()
+            refs?.readView?.onLayoutPageCompleted(index, page)
+        }
+    }
+
     // ── Effect handling ───────────────────────────────────────────────
 
     /**
@@ -836,6 +1007,11 @@ class ReadBookController(
             is ReadBookEffect.Finish -> closeReadBook()
             is ReadBookEffect.UpdateReadViewConfig -> {
                 val r = refs ?: return
+                // 两份快照都是配置的纯派生，在分发具体 action 之前先重建：下划线/虚线/下划线颜色
+                // 等项的 action 集里并没有 UpdateStyle，靠 upStyle() 顺带重建会漏；而且
+                // actions 是集合，无法保证「重建」排在 InvalidateTextPage/SubmitRenderTask 之前。
+                ChapterProvider.upRenderStyle()
+                TipStyleProvider.upTipStyle()
                 effect.actions.forEach { action ->
                     when (action) {
                         ConfigUpdateAction.UpdateSystemUi -> upSystemUiVisibility()
@@ -844,7 +1020,9 @@ class ReadBookController(
                         ConfigUpdateAction.UpdateBackgroundAlpha -> r.readView.upBgAlpha()
                         ConfigUpdateAction.UpdatePageSlopSquare -> r.readView.upPageSlopSquare()
                         ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
-                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) ReadBook.relayoutContent()
+                        ConfigUpdateAction.RelayoutContent -> if (viewModel.isInitFinish) {
+                            layoutController.requestRelayout()
+                        }
                         ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
                         ConfigUpdateAction.UpdateChapterStyle -> {
                             ChapterProvider.upStyle()
@@ -927,22 +1105,6 @@ class ReadBookController(
                 ReadBook.book?.let { viewModel.refreshContentDur(it) }
             }
 
-            is ReadBookEffect.PageChanged -> {
-                pageChanged = true
-                refs?.readView?.onPageChange()
-                viewModel.startBackupJob()
-            }
-
-            is ReadBookEffect.LayoutPageCompleted -> {
-                upSeekBarThrottle.invoke()
-                refs?.readView?.onLayoutPageCompleted(effect.index, effect.page)
-            }
-
-            is ReadBookEffect.ContentLoadFinish -> {
-                viewModel.readAloudProgress.value?.let(::updateReadAloudProgress)
-                onStartContentLoadFinish?.invoke()
-            }
-
             is ReadBookEffect.UpScreenTimeOut -> {
                 upScreenTimeOut()
             }
@@ -963,7 +1125,7 @@ class ReadBookController(
             is ReadBookEffect.StopAutoPage -> onStopAutoPage?.invoke() ?: stopAutoPage()
             is ReadBookEffect.TextActionAloudSelect -> {
                 activity.lifecycleScope.launch {
-                    refs?.readView?.aloudStartSelect(effect.selectStartPos.copy())
+                    aloudStartSelect(effect.selectStartPos.copy())
                 }
             }
 
@@ -1073,9 +1235,6 @@ class ReadBookController(
             is ReadBookEffect.OpenMenuCustomIconPicker,
             is ReadBookEffect.OpenTitleBarCustomIconPicker,
             is ReadBookEffect.OpenSystemTtsSettings,
-            is ReadBookEffect.OpenHttpTtsImportPicker,
-            is ReadBookEffect.OpenHttpTtsExportPicker,
-            is ReadBookEffect.OpenHttpTtsLogin,
             ReadBookEffect.OpenTtsEnginesAndVoices,
             ReadBookEffect.OpenTtsCache,
             is ReadBookEffect.OpenBookVoiceCasting,
@@ -1122,7 +1281,7 @@ class ReadBookController(
                                 ReadBook.readAloud(startPos = line.pagePosition)
                             }
                         } else {
-                            ReadBook.durChapterPos = line.chapterPosition
+                            ReadBook.updateReadingPosition(line.chapterPosition)
                             ReadBook.readAloud(startPos = line.pagePosition)
                         }
                     } else {
@@ -1146,7 +1305,7 @@ class ReadBookController(
                                 ReadBook.readAloud(startPos = line.pagePosition)
                             }
                         } else {
-                            ReadBook.durChapterPos = line.chapterPosition
+                            ReadBook.updateReadingPosition(line.chapterPosition)
                             ReadBook.readAloud(startPos = line.pagePosition)
                         }
                     } else {

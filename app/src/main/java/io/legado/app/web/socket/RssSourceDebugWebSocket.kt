@@ -13,10 +13,9 @@ import splitties.init.appCtx
  * web端订阅源调试
  */
 class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession) :
-    CoroutineScope by session,
-    Debug.Callback {
+    CoroutineScope by session {
 
-    private val notPrintState = arrayOf(10, 20, 30, 40)
+    private var debugSession: Debug.Session? = null
 
     suspend fun handle() {
         try {
@@ -37,8 +36,14 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
                             break
                         }
                         appDb.rssSourceDao.getByKey(tag)?.let {
-                            Debug.callback = this@RssSourceDebugWebSocket
-                            Debug.startDebug(this, it)
+                            val current = Debug.startDebug(this, it)
+                            debugSession = current
+                            current.events.collect { event ->
+                                if (!event.kind.isSourcePayload) session.send(event.message)
+                                if (event.kind.isTerminal) {
+                                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                                }
+                            }
                         }
                     }
                 }
@@ -46,24 +51,8 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
         } catch (e: Exception) {
             e.printOnDebug()
         } finally {
-            Debug.cancelDebug(true)
-        }
-    }
-
-    override fun printLog(state: Int, msg: String) {
-        if (state in notPrintState) {
-            return
-        }
-        launch(Dispatchers.IO) {
-            runCatching {
-                session.send(msg)
-                if (state == -1 || state == 1000) {
-                    Debug.cancelDebug(true)
-                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
-                }
-            }.onFailure {
-                it.printOnDebug()
-            }
+            debugSession?.cancel()
+            debugSession = null
         }
     }
 }

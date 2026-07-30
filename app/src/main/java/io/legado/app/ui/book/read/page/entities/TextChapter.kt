@@ -5,6 +5,7 @@ import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
@@ -281,7 +282,12 @@ data class TextChapter(
         }
     }
 
-    fun createLayout(scope: CoroutineScope, book: Book, bookContent: BookContent) {
+    fun createLayout(
+        scope: CoroutineScope,
+        book: Book,
+        bookSource: BookSource?,
+        bookContent: BookContent,
+    ) {
         if (layout != null) {
             throw IllegalStateException("已经排版过了")
         }
@@ -290,6 +296,7 @@ data class TextChapter(
             this,
             textPages,
             book,
+            bookSource,
             bookContent,
         )
         layout = textLayout

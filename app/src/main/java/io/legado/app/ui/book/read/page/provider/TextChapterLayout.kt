@@ -1,5 +1,6 @@
-package io.legado.app.ui.book.read.page.provider
+﻿package io.legado.app.ui.book.read.page.provider
 
+import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.os.Build
 import android.text.Layout
@@ -22,6 +23,7 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.help.book.BookContent
@@ -30,7 +32,6 @@ import io.legado.app.help.book.getBookSource
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
-import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextLine
@@ -70,6 +71,13 @@ class TextChapterLayout(
     private val textChapter: TextChapter,
     private val textPages: ArrayList<TextPage>,
     private val book: Book,
+    /**
+     * 取图要用的书源，由调用方在**建这一章时**定下（Track D·D2）。
+     *
+     * 以前是排版协程运行中读 `ReadBook.bookSource`：换源/换书时一个还在跑的旧章节协程
+     * 会拿**新源**去下**旧书**的图。构造期定参把这个窗口关掉。
+     */
+    private val bookSource: BookSource?,
     private val bookContent: BookContent,
 ) {
 
@@ -83,7 +91,11 @@ class TextChapterLayout(
         fun invalidateRegexCache() {
             cachedHighlightRules = null
             cachedHighlightRulesConfigName = null
+            bitmapDimsCache.clear()
         }
+
+        /** 九宫格图片尺寸缓存 (width, height)，避免重复读取文件 */
+        private val bitmapDimsCache = mutableMapOf<String, Pair<Int, Int>?>()
     }
 
     private val compiledHighlightRules: List<CompiledHighlightRule>
@@ -113,30 +125,35 @@ class TextChapterLayout(
     @Volatile
     private var listener: LayoutProgressListener? = textChapter
 
-    private val paddingLeft = ChapterProvider.paddingLeft
-    private val paddingTop = ChapterProvider.paddingTop
+    // 一次取到整组排版度量：ChapterProvider 的快照是单个 volatile 字段，读一次即得到
+    // 内部自洽的一组值。逐字段读会拿到「新 viewWidth 配旧 paddingLeft」这种撕裂组合
+    // ——本类在 IO 线程构造，而度量由主线程写入。
+    private val metrics = ChapterProvider.layoutMetrics()
 
-    private val titlePaint = ChapterProvider.titlePaint
-    private val titlePaintTextHeight = ChapterProvider.titlePaintTextHeight
-    private val titlePaintFontMetrics = ChapterProvider.titlePaintFontMetrics
+    private val paddingLeft = metrics.paddingLeft
+    private val paddingTop = metrics.paddingTop
 
-    private val contentPaint = ChapterProvider.contentPaint
-    private val contentPaintTextHeight = ChapterProvider.contentPaintTextHeight
-    private val contentPaintFontMetrics = ChapterProvider.contentPaintFontMetrics
+    private val titlePaint = metrics.titlePaint
+    private val titlePaintTextHeight = metrics.titlePaintTextHeight
+    private val titlePaintFontMetrics = metrics.titlePaintFontMetrics
 
-    private val titleTopSpacing = ChapterProvider.titleTopSpacing
-    private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
-    private val titleLineSpacingExtra = ChapterProvider.titleLineSpacingExtra
-    private val titleLineSpacingSub = ChapterProvider.titleLineSpacingSub
-    private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
-    private val paragraphSpacing = ChapterProvider.paragraphSpacing
+    private val contentPaint = metrics.contentPaint
+    private val contentPaintTextHeight = metrics.contentPaintTextHeight
+    private val contentPaintFontMetrics = metrics.contentPaintFontMetrics
 
-    internal val visibleHeight = ChapterProvider.visibleHeight
-    internal val visibleWidth = ChapterProvider.visibleWidth
+    private val titleTopSpacing = metrics.titleTopSpacing
+    private val titleBottomSpacing = metrics.titleBottomSpacing
+    private val titleLineSpacingExtra = metrics.titleLineSpacingExtra
+    private val titleLineSpacingSub = metrics.titleLineSpacingSub
+    private val lineSpacingExtra = metrics.lineSpacingExtra
+    private val paragraphSpacing = metrics.paragraphSpacing
 
-    private val viewWidth = ChapterProvider.viewWidth
-    private val doublePage = ChapterProvider.doublePage
-    private val indentCharWidth = ChapterProvider.indentCharWidth
+    internal val visibleHeight = metrics.visibleHeight
+    internal val visibleWidth = metrics.visibleWidth
+
+    private val viewWidth = metrics.viewWidth
+    private val doublePage = metrics.doublePage
+    private val indentCharWidth = metrics.indentCharWidth
     private val stringBuilder = StringBuilder()
 
     private val paragraphIndent = ReadBookConfig.paragraphIndent
@@ -419,7 +436,7 @@ class TextChapterLayout(
                         val imgSrc = matcher.group(1)!!
                         var iStyle: String? = null
                         var click: String? = null
-                        var imgSize = ImageProvider.getImageSize(book, imgSrc, ReadBook.bookSource)
+                        var imgSize = ImageProvider.getImageSize(book, imgSrc, bookSource)
                         val urlMatcher = paramPattern.matcher(imgSrc)
                         if (urlMatcher.find()) {
                             var width: String? = null
@@ -615,7 +632,12 @@ class TextChapterLayout(
                 Pair(0f, width)
             }
             textLine.addColumn(
-                ImageColumn(start = absStartX + start.toFloat(), end = absStartX + end.toFloat(), src = src)
+                ImageColumn(
+                    start = absStartX + start.toFloat(),
+                    end = absStartX + end.toFloat(),
+                    src = src,
+                    book = book,
+                )
             )
             calcTextLinePosition(textPages, textLine, stringBuilder.length)
             stringBuilder.append(" ") // 确保翻页时索引计算正确
@@ -710,7 +732,7 @@ class TextChapterLayout(
                             val width = style["width"]
                             val click = style["click"]
                             var imgSize =
-                                ImageProvider.getImageSize(book, source, ReadBook.bookSource)
+                                ImageProvider.getImageSize(book, source, bookSource)
                             width?.let {
                                 if (width.endsWith("%")) {
                                     width.dropLast(1).toIntOrNull()?.let { percentage ->
@@ -734,12 +756,13 @@ class TextChapterLayout(
                             }
                             when (iStyle?.uppercase()) {
                                 "TEXT" -> {
-                                    ImageProvider.cacheImage(book, source, ReadBook.bookSource)
+                                    ImageProvider.cacheImage(book, source, bookSource)
                                     columns.add(
                                         ImageColumn(
                                             start = absStartX + charX,
                                             end = absStartX + charRight,
                                             src = source,
+                                            book = book,
                                             click = click
                                         )
                                     )
@@ -758,7 +781,7 @@ class TextChapterLayout(
                             }
                         } else {
                             val imgSize =
-                                ImageProvider.getImageSize(book, source, ReadBook.bookSource)
+                                ImageProvider.getImageSize(book, source, bookSource)
                             setTypeImage(
                                 book,
                                 source,
@@ -1011,9 +1034,10 @@ class TextChapterLayout(
                     }
                     addCharsToLineNatural(
                         book, absStartX, textLine, words,
-                        startX, !isTitle && lineIndex == 0, widths, srcList, clickList, charStyles, lineStart
+                        startX, !isTitle && lineIndex == 0, widths, srcList, clickList, charStyles, lineStart, textPaint,
                     )
                 }
+
                 else -> {
                     if (
                         isTitle &&
@@ -1023,7 +1047,7 @@ class TextChapterLayout(
                         val startX = (visibleWidth - desiredWidth) / 2
                         addCharsToLineNatural(
                             book, absStartX, textLine, words,
-                            startX, false, widths, srcList, clickList, charStyles, lineStart
+                            startX, false, widths, srcList, clickList, charStyles, lineStart, textPaint,
                         )
                     } else {
                         addCharsToLineMiddle(
@@ -1090,7 +1114,7 @@ class TextChapterLayout(
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
-                x, true, textWidths, srcList, clickList, charStyles, lineStart
+                x, true, textWidths, srcList, clickList, charStyles, lineStart, textPaint,
             )
             return
         }
@@ -1139,20 +1163,56 @@ class TextChapterLayout(
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
-                startX, false, textWidths, srcList, clickList, charStyles, lineStart
+                startX, false, textWidths, srcList, clickList, charStyles, lineStart, textPaint,
             )
             return
         }
         val residualWidth = visibleWidth - desiredWidth
         val spaceSize = words.count { it == " " }
         textLine.startX = absStartX + startX
+
+        // 九宫格状态追踪
+        val continuingFromPrevLine = lineStart > 0 && charStyles?.getOrNull(lineStart - 1)?.bgImageFit == 3
+        var inNineSlice = false
+        var nsBgImage = ""
+        var nsNpLeft = 0.1f
+        var nsNpRight = 0.1f
+
         if (spaceSize > 1) {
             val d = residualWidth / spaceSize
             textLine.wordSpacing = d
             var x = startX
+            // 跨行延续：添加 margin-left
+            if (continuingFromPrevLine) {
+                val prevStyle = charStyles.getOrNull(lineStart - 1)
+                if (prevStyle != null) {
+                    nsBgImage = prevStyle.bgImage
+                    nsNpLeft = prevStyle.npLeft
+                    nsNpRight = prevStyle.npRight
+                    val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginLeft
+                    inNineSlice = true
+                }
+            }
             for (index in words.indices) {
                 val char = words[index]
                 val cw = textWidths[index]
+                val style = charStyles?.getOrNull(lineStart + index)
+                val isNineSlice = style?.bgImageFit == 3
+
+                if (isNineSlice && !inNineSlice) {
+                    nsBgImage = style.bgImage
+                    nsNpLeft = style.npLeft
+                    nsNpRight = style.npRight
+                    val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginLeft
+                    inNineSlice = true
+                } else if (!isNineSlice && inNineSlice) {
+                    val (_, marginRight) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginRight
+                    inNineSlice = false
+                }
+
                 val x1 = if (char == " ") {
                     if (index != words.lastIndex) (x + cw + d) else (x + cw)
                 } else {
@@ -1171,9 +1231,37 @@ class TextChapterLayout(
             textLine.extraLetterSpacingOffsetX = -d / 2
             textLine.extraLetterSpacing = d / textPaint.textSize
             var x = startX
+            // 跨行延续：添加 margin-left
+            if (continuingFromPrevLine) {
+                val prevStyle = charStyles.getOrNull(lineStart - 1)
+                if (prevStyle != null) {
+                    nsBgImage = prevStyle.bgImage
+                    nsNpLeft = prevStyle.npLeft
+                    nsNpRight = prevStyle.npRight
+                    val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginLeft
+                    inNineSlice = true
+                }
+            }
             for (index in words.indices) {
                 val char = words[index]
                 val cw = textWidths[index]
+                val style = charStyles?.getOrNull(lineStart + index)
+                val isNineSlice = style?.bgImageFit == 3
+
+                if (isNineSlice && !inNineSlice) {
+                    nsBgImage = style.bgImage
+                    nsNpLeft = style.npLeft
+                    nsNpRight = style.npRight
+                    val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginLeft
+                    inNineSlice = true
+                } else if (!isNineSlice && inNineSlice) {
+                    val (_, marginRight) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                    x += marginRight
+                    inNineSlice = false
+                }
+
                 val x1 = if (index != words.lastIndex) (x + cw + d) else (x + cw)
                 addCharToLine(
                     book, absStartX, textLine, char,
@@ -1183,7 +1271,38 @@ class TextChapterLayout(
                 x = x1
             }
         }
-        exceed(absStartX, textLine, words)
+        // 行末处理：传递 margin-right 给 exceed
+        var extraRightMargin = 0f
+        if (inNineSlice) {
+            val (_, marginRight) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+            extraRightMargin = marginRight
+        }
+        exceed(absStartX, textLine, words, extraRightMargin)
+    }
+
+    /**
+     * 计算九宫格左右 margin（即边4/6的真实渲染宽度），与渲染层 drawNineSliceCenter 保持一致
+     */
+    private fun calcNineSliceMargin(
+        bgImage: String,
+        npLeft: Float,
+        npRight: Float,
+    ): Pair<Float, Float> {
+        val dims = bitmapDimsCache.getOrPut(bgImage) {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(bgImage, opts)
+            if (opts.outWidth > 0 && opts.outHeight > 0) {
+                opts.outWidth to opts.outHeight
+            } else null
+        } ?: return 0f to 0f
+
+        val (bw, _) = dims
+        val leftPx = (bw * npLeft).toInt().coerceAtLeast(0)
+        val rightPx = (bw * (1f - npRight)).toInt().coerceAtMost(bw)
+
+        val marginLeft = leftPx.toFloat()
+        val marginRight = (bw - rightPx).toFloat()
+        return marginLeft to marginRight
     }
 
     /**
@@ -1200,34 +1319,72 @@ class TextChapterLayout(
         srcList: LinkedList<String>?,
         clickList: LinkedList<String?>?,
         charStyles: Array<CharStyle?>?,
-        lineStart: Int
+        lineStart: Int,
+        textPaint: android.graphics.Paint,
     ) {
         val indentLength = paragraphIndent.length
         var x = startX
         textLine.startX = absStartX + startX
+
+        // 检查是否从前一行延续九宫格段落
+        val continuingFromPrevLine = lineStart > 0 && charStyles?.getOrNull(lineStart - 1)?.bgImageFit == 3
+
+        var inNineSlice = false
+        var nsBgImage = ""
+        var nsNpLeft = 0.1f
+        var nsNpRight = 0.1f
+
+        // 跨行延续：在新行开头添加 margin-left（边4宽度）
+        if (continuingFromPrevLine) {
+            val prevStyle = charStyles.getOrNull(lineStart - 1)
+            if (prevStyle != null) {
+                nsBgImage = prevStyle.bgImage
+                nsNpLeft = prevStyle.npLeft
+                nsNpRight = prevStyle.npRight
+                val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                x += marginLeft
+                inNineSlice = true
+            }
+        }
+
         for (index in words.indices) {
             val char = words[index]
             val cw = textWidths[index]
+            val style = charStyles?.getOrNull(lineStart + index)
+            val isNineSlice = style?.bgImageFit == 3
+
+            if (isNineSlice && !inNineSlice) {
+                // 进入九宫格段落：添加 margin-left（边4宽度）
+                nsBgImage = style.bgImage
+                nsNpLeft = style.npLeft
+                nsNpRight = style.npRight
+                val (marginLeft, _) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                x += marginLeft
+                inNineSlice = true
+            } else if (!isNineSlice && inNineSlice) {
+                // 离开九宫格段落：添加 margin-right（边6宽度）
+                val (_, marginRight) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+                x += marginRight
+                inNineSlice = false
+            }
+
             val x1 = x + cw
             addCharToLine(
-                book,
-                absStartX,
-                textLine,
-                char,
-                x,
-                x1,
-                index + 1 == words.size,
-                srcList,
-                clickList,
-                charStyles,
-                lineStart + index
+                book, absStartX, textLine, char, x, x1,
+                index + 1 == words.size, srcList, clickList, charStyles, lineStart + index,
             )
             x = x1
             if (hasIndent && index == indentLength - 1) {
                 textLine.indentWidth = x
             }
         }
-        exceed(absStartX, textLine, words)
+        // 行末处理：计算 margin-right 并传递给 exceed，确保右侧边框有足够空间
+        var extraRightMargin = 0f
+        if (inNineSlice) {
+            val (_, marginRight) = calcNineSliceMargin(nsBgImage, nsNpLeft, nsNpRight)
+            extraRightMargin = marginRight
+        }
+        exceed(absStartX, textLine, words, extraRightMargin)
     }
 
     /**
@@ -1251,11 +1408,12 @@ class TextChapterLayout(
             !srcList.isNullOrEmpty() && (char == srcReplaceChar || char == reviewChar) -> {
                 val src = srcList.removeFirst()
                 val click = clickList?.removeFirst()
-                ImageProvider.cacheImage(book, src, ReadBook.bookSource)
+                ImageProvider.cacheImage(book, src, bookSource)
                 ImageColumn(
                     start = absStartX + xStart,
                     end = absStartX + xEnd,
                     src = src,
+                    book = book,
                     click = click
                 )
             }
@@ -1275,7 +1433,13 @@ class TextChapterLayout(
                     bgImage = style?.bgImage ?: "",
                     bgImageFit = style?.bgImageFit ?: 0,
                     bgImageScale = style?.bgImageScale ?: 1f,
-                    fontPath = style?.fontPath ?: ""
+                    fontPath = style?.fontPath ?: "",
+                    fontWeight = style?.fontWeight ?: 400,
+                    isItalic = style?.isItalic ?: false,
+                    npLeft = style?.npLeft ?: 0.1f,
+                    npRight = style?.npRight ?: 0.1f,
+                    npTop = style?.npTop ?: 0.1f,
+                    npBottom = style?.npBottom ?: 0.1f,
                 )
             }
         }
@@ -1285,7 +1449,12 @@ class TextChapterLayout(
     /**
      * 超出边界处理
      */
-    private fun exceed(absStartX: Int, textLine: TextLine, words: List<String>) {
+    private fun exceed(
+        absStartX: Int,
+        textLine: TextLine,
+        words: List<String>,
+        extraRightMargin: Float = 0f,
+    ) {
         var size = words.size
         if (size < 2) return
         val visibleEnd = absStartX + visibleWidth
@@ -1298,10 +1467,10 @@ class TextChapterLayout(
         } else {
             columns.last()
         }
-        val endX = endColumn.end.roundToInt()
-        if (endX > visibleEnd) {
+        val effectiveEndX = endColumn.end.roundToInt() + extraRightMargin.roundToInt()
+        if (effectiveEndX > visibleEnd) {
             textLine.exceed = true
-            val cc = (endX - visibleEnd) / size
+            val cc = (effectiveEndX - visibleEnd) / size
             for (i in 0..<size) {
                 textLine.getColumnReverseAt(i, offset).let {
                     val py = cc * (size - i)
@@ -1389,14 +1558,21 @@ class TextChapterLayout(
         val measurePaint = TextPaint(textPaint)
         var i = 0
         while (i < text.length) {
-            val fontPath = charStyles[i]?.fontPath.orEmpty()
+            val style = charStyles[i]
+            val fontPath = style?.fontPath.orEmpty()
             if (fontPath.isEmpty()) { i++; continue }
-            // 找连续使用同一字体的区间
+            val fontWeight = style?.fontWeight ?: 400
+            val isItalic = style?.isItalic ?: false
+            // 找连续使用同一字体且同一字重/斜体的区间
             val segStart = i
             i++
-            while (i < text.length && charStyles[i]?.fontPath.orEmpty() == fontPath) i++
+            while (i < text.length) {
+                val s = charStyles[i]
+                if (s?.fontPath.orEmpty() != fontPath || (s?.fontWeight ?: 400) != fontWeight || (s?.isItalic ?: false) != isItalic) break
+                i++
+            }
             val segEnd = i
-            val typeface = TextColumn.getTypeface(fontPath) ?: continue
+            val typeface = TextColumn.getTypeface(fontPath, fontWeight, isItalic) ?: continue
             measurePaint.typeface = typeface
             val segLen = segEnd - segStart
             val segWidths = FloatArray(segLen)
@@ -1527,7 +1703,13 @@ class TextChapterLayout(
             bgImage = bgImage.orEmpty(),
             bgImageFit = bgImageFit,
             bgImageScale = bgImageScale,
-            fontPath = fontPath.orEmpty()
+            fontPath = fontPath.orEmpty(),
+            fontWeight = fontWeight,
+            isItalic = isItalic,
+            npLeft = npLeft,
+            npRight = npRight,
+            npTop = npTop,
+            npBottom = npBottom,
         )
     }
 

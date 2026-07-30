@@ -23,10 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.SpaceBar
-import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
@@ -37,7 +39,6 @@ import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,12 +46,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import coil.compose.AsyncImage
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadBook
@@ -76,13 +79,14 @@ fun GlobalThemePage(
     onToggleDayNight: () -> Unit,
     eyeProtectionEnabled: Boolean,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenTextTitle: () -> Unit,
-    onOpenPaddingConfig: () -> Unit,
+    onOpenUnderlineConfig: () -> Unit,
+    onOpenShadowSet: () -> Unit,
     onShareLayoutChange: (Boolean) -> Unit,
     onStyleSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
     styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
+    preferences: ReadPreferences = ReadPreferences(),
 ) {
     // Derive values directly from styleConfig (reactive state)
     val textSize = styleConfig.textSize
@@ -90,6 +94,8 @@ fun GlobalThemePage(
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
     val isNightTheme = LegadoTheme.isDark
+    val chineseConverterType = preferences.chineseConverterType
+    val doubleHorizontalPage = preferences.doubleHorizontalPage
 
     val configList = styleConfig.styleItems
 
@@ -113,7 +119,7 @@ fun GlobalThemePage(
                 },
             )
             NormalCard(
-                onClick = onOpenTextTitle,
+                onClick = onOpenUnderlineConfig,
                 modifier = Modifier
                     .height(56.dp)
                     .aspectRatio(1f),
@@ -125,8 +131,27 @@ fun GlobalThemePage(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.TextFields,
-                        contentDescription = stringResource(R.string.read_config_text_effects),
+                        imageVector = Icons.Default.FormatUnderlined,
+                        contentDescription = stringResource(R.string.use_underline),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            NormalCard(
+                onClick = onOpenShadowSet,
+                modifier = Modifier
+                    .height(56.dp)
+                    .aspectRatio(1f),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Layers,
+                        contentDescription = stringResource(R.string.text_shadow_set),
                         tint = LegadoTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -142,6 +167,7 @@ fun GlobalThemePage(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 12.dp, end = 12.dp, top = 12.dp),
@@ -320,6 +346,10 @@ fun GlobalThemePage(
         val currentPageAnimDisplay =
             pageAnimEntries.getOrNull(pageAnimEntryValues.indexOf(pageAnim.toString())) ?: ""
 
+        var showDualPageMenu by remember { mutableStateOf(false) }
+        val doublePageEntries = stringArrayResource(R.array.double_page_title)
+        val doublePageValues = stringArrayResource(R.array.double_page_value)
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -356,23 +386,101 @@ fun GlobalThemePage(
                     }
                 }
             }
-            NormalCard(
-                onClick = onOpenPaddingConfig,
-                modifier = Modifier
-                    .height(56.dp)
-                    .aspectRatio(1f),
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                cornerRadius = 12.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
+            // 中文简繁互转 — dropdown menu
+            Box {
+                var showChineseConvertMenu by remember { mutableStateOf(false) }
+                val chineseConvertEntries = stringArrayResource(R.array.chinese_mode)
+                val chineseConvertValues = remember { arrayOf("0", "1", "2") }
+                NormalCard(
+                    onClick = { showChineseConvertMenu = true },
+                    modifier = Modifier
+                        .height(56.dp)
+                        .aspectRatio(1f),
+                    containerColor = if (chineseConverterType > 0) {
+                        LegadoTheme.colorScheme.secondaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surfaceContainerLow
+                    },
+                    cornerRadius = 12.dp
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.SpaceBar,
-                        contentDescription = stringResource(R.string.padding),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Translate,
+                            contentDescription = stringResource(R.string.chinese_converter),
+                            tint = if (chineseConverterType > 0) {
+                                LegadoTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                LegadoTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                }
+                RoundDropdownMenu(
+                    expanded = showChineseConvertMenu,
+                    onDismissRequest = { showChineseConvertMenu = false },
+                ) { dismiss ->
+                    chineseConvertEntries.forEachIndexed { index, display ->
+                        RoundDropdownMenuItem(
+                            text = display,
+                            isSelected = chineseConvertValues[index] == chineseConverterType.toString(),
+                            onClick = {
+                                onIntent(ReadBookIntent.UpdateConfig(
+                                    ConfigUpdate.ChineseConverterType(chineseConvertValues[index].toInt())
+                                ))
+                                dismiss()
+                            },
+                        )
+                    }
+                }
+            }
+            // 平板/横屏双页 — dropdown menu
+            Box {
+                NormalCard(
+                    onClick = { showDualPageMenu = true },
+                    modifier = Modifier
+                        .height(56.dp)
+                        .aspectRatio(1f),
+                    containerColor = if (doubleHorizontalPage != "0") {
+                        LegadoTheme.colorScheme.secondaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surfaceContainerLow
+                    },
+                    cornerRadius = 12.dp
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tablet,
+                            contentDescription = stringResource(R.string.double_page_horizontal),
+                            tint = if (doubleHorizontalPage != "0") {
+                                LegadoTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                LegadoTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                }
+                RoundDropdownMenu(
+                    expanded = showDualPageMenu,
+                    onDismissRequest = { showDualPageMenu = false },
+                ) { dismiss ->
+                    doublePageEntries.forEachIndexed { index, display ->
+                        RoundDropdownMenuItem(
+                            text = display,
+                            isSelected = doublePageValues[index] == doubleHorizontalPage,
+                            onClick = {
+                                onIntent(ReadBookIntent.UpdateConfig(
+                                    ConfigUpdate.DoubleHorizontalPage(doublePageValues[index])
+                                ))
+                                dismiss()
+                            },
+                        )
+                    }
                 }
             }
         }

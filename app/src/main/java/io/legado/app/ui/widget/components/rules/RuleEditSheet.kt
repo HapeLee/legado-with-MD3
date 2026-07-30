@@ -34,11 +34,11 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -49,6 +49,7 @@ data class RuleEditFields(
     val name: String = "",
     val rule1: String = "",
     val rule2: String = "",
+    val rule3: String = "",
     val extra: String = ""
 )
 
@@ -69,6 +70,7 @@ fun <T> RuleEditSheet(
     title: String,
     label1: String,
     label2: String,
+    label3: String? = null,
     onDismissRequest: () -> Unit,
     onSave: (T) -> Unit,
     onCopy: (T) -> Unit,
@@ -84,6 +86,7 @@ fun <T> RuleEditSheet(
     var name by remember(show, rule) { mutableStateOf(initialFields.name) }
     var rule1 by remember(show, rule) { mutableStateOf(initialFields.rule1) }
     var rule2 by remember(show, rule) { mutableStateOf(initialFields.rule2) }
+    var rule3 by remember(show, rule) { mutableStateOf(initialFields.rule3) }
 
     var showMenu by remember(show, rule) { mutableStateOf(false) }
 
@@ -97,7 +100,7 @@ fun <T> RuleEditSheet(
     val exampleIsEmptyStr = stringResource(R.string.example_is_empty)
     val invalidRegexStr = stringResource(R.string.invalid_regex)
 
-    fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
+    fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2, rule3), rule)
 
     fun runTest() {
         if (testRunning) return
@@ -174,6 +177,7 @@ fun <T> RuleEditSheet(
                                     name = fields.name
                                     rule1 = fields.rule1
                                     rule2 = fields.rule2
+                                    rule3 = fields.rule3
                                 }
                             }
                             showMenu = false
@@ -216,6 +220,15 @@ fun <T> RuleEditSheet(
                     label = label2,
                     minLines = 3
                 )
+                label3?.let { label ->
+                    AppTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = rule3,
+                        onValueChange = { rule3 = it },
+                        backgroundColor = LegadoTheme.colorScheme.surface,
+                        label = label
+                    )
+                }
 
                 if (showTestButton) {
                     // Test error
@@ -284,7 +297,7 @@ fun <T> RuleEditSheet(
                         onClick = { runTest() },
                         tooltipText = stringResource(R.string.test),
                         icon = Icons.Default.RunningWithErrors,
-                        containerColor = LegadoTheme.colorScheme.secondaryContainer,
+                        containerColor = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 AppFloatingActionButton(

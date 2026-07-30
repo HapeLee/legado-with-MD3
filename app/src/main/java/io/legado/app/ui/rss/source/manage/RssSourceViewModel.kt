@@ -8,11 +8,10 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.DefaultData
-import io.legado.app.help.source.SourceHelp
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -107,7 +106,8 @@ sealed interface RssSourceEffect {
 
 class RssSourceViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: RssRepository,
 ) : BaseRuleViewModel<RssSourceItemUi, RssSource, String, RssSourceUiState>(
     application,
     RssSourceUiState(interaction = InteractionState(isLoading = true)),
@@ -121,11 +121,9 @@ class RssSourceViewModel(
         const val PREFIX_GROUP = "group:"
     }
 
-    private val dao = appDb.rssSourceDao
+    override val rawDataFlow: Flow<List<RssSource>> = repository.flowAll()
 
-    override val rawDataFlow: Flow<List<RssSource>> = dao.flowAll()
-
-    val groupsFlow: StateFlow<List<String>> = dao.flowGroups()
+    val groupsFlow: StateFlow<List<String>> = repository.flowGroups()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _groupFilterName = MutableStateFlow<String?>(null)
@@ -254,7 +252,7 @@ class RssSourceViewModel(
     }
 
     override suspend fun findOldRule(newRule: RssSource): RssSource? {
-        return withContext(Dispatchers.IO) { dao.getByKey(newRule.sourceUrl) }
+        return repository.getByKey(newRule.sourceUrl)
     }
 
     override fun saveImportedRules() {
@@ -263,7 +261,7 @@ class RssSourceViewModel(
             val rulesToSave = state.items
                 .filter { it.isSelected }
                 .map { it.data }
-            dao.insert(*rulesToSave.toTypedArray())
+            repository.insertSources(*rulesToSave.toTypedArray())
             withContext(Dispatchers.Main) {
                 _importState.value = BaseImportUiState.Idle
             }
@@ -304,10 +302,7 @@ class RssSourceViewModel(
     fun saveSortOrder() {
         val currentLocal = _localItems.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = currentLocal.mapIndexed { index, item ->
-                item.source.copy(customOrder = index + 1)
-            }
-            dao.update(*sources.toTypedArray())
+            repository.saveOrder(currentLocal.map { it.source })
             withContext(Dispatchers.Main) {
                 _localItems.value = null
             }
@@ -316,65 +311,48 @@ class RssSourceViewModel(
 
     fun topSource(vararg sources: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            val minOrder = dao.minOrder - 1
-            val updated = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
-                source.copy(customOrder = minOrder - index)
-            }
-            dao.update(*updated.toTypedArray())
+            repository.topSources(*sources)
         }
     }
 
     fun bottomSource(vararg sources: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            val maxOrder = dao.maxOrder + 1
-            val updated = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
-                source.copy(customOrder = maxOrder + index)
-            }
-            dao.update(*updated.toTypedArray())
+            repository.bottomSources(*sources)
         }
     }
 
     fun del(vararg rssSource: RssSource) {
         viewModelScope.launch(Dispatchers.IO) {
-            SourceHelp.deleteRssSources(rssSource.toList())
+            repository.deleteSources(rssSource.toList())
         }
     }
 
     fun delSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            SourceHelp.deleteRssSources(sources)
+            repository.deleteByIds(ids)
             _selectedIds.update { it - ids }
         }
     }
 
     fun update(vararg rssSource: RssSource) {
-        viewModelScope.launch(Dispatchers.IO) { dao.update(*rssSource) }
+        viewModelScope.launch(Dispatchers.IO) { repository.updateSources(*rssSource) }
     }
 
     fun upOrder() {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.all
-            for ((index: Int, source: RssSource) in sources.withIndex()) {
-                source.customOrder = index + 1
-            }
-            dao.update(*sources.toTypedArray())
+            repository.normalizeOrder()
         }
     }
 
     fun enableSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy(enabled = true) }
-            dao.update(*updated.toTypedArray())
+            repository.setEnabled(ids, true)
         }
     }
 
     fun disableSelectionByIds(ids: Set<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy(enabled = false) }
-            dao.update(*updated.toTypedArray())
+            repository.setEnabled(ids, false)
         }
     }
 
@@ -394,44 +372,25 @@ class RssSourceViewModel(
 
     fun selectionAddToGroups(ids: Set<String>, groups: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy().addGroup(groups) }
-            dao.update(*updated.toTypedArray())
+            repository.addGroup(ids, groups)
         }
     }
 
     fun selectionRemoveFromGroups(ids: Set<String>, groups: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getRssSources(*ids.toTypedArray())
-            val updated = sources.map { it.copy().removeGroup(groups) }
-            dao.update(*updated.toTypedArray())
+            repository.removeGroup(ids, groups)
         }
     }
 
     fun upGroup(oldGroup: String, newGroup: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getByGroup(oldGroup)
-            sources.forEach { source ->
-                source.sourceGroup?.split(",")?.toHashSet()?.let {
-                    it.remove(oldGroup)
-                    if (newGroup.isNotEmpty()) it.add(newGroup)
-                    source.sourceGroup = it.joinToString(",")
-                }
-            }
-            dao.update(*sources.toTypedArray())
+            repository.renameGroup(oldGroup, newGroup)
         }
     }
 
     fun delGroup(group: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sources = dao.getByGroup(group)
-            sources.forEach { source ->
-                source.sourceGroup?.split(",")?.toHashSet()?.let {
-                    it.remove(group)
-                    source.sourceGroup = it.joinToString(",")
-                }
-            }
-            dao.update(*sources.toTypedArray())
+            repository.deleteGroup(group)
         }
     }
 

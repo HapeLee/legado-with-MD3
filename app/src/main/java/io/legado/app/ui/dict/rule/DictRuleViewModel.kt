@@ -27,13 +27,13 @@ import kotlinx.coroutines.withContext
 
 class DictRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: DictRuleRepository,
 ) : BaseRuleViewModel<DictRuleItemUi, DictRule, String, DictRuleUiState>(
     application,
     DictRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = DictRuleRepository()
     private val _effects = MutableSharedFlow<DictRuleEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 

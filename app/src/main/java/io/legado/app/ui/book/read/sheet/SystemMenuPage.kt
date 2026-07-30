@@ -58,10 +58,10 @@ import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SectionTitle
@@ -97,6 +97,7 @@ private const val COLOR_MENU_TEXT_NIGHT = 16
 @Composable
 internal fun SystemMenuPage(
     preferences: ReadPreferences,
+    styleConfig: ReadBookStyleConfig,
     customIcons: Map<String, String>,
     bottomBarButtons: List<ReadBookButtonConfigItem>,
     modifier: Modifier = Modifier,
@@ -176,6 +177,7 @@ internal fun SystemMenuPage(
                 when (page) {
                     0 -> GlobalMenuTab(
                         preferences = preferences,
+                        styleConfig = styleConfig,
                         onIntent = onIntent,
                         onShowColorPicker = { id, initial ->
                             colorPickerId = id
@@ -240,6 +242,7 @@ internal fun SystemMenuPage(
 @Composable
 private fun GlobalMenuTab(
     preferences: ReadPreferences,
+    styleConfig: ReadBookStyleConfig,
     onIntent: (ReadBookIntent) -> Unit,
     onShowColorPicker: (Int, Int) -> Unit,
 ) {
@@ -250,16 +253,16 @@ private fun GlobalMenuTab(
     val colorMode = preferences.readMenuColorMode.coerceIn(0, 1)
     val dayMenuBgColor = preferences.readMenuBgColor
         .takeIf { it != 0 }
-        ?: ReadBookConfig.durConfig.menuBgColor(isNight = false)
+        ?: styleConfig.menuBgColorDay
     val nightMenuBgColor = preferences.readMenuBgColorNight
         .takeIf { it != 0 }
-        ?: ReadBookConfig.durConfig.menuBgColor(isNight = true)
+        ?: styleConfig.menuBgColorNight
     val dayMenuAccentColor = preferences.readMenuAccentColor
         .takeIf { it != 0 }
-        ?: ReadBookConfig.durConfig.menuAccentColor(isNight = false)
+        ?: styleConfig.menuAccentColorDay
     val nightMenuAccentColor = preferences.readMenuAccentColorNight
         .takeIf { it != 0 }
-        ?: ReadBookConfig.durConfig.menuAccentColor(isNight = true)
+        ?: styleConfig.menuAccentColorNight
     val dayMenuContainerColor = preferences.readMenuContainerColor
         .takeIf { it != 0 }
         ?: dayMenuBgColor

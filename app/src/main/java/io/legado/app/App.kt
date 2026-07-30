@@ -38,6 +38,7 @@ import io.legado.app.di.appModule
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -120,10 +121,9 @@ class App : Application(), ImageLoaderFactory {
             exportGateway = get(),
         )
         ReadBookConfig.initialize(
-            readStyleRepository = get(),
+            configStore = get(),
             readSettingsGateway = get(),
         )
-        ReadBookConfig.attachGateway(get())
         if (legacyLanguage != null) {
             get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
         }
@@ -215,7 +215,7 @@ class App : Application(), ImageLoaderFactory {
             RuleBigDataHelp.clearInvalid()
             BookHelp.clearInvalidCache()
             Backup.clearCache()
-            ReadBookConfig.clearBgAndCache()
+            get<ReadStyleGateway>().clearUnusedBackgrounds()
             ThemeConfigStore.clearBg()
             //初始化简繁转换引擎
             when (AppConfig.chineseConverterType) {

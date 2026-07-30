@@ -38,11 +38,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ReadStyleContent(
-    onOpenPaddingConfig: () -> Unit,
-    onOpenHeaderFooterConfig: () -> Unit,
+    onOpenTypographyConfig: () -> Unit,
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenTextTitle: () -> Unit,
+    onOpenUnderlineConfig: () -> Unit,
+    onOpenShadowSet: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     onPageChanged: (Int) -> Unit = {},
@@ -97,8 +97,8 @@ fun ReadStyleContent(
                         onToggleDayNight = onToggleDayNight,
                         eyeProtectionEnabled = eyeProtectionEnabled,
                         onOpenBgTextConfig = onOpenBgTextConfig,
-                        onOpenTextTitle = onOpenTextTitle,
-                        onOpenPaddingConfig = onOpenPaddingConfig,
+                        onOpenUnderlineConfig = onOpenUnderlineConfig,
+                        onOpenShadowSet = onOpenShadowSet,
                         onShareLayoutChange = { shareLayout ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
                         },
@@ -108,10 +108,12 @@ fun ReadStyleContent(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         onIntent = onIntent,
                         styleConfig = styleConfig,
+                        preferences = preferences,
                     )
 
                     1 -> SystemMenuPage(
                         preferences = preferences,
+                        styleConfig = styleConfig,
                         customIcons = readMenuCustomIcons,
                         bottomBarButtons = bottomBarButtons,
                         onIntent = onIntent,
@@ -123,7 +125,7 @@ fun ReadStyleContent(
         val tabTitles = listOf(
             stringResource(R.string.read_config_global_theme),
             stringResource(R.string.read_config_menu_system),
-            stringResource(R.string.header_footer),
+            stringResource(R.string.compose_type),
             stringResource(R.string.more_setting),
         )
         CardTabRow(
@@ -139,7 +141,7 @@ fun ReadStyleContent(
                             )
                         }
                     }
-                    2 -> onOpenHeaderFooterConfig()
+                    2 -> onOpenTypographyConfig()
                     3 -> onOpenMoreConfig()
                 }
             },

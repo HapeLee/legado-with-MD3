@@ -3,9 +3,9 @@ package io.legado.app.ui.book.toc.rule.preview
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.model.localBook.LocalBook
@@ -27,6 +27,7 @@ import java.util.regex.PatternSyntaxException
 
 class TxtTocRulePreviewViewModel(
     private val app: Application,
+    private val bookRepository: BookRepository,
     private val repository: TxtTocRuleRepository,
 ) : ViewModel() {
 
@@ -98,7 +99,7 @@ class TxtTocRulePreviewViewModel(
     private suspend fun loadRules(bookUrl: String, currentTocRegex: String?) {
         _uiState.update { it.copy(loading = true) }
 
-        val book = runCatching { appDb.bookDao.getBook(bookUrl) }.getOrNull()
+        val book = runCatching { bookRepository.getBook(bookUrl) }.getOrNull()
         this.book = book
         val currentRule = currentTocRegex ?: book?.tocUrl ?: ""
 
@@ -146,7 +147,7 @@ class TxtTocRulePreviewViewModel(
         if (book == null) return TocRulePreviewItem(rule = tocRule)
         return try {
             val pattern = try {
-                tocRule.rule.toPattern(Pattern.MULTILINE)
+                tocRule.chapterRule.toPattern(Pattern.MULTILINE)
             } catch (e: PatternSyntaxException) {
                 return TocRulePreviewItem(rule = tocRule, totalCount = 0)
             }
@@ -164,19 +165,19 @@ class TxtTocRulePreviewViewModel(
 
     private suspend fun saveRuleAndRefresh(updatedRule: TxtTocRule) {
         // Validate
-        if (updatedRule.name.isBlank() || updatedRule.rule.isBlank()) {
+        if (updatedRule.name.isBlank() || updatedRule.chapterRule.isBlank()) {
             _effects.tryEmit(TxtTocRulePreviewEffect.ShowToast(context.getString(R.string.cannot_empty)))
             _uiState.update { it.copy(editingRule = null) }
             return
         }
-        if (runCatching { updatedRule.rule.toPattern(Pattern.MULTILINE) }.isFailure) {
+        if (runCatching { updatedRule.chapterRule.toPattern(Pattern.MULTILINE) }.isFailure) {
             _effects.tryEmit(TxtTocRulePreviewEffect.ShowToast(context.getString(R.string.invalid_format)))
             _uiState.update { it.copy(editingRule = null) }
             return
         }
 
         // Save to DB
-        val existing = runCatching { appDb.txtTocRuleDao.getByIds(setOf(updatedRule.id)) }.getOrNull()?.firstOrNull()
+        val existing = runCatching { repository.findById(updatedRule.id) }.getOrNull()
         if (existing != null) {
             repository.update(updatedRule)
         } else {
@@ -219,7 +220,7 @@ class TxtTocRulePreviewViewModel(
             repository.insert(*defaultRules.toTypedArray())
             rules = repository.all()
         }
-        return rules.filter { it.rule.isNotBlank() }.sortedBy { it.serialNumber }
+        return rules.filter { it.chapterRule.isNotBlank() }.sortedBy { it.serialNumber }
     }
 
     private suspend fun analyzeWithPattern(book: Book, pattern: Pattern): Pair<List<String>, Int> {

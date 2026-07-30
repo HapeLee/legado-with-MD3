@@ -7,8 +7,8 @@ import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.DictRule
+import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -24,7 +24,10 @@ import io.legado.app.utils.isUri
 import io.legado.app.utils.readText
 import splitties.init.appCtx
 
-class ImportDictRuleViewModel(app: Application) : BaseViewModel(app) {
+class ImportDictRuleViewModel(
+    app: Application,
+    private val repository: DictRuleRepository,
+) : BaseViewModel(app) {
 
     val errorLiveData = MutableLiveData<String>()
     val successLiveData = MutableLiveData<Int>()
@@ -62,7 +65,7 @@ class ImportDictRuleViewModel(app: Application) : BaseViewModel(app) {
                     selectSource.add(allSources[index])
                 }
             }
-            appDb.dictRuleDao.insert(*selectSource.toTypedArray())
+            repository.insert(*selectSource.toTypedArray())
         }.onFinally {
             finally.invoke()
         }
@@ -115,7 +118,7 @@ class ImportDictRuleViewModel(app: Application) : BaseViewModel(app) {
     private fun comparisonSource() {
         execute {
             allSources.forEach {
-                val source = appDb.dictRuleDao.getByName(it.name)
+                val source = repository.findById(it.name)
                 checkSources.add(source)
                 selectStatus.add(source == null)
             }

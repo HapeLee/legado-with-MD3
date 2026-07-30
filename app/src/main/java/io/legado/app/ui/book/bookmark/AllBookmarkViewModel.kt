@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
 import io.legado.app.utils.createFileIfNotExist
@@ -79,7 +79,7 @@ sealed interface AllBookmarkEffect {
 
 class AllBookmarkViewModel(
     application: Application,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkRepository: BookmarkRepository,
 ) : AndroidViewModel(application) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -91,7 +91,7 @@ class AllBookmarkViewModel(
     val uiState: StateFlow<BookmarkUiState> = combine(
         _searchQuery,
         _collapsedGroups,
-        bookmarkDao.flowAll()
+        bookmarkRepository.flowAll()
     ) { query, collapsed, allBookmarks ->
 
         val filteredList = if (query.isBlank()) {
@@ -167,13 +167,13 @@ class AllBookmarkViewModel(
 
     fun updateBookmark(bookmark: Bookmark) {
         viewModelScope.launch(Dispatchers.IO) {
-            bookmarkDao.insert(bookmark)
+            bookmarkRepository.save(bookmark)
         }
     }
 
     fun deleteBookmark(bookmark: Bookmark) {
         viewModelScope.launch(Dispatchers.IO) {
-            bookmarkDao.delete(bookmark)
+            bookmarkRepository.delete(bookmark)
         }
     }
 
@@ -188,7 +188,7 @@ class AllBookmarkViewModel(
                 val fileDoc = dirDoc.createFileIfNotExist(fileName)
 
                 fileDoc.openOutputStream().getOrThrow().use { outputStream ->
-                    val allData = bookmarkDao.all
+                    val allData = bookmarkRepository.getAll()
                     if (isMarkdown) {
                         writeMarkdown(outputStream, allData)
                     } else {

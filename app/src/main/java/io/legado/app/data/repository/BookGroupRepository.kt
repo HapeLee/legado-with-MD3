@@ -42,6 +42,14 @@ class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
         return bookGroupDao.getByID(id)
     }
 
+    suspend fun getIdsSum(): Long {
+        return bookGroupDao.idsSum
+    }
+
+    suspend fun getGroupNames(id: Long): List<String> {
+        return bookGroupDao.getGroupNames(id)
+    }
+
     suspend fun clearCover(groupId: Long) {
         bookGroupDao.clearCover(groupId)
     }

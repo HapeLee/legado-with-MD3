@@ -375,6 +375,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         val textChapter = ChapterProvider.getTextChapterAsync(
             CoroutineScope(currentCoroutineContext()),
             book,
+            // 与本函数其余处一致地跟随 ReadBook 当前会话；这里传的就是改造前排版协程
+            // 自己去读的那个值，行为不变
+            ReadBook.bookSource,
             chapter,
             displayTitle,
             processedContent,

@@ -1,0 +1,76 @@
+name: Verify
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '**/modules/web/**'
+  pull_request:
+    paths-ignore:
+      - '**/modules/web/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 与 auto-release.yml 同一处理：settings.gradle 里的 aliyun 镜像面向国内开发机，
+      # 在 GitHub runner 上会 502，且 Gradle 一旦判定某仓库失败就整个禁用它。
+      - name: Remove Aliyun mirrors (unreliable in CI)
+        run: |
+          sed -i '/maven.aliyun.com/d' settings.gradle
+
+      - name: Run tests, lint, architecture check, and debug build
+        run: |
+          chmod +x gradlew
+          ./gradlew \
+            testAppDebugUnitTest \
+            lintAppDebug \
+            verifyConfigArchitecture \
+            assembleAppDebug \
+            --continue \
+            --no-daemon \
+            --no-configuration-cache
+
+      - name: Upload unit test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-unit-test-reports
+          if-no-files-found: warn
+          path: |
+            app/build/test-results/testAppDebugUnitTest/**
+            app/build/reports/tests/testAppDebugUnitTest/**
+
+      - name: Upload lint reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-lint-reports
+          if-no-files-found: warn
+          path: |
+            app/build/reports/lint-results-appDebug.html
+            app/build/reports/lint-results-appDebug.xml
+            app/build/reports/lint-results-appDebug.txt
+            app/build/reports/lint-results-appDebug.sarif

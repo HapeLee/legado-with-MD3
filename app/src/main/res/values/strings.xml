@@ -386,6 +386,10 @@
     <string name="padding_left">Left</string>
     <string name="padding_right">Right</string>
     <string name="padding_format">Top: %1$d  Bottom: %2$d  Left: %3$d  Right: %4$d</string>
+    <string name="body_padding">Body Padding</string>
+    <string name="title_padding">Title Padding</string>
+    <string name="header_padding">Header Padding</string>
+    <string name="footer_padding">Footer Padding</string>
     <string name="check_book_source">Check book sources</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
@@ -692,16 +696,13 @@
     <string name="bg_color">Background color</string>
     <string name="use_bg_image">Use Background Image</string>
     <string name="text_color">Text Color</string>
-    <string name="header_color">Header</string>
-    <string name="footer_color">Footer</string>
-    <string name="header_font">Header Font</string>
-    <string name="footer_font">Footer Font</string>
-    <string name="header_font_size">Header Font Size</string>
-    <string name="footer_font_size">Footer Font Size</string>
+    <string name="apply_header_style">Apply Header Font Style</string>
     <string name="select_image">Select a picture</string>
     <string name="group_manage">Group Management</string>
     <string name="group_add">New Group</string>
     <string name="group_select">Group selection</string>
+    <string name="book_source_default_groups">Default groups</string>
+    <string name="book_source_other_groups">Other groups</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>
@@ -742,7 +743,7 @@
     <string name="refresh_cover">Refresh cover</string>
     <string name="change_cover_source">Change origin</string>
     <string name="select_local_image">Local image</string>
-    <string name="book_type">Type:</string>
+    <string name="book_type">Type</string>
     <string name="to_backstage">Background</string>
     <string name="importing">Importing</string>
     <string name="exporting">Exporting</string>
@@ -788,6 +789,8 @@
     <string name="import_default_rule">Import default rules</string>
     <string name="name">Name</string>
     <string name="regex">Regex</string>
+    <string name="chapter_rule">Chapter Regex</string>
+    <string name="volume_rule">Volume Regex</string>
     <string name="highlight_rule_config">Highlight Rules</string>
     <string name="new_rule">New Rule</string>
     <string name="edit_rule">Edit Rule</string>
@@ -817,6 +820,12 @@
     <string name="bg_fit_tile">Tile</string>
     <string name="bg_fit_stretch">Stretch</string>
     <string name="bg_fit_crop">Center Crop</string>
+    <string name="bg_fit_nine_patch">9-Slice</string>
+    <string name="nine_patch_editor">9-Slice Editor</string>
+    <string name="nine_patch_split_left">Left Split</string>
+    <string name="nine_patch_split_right">Right Split</string>
+    <string name="nine_patch_split_top">Top Split</string>
+    <string name="nine_patch_split_bottom">Bottom Split</string>
     <string name="preview_effect">Preview</string>
     <string name="sample_text">Sample Text</string>
     <string name="sure_delete">Are you sure you want to delete?</string>
@@ -890,6 +899,7 @@
     <string name="auto_change_source">Change Source Automatically</string>
     <string name="text_full_justify">Text Justified</string>
     <string name="text_bottom_justify">Text Align Bottom</string>
+    <string name="text_alignment">Alignment</string>
     <string name="auto_page_speed">Auto scroll speed</string>
     <string name="sort_by_url">Sort by URL</string>
     <string name="backup_summary">Backup the local and WebDAV simultaneously</string>
@@ -1061,7 +1071,7 @@
     <string name="content_src">Content source code</string>
     <string name="list_src">List source code</string>
     <string name="title_font_size">Font Size</string>
-    <string name="title_color">Title Color</string>
+    <string name="title_color">Color</string>
     <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>
     <string name="title_margin_bottom">Margin Bottom</string>
@@ -1214,7 +1224,6 @@
     <string name="placeholder_page_index">PageIndex</string>
     <string name="placeholder_page_size">PageSize</string>
     <string name="placeholder_page_remaining">PageRemaining</string>
-    <string name="chapter_complete">End of chapter</string>
     <string name="placeholder_read_progress">ReadProgress</string>
     <string name="placeholder_full_page_index">FullPageIndex</string>
     <string name="placeholder_full_page_size">FullPageSize</string>
@@ -1348,6 +1357,7 @@
     <string name="clear_webview_data">Clear WebView Data</string>
     <string name="clear_webview_data_summary">Clear all data in WebView</string>
     <string name="source_tab_list">List</string>
+    <string name="source_tab_web_view">Web view</string>
     <string name="source_tab_start">Startup</string>
     <string name="r_startHtml">Startup page HTML text</string>
     <string name="r_startStyle">Startup page style text</string>
@@ -1466,6 +1476,7 @@
     <string name="record_heap_dump_s">Saving a heap dump when the application crashes by OOM</string>
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
+    <string name="font_weight">Font Weight</string>
     <string name="keep_swipe_tip">Keep swiping to load the next chapter…</string>
     <string name="enable_optimize_render">Enable Render Optimization</string>
     <string name="ignore_battery_permission_rationale">Reading requires requesting background permission to keep the service running properly</string>
@@ -1599,7 +1610,7 @@
     <string name="theme_config_no_font_files">No font files</string>
     <string name="input_value_range">Enter value (%1$d-%2$d)</string>
     <string name="change_icon_success">Icon Updated</string>
-    <string name="replace_rule_title_setting">Configure Replace Rules</string>
+    <string name="replace_rule_title_setting">Replace Rules</string>
     <string name="more_setting">More Settings</string>
     <string name="read_chapter_total">Total %d Chapters</string>
     <string name="read_chapter_index">Read %d Chapters</string>
@@ -1847,6 +1858,9 @@
     <string name="filter_show_not_in_shelf_only">Show Only Books Not in Shelf</string>
     <string name="follow_read_background">Follow background</string>
     <string name="heading_spacing">Heading spacing</string>
+    <string name="title_segment">Segment</string>
+    <string name="title_spacing">Spacing</string>
+    <string name="title_dedup">Dedup</string>
     <string name="layout_setting">Layout settings</string>
     <string name="rule_segment">Rule</string>
     <string name="split_title">Split title</string>

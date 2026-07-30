@@ -27,18 +27,18 @@ class ThemeSettingsMappingTest {
     }
 
     @Test
-    fun `Theme gateway 持久化边界固定为 60 键`() {
+    fun `Theme gateway 持久化边界固定为 67 键`() {
         val actualKeys = ThemeSettings().toGatewayPrefMap().keys
         val expectedKeys = ThemeSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(60, actualKeys.size)
+        assertEquals(67, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
         assertFalse(PreferKey.customMode in actualKeys)
         assertFalse(PreferKey.bookInfoInputColor in actualKeys)
     }
 
     @Test
-    fun `Theme gateway 60 键写读映射逐字段对应`() {
+    fun `Theme gateway 67 键写读映射逐字段对应`() {
         themeMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
@@ -194,6 +194,13 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         backgroundImageDark = "dark-background",
         backgroundImageBlurring = 124,
         backgroundImageDarkBlurring = 125,
+        largeContainerBackgroundImageLight = "large-container-light",
+        largeContainerBackgroundImageDark = "large-container-dark",
+        itemBackgroundImageLight = "item-light",
+        itemBackgroundImageDark = "item-dark",
+        enableContainerBackgroundImage = true,
+        appColumnBackgroundOpacity = 127,
+        glassCardBackgroundOpacity = 128,
         enableItemDivider = false,
         itemDividerWidth = 4.5f,
         itemDividerLength = 5.75f,
@@ -277,6 +284,13 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bgImageN to backgroundImageDark,
     PreferKey.bgImageBlurring to backgroundImageBlurring,
     PreferKey.bgImageNBlurring to backgroundImageDarkBlurring,
+    PreferKey.largeContainerBackgroundImageLight to largeContainerBackgroundImageLight,
+    PreferKey.largeContainerBackgroundImageDark to largeContainerBackgroundImageDark,
+    PreferKey.itemBackgroundImageLight to itemBackgroundImageLight,
+    PreferKey.itemBackgroundImageDark to itemBackgroundImageDark,
+    PreferKey.enableContainerBackgroundImage to enableContainerBackgroundImage,
+    PreferKey.appColumnBackgroundOpacity to appColumnBackgroundOpacity,
+    PreferKey.glassCardBackgroundOpacity to glassCardBackgroundOpacity,
     PreferKey.enableItemDivider to enableItemDivider,
     PreferKey.itemDividerWidth to itemDividerWidth,
     PreferKey.itemDividerLength to itemDividerLength,

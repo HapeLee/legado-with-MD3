@@ -25,13 +25,13 @@ import kotlinx.coroutines.launch
 
 class TxtTocRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: TxtTocRuleRepository,
 ) : BaseRuleViewModel<TxtTocRuleItemUi, TxtTocRule, Long, TxtTocRuleUiState>(
     application,
     TxtTocRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = TxtTocRuleRepository()
     private val _effects = MutableSharedFlow<TxtTocRuleEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
@@ -161,7 +161,10 @@ class TxtTocRuleViewModel(
     }
 
     override fun hasChanged(newRule: TxtTocRule, oldRule: TxtTocRule): Boolean {
-        return newRule.name != oldRule.name || newRule.rule != oldRule.rule || newRule.enable != oldRule.enable
+        return newRule.name != oldRule.name ||
+            newRule.chapterRule != oldRule.chapterRule ||
+            newRule.volumeRule != oldRule.volumeRule ||
+            newRule.enable != oldRule.enable
     }
 
     override suspend fun findOldRule(newRule: TxtTocRule): TxtTocRule? {

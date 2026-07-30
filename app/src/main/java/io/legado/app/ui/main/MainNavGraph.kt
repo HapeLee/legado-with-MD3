@@ -411,7 +411,9 @@ fun MainActivity.mainEntryProvider(
         val controller = remember(readBookViewModel) {
             ReadBookController(this@mainEntryProvider, readBookViewModel)
         }
-        // ReadView 在首次组合时就会画一帧, 必须在它之前告诉 ViewModel 本路由要打开哪本书
+        // ReadView 在首次组合时就会画一帧, 必须在它之前告诉 ViewModel 本路由要打开哪本书。
+        // 刻意用 remember 而非 LaunchedEffect：后者在组合之后才跑，赶不上首帧。
+        @Suppress("RememberReturnType")
         remember(readBookViewModel, route) {
             readBookViewModel.prepareCachedChapterFallback(route.bookUrl, route.chapterChanged)
         }

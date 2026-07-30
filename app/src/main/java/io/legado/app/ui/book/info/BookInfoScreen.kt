@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
@@ -81,8 +80,8 @@ import coil.compose.AsyncImage
 import coil.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -105,6 +104,7 @@ import io.legado.app.ui.widget.components.card.HighlightTagRow
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
@@ -650,7 +650,7 @@ private fun BookInfoOverflowAction(
     Box {
         TopBarActionButton(
             onClick = { expanded = true },
-            imageVector = Icons.Default.MoreVert,
+            imageVector = AppIcons.MoreVert,
             contentDescription = stringResource(R.string.more_actions),
         )
         BookInfoOverflowMenu(

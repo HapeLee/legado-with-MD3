@@ -5,9 +5,9 @@ import android.os.Bundle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssArticleRepository
 import io.legado.app.model.rss.Rss
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.Dispatchers.IO
@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class RssArticlesViewModel(application: Application) : BaseViewModel(application) {
+class RssArticlesViewModel(
+    application: Application,
+    private val repository: RssArticleRepository,
+) : BaseViewModel(application) {
 
     private val _loadState = MutableStateFlow(RssArticlesLoadState())
     val loadState: StateFlow<RssArticlesLoadState> = _loadState.asStateFlow()
@@ -62,9 +65,9 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
             articles.forEach { rssArticle ->
                 rssArticle.order = order--
             }
-            appDb.rssArticleDao.insert(*articles.toTypedArray())
+            repository.insert(*articles.toTypedArray())
             if (!rssSource.ruleNextPage.isNullOrEmpty()) {
-                appDb.rssArticleDao.clearOld(rssSource.sourceUrl, sortName, order)
+                repository.clearOld(rssSource.sourceUrl, sortName, order)
             }
             val hasMore = articles.isNotEmpty() && !rssSource.ruleNextPage.isNullOrEmpty()
             _loadState.value = _loadState.value.copy(
@@ -112,7 +115,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    private fun loadMoreSuccess(articles: MutableList<RssArticle>) {
+    private suspend fun loadMoreSuccess(articles: MutableList<RssArticle>) {
         if (articles.isEmpty()) {
             _loadState.value = _loadState.value.copy(
                 isLoadingMore = false,
@@ -121,9 +124,9 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
             return
         }
         val firstArticle = articles.first()
-        val dbFirstArticle = appDb.rssArticleDao.getByLink(firstArticle.origin, firstArticle.link)
+        val dbFirstArticle = repository.findByLink(firstArticle.origin, firstArticle.link)
         val lastArticle = articles.last()
-        val dbLastArticle = appDb.rssArticleDao.getByLink(lastArticle.origin, lastArticle.link)
+        val dbLastArticle = repository.findByLink(lastArticle.origin, lastArticle.link)
 
         val shouldStop = dbFirstArticle != null && dbLastArticle != null
         if (shouldStop) {
@@ -137,7 +140,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
         articles.forEach {
             it.order = order--
         }
-        appDb.rssArticleDao.append(*articles.toTypedArray())
+        repository.append(*articles.toTypedArray())
 
         _loadState.value = _loadState.value.copy(
             isLoadingMore = false,
