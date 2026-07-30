@@ -5526,6 +5526,11 @@ class ReadBookViewModel(
                     readSettingsRepository.setSliderVibrator(update.value)
                 }
             }
+            is ConfigUpdate.UseNewTocSheet -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setUseNewTocSheet(update.value)
+                }
+            }
             is ConfigUpdate.SelectVibrator -> {
                 viewModelScope.launch {
                     readSettingsRepository.setSelectVibrator(update.value)
