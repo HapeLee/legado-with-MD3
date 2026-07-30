@@ -40,9 +40,12 @@ class ChapterProviderMetricsInvariantTest {
             .map { it.groupValues[1] }
             .toSet() + "layoutMetrics"
 
-        val offenders = textChapterLayoutSource().lineSequence()
-            .filterNot { it.trimStart().startsWith("import ") }
-            .flatMap { line -> MEMBER_ACCESS.findAll(line).map { it.groupValues[1] } }
+        // import 行一起扫：`import ...ChapterProvider.viewWidth`（含 as 别名）之后成员可以裸写，
+        // 原先跳过 import 行的写法对这种撕裂读取完全睁眼瞎。放行的只有编译期常量——
+        // 它们不是度量，读多少次都不会和别的字段对不上。
+        // 通配 import 不用管：Kotlin 不允许从 object 按需导入。
+        val offenders = MEMBER_ACCESS.findAll(textChapterLayoutSource())
+            .map { it.groupValues[1] }
             .filterNot { it in constants }
             .toList()
             .distinct()
@@ -50,7 +53,7 @@ class ChapterProviderMetricsInvariantTest {
 
         assertEquals(
             "TextChapterLayout 在 IO 线程构造，必须用 ChapterProvider.layoutMetrics() " +
-                "一次取到自洽的一组度量。以下是逐字段读取：\n" +
+                "一次取到自洽的一组度量。以下是逐字段读取（成员 import 后的裸用同罪）：\n" +
                 offenders.joinToString("\n") { "  - ChapterProvider.$it" },
             emptyList<String>(),
             offenders,

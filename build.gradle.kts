@@ -52,6 +52,26 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
         val readBookConfigMutationCall = Regex(
             """\bReadBookConfig\.durConfig\.set[A-Za-z0-9_]*\s*\("""
         )
+        // 上面两条都按 `ReadBookConfig.` 前缀找，成员 import 之后的裸写一个都看不见：
+        // `import io.legado.app.help.config.ReadBookConfig.durConfig`（含 as 别名）之后
+        // `durConfig = ...` 就是绕过 gateway 的写——不落盘也不 publishState。
+        // 不必管通配 import：Kotlin 不允许从 object 按需导入。
+        val readBookConfigMemberImport = Regex(
+            """^import io\.legado\.app\.help\.config\.ReadBookConfig\.durConfig\b""",
+            RegexOption.MULTILINE,
+        )
+        // 同样的裸写还能从 `with(ReadBookConfig) { durConfig = ... }`／`ReadBookConfig.apply { }`
+        // 这类作用域函数里冒出来。与其枚举作用域函数（还会误伤 ChapterProvider 里只读的
+        // `with(ReadBookConfig)`），不如直接盯裸赋值本身：带 `.` 前缀的限定写法归上面那条管。
+        val readBookConfigBareWrite = Regex("""(?<![.\w])durConfig\s*=(?!=)""")
+        // 文件读写层 ReadStyleRepository 同理是 Koin 单例：谁 inject 谁就能直接 save()
+        // 覆盖 readConfig.json，磁盘与 ReadStyleConfigStore 的内存状态就此分叉。
+        val styleRepositoryOwners = setOf(
+            "io/legado/app/data/repository/ReadStyleRepository.kt",
+            "io/legado/app/data/repository/ReadStyleConfigStore.kt",
+            "io/legado/app/data/repository/ReadBookStyleConfigRepository.kt",
+            "io/legado/app/di/appModule.kt",
+        )
         // R4.7：Config 的值字段已是 val，字段写入由编译器拦；剩下的唯一写入口是
         // ReadStyleConfigStore 的列表操作。它是 Koin 单例，谁 inject 谁就能绕过 gateway
         // 改配置且不触发 save/publishState——所以限定只有下面这几个文件能提到这个类型。
@@ -102,13 +122,19 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
             if (relativePath !=
                 "io/legado/app/data/repository/ReadBookStyleConfigRepository.kt" &&
                 (readBookConfigWrite.containsMatchIn(text) ||
-                    readBookConfigMutationCall.containsMatchIn(text))
+                    readBookConfigMutationCall.containsMatchIn(text) ||
+                    readBookConfigMemberImport.containsMatchIn(text) ||
+                    readBookConfigBareWrite.containsMatchIn(text))
             ) {
                 violations += "$displayPath: ReadBookConfig 写入必须经过 ReadStyleGateway"
             }
             if (relativePath !in configStoreOwners && "ReadStyleConfigStore" in text) {
                 violations += "$displayPath: 排版配置的写入口只对 ReadStyleGateway 的实现开放，" +
                     "不要注入 ReadStyleConfigStore"
+            }
+            if (relativePath !in styleRepositoryOwners && "ReadStyleRepository" in text) {
+                violations += "$displayPath: readConfig.json 的读写只对 ReadStyleConfigStore 与 " +
+                    "ReadStyleGateway 的实现开放，不要注入 ReadStyleRepository"
             }
             if (relativePath in injectedConfigFiles && "GlobalContext" in text) {
                 violations += "$displayPath: 配置所有者必须显式注入依赖，禁止 GlobalContext"
