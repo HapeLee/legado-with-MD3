@@ -60,7 +60,7 @@ class ReadView(
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    var pageFactory: TextPageFactory = TextPageFactory(this)
+    var pageFactory: TextPageFactory = TextPageFactory(this, pageSource)
     var pageDelegate: PageDelegate? = null
         private set(value) {
             field?.onDestroy()

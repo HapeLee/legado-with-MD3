@@ -427,7 +427,7 @@ class ReadBookController(
         viewModel.onIntent(ReadBookIntent.SureNewProgress(progress))
     }
 
-    // ── ReaderPageSource（Track D·D2：喂给 ReadView 的只读页数据）────────
+    // ── ReaderPageSource（Track D·D2：喂给渲染层的页数据 + 接下页位置命令）────
 
     override val durChapterIndex: Int get() = ReadBook.durChapterIndex
 
@@ -437,8 +437,21 @@ class ReadBookController(
 
     override val pageAnim: Int get() = ReadBook.pageAnim()
 
+    override val msg: String? get() = ReadBook.msg
+
     override fun textChapter(chapterOnDur: Int): TextChapter? =
         ReadBook.textChapter(chapterOnDur)
+
+    override fun setPageIndex(index: Int) = ReadBook.setPageIndex(index)
+
+    // upContentInPlace = false：取页器在命令返回后自己决定要不要 upContent，别刷两遍
+    override fun moveToNextChapter(upContent: Boolean) {
+        ReadBook.moveToNextChapter(upContent, upContentInPlace = false)
+    }
+
+    override fun moveToPrevChapter(upContent: Boolean) {
+        ReadBook.moveToPrevChapter(upContent, upContentInPlace = false)
+    }
 
     // ── ReaderEventListener（Track D·D1：ReadView 的出站业务意图）─────────
 

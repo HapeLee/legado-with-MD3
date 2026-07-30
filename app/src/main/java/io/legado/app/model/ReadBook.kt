@@ -456,7 +456,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 layoutGeneration = layoutGeneration,
             )
             val textChapter = ChapterProvider.getTextChapterAsync(
-                this, book, chapter, displayTitle, processed, chapters.size,
+                this, book, bookSource, chapter, displayTitle, processed, chapters.size,
             )
             try {
                 var pageCount = 0
@@ -1445,7 +1445,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             layoutGeneration = pageEstimateGeneration,
         )
         val textChapter = ChapterProvider.getTextChapterAsync(
-            this, book, chapter, displayTitle, contents, simulatedChapterSize
+            this, book, bookSource, chapter, displayTitle, contents, simulatedChapterSize
         ).apply {
             this.pageEstimateGeneration = pageEstimateGeneration
         }

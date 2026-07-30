@@ -23,6 +23,7 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.help.book.BookContent
@@ -31,7 +32,6 @@ import io.legado.app.help.book.getBookSource
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
-import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextLine
@@ -71,6 +71,13 @@ class TextChapterLayout(
     private val textChapter: TextChapter,
     private val textPages: ArrayList<TextPage>,
     private val book: Book,
+    /**
+     * 取图要用的书源，由调用方在**建这一章时**定下（Track D·D2）。
+     *
+     * 以前是排版协程运行中读 `ReadBook.bookSource`：换源/换书时一个还在跑的旧章节协程
+     * 会拿**新源**去下**旧书**的图。构造期定参把这个窗口关掉。
+     */
+    private val bookSource: BookSource?,
     private val bookContent: BookContent,
 ) {
 
@@ -429,7 +436,7 @@ class TextChapterLayout(
                         val imgSrc = matcher.group(1)!!
                         var iStyle: String? = null
                         var click: String? = null
-                        var imgSize = ImageProvider.getImageSize(book, imgSrc, ReadBook.bookSource)
+                        var imgSize = ImageProvider.getImageSize(book, imgSrc, bookSource)
                         val urlMatcher = paramPattern.matcher(imgSrc)
                         if (urlMatcher.find()) {
                             var width: String? = null
@@ -625,7 +632,12 @@ class TextChapterLayout(
                 Pair(0f, width)
             }
             textLine.addColumn(
-                ImageColumn(start = absStartX + start.toFloat(), end = absStartX + end.toFloat(), src = src)
+                ImageColumn(
+                    start = absStartX + start.toFloat(),
+                    end = absStartX + end.toFloat(),
+                    src = src,
+                    book = book,
+                )
             )
             calcTextLinePosition(textPages, textLine, stringBuilder.length)
             stringBuilder.append(" ") // 确保翻页时索引计算正确
@@ -720,7 +732,7 @@ class TextChapterLayout(
                             val width = style["width"]
                             val click = style["click"]
                             var imgSize =
-                                ImageProvider.getImageSize(book, source, ReadBook.bookSource)
+                                ImageProvider.getImageSize(book, source, bookSource)
                             width?.let {
                                 if (width.endsWith("%")) {
                                     width.dropLast(1).toIntOrNull()?.let { percentage ->
@@ -744,12 +756,13 @@ class TextChapterLayout(
                             }
                             when (iStyle?.uppercase()) {
                                 "TEXT" -> {
-                                    ImageProvider.cacheImage(book, source, ReadBook.bookSource)
+                                    ImageProvider.cacheImage(book, source, bookSource)
                                     columns.add(
                                         ImageColumn(
                                             start = absStartX + charX,
                                             end = absStartX + charRight,
                                             src = source,
+                                            book = book,
                                             click = click
                                         )
                                     )
@@ -768,7 +781,7 @@ class TextChapterLayout(
                             }
                         } else {
                             val imgSize =
-                                ImageProvider.getImageSize(book, source, ReadBook.bookSource)
+                                ImageProvider.getImageSize(book, source, bookSource)
                             setTypeImage(
                                 book,
                                 source,
@@ -1395,11 +1408,12 @@ class TextChapterLayout(
             !srcList.isNullOrEmpty() && (char == srcReplaceChar || char == reviewChar) -> {
                 val src = srcList.removeFirst()
                 val click = clickList?.removeFirst()
-                ImageProvider.cacheImage(book, src, ReadBook.bookSource)
+                ImageProvider.cacheImage(book, src, bookSource)
                 ImageColumn(
                     start = absStartX + xStart,
                     end = absStartX + xEnd,
                     src = src,
+                    book = book,
                     click = click
                 )
             }

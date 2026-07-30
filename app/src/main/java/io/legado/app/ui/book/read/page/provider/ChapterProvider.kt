@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.core.os.postDelayed
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.BookContent
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.config.ReadBookConfig
@@ -251,6 +252,7 @@ object ChapterProvider {
     fun getTextChapterAsync(
         scope: CoroutineScope,
         book: Book,
+        bookSource: BookSource?,
         bookChapter: BookChapter,
         displayTitle: String,
         bookContent: BookContent,
@@ -267,7 +269,7 @@ object ChapterProvider {
             bookContent.effectiveReplaceRules,
             bookContent.effectiveContentProcesses,
         ).apply {
-            createLayout(scope, book, bookContent)
+            createLayout(scope, book, bookSource, bookContent)
         }
 
         return textChapter

@@ -21,27 +21,59 @@ class ReadViewBoundaryTest {
 
     @Test
     fun `ReadView 不引用业务单例`() {
-        val source = stripComments(readViewSource())
-
-        val readBookViolations = Regex("""\bReadBook\.(\w+)""")
-            .findAll(source)
-            .map { it.groupValues[1] }
-            .distinct()
-            .map { "ReadBook.$it" }
-            .toList()
-
-        val aloudViolations = Regex("""\b(?:ReadAloud|BaseReadAloudService)\.(\w+)""")
-            .findAll(source)
-            .map { it.value }
-            .distinct()
-            .toList()
-
-        val violations = readBookViolations + aloudViolations
+        val violations = businessSingletonViolations(readViewSource())
         assertTrue(
             "ReadView 又直接摸业务单例了：${violations.joinToString()}。\n" +
                 "业务意图请加进 ReaderEvent 由 ReadBookController.onEvent 翻译；\n" +
                 "要读的页数据请加进 ReaderPageSource 由宿主喂进来。",
             violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `TextPageFactory 不引用业务单例`() {
+        val violations = businessSingletonViolations(
+            mainSourceFile(
+                "io/legado/app/ui/book/read/page/provider/TextPageFactory.kt"
+            ).readText()
+        )
+        assertTrue(
+            "TextPageFactory 又直接摸业务单例了：${violations.joinToString()}。\n" +
+                "取页器是渲染层，不下达业务命令：翻页/换章请经 ReaderPageSource 的 " +
+                "setPageIndex/moveToNextChapter/moveToPrevChapter，加载消息读 pageSource.msg。\n" +
+                "这三个命令是**同步**的（下达后立即取新位置的页并返回布尔给翻页委托），" +
+                "所以不能改走即发即忘的 ReaderEvent。",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `排版器与图片列不在运行期读业务单例`() {
+        // 这两处以前是「排版协程/绘制期去读 ReadBook」，换书换源时会拿新会话的值配旧内容：
+        // 排版协程用新源下旧书的图、旧页面重绘用新书目录找图。现在都由构造期定参钉住。
+        val files = listOf(
+            "io/legado/app/ui/book/read/page/provider/TextChapterLayout.kt",
+            "io/legado/app/ui/book/read/page/entities/column/ImageColumn.kt",
+        )
+        val violations = files.flatMap { path ->
+            businessSingletonViolations(mainSourceFile(path).readText())
+                .map { "${path.substringAfterLast('/')}: $it" }
+        }
+        assertTrue(
+            "又在运行期读业务单例了：${violations.joinToString()}。\n" +
+                "排版/绘制要用的 book、bookSource 请由构造方在**建这一章时**传进来——" +
+                "它们是那一次排版的输入，不是随时可变的全局。",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `pageSource 必须由构造期注入喂给 TextPageFactory`() {
+        val source = stripComments(readViewSource())
+        assertTrue(
+            "TextPageFactory 不再由 ReadView 用构造期注入的 pageSource 建出来。\n" +
+                "若改成让取页器自己找数据源（单例/GlobalContext），D2 的入站边界就绕过去了。",
+            Regex("""TextPageFactory\(\s*this\s*,\s*pageSource\s*\)""").containsMatchIn(source),
         )
     }
 
@@ -158,6 +190,32 @@ class ReadViewBoundaryTest {
 
         fun readViewSource(): String =
             mainSourceFile("io/legado/app/ui/book/read/page/ReadView.kt").readText()
+
+        /**
+         * 渲染层文件对业务单例的引用。
+         *
+         * 三种写法都算违规，不只是 `ReadBook.xxx` 限定访问——**成员 import 之后成员可以裸写**
+         * （`import …ReadBook.durChapterIndex` 后直接用 `durChapterIndex`），
+         * 局部别名（`val rb = ReadBook`）同理。只按 `ReadBook\.` 找，这两种一个都看不见。
+         */
+        fun businessSingletonViolations(rawSource: String): List<String> {
+            val source = stripComments(rawSource)
+            val singletons = "ReadBook|ReadAloud|BaseReadAloudService"
+
+            val qualified = Regex("""\b($singletons)\.(\w+)""")
+                .findAll(source)
+                .map { "${it.groupValues[1]}.${it.groupValues[2]}" }
+
+            val imports = Regex("""(?m)^\s*import\s+[\w.]*\b($singletons)\b[\w.]*""")
+                .findAll(source)
+                .map { "import: ${it.value.trim()}" }
+
+            val aliases = Regex("""=\s*($singletons)\s*$""", RegexOption.MULTILINE)
+                .findAll(source)
+                .map { "别名: ${it.value.trim()}" }
+
+            return (qualified + imports + aliases).distinct().toList()
+        }
 
         fun stripComments(text: String): String = text
             .replace(Regex("""/\*[\s\S]*?\*/"""), "")

@@ -3,8 +3,8 @@ package io.legado.app.ui.book.read.page.entities.column
 import android.graphics.Canvas
 import android.graphics.RectF
 import androidx.annotation.Keep
+import io.legado.app.data.entities.Book
 import io.legado.app.model.ImageProvider
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
@@ -20,13 +20,18 @@ data class ImageColumn(
     override var start: Float,
     override var end: Float,
     var src: String,
+    /**
+     * 解析图片缓存路径要用的书，由排版时定下（Track D·D2）。
+     *
+     * 以前是 `draw()` 里读 `ReadBook.book`：换书那一瞬间旧页面重绘会拿**新书**的目录
+     * 去找**旧页**的图。持有创建时那一本才是对的。
+     */
+    val book: Book,
     var click: String? = null
 ) : BaseColumn {
 
     override var textLine: TextLine = emptyTextLine
     override fun draw(view: ContentTextView, canvas: Canvas) {
-        val book = ReadBook.book ?: return
-
         val height = textLine.height
 
         val bitmap = ImageProvider.getImage(

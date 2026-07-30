@@ -1,13 +1,22 @@
 package io.legado.app.ui.book.read.page.provider
 
 import io.legado.app.R
-import io.legado.app.model.ReadBook
+import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.api.PageFactory
 import io.legado.app.ui.book.read.page.entities.TextPage
 import splitties.init.appCtx
 
-class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource) {
+/**
+ * 分页取页器。
+ *
+ * Track D·D2：页位置命令与加载消息经 [pageSource] 出入，本类不认识 `ReadBook`——
+ * 渲染层不直接向业务单例下达命令。护栏见 `ReadViewBoundaryTest`。
+ */
+class TextPageFactory(
+    dataSource: DataSource,
+    private val pageSource: ReaderPageSource,
+) : PageFactory<TextPage>(dataSource) {
 
     private val keepSwipeTip = appCtx.getString(R.string.keep_swipe_tip)
 
@@ -24,17 +33,17 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
     }
 
     override fun moveToFirst() {
-        ReadBook.setPageIndex(0)
+        pageSource.setPageIndex(0)
     }
 
     override fun moveToLast() = with(dataSource) {
         currentChapter?.let {
             if (it.pageSize == 0) {
-                ReadBook.setPageIndex(0)
+                pageSource.setPageIndex(0)
             } else {
-                ReadBook.setPageIndex(it.pageSize.minus(1))
+                pageSource.setPageIndex(it.pageSize.minus(1))
             }
-        } ?: ReadBook.setPageIndex(0)
+        } ?: pageSource.setPageIndex(0)
     }
 
     override fun moveToNext(upContent: Boolean): Boolean = with(dataSource) {
@@ -44,12 +53,12 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
                 if ((currentChapter == null || isScroll) && nextChapter == null) {
                     return@with false
                 }
-                ReadBook.moveToNextChapter(upContent, false)
+                pageSource.moveToNextChapter(upContent)
             } else {
                 if (pageIndex < 0 || currentChapter?.isLastIndexCurrent(pageIndex) == true) {
                     return@with false
                 }
-                ReadBook.setPageIndex(pageIndex.plus(1))
+                pageSource.setPageIndex(pageIndex.plus(1))
             }
             if (upContent) upContent(resetPageOffset = false)
             true
@@ -66,12 +75,12 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
                 if (prevChapter != null && prevChapter?.isCompleted == false) {
                     return@with false
                 }
-                ReadBook.moveToPrevChapter(upContent, upContentInPlace = false)
+                pageSource.moveToPrevChapter(upContent)
             } else {
                 if (currentChapter == null) {
                     return@with false
                 }
-                ReadBook.setPageIndex(pageIndex.minus(1))
+                pageSource.setPageIndex(pageIndex.minus(1))
             }
             if (upContent) upContent(resetPageOffset = false)
             true
@@ -81,7 +90,7 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
 
     override val curPage: TextPage
         get() = with(dataSource) {
-            ReadBook.msg?.let {
+            pageSource.msg?.let {
                 return@with TextPage(text = it).format()
             }
             currentChapter?.let {
@@ -93,7 +102,7 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
 
     override val nextPage: TextPage
         get() = with(dataSource) {
-            ReadBook.msg?.let {
+            pageSource.msg?.let {
                 return@with TextPage(text = it).format()
             }
             currentChapter?.let {
@@ -115,7 +124,7 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
 
     override val prevPage: TextPage
         get() = with(dataSource) {
-            ReadBook.msg?.let {
+            pageSource.msg?.let {
                 return@with TextPage(text = it).format()
             }
             currentChapter?.let {
