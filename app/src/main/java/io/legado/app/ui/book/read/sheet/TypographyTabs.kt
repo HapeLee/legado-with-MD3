@@ -430,7 +430,7 @@ internal fun TypographyTitleTab(
     // Title font size: <8 means relative offset (textSize + titleSize), >=8 means absolute
     var titleSize by remember(config.titleSize) {
         val initial = if (config.titleSize < 8) {
-            (ReadBookConfig.textSize + config.titleSize).coerceIn(8, 60)
+            (config.textSize + config.titleSize).coerceIn(8, 60)
         } else {
             config.titleSize
         }
@@ -677,7 +677,7 @@ internal fun TypographyHeaderTab(
             title = stringResource(R.string.tip_divider_color),
             colorValue = when (config.tipDividerColor) {
                 -1 -> context.getCompatColor(R.color.divider)
-                0 -> ReadBookConfig.textColor
+                0 -> config.textColorDay
                 else -> config.tipDividerColor
             },
             onClick = { onOpenColorPicker(TypographyColorTarget.Divider) },
@@ -1028,7 +1028,7 @@ internal fun TypographyHeaderFontSelectSheet(
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     TypographyFontSelectSheet(
-        selectedFontPath = ReadBookConfig.headerFont,
+        selectedFontPath = config.headerFont,
         onSelectFont = { fileDoc ->
             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont(fileDoc.uri.toString())))
             onIntent(ReadBookIntent.SaveReadStyleConfig)
@@ -1050,7 +1050,7 @@ internal fun TypographyFooterFontSelectSheet(
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     TypographyFontSelectSheet(
-        selectedFontPath = ReadBookConfig.footerFont,
+        selectedFontPath = config.footerFont,
         onSelectFont = { fileDoc ->
             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterFont(fileDoc.uri.toString())))
             onIntent(ReadBookIntent.SaveReadStyleConfig)
@@ -1068,16 +1068,17 @@ internal fun TypographyFooterFontSelectSheet(
 @Composable
 internal fun TypographyCustomTipDialog(
     target: CustomTipTarget,
+    config: ReadSheetConfigUiState,
     onDismiss: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    val initialTemplate = remember(target) { target.customTemplate }
+    val initialTemplate = target.customTemplateOf(config)
 
     CustomTipDialog(
         show = true,
         initialTemplate = initialTemplate,
         onConfirm = { template ->
-            applyTipValue(target, ReadBookConfig.tipCustom, onIntent)
+            applyTipValue(target, ReadTipType.tipCustom, onIntent)
             target.applyTemplate(template, onIntent)
             onDismiss()
         },

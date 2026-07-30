@@ -62,16 +62,22 @@ class ReadBookDomainSplitBoundaryTest {
     /**
      * R2 的终态验收线。不是为了追行数好看——超过这个数就说明又有新的域直接长在 VM 里，
      * 而不是长成一个 delegate。要放宽必须先说明新增的是哪个域、为什么不能摘。
+     *
+     * 2500 → 2520：合上游后放宽 20 行。溢出的不是新域，是 `buildSheetConfig()` 这张
+     * 投影表——上游给页眉页脚加了字体/字号/`applyHeaderStyle`/`tipDividerColor`，
+     * 再加两个对齐项，一个字段就是一行，纯派生、没有逻辑可摘。上游同批带来的
+     * `useNewTocSheet` 分支（书籍信息/目录改开 Sheet）本来是两处复制粘贴，
+     * 已合并成 `openBookNavigation()`，那部分没占额度。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2500 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2520 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2500。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2520。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2500,
+            lineCount <= 2520,
         )
     }
 

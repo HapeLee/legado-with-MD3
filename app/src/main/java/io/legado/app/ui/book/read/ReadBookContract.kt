@@ -105,6 +105,8 @@ data class ReadBookStyleConfig(
 
 @Stable
 data class ReadSheetConfigUiState(
+    /** 标题字号 <8 时按「正文字号 + 偏移」解释，故正文字号也要进弹层快照。 */
+    val textSize: Int = 20,
     val letterSpacing: Float = 0f,
     val lineSpacing: Int = 0,
     val paragraphSpacing: Int = 0,

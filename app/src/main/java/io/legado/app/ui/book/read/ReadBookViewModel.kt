@@ -76,6 +76,7 @@ import io.legado.app.model.translation.TranslationChapterKey
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.service.BaseReadAloudService
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.utils.ImageSaveUtils
@@ -167,6 +168,24 @@ class ReadBookViewModel(
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
         _effects.emit(effect)
+    }
+
+    /**
+     * 书籍信息/目录有两种呈现：`useNewTocSheet` 开着时在阅读页内开 Sheet，
+     * 否则按老路子发 Effect 开新页。两个入口的判断完全一致，合在一处，
+     * 免得以后只改一边。
+     */
+    private fun openBookNavigation(
+        tab: ReaderBookSheetTab,
+        fallbackEffect: (Book) -> ReadBookEffect,
+    ) {
+        val book = ReadBook.book ?: return
+        closeReadMenu()
+        if (readSettingsRepository.currentSettings.useNewTocSheet) {
+            _uiState.update { it.copy(activeSheet = ReadBookSheet.BookNavigation(tab)) }
+        } else {
+            _effects.tryEmit(fallbackEffect(book))
+        }
     }
 
     private fun closeReadMenu() {
@@ -891,44 +910,12 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.OpenSourceEdit(src.bookSourceUrl))
                 }
             }
-            is ReadBookIntent.OpenBookInfo -> {
-                if (ReadBook.book != null) {
-                    closeReadMenu()
-                    if (readSettingsRepository.currentSettings.useNewTocSheet) {
-                        _uiState.update {
-                            it.copy(
-                                activeSheet = ReadBookSheet.BookNavigation(
-                                    io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information
-                                )
-                            )
-                        }
-                    } else{
-                        ReadBook.book?.let { book ->
-                            _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
-                        }
-                    }
-
-                }
+            is ReadBookIntent.OpenBookInfo -> openBookNavigation(ReaderBookSheetTab.Information) {
+                ReadBookEffect.OpenBookInfo(it.name, it.author, it.bookUrl)
             }
-            is ReadBookIntent.OpenChapterList -> {
-                if (ReadBook.book != null) {
-                    closeReadMenu()
-                    if (readSettingsRepository.currentSettings.useNewTocSheet)
-                    {
-                        _uiState.update { state ->
-                            state.copy(
-                                activeSheet = ReadBookSheet.BookNavigation(
-                                    io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Toc
-                                )
-                            )
-                        }
-                    }else{
-                        ReadBook.book?.bookUrl?.let { bookUrl ->
-                            _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
-                        }
-                    }
 
-                }
+            is ReadBookIntent.OpenChapterList -> openBookNavigation(ReaderBookSheetTab.Toc) {
+                ReadBookEffect.OpenChapterList(it.bookUrl)
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
             is ReadBookIntent.SourceCustomButton -> runSourceCustomButton(intent.longClick)
@@ -1744,6 +1731,7 @@ class ReadBookViewModel(
     }
 
     private fun buildSheetConfig(): ReadSheetConfigUiState = ReadSheetConfigUiState(
+        textSize = ReadBookConfig.textSize,
         letterSpacing = ReadBookConfig.letterSpacing,
         lineSpacing = ReadBookConfig.lineSpacingExtra,
         paragraphSpacing = ReadBookConfig.paragraphSpacing,

@@ -97,7 +97,6 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         }
     }
 
-
     suspend fun topSources(sources: List<BookSourcePart>) = withContext(Dispatchers.IO) {
         val minOrder = bookSourceDao.minOrder - 1
         val reorderedSources = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->

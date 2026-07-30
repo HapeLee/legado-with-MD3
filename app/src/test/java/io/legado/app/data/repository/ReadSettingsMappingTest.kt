@@ -14,11 +14,11 @@ import kotlin.reflect.full.primaryConstructor
 class ReadSettingsMappingTest {
 
     @Test
-    fun `gateway 持久化映射覆盖 ReadSettings 全部 102 个字段`() {
+    fun `gateway 持久化映射覆盖 ReadSettings 全部 103 个字段`() {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(102, actualKeys.size)
+        assertEquals(103, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 
@@ -132,6 +132,7 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         autoReadSpeed = 1004,
         tocUiUseReplace = true,
         tocCountWords = false,
+        useNewTocSheet = false,
         readStyleSelect = 1007,
         comicStyleSelect = 1008,
         shareLayout = true,
@@ -263,6 +264,7 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.nextKeys to nextKeys,
     PreferKey.tocUiUseReplace to tocUiUseReplace,
     PreferKey.tocCountWords to tocCountWords,
+    PreferKey.useNewTocSheet to useNewTocSheet,
     PreferKey.readUrlOpenInBrowser to readUrlInBrowser,
     PreferKey.readStyleSelect to readStyleSelect,
     PreferKey.comicStyleSelect to comicStyleSelect,

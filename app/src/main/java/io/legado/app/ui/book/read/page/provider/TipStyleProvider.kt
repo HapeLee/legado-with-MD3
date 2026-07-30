@@ -60,6 +60,10 @@ internal object TipStyleProvider {
         val footerPaddingTop: Int = 0,
         val footerPaddingRight: Int = 0,
         val footerPaddingBottom: Int = 0,
+        val applyHeaderStyle: Boolean = true,
+        /** 已按 `footerFont` 解析；仅在 [applyHeaderStyle] 为 false 时用得上。 */
+        val footerTypeface: Typeface? = null,
+        val footerTextSize: Float = 0f,
         val showHeaderLine: Boolean = false,
         val showFooterLine: Boolean = false,
         val bgAlpha: Int = 100,
@@ -113,6 +117,9 @@ internal object TipStyleProvider {
             customTipFooterRight = customTipFooterRight,
             tipTypeface = typefaceFor(headerFont),
             tipTextSize = headerFontSize.toFloat(),
+            applyHeaderStyle = applyHeaderStyle,
+            footerTypeface = footerTypefaceFor(footerFont),
+            footerTextSize = footerFontSize.toFloat(),
             textColor = textColor,
             tipHeaderColor = resolvedTipHeaderColor,
             tipFooterColor = resolvedTipFooterColor,
@@ -133,6 +140,8 @@ internal object TipStyleProvider {
 
     private var cachedFontPath: String? = null
     private var cachedTypeface: Typeface? = null
+    private var cachedFooterFontPath: String? = null
+    private var cachedFooterTypeface: Typeface? = null
 
     /** 按路径缓存：字体文件解析是主线程 I/O，只有路径变了才值得重做。 */
     private fun typefaceFor(fontPath: String): Typeface? {
@@ -141,6 +150,15 @@ internal object TipStyleProvider {
             cachedTypeface = loadTypeface(fontPath)
         }
         return cachedTypeface
+    }
+
+    /** 页脚字体单独缓存：与页眉字体路径不同，共用一个槽位会互相打掉缓存。 */
+    private fun footerTypefaceFor(fontPath: String): Typeface? {
+        if (fontPath != cachedFooterFontPath) {
+            cachedFooterFontPath = fontPath
+            cachedFooterTypeface = loadTypeface(fontPath)
+        }
+        return cachedFooterTypeface
     }
 
     private fun loadTypeface(fontPath: String): Typeface? = runCatching {

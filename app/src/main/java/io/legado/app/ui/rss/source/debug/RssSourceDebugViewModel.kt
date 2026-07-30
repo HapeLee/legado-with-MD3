@@ -3,8 +3,8 @@ package io.legado.app.ui.rss.source.debug
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
+import io.legado.app.data.repository.RssSourceEditRepository
 import io.legado.app.help.source.sortUrls
 import io.legado.app.model.Debug
 import io.legado.app.ui.book.source.debug.BookSourceDebugEntryUi
@@ -17,7 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
-class RssSourceDebugViewModel(app: Application) : AndroidViewModel(app) {
+class RssSourceDebugViewModel(
+    app: Application,
+    private val repository: RssSourceEditRepository,
+) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(RssSourceDebugUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<RssSourceDebugEffect>(extraBufferCapacity = 16)
@@ -40,7 +43,7 @@ class RssSourceDebugViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun load(url: String?) = viewModelScope.launch {
-        val loaded = withContext(Dispatchers.IO) { url?.let { appDb.rssSourceDao.getByKey(it) } }
+        val loaded = url?.let { repository.findByUrl(it) }
         source = loaded
         if (loaded == null) {
             _uiState.update { it.copy(status = BookSourceDebugStatus.Failed) }

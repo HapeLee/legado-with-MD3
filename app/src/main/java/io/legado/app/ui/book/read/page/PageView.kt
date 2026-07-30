@@ -385,9 +385,9 @@ class PageView(
         }
 
         // 当页脚不应用页眉字体样式时，覆盖页脚视图的字体和字号
-        if (!ReadBookConfig.applyHeaderStyle) {
-            val footerTypeface = loadTypeface(ReadBookConfig.footerFont) ?: tipTypeface
-            val footerTextSize = ReadBookConfig.footerFontSize.toFloat()
+        if (!style.applyHeaderStyle) {
+            val footerTypeface = style.footerTypeface ?: tipTypeface
+            val footerTextSize = style.footerTextSize
             listOf(tvFooterLeft, tvFooterMiddle, tvFooterRight).forEach { view ->
                 if (view.tag != null) {
                     view.typeface = footerTypeface
