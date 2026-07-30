@@ -1,5 +1,10 @@
 # Track E —— 阅读正文界面「设置 + UDF」现代化改造计划
 
+> **状态（2026-07-30）：本轨道已全部走完。** E0 ✅ → E1 ❌ 撤销 → E2 ✅ → E3 ✅ → E4 ✅ → E5 ✅（并入 R4.1）。
+> 验收总表见 §5。本文档的**事实基线（§1）是 2026-07-25 的快照，已不代表当前代码**——读它是为了理解
+> 每条债的由来与当时的判断，不要照着里面的行号去改代码。E5 之后还追加了配置底座的所有权反转
+> （R4.1–R4.7），由来见 [mad-modernization-plan.md](mad-modernization-plan.md) 的 Track E 节。
+
 > **定位**：本轨道**不改渲染方式**（不 Compose 化正文、不动 `ReadView` 的绘制/手势/动画），只解决
 > 阅读正文界面**配置的数据流**问题。与 [Track D](mad-modernization-plan.md#track-d)（`ReadView`
 > 出站业务解耦）正交、可并行：D 管「View 怎么把业务意图发出去」，E 管「设置怎么流进来」。
@@ -214,22 +219,35 @@ E2 之前 `sheetConfig` 全项目**只有 1 处**重建（`syncFromReadBook`）�
 | `handleConfigUpdate` 无手动 `styleConfig` 重建 | ✅ 改为仅在非 gateway 路径重建，且两份一起 |
 | 手工重建站点收敛 | ✅ styleConfig 13 → 5（含 collector 自身）、sheetConfig 1 → 4 |
 | 「新增写入路径忘了重建」失效类别消失 | ✅ 对**走 gateway 的排版写入**成立 |
-| VM 中 `ReadBookConfig.` 直读 93 → ≤10 | ❌ **未达成，仍是 94** |
+| VM 中 `ReadBookConfig.` 直读 93 → ≤10 | ⚠️ **判据作废（2026-07-30 改判）**，见下 |
 | `tryEmit` 归零 | ❌ 未做（改 effect 发射语义是独立风险，另行评估） |
 
-**最后两条为什么没达成、以及它留下了什么**：本轮没有做 60 字段投影，所以
-`buildStyleConfig()`/`buildSheetConfig()` 仍在**派生时刻裸读可变全局**。这不影响正确性
-（`publishState()` happens-before collector 读取，读到的必是新值），但意味着：
+**「VM 直读 ≤10」这条判据 2026-07-30 改判为作废，不再作为待办追**：复核发现 VM 现存的 109 处
+`ReadBookConfig.` 几乎全部集中在 `buildStyleConfig()`/`buildSheetConfig()`
+（`ReadBookViewModel.kt:1683-1796`）——**这正是「一处读全局、其余读快照」的正确形态**，把它压到 10
+以下只能靠把同一批字段搬去别处再读一遍，是为了让计数变好看而制造间接层。同理
+`ReadBookStyleConfigRepository`（108 处）与 `ReadStyleRepository`（17 处）属 repository 内部，合规。
+**当时判定「未达成」是因为把 grep 计数当成了债的度量**——真靶子从来是渲染层，而它已由 R4.1 处理
+（`PageView` / 四个绘制实体的直读归零）。
 
-- 派生仍不是纯函数、不可单测 → `ReaderConfigSnapshotInvariantTest` 只能继续做源码扫描；
-- **E5/D2 若要让排版引擎吃只读快照，那 60 字段的投影仍然要做**，只是届时 flow 管道已经就位。
+留下的真实缺口只有一条：`buildStyleConfig()`/`buildSheetConfig()` 仍在**派生时刻裸读可变全局**。
+这不影响正确性（`publishState()` happens-before collector 读取，读到的必是新值），但意味着派生
+不是纯函数、不可单测 → `ReaderConfigSnapshotInvariantTest` 只能继续做源码扫描。**R4 之后这条的
+性价比进一步下降**：配置侧已经权威（值字段 `val`、写入经 gateway），派生读到的必是不可变实例。
 
 真机验收（待用户执行）：编辑字号/行距/页眉页脚 → 关弹层重开值正确；切预设；导入配置；
 **日夜切换后弹层颜色**；分享排版开关；简繁转换。
 
 ---
 
-### E3 —— UI 层去全局直读
+### E3 —— UI 层去全局直读 ✅ 已落地（R1.2 + R4.6）
+
+> **落地方式与原计划的差异**：前三个文件按下面的原则改成受控（`637e62cb1` R1.2）。第四轮收尾时发现
+> 剩下的 4 处（`tipNames`/`tipValues`/`getHeaderModes`/`getFooterModes`）**不是配置状态、是静态选项表**，
+> 此前靠护栏白名单放行——`60029d657`（R4.6）把它们搬到唯一消费方 `HeaderFooterPage.kt` 底部，
+> 白名单 `ALLOWED_MEMBERS` 整个删除。同时**堵上护栏的一个洞**：`import ...ReadBookConfig.tipNames`
+> 之后成员可裸写，按 `ReadBookConfig\.` 找的正则一个都看不见 → 需单独抓 import。
+> 顺带把 `remember { tipNames }` 换成 `stringArrayResource`，修掉语言切换后选项不刷新。
 
 把 §1.4 的四个文件改成 `state + onIntent` 纯受控：
 
@@ -248,7 +266,7 @@ E2 之前 `sheetConfig` 全项目**只有 1 处**重建（`syncFromReadBook`）�
 
 ---
 
-### E4 —— 收敛 EventBus 整数码（可与 E3 并行）
+### E4 —— 收敛 EventBus 整数码 ✅ 已落地（`3b38615e5`，即 R1.3）
 
 `EventBus.UP_CONFIG` 的 `ArrayList<Int>` 载荷改为直接投递 `Set<ConfigUpdateAction>`
 （或干脆让 8 个生产者改调 gateway/VM 的具名方法）。整数码 0–12 的翻译表随之删除。
@@ -256,10 +274,32 @@ E2 之前 `sheetConfig` 全项目**只有 1 处**重建（`syncFromReadBook`）�
 优先级低于 E2/E3：它是**可读性**问题，不是正确性问题（翻译表本身没查出错配）。
 
 **验收**：`grep -rn 'EventBus.UP_CONFIG'` 只剩事件定义；VM:2084 的整数 `when` 删除。
+→ ✅ 达成，改用 typed `ReadConfigUpdateBus`（`ui/book/read/ReadConfigUpdateBus.kt`，`buffer=64`）。
 
 ---
 
-### E5 —— 渲染引擎去全局读（**可后置 / 与 Track D2 同源**）
+### E5 —— 渲染引擎去全局读 ✅ 已落地（并入 R4.1，`8c51dfc6f`）
+
+> **实际落地方案与下面的原计划不同，差异值得记下**：没有让引擎「吃传入的 `ReadStyleSnapshot`」
+> （那要改一大批函数签名、且热路径多一层对象传参），而是**在引擎侧建两个绘制期快照**——
+> `ChapterProvider.RenderStyle`（10 字段）+ `TipStyleProvider.TipStyle`（33 字段），由 `upRenderStyle()`/
+> `upTipStyle()` 在配置变更时重建，绘制实体改读快照字段。
+>
+> **先量后动的收获**：原计划按 grep 计数列的靶子数被严重高估——`PageView` 70 处里 41 处是
+> `tipChapterTitle` 这类**常量**（页眉页脚项的类型 ID，已搬去 `constant/ReadTipType.kt`）；
+> `ChapterProvider` 61 处里 9 处在**注释掉的死代码**里（`067d229b0` 删了 671 行块注释），
+> 剩下的全在 `upStyle`/`upThemeColors`/`getPaints` 里，**本来就是「一处读全局、发布快照」的正确形态**。
+> 真靶子只有 `TextLine`/`TextColumn`/`TextHtmlColumn`/`TextPage` 在 `draw()` 里的逐个直读——
+> 代价不只是分层：`ReadBookConfig.underline` 要走 `config → durConfig → getConfig(styleSelect)`，
+> 而 **`getConfig` 是 `@Synchronized`**，等于每行每列每帧抢一次全局配置的监视器锁。
+>
+> **顺带修掉的两个真实问题**：`loadTypeface(headerFont)` 是主线程按路径读字体文件、`PageView` 三实例
+> 一次样式变更读三次（现按 `cachedFontPath` 缓存）；`ChapterProvider.linePaint` 的 `by lazy` 首次取用
+> 即定型，改下划线粗细/字体不反映到朗读高亮线，而 `upThemeColors()` 会就地改它的 color →
+> 「颜色跟得上、其余永远是首帧那份」（`067d229b0` 改为由 `upStyle()` 重建）。
+>
+> **遗留**：绘制热路径仍经另一个可变全局门面 `ReadConfig` 读 `useUnderline`/`optimizeRender`/`isEInkMode`，
+> 且现有护栏对它不设防。见主计划「待续 ③」。
 
 `ChapterProvider`(62)/`PageView`(54)/`TextChapterLayout`(11)/`TextLine`(12) 改为吃传入的
 `ReadStyleSnapshot`（E2 已经造好），而非排版时裸读全局。
@@ -276,15 +316,17 @@ E2 之前 `sheetConfig` 全项目**只有 1 处**重建（`syncFromReadBook`）�
 ## 4. 推荐顺序与依赖
 
 ```
-E0 ──►  ✗E1  ──► E2 ──┬──► E3
- ✅已落地  已撤销  ✅已落地  └──► E4
+E0 ──►  ✗E1  ──► E2 ──┬──► E3 ✅
+ ✅已落地  已撤销  ✅已落地  └──► E4 ✅
 
-                       E5 ← 并入 Track D2 评估（不单独做）
+                       E5 ✅ ← 并入 R4.1（不单独做）
 ```
 
 - **E0 → E2 是主线**（E1 已撤销，见上），两步做完，「设置乱」的结构性成因基本消除。
 - E3/E4 是主线之后的清理，可并行、可分批。
 - E5 不在本轨道单独推进。
+
+> **全部阶段已于 2026-07-30 走完**（E1 撤销、E5 并入 R4.1）。本节保留为历史执行顺序记录。
 
 **单步价值排序（若只能做一步）**：做 **E2**。它单独就能消灭"弹层显示旧值"整个 bug 类别；
 E0 是为了让 E2 之后不再退化。
@@ -293,14 +335,23 @@ E0 是为了让 E2 之后不再退化。
 
 ## 5. 验收总表
 
-| 阶段 | 可机器验证的判据 |
-|---|---|
-| E0 | ✅ 3 个测试类 / 8 条断言进 CI，四条变异实测可红 |
-| ~~E1~~ | ❌ 已撤销：前提不成立（actions 本就抽象；两条轴正交） |
-| E2 | ✅ 部分达成 —— 手工重建收敛 + 三个活 bug 修掉；直读未降（改用 revision 小方案）、`tryEmit` 未动，见 E2 节验收表 |
-| E3 | `sheet/` 下 `ReadBookConfig.` 直读 == 0 |
-| E4 | `EventBus.UP_CONFIG` 生产者 == 0 |
-| E5 | （并入 D2） |
+| 阶段 | 可机器验证的判据 | 结果（2026-07-30） |
+|---|---|---|
+| E0 | 3 个测试类 / 8 条断言进 CI，四条变异实测可红 | ✅ 已落地 |
+| ~~E1~~ | —— | ❌ 已撤销：前提不成立（actions 本就抽象；两条轴正交） |
+| E2 | 手工重建站点收敛、失效类别消失 | ✅ 达成（「直读未降」一条已于 2026-07-30 改判作废，见 E2 节） |
+| E3 | `sheet/` 下 `ReadBookConfig.` 直读 == 0 | ✅ **达成**（R1.2 去镜像状态 + R4.6 把最后 4 处静态选项表搬到 `HeaderFooterPage.kt`，护栏 `ALLOWED_MEMBERS` 白名单整个删除） |
+| E4 | `EventBus.UP_CONFIG` 生产者 == 0 | ✅ **达成**（R1.3 整数码退役，改 typed `ReadConfigUpdateBus`） |
+| E5 | （并入 D2） | ✅ **达成**（并入 R4.1：`ChapterProvider.RenderStyle` + `TipStyleProvider.TipStyle` 两个绘制期快照，`PageView` 与四个绘制实体的 `ReadBookConfig` 引用归零） |
+
+**Track E 到此结束。** 追加的 R4.1–R4.7（配置底座所有权反转）已在
+[mad-modernization-plan.md](mad-modernization-plan.md) 的 Track E 节说明由来：E5 要让渲染引擎吃只读快照时，
+暴露出「`ReadBookConfig` 既是状态本体又是写入口、`getConfig` 还是 `@Synchronized`」的更深问题。
+
+> **护栏的已知洞（2026-07-30 审查）**：E3 的 `sheet/` 护栏堵法是完整的（成员 import / alias / 通配全抓），
+> 但**同款堵法没有回移植**到 `verifyConfigArchitecture` 的写入检查和 `ChapterProviderMetricsInvariantTest`，
+> 那两处仍可被成员 import 绕过。另外 R4.1 的渲染层护栏只匹配 `ReadBookConfig`，对 `ReadConfig`
+> （另一个可变全局门面，绘制热路径仍在读）完全不设防。详见主计划「待续 ③」。
 
 **真机 parity 用例**（每阶段跑，用 `tools/android` 调试工具）：
 编辑字号/行距/页眉页脚 → 关弹层重开值正确；切预设；导入配置；日夜切换；分享排版开关；
@@ -320,3 +371,4 @@ E0 是为了让 E2 之后不再退化。
 ---
 
 *创建于 2026-07-25，同日完成 E0。基线数据（行号/计数）截至同日 HEAD。*
+*2026-07-30 更新：E2–E5 达成情况、E2 一条判据改判作废、护栏已知洞。全轨道结束。*

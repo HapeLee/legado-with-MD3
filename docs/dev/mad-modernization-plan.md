@@ -4,20 +4,45 @@
 >
 > 范围：阅读器核心（`ReadBook` 全局单例、`ReadBookViewModel`、`ReadBook.CallBack` 渲染协议）以及全应用范围内的 UI→DAO 直连问题。**不包含**外围已完成 MAD 化的 Compose 屏幕。
 
-## 进度快照（2026-07-21 · 为新窗口交接）
+## 进度快照（2026-07-30 · 为新窗口交接）
 
-> 本节是给新开窗口的接续点，描述**当前 HEAD 的真实状态**。F1/F2 已推进过半，Track A/B/C 尚未开始。下方数字均已核实。
+> 本节是给新开窗口的接续点，描述**当前 HEAD 的真实状态**。两条横切地基（F1、F2 主线）已完成；
+> Track A/B/E 已落地，Track C 已于 2026-07-25 删除，Track D 走完 D1a/D1b/D2；在此之上又做了一轮
+> **R 系列**（结构止血 → VM 拆分 → 出站解耦 → 配置底座），自 E0 起 main 上共 132 个提交。
+> 下方数字均已核实。**剩余结构性工作只有三项**：D1c（阅读器核心 JVM 测试）、D2 残余（`page/` 包）、
+> Track B 端游 ②（Effect 投递握手，需先改状态式，建议最后评估）；另有 R5 三项体验/安全项与一份
+> 2026-07-30 全量审查的遗留清单（含两条 P1），全部列在「待续」节。
+
+### R 编号 ↔ Track 对照（提交信息用 R 编号，本文档用 Track 字母）
+
+提交信息里 `refactor(R4.7)` 这类编号来自实施期的分批计划，与本文档轨道的对应关系如下——
+**没有这张表，读提交历史的人无法把 `R4.x` 接回本计划**：
+
+| R 编号 | 内容 | 对应轨道 |
+|---|---|---|
+| R1.1–R1.5 | 结构止血：排版快照重建站点收敛到三条通道、弹层去全局直读、`EventBus.UP_CONFIG` 整数码退役、排版度量收进不可变快照、`update{}` 键映射补全（56 字段静默丢写） | Track E（E2 续 / E3 / E4）+ 新增项 |
+| R2.1–R2.3 | `ReadBookViewModel` 拆分：33 处 DAO 直连溶解进 `BookRepository`、七个业务域摘出 delegate、VM 不再实现 `ReadBook.CallBack`（**6671 → 2494 行**） | 「ViewModel 拆分」节 + Track B 端游 ① |
+| R3（= D1a/D1b/D2） | `ReadView` 出入站解耦：`ReaderEvent` 出站、`CallBack` 12→4 拆成瞬时副作用面、`ReaderPageSource` 入站 | Track D |
+| R4.1–R4.7 | 配置底座：渲染层排版直读收进快照、写盘原子化、解双向依赖、写面收进 gateway、状态本体外迁 `ReadStyleConfigStore`、`Config` 值字段不可变（**`ReadBookConfig` 1405 → 982 行**） | Track E·E5 + Track D2 的配置侧 |
+| R5 | 体验/包容性/测量：baseline profile journey、TalkBack 段落节点、WebView bridge DTO 化 | 本计划范围外的新增项，见「待续 ④」 |
 
 ### 已完成
 
 - **F2 冻结机制**：双基线 + 双向棘轮（新增报红、减少了不下调也报红）+ 陈旧条目检测，已 `dependsOn` assemble/compile 在 CI 生效（`build.gradle.kts`）。
   - `legacyDaoInjectionBaseline` —— ViewModel 主线
   - `legacyUiDaoAccessBaseline` —— 非 ViewModel 的 UI 层文件（第二条线）
-- **F1 部分**：`app/lint-baseline.xml` 已建并接入 `lint {}`；`verifyConfigArchitecture` 已在 CI 传递触发；单测 **272 全绿**。
+- **F1 完成** ✅：`app/lint-baseline.xml` 已建并接入 `lint {}`；`.github/workflows/verify.yml:44-51` 的
+  `verify` job 显式跑 `testAppDebugUnitTest` + `lintAppDebug` + `verifyConfigArchitecture` + `assembleAppDebug`
+  四道门并上传报告。单测 **272 → 455 全绿**（含 R 系列新增的护栏测试）。
+- **R 系列的护栏产出**：`verifyConfigArchitecture` 从「DAO 直连 + 旧偏好」扩到管排版配置写入（`ReadBookConfig`
+  写必须经 `ReadStyleGateway`、`ReadStyleConfigStore` 只许 4 个文件引用）；单测侧新增 8 个边界/不变式测试类。
+  R4.7 后 `Config` 的值字段是 `val`，**配置写入的主要约束已从正则升级为编译器**。
 - **F2 清零（已提交 13 批）**：关联导入 → RSS → 书籍导入 → 书源管理 → 换源+目录（`77d38b8`…`04161fa`）；随后清完 8 个可清 VM（Web/BookInfoEdit/ChangeCover/TagGroupRule/SourceLogin/AudioPlay/ReadManga/BookInfo）+ `ReadBookViewModel` 非阅读态子集。**主线基线从 ~247 → 130 → 36 → 0**（`ReadBookViewModel` 的 book/chapter 阅读态访问已随 R2.1 溶解进 `BookRepository`）。
 - **数据层事务加固**：目录替换（`replaceChaptersAndUpdateBook`）、换序 move（`BookSourceDao.moveToTop/Bottom`）已改原子事务。
 
-### 待续（新窗口从这里接）
+### 各轨道落地明细（历史记录，按当时顺序）
+
+> 下面 ①–⑥ 是各轨道**已落地**内容的明细与踩坑记录，保留作查证用。**真正的待做事项见后面的「待续」节。**
 
 **① F2 主线已清零**（`build.gradle.kts` 的 `legacyDaoInjectionBaseline`）：
 
@@ -31,7 +56,7 @@
 
 **② F2 第二条线（非 VM UI 层）**：`legacyUiDaoAccessBaseline` 已冻结 **26 文件 / 62 处**，**只冻不修**。等主线清完、仓库齐备、部分 Activity 随 Compose 迁移消失后再回头清（大头 `BookSourceActivity=10`、`RssJsExtensions=8`、`KeyboardAssistsConfig=7`）。
 
-**③ F1 收尾**：仍缺一个**显式跑 `testAppDebugUnitTest` + `lintAppDebug` 的 CI job**——这是 F1 唯一没关上的门（当前单测失败/新增 lint 违规不会让 CI 红）。
+**③ F1 收尾** ✅ **已关上**：`.github/workflows/verify.yml` 的 `verify` job 显式跑四道门（test / lint / 架构检查 / 构建），失败即红，报告无条件上传。F1 全部完成。
 
 **④ Track A**：**A1–A5 已全部落地**。A1–A3：`ReadBook.book/durChapterIndex/durChapterPos` 已 `private set`，外部 6 处写入改走 `replaceCurrentBook`/`clearCurrentBook`/`updateReadingPosition` + `isCurrentBook` 谓词，编译器证明外部写入点为 0。A4：`LegacyReaderSnapshot` + `ReadBook.snapshot: StateFlow`，`publishSnapshot()` 落在 14 个内部 mutator + 3 个命令的原子末尾。A5：`ReaderSession` 接口 + `LegacyReaderSession` 桥接（`model/ReaderSession.kt`，Koin 注册），`ReadBookViewModel` 已注入并 `collectReaderSession()` 反应式消费。
 
@@ -39,7 +64,10 @@
 
 - **B1（接口切分）**：`ReadBook.CallBack` 切成 `ReaderRenderCallback`（渲染子集：`upContent`/`upContentAwait`/`pageChanged`/`contentLoadFinish`/`upPageAnim`/`cancelSelect` + `LayoutProgressListener`）与状态子集 `CallBack`（`upMenuView`/`loadChapterList`/`notifyBookChanged`/`sureNewProgress`）。
 - **B2（渲染下沉）**：新增 `ReadBook.renderCallBack: ReaderRenderCallback` 独立槽位；30+ 处渲染调用点由 `callBack?.` 改走 `renderCallBack?.`。`ReadBookController` 实现 `ReaderRenderCallback`，`onRefsReady` 注册 / `clearTts` 注销，渲染方法复用既有 `handleEffect` 分支（零渲染逻辑漂移）。**线程关键点**：`ReadBook` 在 `Coroutine.async`(默认 `Dispatchers.IO`) 里回调渲染，旧路径靠 VM 的 `SharedFlow`→生命周期收集器切主线程；B2 用 `handler.post`/`withContext(Main)` 保留同样的异步-切主线程语义。业务状态刷新改由 `collectReaderSession()` 收集快照驱动——为内容加载路径（`contentLoadFinish`/`contentLoadFinishAwait` 布局完成、`loadOrUpContent`、`upMsg`）补 `publishSnapshot()`，补齐旧 VM 渲染回调顺带做的 `syncFromReadBook`（尤其 `seekMax` 依赖 `curTextChapter.pages.size`）。`isInitFinish` 作为纯业务标志留在 VM，由 `controller.contentLoadFinish` 幂等置位。
-- **Track B 端游剩余（未做）**：① VM **仍实现** `ReadBook.CallBack`（状态子集），完整 B 验收「VM 不再实现 CallBack」需把状态子集也迁到 `ReaderSession`；② `emitEffectWhenSubscribed` 的 `subscriptionCount` 握手仍在（现仅服务于 `UpdateReadViewConfig` 这类非渲染 init 时序，一处），完整移除属端游；③ `PageChanged`/`ContentLoadFinish`/`LayoutPageCompleted` 三个 Effect 现在只由 controller 的渲染方法**直接**触发 `handleEffect`（不再经 `_effects` 总线），可在后续把这三个 handler 内联进渲染方法体、删掉对应 Effect 类。
+- **Track B 端游（2026-07-30 更新：①③ 已由 R2.3 关闭，只剩 ②）**：
+  - ① ~~VM 仍实现 `ReadBook.CallBack`~~ ✅ **已关闭**（`00373ffa6` R2.3）：状态子集迁进 `LegacyReaderSession`，全仓唯一 `: ReadBook.CallBack` 声明现在是 `model/ReaderSession.kt:86`，VM 改为反应式消费会话事件。护栏 `ReadBookCallbackBoundaryTest` 盯住不回退。
+  - ② `emitEffectWhenSubscribed` 的 `subscriptionCount` 握手**仍在**（一处，服务 `UpdateReadViewConfig` 的 init 时序）。**判读修正（2026-07-30）**：曾以为「R4 做完配置所有权就能顺带关掉它」——**不成立**。这是**效果投递**问题（`_effects` 是 replay=0 的 `SharedFlow`，ReadView 订阅前 emit 会被丢），与配置所有权正交。要关掉它得让配置应用改成**状态式**（ReadView 拉快照而非收一次性 effect），属 Track E·E2 的续作，是剩余项里唯一的「大改造」，建议排在最后并先评估收益（它现在只护一处时序）。
+  - ③ ~~三个渲染 Effect 内联进渲染方法体~~ ✅ **已关闭**（`00373ffa6` R2.3）：`PageChanged`/`ContentLoadFinish`/`LayoutPageCompleted` 已内联进 controller 的渲染方法，对应 Effect 类删除。
 - **B2 验证边界（真机）**：翻页/换章时章节号与进度、seek bar 上限（page 模式依赖 `pages.size`，B2 改为布局完成后单次 `publishSnapshot` 刷新，非逐页）、首帧渲染（`registerRender` 已在有内容时立即同步一次）、朗读中翻页、`upContentAwait` 时序（B2 下 `withContext(Main)` 会在 await 内**同步**跑完视图更新，比旧实现「只 await emit」更靠后完成，需确认换章无闪烁/错序）。
 
 **⑥ 方向调整（2026-07-21）：Compose 阅读器暂停于 C5，新增 Track D（`ReadView` 自身业务解耦）为近期主线。**
@@ -50,9 +78,61 @@
 - **新增 Track D：把 `ReadView` 自身的出站业务耦合解掉**。核实（`ui/book/read/page/ReadView.kt`）：ReadView 仍直呼 `ReadBook.moveToNextChapter/moveToPrevChapter/moveToNextPage/moveToNextChapterAwait/syncProgress`、`ReadAloud.pause/resume`（509–750 行），并经 `callBack.*` 直接驱动书签/内容编辑/替换规则/目录/搜索/进度确认（504、513–519 行）。这是 A/B/C 都未触及的一面——A 收敛 `ReadBook` 所有权、B 把渲染回调移出 VM、C 让 Compose 面消费只读快照，**都没动 `ReadView` 的出站调用**。Track D 用 `ReaderEvent` 出站接口把这些业务调用路由回 `ReaderSession`/命令，让 View 阅读器本身符合 UDF——**不依赖 Compose**。设计见下方 Track D 节。
 - **C5 工作区改动保留**（`ComposeReaderSurface.kt`/`ReaderRenderModel.kt`/`ReaderRenderStateStoreTest.kt`/`ReaderPageSnapshot.kt`），作为冻结状态；可单独提交 `feat(Track C): C5 不可变快照（冻结为可选渲染器）`。
 
+### 待续（新窗口从这里接）
+
+> 建议顺序：**真机验证 R4.5–R4.7 → ③ 收尾包（小步快合）→ ① D1c 测试专项 → ④ R5 按空档插队 → ② D2 残余 → 最后评估 Track B 端游 ②**。
+
+**① D1c —— 阅读器核心 JVM 测试（回报最大，阻塞链刚解开）**
+
+Track D 的既定下一步。`ReadView` 现在无 Activity 依赖、三个协作面（`callBack`/`eventListener`/`pageSource`）
+构造期非空注入，可在 JVM/robolectric 下构造。**此前的五级阻塞全在 `ReadBookConfig` 一侧，R4 做完才真正解开。**
+项目已有 robolectric 4.16.1（`app/build.gradle.kts:180`）却**零**阅读器核心测试。第一批目标：
+手势 action 路由表（fake listener 断言）、翻页边界 `hasNext`/`hasPrev`、`pageFactory` 换章。
+做完翻页回归不必再全压真机，**并能顺带兜住 ③ 收尾包的回归面**。
+
+**② D2 残余（`page/` 包，可后置）**
+
+D2 只做了 `ReadView.kt` 一个文件的入站解耦。同包另有 8 个文件直接摸 `ReadBook`，其中
+**`TextPageFactory` 6 处是写操作**（`setPageIndex`/`moveToNextChapter`/`moveToPrevChapter`）——
+渲染层下达业务命令，性质同 D1，只是当时文档把 D1 划在一个文件里。其余是 `PageView`/`ContentTextView`/
+`ChapterProvider`/`TextChapterLayout` 读 `ReadBook.book`/`bookSource`。另有两项在 `LayoutMetrics` 的
+KDoc 里已认领为 D2 范围：`TextChapterLayout` 构造期 8 项配置逐项读（无组内原子性）、
+`setTypeHtml` 在 IO 线程就地改共享 `contentPaint.color`。做 ① 的测试时会自然摸到这些。
+
+**③ R4.1 快照体系收尾包（2026-07-30 全量审查发现，小步快合）**
+
+审查结论：R4.4–R4.7 的语义等价性成立、无 P0；问题**集中在一条缝——快照重建入口只覆盖了经
+`ReadBookController` 的那条路**。按性价比排序：
+
+| 项 | 位置 | 说明 |
+|---|---|---|
+| P1 设置页改「底部对齐」不生效 | `ui/config/readConfig/ApplyReadSettingUseCase.kt:48` | `updateLayout()` 不调 `upRenderStyle()`，而 `textBottomJustify` 是 `RenderStyle` 快照字段且消费点在排版路径。R4.1 引入的回归，一行修复 |
+| P1 绘制热路径经 `ReadConfig` 读可变全局 | `page/entities/TextLine.kt:79,162,243`、`TextPage.kt:301` | `ReadConfig.useUnderline` 每行每帧走 `GlobalContext.get()` + 全量构造 `ReadSettings`（上百次 preferences 查找），比 R4.1 消灭的 `@Synchronized getConfig` 锁更贵。三项（`useUnderline`/`optimizeRender`/`isEInkMode`）进 `RenderStyle`，**护栏正则从 `\bReadBookConfig\b` 扩到 `ReadConfig`**——「渲染层零直读」目前对它完全不设防 |
+| P2 补两个快照重建入口 | `ReadBookController.onRefsReady`、`help/storage/Restore.kt:357` | 前者治「跨会话改隐藏状态栏等滞留整个会话」（`ReadConfigUpdateBus` 无 replay，无收集者时事件即丢）；后者治「恢复备份后正文排版不变」。另注意 controller 的 `val r = refs ?: return`（:996）排在预循环重建**之前**，view 未挂载期连重建也跳过 |
+| P2 纯收紧一提交 | `data/repository/ReadStyleConfigStore.kt:40,57,85`、`ReadBookConfig.kt:536-546` | `shareConfigRef` 三个写点只一个在锁内且非 `@Volatile`；`Config` 构造器残留 13 个 `private var`（现无写点，但「写入由编译器把守」对文件内部不成立）。两者都是零行为变化 |
+| P2 护栏三个绕过口 | `build.gradle.kts`、`ChapterProviderMetricsInvariantTest` | 成员 import 后裸写 `durConfig =` 绕过写入正则（R4.6 的堵法只堵在 sheet 单测、未回移植）；`ReadStyleRepository` 是 Koin 单例却无引用限制（注入即可绕 store 直写盘，磁盘与内存分叉）；度量护栏显式 `filterNot { startsWith("import ") }` |
+| P2 祖传 bug 顺手修 | `ChapterProvider.kt:157` | 共享排版开启时下划线间距**写 `shareConfig`（`mutateEffective`）读 `durConfig`**，永不生效。R4.1 把它收敛到一处后可修 |
+| P2 换书误杀新会话预取 | `model/ReadBook.kt:1753-1767` | `unregister(cb)` 只有 `callBack = null` 受 `=== cb` 身份保护，后面的 `preDownloadTask?.cancel()`/`cancelChildren()`/`ImageProvider.clear()` 无条件执行。A→B 快速换书时旧 VM 清场会掐掉新会话的预取。**pre-existing，非 R 系列回归** |
+| P3 杂项 | — | `ReaderSessionEvent.NewProgressAvailable` 是死通道（`ReadBook` 无 `callBack?.sureNewProgress` 调用点），可连同 `CallBack` 成员一起删；`BookChanged` 事件建议带 book 载荷（现消费端读全局 `ReadBook.book`，正确性依赖两个隐式时序前提）；`ReadConfigJsonRoundTripTest:86-96`「copy 重置颜色缓存」是空断言（从未预热缓存）且文件头注释与事实相反；`highlightRules` 是 `ArrayList<全 var 实体>`，是「不可变 `Config`」唯一的洞（现零写点、无护栏） |
+
+**④ R5 —— 体验/包容性/测量（互不阻塞，可随时插队）**
+
+- **baseline profile journey 修复**：迁移后 journey 从不开书 → 开书热路径没 AOT → 首开主线程 JIT。根因已诊断。**三项里唯一不碰阅读器结构的，真机验证等待期正好插这个。**
+- **`ContentTextView` 接 `ExploreByTouchHelper`**：段落级虚拟节点，让 TalkBack 能逐段读正文。
+- **安全面**：WebView bridge 把 `BaseSource` 实体直接注入远程页面 → DTO 化；`dataExtractionRules` 排除书源库/Cookie。
+
+**⑤ 长尾账本（记着，不排期）**
+
+- **F2 第二条线**：`legacyUiDaoAccessBaseline` 仍冻结 26 文件 / 62 处，按既定纪律等 Compose 迁移消化。
+- **`ReadBookController` 的 `clickImg`**（:586-589、609-612、636）三处 `appDb.bookChapterDao` 直连**不在任何棘轮账本里**——两条基线只覆盖 `ui/**` 的 VM 与非 VM 文件，controller 漏网。
+- **`ReadBookViewModel` 仍是 `BaseViewModel(application)`**（:114-130）——「ViewModel 持有 `Application`」这条 MAD 扣分项未消除。
+- 护栏免检区：`app/src/debug`、`.java` 文件、`app/src/main/kotlin`（若被创建）、`RENDER_ENTITIES` 死名单外的新渲染实体文件。
+
 ### 未提交
 
-数据层事务加固（3 个文件：`BookSourceDao.kt`、`BookRepository.kt`、`BookSourceRepository.kt`）尚在工作区，建议单独一提：`refactor: 目录替换与换源移序改为原子事务`。
+无——工作区干净，上述 R 系列全部已入 main。**R4.5/R4.6/R4.7 尚未真机验证**（写盘/不可变化改动，回归面见各自提交说明），
+建议与 ③ 的修复合成一次真机验证：换排版预设、导入配置、共享排版开关下各字段写入、页眉页脚全项、
+备份恢复后排版生效、底部对齐。
 
 ## 0. 框架与判定口径
 
@@ -63,22 +143,43 @@
 
 这两个分数并不矛盾：一次高质量的遗留迁移，可以同时只是中等程度符合目标架构。**本计划的目标是把第一个分数往上推，而不破坏第二个分数所代表的迁移纪律。**
 
+### 重估（2026-07-30，R 系列做完后）
+
+**第一个分数的五条扣分项里三条已消除**：UI→DAO 系统性直连（主线基线 0）、CI 无质量门禁（`verify.yml` 四道门）、
+阅读器核心由**不受控**的全局可变单例驱动（仍是单例，但会话字段 `private set`、外部写入点 0、有权威 `snapshot`
+StateFlow、配置侧写入收进 gateway 且值字段 `val`）。**仍在的两条**：`ReadBookViewModel` 仍是
+`BaseViewModel(application)`；`ViewModel→UI` 的一次性 Effect 通道仍在（但渲染类 Effect 已全部下沉出 VM，
+剩余面是可辩护的最小集）。第二个分数所代表的迁移纪律**没有被破坏**——每一批都带护栏与反证、零全量重写。
+
+**重要边界（回答「R 系列做完是不是就 MAD 完成了」）**：本计划的范围是**阅读器核心 + 全应用 UI→DAO**，
+不是整个应用的 MAD 成熟度。R 系列走完后，下列**全应用维度从未进入本计划**，它们不属于「阅读器现代化」
+但确实是 MAD 画像的一部分：
+
+- **模块化**：业务代码全在单 `:app` 模块（`:modules:book`/`:modules:rhino` 只是库封装）。单模块下 `internal`
+  几乎不设防——这也是本计划多处只能靠正则护栏、而非语言可见性的根因。
+- **UI 技术栈**：仍有 175 个 XML 布局 / 47 个非 Compose Activity（BookInfo、书源管理等），属 **Compose 迁移轨道**，
+  与本计划刻意分开（混做会让真机验证清单失控）。
+- 其余（依赖治理、后台任务、自适应布局与无障碍、隐私与发布质量）本计划均未评估，R5 只挑了其中三项收益最明确的。
+
 ## 1. 已核实的现状（事实基线）
 
-| 事实 | 证据 |
-|---|---|
-| `ReadBook` 是进程级全局单例 | `object ReadBook : CoroutineScope by MainScope(), KoinComponent`（`model/ReadBook.kt:73`） |
-| 阅读器真实所有权在单例，VM 是回调适配器 | `ReadBookViewModel(...) : BaseViewModel(application), ReadBook.CallBack`（`ui/book/read/ReadBookViewModel.kt:203`） |
-| `ReadBookViewModel` 体量失控 | 6484 行 |
-| `ReadBook` 被外部广泛引用 | 44 个非 VM 文件引用；写入约 7 处；引用逃逸式写入近 0；其余为读取/身份比较 |
-| `Book` 是可变实体 | `data class Book(... var durChapterIndex ... var durChapterPos ...)`（`data/entities/Book.kt:41`） |
-| `CallBack` 是混合协议（渲染 + 业务状态） | 11 个方法，`interface CallBack : LayoutProgressListener`（`model/ReadBook.kt:1330`） |
-| `upContentAwait` 是 `suspend`，模型反向等待视图 | `model/ReadBook.kt`（CallBack 定义内） |
-| VM 是 `CallBack` 唯一实现者 | 全仓仅 `ReadBookViewModel` 声明 `: ReadBook.CallBack` |
-| Effect 通道带订阅握手 | `_effects.subscriptionCount.first { it > 0 }`（`ReadBookViewModel.kt:210-223`） |
-| UI→DAO 直连是系统性模式 | 计划撰写时约 33 个 VM 构造注入 DAO；**现已冻结并清零 8 个可清 VM + `ReadBookViewModel` 全部访问，主线余 0**（见进度快照） |
-| CI 门禁 | lint 基线与架构护栏已就位；**仍缺显式 CI test/lint job**（见进度快照 ③） |
-| 已有架构护栏 + 基线机制 | `VerifyConfigArchitectureTask` + 三条基线（`legacyPreferenceCallBaseline` / `legacyDaoInjectionBaseline` / `legacyUiDaoAccessBaseline`），已 `dependsOn` assemble/compile |
+> **这是计划撰写时（2026-07-21 前）的基线，不是当前状态。**「现状」列记录 2026-07-30 的实际值——
+> 保留原始基线是为了让后来者看清每条债是怎么被消掉的；要看当前状态请读上面的进度快照。
+
+| 事实（撰写时基线） | 证据 | 现状（2026-07-30） |
+|---|---|---|
+| `ReadBook` 是进程级全局单例 | `object ReadBook : CoroutineScope by MainScope(), KoinComponent`（`model/ReadBook.kt:73`） | 仍是单例，但会话字段 `private set`、外部写入点 0、有权威 `snapshot: StateFlow`（Track A） |
+| 阅读器真实所有权在单例，VM 是回调适配器 | `ReadBookViewModel(...) : BaseViewModel(application), ReadBook.CallBack`（`ui/book/read/ReadBookViewModel.kt:203`） | VM **不再实现** `CallBack`（R2.3）；仍是 `BaseViewModel(application)`，「VM 持有 Application」未消除 |
+| `ReadBookViewModel` 体量失控 | 6484 行 | **2494 行**（R2 拆出 10 个 delegate，护栏钉住 2500 行验收线） |
+| `ReadBook` 被外部广泛引用 | 44 个非 VM 文件引用；写入约 7 处；引用逃逸式写入近 0；其余为读取/身份比较 | `ReadView.kt` 引用**归零**（D1/D2）；`page/` 包另 8 个文件仍直读，含 `TextPageFactory` 6 处**写**操作，见待续 ② |
+| `Book` 是可变实体 | `data class Book(... var durChapterIndex ... var durChapterPos ...)`（`data/entities/Book.kt:41`） | 未变（Room 实体，A3 完整形态「绝不外递可变 Book」未做） |
+| `CallBack` 是混合协议（渲染 + 业务状态） | 11 个方法，`interface CallBack : LayoutProgressListener`（`model/ReadBook.kt:1330`） | B1 切成 `ReaderRenderCallback`（渲染）+ `CallBack`（状态 4 项）；其中 `sureNewProgress` 现已是**死通道**（无调用点），可删 |
+| `upContentAwait` 是 `suspend`，模型反向等待视图 | `model/ReadBook.kt`（CallBack 定义内） | 未变（B3 已说明：能搬不能删，删它属重写渲染器） |
+| VM 是 `CallBack` 唯一实现者 | 全仓仅 `ReadBookViewModel` 声明 `: ReadBook.CallBack` | 已换成 `LegacyReaderSession`（`model/ReaderSession.kt:86`），VM 不再实现（R2.3） |
+| Effect 通道带订阅握手 | `_effects.subscriptionCount.first { it > 0 }`（`ReadBookViewModel.kt:210-223`） | 仍在，一处（`ReadBookViewModel.kt:167-170`），服务 `UpdateReadViewConfig` 的 init 时序；退役属 Track E·E2 续作，见端游 ② |
+| UI→DAO 直连是系统性模式 | 计划撰写时约 33 个 VM 构造注入 DAO | 主线基线 **0**（R2.1 收尾）；第二条线 26 文件 / 62 处只冻不修；`ReadBookController` 三处漏在账本外，见待续 ⑤ |
+| CI 门禁 | lint 基线与架构护栏已就位；**仍缺显式 CI test/lint job** | ✅ **已补齐**：`verify.yml:44-51` 四道门，单测 455 全绿 |
+| 已有架构护栏 + 基线机制 | `VerifyConfigArchitectureTask` + 三条基线（`legacyPreferenceCallBaseline` / `legacyDaoInjectionBaseline` / `legacyUiDaoAccessBaseline`），已 `dependsOn` assemble/compile | 扩到管排版配置写入 + `ReadStyleConfigStore` owner 名单；单测侧 8 个边界/不变式测试类；R4.7 后配置写入主要由**编译器**（`val`）约束。**已知三个绕过口见待续 ③** |
 
 ## 2. 反目标（明确不做）
 
@@ -95,15 +196,19 @@
 
 ```
 横切地基：
-  F1  CI 质量门禁（测试/lint 基线/架构检查）
-  F2  UI→DAO 去注入（全应用，非阅读器专属）
+  F1  CI 质量门禁（测试/lint 基线/架构检查）  —— 已完成 ✅
+  F2  UI→DAO 去注入（全应用，非阅读器专属）  —— 主线清零 ✅，第二条线只冻不修
 
 Track A  所有权与业务状态       —— 已落地（A1–A5）
-Track B  遗留渲染边界下沉       —— 已落地（B1/B2），端游剩余
+Track B  遗留渲染边界下沉       —— 已落地（B1/B2）+ R2.3 关掉端游 ①③，只剩握手 ②
 Track C  声明式渲染 / Compose   —— C0–C5 已落地，2026-07-21 起暂停；2026-07-25 已删除
-Track D  ReadView 自身业务解耦   —— 近期主线，不依赖 Compose，依赖 A（ReaderSession）
-Track E  阅读设置的 SSOT 与 UDF —— 与 D 正交、可并行，无前置依赖
+Track D  ReadView 自身业务解耦   —— D1a/D1b/D2 已落地（= R3）；剩 D1c 测试 + D2 残余（page 包）
+Track E  阅读设置的 SSOT 与 UDF —— E0–E5 全部达成（E1 撤销、E5 并入 R4.1）；配置底座另做了 R4.1–R4.7
 ```
+
+> **状态汇总（2026-07-30）**：五条轨道 + 两条地基**只剩三处开口**——D1c（阅读器核心 JVM 测试）、
+> D2 残余（`page/` 包 8 个文件，含 `TextPageFactory` 6 处写）、Track B 端游 ②（Effect 投递握手，
+> 需先把配置应用改成状态式）。加上范围外新增的 R5 三项与一份审查遗留清单，见进度快照「待续」。
 
 > **方向修订（2026-07-21）**：原路线把 Track C（Compose 替换阅读器）当作阅读渲染的终点。基于 C3 真机性能基线（Compose 帧耗时/jank 明显劣于旧 View）与「仿真卷曲/选择/滚动/自动翻页全量重写=高回归风险、低用户收益」的判断，**改为**：保留成熟的 `ReadView` 作为渲染核心，把它从「业务+状态+渲染全包」重构成**只做绘制/手势/动画的专业渲染岛**；Compose 用于阅读器外围 UI（工具栏/菜单/设置/弹窗）与「可选可插拔渲染器」实验。**MAD ≠ Compose**：分层、UDF、状态所有权、`ViewModel+StateFlow`、生命周期感知、可测试的数据/业务层，均可在 View 上成立（Android 官方至 2026 仍维护专门的 View 架构指南）。Track C 是否最终成为默认渲染器，留待专门的性能调查后重估，不作为当前目标。
 
@@ -113,12 +218,13 @@ Track E  阅读设置的 SSOT 与 UDF —— 与 D 正交、可并行，无前�
 
 没有它，后续拆 DAO、拆单例、拆 VM 都没有安全网。
 
-> **当前状态**：单测 272 全绿；`app/lint-baseline.xml` 已建并接入 `lint {}`；`verifyConfigArchitecture` 已在 CI 传递生效。**唯一未做 = 下面的第 3 步（显式 CI test/lint job）**。
+> **当前状态（2026-07-30）：F1 全部完成** ✅。单测 455 全绿；`app/lint-baseline.xml` 已建并接入 `lint {}`；
+> `.github/workflows/verify.yml` 的 `verify` job 显式跑全部四道门。
 
 **任务**
-1. ~~反复运行现有单元测试，识别确定性失败与 flaky 套件~~ ✅ 当前 272 tests / 0 failures。
-2. ~~生成 lint 基线并提交 `app/lint-baseline.xml`~~ ✅ 已建并接入。
-3. **（待做）** CI 增加一个 `verify` job（与现有 `assembleAppDebug` 并列或前置）：
+1. ~~反复运行现有单元测试，识别确定性失败与 flaky 套件~~ ✅ 当前 455 tests / 0 failures。
+2. ~~生成 lint 基线并提交 `app/lint-baseline.xml`~~ ✅ 已建并接入（另有 `07e7a8a3f` 清掉 9 个既存 lint 错误，让门禁真正可用）。
+3. ~~CI 增加一个 `verify` job~~ ✅ **已落地**（`verify.yml:44-51`）：
    ```bash
    ./gradlew testAppDebugUnitTest
    ./gradlew lintAppDebug          # 仅新增违规会 fail（基线已冻结历史债）
@@ -309,7 +415,9 @@ ReadBook ──legacy render callback──▶ LegacyReaderRenderController
 
 **验收**：VM 不再实现 `ReadBook.CallBack`；`_effects` 中的渲染类 Effect（`ToggleReadAloud`/`ToggleAutoPage` 等指令）全部由渲染控制器承接；`subscriptionCount.first { it > 0 }` 握手删除。剩余 `_effects` 仅保留真正的一次性 UI 消息/导航（严格 MAD 下仍扣分，但已是可辩护的最小面）。
 
-> **B2 已达成中期目标**（渲染子集不再穿过 VM）；上面这条**完整验收**尚未全绿——VM 仍实现 `CallBack` 的**状态子集**、握手仍在。三项端游剩余见进度快照 ⑤，属把状态子集也迁入 `ReaderSession` 的后续工作。
+> **完整验收进度（2026-07-30）**：「VM 不再实现 `ReadBook.CallBack`」✅ 已达成（R2.3 把状态子集迁进
+> `LegacyReaderSession`）；渲染类 Effect 全部由渲染控制器承接 ✅；**只剩 `subscriptionCount` 握手未删**
+> （一处，见进度快照端游 ②——它是效果投递问题，不随所有权收敛自动消失）。
 
 ---
 
@@ -335,8 +443,20 @@ Legacy Canvas View
 
 ---
 
-### Track D —— `ReadView` 自身业务解耦（近期主线，不依赖 Compose）
+### Track D —— `ReadView` 自身业务解耦（D1a/D1b/D2 已落地，剩 D1c）
 
+> **进度（2026-07-30）**：**D1a**（`d38de8d5d`）7 处业务直呼改 `ReaderEvent` 出站；**D1b**（`c0a8bc308`）
+> `CallBack` 12 → 4 个成员（只留 `screenOffTimerStart`/`showTextActionMenu`/`upSystemUiVisibility`/`isInitFinish`
+> 四项瞬时 UI 副作用），`activity as CallBack` 兜底删除，三个协作面全部构造期**非空**注入；**D2**（`89b756ae4`）
+> 新增 `ReaderPageSource` 喂入页数据，`DataSource.pageIndex` 的默认实现改抽象。`ReadView.kt` 对业务单例的引用**归零**。
+>
+> **实现选择（重要，与下方设计草案的差异）**：`ReaderEvent` 走**同步 `fun interface` 直调**
+> （`ReadView.click()` → `eventListener.onEvent()` → `ReadBookController.onEvent()`），**不走 SharedFlow**——
+> 全程主线程同步，与改造前的直呼零派发时序差异。`sealed interface` + 无 `else` 的 `when` 让漏分支变成编译错误。
+> D2 **刻意不做快照**：取页由 `pageFactory` 在绘制期驱动，发布期快照会改时序，本步零时序变化。
+>
+> **剩余**：D1c（测试，见进度快照待续 ①）、D2 在 `page/` 包的残余（待续 ②）。
+>
 > **由来（2026-07-21）**：Track A 收敛了 `ReadBook` 所有权、Track B 把渲染回调移出 VM、Track C 让 Compose 面消费只读快照——但三者都没动 **`ReadView` 自己**的出站耦合。既然决定「保留 View 作为渲染核心」，就必须把 View 阅读器本身拉回 UDF：**`ReadView` 只做绘制/手势/动画，不认识 `ReadBook`/`ReadAloud`/Activity 导航。**
 
 **已核实的耦合**（`ui/book/read/page/ReadView.kt`）：
@@ -382,9 +502,18 @@ fun interface ReaderEventListener { fun onEvent(event: ReaderEvent) }
 
 ---
 
-### Track E —— 阅读设置的单一数据源与 UDF（与 D 正交，可立即开始）
+### Track E —— 阅读设置的单一数据源与 UDF（已达成，配置底座另做了 R4）
 
-> **执行计划见 `docs/dev/track-e-reader-settings-udf-plan.md`**。
+> **执行计划见 `docs/dev/track-e-reader-settings-udf-plan.md`**（该文档 §5 验收总表已同步到 2026-07-30）。
+>
+> **进度（2026-07-30）**：E0 ✅ → E1 ❌ 撤销（前提不成立）→ E2 ✅ → E3 ✅（`sheet/` 下 `ReadBookConfig.`
+> 归零，R4.6 连白名单一并取消）→ E4 ✅（`UP_CONFIG` 生产者归零）→ E5 ✅（并入 R4.1）。
+>
+> **本轨道最初没预料到的部分：配置底座本身的所有权反转（R4.1–R4.7）**。Track E 原定「写入面不动、
+> 只补写完之后怎么让所有人看到新值」，但 E5 要让渲染引擎吃只读快照时暴露出更深的问题——`ReadBookConfig`
+> 既是状态本体又是写入口，`getConfig` 还是 `@Synchronized`（每行每列每帧抢一次全局锁）。于是追加了 R4：
+> 写面收进 gateway 实现 → 状态本体搬进 `ReadStyleConfigStore` → `Config` 值字段改 `val`。
+> 结果是**写入约束从正则护栏升级为编译器**，`ReadBookConfig` 降为只读投影（1405 → 982 行）。
 
 Track D 管「`ReadView` 怎么把业务意图**发出去**」，Track E 管「设置怎么**流进来**」。两者不互相阻塞。
 
@@ -445,7 +574,11 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 ```
 迁移期，旧 `ReadBook.CallBack`（渲染子集）由 `LegacyReaderRenderController` 实现；最终从 `ReadBook` 抽走渲染职责。
 
-> **2026-07-21 修订**：底部「→ 最终由 Track C 替换为声明式渲染」**改为长期可选**。当前目标是 `ReadView`/`ContentTextView` 作为**稳定的规范渲染岛**保留，Track D 补一条 `ReadView → ReaderEvent → VM/ReaderSession` 的出站回边（替代 `ReadView` 现在直呼 `ReadBook`/`ReadAloud`/`callBack` 业务项）。Compose 渲染器（`ComposeReaderRenderer`）冻结在 `ReaderRenderer` 契约后，作为可选实现，非默认终点。
+> **2026-07-21 修订**：底部「→ 最终由 Track C 替换为声明式渲染」**改为长期可选**。当前目标是 `ReadView`/`ContentTextView` 作为**稳定的规范渲染岛**保留，Track D 补一条 `ReadView → ReaderEvent → VM/ReaderSession` 的出站回边（替代 `ReadView` 直呼 `ReadBook`/`ReadAloud`/`callBack` 业务项）。Compose 渲染器（`ComposeReaderRenderer`）冻结在 `ReaderRenderer` 契约后，作为可选实现，非默认终点。
+>
+> **2026-07-30 更新**：那条出站回边**已建成**（D1a/D1b + `ReaderEvent`），入站页数据也已走 `ReaderPageSource`（D2）。
+> Compose 渲染器于 2026-07-25 连同 `ReaderRenderer` 契约一并**删除**（见 Track C 节），所以上图底部的
+> 「最终由 Track C 替换」在当前代码里没有对应物——`ReadView`/`ContentTextView` 就是唯一渲染实现。
 
 ## 6. 强制机制（编译器 > 扫描器）
 
@@ -456,12 +589,37 @@ AI 清理与改写、翻译、TTS 引擎查询与配置、换源、上传/同步
 | 非 VM UI 层不新增 DAO 直连 | 同上 + `legacyUiDaoAccessBaseline` | CI，双向棘轮 ✅ |
 | 不新增旧偏好直读 | 现有 `legacyPreferenceCallBaseline` | CI（已存在） |
 | `ReadBook` 读取收敛 | lint/Detekt（读取难以编码约束，且低风险，用扫描器足够） | CI 提示 |
-| 单测/新增 lint 违规 | `testAppDebugUnitTest` / `lintAppDebug` + 基线 | **待接入 CI job（F1 ③）** |
+| 单测/新增 lint 违规 | `testAppDebugUnitTest` / `lintAppDebug` + 基线 | CI job 已接入 ✅（`verify.yml`） |
+| 排版 `Config` 的值字段不可外部写 | Kotlin `val`（92 个构造参数，R4.7）+ `copy`/`withCurXxx` | 编译期，不可绕过 ✅ |
+| `ReadBookConfig` 写入必须经 `ReadStyleGateway` | `verifyConfigArchitecture` 正则 | CI，**有绕过口**（成员 import 裸写，见待续 ③） |
+| 排版状态本体只对 gateway 开放 | `configStoreOwners` 4 文件名单（纯子串检查，较结实） | CI ✅（但下层 `ReadStyleRepository` 无限制，见待续 ③） |
+| `ReadView` 不认识业务单例 / 三面非空注入 | `ReadViewBoundaryTest` 六条断言 | 单测，**只扫 `ReadView.kt` 一个文件** |
+| 渲染实体不直读排版全局 | `RenderStyleSnapshotBoundaryTest` | 单测，**对 `ReadConfig` 不设防 + 实体名单是死的** |
+| 域状态不回流 / VM ≤2500 行 / delegate 无 DAO | `ReadBookDomainSplitBoundaryTest` | 单测（stateFields 走反射，较结实）✅ |
 
 原则：能路由的**写入**用可见性（语言级）约束；难封装的**读取**用扫描器（工具级）约束。
 
+> **护栏强度排序（2026-07-30 审查结论，写新护栏时参考）**：反射/行为类（枚举 sealed 子类、JSON round-trip）
+> ＞ 全词子串类（`\bReadBookConfig\b`、owner 名单）＞ 限定访问正则类（`ReadBook\.`、`configStore\.xxx(`）
+> ＞ 缩进锚定声明类（`^    var`——`internal var`、同行注解、嵌套 object 全盲）。
+> **「注入反证会红」只证明护栏能抓它自己想象的那一种写法**，不等于强制了它声称的不变式。
+> Kotlin 表达同一件事有五种写法（成员 import、alias import、FQN、`with`/`apply` 接收者、局部别名），
+> 正则类护栏默认只挡住一种。
+
 ## 7. 推荐执行顺序（一句话）
 
-**先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A，已落地）；同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B，已落地）→ 并行拆分 VM 中与渲染无关的业务 → 把 `ReadView` 自身的业务耦合解掉、让 View 阅读器符合 UDF（Track D，近期主线，不依赖 Compose），并行推进阅读设置的 SSOT 收敛（Track E，无前置依赖）。Compose 阅读器（Track C）已于 2026-07-25 删除，若重启需重新实现。** 全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
+**已走完的路径**：先用编译器冻结写入 → 集中约 7 个 mutator → 建立权威 ReaderSession（Track A）；
+同时把渲染 Effect 从 VM 下沉到 UI 渲染控制器（Track B）→ 拆分 VM 中与渲染无关的业务（R2，6671 → 2494 行）
+→ 把 `ReadView` 自身的业务耦合解掉（Track D = R3）→ 阅读设置 SSOT 收敛（Track E）→ 追加配置底座
+所有权反转（R4，写入约束升级为编译器）。Compose 阅读器（Track C）已于 2026-07-25 删除，若重启需重新实现。
+全程由 F1 的 CI 门禁与 F2 的 DAO 去注入护栏兜底。
+
+**剩余顺序（2026-07-30）**：真机验证 R4.5–R4.7 → 快照体系收尾包（审查遗留，小步快合）→ **D1c 阅读器核心
+JVM 测试**（阻塞链刚解开，回报最大，且能兜住前一步的回归面）→ R5 三项按空档插队（baseline profile 那项
+不碰阅读器结构，随时可插）→ D2 残余（`page/` 包）→ 最后再评估 Track B 端游 ②（Effect 投递握手，
+需先把配置应用改成状态式，是剩余项里唯一的大改造）。明细见进度快照「待续」。
+
+**做完这些之后**：阅读器核心的 MAD 收敛即告完成，主线转入 **Compose 迁移轨道**（175 XML / 47 非 Compose
+Activity）。那条轨道与本计划刻意分开——见 §0「重要边界」，以及本计划反目标「不用 Compose 迁移当作解耦前置」。
 
 严格 MAD 下 Effect 仍扣分；但准确的表述是——**问题从来不是"指令式 View 无解"，而是"指令式渲染协议被错误地穿过了 ViewModel"**。本计划的每一步都在把那条线拉回 UI 层，而不需要等待 Compose。
