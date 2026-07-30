@@ -9,9 +9,11 @@
 > 本节是给新开窗口的接续点，描述**当前 HEAD 的真实状态**。两条横切地基（F1、F2 主线）已完成；
 > Track A/B/E 已落地，Track C 已于 2026-07-25 删除，Track D 走完 D1a/D1b/D2；在此之上又做了一轮
 > **R 系列**（结构止血 → VM 拆分 → 出站解耦 → 配置底座），自 E0 起 main 上共 132 个提交。
-> 下方数字均已核实。**剩余结构性工作只有三项**：D1c（阅读器核心 JVM 测试）、D2 残余（`page/` 包）、
-> Track B 端游 ②（Effect 投递握手，需先改状态式，建议最后评估）；另有 R5 三项体验/安全项与一份
-> 2026-07-30 全量审查的遗留清单（含两条 P1），全部列在「待续」节。
+> 下方数字均已核实。**2026-07-30 又推进了 D1c 第一批与 D2 的写操作清零**（`54d19c980`、`6d7fa37a8`）：
+> `TextPageFactory` 对 `ReadBook` 的引用归零并补上 20 条翻页边界测试，`page/` 包剩下的全是读。
+> **剩余结构性工作**：D1c 的手势路由与选页测试、D2 的三处读（`PageView`/`ScrollPageDelegate`/
+> `ContentTextView`）、Track B 端游 ②（Effect 投递握手，建议最后评估）；另有 R5 三项体验/安全项与
+> 2026-07-30 全量审查的遗留清单，全部列在「待续」节——**其中已判定「不做」的几处都写明了理由，别再重开**。
 
 ### R 编号 ↔ Track 对照（提交信息用 R 编号，本文档用 Track 字母）
 
@@ -82,22 +84,46 @@
 
 > 建议顺序：**真机验证 R4.5–R4.7 → ③ 收尾包（小步快合）→ ① D1c 测试专项 → ④ R5 按空档插队 → ② D2 残余 → 最后评估 Track B 端游 ②**。
 
-**① D1c —— 阅读器核心 JVM 测试（回报最大，阻塞链刚解开）**
+**① D1c —— 阅读器核心 JVM 测试：第一批已落地（`6d7fa37a8`，2026-07-30），余下的见下**
 
-Track D 的既定下一步。`ReadView` 现在无 Activity 依赖、三个协作面（`callBack`/`eventListener`/`pageSource`）
-构造期非空注入，可在 JVM/robolectric 下构造。**此前的五级阻塞全在 `ReadBookConfig` 一侧，R4 做完才真正解开。**
-项目已有 robolectric 4.16.1（`app/build.gradle.kts:180`）却**零**阅读器核心测试。第一批目标：
-手势 action 路由表（fake listener 断言）、翻页边界 `hasNext`/`hasPrev`、`pageFactory` 换章。
-做完翻页回归不必再全压真机，**并能顺带兜住 ③ 收尾包的回归面**。
+`TextPageFactoryTest` 20 条覆盖**翻页边界与换章**。切入点不是 `ReadView` 而是 `TextPageFactory`：
+D2 把它的页位置命令收进 `ReaderPageSource` 之后依赖只剩两个接口，用假实现断言「哪个命令被下达了」
+比构造 `ReadView` 便宜得多，且覆盖的正是真机难复现的分支（滚动模式章尾下一章未加载、
+上一章未排完不许后退、章内 vs 跨章走不同命令）。同批打开了
+`testOptions.unitTests.isIncludeAndroidResources`——**没有它 Robolectric 下取任何 `R.string`
+都是 `Resources$NotFoundException`，整条阅读器测试线起不来**（阅读器在构造期就读资源）。
 
-**② D2 残余（`page/` 包，可后置）**
+**还没做的两块**：
 
-D2 只做了 `ReadView.kt` 一个文件的入站解耦。同包另有 8 个文件直接摸 `ReadBook`，其中
-**`TextPageFactory` 6 处是写操作**（`setPageIndex`/`moveToNextChapter`/`moveToPrevChapter`）——
-渲染层下达业务命令，性质同 D1，只是当时文档把 D1 划在一个文件里。其余是 `PageView`/`ContentTextView`/
-`ChapterProvider`/`TextChapterLayout` 读 `ReadBook.book`/`bookSource`。另有两项在 `LayoutMetrics` 的
-KDoc 里已认领为 D2 范围：`TextChapterLayout` 构造期 8 项配置逐项读（无组内原子性）、
-`setTypeHtml` 在 IO 线程就地改共享 `contentPaint.color`。做 ① 的测试时会自然摸到这些。
+- **手势 action 路由表**（原定第一批目标之一）：`ReadView.click(action: Int)` 与 `onSingleTapUp()`
+  都是 private，要测得先决定是否为可测性把 `click` 降为 `internal`；且构造 `ReadView` 还要过
+  `PageView`/`TipStyleProvider` 那一路的全局图。**公开的 `performAccessibilityAction` 可以先测**。
+- **选页逻辑**（`curPage`/`nextPage`/`prevPage`）：构造**任何 `TextPage`** 都会拉起
+  `CanvasRecorderFactory → ReadConfig → Koin` 与 `ChapterProvider.<clinit> → ReadBookConfig →
+  ReadStyleConfigStore → Room` 两条链。第一批用「按泛型擦除塞占位对象」绕开（翻页边界只用
+  `pages.size`，从不碰页对象）。要测页内容得先给渲染实体解开构造期的全局依赖，别在测试里拉那条链。
+
+**② D2 残余（`page/` 包）——写操作已清零（`54d19c980`，2026-07-30）**
+
+`TextPageFactory` 的 6 处写操作（`setPageIndex`/`moveToNextChapter`/`moveToPrevChapter`）
++ 3 处读 `msg` 已收进 `ReaderPageSource`。**命令口刻意不是 `ReaderEvent`**：那是即发即忘的
+出站意图，而这三个命令必须同步生效（下达后立即取新位置的页、返回布尔给翻页委托决定动画）。
+同批把 `TextChapterLayout` 的 `bookSource` 与 `ImageColumn` 的 `book` 改成构造期定参，
+顺带修掉两个真实的陈旧读（换源时旧排版协程用新源下旧书的图；换书瞬间旧页面用新书目录找图）。
+
+**剩下的都是读，且两处已判定不做**：
+
+| 位置 | 内容 | 判定 |
+|---|---|---|
+| `PageView`（4 处） | `book?.name`、`getWholeBookPageState` | 待做，需给 `ReaderPageSource` 加书籍描述成员 + 整书页码查询口 |
+| `ScrollPageDelegate`（2 处） | `book?.isImage`、`getImageStyle()` | 待做，同上（`PageDelegate` 只有 `readView`，要透传） |
+| `ContentTextView`（2 处） | `isOnLineTxt`、书签组装 | 待做，**但会改动手势的 `handled` 语义**，必须与 controller 同批 |
+| `TextLine:189` | `book?.isImage`（不画下划线） | **不做**：该 `TextLine` 创建点拿不到 book，改了漫画书加载页会多出下划线；而它每帧只是个位测试，为架构纯度换行为差不值 |
+| `ChapterProvider:530` | `requestWholeBookPageEstimate()` | **不做**：合并进紧邻的 `ReadConfigUpdateBus` 看似一行，但那是 `tryEmit` 且 action 循环被 `refs ?: return` 挡着，首次布局 refs 未就绪时请求会被丢，**比直调更差** |
+| `ChapterProvider:549-550` | `pageAnim()` | **归 E5**：这是配置（全局 + 按书覆盖），且 `ChapterProvider` 是 `object`、无注入口 |
+
+另有两项在 `LayoutMetrics` 的 KDoc 里已认领为 D2 范围、本轮未做：`TextChapterLayout` 构造期
+8 项配置逐项读（无组内原子性）、`setTypeHtml` 在 IO 线程就地改共享 `contentPaint.color`。
 
 **③ R4.1 快照体系收尾包（2026-07-30 全量审查发现，小步快合）**
 
@@ -202,7 +228,8 @@ StateFlow、配置侧写入收进 gateway 且值字段 `val`）。**仍在的两
 Track A  所有权与业务状态       —— 已落地（A1–A5）
 Track B  遗留渲染边界下沉       —— 已落地（B1/B2）+ R2.3 关掉端游 ①③，只剩握手 ②
 Track C  声明式渲染 / Compose   —— C0–C5 已落地，2026-07-21 起暂停；2026-07-25 已删除
-Track D  ReadView 自身业务解耦   —— D1a/D1b/D2 已落地（= R3）；剩 D1c 测试 + D2 残余（page 包）
+Track D  ReadView 自身业务解耦   —— D1a/D1b/D2 + 取页器写面已落地；D1c 第一批 20 条已补
+                                    剩 D1c 手势/选页测试 + page 包三处读（详见待续 ①②）
 Track E  阅读设置的 SSOT 与 UDF —— E0–E5 全部达成（E1 撤销、E5 并入 R4.1）；配置底座另做了 R4.1–R4.7
 ```
 
