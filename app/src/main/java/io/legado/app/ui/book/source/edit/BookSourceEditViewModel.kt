@@ -208,7 +208,7 @@ class BookSourceEditViewModel(
             }
                 val old = originalSource ?: BookSource()
                 if (!source.equal(old)) {
-                source.lastUpdateTime = System.currentTimeMillis()
+                    source.lastUpdateTime = System.currentTimeMillis()
                     if (old.exploreUrl != source.exploreUrl) old.clearExploreKindsCache()
                     if (old.jsLib != source.jsLib) SharedJsScope.remove(old.jsLib)
                 }
