@@ -46,6 +46,8 @@ class ApplyReadSettingUseCase {
     }
 
     private fun updateLayout() {
+        // textBottomJustify 属于 RenderStyle 快照，重排前得先重建，否则排版读到旧值
+        ChapterProvider.upRenderStyle()
         ChapterProvider.upLayout()
         ReadBook.loadContent(false)
     }
