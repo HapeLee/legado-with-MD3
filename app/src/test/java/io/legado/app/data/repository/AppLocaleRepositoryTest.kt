@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import android.app.Application
 import androidx.core.os.LocaleListCompat
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -7,8 +8,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+// application = Application::class 与其余 Robolectric 测试一致：不指定的话 Robolectric 会从
+// manifest 取真的 io.legado.app.App，App.onCreate() 要拉 Koin/DB/Cronet，单测里必炸。
+// 开 isIncludeAndroidResources 之前 manifest 不被读取，这里才侥幸没暴露。
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(application = Application::class, sdk = [35])
 class AppLocaleRepositoryTest {
 
     @Test
