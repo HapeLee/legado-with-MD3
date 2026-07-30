@@ -628,6 +628,11 @@ class ReadConfigUpdateDelegate(
                     readSettingsRepository.setSliderVibrator(update.value)
                 }
             }
+            is ConfigUpdate.UseNewTocSheet -> {
+                scope.launch {
+                    readSettingsRepository.setUseNewTocSheet(update.value)
+                }
+            }
             is ConfigUpdate.SelectVibrator -> {
                 scope.launch {
                     readSettingsRepository.setSelectVibrator(update.value)

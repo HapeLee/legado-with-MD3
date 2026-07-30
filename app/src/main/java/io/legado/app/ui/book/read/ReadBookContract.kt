@@ -1478,6 +1478,9 @@ sealed interface ConfigUpdate {
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
+    data class UseNewTocSheet(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class SelectVibrator(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }

@@ -111,6 +111,9 @@ fun MoreConfigSheet(
                 onSliderVibratorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SliderVibrator(it)))
                 },
+                onUseNewTocSheetChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseNewTocSheet(it)))
+                },
                 onSelectVibratorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SelectVibrator(it)))
                 },
@@ -265,6 +268,7 @@ private fun PageControlSettings(
 private fun OtherSettings(
     preferences: ReadPreferences,
     onSliderVibratorChange: (Boolean) -> Unit,
+    onUseNewTocSheetChange: (Boolean) -> Unit,
     onSelectVibratorChange: (Boolean) -> Unit,
     onAutoChangeSourceChange: (Boolean) -> Unit,
     onDefaultSourceChangeAllChange: (Boolean) -> Unit,
@@ -288,6 +292,13 @@ private fun OtherSettings(
         checked = preferences.sliderVibrator,
         onCheckedChange = onSliderVibratorChange,
     )
+
+    TinySwitchSettingItem(
+        title = stringResource(R.string.use_new_toc_sheet),
+        checked = preferences.useNewTocSheet,
+        onCheckedChange = onUseNewTocSheetChange,
+    )
+
     TinySwitchSettingItem(
         title = stringResource(R.string.enable_select_vibrator),
         checked = preferences.selectVibrator,
