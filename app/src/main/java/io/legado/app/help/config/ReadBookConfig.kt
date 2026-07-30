@@ -522,7 +522,7 @@ object ReadBookConfig {
     @Keep
     data class Config(
         val name: String = "",
-        val bgStr: String = "#EEEEEE",//白天背景
+        val bgStr: String = "w.jpg",//白天背景
         val bgStrNight: String = "#000000",//夜间背景
         @Transient
         val menuBgColor: String = "#EEEFE3",
@@ -534,7 +534,7 @@ object ReadBookConfig {
         val menuAcColorNight: String = "#586249",
         val bgStrEInk: String = "#FFFFFF",//EInk背景
         val bgAlpha: Int = 100,//背景透明度
-        val bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
+        val bgType: Int = 1,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
         val bgTypeNight: Int = 0,//夜间背景类型
         val bgTypeEInk: Int = 0,//EInk背景类型
         private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
@@ -546,7 +546,7 @@ object ReadBookConfig {
         private var textAccentColor: String = "#834E00",//白天强调文字颜色
         private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
         private var textAccentColorEInk: String = "#000000",
-        private var pageAnim: Int = 0,//翻页动画
+        private var pageAnim: Int = 2,//翻页动画
         private var pageAnimEInk: Int = 4,
         val textFont: String = "",//字体
         val titleFont: String = "",//标题字体
@@ -591,19 +591,19 @@ object ReadBookConfig {
         val dottedBase: Float = 6f, //长度
         val dottedRatio: Float = 6f,
         val paddingBottom: Int = 6,
-        val paddingLeft: Int = 16,
-        val paddingRight: Int = 16,
-        val paddingTop: Int = 6,
-        val headerPaddingBottom: Int = 0,
-        val headerPaddingLeft: Int = 16,
-        val headerPaddingRight: Int = 16,
-        val headerPaddingTop: Int = 0,
-        val footerPaddingBottom: Int = 6,
-        val footerPaddingLeft: Int = 16,
-        val footerPaddingRight: Int = 16,
-        val footerPaddingTop: Int = 6,
+        val paddingLeft: Int = 15,
+        val paddingRight: Int = 15,
+        val paddingTop: Int = 0,
+        val headerPaddingBottom: Int = 10,
+        val headerPaddingLeft: Int = 15,
+        val headerPaddingRight: Int = 15,
+        val headerPaddingTop: Int = 5,
+        val footerPaddingBottom: Int = 10,
+        val footerPaddingLeft: Int = 30,
+        val footerPaddingRight: Int = 30,
+        val footerPaddingTop: Int = 5,
         val showHeaderLine: Boolean = false,
-        val showFooterLine: Boolean = true,
+        val showFooterLine: Boolean = false,
         val tipHeaderLeft: Int = ReadTipType.tipTime,
         val tipHeaderMiddle: Int = ReadTipType.tipNone,
         val tipHeaderRight: Int = ReadTipType.tipBattery,

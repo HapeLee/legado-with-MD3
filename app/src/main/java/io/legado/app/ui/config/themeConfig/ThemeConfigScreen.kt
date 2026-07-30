@@ -295,7 +295,7 @@ fun ThemeConfigScreen(
                             context.getString(R.string.font_scale_summary, it / 10f)
                         },
                         value = appShell.fontScale.toFloat(),
-                        defaultValue = 10f,
+                        defaultValue = 8f,
                         valueRange = 8f..16f,
                         steps = 7,
                         onValueChange = { value ->

@@ -18,7 +18,7 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         customContrast = string(PreferKey.customContrast, "Default"),
         launcherIcon = string(PreferKey.launcherIcon, "ic_launcher"),
         isPredictiveBackEnabled = boolean(PreferKey.isPredictiveBackEnabled, true),
-        fontScale = int(PreferKey.fontScale, 10),
+        fontScale = int(PreferKey.fontScale, 8),
         enableDeepPersonalization = boolean(PreferKey.enableDeepPersonalization, false),
         cPrimary = int(PreferKey.cPrimary, 0),
         cNPrimary = int(PreferKey.cNPrimary, 0),

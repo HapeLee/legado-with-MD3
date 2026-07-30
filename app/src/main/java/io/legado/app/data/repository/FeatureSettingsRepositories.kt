@@ -279,7 +279,7 @@ internal fun BackupSettings.toPrefMap(): Map<String, Any?> = mapOf(
 
 internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettings(
     themeMode = compatDsString(PreferKey.themeMode) ?: "0",
-    fontScale = compatDsInt(PreferKey.fontScale) ?: 10,
+    fontScale = compatDsInt(PreferKey.fontScale) ?: 8,
     composeEngine = compatDsString(PreferKey.composeEngine) ?: "material",
     showHome = compatDsBoolean(PreferKey.showHome) ?: true,
     showDiscovery = compatDsBoolean(PreferKey.showDiscovery) ?: true,
