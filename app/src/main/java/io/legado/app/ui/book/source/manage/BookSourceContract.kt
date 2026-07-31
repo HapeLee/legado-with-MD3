@@ -17,6 +17,9 @@ data class BookSourceItemUi(
     val name: String,
     val group: String?,
     val enabled: Boolean,
+    val enabledExplore: Boolean,
+    val hasLoginUrl: Boolean,
+    val hasExploreUrl: Boolean,
     val customOrder: Int,
 ) : SelectableItem<String> {
 }

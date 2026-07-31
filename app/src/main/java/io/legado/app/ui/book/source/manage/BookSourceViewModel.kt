@@ -83,6 +83,9 @@ class BookSourceViewModel(
                     name = source.bookSourceName,
                     group = source.bookSourceGroup,
                     enabled = pendingEnabled[source.bookSourceUrl] ?: source.enabled,
+                    enabledExplore = source.enabledExplore,
+                    hasLoginUrl = source.hasLoginUrl,
+                    hasExploreUrl = source.hasExploreUrl,
                     customOrder = source.customOrder,
                 )
             }.toImmutableList(),

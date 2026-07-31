@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.SnackbarHostState
@@ -51,6 +49,7 @@ import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
@@ -66,6 +65,9 @@ fun BookSourceRouteScreen(
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
+    onLoginSource: (String) -> Unit,
+    onSearchSource: (String) -> Unit,
+    onDebugSource: (String) -> Unit,
     onImportLocal: () -> Unit,
     onImportOnline: (String) -> Unit,
 ) {
@@ -76,6 +78,9 @@ fun BookSourceRouteScreen(
         onBackClick,
         onAddSource,
         onEditSource,
+        onLoginSource,
+        onSearchSource,
+        onDebugSource,
         onImportLocal,
         onImportOnline
     )
@@ -89,6 +94,9 @@ fun BookSourceScreen(
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
+    onLoginSource: (String) -> Unit,
+    onSearchSource: (String) -> Unit,
+    onDebugSource: (String) -> Unit,
     onImportLocal: () -> Unit,
     onImportOnline: (String) -> Unit,
 ) {
@@ -354,10 +362,25 @@ fun BookSourceScreen(
                             },
                             onClickEdit = { onEditSource(item.id) },
                             trailingAction = {
-                                SmallPlainButton(
-                                    icon = Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.delete),
-                                    onClick = { deleteIds = setOf(item.id) })
+                                BookSourceItemMenu(
+                                    item = item,
+                                    canMoveToEdge = state.sort == BookSourceSort.Default && !state.groupByDomain,
+                                    onMoveToEdge = { toTop ->
+                                        onIntent(BookSourceIntent.MoveToEdge(setOf(item.id), toTop))
+                                    },
+                                    onLogin = { onLoginSource(item.id) },
+                                    onSearch = { onSearchSource(item.id) },
+                                    onDebug = { onDebugSource(item.id) },
+                                    onDelete = { deleteIds = setOf(item.id) },
+                                    onSetExploreEnabled = { enabled ->
+                                        onIntent(
+                                            BookSourceIntent.SetExploreEnabled(
+                                                setOf(item.id),
+                                                enabled
+                                            )
+                                        )
+                                    },
+                                )
                             })
                     }
                 }
@@ -373,6 +396,64 @@ fun BookSourceScreen(
                     .width(60.dp)
                     .align(Alignment.TopStart)
             )
+        }
+    }
+}
+
+@Composable
+private fun BookSourceItemMenu(
+    item: BookSourceItemUi,
+    canMoveToEdge: Boolean,
+    onMoveToEdge: (Boolean) -> Unit,
+    onLogin: () -> Unit,
+    onSearch: () -> Unit,
+    onDebug: () -> Unit,
+    onDelete: () -> Unit,
+    onSetExploreEnabled: (Boolean) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        SmallPlainButton(
+            icon = AppIcons.MoreVert,
+            contentDescription = stringResource(R.string.menu),
+            onClick = { expanded = true },
+        )
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            if (canMoveToEdge) {
+                RoundDropdownMenuItem(stringResource(R.string.to_top), onClick = {
+                    dismiss(); onMoveToEdge(true)
+                })
+                RoundDropdownMenuItem(stringResource(R.string.to_bottom), onClick = {
+                    dismiss(); onMoveToEdge(false)
+                })
+            }
+            if (item.hasLoginUrl) {
+                RoundDropdownMenuItem(stringResource(R.string.login), onClick = {
+                    dismiss(); onLogin()
+                })
+            }
+            RoundDropdownMenuItem(stringResource(R.string.search), onClick = {
+                dismiss(); onSearch()
+            })
+            RoundDropdownMenuItem(stringResource(R.string.debug), onClick = {
+                dismiss(); onDebug()
+            })
+            RoundDropdownMenuItem(stringResource(R.string.delete), onClick = {
+                dismiss(); onDelete()
+            })
+            if (item.hasExploreUrl) {
+                RoundDropdownMenuItem(
+                    text = stringResource(
+                        if (item.enabledExplore) R.string.disable_explore else R.string.enable_explore
+                    ),
+                    onClick = {
+                        dismiss(); onSetExploreEnabled(!item.enabledExplore)
+                    },
+                )
+            }
         }
     }
 }
