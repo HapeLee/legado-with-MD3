@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.9",
-  "name": "Pre-release 3.26.16-beta.9",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 界面优化\n* feat: 界面优化\n* feat: 优化主题管理\n* feat: 优化一下MIUIX主题管理\n* feat: 书源管理界面优化\n* feat: 界面优化\n* feat: 重构书源与订阅源编辑调试界面\n* refactor: 提取可复用书源编辑与调试组件\n* fix: 修复书源列表开关状态更新\n* feat:阅读设置里增加按钮切换新旧目录显示\n* feat: 重写书源编辑界面\n* feat: 重写书源列表界面\n* style(zh-strings): simplify \"正文标题\" to \"标题\" across chinese locales\n* chore(zh-strings): remove unused header and footer related strings\n* refactor(txtToc): 重构文本目录规则，拆分章节与分卷正则\n* feat(toc): 添加更新目录按钮并修复卷目录层级逻辑\n* refactor(read): 重构排版配置页面，整合页眉页脚设置\n* feat(highlight): add font weight, italic and 9-slice background support\n* feat(highlight): add font weight, italic and 9-slice background support",
+  "tag_name": "3.26.16-beta.10",
+  "name": "Pre-release 3.26.16-beta.10",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 整理代码\n* feat: 整理阅读配置和更多菜单\n* feat: 书源列表溢出菜单\n* feat: 刷新时刷新之后章节的问题\n* fix: 书架布局模式切换不生效及列表封面未垂直居中\n* feat:阅读界面更多设置里补充按钮切换新旧目录显示\n* 删除未使用的环境变量\n* 添加自助还原日志工作流\n* chore(lint): 基线去掉 UnusedResources 并修掉 rebase 带进来的两个 error\n* fix(rebase): 合上游后修复护栏、DAO 直连与弹层全局直读\n* docs: 同步 D1c 第一批与 D2 写面清零的落地情况\n* test(D1c): 补阅读器翻页边界与换章的第一批测试\n* refactor(D2): 取页器的页位置命令收进 ReaderPageSource，排版取图改构造期定参\n* 文档更新\n* fix(guard): 堵住配置护栏的三个绕过口\n* fix(read): 应用设置页切底部对齐后重排读到旧快照\n* refactor(R4.7): Config 的值字段改不可变，写入口从正则护栏升级为编译器\n* refactor(R4.6): 页眉页脚的静态选项表搬到消费方，E3 护栏取消白名单\n* refactor(R4.5): 排版配置的状态本体搬进 ReadStyleConfigStore\n* fix(read): linePaint 改由 upStyle 重建；清掉 ChapterProvider 671 行注释死代码与两个死 import\n* refactor(R4.4): 排版配置的写面收进 gateway 实现，ReadBookConfig 降为只读投影\n* fix(read): 自定义页眉页脚的 {PageRemaining} 不再在剩 0 页时替换成本章完\n* refactor(R4.1): 阅读器渲染层的排版直读全部收进快照\n* refactor(D2): ReadView 的页数据改由 ReaderPageSource 喂入\n* fix(R4.2): 主题配置与备份恢复的写盘一并改原子写\n* refactor(R4.3): 解开 ReadBookConfig 与排版 gateway 的双向依赖\n* fix(R4.2): 排版配置写盘改原子写，消除杀进程丢配置的窗口\n* refactor(D1b): ReadView.CallBack 拆成瞬时副作用面，业务项改走 ReaderEvent\n* refactor(D1a): ReadView 的 7 处业务直呼改 ReaderEvent 出站\n* docs: 同步 DAO 主线基线 36 → 0\n* refactor(R2.2): 朗读/样式/开书/书签四域摘出，ReadBookViewModel 达到 2500 行验收线\n* refactor(R2.2): 正文处理域与菜单按钮配置域摘出 ReadBookViewModel\n* refactor(R2.3): VM 不再实现 ReadBook.CallBack，渲染 Effect 内联进 controller\n* refactor(R2.1): ReadBookViewModel 33 处 DAO 直连溶解进 BookRepository\n* refactor(read): 删除不可达的 TTS 引擎配置 UI（净删 838 行）\n* refactor(R2.2): 配置更新分发 790 行摘出 ReadBookViewModel\n* refactor(R2.2): 搜索结果定位的纯逻辑摘出 ReadBookViewModel 并补测\n* refactor(R2.2): 正文编辑域 130 行摘出 ReadBookViewModel\n* refactor(R2.2): 高亮规则域 288 行摘出 ReadBookViewModel\n* refactor(R2.2): AI 域 1182 行摘出 ReadBookViewModel，状态独立成 ReadAiUiState\n* fix(R1.5): 补全 update{} 的键映射，消除 56 个字段的静默丢写\n* fix(lint): 清掉 9 个既存 lint 错误，让 verify 门禁真正可用\n* refactor(R1.4): 排版度量收进不可变快照，消除渲染管线数据竞争\n* refactor(Track E·E3/R1.2): 阅读设置弹层去可变全局直读\n* ci(verify): 删除 aliyun 镜像，与 auto-release 对齐\n* refactor(Track E·R1.1): 排版快照重建站点收敛到三条真实通道\n* refactor(Track E·E4): UP_CONFIG 整数码退役，改用 typed ReadConfigUpdateBus\n* test: DictionaryRepositoryImplTest 补 appCtx 注入\n* fix(阅读设置): readMenuFloatingIconLiquidGlass 接入 update{} 持久化与通道归类\n* chore(F2): 冻结护栏缺席期 main 新增的 DAO 直连基线\n* docs(Track E): 记录 E2 落地情况与两条未达成的验收判据\n* feat(Track E · E2): 排版快照改由 gateway 统一驱动，修复弹层显示旧值\n* fix(阅读设置): 修正两处 ConfigUpdateAction 错配导致的「改了不生效」\n* docs(Track E): 撤销 E1——前提不成立\n* test(Track E · E0): 阅读设置的三条防回归不变式\n* docs(Track E): 新增阅读设置 SSOT/UDF 改造计划\n* refactor(reader): 排版 viewport 解耦与首帧就绪信号\n* refactor(Track B): B2 渲染子集下沉到 UI 层渲染控制器\n* refactor(Track B): B1 拆分 CallBack — 渲染子集 ReaderRenderCallback\n* docs: Track A 收官 — A4/A5 落地说明与验证边界\n* feat(Track A): A4 权威快照 + A5 ReaderSession + VM 消费\n* docs: Track A A1-A3 落地记录 + A4/A5 暂缓理由\n* refactor(Track A): ReadBook 会话字段 private set + 语义化写入命令\n* docs: 更新 MAD 计划进度快照(F2 主线 130→36)\n* refactor: 清零 ReadBookViewModel 非阅读态 DAO 直连(httpTTS/书源/书签)\n* refactor: 清零 BookInfoViewModel DAO 直连\n* refactor: 清零 ReadMangaViewModel DAO 直连\n* refactor: 清零 AudioPlayViewModel DAO 直连\n* refactor: 清零 SourceLoginViewModel DAO 直连\n* refactor: 清零 TagGroupRuleViewModel DAO 直连\n* refactor: 清零 ChangeCoverViewModel DAO 直连\n* refactor: 清零 BookInfoEditViewModel DAO 直连\n* refactor: 清零 WebViewModel DAO 直连\n* refactor: 更新 MAD 现代化计划，增加进度快照与已完成任务描述\n* fix: 保证目录替换和书源排序原子性\n* refactor: 清零换源与目录 DAO 直连\n* chore: 扩展非 ViewModel UI DAO 护栏\n* refactor: 清零书源管理 DAO 直连\n* refactor: 清零书籍导入 DAO 直连\n* refactor: 清零 RSS DAO 直连\n* refactor: 清零关联导入 DAO 直连\n* refactor: 落地 F2 UI DAO 去注入\n* feat: add Reader core modernization plan (MAD convergence) document\n* refactor(typography): 简化字体和颜色相关字符串key\n* refactor(read): remove unused shadow set and chinese convert feature",
   "prerelease": true,
-  "created_at": "2026-07-29T18:58:18Z",
+  "created_at": "2026-07-31T14:59:11Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.9/legado-3.26.16-beta.9-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.10/legado-3.26.16-beta.10-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-29T19:13:03Z",
+      "created_at": "2026-07-31T15:25:15Z",
       "download_count": 0,
-      "id": 494426969,
-      "name": "legado-3.26.16-beta.9-arm64-v8a.apk",
+      "id": 496841529,
+      "name": "legado-3.26.16-beta.10-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/494426969"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/496841529"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.9/legado-3.26.16-beta.9-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.10/legado-3.26.16-beta.10-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-29T19:13:03Z",
+      "created_at": "2026-07-31T15:25:15Z",
       "download_count": 0,
-      "id": 494426967,
-      "name": "legado-3.26.16-beta.9-armeabi-v7a.apk",
+      "id": 496841525,
+      "name": "legado-3.26.16-beta.10-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/494426967"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/496841525"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.9/legado-3.26.16-beta.9.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.10/legado-3.26.16-beta.10.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-07-29T19:13:03Z",
+      "created_at": "2026-07-31T15:25:15Z",
       "download_count": 0,
-      "id": 494426966,
-      "name": "legado-3.26.16-beta.9.apk",
+      "id": 496841526,
+      "name": "legado-3.26.16-beta.10.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/494426966"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/496841526"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.9/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.10/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-07-29T19:13:03Z",
+      "created_at": "2026-07-31T15:25:15Z",
       "download_count": 0,
-      "id": 494426968,
+      "id": 496841528,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/494426968"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/496841528"
     }
   ]
 }
