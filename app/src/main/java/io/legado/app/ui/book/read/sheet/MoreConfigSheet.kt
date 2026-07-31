@@ -87,6 +87,9 @@ fun MoreConfigSheet(
             SectionTitle(stringResource(R.string.page_control))
             PageControlSettings(
                 preferences = preferences,
+                onDoubleHorizontalPageChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DoubleHorizontalPage(it)))
+                },
                 onProgressBarBehaviorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ProgressBarBehavior(it)))
                 },
@@ -226,15 +229,25 @@ private fun ScreenSettings(
 @Composable
 private fun PageControlSettings(
     preferences: ReadPreferences,
+    onDoubleHorizontalPageChange: (String) -> Unit,
     onProgressBarBehaviorChange: (String) -> Unit,
     onMouseWheelPageChange: (Boolean) -> Unit,
     onVolumeKeyPageChange: (Boolean) -> Unit,
     onVolumeKeyPageOnPlayChange: (Boolean) -> Unit,
     onKeyPageOnLongPressChange: (Boolean) -> Unit,
 ) {
+    val doublePageEntries = stringArrayResource(R.array.double_page_title)
+    val doublePageValues = stringArrayResource(R.array.double_page_value)
     val progressBarEntries = stringArrayResource(R.array.progress_bar_behavior_title)
     val progressBarValues = stringArrayResource(R.array.progress_bar_behavior_value)
 
+    TinyDropdownSettingItem(
+        title = stringResource(R.string.double_page_horizontal),
+        selectedValue = preferences.doubleHorizontalPage,
+        displayEntries = doublePageEntries,
+        entryValues = doublePageValues,
+        onValueChange = onDoubleHorizontalPageChange,
+    )
     TinyDropdownSettingItem(
         title = stringResource(R.string.progress_bar_behavior),
         selectedValue = preferences.progressBarBehavior,

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
@@ -61,8 +62,8 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.book.read.ReadBookSheet
+import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -892,11 +893,15 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("eye_protection", Icons.Default.Visibility, context.getString(R.string.eye_protection)),
     ReadMenuButtonInfo("prev_chapter", Icons.Default.SkipPrevious, context.getString(R.string.previous_chapter)),
     ReadMenuButtonInfo("next_chapter", Icons.Default.SkipNext, context.getString(R.string.next_chapter)),
-    ReadMenuButtonInfo("replace", Icons.Default.FindReplace, context.getString(R.string.replace_purify)),
+    ReadMenuButtonInfo(
+        "replace",
+        Icons.Default.FindReplace,
+        context.getString(R.string.text_processing)
+    ),
     ReadMenuButtonInfo(
         "replace_badge",
         Icons.Default.FindReplace,
-        context.getString(R.string.replace_purify_badge)
+        context.getString(R.string.text_processing)
     ),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
     ReadMenuButtonInfo(
@@ -908,6 +913,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         "ai_rewrite",
         Icons.Default.Edit,
         context.getString(R.string.ai_text_rewrite)
+    ),
+    ReadMenuButtonInfo(
+        "more_actions",
+        Icons.Default.MoreVert,
+        context.getString(R.string.more_actions)
     ),
 )
 

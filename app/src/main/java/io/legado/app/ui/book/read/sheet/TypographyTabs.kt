@@ -3,11 +3,8 @@ package io.legado.app.ui.book.read.sheet
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,7 +28,6 @@ import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Height
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LineWeight
 import androidx.compose.material.icons.filled.Minimize
@@ -53,7 +49,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -63,10 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.entities.Book
-import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.constant.ReadTipType
-import io.legado.app.model.ReadBook
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
@@ -81,13 +74,13 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.CustomTipDialog
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.getCompatColor
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
@@ -116,7 +109,8 @@ private fun FontWeightSetting(
     value: Int,
     onValueChange: (Int) -> Unit,
 ) {
-    var showVariableWeight by remember { mutableStateOf(false) }
+    // 0 常规 / 1 粗体 / 2 细体，其余 100..900 为自定义可变字重
+    val isCustom = value !in 0..2
     var sliderValue by remember(value) {
         mutableFloatStateOf(
             when (value) {
@@ -130,66 +124,64 @@ private fun FontWeightSetting(
     val weightEntries = stringArrayResource(R.array.text_font_weight)
 
     Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.font_weight_text),
-                    selectedValue = value.toString(),
-                    displayEntries = arrayOf(weightEntries[2], weightEntries[0], weightEntries[1]),
-                    entryValues = arrayOf("2", "0", "1"),
-                    imageVector = Icons.Default.LineWeight,
-                    onValueChange = { onValueChange(it.toInt()) },
-                )
-            }
-            NormalCard(
-                onClick = { showVariableWeight = !showVariableWeight },
-                modifier = Modifier
-                    .padding(bottom = 4.dp)
-                    .height(56.dp)
-                    .aspectRatio(1f),
-                containerColor = if (showVariableWeight) LegadoTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.surfaceContainerLow,
-                contentColor = if (showVariableWeight) LegadoTheme.colorScheme.onSecondaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
-                cornerRadius = 12.dp,
-            ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    AppIcon(Icons.Default.Tune, stringResource(R.string.font_weight_text))
-                }
-            }
-        }
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.font_weight_text),
+            selectedValue = if (isCustom) "-1" else value.toString(),
+            displayEntries = arrayOf(
+                weightEntries[2],
+                weightEntries[0],
+                weightEntries[1],
+                stringResource(R.string.custom),
+            ),
+            entryValues = arrayOf("2", "0", "1", "-1"),
+            imageVector = Icons.Default.LineWeight,
+            onValueChange = {
+                val v = it.toInt()
+                onValueChange(if (v == -1) sliderValue.toInt() else v)
+            },
+        )
 
-        AnimatedVisibility(visible = showVariableWeight) {
-            NormalCard(
+        AnimatedVisibility(visible = isCustom) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp)
-                    .height(56.dp),
-                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                cornerRadius = 12.dp,
+                    .padding(bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ValueStepper(
-                    value = sliderValue,
-                    displayValue = sliderValue,
-                    valueRange = 100f..900f,
-                    onValueChange = {
-                        sliderValue = it
-                        onValueChange(it.toInt())
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 12.dp),
-                    content = {
-                        AppSlider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
-                            onValueChangeFinished = { onValueChange(sliderValue.toInt()) },
-                            valueRange = 100f..900f,
-                            modifier = Modifier.weight(1f),
-                        )
-                    },
+                AppText(
+                    text = stringResource(R.string.font_weight_custom_description),
+                    style = LegadoTheme.typography.labelSmallEmphasized,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
+                NormalCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    cornerRadius = 12.dp,
+                ) {
+                    ValueStepper(
+                        value = sliderValue,
+                        displayValue = sliderValue,
+                        valueRange = 100f..900f,
+                        onValueChange = {
+                            sliderValue = it
+                            onValueChange(it.toInt())
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp),
+                        content = {
+                            AppSlider(
+                                value = sliderValue,
+                                onValueChange = { sliderValue = it },
+                                onValueChangeFinished = { onValueChange(sliderValue.toInt()) },
+                                valueRange = 100f..900f,
+                                modifier = Modifier.weight(1f),
+                            )
+                        },
+                    )
+                }
             }
         }
     }
@@ -283,7 +275,7 @@ internal fun TypographyBodyTab(
             .verticalScroll(rememberScrollState()),
     ) {
         // 字体组
-        SectionTitle(title = stringResource(R.string.text_typeface))
+        SectionTitle(title = stringResource(R.string.text_font))
         TinyClickableSettingItem(
             title = stringResource(R.string.select_font),
             imageVector = Icons.Default.TextFields,
@@ -423,32 +415,6 @@ internal fun TypographyBodyTab(
             },
         )
 
-        // 图片组
-        SectionTitle(title = stringResource(R.string.image_style))
-        val imgStyleEntries = arrayOf(
-            stringResource(R.string.btn_default_s),
-            stringResource(R.string.image_style_full),
-            stringResource(R.string.image_style_text),
-            stringResource(R.string.image_style_single),
-        )
-        val imgStyleValues = arrayOf(
-            Book.imgStyleDefault,
-            Book.imgStyleFull,
-            Book.imgStyleText,
-            Book.imgStyleSingle,
-        )
-        TinyDropdownSettingItem(
-            title = stringResource(R.string.image_style),
-            selectedValue = ReadBook.book?.getImageStyle() ?: Book.imgStyleDefault,
-            displayEntries = imgStyleEntries,
-            entryValues = imgStyleValues,
-            imageVector = Icons.Default.Image,
-            onValueChange = { style ->
-                onIntent(ReadBookIntent.MenuImageStyle(style))
-            },
-        )
-
-        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -488,24 +454,6 @@ internal fun TypographyTitleTab(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState()),
     ) {
-        // 内容组
-        SectionTitle(title = stringResource(R.string.content))
-        TinyDropdownSettingItem(
-            title = stringResource(R.string.body_title),
-            selectedValue = titleMode.toString(),
-            displayEntries = arrayOf(
-                stringResource(R.string.title_left),
-                stringResource(R.string.title_center),
-                stringResource(R.string.title_hide),
-            ),
-            entryValues = arrayOf("0", "1", "2"),
-            imageVector = Icons.Default.Title,
-            onValueChange = {
-                titleMode = it.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleMode(titleMode)))
-            },
-        )
-
         // 字体组
         SectionTitle(title = stringResource(R.string.text_font))
         TinyClickableSettingItem(
@@ -546,8 +494,23 @@ internal fun TypographyTitleTab(
             },
         )
 
-        // 分段组
-        SectionTitle(title = stringResource(R.string.title_segment))
+        // 样式组（标题位置 + 分段 + 间距 + 去重）
+        SectionTitle(title = stringResource(R.string.style))
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.title_position),
+            selectedValue = titleMode.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.title_left),
+                stringResource(R.string.title_center),
+                stringResource(R.string.title_hide),
+            ),
+            entryValues = arrayOf("0", "1", "2"),
+            imageVector = Icons.Default.Title,
+            onValueChange = {
+                titleMode = it.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleMode(titleMode)))
+            },
+        )
         TinyDropdownSettingItem(
             title = stringResource(R.string.split_title_mode),
             selectedValue = titleSegType.toString(),
@@ -599,6 +562,15 @@ internal fun TypographyTitleTab(
             },
         )
 
+        TinySwitchSettingItem(
+            title = stringResource(R.string.same_title_removed),
+            checked = sameTitleRemoved,
+            imageVector = Icons.Default.CleanHands,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.MenuSameTitleRemoved)
+            },
+        )
+
         // 间距组
         SectionTitle(title = stringResource(R.string.title_spacing))
         TinySliderSettingItem(
@@ -619,17 +591,6 @@ internal fun TypographyTitleTab(
             onValueChange = { value ->
                 titleLineSpacingSub = value.toInt()
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(titleLineSpacingSub)))
-            },
-        )
-
-        // 去重组
-        SectionTitle(title = stringResource(R.string.title_dedup))
-        TinySwitchSettingItem(
-            title = stringResource(R.string.same_title_removed),
-            checked = sameTitleRemoved,
-            imageVector = Icons.Default.CleanHands,
-            onCheckedChange = {
-                onIntent(ReadBookIntent.MenuSameTitleRemoved)
             },
         )
 
@@ -732,6 +693,7 @@ internal fun TypographyHeaderTab(
         )
         TinyColorSettingItem(
             title = stringResource(R.string.tip_divider_color),
+            description = stringResource(R.string.tip_divider_color_shared_desc),
             colorValue = when (config.tipDividerColor) {
                 -1 -> context.getCompatColor(R.color.divider)
                 0 -> config.textColorDay
@@ -741,8 +703,7 @@ internal fun TypographyHeaderTab(
             onClick = { onOpenColorPicker(TypographyColorTarget.Divider) },
         )
 
-        // 字体组
-        SectionTitle(title = stringResource(R.string.text_font))
+        SectionTitle(title = stringResource(R.string.text_typeface))
         TinyClickableSettingItem(
             title = stringResource(R.string.select_font),
             imageVector = Icons.Default.TextFields,
@@ -846,6 +807,17 @@ internal fun TypographyFooterTab(
             imageVector = Icons.Default.Minimize,
             onCheckedChange = { onShowFooterLineChange(it) },
         )
+        TinyColorSettingItem(
+            title = stringResource(R.string.tip_divider_color),
+            description = stringResource(R.string.tip_divider_color_shared_desc),
+            colorValue = when (config.tipDividerColor) {
+                -1 -> context.getCompatColor(R.color.divider)
+                0 -> config.textColorDay
+                else -> config.tipDividerColor
+            },
+            imageVector = Icons.Default.Palette,
+            onClick = { onOpenColorPicker(TypographyColorTarget.Divider) },
+        )
 
         // 字体组
         SectionTitle(title = stringResource(R.string.text_font))
@@ -896,6 +868,7 @@ internal fun TypographyFooterTab(
 internal fun TypographyMarginTab(
     config: ReadSheetConfigUiState,
     onIntent: (ReadBookIntent) -> Unit,
+    page: Int,
     modifier: Modifier = Modifier,
 ) {
     // Body padding state
@@ -903,10 +876,6 @@ internal fun TypographyMarginTab(
     var paddingBottom by remember(config.paddingBottom) { mutableFloatStateOf(config.paddingBottom.toFloat()) }
     var paddingLeft by remember(config.paddingLeft) { mutableFloatStateOf(config.paddingLeft.toFloat()) }
     var paddingRight by remember(config.paddingRight) { mutableFloatStateOf(config.paddingRight.toFloat()) }
-
-    // Title padding state
-    var titleTopSpacing by remember(config.titleTopSpacing) { mutableIntStateOf(config.titleTopSpacing) }
-    var titleBottomSpacing by remember(config.titleBottomSpacing) { mutableIntStateOf(config.titleBottomSpacing) }
 
     // Header padding state
     var headerPaddingTop by remember(config.headerPaddingTop) { mutableFloatStateOf(config.headerPaddingTop.toFloat()) }
@@ -923,101 +892,74 @@ internal fun TypographyMarginTab(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .padding(top = 8.dp),
     ) {
-        // 正文边距
-        SectionTitle(title = stringResource(R.string.body_padding))
-        PaddingSliders(
-            top = paddingTop, bottom = paddingBottom,
-            left = paddingLeft, right = paddingRight,
-            onTopChange = {
-                paddingTop = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingTop(it.toInt())))
-            },
-            onBottomChange = {
-                paddingBottom = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingBottom(it.toInt())))
-            },
-            onLeftChange = {
-                paddingLeft = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingLeft(it.toInt())))
-            },
-            onRightChange = {
-                paddingRight = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingRight(it.toInt())))
-            },
-        )
+        when (page) {
+            0 -> PaddingSliders(
+                top = paddingTop, bottom = paddingBottom,
+                left = paddingLeft, right = paddingRight,
+                onTopChange = {
+                    paddingTop = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingTop(it.toInt())))
+                },
+                onBottomChange = {
+                    paddingBottom = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingBottom(it.toInt())))
+                },
+                onLeftChange = {
+                    paddingLeft = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingLeft(it.toInt())))
+                },
+                onRightChange = {
+                    paddingRight = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingRight(it.toInt())))
+                },
+            )
 
-        // 标题边距
-        SectionTitle(title = stringResource(R.string.title_padding))
-        TinySliderSettingItem(
-            title = stringResource(R.string.title_margin_top),
-            value = titleTopSpacing.toFloat(),
-            valueRange = 0f..200f,
-            imageVector = Icons.Default.VerticalAlignTop,
-            onValueChange = { value ->
-                titleTopSpacing = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleTopSpacing(titleTopSpacing)))
-            },
-        )
-        TinySliderSettingItem(
-            title = stringResource(R.string.title_margin_bottom),
-            value = titleBottomSpacing.toFloat(),
-            valueRange = 0f..200f,
-            imageVector = Icons.Default.VerticalAlignBottom,
-            onValueChange = { value ->
-                titleBottomSpacing = value.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBottomSpacing(titleBottomSpacing)))
-            },
-        )
+            1 -> PaddingSliders(
+                top = headerPaddingTop, bottom = headerPaddingBottom,
+                left = headerPaddingLeft, right = headerPaddingRight,
+                onTopChange = {
+                    headerPaddingTop = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingTop(it.toInt())))
+                },
+                onBottomChange = {
+                    headerPaddingBottom = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingBottom(it.toInt())))
+                },
+                onLeftChange = {
+                    headerPaddingLeft = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingLeft(it.toInt())))
+                },
+                onRightChange = {
+                    headerPaddingRight = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingRight(it.toInt())))
+                },
+            )
 
-        // 页眉边距
-        SectionTitle(title = stringResource(R.string.header_padding))
-        PaddingSliders(
-            top = headerPaddingTop, bottom = headerPaddingBottom,
-            left = headerPaddingLeft, right = headerPaddingRight,
-            onTopChange = {
-                headerPaddingTop = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingTop(it.toInt())))
-            },
-            onBottomChange = {
-                headerPaddingBottom = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingBottom(it.toInt())))
-            },
-            onLeftChange = {
-                headerPaddingLeft = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingLeft(it.toInt())))
-            },
-            onRightChange = {
-                headerPaddingRight = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingRight(it.toInt())))
-            },
-        )
+            else -> PaddingSliders(
+                top = footerPaddingTop, bottom = footerPaddingBottom,
+                left = footerPaddingLeft, right = footerPaddingRight,
+                onTopChange = {
+                    footerPaddingTop = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingTop(it.toInt())))
+                },
+                onBottomChange = {
+                    footerPaddingBottom = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingBottom(it.toInt())))
+                },
+                onLeftChange = {
+                    footerPaddingLeft = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingLeft(it.toInt())))
+                },
+                onRightChange = {
+                    footerPaddingRight = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingRight(it.toInt())))
+                },
+            )
+        }
 
-        // 页脚边距
-        SectionTitle(title = stringResource(R.string.footer_padding))
-        PaddingSliders(
-            top = footerPaddingTop, bottom = footerPaddingBottom,
-            left = footerPaddingLeft, right = footerPaddingRight,
-            onTopChange = {
-                footerPaddingTop = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingTop(it.toInt())))
-            },
-            onBottomChange = {
-                footerPaddingBottom = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingBottom(it.toInt())))
-            },
-            onLeftChange = {
-                footerPaddingLeft = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingLeft(it.toInt())))
-            },
-            onRightChange = {
-                footerPaddingRight = it
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingRight(it.toInt())))
-            },
-        )
-
-        Spacer(Modifier.height(8.dp))
     }
 }
 

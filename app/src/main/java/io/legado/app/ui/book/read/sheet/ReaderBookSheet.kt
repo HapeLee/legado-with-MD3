@@ -4,20 +4,18 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,9 +30,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
@@ -43,12 +41,10 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Numbers
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,8 +58,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -71,7 +67,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,17 +75,15 @@ import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
+import io.legado.app.ui.book.toc.DownloadState
+import io.legado.app.ui.book.toc.TocActivity
+import io.legado.app.ui.book.toc.TocBookmarkItemUi
 import io.legado.app.ui.book.toc.TocEffect
 import io.legado.app.ui.book.toc.TocIntent
-import io.legado.app.ui.book.toc.TocBookmarkItemUi
 import io.legado.app.ui.book.toc.TocItemUi
 import io.legado.app.ui.book.toc.TocUiState
 import io.legado.app.ui.book.toc.TocViewModel
-import io.legado.app.ui.book.toc.DownloadState
-import io.legado.app.ui.book.toc.TocActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
-import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -102,7 +95,6 @@ import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
@@ -198,9 +190,6 @@ fun ReaderBookSheetRoute(
                 }
             }
         },
-        onOpenReplaceRule = { route ->
-            context.startActivity(ReplaceRuleActivity.startIntent(context, route))
-        },
         onEditLocalTocRule = { regex ->
             tocRegexLauncher.launch(
                 Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
@@ -223,7 +212,6 @@ private fun ReaderBookSheet(
     onChapterClick: (Int) -> Unit,
     onBookmarkNavigate: (Int, Int) -> Unit,
     onOpenFullScreen: (ReaderBookSheetTab) -> Unit,
-    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
     onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
 ) {
@@ -248,10 +236,13 @@ private fun ReaderBookSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         animateContentSize = false,
+        contentPaddingEnabled = false,
         modifier = Modifier
             .heightIn(max = maxHeight),
     ) {
-        ReaderBookHeader(book = state.book)
+        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            ReaderBookHeader(book = state.book)
+        }
         CardTabRow(
             tabTitles = listOf(
                 stringResource(R.string.information),
@@ -266,7 +257,7 @@ private fun ReaderBookSheet(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp),
             tabEndContent = { index ->
                 Box(
                     modifier = Modifier
@@ -274,9 +265,9 @@ private fun ReaderBookSheet(
                         .size(16.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .clickable {
-                        onDismissRequest()
-                        onOpenFullScreen(ReaderBookSheetTab.entries[index])
-                    },
+                            onDismissRequest()
+                            onOpenFullScreen(ReaderBookSheetTab.entries[index])
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -293,24 +284,31 @@ private fun ReaderBookSheet(
                 .fillMaxWidth()
                 .weight(1f),
         ) { page ->
-            when (ReaderBookSheetTab.entries[page]) {
-                ReaderBookSheetTab.Information -> ReaderBookInformation(
-                    book = state.book,
-                )
-                ReaderBookSheetTab.Toc -> ReaderBookTocPage(
-                    state = state,
-                    onIntent = onIntent,
-                    onChapterClick = onChapterClick,
-                    onOpenReplaceRule = onOpenReplaceRule,
-                    onEditLocalTocRule = onEditLocalTocRule,
-                )
-                ReaderBookSheetTab.Bookmarks -> ReaderBookBookmarksPage(
-                    state = state,
-                    onIntent = onIntent,
-                    onBookmarkNavigate = onBookmarkNavigate,
-                    onEditBookmark = { editingBookmark = it },
-                    onExportBookmarks = onExportBookmarks,
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            ) {
+                when (ReaderBookSheetTab.entries[page]) {
+                    ReaderBookSheetTab.Information -> ReaderBookInformation(
+                        book = state.book,
+                    )
+
+                    ReaderBookSheetTab.Toc -> ReaderBookTocPage(
+                        state = state,
+                        onIntent = onIntent,
+                        onChapterClick = onChapterClick,
+                        onEditLocalTocRule = onEditLocalTocRule,
+                    )
+
+                    ReaderBookSheetTab.Bookmarks -> ReaderBookBookmarksPage(
+                        state = state,
+                        onIntent = onIntent,
+                        onBookmarkNavigate = onBookmarkNavigate,
+                        onEditBookmark = { editingBookmark = it },
+                        onExportBookmarks = onExportBookmarks,
+                    )
+                }
             }
         }
     }
@@ -332,7 +330,7 @@ private fun ReaderBookSheet(
 }
 
 @Composable
-private fun ReaderBookHeader(book: Book?) {
+internal fun ReaderBookHeader(book: Book?) {
     val current = ((book?.durChapterIndex ?: -1) + 1).coerceAtLeast(0)
     val total = book?.totalChapterNum?.coerceAtLeast(0) ?: 0
 
@@ -525,7 +523,6 @@ private fun ReaderBookTocPage(
     state: TocUiState,
     onIntent: (TocIntent) -> Unit,
     onChapterClick: (Int) -> Unit,
-    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
 ) {
     val action = state.action
@@ -607,12 +604,6 @@ private fun ReaderBookTocPage(
                 contentDescription = stringResource(R.string.reverse_toc),
                 onClick = { onIntent(TocIntent.ReverseToc) },
             )
-            CompactToolIconBox(
-                selected = action.useReplace,
-                icon = Icons.Default.Shuffle,
-                contentDescription = stringResource(R.string.use_replace_rule),
-                onClick = { onIntent(TocIntent.ToggleUseReplace) },
-            )
             Box {
                 CompactToolIconBox(
                     selected = menuExpanded,
@@ -628,7 +619,6 @@ private fun ReaderBookTocPage(
                         state = state,
                         onIntent = onIntent,
                         onDismiss = { menuExpanded = false },
-                        onOpenReplaceRule = onOpenReplaceRule,
                         onEditLocalTocRule = onEditLocalTocRule,
                     )
                 }
@@ -889,7 +879,6 @@ private fun ReaderBookTocMenu(
     state: TocUiState,
     onIntent: (TocIntent) -> Unit,
     onDismiss: () -> Unit,
-    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
 ) {
     val book = state.book
@@ -914,29 +903,6 @@ private fun ReaderBookTocMenu(
     RoundDropdownMenuItem(
         text = stringResource(R.string.update_toc),
         onClick = { dispatch(TocIntent.UpdateToc) },
-    )
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.replace_rule_title),
-        onClick = {
-            onDismiss()
-            onOpenReplaceRule(null)
-        },
-    )
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.add_replace_rule),
-        onClick = {
-            onDismiss()
-            val scopes = listOfNotNull(book?.name, book?.origin).joinToString(";")
-            onOpenReplaceRule(
-                ReplaceEditRoute(
-                    id = -1,
-                    pattern = "",
-                    scope = scopes,
-                    isScopeTitle = true,
-                    isScopeContent = false,
-                )
-            )
-        },
     )
     if (book?.isLocal == true) {
         RoundDropdownMenuItem(

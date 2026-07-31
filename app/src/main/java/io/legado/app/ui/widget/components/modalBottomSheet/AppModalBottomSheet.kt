@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +53,7 @@ fun AppModalBottomSheet(
     endAction: @Composable (() -> Unit)? = null,
     animateContentSize: Boolean = true,
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
+    contentPaddingEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = LocalLegadoThemeColors.current.colorScheme
@@ -82,7 +84,7 @@ fun AppModalBottomSheet(
                     }
                 }
             },
-            insideMargin = DpSize(16.dp, 0.dp),
+            insideMargin = if (contentPaddingEnabled) DpSize(16.dp, 0.dp) else DpSize(0.dp, 0.dp),
             backgroundColor = sheetContainerColor,
             dragHandleColor = sheetDragHandleColor,
             onDismissRequest = onDismissRequest,
@@ -94,7 +96,13 @@ fun AppModalBottomSheet(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 24.dp)
+                            .let {
+                                if (contentPaddingEnabled) {
+                                    it.padding(bottom = 24.dp)
+                                } else {
+                                    it.navigationBarsPadding()
+                                }
+                            }
                             .let { contentModifier ->
                                 if (animateContentSize) contentModifier.animateContentSize() else contentModifier
                             },
@@ -131,7 +139,13 @@ fun AppModalBottomSheet(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                            .let {
+                                if (contentPaddingEnabled) {
+                                    it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                } else {
+                                    it
+                                }
+                            }
                             .heightIn(max = maxHeight)
                             .let { contentModifier ->
                                 if (animateContentSize) contentModifier.animateContentSize() else contentModifier

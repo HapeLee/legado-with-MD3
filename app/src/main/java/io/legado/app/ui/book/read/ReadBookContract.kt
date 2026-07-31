@@ -58,6 +58,8 @@ sealed interface ReadBookMenuRoute {
     data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
     data object TypographyConfig : ReadBookMenuRoute
+    data object InformationConfig : ReadBookMenuRoute
+    data object PaddingConfig : ReadBookMenuRoute
 }
 
 @Stable
@@ -228,6 +230,7 @@ data class ReadBookUiState(
     val effectiveReplaceCount: Int = 0,
     val effectiveContentProcessCount: Int = 0,
     val effectiveReplaceRules: ImmutableList<ReplaceRule> = persistentListOf(),
+    val allReplaceRules: ImmutableList<ReplaceRuleItemUi> = persistentListOf(),
     val chineseConverterActive: Boolean = false,
     // Translation
     val translationMode: Boolean = false,
@@ -321,6 +324,16 @@ data class ContentProcessItemUi(
 )
 
 @Stable
+data class ReplaceRuleItemUi(
+    val id: Long,
+    val name: String,
+    val group: String?,
+    val pattern: String,
+    val replacement: String,
+    val enabled: Boolean,
+)
+
+@Stable
 data class ReadMenuConfig(
     val titleBarIconPosition: Int = 3,
     val showTitleBarIcons: Boolean = false,
@@ -355,6 +368,7 @@ data class ReadMenuConfig(
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val bottomBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
+    val moreActionItems: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
     val readBrightness: Int = 100,
@@ -372,6 +386,7 @@ data class ReadBookButtonConfigItem(
 internal val ReadBookButtonIds = listOf(
     "ai_summary",
     "ai_rewrite",
+    "more_actions",
     "search",
     "auto_page",
     "catalog",
@@ -385,6 +400,13 @@ internal val ReadBookButtonIds = listOf(
     "replace",
     "replace_badge",
     "translate",
+)
+
+internal val MoreActionIds = listOf(
+    "change_source", "refresh", "download", "edit_content", "add_bookmark",
+    "text_processing", "reverse_content", "re_segment",
+    "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
+    "simulated_reading", "get_progress", "cover_progress", "log",
 )
 
 sealed interface ReadBookIntent {
@@ -437,6 +459,9 @@ sealed interface ReadBookIntent {
     data object RefreshAllChapters : ReadBookIntent
     data object RefreshContentAfter : ReadBookIntent
     data class ChangeReplaceRule(val enabled: Boolean) : ReadBookIntent
+    data class SetReplaceRuleEnabled(val id: Long, val enabled: Boolean) : ReadBookIntent
+    data class MoveReplaceRule(val draggedId: Long, val anchorId: Long, val afterAnchor: Boolean) :
+        ReadBookIntent
     data object ToggleTranslation : ReadBookIntent
     data object OpenChapterSummary : ReadBookIntent
     data object OpenAiCurrentChapterRewrite : ReadBookIntent
@@ -604,6 +629,7 @@ sealed interface ReadBookIntent {
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookIntent
     data class SaveMenuButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
     data class SaveTitleBarButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
+    data class SaveMoreActionsConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
 
     // BgTextConfig (needs Activity for DialogFragment)
     data class OpenBgTextConfig(val index: Int) : ReadBookIntent
@@ -881,6 +907,7 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
+    data object MoreActions : ReadBookSheet
     data class BookNavigation(val initialTab: ReaderBookSheetTab) : ReadBookSheet
     data object PageAnim : ReadBookSheet
     data object Download : ReadBookSheet
@@ -891,6 +918,7 @@ sealed interface ReadBookSheet {
     data object FloatingBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentProcesses : ReadBookSheet
+    data object TextProcessing : ReadBookSheet
     data object ContentEdit : ReadBookSheet
     data object ChapterSummary : ReadBookSheet
     data object AiTextClean : ReadBookSheet

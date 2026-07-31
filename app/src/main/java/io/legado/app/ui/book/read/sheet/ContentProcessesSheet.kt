@@ -31,6 +31,7 @@ import io.legado.app.ui.book.read.ContentProcessConfigUiState
 import io.legado.app.ui.book.read.ContentProcessItemUi
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -75,9 +76,8 @@ fun ContentProcessesSheet(
             }
 
             state.items.isEmpty() -> {
-                AppText(
-                    text = stringResource(R.string.content_process_empty),
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                EmptyMessage(
+                    message = stringResource(R.string.content_process_empty),
                     modifier = Modifier
                         .fillMaxWidth(),
                 )

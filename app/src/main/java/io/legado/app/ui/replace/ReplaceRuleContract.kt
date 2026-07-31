@@ -6,12 +6,13 @@ import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.book.read.ContentProcessConfigUiState
 import io.legado.app.ui.book.read.ContentProcessItemUi
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 data class ReplaceRuleItemUi(
@@ -48,8 +49,8 @@ data class ReplaceRuleItemUi(
 
 @Stable
 data class ReplaceRuleUiState(
-    override val items: List<ReplaceRuleItemUi> = emptyList(),
-    override val selectedIds: Set<Long> = emptySet(),
+    override val items: ImmutableList<ReplaceRuleItemUi> = persistentListOf(),
+    override val selectedIds: ImmutableSet<Long> = persistentSetOf(),
     override val searchKey: String = "",
     val sortMode: String = "desc",
     val selectedGroup: String? = null,

@@ -258,7 +258,7 @@
     <string name="mouse_wheel_page">鼠标滚轮翻页</string>
     <string name="click_turn_page">点击翻页</string>
     <string name="page_anim">翻页动画</string>
-    <string name="book_page_anim">翻页动画（本书）</string>
+    <string name="book_page_anim">本书翻页动画</string>
     <string name="keep_light">屏幕超时</string>
     <string name="back">返回</string>
     <string name="menu">菜单</string>
@@ -983,6 +983,7 @@
     <string name="prev_page">上一页</string>
     <string name="non_action">无操作</string>
     <string name="body_title">标题</string>
+    <string name="title_position">标题位置</string>
     <string name="show_hide">显示/隐藏</string>
     <string name="header_footer">信息</string>
     <string name="rule_subscription">规则</string>
@@ -1158,6 +1159,7 @@
     <string name="scope_content">作用于正文</string>
     <string name="join_qq_channel">加入 QQ 频道</string>
     <string name="qq_channel_summary">点击加入阅读 QQ 频道</string>
+    <string name="menu_refresh">刷新章节</string>
     <string name="menu_refresh_dur">刷新当前章节</string>
     <string name="menu_refresh_after">刷新之后章节</string>
     <string name="menu_refresh_all">刷新全部章节</string>
@@ -1288,6 +1290,7 @@
     <string name="show_last_update_time">显示上次更新时间</string>
     <string name="refresh_list">刷新列表</string>
     <string name="tip_divider_color">分隔线</string>
+    <string name="tip_divider_color_shared_desc">页眉与页脚共用</string>
     <string name="same_title_removed">移除重复标题</string>
     <string name="update_book_fail">更新失败</string>
     <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度。</string>
@@ -1418,6 +1421,7 @@
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
     <string name="font_weight">字重</string>
+    <string name="font_weight_custom_description">自定义字重仅适用于可变字重的字体</string>
     <string name="keep_swipe_tip">继续滑动以加载下一章…</string>
     <string name="enable_optimize_render">启用绘制优化</string>
     <string name="ignore_battery_permission_rationale">阅读需要请求后台权限以保持服务正常运行，拒绝后不再弹出。如有需要可至高级设置中再次申请。</string>
@@ -1588,6 +1592,7 @@
     <string name="welcome_book_folder_tip">设置本地书籍保存目录，后续也可在设置中修改。</string>
     <string name="welcome_book_folder_not_selected">未选择文件夹</string>
     <string name="config_btn">配置底部按钮</string>
+    <string name="more_actions_config">配置更多菜单</string>
     <string name="compact_grid">紧凑网格</string>
     <string name="cover_grid">封面网格</string>
     <string name="end_chapter">结束章</string>
@@ -1762,7 +1767,7 @@
     <string name="save_to_local">保存至本地</string>
     <string name="select_operation">选择操作</string>
     <string name="text_accent_color">强调</string>
-    <string name="read_color">颜色样式</string>
+    <string name="read_color">颜色</string>
     <string name="reverse_volume_key_page">反转音量键翻页方向</string>
     <string name="palette_style">调色板样式</string>
     <string name="material_version">颜色规格</string>
@@ -1809,9 +1814,7 @@
 	<string name="subtitle_scale">次行缩放</string>
 	<string name="subtitle_margin">次行距离</string>
 	<string name="heading_spacing">标题段距</string>
-	<string name="title_segment">分段</string>
 	<string name="title_spacing">间距</string>
-	<string name="title_dedup">去重</string>
     <string name="follow_read_background">跟随阅读背景</string>
     <string name="bookshelf_total_count">共%1$d本</string>
     <string name="bookshelf_selected_count">已选%1$d本</string>
@@ -2070,6 +2073,13 @@
     <string name="ai_rewrite_preset_dialogue_name">口语自然</string>
     <string name="ai_rewrite_preset_dialogue_instruction">把所选文字改写得更像自然叙述或对话，保持角色意图、人物关系和剧情事实不变。</string>
     <string name="content_processes">正文处理</string>
+    <string name="text_processing">文本处理</string>
+    <string name="replace_filter_all">全部</string>
+    <string name="replace_filter">筛选替换规则</string>
+    <string name="replace_filter_enabled">已启用</string>
+    <string name="replace_filter_disabled">未启用</string>
+    <string name="replace_filter_effective">正在生效</string>
+    <string name="replace_filter_empty">暂无匹配的替换净化</string>
     <string name="content_process_empty">当前章节没有正文处理。</string>
     <string name="content_process_delete_confirm">删除这条正文处理？\n\n%1$s</string>
     <string name="content_process_delete_confirm_simple">删除这条正文处理？</string>

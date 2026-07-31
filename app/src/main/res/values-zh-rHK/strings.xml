@@ -208,7 +208,7 @@
     <string name="mouse_wheel_page">鼠标滚动翻页</string>
     <string name="click_turn_page">點擊翻頁</string>
     <string name="page_anim">翻頁動畫</string>
-    <string name="book_page_anim">翻頁動畫(本書)</string>
+    <string name="book_page_anim">本書翻頁動畫</string>
     <string name="keep_light">屏幕超時</string>
     <string name="back">返回</string>
     <string name="menu">菜單</string>
@@ -843,6 +843,7 @@
     <string name="prev_page">上一頁</string>
     <string name="non_action">無操作</string>
     <string name="body_title">標題</string>
+    <string name="title_position">標題位置</string>
     <string name="show_hide">顯示/隱藏</string>
     <string name="header_footer">頁眉<![CDATA[&]]>頁腳</string>
     <string name="rule_subscription">規則訂閱</string>
@@ -995,6 +996,7 @@
     <string name="scope_content">作用于正文</string>
     <string name="join_qq_channel">加入QQ频道</string>
     <string name="qq_channel_summary">点击加入阅读QQ频道</string>
+    <string name="menu_refresh">刷新章节</string>
     <string name="menu_refresh_dur">刷新当前章节</string>
     <string name="menu_refresh_after">刷新之后章节</string>
     <string name="menu_refresh_all">刷新全部章节</string>
@@ -1117,6 +1119,7 @@
     <string name="show_last_update_time">显示上次更新时间</string>
     <string name="refresh_list">刷新列表</string>
     <string name="tip_divider_color">分隔线颜色</string>
+    <string name="tip_divider_color_shared_desc">页眉与页脚共用</string>
     <string name="same_title_removed">移除重复标题</string>
     <string name="update_book_fail">更新失败</string>
     <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度</string>
@@ -1229,6 +1232,7 @@
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
     <string name="font_weight">字重</string>
+    <string name="font_weight_custom_description">自訂字重僅適用於可變字重的字體</string>
     <string name="keep_swipe_tip">继续滑动以加载下一章…</string>
     <string name="enable_optimize_render">启用绘制优化</string>
     <string name="ignore_battery_permission_rationale">阅读需要请求后台权限以保持服务正常运行</string>
@@ -1301,6 +1305,7 @@
 	<string name="subtitle_scale">次行縮放</string>
 	<string name="subtitle_margin">次行距離</string>
 	<string name="heading_spacing">標題段距</string>
+    <string name="title_spacing">間距</string>
     <string name="web_file">網頁文件</string>
     <string name="show_book_count">顯示分組書籍數量</string>
     <string name="dynamic_colors_summary">使用基於桌布的主題顏色</string>
@@ -1637,6 +1642,7 @@
     <string name="compose_engine">主題樣式</string>
     <string name="compose_related">Compose 相關</string>
     <string name="config_btn">配置底部按鈕</string>
+    <string name="more_actions_config">設定更多選單</string>
     <string name="confirm_skip_to_chapter">跳轉到此章節？</string>
     <string name="container_background_color">容器背景色</string>
     <string name="container_opacity">容器不透明度</string>
@@ -1945,7 +1951,7 @@
     <string name="read_change_all_s">否則僅應用於單章。</string>
     <string name="read_chapter_index">已讀 %d 章</string>
     <string name="read_chapter_total">共 %d 章</string>
-    <string name="read_color">顏色樣式</string>
+    <string name="read_color">顏色</string>
     <string name="read_config_body_padding_desc">調整正文上下左右邊距</string>
     <string name="read_config_body_spacing">正文間距</string>
     <string name="read_config_divider_line">分隔線</string>

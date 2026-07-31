@@ -31,6 +31,7 @@ import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -185,6 +186,7 @@ class ReplaceRuleViewModel(
             }
             is ReplaceRuleIntent.ToggleContentProcess -> viewModelScope.launch {
                 bookContentProcessGateway.setEnabled(intent.id, intent.enabled)
+                loadContentProcesses()
             }
             is ReplaceRuleIntent.RequestDeleteContentProcess -> _bookState.update {
                 it.copy(contentProcessState = it.contentProcessState.copy(deleteItem = intent.item))
@@ -252,8 +254,8 @@ class ReplaceRuleViewModel(
         importState: BaseImportUiState<ReplaceRule>
     ): ReplaceRuleUiState {
         return ReplaceRuleUiState(
-            items = items,
-            selectedIds = selectedIds,
+            items = items.toImmutableList(),
+            selectedIds = selectedIds.toImmutableSet(),
             searchKey = _searchKey.value,
             sortMode = _sortMode.value,
             selectedGroup = _group.value,

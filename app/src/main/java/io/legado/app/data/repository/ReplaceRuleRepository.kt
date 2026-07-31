@@ -205,6 +205,26 @@ class ReplaceRuleRepository(
             }
         }
 
+    /**
+     * 把 [draggedId] 规则移动到 [anchorId] 规则旁边（[afterAnchor] 为 true 时在其后，否则在其前）。
+     * 列表顺序始终按 sortOrder 升序，移动后统一重写全部规则序号。
+     */
+    suspend fun moveReplaceRule(draggedId: Long, anchorId: Long, afterAnchor: Boolean) {
+        withContext(Dispatchers.IO) {
+            val rules = dao.all
+            val draggedIndex = rules.indexOfFirst { it.id == draggedId }
+            if (draggedIndex < 0) return@withContext
+            val dragged = rules[draggedIndex]
+            val remaining = rules.toMutableList().apply { removeAt(draggedIndex) }
+            val anchorIndex = remaining.indexOfFirst { it.id == anchorId }
+            if (anchorIndex < 0) return@withContext
+            val insertIndex = (anchorIndex + if (afterAnchor) 1 else 0).coerceIn(0, remaining.size)
+            remaining.add(insertIndex, dragged)
+            val updated = remaining.mapIndexed { index, rule -> rule.copy(order = index + 1) }
+            dao.update(*updated.toTypedArray())
+        }
+    }
+
     suspend fun moveOrder(currentRules: List<ReplaceRule>, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             val size = currentRules.size

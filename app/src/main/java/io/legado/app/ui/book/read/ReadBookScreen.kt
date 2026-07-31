@@ -24,9 +24,7 @@ import io.legado.app.ui.book.read.sheet.ChapterSummarySheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
-import io.legado.app.ui.book.read.sheet.ContentProcessesSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
-import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
@@ -37,8 +35,10 @@ import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudPage
 import io.legado.app.ui.book.read.sheet.ReadAloudScreen
+import io.legado.app.ui.book.read.sheet.ReaderMoreActionsSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
+import io.legado.app.ui.book.read.sheet.TextProcessingSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerEffect
@@ -176,30 +176,19 @@ fun ReadBookScreen(
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
-    EffectiveReplacesSheet(
-        show = state.activeSheet is ReadBookSheet.EffectiveReplaces,
+    TextProcessingSheet(
+        show = state.activeSheet is ReadBookSheet.TextProcessing,
+        book = state.book,
+        allRules = state.allReplaceRules,
         effectiveRules = state.effectiveReplaceRules,
-        chineseConvertActive = state.chineseConverterActive,
-        reSegmentActive = state.reSegment,
+        replaceEnabled = state.useReplaceRule,
+        contentProcessState = contentProcessState,
+        onIntent = onIntent,
         onDismissRequest = dismissSheet,
-        onOpenReplaceEditor = { id, pattern ->
-            onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
-        },
-        onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
-        onNavigateToTextEffects = {
-            onIntent(ReadBookIntent.DismissSheet)
-            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TypographyConfig))
-        },
-        onOpenContentProcesses = {
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentProcesses))
-        },
-        onDisableRule = { onIntent(ReadBookIntent.DisableEffectiveReplace(it)) },
-        onDisableChineseConverter = { onIntent(ReadBookIntent.DisableChineseConverter) },
-        onDisableReSegment = { onIntent(ReadBookIntent.DisableReSegment) },
     )
-    ContentProcessesSheet(
-        show = state.activeSheet is ReadBookSheet.ContentProcesses,
-        state = contentProcessState,
+    ReaderMoreActionsSheet(
+        show = state.activeSheet is ReadBookSheet.MoreActions,
+        state = state,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )

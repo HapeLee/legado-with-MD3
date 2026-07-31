@@ -361,6 +361,7 @@ object PreferKey {
     const val showTitleBarIcons = "showTitleBarIcons"
     const val showMenuIcon = "showMenuIcon"
     const val titleBarCompact = "titleBarCompact"
+    const val moreActionsConfig = "moreActionsConfig"
     const val disableReturnKey = "disableReturnKey"
     const val selectText = "selectText"
     //我在干什么

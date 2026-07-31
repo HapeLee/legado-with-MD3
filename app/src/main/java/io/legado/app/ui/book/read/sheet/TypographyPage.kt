@@ -5,10 +5,18 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SpaceBar
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +38,8 @@ import io.legado.app.constant.ReadTipType
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
@@ -37,9 +47,7 @@ import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
 
 /**
- * 排版配置页 — 统一的 5 Tab 排版设置入口。
- *
- * Tabs: 正文 / 标题 / 页眉 / 页脚 / 边距
+ * 阅读样式的分组配置页。
  *
  * 模态弹窗（FontSelectSheet / ColorPickerSheet / CustomTipDialog）状态上抛至本层级，
  * 在 HorizontalPager 之外渲染，避免 clipToBounds 裁剪问题。
@@ -54,17 +62,30 @@ fun TypographyPage(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     sameTitleRemoved: Boolean = false,
+    section: TypographySection = TypographySection.Typography,
+    onOpenPaddingConfig: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val tabTitles = listOf(
-        stringResource(R.string.main_body),   // 正文
-        stringResource(R.string.body_title),   // 标题
-        stringResource(R.string.header),       // 页眉
-        stringResource(R.string.footer),       // 页脚
-        stringResource(R.string.padding),      // 边距
-    )
-    val pagerState = rememberPagerState(pageCount = { 5 })
+    val pages = when (section) {
+        TypographySection.Typography -> listOf(0, 1)
+        TypographySection.Information -> listOf(2, 3)
+        TypographySection.Padding -> listOf(4, 5, 6)
+    }
+    val tabTitles = pages.map { page ->
+        stringResource(
+            when (page) {
+                0 -> R.string.main_body
+                1 -> R.string.body_title
+                2 -> R.string.header
+                3 -> R.string.footer
+                4 -> R.string.main_body
+                5 -> R.string.header
+                else -> R.string.footer
+            }
+        )
+    }
+    val pagerState = rememberPagerState(pageCount = { pages.size })
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // Hoisted modal sheet state — rendered outside the pager to avoid clipToBounds clipping
@@ -135,19 +156,54 @@ fun TypographyPage(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        CardTabRow(
-            tabTitles = tabTitles,
-            selectedTabIndex = selectedTab,
-            onTabSelected = { index ->
-                scope.launch {
-                    pagerState.animateScrollToPage(
-                        page = index,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-                    )
+        if (pages.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+            ) {
+                CardTabRow(
+                    tabTitles = tabTitles,
+                    selectedTabIndex = selectedTab,
+                    onTabSelected = { index ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                if (section != TypographySection.Padding && onOpenPaddingConfig != null) {
+                    NormalCard(
+                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                        onClick = onOpenPaddingConfig,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .fillMaxHeight()
+                            .aspectRatio(1f),
+                        cornerRadius = 12.dp,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SpaceBar,
+                                contentDescription = stringResource(R.string.padding),
+                            )
+                        }
+                    }
                 }
-            },
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-        )
+            }
+        }
 
         HorizontalPager(
             state = pagerState,
@@ -157,12 +213,13 @@ fun TypographyPage(
                 .weight(1f, fill = false)
                 .clipToBounds()
                 .pagerHeight(animatedHeight),
-        ) { page ->
+        ) { pagerIndex ->
+            val page = pages[pagerIndex]
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onSizeChanged { size ->
-                        pageHeights[page] = size.height
+                        pageHeights[pagerIndex] = size.height
                     }
             ) {
                 when (page) {
@@ -228,11 +285,13 @@ fun TypographyPage(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
 
-                    4 -> TypographyMarginTab(
+                    4, 5, 6 -> TypographyMarginTab(
                         config = config,
                         onIntent = onIntent,
+                        page = page - 4,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
+
                 }
             }
         }
@@ -277,4 +336,10 @@ fun TypographyPage(
             onIntent = onIntent,
         )
     }
+}
+
+enum class TypographySection {
+    Typography,
+    Information,
+    Padding,
 }

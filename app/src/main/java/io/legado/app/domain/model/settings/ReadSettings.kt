@@ -107,4 +107,5 @@ data class ReadSettings(
     val chineseConverterType: Int = 0,
     val showMenuIcon: Boolean = false,
     val titleBarCompact: Boolean = false,
+    val moreActionsConfig: String = "",
 )

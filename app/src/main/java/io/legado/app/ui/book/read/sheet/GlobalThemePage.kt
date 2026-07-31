@@ -23,10 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.SpaceBar
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,7 +76,8 @@ fun GlobalThemePage(
     onToggleDayNight: () -> Unit,
     eyeProtectionEnabled: Boolean,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenUnderlineConfig: () -> Unit,
+    onOpenTypographyConfig: () -> Unit,
+    onOpenPaddingConfig: () -> Unit,
     onShareLayoutChange: (Boolean) -> Unit,
     onStyleSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -91,7 +91,6 @@ fun GlobalThemePage(
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
     val isNightTheme = LegadoTheme.isDark
-    val doubleHorizontalPage = preferences.doubleHorizontalPage
 
     val configList = styleConfig.styleItems
 
@@ -115,7 +114,7 @@ fun GlobalThemePage(
                 },
             )
             NormalCard(
-                onClick = onOpenUnderlineConfig,
+                onClick = onOpenTypographyConfig,
                 modifier = Modifier
                     .height(56.dp)
                     .aspectRatio(1f),
@@ -127,9 +126,9 @@ fun GlobalThemePage(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.FormatUnderlined,
-                        contentDescription = stringResource(R.string.use_underline),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.TextFields,
+                        contentDescription = stringResource(R.string.compose_type),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -323,10 +322,6 @@ fun GlobalThemePage(
         val currentPageAnimDisplay =
             pageAnimEntries.getOrNull(pageAnimEntryValues.indexOf(pageAnim.toString())) ?: ""
 
-        var showDualPageMenu by remember { mutableStateOf(false) }
-        val doublePageEntries = stringArrayResource(R.array.double_page_title)
-        val doublePageValues = stringArrayResource(R.array.double_page_value)
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -363,51 +358,20 @@ fun GlobalThemePage(
                     }
                 }
             }
-            // 平板/横屏双页 — dropdown menu
-            Box {
-                NormalCard(
-                    onClick = { showDualPageMenu = true },
-                    modifier = Modifier
-                        .height(56.dp)
-                        .aspectRatio(1f),
-                    containerColor = if (doubleHorizontalPage != "0") {
-                        LegadoTheme.colorScheme.secondaryContainer
-                    } else {
-                        LegadoTheme.colorScheme.surfaceContainerLow
-                    },
-                    cornerRadius = 12.dp
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tablet,
-                            contentDescription = stringResource(R.string.double_page_horizontal),
-                            tint = if (doubleHorizontalPage != "0") {
-                                LegadoTheme.colorScheme.onSecondaryContainer
-                            } else {
-                                LegadoTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
-                }
-                RoundDropdownMenu(
-                    expanded = showDualPageMenu,
-                    onDismissRequest = { showDualPageMenu = false },
-                ) { dismiss ->
-                    doublePageEntries.forEachIndexed { index, display ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            isSelected = doublePageValues[index] == doubleHorizontalPage,
-                            onClick = {
-                                onIntent(ReadBookIntent.UpdateConfig(
-                                    ConfigUpdate.DoubleHorizontalPage(doublePageValues[index])
-                                ))
-                                dismiss()
-                            },
-                        )
-                    }
+            NormalCard(
+                onClick = onOpenPaddingConfig,
+                modifier = Modifier
+                    .height(56.dp)
+                    .aspectRatio(1f),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.SpaceBar,
+                        contentDescription = stringResource(R.string.padding),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

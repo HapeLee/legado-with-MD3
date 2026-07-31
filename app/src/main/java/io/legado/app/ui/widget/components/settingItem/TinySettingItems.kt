@@ -33,11 +33,13 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +71,28 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
+
+/**
+ * 滑块拖拽状态：宿主（如阅读菜单）可在任意滑块拖动时据此降低自身透明度。
+ */
+@Stable
+class SliderDragState {
+    var isDragging by mutableStateOf(false)
+        private set
+
+    fun startDragging() {
+        isDragging = true
+    }
+
+    fun stopDragging() {
+        isDragging = false
+    }
+}
+
+/**
+ * 提供当前 [SliderDragState] 的 CompositionLocal；宿主不提供时为 null（不参与透明度联动）。
+ */
+val LocalSliderDragState = staticCompositionLocalOf<SliderDragState?> { null }
 
 @Composable
 fun TinySettingItem(
@@ -270,6 +294,7 @@ fun TinySliderSettingItem(
     var expanded by remember { mutableStateOf(false) }
     var sliderValue by remember(value) { mutableFloatStateOf(value) }
     var displayValue by remember(value) { mutableFloatStateOf(value) }
+    val dragState = LocalSliderDragState.current
 
     TinySettingItem(
         title = title,
@@ -298,9 +323,11 @@ fun TinySliderSettingItem(
                 onValueChange = {
                     sliderValue = it
                     displayValue = it
+                    onValueChange(it)
+                    dragState?.startDragging()
                 },
                 onValueChangeFinished = {
-                    onValueChange(sliderValue)
+                    dragState?.stopDragging()
                 },
                 valueRange = valueRange,
                 steps = steps,

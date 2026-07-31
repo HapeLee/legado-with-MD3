@@ -1011,6 +1011,7 @@
     <string name="prev_page">Prior page</string>
     <string name="non_action">None</string>
     <string name="body_title">Title</string>
+    <string name="title_position">Title Position</string>
     <string name="show_hide">Show/Hide</string>
     <string name="header_footer">Footer <![CDATA[&]]> Header</string>
     <string name="rule_subscription">Rule Subscription</string>
@@ -1199,6 +1200,7 @@
     <string name="scope_content">Act on the content</string>
     <string name="join_qq_channel">Join QQ channel</string>
     <string name="qq_channel_summary">Tap to join the Reading QQ channel</string>
+    <string name="menu_refresh">Refresh Chapter</string>
     <string name="menu_refresh_dur">Refresh the current chapter</string>
     <string name="menu_refresh_after">Refresh the chapter after</string>
     <string name="menu_refresh_all">Refresh all chapters</string>
@@ -1345,6 +1347,7 @@
     <string name="show_last_update_time">Show Last Updated Time</string>
     <string name="refresh_list">Refresh list</string>
     <string name="tip_divider_color">Divider color</string>
+    <string name="tip_divider_color_shared_desc">Shared by header and footer</string>
     <string name="same_title_removed">Remove Duplicate Title</string>
     <string name="update_book_fail">Update failed</string>
     <string name="notification_permission_rationale">Reading requires sending notifications to show reading control and download progress</string>
@@ -1477,6 +1480,7 @@
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
     <string name="font_weight">Font Weight</string>
+    <string name="font_weight_custom_description">Custom weight only applies to variable fonts</string>
     <string name="keep_swipe_tip">Keep swiping to load the next chapter…</string>
     <string name="enable_optimize_render">Enable Render Optimization</string>
     <string name="ignore_battery_permission_rationale">Reading requires requesting background permission to keep the service running properly</string>
@@ -1643,6 +1647,7 @@
     <string name="welcome_book_folder_tip">Set where local books are stored. You can change it later in Settings.</string>
     <string name="welcome_book_folder_not_selected">No folder selected</string>
     <string name="config_btn">Configure Bottom Buttons</string>
+    <string name="more_actions_config">Configure More Menu</string>
     <string name="compact_grid">Compact Grid</string>
     <string name="cover_grid">Cover Grid</string>
     <string name="end_chapter">End Chapter</string>
@@ -1819,7 +1824,7 @@
     <string name="save_to_local">Save to local</string>
     <string name="select_operation">Select an operation</string>
     <string name="text_accent_color">Accent Color</string>
-    <string name="read_color">Color Style</string>
+    <string name="read_color">Color</string>
     <string name="reverse_volume_key_page">Reverse Volume-Key Page Turn Direction</string>
     <string name="palette_style">Palette Style</string>
     <string name="material_version">Color Specification</string>
@@ -1858,9 +1863,7 @@
     <string name="filter_show_not_in_shelf_only">Show Only Books Not in Shelf</string>
     <string name="follow_read_background">Follow background</string>
     <string name="heading_spacing">Heading spacing</string>
-    <string name="title_segment">Segment</string>
     <string name="title_spacing">Spacing</string>
-    <string name="title_dedup">Dedup</string>
     <string name="layout_setting">Layout settings</string>
     <string name="rule_segment">Rule</string>
     <string name="split_title">Split title</string>
@@ -2015,6 +2018,13 @@
     <string name="ai_rewrite_preset_dialogue_name">Natural dialogue</string>
     <string name="ai_rewrite_preset_dialogue_instruction">Rewrite the selected text into more natural spoken narration or dialogue while preserving character intent, relationships, and plot facts.</string>
     <string name="content_processes">Content edits</string>
+    <string name="text_processing">Text processing</string>
+    <string name="replace_filter_all">All</string>
+    <string name="replace_filter">Filter replacement rules</string>
+    <string name="replace_filter_enabled">Enabled</string>
+    <string name="replace_filter_disabled">Disabled</string>
+    <string name="replace_filter_effective">Effective now</string>
+    <string name="replace_filter_empty">No matching replacement rules</string>
     <string name="content_process_empty">No content edits for this chapter.</string>
     <string name="content_process_delete_confirm">Delete this content edit?\n\n%1$s</string>
     <string name="content_process_delete_confirm_simple">Delete this content edit?</string>

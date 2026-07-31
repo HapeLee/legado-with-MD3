@@ -39,9 +39,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun ReadStyleContent(
     onOpenTypographyConfig: () -> Unit,
+    onOpenInformationConfig: () -> Unit,
+    onOpenPaddingConfig: () -> Unit,
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
-    onOpenUnderlineConfig: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     onPageChanged: (Int) -> Unit = {},
@@ -96,7 +97,8 @@ fun ReadStyleContent(
                         onToggleDayNight = onToggleDayNight,
                         eyeProtectionEnabled = eyeProtectionEnabled,
                         onOpenBgTextConfig = onOpenBgTextConfig,
-                        onOpenUnderlineConfig = onOpenUnderlineConfig,
+                        onOpenTypographyConfig = onOpenTypographyConfig,
+                        onOpenPaddingConfig = onOpenPaddingConfig,
                         onShareLayoutChange = { shareLayout ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
                         },
@@ -123,7 +125,7 @@ fun ReadStyleContent(
         val tabTitles = listOf(
             stringResource(R.string.read_config_global_theme),
             stringResource(R.string.read_config_menu_system),
-            stringResource(R.string.compose_type),
+            stringResource(R.string.information),
             stringResource(R.string.more_setting),
         )
         CardTabRow(
@@ -139,7 +141,7 @@ fun ReadStyleContent(
                             )
                         }
                     }
-                    2 -> onOpenTypographyConfig()
+                    2 -> onOpenInformationConfig()
                     3 -> onOpenMoreConfig()
                 }
             },

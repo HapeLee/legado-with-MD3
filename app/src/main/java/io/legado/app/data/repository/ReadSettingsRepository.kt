@@ -443,6 +443,7 @@ class ReadSettingsRepository(
             chineseConverterType = compatDsValue(Keys.ChineseConverterType, 0),
             showMenuIcon = compatDsValue(Keys.ShowMenuIcon, false),
             titleBarCompact = compatDsValue(Keys.TitleBarCompact, false),
+            moreActionsConfig = compatDsValue(Keys.MoreActionsConfig, ""),
         )
     }
 
@@ -554,6 +555,7 @@ class ReadSettingsRepository(
         val ChineseConverterType = intPreferencesKey(PreferKey.chineseConverterType)
         val ShowMenuIcon = booleanPreferencesKey(PreferKey.showMenuIcon)
         val TitleBarCompact = booleanPreferencesKey(PreferKey.titleBarCompact)
+        val MoreActionsConfig = stringPreferencesKey(PreferKey.moreActionsConfig)
     }
 }
 
@@ -672,4 +674,5 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.chineseConverterType to chineseConverterType,
     PreferKey.showMenuIcon to showMenuIcon,
     PreferKey.titleBarCompact to titleBarCompact,
+    PreferKey.moreActionsConfig to moreActionsConfig,
 )
