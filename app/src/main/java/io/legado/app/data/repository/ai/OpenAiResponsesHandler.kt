@@ -10,7 +10,6 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiToolCall
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.help.http.addHeaders
@@ -62,8 +61,8 @@ class OpenAiResponsesHandler : AiProtocolHandler {
         if (hasReasoningCapability(request.model.capabilities)) {
             body["reasoning"] = buildMap<String, Any> {
                 put("summary", "auto")
-                if (params.reasoningLevel != AiReasoningLevel.AUTO) {
-                    put("effort", params.reasoningLevel.effort)
+                params.reasoningLevel.effortFor(provider)?.let {
+                    put("effort", it)
                 }
             }
         }
@@ -114,8 +113,8 @@ class OpenAiResponsesHandler : AiProtocolHandler {
         if (hasReasoningCapability(request.model.capabilities)) {
             body["reasoning"] = buildMap<String, Any> {
                 put("summary", "auto")
-                if (params.reasoningLevel != AiReasoningLevel.AUTO) {
-                    put("effort", params.reasoningLevel.effort)
+                params.reasoningLevel.effortFor(provider)?.let {
+                    put("effort", it)
                 }
             }
         }

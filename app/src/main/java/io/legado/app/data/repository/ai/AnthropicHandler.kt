@@ -75,8 +75,8 @@ class AnthropicHandler : AiProtocolHandler {
                 }
             }
             body["thinking"] = thinking
-            if (reasoningLevel != AiReasoningLevel.OFF && reasoningLevel != AiReasoningLevel.AUTO) {
-                body["output_config"] = mapOf("effort" to reasoningLevel.effort)
+            reasoningLevel.effortFor(provider)?.let {
+                body["output_config"] = mapOf("effort" to it)
             }
         } else {
             request.params.temperature?.let { body["temperature"] = it }
@@ -143,8 +143,8 @@ class AnthropicHandler : AiProtocolHandler {
                 }
             }
             body["thinking"] = thinking
-            if (reasoningLevel != AiReasoningLevel.OFF && reasoningLevel != AiReasoningLevel.AUTO) {
-                body["output_config"] = mapOf("effort" to reasoningLevel.effort)
+            reasoningLevel.effortFor(provider)?.let {
+                body["output_config"] = mapOf("effort" to it)
             }
         } else {
             request.params.temperature?.let { body["temperature"] = it }

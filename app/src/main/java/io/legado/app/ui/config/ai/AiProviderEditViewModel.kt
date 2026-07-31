@@ -11,6 +11,7 @@ import io.legado.app.domain.model.AiModelDraft
 import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiProviderDraft
 import io.legado.app.domain.model.AiProviderPresets
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
@@ -73,7 +74,8 @@ class AiProviderEditViewModel(
                                 modelId = model.modelId,
                                 contextWindow = model.contextWindow,
                                 maxOutputTokens = model.maxOutputTokens,
-                                temperature = params.temperature ?: TranslationConstants.DEFAULT_TEMPERATURE
+                                temperature = params.temperature ?: TranslationConstants.DEFAULT_TEMPERATURE,
+                                reasoningLevel = params.reasoningLevel.toModelConfigLevel()
                             )
                         }
                         .toImmutableList()
@@ -116,6 +118,7 @@ class AiProviderEditViewModel(
             is AiProviderEditIntent.UpdateEditingContextWindow -> updateEditingModel { copy(contextWindow = intent.value) }
             is AiProviderEditIntent.UpdateEditingMaxOutputTokens -> updateEditingModel { copy(maxOutputTokens = intent.value) }
             is AiProviderEditIntent.UpdateEditingTemperature -> updateEditingModel { copy(temperature = intent.value) }
+            is AiProviderEditIntent.UpdateEditingReasoningLevel -> updateEditingModel { copy(reasoningLevel = intent.value) }
             AiProviderEditIntent.SaveEditingModel -> saveEditingModel()
             AiProviderEditIntent.TestConnection -> testConnection()
             AiProviderEditIntent.SaveProvider -> saveProvider()
@@ -153,7 +156,8 @@ class AiProviderEditViewModel(
                     modelId = model.modelId,
                     contextWindow = model.contextWindow.takeIf { value -> value > 0 }?.toString().orEmpty(),
                     maxOutputTokens = model.maxOutputTokens.takeIf { value -> value > 0 }?.toString().orEmpty(),
-                    temperature = model.temperature.toString()
+                    temperature = model.temperature.toString(),
+                    reasoningLevel = model.reasoningLevel
                 )
             )
         }
@@ -181,7 +185,8 @@ class AiProviderEditViewModel(
                         contextWindow = editor.contextWindow.toIntOrNull() ?: 0,
                         maxOutputTokens = editor.maxOutputTokens.toIntOrNull() ?: 0,
                         temperature = editor.temperature.toFloatOrNull()
-                            ?: TranslationConstants.DEFAULT_TEMPERATURE
+                            ?: TranslationConstants.DEFAULT_TEMPERATURE,
+                        reasoningLevel = editor.reasoningLevel
                     )
                 )
             }.onSuccess { model ->
@@ -339,5 +344,9 @@ class AiProviderEditViewModel(
         return runCatching {
             GSON.fromJson(json, AiGenerationParams::class.java)
         }.getOrDefault(AiGenerationParams())
+    }
+
+    private fun AiReasoningLevel.toModelConfigLevel(): AiReasoningLevel {
+        return takeIf { it in AiReasoningLevel.modelConfigEntries } ?: AiReasoningLevel.MEDIUM
     }
 }

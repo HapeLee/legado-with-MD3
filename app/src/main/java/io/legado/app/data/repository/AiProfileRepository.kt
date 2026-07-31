@@ -15,6 +15,7 @@ import io.legado.app.domain.model.AiPromptTemplate
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiProviderDraft
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskRuntimeOptions
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
@@ -97,7 +98,10 @@ class AiProfileRepository(
         )
         val existingModel = aiProfileDao.getModel(modelProfileId)
         val now = System.currentTimeMillis()
-        val params = AiGenerationParams(temperature = draft.temperature)
+        val params = AiGenerationParams(
+            temperature = draft.temperature,
+            reasoningLevel = draft.reasoningLevel
+        )
         val model = AiModelProfile(
             id = modelProfileId,
             providerId = draft.providerId,
@@ -105,7 +109,7 @@ class AiProfileRepository(
             modelId = draft.modelId,
             contextWindow = draft.contextWindow,
             maxOutputTokens = draft.maxOutputTokens,
-            capabilities = existingModel?.capabilities.orEmpty(),
+            capabilities = mergeCapabilities(existingModel?.capabilities, draft.modelId),
             defaultParamsJson = GSON.toJson(params),
             enabled = existingModel?.enabled ?: true,
             sortNumber = existingModel?.sortNumber ?: 0,
@@ -132,9 +136,10 @@ class AiProfileRepository(
                 modelId = availableModel.id,
                 contextWindow = availableModel.contextWindow.takeIf { it > 0 } ?: existingModel?.contextWindow ?: 0,
                 maxOutputTokens = availableModel.maxOutputTokens.takeIf { it > 0 } ?: existingModel?.maxOutputTokens ?: 0,
-                capabilities = existingModel?.capabilities?.takeIf { it.isNotBlank() }
-                    ?: AiModelRegistry.inferCapabilities(availableModel.id).joinToString(","),
-                defaultParamsJson = existingModel?.defaultParamsJson ?: GSON.toJson(AiGenerationParams()),
+                capabilities = mergeCapabilities(existingModel?.capabilities, availableModel.id),
+                defaultParamsJson = existingModel?.defaultParamsJson ?: GSON.toJson(
+                    AiGenerationParams(reasoningLevel = AiReasoningLevel.MEDIUM)
+                ),
                 enabled = existingModel?.enabled ?: true,
                 sortNumber = existingModel?.sortNumber ?: 0,
                 createdAt = existingModel?.createdAt ?: now,
@@ -266,7 +271,7 @@ class AiProfileRepository(
                 modelId = draft.modelId,
                 contextWindow = draft.contextWindow,
                 maxOutputTokens = draft.maxOutputTokens,
-                capabilities = existingModel?.capabilities.orEmpty(),
+                capabilities = mergeCapabilities(existingModel?.capabilities, draft.modelId),
                 defaultParamsJson = GSON.toJson(params),
                 createdAt = existingModel?.createdAt ?: now,
                 updatedAt = now
@@ -405,6 +410,14 @@ class AiProfileRepository(
                 .mapKeys { it.key.toString() }
                 .mapValues { it.value.toString() }
         }.getOrDefault(emptyMap())
+    }
+
+    private fun mergeCapabilities(existing: String?, modelId: String): String {
+        return (existing.orEmpty().split(',') + AiModelRegistry.inferCapabilities(modelId))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(",")
     }
 
     private companion object {

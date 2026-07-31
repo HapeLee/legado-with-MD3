@@ -44,7 +44,9 @@ class AiChatGenerationUseCase(
         return AiGenerateRequest(
             model = preset.model,
             messages = buildRequestMessages(userContent, history, conversationId),
-            params = preset.params.copy(reasoningLevel = reasoningLevel),
+            params = preset.params.copy(
+                reasoningLevel = reasoningLevel.resolveModelDefault(preset.params.reasoningLevel)
+            ),
             tools = aiToolGateway.availableTools()
         )
     }
@@ -133,7 +135,9 @@ class AiChatGenerationUseCase(
         val request = AiGenerateRequest(
             model = preset.model,
             messages = listOf(AiMessage(AiMessageRole.USER, prompt)),
-            params = preset.params.copy(reasoningLevel = reasoningLevel)
+            params = preset.params.copy(
+                reasoningLevel = reasoningLevel.resolveModelDefault(preset.params.reasoningLevel)
+            )
         )
         val result = aiTextGateway.generate(request)
         return result.getOrNull()?.text?.trim()?.take(30) ?: userContent.take(20)
@@ -216,6 +220,10 @@ class AiChatGenerationUseCase(
 
         val memoryBlock = memories.joinToString("\n") { "- ${it.key}: ${it.value}" }
         return "$base\n\n## User Memory\nThe following facts about the user have been remembered from prior conversations:\n$memoryBlock"
+    }
+
+    private fun AiReasoningLevel.resolveModelDefault(default: AiReasoningLevel): AiReasoningLevel {
+        return if (this == AiReasoningLevel.AUTO) default else this
     }
 
     companion object {

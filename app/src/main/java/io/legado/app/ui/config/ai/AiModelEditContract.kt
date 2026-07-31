@@ -1,6 +1,7 @@
 package io.legado.app.ui.config.ai
 
 import androidx.compose.runtime.Stable
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -15,6 +16,7 @@ data class AiModelEditUiState(
     val contextWindow: Int = 0,
     val maxOutputTokens: Int = 0,
     val temperature: Float = TranslationConstants.DEFAULT_TEMPERATURE,
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM,
     val isSaving: Boolean = false,
     val isTesting: Boolean = false,
     val initialized: Boolean = false
@@ -35,6 +37,7 @@ sealed interface AiModelEditIntent {
     data class UpdateContextWindow(val value: Int) : AiModelEditIntent
     data class UpdateMaxOutputTokens(val value: Int) : AiModelEditIntent
     data class UpdateTemperature(val value: Float) : AiModelEditIntent
+    data class UpdateReasoningLevel(val value: AiReasoningLevel) : AiModelEditIntent
     data object Save : AiModelEditIntent
     data object TestConnection : AiModelEditIntent
 }

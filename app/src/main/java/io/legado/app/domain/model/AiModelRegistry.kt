@@ -17,9 +17,15 @@ object AiModelRegistry {
     )
 
     private val patterns = listOf(
-        // OpenAI GPT-4o / GPT-4.1 / GPT-5
+        // OpenAI GPT-5 reasoning models
+        ModelPattern(
+            tokens = listOf("gpt-5"),
+            capabilities = setOf(AiCapability.TOOLS, AiCapability.REASONING, AiCapability.VISION, AiCapability.STREAMING)
+        ),
+        // OpenAI non-reasoning GPT models
         ModelPattern(
             tokens = listOf("gpt"),
+            notTokens = listOf("gpt-5"),
             capabilities = setOf(AiCapability.TOOLS, AiCapability.VISION, AiCapability.STREAMING)
         ),
         // OpenAI o-series (reasoning models)
@@ -50,7 +56,7 @@ object AiModelRegistry {
         ModelPattern(
             tokens = listOf("deepseek"),
             notTokens = listOf("reasoner"),
-            capabilities = setOf(AiCapability.TOOLS, AiCapability.STREAMING)
+            capabilities = setOf(AiCapability.TOOLS, AiCapability.REASONING, AiCapability.STREAMING)
         ),
         // Gemini
         ModelPattern(

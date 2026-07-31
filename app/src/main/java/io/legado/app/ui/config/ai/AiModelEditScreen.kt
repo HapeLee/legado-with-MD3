@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
@@ -172,6 +173,23 @@ fun AiModelEditScreen(
                         displayEntries = maxOutputTokenOptions.displayEntries,
                         entryValues = maxOutputTokenOptions.entryValues,
                         onValueChange = { onIntent(AiModelEditIntent.UpdateMaxOutputTokens(it.toIntOrNull() ?: 0)) }
+                    )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.ai_thinking_strength),
+                        selectedValue = state.reasoningLevel.effort,
+                        displayEntries = arrayOf(
+                            stringResource(R.string.ai_reasoning_level_low),
+                            stringResource(R.string.ai_reasoning_level_medium),
+                            stringResource(R.string.ai_reasoning_level_high),
+                            stringResource(R.string.ai_reasoning_level_xhigh),
+                            stringResource(R.string.ai_reasoning_level_max)
+                        ),
+                        entryValues = AiReasoningLevel.modelConfigEntries
+                            .map { it.effort }
+                            .toTypedArray(),
+                        onValueChange = {
+                            onIntent(AiModelEditIntent.UpdateReasoningLevel(AiReasoningLevel.fromEffort(it)))
+                        }
                     )
                     SliderSettingItem(
                         title = stringResource(R.string.ai_temperature),
