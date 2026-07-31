@@ -32,6 +32,7 @@ data class TextHtmlColumn(
     override val fontPath: String = "",
     override val fontWeight: Int = 400,
     override val isItalic: Boolean = false,
+    override val fontSizeOffset: Int = 0,
     override val npLeft: Float = 0.1f,
     override val npRight: Float = 0.1f,
     override val npTop: Float = 0.1f,

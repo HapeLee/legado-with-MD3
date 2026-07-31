@@ -176,6 +176,7 @@ class HighlightRuleRepository(
             fontPath = runCatching { rule.fontPath }.getOrNull()?.takeIf { it.isNotBlank() },
             fontWeight = runCatching { rule.fontWeight }.getOrDefault(400).coerceIn(300, 700),
             isItalic = runCatching { rule.isItalic }.getOrDefault(false),
+            fontSizeOffset = runCatching { rule.fontSizeOffset }.getOrDefault(0).coerceIn(-10, 10),
             npLeft = runCatching { rule.npLeft }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             npRight = runCatching { rule.npRight }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             npTop = runCatching { rule.npTop }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
