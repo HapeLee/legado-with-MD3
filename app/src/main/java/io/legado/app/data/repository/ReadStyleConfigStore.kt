@@ -25,7 +25,7 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     val shareConfigFilePath: String get() = readStyleRepository.shareConfigFilePath
 
     /** 共享排版那一份。 */
-    val shareConfig: ReadBookConfig.Config get() = shareConfigRef
+    val shareConfig: ReadBookConfig.Config get() = synchronized(lock) { shareConfigRef }
 
     fun initConfigs() {
         val configs = readStyleRepository.readConfigs()
@@ -37,7 +37,8 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
 
     fun initShareConfig() {
         val fallback = synchronized(lock) { configList.getOrNull(5) } ?: ReadBookConfig.Config()
-        shareConfigRef = readStyleRepository.readShareConfig(fallback)
+        val config = readStyleRepository.readShareConfig(fallback)
+        synchronized(lock) { shareConfigRef = config }
     }
 
     /** 按下标取用。配置文件缺斤少两时先恢复默认，保证 5 份预设始终在。 */
@@ -52,9 +53,9 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     fun replaceConfigAt(index: Int, config: ReadBookConfig.Config, alsoShare: Boolean) {
         synchronized(lock) {
             configList[index] = config
-        }
-        if (alsoShare) {
-            shareConfigRef = config
+            if (alsoShare) {
+                shareConfigRef = config
+            }
         }
     }
 
@@ -93,7 +94,7 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
         configList.toList()
     }
 
-    fun shareConfigSnapshot(): ReadBookConfig.Config = shareConfigRef
+    fun shareConfigSnapshot(): ReadBookConfig.Config = synchronized(lock) { shareConfigRef }
 
     fun addConfig(config: ReadBookConfig.Config): Int = synchronized(lock) {
         configList.add(config)
@@ -132,8 +133,10 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     }
 
     private fun save() {
+        // 列表与共享配置在同一临界区内取快照，落盘的两份内容彼此自洽
+        val (configs, share) = synchronized(lock) { configList.toList() to shareConfigRef }
         Coroutine.async {
-            readStyleRepository.save(configsSnapshot(), shareConfigRef)
+            readStyleRepository.save(configs, share)
         }
     }
 }

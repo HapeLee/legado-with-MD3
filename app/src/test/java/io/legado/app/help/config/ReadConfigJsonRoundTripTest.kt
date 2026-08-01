@@ -84,14 +84,30 @@ class ReadConfigJsonRoundTripTest {
 
     @Test
     fun `copy 会重置颜色记忆化缓存`() {
-        // curTextColor() 把解析结果记在 @Transient 字段里。copy 只复制构造参数，
-        // 缓存回到未初始化——改了颜色的那份必须重新解析，不能沿用旧值。
+        // curTextColor() 把解析结果记在 @Transient 字段里，并用 initColorInt 挡住重复解析。
+        // copy 只复制构造参数，两个字段都应回到未初始化——否则改了颜色的那份会沿用旧解析值。
+        // curTextColor() 本身要经 Koin 取主题网关，JVM 单测起不来，所以用反射模拟
+        // 「ensureColorInts 已经跑过」的状态，直接断言 copy 出来的实例缓存是空的。
         val config = ReadBookConfig.Config(name = "x")
-        val before = config.getTextColor()
+        val cacheField = ReadBookConfig.Config::class.java.getDeclaredField("textColorInt")
+            .apply { isAccessible = true }
+        val initFlagField = ReadBookConfig.Config::class.java.getDeclaredField("initColorInt")
+            .apply { isAccessible = true }
+        cacheField.setInt(config, 0x123456)
+        initFlagField.setBoolean(config, true)
 
         val changed = config.copy(name = "y")
 
-        assertEquals(before, changed.getTextColor())
         assertEquals("y", changed.name)
+        assertEquals(
+            "copy 若带走了 initColorInt，改色后 ensureColorInts 不会重算，永远沿用旧解析值",
+            false,
+            initFlagField.getBoolean(changed),
+        )
+        assertEquals(
+            "copy 若带走了记忆化缓存，改色后会沿用旧解析值",
+            -1,
+            cacheField.getInt(changed),
+        )
     }
 }
