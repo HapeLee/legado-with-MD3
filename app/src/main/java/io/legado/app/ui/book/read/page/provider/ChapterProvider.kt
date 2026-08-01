@@ -138,6 +138,12 @@ object ChapterProvider {
         val underlineHeight: Int = 1,
         val underlinePadding: Int = 10,
         val textBottomJustify: Boolean = false,
+        // 下面三项来自 ReadConfig 而不是 ReadBookConfig，但对绘制路径是同一回事：
+        // 每次经门面读都要全量构造一份 ReadSettings（几十个 preferences 查找），
+        // 放在 draw() 里比 getConfig 的监视器锁还贵。
+        val useUnderline: Boolean = false,
+        val optimizeRender: Boolean = false,
+        val isEInkMode: Boolean = false,
     )
 
     @Volatile
@@ -155,8 +161,11 @@ object ChapterProvider {
             underlineExtend = ReadBookConfig.underlineExtend,
             underlineColor = ReadBookConfig.durConfig.curUnderlineColor(),
             underlineHeight = ReadBookConfig.underlineHeight,
-            underlinePadding = ReadBookConfig.durConfig.underlinePadding,
+            underlinePadding = ReadBookConfig.underlinePadding,
             textBottomJustify = ReadBookConfig.textBottomJustify,
+            useUnderline = ReadConfig.useUnderline,
+            optimizeRender = ReadConfig.optimizeRender,
+            isEInkMode = ReadConfig.isEInkMode,
         )
     }
 

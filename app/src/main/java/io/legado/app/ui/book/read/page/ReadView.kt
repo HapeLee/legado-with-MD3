@@ -120,6 +120,13 @@ class ReadView(
     val isAutoPage get() = autoPager.isRunning
 
     init {
+        if (!isInEditMode) {
+            // 重开阅读器的唯一快照重建入口：ReadConfigUpdateBus 无 replay，上一会话关闭后改的
+            // 配置（如设置页的「隐藏状态栏」）没有任何 effect 会补发；PageView 构造期就要读
+            // TipStyleProvider.style，所以必须在 addView 之前重建。两份快照纯派生、幂等。
+            ChapterProvider.upRenderStyle()
+            TipStyleProvider.upTipStyle()
+        }
         addView(nextPage)
         addView(curPage)
         addView(prevPage)

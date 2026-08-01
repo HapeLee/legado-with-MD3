@@ -20,7 +20,6 @@ import io.legado.app.ui.book.read.page.entities.column.BaseColumn
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.canvasrecorder.recordIfNeededThenDraw
 import io.legado.app.utils.dpToPx
@@ -77,7 +76,7 @@ data class TextLine(
     var textPage: TextPage = emptyTextPage
     var isLeftLine = true
     val useUnderline: Boolean
-        get() = ReadConfig.useUnderline
+        get() = ChapterProvider.renderStyle.useUnderline
 
     fun addColumn(column: BaseColumn) {
         if (column !is TextColumn) {
@@ -160,7 +159,7 @@ data class TextLine(
     }
 
     fun draw(view: ContentTextView, canvas: Canvas) {
-        if (ReadConfig.optimizeRender) {
+        if (ChapterProvider.renderStyle.optimizeRender) {
             canvasRecorder.recordIfNeededThenDraw(canvas, view.width, height.toInt()) {
                 drawTextLine(view, this)
             }
@@ -246,7 +245,7 @@ data class TextLine(
         paint.color = renderStyle.underlineColor
         paint.strokeWidth = renderStyle.underlineHeight.toFloat()
         paint.style = Paint.Style.STROKE
-        paint.pathEffect = if (renderStyle.dottedLine && !ReadConfig.isEInkMode)
+        paint.pathEffect = if (renderStyle.dottedLine && !renderStyle.isEInkMode)
             ChapterProvider.dashEffect
         else
             null
@@ -832,7 +831,7 @@ data class TextLine(
     }
 
     fun checkFastDraw(): Boolean {
-        if (!ReadConfig.optimizeRender || exceed || !onlyTextColumn || textPage.isMsgPage) {
+        if (!ChapterProvider.renderStyle.optimizeRender || exceed || !onlyTextColumn || textPage.isMsgPage) {
             return false
         }
         if (wordSpacing != 0f && (!atLeastApi26 || !wordSpacingWorking)) {

@@ -35,6 +35,8 @@ import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.ui.book.read.ConfigUpdateAction
+import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
@@ -355,6 +357,17 @@ object Restore : KoinComponent {
             // 两个文件都落地后再整体重读：分开重读会让 shareConfig 的兜底
             // （configList[5]）取到还没被覆盖的旧列表。refresh 顺带发布 state。
             get<ReadStyleGateway>().refresh()
+            // refresh 只重建 Compose 侧 state；阅读器开着时渲染层的两份快照（RenderStyle/
+            // TipStyle）与已排版内容不会跟着刷新，得走配置总线让 controller 重建并重排。
+            // 阅读器没开时无人消费，重开由 ReadView.init 的重建入口兜底。
+            ReadConfigUpdateBus.post(
+                setOf(
+                    ConfigUpdateAction.UpdateBackground,
+                    ConfigUpdateAction.UpdateStyle,
+                    ConfigUpdateAction.ReloadContent,
+                    ConfigUpdateAction.RebuildWholeBookPageIndex,
+                )
+            )
         }
         // 恢复配置文件 (手动解析 XML，替代反射逻辑)
         val configFile = File(path, "config.xml")

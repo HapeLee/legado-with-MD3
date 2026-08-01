@@ -22,12 +22,15 @@ import java.io.File
 class RenderStyleSnapshotBoundaryTest {
 
     @Test
-    fun `渲染实体不直读 ReadBookConfig`() {
+    fun `渲染实体不直读 ReadBookConfig 或 ReadConfig`() {
+        // ReadConfig 门面同罪：它的每个属性都要全量构造一份 Settings 快照
+        // （几十个 preferences 查找），放在 draw() 里比 getConfig 的监视器锁还贵。
         val violations = RENDER_ENTITIES.filter { path ->
-            Regex("""\bReadBookConfig\b""").containsMatchIn(stripComments(mainSource(path)))
+            Regex("""\b(?:ReadBookConfig|ReadConfig)\b""")
+                .containsMatchIn(stripComments(mainSource(path)))
         }
         assertTrue(
-            "以下渲染实体又直接读 ReadBookConfig 了：\n" +
+            "以下渲染实体又直接读 ReadBookConfig / ReadConfig 了：\n" +
                 violations.joinToString("\n") { "  - $it" } + "\n" +
                 "绘制期要用的排版项请加进 ChapterProvider.RenderStyle，" +
                 "由 upRenderStyle() 统一重建后读快照。",

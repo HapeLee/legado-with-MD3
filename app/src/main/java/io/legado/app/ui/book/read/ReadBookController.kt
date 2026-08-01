@@ -1004,12 +1004,13 @@ class ReadBookController(
             // ── Already migrated (View-layer) ──
             is ReadBookEffect.Finish -> closeReadBook()
             is ReadBookEffect.UpdateReadViewConfig -> {
-                val r = refs ?: return
                 // 两份快照都是配置的纯派生，在分发具体 action 之前先重建：下划线/虚线/下划线颜色
                 // 等项的 action 集里并没有 UpdateStyle，靠 upStyle() 顺带重建会漏；而且
                 // actions 是集合，无法保证「重建」排在 InvalidateTextPage/SubmitRenderTask 之前。
+                // 重建必须排在 refs 判空之前——view 未挂载期收到的配置变更，至少快照不能滞留。
                 ChapterProvider.upRenderStyle()
                 TipStyleProvider.upTipStyle()
+                val r = refs ?: return
                 effect.actions.forEach { action ->
                     when (action) {
                         ConfigUpdateAction.UpdateSystemUi -> upSystemUiVisibility()
