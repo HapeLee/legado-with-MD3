@@ -54,6 +54,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +64,9 @@ fun BookSourceEditScreen(
     onMenuExpandedChange: (Boolean) -> Unit,
     onIntent: (BookSourceEditIntent) -> Unit,
 ) {
-    BackHandler { onIntent(BookSourceEditIntent.RequestBack) }
+    BackHandler(enabled = state.dirty) {
+        onIntent(BookSourceEditIntent.RequestBack)
+    }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val tabs = BookSourceEditTab.entries
     val pagerState = rememberPagerState(initialPage = state.selectedTab.ordinal) { tabs.size }
@@ -160,6 +163,13 @@ fun BookSourceEditScreen(
             }
         }
     }
+    val variableSheet = state.activeSheet as? BookSourceEditSheet.Variable
+    VariableEditorSheet(
+        state = variableSheet?.editor,
+        onValueChange = { onIntent(BookSourceEditIntent.UpdateVariable(it)) },
+        onSave = { onIntent(BookSourceEditIntent.SaveVariable) },
+        onDismissRequest = { onIntent(BookSourceEditIntent.DismissSheet) },
+    )
     SourceEditFieldSheet(
         field = editingField,
         onDismissRequest = { editingFieldPath = null },

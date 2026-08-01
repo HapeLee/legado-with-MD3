@@ -1,7 +1,7 @@
 package io.legado.app.ui.book.source.edit
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -19,6 +19,7 @@ import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.storage.ImportOldData
 import io.legado.app.model.SharedJsScope
+import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
@@ -38,9 +39,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class BookSourceEditViewModel(
-    application: Application,
+    private val application: Application,
     private val repository: BookSourceRepository,
-) : AndroidViewModel(application) {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(BookSourceEditUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<BookSourceEditEffect>(extraBufferCapacity = 16)
@@ -96,10 +97,17 @@ class BookSourceEditViewModel(
             BookSourceEditIntent.ShowHelp -> showHelp()
             BookSourceEditIntent.DismissSheet -> _uiState.update { it.copy(activeSheet = null) }
             BookSourceEditIntent.SaveAndSetVariable -> save { BookSourceEditEffect.OpenVariable(it) }
+            is BookSourceEditIntent.UpdateVariable -> updateVariable(intent.value)
+            BookSourceEditIntent.SaveVariable -> saveVariable()
             BookSourceEditIntent.RequestBack -> if (_uiState.value.dirty) {
-                _effects.tryEmit(BookSourceEditEffect.ConfirmDiscard)
+                _uiState.update {
+                    it.copy(activeDialog = BookSourceEditDialog.ConfirmDiscard)
+                }
             } else _effects.tryEmit(BookSourceEditEffect.Finish(""))
 
+            BookSourceEditIntent.DismissDialog -> _uiState.update {
+                it.copy(activeDialog = null)
+            }
             BookSourceEditIntent.DiscardChanges -> _effects.tryEmit(BookSourceEditEffect.Finish(""))
         }
     }
@@ -113,7 +121,7 @@ class BookSourceEditViewModel(
     }
 
     private fun showHelp() = viewModelScope.launch(Dispatchers.IO) {
-        val content = getApplication<Application>().assets
+        val content = application.assets
             .open("web/help/md/ruleHelp.md")
             .bufferedReader()
             .use { it.readText() }
@@ -204,7 +212,7 @@ class BookSourceEditViewModel(
             runCatching {
                 val source = currentSource()
             if (source.bookSourceUrl.isBlank() || source.bookSourceName.isBlank()) {
-                throw NoStackTraceException(getApplication<Application>().getString(R.string.non_null_name_url))
+                throw NoStackTraceException(application.getString(R.string.non_null_name_url))
             }
                 val old = originalSource ?: BookSource()
                 if (!source.equal(old)) {
@@ -225,11 +233,46 @@ class BookSourceEditViewModel(
                 source.bookSourceUrl
             }.onSuccess { url ->
                 _uiState.update { it.copy(saving = false, dirty = false) }
-                _effects.emit(effect(url))
+                when (val next = effect(url)) {
+                    is BookSourceEditEffect.OpenVariable -> showVariable(next.sourceUrl)
+                    else -> _effects.emit(next)
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(saving = false) }
                 _effects.emit(BookSourceEditEffect.ShowMessage(error.localizedMessage ?: "Error"))
         }
+    }
+
+    private suspend fun showVariable(sourceUrl: String) {
+        val source = repository.getBookSource(sourceUrl) ?: return
+        _uiState.update {
+            it.copy(
+                activeSheet = BookSourceEditSheet.Variable(
+                    VariableEditorUiState(
+                        title = application.getString(R.string.set_source_variable),
+                        key = source.getKey(),
+                        value = source.getVariable().orEmpty(),
+                        comment = source.getDisplayVariableComment(
+                            "源变量可在js中通过source.getVariable()获取"
+                        ),
+                    )
+                )
+            )
+        }
+    }
+
+    private fun updateVariable(value: String) {
+        _uiState.update { state ->
+            val sheet = state.activeSheet as? BookSourceEditSheet.Variable ?: return@update state
+            state.copy(activeSheet = sheet.copy(editor = sheet.editor.copy(value = value)))
+        }
+    }
+
+    private fun saveVariable() = viewModelScope.launch(Dispatchers.IO) {
+        val editor = (_uiState.value.activeSheet as? BookSourceEditSheet.Variable)?.editor
+            ?: return@launch
+        repository.getBookSource(editor.key)?.setVariable(editor.value)
+        _uiState.update { it.copy(activeSheet = null) }
     }
 
     private fun importText(text: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -261,7 +304,7 @@ class BookSourceEditViewModel(
 
     private fun clearCookie() = viewModelScope.launch(Dispatchers.IO) {
         CookieStore.removeCookie(currentSource().bookSourceUrl)
-        _effects.emit(BookSourceEditEffect.ShowMessage(getApplication<Application>().getString(R.string.success)))
+        _effects.emit(BookSourceEditEffect.ShowMessage(application.getString(R.string.success)))
     }
 
     private fun fieldsFor(tab: BookSourceEditTab) = FIELD_SPECS.getValue(tab).map { spec ->

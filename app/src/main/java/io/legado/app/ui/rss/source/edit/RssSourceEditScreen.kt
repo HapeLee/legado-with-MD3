@@ -43,9 +43,10 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 
 @Composable fun RssSourceEditScreen(state:RssSourceEditUiState,onIntent:(RssSourceEditIntent)->Unit,onBack:()->Unit){
-    BackHandler { onBack() };
+    BackHandler(enabled = state.dirty) { onBack() };
     val tabs = RssSourceEditTab.entries;
     val pager = rememberPagerState(state.selectedTab.ordinal) { tabs.size };
     val scroll = GlassTopAppBarDefaults.defaultScrollBehavior();
@@ -88,6 +89,13 @@ import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
         title = stringResource(R.string.help),
         content = helpSheet?.content.orEmpty(),
         onDismissRequest = { onIntent(RssSourceEditIntent.DismissSheet) })
+    val variableSheet = state.activeSheet as? RssSourceEditSheet.Variable
+    VariableEditorSheet(
+        state = variableSheet?.editor,
+        onValueChange = { onIntent(RssSourceEditIntent.UpdateVariable(it)) },
+        onSave = { onIntent(RssSourceEditIntent.SaveVariable) },
+        onDismissRequest = { onIntent(RssSourceEditIntent.DismissSheet) },
+    )
 }
 @Composable private fun RssEditOptions(s:RssSourceEditUiState,on:(RssSourceEditIntent)->Unit){val types=stringArrayResource(R.array.rss_type);val styles=stringArrayResource(R.array.layout_type);var typeMenu by remember{mutableStateOf(false)};var styleMenu by remember{mutableStateOf(false)}
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Box(Modifier.weight(1f)){SourceEditOptionCard("类型：${types.getOrNull(s.type).orEmpty()}",{typeMenu=true});RoundDropdownMenu(typeMenu,{typeMenu=false}){types.forEachIndexed{i,t->RoundDropdownMenuItem(text=t,isSelected=s.type==i,onClick={typeMenu=false;on(RssSourceEditIntent.SetType(i))})}}};Box(Modifier.weight(1f)){SourceEditOptionCard("布局：${styles.getOrNull(s.articleStyle).orEmpty()}",{styleMenu=true});RoundDropdownMenu(styleMenu,{styleMenu=false}){styles.forEachIndexed{i,t->RoundDropdownMenuItem(text=t,isSelected=s.articleStyle==i,onClick={styleMenu=false;on(RssSourceEditIntent.SetArticleStyle(i))})}}};SourceEditOptionCard(stringResource(R.string.is_enable),{on(RssSourceEditIntent.SetEnabled(!s.enabled))},Modifier.weight(1f),checked=s.enabled)}

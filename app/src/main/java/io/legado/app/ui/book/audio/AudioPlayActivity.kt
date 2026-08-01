@@ -7,6 +7,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.TransitionDrawable
@@ -24,13 +25,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
-import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.slider.Slider
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
-import android.graphics.Typeface
-import com.dirror.lyricviewx.OnPlayClickListener
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.BookType
@@ -42,34 +40,29 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityAudioPlayBinding
-import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.model.AudioPlay
-import org.koin.android.ext.android.inject
-import org.koin.androidx.viewmodel.ext.android.viewModel
 import io.legado.app.model.BookCover
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.AudioPlayService
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.utils.StartActivityContract
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.login.SourceLoginType
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.ToolbarUtils.setAllIconsColor
 import io.legado.app.utils.applyNavigationBarPadding
-import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.observeEventSticky
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.startAnimation
 import io.legado.app.utils.toastOnUi
@@ -81,6 +74,8 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import splitties.views.onLongClick
 import java.util.Locale
 
@@ -129,7 +124,7 @@ class AudioPlayActivity :
         }
     }
     private val sourceEditResult =
-        registerForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
                 viewModel.upSource()
             }
@@ -200,10 +195,13 @@ class AudioPlayActivity :
             }
 
             R.id.menu_login -> AudioPlay.bookSource?.let {
-                startActivity<SourceLoginActivity> {
-                    putExtra("type", "bookSource")
-                    putExtra("key", it.bookSourceUrl)
-                }
+                startActivity(
+                    MainActivity.createSourceLoginIntent(
+                        this,
+                        SourceLoginType.BookSource,
+                        it.bookSourceUrl
+                    )
+                )
             }
             R.id.menu_media_control -> lifecycleScope.launch {
                 readAloudSettingsGateway.update {
@@ -233,9 +231,9 @@ class AudioPlayActivity :
                 }
             }
             R.id.menu_edit_source -> AudioPlay.bookSource?.let {
-                sourceEditResult.launch {
-                    putExtra("sourceUrl", it.bookSourceUrl)
-                }
+                sourceEditResult.launch(
+                    MainActivity.createBookSourceEditIntent(this, it.bookSourceUrl)
+                )
             }
 
             R.id.menu_log -> showDialogFragment<AppLogDialog>()

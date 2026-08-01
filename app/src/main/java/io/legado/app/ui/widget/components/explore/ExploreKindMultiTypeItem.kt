@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -57,6 +59,9 @@ fun ExploreKindMultiTypeItem(
     isSelected: Boolean = false,
     onValueChange: ((String) -> Unit)? = null,
     onRunAction: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    textAlign: TextAlign = TextAlign.Center,
+    minHeight: Dp = 0.dp,
     useCase: ExploreKindUiUseCase? = null,
     onClick: (() -> Unit)? = null,
     content: (@Composable (displayName: String, isSelected: Boolean, onClick: () -> Unit, trailingIcon: @Composable (() -> Unit)?) -> Unit)? = null
@@ -86,7 +91,10 @@ fun ExploreKindMultiTypeItem(
                 isMiuix = isMiuix,
                 displayText = text,
                 isSelected = isSelected,
-                trailingIcon = trailingIcon
+                trailingIcon = trailingIcon,
+                onLongClick = onLongClick,
+                textAlign = textAlign,
+                minHeight = minHeight,
             )
         }
     }
@@ -160,7 +168,8 @@ fun ExploreKindMultiTypeItem(
                         modifier = modifier,
                         backgroundColor = backgroundColor,
                         isMiuix = isMiuix,
-                        displayText = state.displayName
+                        displayText = state.displayName,
+                        minHeight = minHeight,
                     )
                 }
             }

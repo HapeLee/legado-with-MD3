@@ -22,8 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FindReplace
@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
-import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
@@ -148,7 +147,7 @@ fun MyScreen(
                     imageVector = Icons.Default.Source,
                     onClick = {
                         onNavigate(
-                            PrefClickEvent.StartActivity(BookSourceActivity::class.java)
+                            PrefClickEvent.OpenBookSourceManage
                         )
                     }
                 )

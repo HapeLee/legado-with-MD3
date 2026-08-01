@@ -46,6 +46,7 @@ import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
@@ -636,14 +637,14 @@ private fun CheckBookSourceSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.check_book_source),
         startAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 icon = AppIcons.Settings,
                 contentDescription = stringResource(R.string.check_source_config),
                 onClick = onOpenSettings,
             )
         },
         endAction = {
-            SmallPlainButton(
+            MediumTonalButton(
                 icon = AppIcons.Check,
                 contentDescription = stringResource(R.string.check_book_source),
                 onClick = { sourceIds?.let { onConfirm(it, keyword.trim(), options) } },

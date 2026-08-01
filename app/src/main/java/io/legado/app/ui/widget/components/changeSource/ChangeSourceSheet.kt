@@ -47,8 +47,7 @@ import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceEffect
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.search.ScopeSelectSheet
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -62,8 +61,6 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.StartActivityContract
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -120,7 +117,8 @@ fun ChangeSourceSheet(
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val bookAddedToShelfText = stringResource(R.string.book_added_to_shelf)
 
-    val editSourceResult = rememberLauncherForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
+    val editSourceResult =
+        rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
         val origin = it.data?.getStringExtra("origin") ?: return@rememberLauncherForActivityResult
         viewModel.startSearch(origin)
     }
@@ -264,7 +262,11 @@ fun ChangeSourceSheet(
                         RoundDropdownMenuItem(
                             text = stringResource(R.string.book_source_manage),
                             onClick = {
-                                context.startActivity<BookSourceActivity>()
+                                context.startActivity(
+                                    MainActivity.createBookSourceManageIntent(
+                                        context
+                                    )
+                                )
                                 dismiss()
                             }
                         )
@@ -397,7 +399,12 @@ fun ChangeSourceSheet(
                                 text = stringResource(R.string.edit),
                                 onClick = {
                                     onDismiss()
-                                    editSourceResult.launch { putExtra("sourceUrl", item.origin) }
+                                    editSourceResult.launch(
+                                        MainActivity.createBookSourceEditIntent(
+                                            context,
+                                            item.origin
+                                        )
+                                    )
                                 }
                             )
                             RoundDropdownMenuItem(

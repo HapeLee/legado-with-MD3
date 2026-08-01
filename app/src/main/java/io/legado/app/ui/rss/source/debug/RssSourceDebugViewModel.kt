@@ -1,7 +1,6 @@
 package io.legado.app.ui.rss.source.debug
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssSourceEditRepository
@@ -11,16 +10,17 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugEntryUi
 import io.legado.app.ui.book.source.debug.BookSourceDebugStatus
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 class RssSourceDebugViewModel(
-    app: Application,
     private val repository: RssSourceEditRepository,
-) : AndroidViewModel(app) {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(RssSourceDebugUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<RssSourceDebugEffect>(extraBufferCapacity = 16)

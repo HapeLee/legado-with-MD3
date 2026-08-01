@@ -6,9 +6,32 @@ import kotlin.math.roundToInt
 fun calculateExploreKindRows(
     kinds: List<ExploreKind>,
     maxSpan: Int
-): List<List<Pair<ExploreKind, Int>>> {
-    val rows = mutableListOf<MutableList<Pair<ExploreKind, Int>>>()
-    var currentRow = mutableListOf<Pair<ExploreKind, Int>>()
+): List<List<Pair<ExploreKind, Int>>> = calculateFlexRows(
+    items = kinds,
+    maxSpan = maxSpan,
+    layout = { kind ->
+        val style = kind.style()
+        FlexItemLayout(
+            flexGrow = style.layout_flexGrow,
+            basisPercent = style.layout_flexBasisPercent,
+            wrapBefore = style.layout_wrapBefore,
+        )
+    },
+)
+
+data class FlexItemLayout(
+    val flexGrow: Float = 0f,
+    val basisPercent: Float = -1f,
+    val wrapBefore: Boolean = false,
+)
+
+fun <T> calculateFlexRows(
+    items: List<T>,
+    maxSpan: Int,
+    layout: (T) -> FlexItemLayout,
+): List<List<Pair<T, Int>>> {
+    val rows = mutableListOf<MutableList<Pair<T, Int>>>()
+    var currentRow = mutableListOf<Pair<T, Int>>()
     var currentSpan = 0
 
     fun fillCurrentRowTail() {
@@ -20,39 +43,39 @@ fun calculateExploreKindRows(
             val addEach = remain / currentRow.size
             var extra = remain % currentRow.size
             currentRow.indices.forEach { index ->
-                val (kind, span) = currentRow[index]
+                val (item, span) = currentRow[index]
                 val add = addEach + if (extra > 0) {
                     extra -= 1
                     1
                 } else {
                     0
                 }
-                currentRow[index] = kind to (span + add)
+                currentRow[index] = item to (span + add)
             }
         } else {
-            val (lastKind, lastSpan) = currentRow.last()
-            currentRow[currentRow.lastIndex] = lastKind to (lastSpan + remain)
+            val (lastItem, lastSpan) = currentRow.last()
+            currentRow[currentRow.lastIndex] = lastItem to (lastSpan + remain)
         }
         currentSpan += remain
     }
 
-    kinds.forEach { kind ->
-        val style = kind.style()
+    items.forEach { item ->
+        val style = layout(item)
         val span = when {
-            style.layout_wrapBefore || style.layout_flexBasisPercent >= 1.0f -> maxSpan
-            style.layout_flexBasisPercent > 0 -> (maxSpan * style.layout_flexBasisPercent).roundToInt()
+            style.wrapBefore || style.basisPercent >= 1.0f -> maxSpan
+            style.basisPercent > 0 -> (maxSpan * style.basisPercent).roundToInt()
                 .coerceIn(1, maxSpan)
 
-            style.layout_flexGrow > 0f -> 3
+            style.flexGrow > 0f -> 3
             else -> 2
         }
-        if ((style.layout_wrapBefore && currentRow.isNotEmpty()) || (currentSpan + span > maxSpan)) {
+        if ((style.wrapBefore && currentRow.isNotEmpty()) || (currentSpan + span > maxSpan)) {
             fillCurrentRowTail()
             rows.add(currentRow)
             currentRow = mutableListOf()
             currentSpan = 0
         }
-        currentRow.add(kind to span)
+        currentRow.add(item to span)
         currentSpan += span
         if (currentSpan >= maxSpan) {
             rows.add(currentRow)

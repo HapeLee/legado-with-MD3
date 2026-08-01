@@ -19,6 +19,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
@@ -26,20 +27,14 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.openFileUri
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.collections.immutable.persistentListOf
-import io.legado.app.data.entities.BookGroup
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -53,6 +48,8 @@ fun BookInfoRouteScreen(
     onBack: () -> Unit,
     onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
     onOpenSearch: (String) -> Unit,
+    onOpenBookSourceEdit: (String) -> Unit,
+    onOpenSourceLogin: (String) -> Unit,
     onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
@@ -64,7 +61,6 @@ fun BookInfoRouteScreen(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
-    onRegisterVariableSetter: (((String, String?) -> Unit)?) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as AppCompatActivity
@@ -87,13 +83,6 @@ fun BookInfoRouteScreen(
             viewModel.onInfoEdited()
         }
     }
-    val editSourceResult = rememberLauncherForActivityResult(
-        StartActivityContract(BookSourceEditActivity::class.java)
-    ) {
-        if (it.resultCode != Activity.RESULT_CANCELED) {
-            viewModel.onSourceEdited()
-        }
-    }
     val readBookResult = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -110,17 +99,12 @@ fun BookInfoRouteScreen(
         )
     }
 
-    DisposableEffect(viewModel) {
-        onRegisterVariableSetter(viewModel::setVariable)
-        onDispose {
-            onRegisterVariableSetter(null)
-        }
-    }
 
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refreshShelfState()
+                viewModel.onSourceEdited()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -171,16 +155,11 @@ fun BookInfoRouteScreen(
 
                 is BookInfoEffect.OpenToc -> tocActivityResult.launch(effect.bookUrl)
                 is BookInfoEffect.OpenBookSourceEdit -> {
-                    editSourceResult.launch {
-                        putExtra("sourceUrl", effect.sourceUrl)
-                    }
+                    onOpenBookSourceEdit(effect.sourceUrl)
                 }
 
                 is BookInfoEffect.OpenSourceLogin -> {
-                    activity.startActivity<SourceLoginActivity> {
-                        putExtra("type", "bookSource")
-                        putExtra("key", effect.sourceUrl)
-                    }
+                    onOpenSourceLogin(effect.sourceUrl)
                 }
 
                 BookInfoEffect.OpenSelectBooksDir -> localBookTreeSelect.launch {
@@ -192,16 +171,6 @@ fun BookInfoRouteScreen(
                     runSourceCallback(activity, effect, viewModel, onOpenSearch)
                 }
 
-                is BookInfoEffect.ShowVariableDialog -> {
-                    activity.showDialogFragment(
-                        VariableDialog(
-                            effect.title,
-                            effect.key,
-                            effect.variable,
-                            effect.comment,
-                        )
-                    )
-                }
 
                 is BookInfoEffect.NavigateToBookInfo -> {
                     onNavigateToBookInfo(effect.name, effect.author, effect.bookUrl, effect.origin, effect.coverPath)

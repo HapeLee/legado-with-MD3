@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.info
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,14 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PauseCircleOutline
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,17 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Book
@@ -61,17 +51,8 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
-import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
-import io.legado.app.ui.book.changesource.ChangeSourceConfig
-import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.group.GroupEditSheet
-import io.legado.app.ui.book.search.ScopeSelectSheet
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -79,15 +60,9 @@ import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.StartActivityContract
-import io.legado.app.utils.startActivity
-import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 
 @Composable

@@ -27,24 +27,20 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.databinding.DialogBookChangeSourceBinding
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.model.settings.ChangeSourceSettings
-import io.legado.app.databinding.DialogBookChangeSourceBinding
+import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.search.SearchScope
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.ui.widget.recycler.VerticalDivider
-import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.getCompatDrawable
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -80,7 +76,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     private val waitDialog by lazy { WaitDialog(requireContext()) }
     private val adapter by lazy { ChangeBookSourceAdapter(requireContext(), viewModel, this) }
     private val editSourceResult =
-        registerForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             val origin = it.data?.getStringExtra("origin") ?: return@registerForActivityResult
             viewModel.startSearch(origin)
         }
@@ -347,7 +343,9 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             }
 
             R.id.menu_start_stop -> viewModel.startOrStopSearch()
-            R.id.menu_source_manage -> startActivity<BookSourceActivity>()
+            R.id.menu_source_manage -> startActivity(
+                MainActivity.createBookSourceManageIntent(requireContext())
+            )
             R.id.menu_close -> dismissAllowingStateLoss()
             R.id.menu_refresh_list -> viewModel.startRefreshList()
             else -> if (item?.groupId == R.id.source_group && !item.isChecked) {
@@ -461,9 +459,9 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     }
 
     override fun editSource(searchBook: SearchBook) {
-        editSourceResult.launch {
-            putExtra("sourceUrl", searchBook.origin)
-        }
+        editSourceResult.launch(
+            MainActivity.createBookSourceEditIntent(requireContext(), searchBook.origin)
+        )
     }
 
     override fun disableSource(searchBook: SearchBook) {

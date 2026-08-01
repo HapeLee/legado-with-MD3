@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.explore
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -33,7 +34,10 @@ fun ExploreKindItem(
     backgroundColor: androidx.compose.ui.graphics.Color = LegadoTheme.colorScheme.surfaceContainer,
     displayText: String = kind.title,
     isSelected: Boolean = false,
-    trailingIcon: (@Composable () -> Unit)? = null
+    trailingIcon: (@Composable () -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    textAlign: TextAlign = TextAlign.Center,
+    minHeight: Dp = 0.dp,
 ) {
     CompositionLocalProvider(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified
@@ -67,6 +71,7 @@ fun ExploreKindItem(
         if (isClickable) {
             GlassCard(
                 onClick = onClick,
+                onLongClick = onLongClick,
                 cornerRadius = cornerRadius,
                 containerColor = containerColor,
                 contentColor = contentColor,
@@ -76,7 +81,9 @@ fun ExploreKindItem(
                     text = displayText,
                     isClickable = true,
                     contentColor = contentColor,
-                    trailingIcon = trailingIcon
+                    trailingIcon = trailingIcon,
+                    textAlign = textAlign,
+                    minHeight = minHeight,
                 )
             }
         } else {
@@ -90,7 +97,8 @@ fun ExploreKindItem(
                     text = displayText,
                     isClickable = false,
                     contentColor = contentColor,
-                    trailingIcon = trailingIcon
+                    trailingIcon = trailingIcon,
+                    minHeight = minHeight,
                 )
             }
         }
@@ -103,12 +111,16 @@ private fun KindText(
     text: String,
     isClickable: Boolean,
     contentColor: androidx.compose.ui.graphics.Color = LegadoTheme.colorScheme.onSurface,
-    trailingIcon: (@Composable () -> Unit)? = null
+    trailingIcon: (@Composable () -> Unit)? = null,
+    textAlign: TextAlign = TextAlign.Center,
+    minHeight: Dp = 0.dp,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .heightIn(min = minHeight)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
     ) {
         AppText(
             text = text,
@@ -117,7 +129,7 @@ private fun KindText(
                 .fillMaxWidth()
                 .padding(end = if (trailingIcon == null) 0.dp else 18.dp),
             style = LegadoTheme.typography.labelMediumEmphasized,
-            textAlign = TextAlign.Center,
+            textAlign = textAlign,
             overflow = TextOverflow.Ellipsis,
             maxLines = 1
         )

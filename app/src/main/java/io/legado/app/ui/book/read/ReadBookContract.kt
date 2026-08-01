@@ -803,7 +803,7 @@ sealed interface ReadBookEffect {
     data object StopAutoPage : ReadBookEffect
 
     // Search
-    data class OpenSearchActivity(
+    data class OpenSearch(
         val word: String?,
         val bookUrl: String,
         val autoFocus: Boolean = true,

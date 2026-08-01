@@ -60,10 +60,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
-import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -82,7 +79,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.startActivity
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -96,6 +92,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ExploreRouteScreen(
     viewModel: ExploreViewModel = koinViewModel(),
     onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    onOpenLogin: (sourceUrl: String) -> Unit,
+    onOpenEdit: (sourceUrl: String) -> Unit,
+    onOpenSearch: (scopeRaw: String) -> Unit,
 ) {
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
@@ -120,20 +119,13 @@ fun ExploreRouteScreen(
                     )
                 }
                 is ExploreEffect.OpenEdit -> {
-                    context.startActivity<BookSourceEditActivity> {
-                        putExtra("sourceUrl", effect.sourceUrl)
-                    }
+                    onOpenEdit(effect.sourceUrl)
                 }
                 is ExploreEffect.OpenSearch -> {
-                    context.startActivity<SearchActivity> {
-                        putExtra("searchScope", SearchScope(effect.source).toString())
-                    }
+                    onOpenSearch(SearchScope(effect.source).toString())
                 }
                 is ExploreEffect.OpenLogin -> {
-                    context.startActivity<SourceLoginActivity> {
-                        putExtra("type", "bookSource")
-                        putExtra("key", effect.sourceUrl)
-                    }
+                    onOpenLogin(effect.sourceUrl)
                 }
             }
         }

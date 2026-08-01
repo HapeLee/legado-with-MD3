@@ -71,12 +71,12 @@ import io.legado.app.ui.book.manga.recyclerview.MangaLayoutManager
 import io.legado.app.ui.book.manga.recyclerview.ScrollTimer
 import io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
 import io.legado.app.ui.book.read.MangaMenu
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginType
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.recycler.LoadMoreView
 import io.legado.app.utils.GSON
@@ -156,7 +156,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private val sourceEditActivity =
-        registerForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
                 viewModel.upBookSource {
                     handler.post {
@@ -664,10 +664,13 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     override fun showLogin() {
         ReadManga.bookSource?.let {
-            startActivity<SourceLoginActivity> {
-                putExtra("type", "bookSource")
-                putExtra("key", it.bookSourceUrl)
-            }
+            startActivity(
+                MainActivity.createSourceLoginIntent(
+                    this,
+                    SourceLoginType.BookSource,
+                    it.bookSourceUrl
+                )
+            )
         }
     }
 
@@ -726,9 +729,9 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     override fun openSourceEditActivity() {
         ReadManga.bookSource?.let {
-            sourceEditActivity.launch {
-                putExtra("sourceUrl", it.bookSourceUrl)
-            }
+            sourceEditActivity.launch(
+                MainActivity.createBookSourceEditIntent(this, it.bookSourceUrl)
+            )
         }
     }
 

@@ -120,6 +120,7 @@ import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
@@ -449,6 +450,12 @@ private fun BookInfoScreenContent(
                     )
                 )
             },
+        )
+        is BookInfoSheet.Variable -> VariableEditorSheet(
+            state = sheet.editor.takeIf { currentSheet is BookInfoSheet.Variable },
+            onValueChange = { onIntent(BookInfoIntent.UpdateVariable(it)) },
+            onSave = { onIntent(BookInfoIntent.SaveVariable) },
+            onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
         )
     }
 

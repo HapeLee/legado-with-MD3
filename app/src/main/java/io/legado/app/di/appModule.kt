@@ -600,6 +600,7 @@ val appModule = module {
             rssRepository = get(),
             httpTtsRepository = get(),
             searchRepository = get(),
+            downloadCacheSettingsGateway = get(),
         )
     }
     viewModel { (bookUrl: String, characterId: String?) ->

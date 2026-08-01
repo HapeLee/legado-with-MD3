@@ -44,15 +44,13 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.ReaderEvent
-import io.legado.app.ui.book.read.page.ReaderEventListener
-import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
@@ -414,7 +412,7 @@ class ReadBookController(
         viewModel.onIntent(ReadBookIntent.MenuEnableReplace)
     }
 
-    private fun openSearchActivity(searchWord: String?) {
+    private fun openSearch(searchWord: String?) {
         viewModel.onIntent(ReadBookIntent.OpenSearch(searchWord))
     }
 
@@ -461,7 +459,7 @@ class ReadBookController(
             ReaderEvent.AutoPageStop -> autoPageStop()
             ReaderEvent.OpenChapterList -> openChapterList()
             ReaderEvent.OpenContentEdit -> openContentEdit()
-            ReaderEvent.OpenSearch -> openSearchActivity(null)
+            ReaderEvent.OpenSearch -> openSearch(null)
             ReaderEvent.AddBookmark -> addBookmark()
             ReaderEvent.ChangeReplaceRuleState -> changeReplaceRuleState()
             ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
@@ -1218,7 +1216,7 @@ class ReadBookController(
             is ReadBookEffect.OpenSourceEdit,
             is ReadBookEffect.OpenChapterList,
             is ReadBookEffect.OpenBookInfo,
-            is ReadBookEffect.OpenSearchActivity,
+            is ReadBookEffect.OpenSearch,
             is ReadBookEffect.ShowLogin,
             is ReadBookEffect.OpenWebView,
             is ReadBookEffect.RunSourceCustomButton,

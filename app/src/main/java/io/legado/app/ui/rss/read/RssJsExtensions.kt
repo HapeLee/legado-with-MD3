@@ -11,13 +11,11 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.help.JsExtensions
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.ui.association.AddToBookshelfDialog
-import io.legado.app.ui.book.search.SearchActivity
-import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -60,7 +58,7 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
     @JavascriptInterface
     fun searchBook(key: String, searchScope: String?) {
         activityRef.get()?.let {
-            SearchActivity.start(it, key, searchScope)
+            it.startActivity(MainActivity.createSearchIntent(it, key, searchScope))
         }
     }
 
@@ -91,10 +89,6 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
             val source = getSource() ?: return@launch
             when (name) {
                 "login" -> {
-                    if (activity is SourceLoginActivity) {
-                        activity.toastOnUi("已在登录界面")
-                        return@launch
-                    }
                     val toSource = origin?.let { o ->
                         appDb.bookSourceDao.getBookSource(o)
                     } ?: source
@@ -105,19 +99,25 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
                     when (toSource) {
                         is BookSource -> {
                             withContext(Main) {
-                                activity.startActivity<SourceLoginActivity> {
-                                    putExtra("type", "bookSource")
-                                    putExtra("key", toSource.bookSourceUrl)
-                                }
+                                activity.startActivity(
+                                    MainActivity.createSourceLoginIntent(
+                                        activity,
+                                        SourceLoginType.BookSource,
+                                        toSource.bookSourceUrl
+                                    )
+                                )
                             }
                         }
 
                         is RssSource -> {
                             withContext(Main) {
-                                activity.startActivity<SourceLoginActivity> {
-                                    putExtra("type", "rssSource")
-                                    putExtra("key", toSource.sourceUrl)
-                                }
+                                activity.startActivity(
+                                    MainActivity.createSourceLoginIntent(
+                                        activity,
+                                        SourceLoginType.RssSource,
+                                        toSource.sourceUrl
+                                    )
+                                )
                             }
                         }
                     }

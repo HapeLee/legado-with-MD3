@@ -77,10 +77,15 @@ import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
 import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchRouteScreen
+import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.search.SearchViewModel
 import io.legado.app.ui.book.searchContent.SearchContentRouteScreen
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
-import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.book.source.debug.BookSourceDebugRoute
+import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
+import io.legado.app.ui.book.source.edit.BookSourceEditRoute
+import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
+import io.legado.app.ui.book.source.manage.BookSourceRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
@@ -99,15 +104,22 @@ import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
-import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginIntent
+import io.legado.app.ui.login.SourceLoginRoute
+import io.legado.app.ui.login.SourceLoginType
+import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesRouteScreen
 import io.legado.app.ui.rss.read.MainRouteRssRead
 import io.legado.app.ui.rss.read.RssReadRouteScreen
+import io.legado.app.ui.rss.source.debug.RssSourceDebugRoute
+import io.legado.app.ui.rss.source.debug.RssSourceDebugViewModel
+import io.legado.app.ui.rss.source.edit.RssSourceEditRoute
+import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
+import io.legado.app.ui.rss.source.manage.RssSourceRouteScreen
 import io.legado.app.ui.rss.subscription.RuleSubRouteScreen
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
@@ -128,8 +140,104 @@ fun MainActivity.mainEntryProvider(
     sharedTransitionScope: SharedTransitionScope,
     onNavigateToRoute: (NavKey) -> Unit,
     onNavigateBack: () -> Unit,
-    onRegisterVariableSetter: (((String, String?) -> Unit)?) -> Unit
 ) = entryProvider {
+    entry<MainRouteSourceLogin>(
+        metadata = ModalOverlaySceneStrategy.modalOverlay(),
+    ) { route ->
+        val viewModel = koinViewModel<SourceLoginViewModel>(
+            key = "SourceLogin:${route.type}:${route.sourceKey}:${route.bookUrl}",
+        )
+        SourceLoginRoute(
+            request = SourceLoginIntent.Initialize(route.type, route.sourceKey, route.bookUrl),
+            viewModel = viewModel,
+            host = this@mainEntryProvider,
+            onBack = onNavigateBack,
+        )
+    }
+    entry<MainRouteBookSourceManage> {
+        BookSourceRouteScreen(
+            onBackClick = onNavigateBack,
+            onAddSource = { onNavigateToRoute(MainRouteBookSourceEdit()) },
+            onEditSource = { onNavigateToRoute(MainRouteBookSourceEdit(it)) },
+            onLoginSource = {
+                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, it))
+            },
+            onSearchSource = { sourceUrl ->
+                onNavigateToRoute(MainRouteSearch(null, SearchScope(sourceUrl).toString()))
+            },
+            onDebugSource = { sourceUrl ->
+                onNavigateToRoute(MainRouteBookSourceDebug(sourceUrl))
+            },
+        )
+    }
+    entry<MainRouteBookSourceEdit> { route ->
+        val viewModel = koinViewModel<BookSourceEditViewModel>(
+            key = "BookSourceEdit:${route.sourceUrl.orEmpty()}",
+        )
+        BookSourceEditRoute(
+            sourceUrl = route.sourceUrl,
+            viewModel = viewModel,
+            onBack = { savedSourceUrl ->
+                if (backStack.size == 1) {
+                    savedSourceUrl?.let {
+                        this@mainEntryProvider.setResult(
+                            android.app.Activity.RESULT_OK,
+                            Intent().putExtra("origin", it),
+                        )
+                    }
+                    this@mainEntryProvider.finish()
+                } else onNavigateBack()
+            },
+            onLogin = {
+                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, it))
+            },
+            onDebug = { onNavigateToRoute(MainRouteBookSourceDebug(it)) },
+            onSearch = { onNavigateToRoute(MainRouteSearch(null, it.toString())) },
+        )
+    }
+    entry<MainRouteRssSourceManage> {
+        RssSourceRouteScreen(
+            onBackClick = onNavigateBack,
+            onEditSource = { onNavigateToRoute(MainRouteRssSourceEdit(it.sourceUrl)) },
+            onAddSource = { onNavigateToRoute(MainRouteRssSourceEdit()) },
+        )
+    }
+    entry<MainRouteRssSourceEdit> { route ->
+        val viewModel = koinViewModel<RssSourceEditViewModel>(
+            key = "RssSourceEdit:${route.sourceUrl.orEmpty()}",
+        )
+        RssSourceEditRoute(
+            sourceUrl = route.sourceUrl,
+            viewModel = viewModel,
+            onBack = { savedSourceUrl ->
+                if (backStack.size == 1) {
+                    savedSourceUrl?.let {
+                        this@mainEntryProvider.setResult(
+                            android.app.Activity.RESULT_OK,
+                            Intent().putExtra("origin", it),
+                        )
+                    }
+                    this@mainEntryProvider.finish()
+                } else onNavigateBack()
+            },
+            onLogin = {
+                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.RssSource, it))
+            },
+            onDebug = { onNavigateToRoute(MainRouteRssSourceDebug(it)) },
+        )
+    }
+    entry<MainRouteBookSourceDebug> { route ->
+        val viewModel = koinViewModel<BookSourceDebugViewModel>(
+            key = "BookSourceDebug:${route.sourceUrl.orEmpty()}",
+        )
+        BookSourceDebugRoute(route.sourceUrl, viewModel, onNavigateBack)
+    }
+    entry<MainRouteRssSourceDebug> { route ->
+        val viewModel = koinViewModel<RssSourceDebugViewModel>(
+            key = "RssSourceDebug:${route.sourceUrl.orEmpty()}",
+        )
+        RssSourceDebugRoute(route.sourceUrl, viewModel, onNavigateBack)
+    }
     entry<MainRouteHome> {
         val mainViewModel = koinViewModel<MainViewModel>()
         val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
@@ -150,6 +258,9 @@ fun MainActivity.mainEntryProvider(
                         key = key?.trim()?.takeIf { it.isNotEmpty() }
                     )
                 )
+            },
+            onNavigateToScopedSearch = { scopeRaw ->
+                onNavigateToRoute(MainRouteSearch(key = null, scopeRaw = scopeRaw))
             },
             onNavigateToRemoteImport = {
                 onNavigateToRoute(MainRouteImportRemote)
@@ -193,6 +304,21 @@ fun MainActivity.mainEntryProvider(
                         exploreUrl = exploreUrl
                     )
                 )
+            },
+            onNavigateToSourceLogin = { type, sourceUrl ->
+                onNavigateToRoute(MainRouteSourceLogin(type, sourceUrl))
+            },
+            onNavigateToBookSourceManage = {
+                onNavigateToRoute(MainRouteBookSourceManage)
+            },
+            onNavigateToBookSourceEdit = {
+                onNavigateToRoute(MainRouteBookSourceEdit(it))
+            },
+            onNavigateToRssSourceManage = {
+                onNavigateToRoute(MainRouteRssSourceManage)
+            },
+            onNavigateToRssSourceEdit = {
+                onNavigateToRoute(MainRouteRssSourceEdit(it))
             },
             onNavigateToRssSort = { sourceUrl, sortUrl, key ->
                 onNavigateToRoute(
@@ -563,7 +689,7 @@ fun MainActivity.mainEntryProvider(
                 )
             },
             onOpenSourceManage = {
-                this@mainEntryProvider.startActivity<BookSourceActivity>()
+                onNavigateToRoute(MainRouteBookSourceManage)
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
@@ -602,7 +728,11 @@ fun MainActivity.mainEntryProvider(
                         )
                     )
                 }
-            }
+            },
+            onEditSource = { onNavigateToRoute(MainRouteRssSourceEdit(it)) },
+            onLogin = {
+                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.RssSource, it))
+            },
         )
     }
 
@@ -737,6 +867,12 @@ fun MainActivity.mainEntryProvider(
             onOpenSearch = { keyword ->
                 onNavigateToRoute(MainRouteSearch(key = keyword))
             },
+            onOpenBookSourceEdit = { sourceUrl ->
+                onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
+            },
+            onOpenSourceLogin = { sourceUrl ->
+                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
+            },
             onOpenReader = { bookUrl, inBookshelf, chapterChanged ->
                 onNavigateToRoute(
                     MainRouteReadBook(
@@ -770,9 +906,6 @@ fun MainActivity.mainEntryProvider(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
-            onRegisterVariableSetter = { setter ->
-                onRegisterVariableSetter(setter)
-            }
         )
     }
 
@@ -890,11 +1023,11 @@ fun MainActivity.mainEntryProvider(
                     )
 
                     CloudTtsEffect.OpenHttpTtsExportPicker -> exportLauncher.launch("httpTTS.json")
-                    is CloudTtsEffect.OpenHttpTtsLogin -> context.startActivity(
-                        Intent(context, SourceLoginActivity::class.java).apply {
-                            putExtra("type", "httpTts")
-                            putExtra("key", effect.engineId.toString())
-                        }
+                    is CloudTtsEffect.OpenHttpTtsLogin -> onNavigateToRoute(
+                        MainRouteSourceLogin(
+                            type = SourceLoginType.HttpTts,
+                            sourceKey = effect.engineId.toString(),
+                        )
                     )
 
                     else -> Unit

@@ -30,6 +30,17 @@ object MainNavigator {
         }
 
         when (route) {
+            is MainRouteSourceLogin -> {
+                backStack.add(route)
+            }
+
+            MainRouteBookSourceManage,
+            is MainRouteBookSourceEdit,
+            MainRouteRssSourceManage,
+            is MainRouteRssSourceEdit,
+            is MainRouteBookSourceDebug,
+            is MainRouteRssSourceDebug -> backStack.add(route)
+
             MainRouteHome -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
@@ -313,6 +324,31 @@ object MainNavigator {
     private fun resolveStartRoute(route: String?, intent: Intent?): MainRoute {
         return when (route) {
             MainRouteConst.ROUTE_MAIN -> MainRouteHome
+            MainRouteConst.ROUTE_SOURCE_LOGIN -> MainRouteSourceLogin(
+                type = intent?.getStringExtra(MainIntent.EXTRA_SOURCE_LOGIN_TYPE)
+                    ?.let { runCatching { io.legado.app.ui.login.SourceLoginType.valueOf(it) }.getOrNull() }
+                    ?: io.legado.app.ui.login.SourceLoginType.BookSource,
+                sourceKey = intent?.getStringExtra(MainIntent.EXTRA_SOURCE_LOGIN_KEY),
+                bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
+            )
+
+            MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE -> MainRouteBookSourceManage
+            MainRouteConst.ROUTE_BOOK_SOURCE_EDIT -> MainRouteBookSourceEdit(
+                intent?.getStringExtra(MainIntent.EXTRA_SOURCE_URL)
+            )
+
+            MainRouteConst.ROUTE_RSS_SOURCE_MANAGE -> MainRouteRssSourceManage
+            MainRouteConst.ROUTE_RSS_SOURCE_EDIT -> MainRouteRssSourceEdit(
+                intent?.getStringExtra(MainIntent.EXTRA_SOURCE_URL)
+            )
+
+            MainRouteConst.ROUTE_BOOK_SOURCE_DEBUG -> MainRouteBookSourceDebug(
+                intent?.getStringExtra(MainIntent.EXTRA_SOURCE_URL)
+            )
+
+            MainRouteConst.ROUTE_RSS_SOURCE_DEBUG -> MainRouteRssSourceDebug(
+                intent?.getStringExtra(MainIntent.EXTRA_SOURCE_URL)
+            )
             MainRouteConst.ROUTE_SETTINGS -> MainRouteSettings
             MainRouteConst.ROUTE_SETTINGS_OTHER -> MainRouteSettingsOther
             MainRouteConst.ROUTE_SETTINGS_READ -> MainRouteSettingsRead

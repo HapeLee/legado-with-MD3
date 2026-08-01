@@ -1,7 +1,7 @@
 package io.legado.app.ui.rss.source.edit
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -15,6 +15,7 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.model.SharedJsScope
 import io.legado.app.ui.book.source.edit.BookSourceEditFieldUi
+import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -27,9 +28,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class RssSourceEditViewModel(
-    app: Application,
+    private val app: Application,
     private val repository: RssSourceEditRepository,
-) : AndroidViewModel(app) {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(RssSourceEditUiState()); val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<RssSourceEditEffect>(extraBufferCapacity = 16); val effects = _effects.asSharedFlow()
     private var original: RssSource? = null; private var json = JsonObject(); private var baseline = ""
@@ -44,7 +45,10 @@ class RssSourceEditViewModel(
         RssSourceEditIntent.SaveLogin -> save { RssSourceEditEffect.Login(it) }; RssSourceEditIntent.Copy -> _effects.tryEmit(RssSourceEditEffect.Copy(GSON.toJson(current())))
         RssSourceEditIntent.Paste -> _effects.tryEmit(RssSourceEditEffect.ReadClipboard); is RssSourceEditIntent.Import -> import(i.text)
         RssSourceEditIntent.Share -> _effects.tryEmit(RssSourceEditEffect.Share(GSON.toJson(current()))); RssSourceEditIntent.ClearCookie -> viewModelScope.launch(Dispatchers.IO){ CookieStore.removeCookie(current().sourceUrl) }
-        RssSourceEditIntent.SetVariable -> save { RssSourceEditEffect.Variable(it) }; RssSourceEditIntent.ShowLog -> _uiState.update {
+        RssSourceEditIntent.SetVariable -> save { RssSourceEditEffect.Variable(it) };
+        is RssSourceEditIntent.UpdateVariable -> updateVariable(i.value);
+        RssSourceEditIntent.SaveVariable -> saveVariable();
+        RssSourceEditIntent.ShowLog -> _uiState.update {
             it.copy(
                 activeSheet = RssSourceEditSheet.Log
             )
@@ -54,12 +58,18 @@ class RssSourceEditViewModel(
             it.copy(
                 activeSheet = null
             )
-        }; RssSourceEditIntent.Back -> _effects.tryEmit(RssSourceEditEffect.Finish(""))
+        };
+        RssSourceEditIntent.Back -> if (_uiState.value.dirty) {
+            _uiState.update { it.copy(activeDialog = RssSourceEditDialog.ConfirmDiscard) }
+        } else _effects.tryEmit(RssSourceEditEffect.Finish(""))
+
+        RssSourceEditIntent.DismissDialog -> _uiState.update { it.copy(activeDialog = null) }
+        RssSourceEditIntent.DiscardChanges -> _effects.tryEmit(RssSourceEditEffect.Finish(""))
     } }
     private fun load(url:String?)=viewModelScope.launch(Dispatchers.IO){ apply(url?.let{repository.findByUrl(it)}?:RssSource(),true) }
     private fun showHelp() = viewModelScope.launch(Dispatchers.IO) {
         val content =
-            getApplication<Application>().assets.open("web/help/md/ruleHelp.md").bufferedReader()
+            app.assets.open("web/help/md/ruleHelp.md").bufferedReader()
                 .use { it.readText() }; _uiState.update {
         it.copy(
             activeSheet = RssSourceEditSheet.Help(
@@ -72,7 +82,62 @@ class RssSourceEditViewModel(
     private fun update(k:String,v:String){ if(v.isBlank())json.remove(k) else json.addProperty(k,v);_uiState.update{st->st.copy(fields=st.fields.mapValues{(_,fs)->fs.map{if(it.path==k)it.copy(value=v)else it}.toImmutableList()}.toImmutableMap(),dirty=true)} }
     private fun flag(f:RssSourceEditUiState.()->RssSourceEditUiState)=_uiState.update{f(it).copy(dirty=true)}
     private fun current():RssSource=GSON.fromJson(json,RssSource::class.java).apply{val s=_uiState.value;enabled=s.enabled;singleUrl=s.singleUrl;enabledCookieJar=s.cookieJar;preload=s.preload;type=s.type;articleStyle=s.articleStyle;if(s.autoComplete){ruleNextPage=RuleComplete.autoComplete(ruleNextPage,ruleArticles,2);ruleTitle=RuleComplete.autoComplete(ruleTitle,ruleArticles);rulePubDate=RuleComplete.autoComplete(rulePubDate,ruleArticles);ruleDescription=RuleComplete.autoComplete(ruleDescription,ruleArticles);ruleImage=RuleComplete.autoComplete(ruleImage,ruleArticles,3);ruleLink=RuleComplete.autoComplete(ruleLink,ruleArticles);ruleContent=RuleComplete.autoComplete(ruleContent,ruleArticles)}}
-    private fun save(effect:(String)->RssSourceEditEffect)=viewModelScope.launch(Dispatchers.IO){runCatching{val s=current();if(s.sourceName.isBlank()||s.sourceUrl.isBlank())throw NoStackTraceException(getApplication<Application>().getString(R.string.non_null_name_url));val old=original?:RssSource();if(!s.equal(old)){s.lastUpdateTime=System.currentTimeMillis();if(old.sortUrl!=s.sortUrl)old.removeSortCache();if(old.jsLib!=s.jsLib)SharedJsScope.remove(old.jsLib)};if(repository.save(original,s))AppCacheManager.clearSourceVariables();original=s;baseline=GSON.toJson(s);s.sourceUrl}.onSuccess{_uiState.update{s->s.copy(dirty=false)};_effects.emit(effect(it))}.onFailure{_effects.emit(RssSourceEditEffect.Message(it.localizedMessage?:"Error"))}}
+    private fun save(effect: (String) -> RssSourceEditEffect) =
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val s =
+                    current(); if (s.sourceName.isBlank() || s.sourceUrl.isBlank()) throw NoStackTraceException(
+                app.getString(R.string.non_null_name_url)
+            );
+                val old = original ?: RssSource(); if (!s.equal(old)) {
+                s.lastUpdateTime =
+                    System.currentTimeMillis(); if (old.sortUrl != s.sortUrl) old.removeSortCache(); if (old.jsLib != s.jsLib) SharedJsScope.remove(
+                    old.jsLib
+                )
+            }; if (repository.save(original, s)) AppCacheManager.clearSourceVariables(); original =
+                s; baseline = GSON.toJson(s); s.sourceUrl
+            }.onSuccess { url ->
+                _uiState.update { s -> s.copy(dirty = false) }; when (val next = effect(url)) {
+                is RssSourceEditEffect.Variable -> showVariable(next.url); else -> _effects.emit(
+                    next
+                )
+            }
+            }.onFailure {
+                _effects.emit(
+                    RssSourceEditEffect.Message(
+                        it.localizedMessage ?: "Error"
+                    )
+                )
+            }
+        }
+
+    private suspend fun showVariable(url: String) {
+        val source = repository.findByUrl(url) ?: return; _uiState.update {
+            it.copy(
+                activeSheet = RssSourceEditSheet.Variable(
+                    VariableEditorUiState(
+                        app.getString(R.string.set_source_variable),
+                        source.getKey(),
+                        source.getVariable().orEmpty(),
+                        source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+                    )
+                )
+            )
+        }
+    }
+
+    private fun updateVariable(value: String) = _uiState.update { state ->
+        val sheet =
+            state.activeSheet as? RssSourceEditSheet.Variable ?: return@update state; state.copy(
+        activeSheet = sheet.copy(editor = sheet.editor.copy(value = value))
+    )
+    }
+
+    private fun saveVariable() = viewModelScope.launch(Dispatchers.IO) {
+        val editor = (_uiState.value.activeSheet as? RssSourceEditSheet.Variable)?.editor
+            ?: return@launch; repository.findByUrl(editor.key)
+        ?.setVariable(editor.value); _uiState.update { it.copy(activeSheet = null) }
+    }
     private fun import(text:String)=runCatching{GSON.fromJson(text,RssSource::class.java)}.onSuccess{apply(it);_uiState.update{s->s.copy(dirty=true)}}.onFailure{_effects.tryEmit(RssSourceEditEffect.Message(it.localizedMessage?:"格式不对"))}
     private data class F(val k:String,val r:Int?=null,val l:String?=null)
     private fun groups()=SPECS.mapValues{(_,v)->v.map{BookSourceEditFieldUi(it.k,it.r,it.l,json.get(it.k)?.takeUnless{e->e.isJsonNull}?.asString.orEmpty())}.toImmutableList()}.toImmutableMap()
