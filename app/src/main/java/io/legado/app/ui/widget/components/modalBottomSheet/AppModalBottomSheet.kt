@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideAppContentColor
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.menuItem.LocalUseMiuixWindowPopup
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
@@ -68,18 +69,22 @@ fun AppModalBottomSheet(
             title = title,
             startAction = startAction?.let { action ->
                 {
-                    ProvideAppContentColor(sheetContentColor) {
-                        CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                            action()
+                    ProvideAppDensity {
+                        ProvideAppContentColor(sheetContentColor) {
+                            CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                                action()
+                            }
                         }
                     }
                 }
             },
             endAction = endAction?.let { action ->
                 {
-                    ProvideAppContentColor(sheetContentColor) {
-                        CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                            action()
+                    ProvideAppDensity {
+                        ProvideAppContentColor(sheetContentColor) {
+                            CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                                action()
+                            }
                         }
                     }
                 }
@@ -91,23 +96,25 @@ fun AppModalBottomSheet(
             enableWindowDim = true,
             allowDismiss = true
         ) {
-            ProvideAppContentColor(sheetContentColor) {
-                CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .let {
-                                if (contentPaddingEnabled) {
-                                    it.padding(bottom = 24.dp)
-                                } else {
-                                    it.navigationBarsPadding()
+            ProvideAppDensity {
+                ProvideAppContentColor(sheetContentColor) {
+                    CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .let {
+                                    if (contentPaddingEnabled) {
+                                        it.padding(bottom = 24.dp)
+                                    } else {
+                                        it.navigationBarsPadding()
+                                    }
                                 }
-                            }
-                            .let { contentModifier ->
-                                if (animateContentSize) contentModifier.animateContentSize() else contentModifier
-                            },
-                        content = content
-                    )
+                                .let { contentModifier ->
+                                    if (animateContentSize) contentModifier.animateContentSize() else contentModifier
+                                },
+                            content = content
+                        )
+                    }
                 }
             }
         }
@@ -136,59 +143,61 @@ fun AppModalBottomSheet(
                     dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
                     contentWindowInsets = contentWindowInsets
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .let {
-                                if (contentPaddingEnabled) {
-                                    it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                } else {
-                                    it
-                                }
-                            }
-                            .heightIn(max = maxHeight)
-                            .let { contentModifier ->
-                                if (animateContentSize) contentModifier.animateContentSize() else contentModifier
-                            }
-                            .then(modifier)
-                    ) {
-                        val hasHeader =
-                            !title.isNullOrEmpty() || startAction != null || endAction != null
-
-                        if (hasHeader) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (startAction != null) {
-                                    Box(modifier = Modifier.align(Alignment.CenterStart)) {
-                                        startAction()
+                    ProvideAppDensity {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .let {
+                                    if (contentPaddingEnabled) {
+                                        it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                    } else {
+                                        it
                                     }
                                 }
-
-                                if (!title.isNullOrEmpty()) {
-                                    Text(
-                                        text = title,
-                                        style = LegadoTheme.typography.titleMediumEmphasized,
-                                        color = sheetContentColor,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 56.dp)
-                                    )
+                                .heightIn(max = maxHeight)
+                                .let { contentModifier ->
+                                    if (animateContentSize) contentModifier.animateContentSize() else contentModifier
                                 }
+                                .then(modifier)
+                        ) {
+                            val hasHeader =
+                                !title.isNullOrEmpty() || startAction != null || endAction != null
 
-                                if (endAction != null) {
-                                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                                        endAction()
+                            if (hasHeader) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (startAction != null) {
+                                        Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                                            startAction()
+                                        }
+                                    }
+
+                                    if (!title.isNullOrEmpty()) {
+                                        Text(
+                                            text = title,
+                                            style = LegadoTheme.typography.titleMediumEmphasized,
+                                            color = sheetContentColor,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(horizontal = 56.dp)
+                                        )
+                                    }
+
+                                    if (endAction != null) {
+                                        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                            endAction()
+                                        }
                                     }
                                 }
                             }
+
+                            content()
                         }
-
-                        content()
                     }
                 }
             }

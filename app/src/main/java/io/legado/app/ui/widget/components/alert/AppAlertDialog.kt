@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.SecondaryButton
@@ -49,42 +50,44 @@ fun AppAlertDialog(
             summary = text,
             onDismissRequest = onDismissRequest,
             content = {
-                if (content != null) {
-                    Column(
+                ProvideAppDensity {
+                    if (content != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            content()
+                        }
+                    }
+
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp)
-                            .verticalScroll(rememberScrollState())
+                            .padding(top = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        content()
-                    }
-                }
+                        if (onDismiss != null) {
+                            SecondaryButton(
+                                text = dismissText,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    onDismiss()
+                                }
+                            )
+                        }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onDismiss != null) {
-                        SecondaryButton(
-                            text = dismissText,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                onDismiss()
-                            }
-                        )
-                    }
-
-                    if (onConfirm != null) {
-                        PrimaryButton(
-                            text = confirmText,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                onConfirm()
-                            }
-                        )
+                        if (onConfirm != null) {
+                            PrimaryButton(
+                                text = confirmText,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    onConfirm()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -99,40 +102,46 @@ fun AppAlertDialog(
                 titleContentColor = LegadoTheme.colorScheme.onSurface,
                 textContentColor = LegadoTheme.colorScheme.onSurfaceVariant,
                 tonalElevation = AlertDialogDefaults.TonalElevation,
-                title = title?.let { { Text(text = it) } },
+                title = title?.let { { ProvideAppDensity { Text(text = it) } } },
                 text = {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState())
-                    ) {
-                        if (text != null) {
-                            SelectionContainer {
-                                Text(
-                                    text = text,
-                                    modifier = Modifier.padding(bottom = if (content != null) 16.dp else 0.dp)
-                                )
+                    ProvideAppDensity {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            if (text != null) {
+                                SelectionContainer {
+                                    Text(
+                                        text = text,
+                                        modifier = Modifier.padding(bottom = if (content != null) 16.dp else 0.dp)
+                                    )
+                                }
                             }
-                        }
-                        if (content != null) {
-                            content()
+                            if (content != null) {
+                                content()
+                            }
                         }
                     }
                 },
                 confirmButton = {
                     if (onConfirm != null) {
-                        PrimaryButton(
-                            onClick = onConfirm,
-                            text = confirmText
-                        )
+                        ProvideAppDensity {
+                            PrimaryButton(
+                                onClick = onConfirm,
+                                text = confirmText
+                            )
+                        }
                     }
                 },
                 dismissButton = {
                     if (onDismiss != null) {
-                        SecondaryButton(
-                            onClick = {
-                                onDismiss()
-                            },
-                            text = dismissText
-                        )
+                        ProvideAppDensity {
+                            SecondaryButton(
+                                onClick = {
+                                    onDismiss()
+                                },
+                                text = dismissText
+                            )
+                        }
                     }
                 }
             )

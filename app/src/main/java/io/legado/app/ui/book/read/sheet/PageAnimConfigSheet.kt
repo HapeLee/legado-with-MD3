@@ -7,6 +7,7 @@ import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 
 @Composable
@@ -26,19 +27,21 @@ fun PageAnimConfigSheet(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
-        title = { Text(stringResource(R.string.page_anim)) },
+        title = { ProvideAppDensity { Text(stringResource(R.string.page_anim)) } },
         text = {
-            TinyDropdownSettingItem(
-                title = stringResource(R.string.page_anim),
-                selectedValue = ReadBook.book?.getPageAnim()?.toString() ?: "-1",
-                displayEntries = items.map { stringResource(it) }.toTypedArray(),
-                entryValues = items.indices.map { (it - 1).toString() }.toTypedArray(),
-                onValueChange = {
-                    ReadBook.book?.setPageAnim(it.toInt())
-                    onAnimChanged()
-                    onDismissRequest()
-                },
-            )
+            ProvideAppDensity {
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.page_anim),
+                    selectedValue = ReadBook.book?.getPageAnim()?.toString() ?: "-1",
+                    displayEntries = items.map { stringResource(it) }.toTypedArray(),
+                    entryValues = items.indices.map { (it - 1).toString() }.toTypedArray(),
+                    onValueChange = {
+                        ReadBook.book?.setPageAnim(it.toInt())
+                        onAnimChanged()
+                        onDismissRequest()
+                    },
+                )
+            }
         },
         confirmButton = {},
     )

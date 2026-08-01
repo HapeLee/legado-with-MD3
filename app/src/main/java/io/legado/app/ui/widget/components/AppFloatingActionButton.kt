@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.Button
@@ -101,10 +102,12 @@ fun AppFloatingActionButton(
                         TooltipAnchorPosition.Above
                     ),
                     tooltip = {
-                        PlainTooltip(
-                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                            contentColor = LegadoTheme.colorScheme.onSurface,
-                        ) { AppText(tooltipText) }
+                        ProvideAppDensity {
+                            PlainTooltip(
+                                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                                contentColor = LegadoTheme.colorScheme.onSurface,
+                            ) { AppText(tooltipText) }
+                        }
                     },
                     state = rememberTooltipState(),
                 ) {

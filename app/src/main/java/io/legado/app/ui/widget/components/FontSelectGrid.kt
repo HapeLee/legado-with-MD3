@@ -51,6 +51,7 @@ import io.legado.app.R
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
@@ -166,25 +167,27 @@ fun FontSelectGrid(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        FontSort.entries.forEach { sort ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(sort.labelRes)) },
-                                onClick = {
-                                    scope.launch {
-                                        otherSettings.update { it.copy(fontSort = sort.ordinal) }
-                                    }
-                                    expanded = false
-                                },
-                                trailingIcon = if (fontSort == sort.ordinal) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = LegadoTheme.colorScheme.primary
-                                        )
-                                    }
-                                } else null
-                            )
+                        ProvideAppDensity {
+                            FontSort.entries.forEach { sort ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(sort.labelRes)) },
+                                    onClick = {
+                                        scope.launch {
+                                            otherSettings.update { it.copy(fontSort = sort.ordinal) }
+                                        }
+                                        expanded = false
+                                    },
+                                    trailingIcon = if (fontSort == sort.ordinal) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = LegadoTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else null
+                                )
+                            }
                         }
                     }
                 }
