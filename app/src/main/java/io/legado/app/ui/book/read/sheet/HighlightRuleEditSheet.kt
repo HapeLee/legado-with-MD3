@@ -360,7 +360,11 @@ fun HighlightRuleEditSheet(
                 value = fontSizeOffset.toFloat(),
                 valueRange = -10f..10f,
                 steps = 19,
-                description = if (fontSizeOffset == 0) "默认" else String.format("%+d sp", fontSizeOffset),
+                description = if (fontSizeOffset == 0) {
+                    stringResource(R.string.text_default)
+                } else {
+                    stringResource(R.string.font_size_offset_value, fontSizeOffset)
+                },
                 onValueChange = { fontSizeOffset = it.toInt() },
             )
 
