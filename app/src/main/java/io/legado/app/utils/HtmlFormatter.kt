@@ -77,6 +77,18 @@ object HtmlFormatter {
             .joinToString("\n") { PARAGRAPH_INDENT + it }
     }
 
+    /**
+     * 与 [formatDisplayText] 同样清洗, 但压成单行摘要。
+     * 列表/卡片只显示一两行并 ellipsis, 保留换行会让首段之后的内容被直接截断。
+     */
+    fun formatSummaryText(html: String?): String {
+        return formatDisplayText(html)
+            .lineSequence()
+            .map { it.trim(*blankChars) }
+            .filterNot { it.isEmpty() }
+            .joinToString(" ")
+    }
+
     fun formatKeepImg(html: String?, redirectUrl: URL? = null): String {
         html ?: return ""
         val keepImgHtml = format(html, notImgHtmlRegex)

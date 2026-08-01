@@ -757,8 +757,19 @@ fun BookItem(
         columnContent = if (layoutMode == 0 && !isCompact && settings.showBookIntro) {
             {
                 val kindList = bookUi.displayTags
-                val intro = remember(book.intro) {
-                    HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
+                //不限行数时保留分段, 限行数时压成摘要, 否则第一段之后会被直接截掉
+                val introMaxLines = if (settings.bookshelfIntroMaxLines == 0) {
+                    Int.MAX_VALUE
+                } else {
+                    settings.bookshelfIntroMaxLines
+                }
+                val intro = remember(book.intro, introMaxLines) {
+                    val text = if (introMaxLines == Int.MAX_VALUE) {
+                        HtmlFormatter.formatDisplayText(book.intro)
+                    } else {
+                        HtmlFormatter.formatSummaryText(book.intro)
+                    }
+                    text.takeIf { it.isNotBlank() }
                 }
                 if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
@@ -788,12 +799,11 @@ fun BookItem(
                     }
                 }
                 if (settings.bookshelfShowIntro && intro != null) {
-                    val maxLines = if (settings.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else settings.bookshelfIntroMaxLines
                     AppText(
                         text = intro,
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        maxLines = maxLines,
+                        maxLines = introMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .fillMaxWidth()
