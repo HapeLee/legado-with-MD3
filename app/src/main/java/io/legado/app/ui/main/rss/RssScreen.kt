@@ -318,7 +318,7 @@ fun RssSourceGridItem(
     val openLabel = stringResource(R.string.open)
     val moreMenuLabel = stringResource(R.string.more_menu)
 
-    Column(
+    GlassCard(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
@@ -331,79 +331,86 @@ fun RssSourceGridItem(
             .semantics(mergeDescendants = true) {
                 contentDescription = source.sourceName
                 role = Role.Button
-            }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            },
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        cornerRadius = 16.dp,
     ) {
-        Box {
-            SourceIcon(
-                path = source.sourceIcon,
-                sourceOrigin = source.sourceUrl,
-                modifier = Modifier.size(48.dp)
-            )
-            RoundDropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                PillHeaderDivider(title = source.sourceName)
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                    text = stringResource(R.string.to_top),
-                    onClick = {
-                        onTop()
-                        showMenu = false
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box {
+                SourceIcon(
+                    path = source.sourceIcon,
+                    sourceOrigin = source.sourceUrl,
+                    modifier = Modifier.size(48.dp)
                 )
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                    text = stringResource(R.string.edit),
-                    onClick = {
-                        onEdit()
-                        showMenu = false
-                    }
-                )
-                if (!source.loginUrl.isNullOrBlank()) {
+                RoundDropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    PillHeaderDivider(title = source.sourceName)
                     RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                        text = stringResource(R.string.login),
+                        leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                        text = stringResource(R.string.to_top),
                         onClick = {
-                            onLogin()
+                            onTop()
+                            showMenu = false
+                        }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                        text = stringResource(R.string.edit),
+                        onClick = {
+                            onEdit()
+                            showMenu = false
+                        }
+                    )
+                    if (!source.loginUrl.isNullOrBlank()) {
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                            text = stringResource(R.string.login),
+                            onClick = {
+                                onLogin()
+                                showMenu = false
+                            }
+                        )
+                    }
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Close) },
+                        text = stringResource(R.string.disable_source),
+                        onClick = {
+                            onDisable()
+                            showMenu = false
+                        }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = {
+                            MenuItemIcon(
+                                Icons.Default.Delete,
+                                tint = LegadoTheme.colorScheme.error
+                            )
+                        },
+                        text = stringResource(R.string.delete),
+                        color = LegadoTheme.colorScheme.error,
+                        onClick = {
+                            onDelete()
                             showMenu = false
                         }
                     )
                 }
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.Close) },
-                    text = stringResource(R.string.disable_source),
-                    onClick = {
-                        onDisable()
-                        showMenu = false
-                    }
-                )
-                RoundDropdownMenuItem(
-                    leadingIcon = {
-                        MenuItemIcon(
-                            Icons.Default.Delete,
-                            tint = LegadoTheme.colorScheme.error
-                        )
-                    },
-                    text = stringResource(R.string.delete),
-                    color = LegadoTheme.colorScheme.error,
-                    onClick = {
-                        onDelete()
-                        showMenu = false
-                    }
-                )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            AppText(
+                text = source.sourceName,
+                style = LegadoTheme.typography.labelMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        AppText(
-            text = source.sourceName,
-            style = LegadoTheme.typography.labelMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }

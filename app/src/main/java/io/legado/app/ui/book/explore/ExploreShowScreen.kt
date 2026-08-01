@@ -53,6 +53,7 @@ import io.legado.app.R
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppPullToRefresh
@@ -62,6 +63,7 @@ import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -483,16 +485,25 @@ fun ExploreBookItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    SearchBookListItem(
-        book = book,
-        shelfState = shelfState,
-        onClick = onClick,
-        onLongClick = onLongClick,
-        modifier = modifier,
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
-    )
+    GlassCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .adaptiveHorizontalPadding(vertical = 4.dp),
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        cornerRadius = 16.dp,
+    ) {
+        SearchBookListItem(
+            book = book,
+            shelfState = shelfState,
+            onClick = onClick,
+            onLongClick = onLongClick,
+            modifier = Modifier.padding(all = 8.dp),
+            showPadding = false,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey
+        )
+    }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -507,14 +518,20 @@ fun ExploreBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    SearchBookGridItem(
-        book = book,
-        shelfState = shelfState,
-        onClick = onClick,
-        onLongClick = onLongClick,
+    GlassCard(
         modifier = modifier.padding(4.dp),
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
-    )
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        cornerRadius = 12.dp,
+    ) {
+        SearchBookGridItem(
+            book = book,
+            shelfState = shelfState,
+            onClick = onClick,
+            onLongClick = onLongClick,
+            modifier = Modifier.padding(4.dp),
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey
+        )
+    }
 }
