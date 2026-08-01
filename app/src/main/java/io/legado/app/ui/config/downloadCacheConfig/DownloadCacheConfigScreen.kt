@@ -137,6 +137,17 @@ fun DownloadCacheConfigScreen(
                             onIntent(DownloadCacheConfigIntent.SetPreDownloadNum(it.toInt()))
                         }
                     )
+
+                    InputSettingItem(
+                        title = stringResource(R.string.download_interval_title),
+                        description = stringResource(R.string.download_interval_summary),
+                        value = settings.downloadIntervalMs.toString(),
+                        defaultValue = "0",
+                        onConfirm = {
+                            val v = it.trim().toIntOrNull() ?: 0
+                            onIntent(DownloadCacheConfigIntent.SetDownloadInterval(v.coerceAtLeast(0)))
+                        }
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.image_cache)) {

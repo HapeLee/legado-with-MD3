@@ -150,6 +150,7 @@ class BackupSettingsRepository : BackupSettingsGateway {
 
 internal fun Preferences.toDownloadCacheSettings(): DownloadCacheSettings =
     DownloadCacheSettings(
+        downloadIntervalMs = compatDsInt(PreferKey.downloadIntervalMs) ?: 0,
         bitmapCacheSize = compatDsInt(PreferKey.bitmapCacheSize) ?: 50,
         imageRetainNum = compatDsInt(PreferKey.imageRetainNum) ?: 0,
         preDownloadNum = compatDsInt(PreferKey.preDownloadNum) ?: 10,
@@ -168,6 +169,7 @@ internal fun DownloadCacheSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.imageRetainNum to imageRetainNum,
     PreferKey.preDownloadNum to preDownloadNum,
     PreferKey.threadCount to threadCount,
+    PreferKey.downloadIntervalMs to downloadIntervalMs,
     PreferKey.cacheBookThreadCount to cacheBookThreadCount,
     PreferKey.userAgent to userAgent,
     PreferKey.cronet to cronetEnabled,

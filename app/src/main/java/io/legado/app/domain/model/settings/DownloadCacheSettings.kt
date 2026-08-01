@@ -6,6 +6,7 @@ data class DownloadCacheSettings(
     val preDownloadNum: Int = 10,
     val threadCount: Int = 16,
     val cacheBookThreadCount: Int = 16,
+    val downloadIntervalMs: Int = 0,
     val userAgent: String = "",
     val cronetEnabled: Boolean = false,
 )

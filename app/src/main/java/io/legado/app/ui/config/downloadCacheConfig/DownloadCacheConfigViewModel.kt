@@ -43,6 +43,8 @@ class DownloadCacheConfigViewModel(
         when (intent) {
             is DownloadCacheConfigIntent.SetThreadCount ->
                 update { it.copy(threadCount = intent.value) }
+            is DownloadCacheConfigIntent.SetDownloadInterval ->
+                update { it.copy(downloadIntervalMs = intent.value) }
             is DownloadCacheConfigIntent.SetCacheBookThreadCount -> {
                 val value = intent.value.coerceIn(1, CacheBook.maxDownloadConcurrency)
                 update { it.copy(cacheBookThreadCount = value) }

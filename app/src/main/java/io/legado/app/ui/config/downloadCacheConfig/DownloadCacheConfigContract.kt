@@ -20,6 +20,7 @@ enum class DownloadCacheConfigDialog {
 
 sealed interface DownloadCacheConfigIntent {
     data class SetThreadCount(val value: Int) : DownloadCacheConfigIntent
+    data class SetDownloadInterval(val value: Int) : DownloadCacheConfigIntent
     data class SetCacheBookThreadCount(val value: Int) : DownloadCacheConfigIntent
     data class SetPreDownloadNum(val value: Int) : DownloadCacheConfigIntent
     data class SetBitmapCacheSize(val value: Int) : DownloadCacheConfigIntent

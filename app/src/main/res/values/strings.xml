@@ -312,6 +312,8 @@
     <string name="import_select_book">Import selected book(s)</string>
     <string name="threads_num_title">Number of Concurrent Tasks</string>
     <string name="threads_num_summary">Controls concurrent download tasks. Higher values increase OOM risk</string>
+    <string name="download_interval_title">Content Fetch Interval</string>
+    <string name="download_interval_summary">Delay before each chapter content request (ms). 0 = no limit</string>
     <string name="cache_book_threads_num_title">Cache Download Threads</string>
     <string name="cache_book_threads_num_summary">Controls concurrent chapter downloads for offline book cache. Higher values increase OOM risk</string>
     <string name="change_icon">Change Icon</string>

@@ -26,9 +26,29 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import io.legado.app.ui.config.otherConfig.OtherConfig
 
 @Suppress("MemberVisibilityCanBePrivate")
 object WebBook {
+
+    private val downloadGate = object {
+        private val mutex = Mutex()
+        private var lastStart = 0L
+
+        suspend fun beforeContent() {
+            val interval = OtherConfig.downloadIntervalMs
+            if (interval == 0) return
+            mutex.withLock {
+                val now = System.currentTimeMillis()
+                val wait = interval - (now - lastStart)
+                if (wait > 0) delay(wait)
+                lastStart = now
+            }
+        }
+    }
 
     /**
      * 搜索
@@ -397,6 +417,7 @@ object WebBook {
         nextChapterUrl: String? = null,
         needSave: Boolean = true
     ): String {
+        downloadGate.beforeContent()
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
             Debug.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接:${bookChapter.url}")
             return bookChapter.url
