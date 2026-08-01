@@ -41,6 +41,13 @@ class ApplyReadSettingUseCase {
 
             is ReadConfigIntent.NoAnimScrollPageChanged -> ReadBook.renderCallBack?.upPageAnim()
             is ReadConfigIntent.OptimizeRenderChanged -> updateStyle()
+
+            // useUnderline 进了 RenderStyle 快照，改完必须重建并重绘，否则朗读/搜索
+            // 高亮线要等下一次样式变更才生效
+            is ReadConfigIntent.UseUnderlineChanged -> {
+                ChapterProvider.upRenderStyle()
+                ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.InvalidateTextPage))
+            }
             else -> Unit
         }
     }
