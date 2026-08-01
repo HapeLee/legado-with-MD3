@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.domain.gateway.AppLocaleGateway
-import io.legado.app.domain.gateway.CheckSourceSettings
-import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.DirectLinkRule
 import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -17,6 +15,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +23,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.collections.immutable.toImmutableList
 
 class OtherConfigViewModel(
     private val appLocaleGateway: AppLocaleGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
-    private val checkSourceSettingsGateway: CheckSourceSettingsGateway,
     private val directLinkSettingsGateway: DirectLinkSettingsGateway,
     private val localPasswordGateway: LocalPasswordGateway,
     private val systemGateway: OtherConfigSystemGateway,
@@ -43,9 +40,7 @@ class OtherConfigViewModel(
     private var nextMessageId = 0L
 
     private val _uiState = MutableStateFlow(
-        otherSettingsGateway.currentSettings.toUiState(initialState)
-            .let(checkSourceSettingsGateway.currentSettings::toUiState)
-            .copy(
+        otherSettingsGateway.currentSettings.toUiState(initialState).copy(
             mediaButtonOnExit = readAloudSettingsGateway.currentSettings.mediaButtonOnExit,
             readAloudByMediaButton =
                 readAloudSettingsGateway.currentSettings.readAloudByMediaButton,
@@ -78,11 +73,6 @@ class OtherConfigViewModel(
                         ignoreAudioFocus = preferences.ignoreAudioFocus,
                     )
                 }
-            }
-        }
-        viewModelScope.launch {
-            checkSourceSettingsGateway.settings.collect { settings ->
-                _uiState.update(settings::toUiState)
             }
         }
         loadDirectLinkConfiguration()
@@ -137,38 +127,6 @@ class OtherConfigViewModel(
                 updateOtherSetting { it.copy(recordLog = intent.value) }
             is OtherConfigIntent.RecordHeapDumpChanged ->
                 updateOtherSetting { it.copy(recordHeapDump = intent.value) }
-            is OtherConfigIntent.CheckSourceTimeoutChanged ->
-                _uiState.update { it.copy(checkSourceTimeoutSeconds = intent.value) }
-            is OtherConfigIntent.CheckSearchChanged -> _uiState.update {
-                it.copy(
-                    checkSearch = intent.value,
-                    checkDiscovery = if (!intent.value && !it.checkDiscovery) true else it.checkDiscovery,
-                )
-            }
-            is OtherConfigIntent.CheckDiscoveryChanged -> _uiState.update {
-                it.copy(
-                    checkDiscovery = intent.value,
-                    checkSearch = if (!intent.value && !it.checkSearch) true else it.checkSearch,
-                )
-            }
-            is OtherConfigIntent.CheckInfoChanged -> _uiState.update {
-                it.copy(
-                    checkInfo = intent.value,
-                    checkCategory = if (intent.value) it.checkCategory else false,
-                    checkContent = if (intent.value) it.checkContent else false,
-                )
-            }
-            is OtherConfigIntent.CheckCategoryChanged -> _uiState.update {
-                it.copy(
-                    checkCategory = intent.value,
-                    checkContent = if (intent.value) it.checkContent else false,
-                )
-            }
-            is OtherConfigIntent.CheckContentChanged ->
-                _uiState.update { it.copy(checkContent = intent.value) }
-            OtherConfigIntent.ConfirmCheckSource -> {
-                saveCheckSourceConfig()
-            }
             is OtherConfigIntent.DirectUploadUrlChanged ->
                 _uiState.update { it.copy(directUploadUrl = intent.value) }
             is OtherConfigIntent.DirectDownloadUrlRuleChanged ->
@@ -295,32 +253,6 @@ class OtherConfigViewModel(
         updateOtherSetting { it.copy(defaultBookTreeUri = path) }
     }
 
-    private fun saveCheckSourceConfig() {
-        val state = _uiState.value
-        if (state.checkSourceTimeoutSeconds <= 0L) {
-            showMessage(R.string.error)
-            return
-        }
-        viewModelScope.launch {
-            runCatching {
-                checkSourceSettingsGateway.update(
-                    CheckSourceSettings(
-                        timeoutMillis = state.checkSourceTimeoutSeconds * 1_000L,
-                        checkSearch = state.checkSearch,
-                        checkDiscovery = state.checkDiscovery,
-                        checkInfo = state.checkInfo,
-                        checkCategory = state.checkCategory,
-                        checkContent = state.checkContent,
-                    )
-                )
-            }.onSuccess {
-                _uiState.update { it.copy(activeOverlay = null) }
-            }.onFailure {
-                showMessage(it.localizedMessage ?: "设置失败")
-            }
-        }
-    }
-
     private fun updateDirectLinkRule(rule: DirectLinkRule) {
         _uiState.update {
             it.copy(
@@ -418,16 +350,6 @@ private fun DirectLinkRule.toUi() = DirectLinkRuleUi(
     summary = summary,
     compress = compress,
 )
-
-private fun CheckSourceSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
-    current.copy(
-        checkSourceTimeoutSeconds = timeoutMillis / 1_000L,
-        checkSearch = checkSearch,
-        checkDiscovery = checkDiscovery,
-        checkInfo = checkInfo,
-        checkCategory = checkCategory,
-        checkContent = checkContent,
-    )
 
 private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
     current.copy(

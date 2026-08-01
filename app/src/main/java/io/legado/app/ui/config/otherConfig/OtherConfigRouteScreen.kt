@@ -105,13 +105,6 @@ fun OtherConfigRouteScreen(
         },
     )
 
-    CheckSourceBottomSheet(
-        show = state.activeOverlay == OtherConfigOverlay.CheckSource,
-        state = state,
-        onIntent = viewModel::onIntent,
-        onDismiss = { viewModel.onIntent(OtherConfigIntent.DismissOverlay) },
-    )
-
     DirectLinkUploadBottomSheet(
         show = state.activeOverlay == OtherConfigOverlay.DirectLinkUpload,
         state = state,

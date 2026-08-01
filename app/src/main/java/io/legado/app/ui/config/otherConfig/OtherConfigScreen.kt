@@ -209,11 +209,6 @@ fun OtherConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.check_source_config),
-                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.CheckSource)) }
-                )
-
-                ClickableSettingItem(
                     title = stringResource(R.string.direct_link_upload_rule),
                     description = stringResource(R.string.direct_link_upload_rule_summary),
                     onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.DirectLinkUpload)) }

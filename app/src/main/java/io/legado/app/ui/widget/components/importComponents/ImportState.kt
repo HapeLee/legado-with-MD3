@@ -27,6 +27,8 @@ sealed interface BaseImportUiState<out T> {
         val version: Int = 0,
         // 导入配置项
         val keepOriginalName: Boolean = false,
+        val keepOriginalGroup: Boolean = false,
+        val keepOriginalEnable: Boolean = false,
         val customGroup: String? = null,
         val isAddGroup: Boolean = false
     ) : BaseImportUiState<T>

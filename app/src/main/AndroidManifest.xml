@@ -497,9 +497,6 @@
         </activity>
 
         <service
-            android:name=".service.CheckSourceService"
-            android:foregroundServiceType="dataSync" />
-        <service
             android:name=".service.CacheBookService"
             android:foregroundServiceType="dataSync" />
         <service

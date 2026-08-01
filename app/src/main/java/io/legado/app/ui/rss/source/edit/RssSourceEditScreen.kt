@@ -21,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -44,16 +43,36 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import kotlinx.coroutines.launch
 
 @Composable fun RssSourceEditScreen(state:RssSourceEditUiState,onIntent:(RssSourceEditIntent)->Unit,onBack:()->Unit){
-    BackHandler{onBack()};val tabs=RssSourceEditTab.entries;val pager=rememberPagerState(state.selectedTab.ordinal){tabs.size};val scope=rememberCoroutineScope();val scroll=GlassTopAppBarDefaults.defaultScrollBehavior();var menu by remember{mutableStateOf(false)}
-    LaunchedEffect(state.selectedTab){if(pager.currentPage!=state.selectedTab.ordinal)pager.animateScrollToPage(state.selectedTab.ordinal)}
-    LaunchedEffect(pager){snapshotFlow{pager.currentPage}.collect{onIntent(RssSourceEditIntent.SelectTab(tabs[it]))}}
+    BackHandler { onBack() };
+    val tabs = RssSourceEditTab.entries;
+    val pager = rememberPagerState(state.selectedTab.ordinal) { tabs.size };
+    val scroll = GlassTopAppBarDefaults.defaultScrollBehavior();
+    var menu by remember { mutableStateOf(false) }
+    LaunchedEffect(state.selectedTab) {
+        if (pager.settledPage != state.selectedTab.ordinal) pager.animateScrollToPage(
+            state.selectedTab.ordinal
+        )
+    }
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect {
+            onIntent(
+                RssSourceEditIntent.SelectTab(tabs[it])
+            )
+        }
+    }
     AppScaffold(modifier=Modifier.nestedScroll(scroll.nestedScrollConnection),topBar={Column{GlassMediumFlexibleTopAppBar(
         title=stringResource(R.string.rss_source_edit),navigationIcon={TopBarNavigationButton(onClick=onBack)},scrollBehavior=scroll,
         actions={TopBarActionButton({onIntent(RssSourceEditIntent.SaveDebug)},Icons.Default.BugReport,stringResource(R.string.debug_source));TopBarActionButton({menu=true},Icons.Default.MoreVert,stringResource(R.string.more_menu));RssEditMenu(menu,{menu=false},onIntent)}
-    );AppTabRow(tabs.map{stringResource(it.title)},state.selectedTab.ordinal,{p->onIntent(RssSourceEditIntent.SelectTab(tabs[p]));scope.launch{pager.animateScrollToPage(p)}},Modifier.fillMaxWidth())}},
+    ); AppTabRow(
+        tabs.map { stringResource(it.title) },
+        state.selectedTab.ordinal,
+        { p -> onIntent(RssSourceEditIntent.SelectTab(tabs[p])) },
+        Modifier.fillMaxWidth()
+    )
+    }
+    },
         floatingActionButton={AppFloatingActionButton({onIntent(RssSourceEditIntent.Save)},icon=Icons.Default.Save,tooltipText=stringResource(R.string.action_save))}){padding->
         HorizontalPager(pager,Modifier.fillMaxSize()){page->val tab=tabs[page];LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp,padding.calculateTopPadding()+12.dp,16.dp,padding.calculateBottomPadding()+96.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(tab==RssSourceEditTab.Base)item("options"){RssEditOptions(state,onIntent)}

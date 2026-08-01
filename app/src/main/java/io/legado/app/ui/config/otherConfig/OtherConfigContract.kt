@@ -1,7 +1,7 @@
 package io.legado.app.ui.config.otherConfig
 
-import androidx.compose.runtime.Stable
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -29,12 +29,6 @@ data class OtherConfigUiState(
     val processText: Boolean = true,
     val recordLog: Boolean = false,
     val recordHeapDump: Boolean = false,
-    val checkSourceTimeoutSeconds: Long = 180,
-    val checkSearch: Boolean = true,
-    val checkDiscovery: Boolean = true,
-    val checkInfo: Boolean = true,
-    val checkCategory: Boolean = true,
-    val checkContent: Boolean = true,
     val directUploadUrl: String = "",
     val directDownloadUrlRule: String = "",
     val directSummary: String = "",
@@ -76,7 +70,6 @@ data class OtherConfigMessage(
 
 sealed interface OtherConfigOverlay {
     data object FilePicker : OtherConfigOverlay
-    data object CheckSource : OtherConfigOverlay
     data object DirectLinkUpload : OtherConfigOverlay
     data object ClearWebViewConfirmation : OtherConfigOverlay
     data object Password : OtherConfigOverlay
@@ -105,13 +98,6 @@ sealed interface OtherConfigIntent {
     data class ProcessTextChanged(val value: Boolean) : OtherConfigIntent
     data class RecordLogChanged(val value: Boolean) : OtherConfigIntent
     data class RecordHeapDumpChanged(val value: Boolean) : OtherConfigIntent
-    data class CheckSourceTimeoutChanged(val value: Long) : OtherConfigIntent
-    data class CheckSearchChanged(val value: Boolean) : OtherConfigIntent
-    data class CheckDiscoveryChanged(val value: Boolean) : OtherConfigIntent
-    data class CheckInfoChanged(val value: Boolean) : OtherConfigIntent
-    data class CheckCategoryChanged(val value: Boolean) : OtherConfigIntent
-    data class CheckContentChanged(val value: Boolean) : OtherConfigIntent
-    data object ConfirmCheckSource : OtherConfigIntent
     data class DirectUploadUrlChanged(val value: String) : OtherConfigIntent
     data class DirectDownloadUrlRuleChanged(val value: String) : OtherConfigIntent
     data class DirectSummaryChanged(val value: String) : OtherConfigIntent
