@@ -63,6 +63,7 @@ import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.roundToInt
@@ -131,75 +132,77 @@ fun TextActionSelectionMenu(
             dismissOnClickOutside = !showMoreMenu,
         )
     ) {
+        ProvideAppDensity {
 
-        AnimatedVisibility(
-            visibleState = visibilityState,
-            enter = fadeIn(animationSpec = tween(360)) + scaleIn(
-                initialScale = 0.94f,
-                animationSpec = tween(400),
-            ),
-            exit = fadeOut(animationSpec = tween(320)) + scaleOut(
-                targetScale = 0.96f,
-                animationSpec = tween(280),
-            ),
-        ) {
-            if (expandTextMenu) {
-                Box(modifier = Modifier.padding(menuShadowPadding)) {
-                    NormalCard(
-                        modifier = Modifier.widthIn(max = menuCardMaxWidth),
-                        containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 12.dp,
-                        cornerRadius = 12.dp,
-                    ) {
-                        MultiLineMenuView(
-                            items = activeMultiItems,
-                            onItemClick = onItemClick,
-                            onManageClick = {
-                                onDismiss()
-                                onOpenManage()
-                            }
-                        )
-                    }
-                }
-            } else {
-                val quickMenuScale by animateFloatAsState(
-                    targetValue = if (showMoreMenu) 0.96f else 1f,
-                    animationSpec = tween(durationMillis = 400),
-                    label = "quickMenuScale"
-                )
-                val quickMenuAlpha by animateFloatAsState(
-                    targetValue = if (showMoreMenu) 0.82f else 1f,
-                    animationSpec = tween(durationMillis = 360),
-                    label = "quickMenuAlpha"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            scaleX = quickMenuScale
-                            scaleY = quickMenuScale
-                            alpha = quickMenuAlpha
-                            transformOrigin = TransformOrigin(1f, 0.5f)
+            AnimatedVisibility(
+                visibleState = visibilityState,
+                enter = fadeIn(animationSpec = tween(360)) + scaleIn(
+                    initialScale = 0.94f,
+                    animationSpec = tween(400),
+                ),
+                exit = fadeOut(animationSpec = tween(320)) + scaleOut(
+                    targetScale = 0.96f,
+                    animationSpec = tween(280),
+                ),
+            ) {
+                if (expandTextMenu) {
+                    Box(modifier = Modifier.padding(menuShadowPadding)) {
+                        NormalCard(
+                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
+                            containerColor = LegadoTheme.colorScheme.surfaceBright,
+                            elevation = 12.dp,
+                            cornerRadius = 12.dp,
+                        ) {
+                            MultiLineMenuView(
+                                items = activeMultiItems,
+                                onItemClick = onItemClick,
+                                onManageClick = {
+                                    onDismiss()
+                                    onOpenManage()
+                                }
+                            )
                         }
-                        .padding(menuShadowPadding),
-                ) {
-                    NormalCard(
-                        modifier = Modifier.widthIn(max = menuCardMaxWidth),
-                        containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 6.dp,
-                        cornerRadius = 12.dp,
-                    ) {
-                        QuickMenuView(
-                            items = primaryItems,
-                            hasMore = collapsedItems.isNotEmpty(),
-                            onItemClick = onItemClick,
-                            onMoreClick = { showMoreMenu = true },
-                            onMoreAnchorChanged = { moreMenuAnchor = it },
-                            onSettingsClick = {
-                                onDismiss()
-                                onOpenManage()
+                    }
+                } else {
+                    val quickMenuScale by animateFloatAsState(
+                        targetValue = if (showMoreMenu) 0.96f else 1f,
+                        animationSpec = tween(durationMillis = 400),
+                        label = "quickMenuScale"
+                    )
+                    val quickMenuAlpha by animateFloatAsState(
+                        targetValue = if (showMoreMenu) 0.82f else 1f,
+                        animationSpec = tween(durationMillis = 360),
+                        label = "quickMenuAlpha"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = quickMenuScale
+                                scaleY = quickMenuScale
+                                alpha = quickMenuAlpha
+                                transformOrigin = TransformOrigin(1f, 0.5f)
                             }
-                        )
+                            .padding(menuShadowPadding),
+                    ) {
+                        NormalCard(
+                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
+                            containerColor = LegadoTheme.colorScheme.surfaceBright,
+                            elevation = 6.dp,
+                            cornerRadius = 12.dp,
+                        ) {
+                            QuickMenuView(
+                                items = primaryItems,
+                                hasMore = collapsedItems.isNotEmpty(),
+                                onItemClick = onItemClick,
+                                onMoreClick = { showMoreMenu = true },
+                                onMoreAnchorChanged = { moreMenuAnchor = it },
+                                onSettingsClick = {
+                                    onDismiss()
+                                    onOpenManage()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -231,37 +234,39 @@ fun TextActionSelectionMenu(
                 dismissOnClickOutside = true,
             )
         ) {
-            AnimatedVisibility(
-                visibleState = moreVisibilityState,
-                enter = fadeIn(animationSpec = tween(360)) + scaleIn(
-                    initialScale = 0.94f,
-                    transformOrigin = TransformOrigin(1f, 0.5f),
-                    animationSpec = tween(400),
-                ),
-                exit = fadeOut(animationSpec = tween(240)) + scaleOut(
-                    targetScale = 0.96f,
-                    transformOrigin = TransformOrigin(1f, 0.5f),
-                    animationSpec = tween(280),
-                ),
-            ) {
-                Box(
-                    modifier = Modifier.padding(menuShadowPadding),
+            ProvideAppDensity {
+                AnimatedVisibility(
+                    visibleState = moreVisibilityState,
+                    enter = fadeIn(animationSpec = tween(360)) + scaleIn(
+                        initialScale = 0.94f,
+                        transformOrigin = TransformOrigin(1f, 0.5f),
+                        animationSpec = tween(400),
+                    ),
+                    exit = fadeOut(animationSpec = tween(240)) + scaleOut(
+                        targetScale = 0.96f,
+                        transformOrigin = TransformOrigin(1f, 0.5f),
+                        animationSpec = tween(280),
+                    ),
                 ) {
-                    NormalCard(
-                        modifier = Modifier.widthIn(max = menuCardMaxWidth),
-                        containerColor = LegadoTheme.colorScheme.surfaceBright,
-                        elevation = 6.dp,
-                        cornerRadius = 12.dp,
+                    Box(
+                        modifier = Modifier.padding(menuShadowPadding),
                     ) {
-                        MoreMenuView(
-                            items = collapsedItems,
-                            onItemClick = onItemClick,
-                            onBack = { showMoreMenu = false },
-                            onManageClick = {
-                                onDismiss()
-                                onOpenManage()
-                            }
-                        )
+                        NormalCard(
+                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
+                            containerColor = LegadoTheme.colorScheme.surfaceBright,
+                            elevation = 6.dp,
+                            cornerRadius = 12.dp,
+                        ) {
+                            MoreMenuView(
+                                items = collapsedItems,
+                                onItemClick = onItemClick,
+                                onBack = { showMoreMenu = false },
+                                onManageClick = {
+                                    onDismiss()
+                                    onOpenManage()
+                                }
+                            )
+                        }
                     }
                 }
             }

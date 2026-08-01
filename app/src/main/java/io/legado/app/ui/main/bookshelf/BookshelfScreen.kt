@@ -105,6 +105,7 @@ import io.legado.app.ui.book.group.GroupEditSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -1285,24 +1286,26 @@ private fun BookshelfOverlays(
     if (uiState.isLoading) {
         val loadingDescription = uiState.loadingText ?: stringResource(R.string.loading)
         Dialog(onDismissRequest = {}) {
-            NormalCard(
-                modifier = Modifier.semantics {
-                    contentDescription = loadingDescription
-                },
-                cornerRadius = 12.dp,
-                containerColor = LegadoTheme.colorScheme.surfaceContainerHigh
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            ProvideAppDensity {
+                NormalCard(
+                    modifier = Modifier.semantics {
+                        contentDescription = loadingDescription
+                    },
+                    cornerRadius = 12.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerHigh
                 ) {
-                    AppCircularProgressIndicator()
-                    uiState.loadingText?.let {
-                        AppText(
-                            text = it,
-                            modifier = Modifier.padding(top = 16.dp),
-                            style = LegadoTheme.typography.bodyMedium
-                        )
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AppCircularProgressIndicator()
+                        uiState.loadingText?.let {
+                            AppText(
+                                text = it,
+                                modifier = Modifier.padding(top = 16.dp),
+                                style = LegadoTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }

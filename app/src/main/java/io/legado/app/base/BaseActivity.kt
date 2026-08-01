@@ -164,6 +164,8 @@ abstract class BaseActivity<VB : ViewBinding>(
         appUiConfigurationGateway.synchronizeSystemDarkTheme(newConfig.isNightMode)
         super.onConfigurationChanged(newConfig)
         lastPlatformConfiguration = Configuration(newConfig)
+        // 窗口尺寸变化会重置 resources 配置里的字体缩放，需要重新应用。
+        AppContextWrapper.applyFont(this)
         appLocaleGateway.synchronizeFromPlatform()
 
         val platformDiff = AppUiConfigurationDiff(

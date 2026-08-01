@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.Density
 import com.materialkolor.PaletteStyle
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.customColors
-import io.legado.app.utils.sysConfiguration
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -83,9 +82,7 @@ private fun AppThemeActual(
     val customNightPrimary = themeSettings.customNightPrimary
     val appFontPath = themeSettings.appFontPath
     val currentDensity = LocalDensity.current
-    val fontScale = (appShellSettings.fontScale / 10f)
-        .takeIf { it in 0.8f..1.6f }
-        ?: sysConfiguration.fontScale
+    val fontScale = resolveAppFontScale(appShellSettings.fontScale)
     val appDensity = remember(currentDensity.density, fontScale) {
         Density(currentDensity.density, fontScale)
     }

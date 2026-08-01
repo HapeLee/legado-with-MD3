@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
@@ -65,15 +66,17 @@ fun FontSelectSheet(
                     expanded = showTypefaceMenu,
                     onDismissRequest = { showTypefaceMenu = false },
                 ) {
-                    systemTypefaces.forEachIndexed { index, name ->
-                        DropdownMenuItem(
-                            text = { Text(name) },
-                            onClick = {
-                                onSelectSystemTypeface(index)
-                                showTypefaceMenu = false
-                                onDismissRequest()
-                            },
-                        )
+                    ProvideAppDensity {
+                        systemTypefaces.forEachIndexed { index, name ->
+                            DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = {
+                                    onSelectSystemTypeface(index)
+                                    showTypefaceMenu = false
+                                    onDismissRequest()
+                                },
+                            )
+                        }
                     }
                 }
                 MediumTonalButton(

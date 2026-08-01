@@ -61,6 +61,7 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerScreenContent
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ProvideThemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -131,60 +132,62 @@ fun ReadAloudScreen(
             dragHandle = null,
             properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
         ) {
-            BackHandler(enabled = page == ReadAloudPage.Config, onBack = returnFromConfig)
-            PredictiveBackHandler(enabled = page != ReadAloudPage.Config) { progress ->
-                try {
-                    progress.collect { event ->
-                        backProgress = event.progress
+            ProvideAppDensity {
+                BackHandler(enabled = page == ReadAloudPage.Config, onBack = returnFromConfig)
+                PredictiveBackHandler(enabled = page != ReadAloudPage.Config) { progress ->
+                    try {
+                        progress.collect { event ->
+                            backProgress = event.progress
+                        }
+                        sheetState.hide()
+                        onDismissRequest()
+                    } finally {
+                        backProgress = 0f
                     }
-                    sheetState.hide()
-                    onDismissRequest()
-                } finally {
-                    backProgress = 0f
                 }
-            }
-            AnimatedContent(
-                targetState = page,
-                label = "ReadAloudPage",
-            ) { targetPage ->
-                when (targetPage) {
-                    ReadAloudPage.Config -> Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .windowInsetsPadding(WindowInsets.statusBars)
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            MediumTonalButton(
-                                onClick = {
-                                    returnFromConfig()
-                                },
-                                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = stringResource(R.string.aloud_config),
-                                style = LegadoTheme.typography.titleLarge,
+                AnimatedContent(
+                    targetState = page,
+                    label = "ReadAloudPage",
+                ) { targetPage ->
+                    when (targetPage) {
+                        ReadAloudPage.Config -> Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(WindowInsets.statusBars)
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                MediumTonalButton(
+                                    onClick = {
+                                        returnFromConfig()
+                                    },
+                                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.back),
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = stringResource(R.string.aloud_config),
+                                    style = LegadoTheme.typography.titleLarge,
+                                )
+                            }
+                            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+                            ReadAloudConfigContent(
+                                state = state,
+                                playerState = playerState,
+                                onIntent = onIntent,
+                                onPlayerIntent = onPlayerIntent,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.padding(vertical = 8.dp))
-                        ReadAloudConfigContent(
-                            state = state,
-                            playerState = playerState,
-                            onIntent = onIntent,
-                            onPlayerIntent = onPlayerIntent,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
 
-                    ReadAloudPage.Player -> ProvideThemeOverride(playerTheme) {
-                        ReadAloudPlayerScreenContent(
-                            state = playerState,
-                            onIntent = onPlayerIntent,
-                            onBack = onDismissRequest,
-                        )
+                        ReadAloudPage.Player -> ProvideThemeOverride(playerTheme) {
+                            ReadAloudPlayerScreenContent(
+                                state = playerState,
+                                onIntent = onPlayerIntent,
+                                onBack = onDismissRequest,
+                            )
+                        }
                     }
                 }
             }
