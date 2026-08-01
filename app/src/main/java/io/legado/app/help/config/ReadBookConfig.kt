@@ -568,7 +568,7 @@ object ReadBookConfig {
         val lineSpacingExtra: Int = 12,//行间距
         val paragraphSpacing: Int = 2,//段距
         val titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
-        val titleSize: Int = 0,
+        val titleSize: Int = 20,
         val titleTopSpacing: Int = 0,
         val titleBottomSpacing: Int = 0,
         val titleColor: Int = 0,

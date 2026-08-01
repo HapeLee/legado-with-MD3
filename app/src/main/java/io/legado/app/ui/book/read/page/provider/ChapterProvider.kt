@@ -469,7 +469,7 @@ object ChapterProvider {
         tPaint.typeface = titleFontTypeface
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ReadBookConfig.titleBold in 100..900)
             tPaint.setFontVariationSettings("'wght' ${ReadBookConfig.titleBold}")
-        tPaint.textSize = with(ReadBookConfig) { textSize + titleSize }.toFloat().spToPx()
+        tPaint.textSize = ReadBookConfig.titleSize.toFloat().spToPx()
         tPaint.isAntiAlias = true
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && ReadConfig.optimizeRender) {
             tPaint.isLinearText = true

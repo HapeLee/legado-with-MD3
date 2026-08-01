@@ -436,14 +436,8 @@ internal fun TypographyTitleTab(
     var titleLineSpacingExtra by remember(config.titleLineSpacingExtra) { mutableIntStateOf(config.titleLineSpacingExtra) }
     var titleLineSpacingSub by remember(config.titleLineSpacingSub) { mutableIntStateOf(config.titleLineSpacingSub) }
 
-    // Title font size: <8 means relative offset (textSize + titleSize), >=8 means absolute
     var titleSize by remember(config.titleSize) {
-        val initial = if (config.titleSize < 8) {
-            (config.textSize + config.titleSize).coerceIn(8, 60)
-        } else {
-            config.titleSize
-        }
-        mutableIntStateOf(initial)
+        mutableIntStateOf(config.titleSize)
     }
 
     var showFlagDialog by remember { mutableStateOf(false) }
