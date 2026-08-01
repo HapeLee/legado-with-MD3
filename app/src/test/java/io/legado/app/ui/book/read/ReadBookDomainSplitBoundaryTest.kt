@@ -227,12 +227,27 @@ class ReadBookDomainSplitBoundaryTest {
                 ),
             ),
             // 按钮配置域无自持状态：按钮列表仍在 menuConfig 里，靠 stateTypes 守
-            // 「SharedPreferences 读写和归一化逻辑不回流 VM」
+            // 「SharedPreferences 读写和归一化逻辑不回流 VM」。上游曾把「更多操作」的
+            // 归一化/解析直接长在 VM（MoreActionIds 是它的标记），已并回本域。
             DomainSplit(
                 name = "菜单按钮配置",
                 delegateFile = "io/legado/app/ui/book/read/ReadButtonConfigDelegate.kt",
                 stateFields = emptySet(),
-                stateTypes = listOf("ReadBookButtonIds", "getSharedPreferences"),
+                stateTypes = listOf("ReadBookButtonIds", "getSharedPreferences", "MoreActionIds"),
+            ),
+            // 净化规则域无自持状态：allReplaceRules 被 TextProcessingSheet 直读，仍在
+            // UiState；靠 stateTypes 守「规则读写与净化管线刷新不回流 VM」
+            DomainSplit(
+                name = "净化规则",
+                delegateFile = "io/legado/app/ui/book/read/ReadReplaceRuleDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "replaceRuleRepository.flowAll",
+                    "replaceRuleRepository.setEnabled",
+                    "replaceRuleRepository.moveReplaceRule",
+                    "replaceRuleRepository.insert",
+                    "upReplaceRules",
+                ),
             ),
         )
 

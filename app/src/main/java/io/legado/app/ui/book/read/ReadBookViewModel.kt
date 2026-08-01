@@ -459,6 +459,7 @@ class ReadBookViewModel(
     private val buttonConfigDelegate = ReadButtonConfigDelegate(
         context = context,
         scope = viewModelScope,
+        readSettingsRepository = readSettingsRepository,
         host = object : ReadButtonConfigDelegate.Host {
             override fun updateMenuConfig(transform: (ReadMenuConfig) -> ReadMenuConfig) {
                 _uiState.update { it.copy(menuConfig = transform(it.menuConfig)) }
@@ -466,6 +467,24 @@ class ReadBookViewModel(
 
             override fun applyConfigUpdate(update: ConfigUpdate) {
                 configUpdateDelegate.handle(update)
+            }
+        },
+    )
+
+    // --- 净化规则域（无自持状态，规则列表仍在 uiState.allReplaceRules）---
+
+    private val replaceRuleDelegate = ReadReplaceRuleDelegate(
+        scope = viewModelScope,
+        replaceRuleRepository = replaceRuleRepository,
+        host = object : ReadReplaceRuleDelegate.Host {
+            override fun updateAllReplaceRules(rules: List<ReplaceRuleItemUi>) {
+                _uiState.update { it.copy(allReplaceRules = rules.toImmutableList()) }
+            }
+
+            override fun updateUseReplaceRule(enabled: Boolean) {
+                _uiState.update {
+                    it.copy(useReplaceRule = enabled, replaceRuleEnabled = enabled)
+                }
             }
         },
     )
@@ -538,29 +557,8 @@ class ReadBookViewModel(
         collectEventBus()
         collectReaderSession()
         collectReadStyle()
-        collectReplaceRules()
+        replaceRuleDelegate.start()
         execute { readAloudDelegate.syncConfiguredTtsVoices() }
-    }
-
-    private fun collectReplaceRules() {
-        viewModelScope.launch {
-            replaceRuleRepository.flowAll().collect { rules ->
-                _uiState.update { state ->
-                    state.copy(
-                        allReplaceRules = rules.map { rule ->
-                            ReplaceRuleItemUi(
-                                id = rule.id,
-                                name = rule.name,
-                                group = rule.group,
-                                pattern = rule.pattern,
-                                replacement = rule.replacement,
-                                enabled = rule.isEnabled,
-                            )
-                        }.toImmutableList()
-                    )
-                }
-            }
-        }
     }
 
     /**
@@ -785,23 +783,13 @@ class ReadBookViewModel(
             is ReadBookIntent.RefreshCurrentChapter -> refreshCurrentChapter()
             is ReadBookIntent.RefreshAllChapters -> refreshAllChapters()
             is ReadBookIntent.RefreshContentAfter -> refreshContentAfter()
-            is ReadBookIntent.ChangeReplaceRule -> changeReplaceRule(intent.enabled)
-            is ReadBookIntent.SetReplaceRuleEnabled -> viewModelScope.launch {
-                replaceRuleRepository.setEnabled(intent.id, intent.enabled)
-                replaceRuleChanged()
-            }
-
-            is ReadBookIntent.MoveReplaceRule -> viewModelScope.launch {
-                replaceRuleRepository.moveReplaceRule(
-                    intent.draggedId,
-                    intent.anchorId,
-                    intent.afterAnchor
-                )
-                replaceRuleChanged()
-            }
-            is ReadBookIntent.DisableEffectiveReplace -> viewModelScope.launch {
-                replaceRuleRepository.insert(intent.rule.copy(isEnabled = false))
-            }
+            is ReadBookIntent.ChangeReplaceRule ->
+                replaceRuleDelegate.changeUseReplaceRule(intent.enabled)
+            is ReadBookIntent.SetReplaceRuleEnabled ->
+                replaceRuleDelegate.setEnabled(intent.id, intent.enabled)
+            is ReadBookIntent.MoveReplaceRule ->
+                replaceRuleDelegate.move(intent.draggedId, intent.anchorId, intent.afterAnchor)
+            is ReadBookIntent.DisableEffectiveReplace -> replaceRuleDelegate.disable(intent.rule)
             ReadBookIntent.DisableChineseConverter -> {
                 configUpdateDelegate.handle(ConfigUpdate.ChineseConverterType(0))
             }
@@ -849,7 +837,7 @@ class ReadBookViewModel(
             is ReadBookIntent.AddSourceAsNewBook -> addToBookshelf(intent.book, intent.toc)
             is ReadBookIntent.OpenChapterResult -> openChapter(intent.index, intent.chapterPos)
             is ReadBookIntent.SourceEditResult -> upBookSource()
-            is ReadBookIntent.ReplaceRuleResult -> replaceRuleChanged()
+            is ReadBookIntent.ReplaceRuleResult -> replaceRuleDelegate.rulesChanged()
             is ReadBookIntent.BookInfoResult -> {
                 if (intent.bookDeleted) {
                     _effects.tryEmit(ReadBookEffect.Finish)
@@ -1082,12 +1070,7 @@ class ReadBookViewModel(
                     val enabled = !it.getUseReplaceRule(
                         otherSettingsGateway.currentSettings.replaceEnableDefault
                     )
-                    it.setUseReplaceRule(enabled)
-                    ReadBook.saveRead()
-                    _uiState.update { state ->
-                        state.copy(useReplaceRule = enabled, replaceRuleEnabled = enabled)
-                    }
-                    replaceRuleChanged()
+                    replaceRuleDelegate.changeUseReplaceRule(enabled)
                 }
             }
 
@@ -1173,22 +1156,8 @@ class ReadBookViewModel(
                 buttonConfigDelegate.saveMenuButtons(intent.items)
             is ReadBookIntent.SaveTitleBarButtonConfig ->
                 buttonConfigDelegate.saveTitleBarButtons(intent.items)
-            is ReadBookIntent.SaveMoreActionsConfig -> viewModelScope.launch {
-                val seen = mutableSetOf<String>()
-                val normalized = intent.items.mapNotNull { item ->
-                    item.takeIf { it.id in MoreActionIds && seen.add(it.id) }
-                }.toMutableList()
-                MoreActionIds.forEach { id ->
-                    if (seen.add(id)) normalized.add(ReadBookButtonConfigItem(id, true))
-                }
-                readSettingsRepository.update { settings ->
-                    settings.copy(
-                        moreActionsConfig = normalized.joinToString(";") {
-                            "${it.id},${it.enabled}"
-                        }
-                    )
-                }
-            }
+            is ReadBookIntent.SaveMoreActionsConfig ->
+                buttonConfigDelegate.saveMoreActions(intent.items)
 
             is ReadBookIntent.KeepLightChanged -> {
                 _readPreferences.update { it.copy(keepLight = intent.value) }
@@ -1303,7 +1272,7 @@ class ReadBookViewModel(
                 )
             )
 
-            is ReadBookIntent.ReplaceRuleChanged -> replaceRuleChanged()
+            is ReadBookIntent.ReplaceRuleChanged -> replaceRuleDelegate.rulesChanged()
             is ReadBookIntent.OpenFontFolderPicker -> _effects.tryEmit(ReadBookEffect.OpenFontFolderPicker)
             is ReadBookIntent.OpenReadStyleImagePicker -> {
                 _effects.tryEmit(ReadBookEffect.OpenReadStyleImagePicker)
@@ -1935,8 +1904,8 @@ class ReadBookViewModel(
                 readMenuCustomIcons = ReadBookConfig.readMenuCustomIcons.toImmutableMap(),
                 titleBarButtons = current.menuConfig.titleBarButtons,
                 bottomBarButtons = current.menuConfig.bottomBarButtons,
-                moreActionItems = readSettingsRepository.currentSettings.moreActionsConfig
-                    .toMoreActionConfig()
+                moreActionItems = buttonConfigDelegate
+                    .parseMoreActions(readSettingsRepository.currentSettings.moreActionsConfig)
                     .toImmutableList(),
                 showBrightnessView = ReadBookConfig.showBrightnessView,
                 brightnessVwPos = ReadBookConfig.brightnessVwPos,
@@ -1946,21 +1915,6 @@ class ReadBookViewModel(
                 titleBarCompact = ReadBookConfig.titleBarCompact,
             ),
         )
-    }
-
-    private fun String.toMoreActionConfig(): List<ReadBookButtonConfigItem> {
-        if (isBlank()) return MoreActionIds.map { ReadBookButtonConfigItem(it, true) }
-        val seen = mutableSetOf<String>()
-        val items = split(";").mapNotNull { token ->
-            val parts = token.split(",")
-            val id = parts.getOrNull(0)?.takeIf { it in MoreActionIds && seen.add(it) }
-            val enabled = parts.getOrNull(1)?.toBooleanStrictOrNull()
-            if (id != null && enabled != null) ReadBookButtonConfigItem(id, enabled) else null
-        }.toMutableList()
-        MoreActionIds.forEach { id ->
-            if (seen.add(id)) items.add(ReadBookButtonConfigItem(id, true))
-        }
-        return items
     }
 
     private fun observeCurrentTranslation(
@@ -2295,26 +2249,6 @@ class ReadBookViewModel(
             _effects.tryEmit(ReadBookEffect.ShowToast("保存图片失败: ${it.localizedMessage}"))
         }.onSuccess {
             _effects.tryEmit(ReadBookEffect.ShowToast("已保存到相册"))
-        }
-    }
-
-    fun replaceRuleChanged() {
-        execute {
-            ReadBook.book?.let {
-                ContentProcessor.get(it.name, it.origin).upReplaceRules()
-                ReadBook.loadContent(resetPageOffset = false)
-            }
-        }
-    }
-
-    private fun changeReplaceRule(enabled: Boolean) {
-        ReadBook.book?.let {
-            it.setUseReplaceRule(enabled)
-            ReadBook.saveRead()
-            _uiState.update { state ->
-                state.copy(useReplaceRule = enabled, replaceRuleEnabled = enabled)
-            }
-            replaceRuleChanged()
         }
     }
 
