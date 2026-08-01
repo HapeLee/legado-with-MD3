@@ -143,6 +143,8 @@ class ConfigUpdateActionsInvariantTest {
             "AutoSuggestDayNight",
             "ShowReadTitleAddition",
             "AutoReadSpeed",
+            // 只决定点击目录时开新 Sheet 还是旧 Activity，取用时读设置，无渲染副作用
+            "UseNewTocSheet",
         )
     }
 }
