@@ -54,4 +54,17 @@ class HtmlFormatterTest {
             HtmlFormatter.formatDisplayText("第一段\n第二段")
         )
     }
+
+    @Test
+    fun formatSummaryText_dropsIndentAndLineBreaks() {
+        assertEquals(
+            "第一段 第二段",
+            HtmlFormatter.formatSummaryText("<p>第一段</p><p>第二段</p>")
+        )
+    }
+
+    @Test
+    fun formatSummaryText_dropsLeadingIndentOfSingleParagraph() {
+        assertEquals("普通简介", HtmlFormatter.formatSummaryText("　　普通简介"))
+    }
 }
