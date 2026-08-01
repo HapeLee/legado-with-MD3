@@ -2031,6 +2031,11 @@
     <string name="ai_regenerate">重新生成</string>
     <string name="ai_thinking_mode">思考模式</string>
     <string name="ai_thinking_strength">強度</string>
+    <string name="ai_reasoning_level_low">輕度</string>
+    <string name="ai_reasoning_level_medium">中</string>
+    <string name="ai_reasoning_level_high">高</string>
+    <string name="ai_reasoning_level_xhigh">極高</string>
+    <string name="ai_reasoning_level_max">最高</string>
     <string name="ai_thinking_off">關閉</string>
     <string name="ai_thinking_auto">自動</string>
     <string name="ai_thinking_deep">深度</string>
