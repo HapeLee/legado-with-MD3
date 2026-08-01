@@ -119,6 +119,9 @@ abstract class BaseComposeActivity(
         // 可直接响应语言与深浅色变化，无需销毁 Activity。AppCompat 手动回调本方法时
         // 不会走 View 树分发，需要自己同步给 Compose（LocalConfiguration），并刷新
         // 系统栏与背景图。
+        // 系统在窗口尺寸变化（小窗/分屏/全屏切换）时会重建 Activity 的 resources 配置，
+        // onCreate 里写入的字体缩放被重置，需要重新应用。
+        AppContextWrapper.applyFont(this)
         window.decorView.dispatchConfigurationChanged(newConfig)
         appLocaleGateway.synchronizeFromPlatform()
         setupSystemBar()
@@ -201,6 +204,11 @@ abstract class BaseComposeActivity(
                     lastUiConfiguration = configuration
                     if (previous == null) return@collect
                     val diff = configuration.diffFrom(previous)
+                    if (diff.fontScaleChanged) {
+                        // Compose 树通过 AppTheme/ProvideAppDensity 自行响应；这里同步 resources
+                        // 配置，供仍读取平台字体缩放的组件（三方弹窗内部、legacy View）使用。
+                        AppContextWrapper.applyFont(this@BaseComposeActivity)
+                    }
                     if (diff.windowChanged) {
                         setupSystemBar()
                         if (imageBg) upBackgroundImage()

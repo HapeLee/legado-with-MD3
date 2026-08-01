@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 
 @Composable
 fun DownloadSheet(
@@ -32,43 +33,49 @@ fun DownloadSheet(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
-        title = { Text(stringResource(R.string.offline_cache)) },
+        title = { ProvideAppDensity { Text(stringResource(R.string.offline_cache)) } },
         text = {
-            androidx.compose.foundation.layout.Column {
-                OutlinedTextField(
-                    value = startChapter,
-                    onValueChange = { startChapter = it },
-                    label = { Text(stringResource(R.string.start_chapter)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = endChapter,
-                    onValueChange = { endChapter = it },
-                    label = { Text(stringResource(R.string.end_chapter)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
+            ProvideAppDensity {
+                androidx.compose.foundation.layout.Column {
+                    OutlinedTextField(
+                        value = startChapter,
+                        onValueChange = { startChapter = it },
+                        label = { Text(stringResource(R.string.start_chapter)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = endChapter,
+                        onValueChange = { endChapter = it },
+                        label = { Text(stringResource(R.string.end_chapter)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    val start = startChapter.toIntOrNull() ?: return@TextButton
-                    val end = endChapter.toIntOrNull() ?: return@TextButton
-                    if (start <= end) {
-                        onDownload(start, end)
-                        onDismissRequest()
-                    }
-                },
-            ) {
-                Text(stringResource(R.string.ok))
+            ProvideAppDensity {
+                TextButton(
+                    onClick = {
+                        val start = startChapter.toIntOrNull() ?: return@TextButton
+                        val end = endChapter.toIntOrNull() ?: return@TextButton
+                        if (start <= end) {
+                            onDownload(start, end)
+                            onDismissRequest()
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.cancel))
+            ProvideAppDensity {
+                TextButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         },
     )

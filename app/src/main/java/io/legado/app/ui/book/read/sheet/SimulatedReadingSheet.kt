@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import java.time.Instant
 import java.time.LocalDate
@@ -51,67 +52,73 @@ fun SimulatedReadingSheet(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
-        title = { Text(stringResource(R.string.simulated_reading)) },
+        title = { ProvideAppDensity { Text(stringResource(R.string.simulated_reading)) } },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = startDate.format(dateFormatter),
-                    onValueChange = {},
-                    label = { Text(stringResource(R.string.start_from)) },
-                    readOnly = true,
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true },
-                    enabled = false,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TinySwitchSettingItem(
-                    title = stringResource(R.string.simulated_reading),
-                    checked = enabled,
-                    onCheckedChange = { enabled = it },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                // Start chapter + daily chapters
-                Row(modifier = Modifier.fillMaxWidth()) {
+            ProvideAppDensity {
+                Column {
                     OutlinedTextField(
-                        value = startChapter,
-                        onValueChange = { startChapter = it },
-                        label = { Text(stringResource(R.string.start_chapter)) },
+                        value = startDate.format(dateFormatter),
+                        onValueChange = {},
+                        label = { Text(stringResource(R.string.start_from)) },
+                        readOnly = true,
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true },
+                        enabled = false,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
-                        value = dailyChapters,
-                        onValueChange = { dailyChapters = it },
-                        label = { Text(stringResource(R.string.daily_chapters)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.simulated_reading),
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    // Start chapter + daily chapters
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = startChapter,
+                            onValueChange = { startChapter = it },
+                            label = { Text(stringResource(R.string.start_chapter)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = dailyChapters,
+                            onValueChange = { dailyChapters = it },
+                            label = { Text(stringResource(R.string.daily_chapters)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    book.setStartDate(startDate)
-                    book.setDailyChapters(dailyChapters.toIntOrNull() ?: 0)
-                    book.setStartChapter(startChapter.toIntOrNull() ?: 0)
-                    book.setReadSimulating(enabled)
-                    book.save()
-                    onApply()
-                    onDismissRequest()
-                },
-            ) {
-                Text(stringResource(R.string.ok))
+            ProvideAppDensity {
+                TextButton(
+                    onClick = {
+                        book.setStartDate(startDate)
+                        book.setDailyChapters(dailyChapters.toIntOrNull() ?: 0)
+                        book.setStartChapter(startChapter.toIntOrNull() ?: 0)
+                        book.setReadSimulating(enabled)
+                        book.save()
+                        onApply()
+                        onDismissRequest()
+                    },
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.cancel))
+            ProvideAppDensity {
+                TextButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         },
     )

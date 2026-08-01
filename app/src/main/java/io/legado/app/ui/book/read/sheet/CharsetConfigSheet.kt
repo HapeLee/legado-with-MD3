@@ -22,6 +22,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,57 +36,65 @@ fun CharsetConfigSheet(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
-        title = { Text(stringResource(R.string.set_charset)) },
+        title = { ProvideAppDensity { Text(stringResource(R.string.set_charset)) } },
         text = {
-            Column {
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = charset,
-                        onValueChange = { charset = it },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryEditable)
-                            .fillMaxWidth(),
-                        readOnly = false,
-                        label = { Text(stringResource(R.string.set_charset)) },
-                        singleLine = true,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                        },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    )
-                    ExposedDropdownMenu(
+            ProvideAppDensity {
+                Column {
+                    ExposedDropdownMenuBox(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false },
+                        onExpandedChange = { expanded = it },
                     ) {
-                        charsetEntries.forEach { entry ->
-                            DropdownMenuItem(
-                                text = { Text(entry) },
-                                onClick = {
-                                    charset = entry
-                                    expanded = false
-                                },
-                            )
+                        OutlinedTextField(
+                            value = charset,
+                            onValueChange = { charset = it },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryEditable)
+                                .fillMaxWidth(),
+                            readOnly = false,
+                            label = { Text(stringResource(R.string.set_charset)) },
+                            singleLine = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                        ) {
+                            ProvideAppDensity {
+                                charsetEntries.forEach { entry ->
+                                    DropdownMenuItem(
+                                        text = { Text(entry) },
+                                        onClick = {
+                                            charset = entry
+                                            expanded = false
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    ReadBook.setCharset(charset)
-                    onDismissRequest()
-                },
-            ) {
-                Text(stringResource(R.string.ok))
+            ProvideAppDensity {
+                TextButton(
+                    onClick = {
+                        ReadBook.setCharset(charset)
+                        onDismissRequest()
+                    },
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.cancel))
+            ProvideAppDensity {
+                TextButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         },
     )

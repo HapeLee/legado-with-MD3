@@ -29,6 +29,7 @@ import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -52,88 +53,94 @@ fun PageKeyConfigSheet(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
-        title = { Text(stringResource(R.string.custom_page_key)) },
+        title = { ProvideAppDensity { Text(stringResource(R.string.custom_page_key)) } },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
-                OutlinedTextField(
-                    value = prevKeys,
-                    onValueChange = { prevKeys = it },
-                    label = { Text(stringResource(R.string.prev_page_key)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onKeyEvent { event ->
-                            val keyCode = event.nativeKeyEvent.keyCode
-                            if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
-                                keyCode != android.view.KeyEvent.KEYCODE_DEL
-                            ) {
-                                prevKeys = if (prevKeys.isEmpty() || prevKeys.endsWith(",")) {
-                                    "$prevKeys$keyCode"
+            ProvideAppDensity {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    OutlinedTextField(
+                        value = prevKeys,
+                        onValueChange = { prevKeys = it },
+                        label = { Text(stringResource(R.string.prev_page_key)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onKeyEvent { event ->
+                                val keyCode = event.nativeKeyEvent.keyCode
+                                if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
+                                    keyCode != android.view.KeyEvent.KEYCODE_DEL
+                                ) {
+                                    prevKeys = if (prevKeys.isEmpty() || prevKeys.endsWith(",")) {
+                                        "$prevKeys$keyCode"
+                                    } else {
+                                        "$prevKeys,$keyCode"
+                                    }
+                                    true
                                 } else {
-                                    "$prevKeys,$keyCode"
+                                    false
                                 }
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = nextKeys,
-                    onValueChange = { nextKeys = it },
-                    label = { Text(stringResource(R.string.next_page_key)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onKeyEvent { event ->
-                            val keyCode = event.nativeKeyEvent.keyCode
-                            if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
-                                keyCode != android.view.KeyEvent.KEYCODE_DEL
-                            ) {
-                                nextKeys = if (nextKeys.isEmpty() || nextKeys.endsWith(",")) {
-                                    "$nextKeys$keyCode"
+                            },
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = nextKeys,
+                        onValueChange = { nextKeys = it },
+                        label = { Text(stringResource(R.string.next_page_key)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onKeyEvent { event ->
+                                val keyCode = event.nativeKeyEvent.keyCode
+                                if (keyCode != android.view.KeyEvent.KEYCODE_BACK &&
+                                    keyCode != android.view.KeyEvent.KEYCODE_DEL
+                                ) {
+                                    nextKeys = if (nextKeys.isEmpty() || nextKeys.endsWith(",")) {
+                                        "$nextKeys$keyCode"
+                                    } else {
+                                        "$nextKeys,$keyCode"
+                                    }
+                                    true
                                 } else {
-                                    "$nextKeys,$keyCode"
+                                    false
                                 }
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.page_key_set_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                            },
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.page_key_set_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = {
-                    prevKeys = ""
-                    nextKeys = ""
-                },
-            ) {
-                Text(stringResource(R.string.reset))
+            ProvideAppDensity {
+                TextButton(
+                    onClick = {
+                        prevKeys = ""
+                        nextKeys = ""
+                    },
+                ) {
+                    Text(stringResource(R.string.reset))
+                }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        readSettingsRepository.setPageKeys(prevKeys, nextKeys)
-                        onDismissRequest()
-                    }
-                },
-            ) {
-                Text(stringResource(R.string.ok))
+            ProvideAppDensity {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            readSettingsRepository.setPageKeys(prevKeys, nextKeys)
+                            onDismissRequest()
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
             }
         },
     )

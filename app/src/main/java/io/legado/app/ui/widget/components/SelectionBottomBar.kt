@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -187,7 +188,7 @@ fun SelectionBottomBar(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                         TooltipAnchorPosition.Above
                     ),
-                    tooltip = { PlainTooltip { AppText(primaryAction.text) } },
+                    tooltip = { ProvideAppDensity { PlainTooltip { AppText(primaryAction.text) } } },
                     state = rememberTooltipState(),
                 ) {
                     FilledIconButton(
