@@ -116,8 +116,7 @@ fun ReadBookMenuBar(
     } else {
         ReadBookMenuContent.Route(currentRoute)
     }
-    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.TypographyConfig ||
-            currentRoute == ReadBookMenuRoute.InformationConfig ||
+    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.InformationConfig ||
             currentRoute == ReadBookMenuRoute.PaddingConfig
     var readStylePage by remember { mutableIntStateOf(0) }
     val sliderDragState = remember { SliderDragState() }
@@ -347,8 +346,7 @@ private fun ReadBookMenuSurface(
         is ReadBookMenuContent.Route -> contentTarget.route
     }
     val expanded = route != ReadBookMenuRoute.Main
-    val dialogLikeRoute = route == ReadBookMenuRoute.TypographyConfig ||
-            route == ReadBookMenuRoute.InformationConfig ||
+    val dialogLikeRoute = route == ReadBookMenuRoute.InformationConfig ||
             route == ReadBookMenuRoute.PaddingConfig
     val density = LocalDensity.current
     val windowSize = LocalWindowInfo.current.containerSize

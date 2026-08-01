@@ -167,12 +167,6 @@ fun SelectionBottomBar(
                             secondaryActions.forEach { action ->
                                 RoundDropdownMenuItem(
                                     text = action.text,
-                                    leadingIcon = {
-                                        AppIcon(
-                                            imageVector = action.icon,
-                                            contentDescription = null
-                                        )
-                                    },
                                     onClick = {
                                         action.onClick()
                                         showMenu = false
