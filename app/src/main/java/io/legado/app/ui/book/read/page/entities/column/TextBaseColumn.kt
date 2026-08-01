@@ -20,6 +20,7 @@ interface TextBaseColumn : BaseColumn {
     val fontPath: String
     val fontWeight: Int
     val isItalic: Boolean
+    val fontSizeOffset: Int
     val npLeft: Float
     val npRight: Float
     val npTop: Float

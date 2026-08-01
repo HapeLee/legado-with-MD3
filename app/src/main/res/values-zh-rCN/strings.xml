@@ -781,6 +781,8 @@
     <string name="underline_svg">自定义SVG</string>
     <string name="underline_width">下划线宽度</string>
     <string name="underline_offset">下划线偏移</string>
+    <string name="font_size_offset">字号偏移</string>
+    <string name="font_size_offset_value">%1$+d sp</string>
     <string name="svg_path">SVG路径</string>
     <string name="svg_path_hint">坐标范围：X(0-100)，Y(0-100)</string>
     <string name="bg_image_fit">背景适配</string>

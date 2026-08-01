@@ -812,6 +812,8 @@
     <string name="underline_svg">Custom SVG</string>
     <string name="underline_width">Underline Width</string>
     <string name="underline_offset">Underline Offset</string>
+    <string name="font_size_offset">Font Size Offset</string>
+    <string name="font_size_offset_value">%1$+d sp</string>
     <string name="svg_path">SVG Path</string>
     <string name="svg_path_hint">Coordinates: X(0-100), Y(0-100)</string>
     <string name="bg_image_fit">Background Fit</string>

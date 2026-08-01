@@ -11,6 +11,7 @@ import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.ResourceLoadFailureCache
 import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.spToPx
 import splitties.init.appCtx
 import java.io.File
 
@@ -32,6 +33,7 @@ data class TextColumn(
     override val fontPath: String = "",
     override val fontWeight: Int = 400,
     override val isItalic: Boolean = false,
+    override val fontSizeOffset: Int = 0,
     override val npLeft: Float = 0.1f,
     override val npRight: Float = 0.1f,
     override val npTop: Float = 0.1f,
@@ -76,14 +78,21 @@ data class TextColumn(
                 renderStyle.textColor
             }
         }
-        val needRestoreSize = textLine.titleTextSize != null
+        val hasSizeOverride = textLine.titleTextSize != null
+        val hasFontSizeOffset = fontSizeOffset != 0
+        val needRestoreSize = hasSizeOverride || hasFontSizeOffset
         val needRestoreColor = textPaint.color != drawColor
         val customTypeface = getCustomTypeface()
         val needRestoreTypeface = customTypeface != null
         if (needRestoreSize) {
             val originalSize = textPaint.textSize
             val originalTypeface = if (needRestoreTypeface) textPaint.typeface else null
-            textPaint.textSize = textLine.titleTextSize!!
+            val baseSize = textLine.titleTextSize ?: textPaint.textSize
+            textPaint.textSize = if (hasFontSizeOffset) {
+                baseSize + fontSizeOffset.toFloat().spToPx()
+            } else {
+                baseSize
+            }
             if (needRestoreColor) textPaint.color = drawColor
             if (needRestoreTypeface) textPaint.typeface = customTypeface
             val y = textLine.lineBase - textLine.lineTop
