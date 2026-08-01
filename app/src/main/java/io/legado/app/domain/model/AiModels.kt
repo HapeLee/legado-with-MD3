@@ -229,7 +229,6 @@ enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
         val identity = "${provider.id} ${provider.name} ${provider.baseUrl}".lowercase()
         return when {
             "mimo" in identity || "xiaomi" in identity -> null
-            "deepseek" in identity && this == MEDIUM -> LOW.effort
             "deepseek" in identity ||
                 "openai" in identity ||
                 "anthropic" in identity ||
