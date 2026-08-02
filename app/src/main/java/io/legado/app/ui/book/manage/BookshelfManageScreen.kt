@@ -3,12 +3,16 @@ package io.legado.app.ui.book.manage
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -38,6 +42,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Checkbox
@@ -101,10 +106,11 @@ import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
-import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.reorderAccessibility
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.ACache
@@ -157,7 +163,8 @@ private fun BookshelfManageScreen(
     var showFilePickerSheet by remember { mutableStateOf(false) }
     var showDownloadAllConfirmDialog by remember { mutableStateOf(false) }
     var showBatchDownloadConfirmDialog by remember { mutableStateOf(false) }
-    var showExportTypeDialog by remember { mutableStateOf(false) }
+    var showExportSheet by remember { mutableStateOf(false) }
+    var showExportSettings by remember { mutableStateOf(false) }
     var showExportFileNameDialog by remember { mutableStateOf(false) }
     var showCharsetDialog by remember { mutableStateOf(false) }
     var showLogSheet by remember { mutableStateOf(false) }
@@ -175,8 +182,8 @@ private fun BookshelfManageScreen(
     var pendingDeleteBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
     var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var pendingExportBookUrl by remember { mutableStateOf<String?>(null) }
-    var pendingExportAll by remember { mutableStateOf(false) }
     var pendingExportSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var exportSheetBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
     var customExportPath by remember { mutableStateOf("") }
     var customExportBook by remember { mutableStateOf<Book?>(null) }
     var customExportAllChapter by remember { mutableStateOf(false) }
@@ -205,6 +212,9 @@ private fun BookshelfManageScreen(
     val exportFileNameHintText = stringResource(R.string.export_file_name_template_hint)
     val exportFileNameHelpText = stringResource(R.string.export_file_name_template_help)
     val booksByUrl = remember(state.books) { state.books.associateBy { it.bookUrl } }
+    val exportSheetBooks = remember(exportSheetBookUrls, booksByUrl) {
+        exportSheetBookUrls.mapNotNull(booksByUrl::get)
+    }
     val userGroups = remember(state.groupList) { state.groupList.filter { it.groupId > 0L } }
 
     val groupNameResolver: (Book) -> String = remember(userGroups, noGroupText) {
@@ -291,12 +301,6 @@ private fun BookshelfManageScreen(
             }
             return@rememberLauncherForActivityResult
         }
-        if (pendingExportAll) {
-            state.books.forEach { book ->
-                startExport(context, dirPath, book, state.exportConfig.exportType)
-            }
-            return@rememberLauncherForActivityResult
-        }
         val bookUrl = pendingExportBookUrl ?: return@rememberLauncherForActivityResult
         val book = booksByUrl[bookUrl] ?: return@rememberLauncherForActivityResult
         if (state.exportConfig.isCustomEpubExportEnabled) {
@@ -327,22 +331,24 @@ private fun BookshelfManageScreen(
 
     fun selectExportFolder(
         bookUrl: String? = null,
-        forAll: Boolean = false,
         selection: Set<String> = emptySet()
     ) {
         pendingExportBookUrl = bookUrl
-        pendingExportAll = forAll
         pendingExportSelection = selection
         showFilePickerSheet = true
     }
 
-    fun exportBook(book: Book) {
+    fun startExportForBooks(books: List<Book>) {
+        if (books.isEmpty()) return
         val path = ACache.get().getAsString(exportBookPathKey)
         if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
-            selectExportFolder(book.bookUrl)
-        } else if (state.exportConfig.isCustomEpubExportEnabled) {
+            when (books.size) {
+                1 -> selectExportFolder(books.single().bookUrl)
+                else -> selectExportFolder(selection = books.mapTo(linkedSetOf()) { it.bookUrl })
+            }
+        } else if (state.exportConfig.isCustomEpubExportEnabled && books.size == 1) {
             customExportPath = path
-            customExportBook = book
+            customExportBook = books.single()
             customExportAllChapter = false
             customEpubScopeInput = ""
             customEpubScopeError = null
@@ -350,33 +356,24 @@ private fun BookshelfManageScreen(
             customEpisodeExportNameInput = state.exportConfig.episodeExportFileName
             showCustomExportDialog = true
         } else {
-            startExport(context, path, book, state.exportConfig.exportType)
-        }
-    }
-
-    fun exportAll() {
-        val path = ACache.get().getAsString(exportBookPathKey)
-        if (path.isNullOrEmpty()) {
-            selectExportFolder(forAll = true)
-        } else {
-            state.books.forEach { book ->
+            books.forEach { book ->
                 startExport(context, path, book, state.exportConfig.exportType)
             }
         }
     }
 
+    fun showExportSheetFor(books: List<Book>) {
+        exportSheetBookUrls = books.mapTo(linkedSetOf()) { it.bookUrl }
+        showExportSettings = false
+        showExportSheet = exportSheetBookUrls.isNotEmpty()
+    }
+
+    fun exportAll() {
+        showExportSheetFor(state.books)
+    }
+
     fun exportSelected() {
-        if (selectedBookUrls.isEmpty()) return
-        val path = ACache.get().getAsString(exportBookPathKey)
-        if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
-            selectExportFolder(selection = selectedBookUrls)
-        } else {
-            selectedBookUrls.forEach { bookUrl ->
-                booksByUrl[bookUrl]?.let { book ->
-                    startExport(context, path, book, state.exportConfig.exportType)
-                }
-            }
-        }
+        showExportSheetFor(selectedBookUrls.mapNotNull(booksByUrl::get))
     }
     fun resolveSelectionGroupMask(): Long {
         val targetBooks = selectedBookUrls.mapNotNull { booksByUrl[it] }
@@ -502,7 +499,6 @@ private fun BookshelfManageScreen(
             }
         },
         dropDownMenuContent = { dismiss ->
-            var showCharsetMenu by remember { mutableStateOf(false) }
             RoundDropdownMenuItem(
                 text = stringResource(R.string.download_all),
                 onClick = {
@@ -517,118 +513,6 @@ private fun BookshelfManageScreen(
             RoundDropdownMenuItem(
                 text = stringResource(R.string.export_all),
                 onClick = { dismiss(); exportAll() }
-            )
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.export_folder),
-                onClick = { dismiss(); selectExportFolder() }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.export_file_name),
-                onClick = {
-                    dismiss()
-                    exportFileNameInput = state.exportConfig.bookExportFileName.orEmpty()
-                    showExportFileNameDialog = true
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "${stringResource(R.string.export_type)} (${exportTypes.getOrElse(state.exportConfig.exportType) { exportTypes[0] }})",
-                onClick = {
-                    dismiss()
-                    showExportTypeDialog = true
-                }
-            )
-            Box {
-                RoundDropdownMenuItem(
-                    text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
-                    onClick = { showCharsetMenu = true }
-                )
-                RoundDropdownMenu(
-                    expanded = showCharsetMenu,
-                    onDismissRequest = { showCharsetMenu = false }
-                ) { subDismiss ->
-                    commonCharsets.forEach { charset ->
-                        RoundDropdownMenuItem(
-                            text = charset,
-                            isSelected = state.exportConfig.exportCharset == charset,
-                            onClick = {
-                                viewModel.dispatch(BookshelfManageScreenIntent.SetExportCharset(charset))
-                                subDismiss()
-                                dismiss()
-                            }
-                        )
-                    }
-                    PillDivider()
-                    RoundDropdownMenuItem(
-                        text = "自定义...",
-                        onClick = {
-                            subDismiss()
-                            exportCharsetInput = state.exportConfig.exportCharset
-                            showCharsetDialog = true
-                        }
-                    )
-                }
-            }
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = "替换净化",
-                isSelected = state.exportConfig.exportUseReplace,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetExportUseReplace(!state.exportConfig.exportUseReplace)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "自定义导出",
-                isSelected = state.exportConfig.enableCustomExport,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetEnableCustomExport(!state.exportConfig.enableCustomExport)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "导出包含章节名",
-                isSelected = !state.exportConfig.exportNoChapterName,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "导出到WebDav",
-                isSelected = state.exportConfig.exportToWebDav,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "导出插图文件",
-                isSelected = state.exportConfig.exportPictureFile,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetExportPictureFile(!state.exportConfig.exportPictureFile)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "并行导出",
-                isSelected = state.exportConfig.parallelExportBook,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetParallelExportBook(!state.exportConfig.parallelExportBook)
-                    )
-                }
             )
             PillDivider()
             RoundDropdownMenuItem(
@@ -799,7 +683,7 @@ private fun BookshelfManageScreen(
                                         color = LegadoTheme.colorScheme.outlineVariant
                                     )
                                     SmallTonalButton(
-                                        onClick = { exportBook(book) },
+                                        onClick = { showExportSheetFor(listOf(book)) },
                                         modifier = Modifier.weight(1f),
                                         icon = Icons.Default.Upload,
                                         text = "导出",
@@ -1134,20 +1018,181 @@ private fun BookshelfManageScreen(
         onDismiss = { showDownloadAllConfirmDialog = false }
     )
 
-    OptionSheet(
-        show = showExportTypeDialog,
-        onDismissRequest = { showExportTypeDialog = false },
-        title = stringResource(R.string.export_type)
-    ) {
-        exportTypes.forEachIndexed { index, type ->
-            OptionCard(
-                icon = if (type == "epub") Icons.Default.Upload else Icons.Default.Download,
-                text = type,
-                onClick = {
-                    viewModel.dispatch(BookshelfManageScreenIntent.SetExportType(index))
-                    showExportTypeDialog = false
-                }
+    AppModalBottomSheet(
+        show = showExportSheet,
+        onDismissRequest = {
+            showExportSettings = false
+            showExportSheet = false
+        },
+        title = if (showExportSettings) "导出设置" else stringResource(R.string.export),
+        startAction = {
+            MediumTonalButton(
+                onClick = { showExportSettings = !showExportSettings },
+                icon = if (showExportSettings) Icons.Default.Upload else Icons.Default.Settings,
+                contentDescription = if (showExportSettings) stringResource(R.string.export) else "导出设置",
             )
+        },
+    ) {
+        AnimatedContent(
+            targetState = showExportSettings,
+            transitionSpec = {
+                fadeIn() togetherWith fadeOut() using SizeTransform(clip = false)
+            },
+            label = "ExportSheetPage",
+        ) { settings ->
+            if (settings) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    item {
+                        TinyDropdownSettingItem(
+                            title = stringResource(R.string.export_type),
+                            selectedValue = state.exportConfig.exportType.toString(),
+                            displayEntries = exportTypes.toTypedArray(),
+                            entryValues = exportTypes.indices.map(Int::toString).toTypedArray(),
+                            onValueChange = { type ->
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportType(
+                                        type.toInt()
+                                    )
+                                )
+                            },
+                        )
+                    }
+                    item {
+                        TinyDropdownSettingItem(
+                            title = stringResource(R.string.export_charset),
+                            selectedValue = state.exportConfig.exportCharset,
+                            displayEntries = commonCharsets.toTypedArray(),
+                            entryValues = commonCharsets.toTypedArray(),
+                            onValueChange = { charset ->
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportCharset(charset)
+                                )
+                            },
+                        )
+                    }
+                    item {
+                        TinyClickableSettingItem(
+                            title = "自定义字符集",
+                            description = state.exportConfig.exportCharset,
+                            onClick = {
+                                exportCharsetInput =
+                                    state.exportConfig.exportCharset; showCharsetDialog = true
+                            })
+                    }
+                    item {
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.export_folder),
+                            description = ACache.get().getAsString(exportBookPathKey) ?: "未选择",
+                            onClick = { selectExportFolder() })
+                    }
+                    item {
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.export_file_name),
+                            description = state.exportConfig.bookExportFileName.orEmpty(),
+                            onClick = {
+                                exportFileNameInput =
+                                    state.exportConfig.bookExportFileName.orEmpty(); showExportFileNameDialog =
+                                true
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "替换净化",
+                            checked = state.exportConfig.exportUseReplace,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportUseReplace(it)
+                                )
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "自定义导出",
+                            checked = state.exportConfig.enableCustomExport,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetEnableCustomExport(it)
+                                )
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "导出包含章节名",
+                            checked = !state.exportConfig.exportNoChapterName,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportNoChapterName(!it)
+                                )
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "导出到WebDav",
+                            checked = state.exportConfig.exportToWebDav,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportToWebDav(it)
+                                )
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "导出插图文件",
+                            checked = state.exportConfig.exportPictureFile,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetExportPictureFile(it)
+                                )
+                            })
+                    }
+                    item {
+                        TinySwitchSettingItem(
+                            title = "并行导出",
+                            checked = state.exportConfig.parallelExportBook,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    BookshelfManageScreenIntent.SetParallelExportBook(it)
+                                )
+                            })
+                    }
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    AppText(
+                        text = "本次导出（${exportSheetBooks.size} 本）",
+                        style = LegadoTheme.typography.titleSmallEmphasized,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(exportSheetBooks, key = { it.bookUrl }) { book ->
+                            AppText(
+                                text = book.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                            )
+                        }
+                    }
+                    MediumTonalButton(
+                        onClick = {
+                            showExportSheet = false; startExportForBooks(exportSheetBooks)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        icon = Icons.Default.Upload,
+                        text = stringResource(R.string.export),
+                    )
+                }
+            }
         }
     }
 
