@@ -51,7 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.help.http.CookieManager
-import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginType
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
@@ -75,7 +76,6 @@ import io.legado.app.utils.applyDayNight
 import io.legado.app.utils.keepScreenOn
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.share
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import org.apache.commons.text.StringEscapeUtils
@@ -283,10 +283,13 @@ fun RssReadRouteScreen(
                                     leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
                                     onClick = {
                                         dismiss()
-                                        context.startActivity<SourceLoginActivity> {
-                                            putExtra("type", "rssSource")
-                                            putExtra("key", viewModel.rssSource?.sourceUrl)
-                                        }
+                                        context.startActivity(
+                                            MainActivity.createSourceLoginIntent(
+                                                context,
+                                                SourceLoginType.RssSource,
+                                                viewModel.rssSource?.sourceUrl,
+                                            )
+                                        )
                                     }
                                 )
                                 }

@@ -44,15 +44,13 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.ReaderEvent
-import io.legado.app.ui.book.read.page.ReaderEventListener
-import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
@@ -414,7 +412,7 @@ class ReadBookController(
         viewModel.onIntent(ReadBookIntent.MenuEnableReplace)
     }
 
-    private fun openSearchActivity(searchWord: String?) {
+    private fun openSearch(searchWord: String?) {
         viewModel.onIntent(ReadBookIntent.OpenSearch(searchWord))
     }
 
@@ -461,7 +459,7 @@ class ReadBookController(
             ReaderEvent.AutoPageStop -> autoPageStop()
             ReaderEvent.OpenChapterList -> openChapterList()
             ReaderEvent.OpenContentEdit -> openContentEdit()
-            ReaderEvent.OpenSearch -> openSearchActivity(null)
+            ReaderEvent.OpenSearch -> openSearch(null)
             ReaderEvent.AddBookmark -> addBookmark()
             ReaderEvent.ChangeReplaceRuleState -> changeReplaceRuleState()
             ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
@@ -1006,12 +1004,13 @@ class ReadBookController(
             // ── Already migrated (View-layer) ──
             is ReadBookEffect.Finish -> closeReadBook()
             is ReadBookEffect.UpdateReadViewConfig -> {
-                val r = refs ?: return
                 // 两份快照都是配置的纯派生，在分发具体 action 之前先重建：下划线/虚线/下划线颜色
                 // 等项的 action 集里并没有 UpdateStyle，靠 upStyle() 顺带重建会漏；而且
                 // actions 是集合，无法保证「重建」排在 InvalidateTextPage/SubmitRenderTask 之前。
+                // 重建必须排在 refs 判空之前——view 未挂载期收到的配置变更，至少快照不能滞留。
                 ChapterProvider.upRenderStyle()
                 TipStyleProvider.upTipStyle()
+                val r = refs ?: return
                 effect.actions.forEach { action ->
                     when (action) {
                         ConfigUpdateAction.UpdateSystemUi -> upSystemUiVisibility()
@@ -1218,7 +1217,7 @@ class ReadBookController(
             is ReadBookEffect.OpenSourceEdit,
             is ReadBookEffect.OpenChapterList,
             is ReadBookEffect.OpenBookInfo,
-            is ReadBookEffect.OpenSearchActivity,
+            is ReadBookEffect.OpenSearch,
             is ReadBookEffect.ShowLogin,
             is ReadBookEffect.OpenWebView,
             is ReadBookEffect.RunSourceCustomButton,

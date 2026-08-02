@@ -1,14 +1,13 @@
 package io.legado.app.ui.book.source.debug
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.Debug
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +19,8 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 class BookSourceDebugViewModel(
-    application: Application,
     private val repository: BookSourceRepository,
-) : AndroidViewModel(application) {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(BookSourceDebugUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<BookSourceDebugEffect>(extraBufferCapacity = 16)

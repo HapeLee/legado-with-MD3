@@ -8,6 +8,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
+import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -121,6 +122,7 @@ sealed interface BookInfoSheet {
         val entries: List<String>,
         val openAfterImport: Boolean,
     ) : BookInfoSheet
+    data class Variable(val editor: VariableEditorUiState) : BookInfoSheet
 }
 
 sealed interface BookInfoDialog {
@@ -152,6 +154,8 @@ sealed interface BookInfoIntent {
     data object DismissSheet : BookInfoIntent
     data object DismissDialog : BookInfoIntent
     data object DismissAppLogSheet : BookInfoIntent
+    data class UpdateVariable(val value: String) : BookInfoIntent
+    data object SaveVariable : BookInfoIntent
     data class MenuAction(val action: BookInfoMenuAction) : BookInfoIntent
     data class AuthorClick(val longClick: Boolean) : BookInfoIntent
     data class BookNameClick(val longClick: Boolean) : BookInfoIntent
@@ -238,13 +242,6 @@ sealed interface BookInfoEffect {
         val book: Book,
         val action: BookInfoCallbackAction,
     ) : BookInfoEffect
-    data class ShowVariableDialog(
-        val title: String,
-        val key: String,
-        val variable: String?,
-        val comment: String,
-    ) : BookInfoEffect
-
     data class NavigateToBookInfo(
         val name: String?,
         val author: String?,

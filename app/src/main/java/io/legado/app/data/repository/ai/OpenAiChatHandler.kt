@@ -3,18 +3,14 @@ package io.legado.app.data.repository.ai
 import androidx.annotation.Keep
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.model.AiAvailableModel
-import io.legado.app.domain.model.AiCapability
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
-import io.legado.app.domain.model.AiReasoningLevel
-import io.legado.app.domain.model.AiToolCall
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.help.http.addHeaders
-import io.legado.app.help.http.await
 import io.legado.app.help.http.newCallResponse
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
@@ -22,7 +18,6 @@ import io.legado.app.help.http.postJson
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Response
 
 class OpenAiChatHandler : AiProtocolHandler {
 
@@ -60,8 +55,10 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.temperature?.let { body["temperature"] = it }
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
-        if (hasReasoningCapability(request.model.capabilities) && params.reasoningLevel != AiReasoningLevel.AUTO) {
-            body["reasoning_effort"] = params.reasoningLevel.toOpenAiEffort()
+        if (hasReasoningCapability(request.model.capabilities)) {
+            params.reasoningLevel.effortFor(provider)?.let {
+                body["reasoning_effort"] = it
+            }
         }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
@@ -107,8 +104,10 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.temperature?.let { body["temperature"] = it }
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
-        if (hasReasoningCapability(request.model.capabilities) && params.reasoningLevel != AiReasoningLevel.AUTO) {
-            body["reasoning_effort"] = params.reasoningLevel.toOpenAiEffort()
+        if (hasReasoningCapability(request.model.capabilities)) {
+            params.reasoningLevel.effortFor(provider)?.let {
+                body["reasoning_effort"] = it
+            }
         }
 
         // For streaming, we retry before establishing the SSE connection.

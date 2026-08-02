@@ -19,9 +19,8 @@ import io.legado.app.data.repository.AppStartupRepository
 import io.legado.app.data.repository.AppUiConfigurationRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
-import io.legado.app.data.repository.BookCacheManageRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
-import io.legado.app.data.repository.BookmarkRepository
+import io.legado.app.data.repository.BookCacheManageRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookExportSettingsRepository
@@ -31,7 +30,9 @@ import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
+import io.legado.app.data.repository.BookSourceCheckRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.BookshelfSettingsRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
@@ -113,6 +114,7 @@ import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
+import io.legado.app.domain.gateway.BookSourceCheckGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway
@@ -184,12 +186,11 @@ import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
+import io.legado.app.domain.usecase.StartBookSourceCheckUseCase
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
-import io.legado.app.model.ReaderSession
-import io.legado.app.model.LegacyReaderSession
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
 import io.legado.app.help.coil.CoverFetcher
@@ -197,7 +198,9 @@ import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
+import io.legado.app.model.LegacyReaderSession
 import io.legado.app.model.ReadAloudSessionStore
+import io.legado.app.model.ReaderSession
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatViewModel
 import io.legado.app.ui.association.ImportBookSourceViewModel
@@ -206,6 +209,7 @@ import io.legado.app.ui.association.ImportHttpTtsViewModel
 import io.legado.app.ui.association.ImportReplaceRuleViewModel
 import io.legado.app.ui.association.ImportRssSourceViewModel
 import io.legado.app.ui.association.ImportTxtTocRuleViewModel
+import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
@@ -218,11 +222,8 @@ import io.legado.app.ui.book.import.local.ImportBookViewModel
 import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.import.remote.ServerConfigViewModel
 import io.legado.app.ui.book.import.remote.ServersViewModel
-import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.info.edit.BookInfoEditViewModel
-import io.legado.app.ui.login.SourceLoginViewModel
-import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterListViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterNetworkViewModel
@@ -242,14 +243,13 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerCoordinator
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.book.search.SearchViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
-import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
+import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceViewModel
-import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
-import io.legado.app.ui.rss.source.debug.RssSourceDebugViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
+import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.config.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditViewModel
@@ -271,6 +271,7 @@ import io.legado.app.ui.config.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
+import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -286,6 +287,8 @@ import io.legado.app.ui.rss.article.RssArticlesViewModel
 import io.legado.app.ui.rss.article.RssSortViewModel
 import io.legado.app.ui.rss.favorites.RssFavoritesViewModel
 import io.legado.app.ui.rss.read.ReadRssViewModel
+import io.legado.app.ui.rss.source.debug.RssSourceDebugViewModel
+import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
@@ -342,7 +345,10 @@ val appModule = module {
         )
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
-    single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository(get()) }
+    single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository() }
+    single { BookSourceCheckRepository(get(), get(), get()) }
+    single<BookSourceCheckGateway> { get<BookSourceCheckRepository>() }
+    singleOf(::StartBookSourceCheckUseCase)
     single<DirectLinkSettingsGateway> { DirectLinkSettingsRepository() }
     single<LocalPasswordGateway> { LocalPasswordRepository() }
     single<OtherConfigSystemGateway> { OtherConfigSystemRepository(get()) }
@@ -528,7 +534,6 @@ val appModule = module {
             readAloudSettingsGateway = get(),
             otherSettingsGateway = get(),
             downloadCacheSettingsGateway = get(),
-            checkSourceSettingsGateway = get(),
             directLinkSettingsGateway = get(),
             localPasswordGateway = get(),
             systemGateway = get(),
@@ -595,6 +600,7 @@ val appModule = module {
             rssRepository = get(),
             httpTtsRepository = get(),
             searchRepository = get(),
+            downloadCacheSettingsGateway = get(),
         )
     }
     viewModel { (bookUrl: String, characterId: String?) ->

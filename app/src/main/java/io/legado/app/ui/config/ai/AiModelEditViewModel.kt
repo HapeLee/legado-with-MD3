@@ -9,6 +9,7 @@ import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiModelDraft
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -72,6 +73,7 @@ class AiModelEditViewModel(
                             contextWindow = model?.contextWindow ?: 0,
                             maxOutputTokens = model?.maxOutputTokens ?: 0,
                             temperature = params.temperature ?: current.temperature,
+                            reasoningLevel = params.reasoningLevel.toModelConfigLevel(),
                             initialized = true
                         )
                     }
@@ -88,6 +90,7 @@ class AiModelEditViewModel(
             is AiModelEditIntent.UpdateContextWindow -> _uiState.update { it.copy(contextWindow = intent.value) }
             is AiModelEditIntent.UpdateMaxOutputTokens -> _uiState.update { it.copy(maxOutputTokens = intent.value) }
             is AiModelEditIntent.UpdateTemperature -> _uiState.update { it.copy(temperature = intent.value) }
+            is AiModelEditIntent.UpdateReasoningLevel -> _uiState.update { it.copy(reasoningLevel = intent.value) }
             AiModelEditIntent.Save -> save(navigateBack = true)
             AiModelEditIntent.TestConnection -> testConnection()
         }
@@ -146,8 +149,13 @@ class AiModelEditViewModel(
             modelId = modelId.trim(),
             contextWindow = contextWindow,
             maxOutputTokens = maxOutputTokens,
-            temperature = temperature
+            temperature = temperature,
+            reasoningLevel = reasoningLevel
         )
+    }
+
+    private fun AiReasoningLevel.toModelConfigLevel(): AiReasoningLevel {
+        return takeIf { it in AiReasoningLevel.modelConfigEntries } ?: AiReasoningLevel.MEDIUM
     }
 
     private fun parseParams(json: String?): AiGenerationParams {

@@ -812,6 +812,8 @@
     <string name="underline_svg">Custom SVG</string>
     <string name="underline_width">Underline Width</string>
     <string name="underline_offset">Underline Offset</string>
+    <string name="font_size_offset">Font Size Offset</string>
+    <string name="font_size_offset_value">%1$+d sp</string>
     <string name="svg_path">SVG Path</string>
     <string name="svg_path_hint">Coordinates: X(0-100), Y(0-100)</string>
     <string name="bg_image_fit">Background Fit</string>
@@ -2047,6 +2049,11 @@
     <string name="ai_regenerate">Regenerate</string>
     <string name="ai_thinking_mode">Thinking</string>
     <string name="ai_thinking_strength">Strength</string>
+    <string name="ai_reasoning_level_low">Low</string>
+    <string name="ai_reasoning_level_medium">Medium</string>
+    <string name="ai_reasoning_level_high">High</string>
+    <string name="ai_reasoning_level_xhigh">Very high</string>
+    <string name="ai_reasoning_level_max">Maximum</string>
     <string name="ai_thinking_off">Off</string>
     <string name="ai_thinking_auto">Auto</string>
     <string name="ai_thinking_deep">Deep</string>

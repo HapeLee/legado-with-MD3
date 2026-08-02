@@ -46,4 +46,12 @@ object LocalPreferencesKeys {
     val CHANGE_SOURCE_LOAD_TOC = booleanPreferencesKey("changeSourceLoadToc")
     val CHANGE_SOURCE_LOAD_WORD_COUNT = booleanPreferencesKey("changeSourceLoadWordCount")
     val CHANGE_SOURCE_SEARCH_SCOPE = stringPreferencesKey("changeSourceSearchScope")
+
+    // Book source check options
+    val CHECK_SOURCE_TIMEOUT = longPreferencesKey("checkSourceTimeout")
+    val CHECK_SOURCE_SEARCH = booleanPreferencesKey("checkSearch")
+    val CHECK_SOURCE_DISCOVERY = booleanPreferencesKey("checkDiscovery")
+    val CHECK_SOURCE_INFO = booleanPreferencesKey("checkInfo")
+    val CHECK_SOURCE_CATEGORY = booleanPreferencesKey("checkCategory")
+    val CHECK_SOURCE_CONTENT = booleanPreferencesKey("checkContent")
 }

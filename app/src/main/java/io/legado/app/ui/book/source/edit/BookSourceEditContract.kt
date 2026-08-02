@@ -3,6 +3,7 @@ package io.legado.app.ui.book.source.edit
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
@@ -39,11 +40,17 @@ data class BookSourceEditUiState(
     val autoComplete: Boolean = false,
     val dirty: Boolean = false,
     val activeSheet: BookSourceEditSheet? = null,
+    val activeDialog: BookSourceEditDialog? = null,
 )
+
+sealed interface BookSourceEditDialog {
+    data object ConfirmDiscard : BookSourceEditDialog
+}
 
 sealed interface BookSourceEditSheet {
     data object Log : BookSourceEditSheet
     data class Help(val content: String) : BookSourceEditSheet
+    data class Variable(val editor: VariableEditorUiState) : BookSourceEditSheet
 }
 
 sealed interface BookSourceEditIntent {
@@ -70,7 +77,10 @@ sealed interface BookSourceEditIntent {
     data object ShowHelp : BookSourceEditIntent
     data object DismissSheet : BookSourceEditIntent
     data object SaveAndSetVariable : BookSourceEditIntent
+    data class UpdateVariable(val value: String) : BookSourceEditIntent
+    data object SaveVariable : BookSourceEditIntent
     data object RequestBack : BookSourceEditIntent
+    data object DismissDialog : BookSourceEditIntent
     data object DiscardChanges : BookSourceEditIntent
 }
 
@@ -82,7 +92,6 @@ sealed interface BookSourceEditEffect {
     data class CopyText(val text: String) : BookSourceEditEffect
     data class ShareText(val text: String) : BookSourceEditEffect
     data object ReadClipboard : BookSourceEditEffect
-    data object ConfirmDiscard : BookSourceEditEffect
     data class OpenVariable(val sourceUrl: String) : BookSourceEditEffect
     data class ShowMessage(val message: String) : BookSourceEditEffect
 }

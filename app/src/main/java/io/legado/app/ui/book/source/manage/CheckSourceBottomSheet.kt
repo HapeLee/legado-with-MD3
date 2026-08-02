@@ -1,8 +1,7 @@
-package io.legado.app.ui.config.otherConfig
+package io.legado.app.ui.book.source.manage
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,8 +21,19 @@ import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 @Composable
 fun CheckSourceBottomSheet(
     show: Boolean,
-    state: OtherConfigUiState,
-    onIntent: (OtherConfigIntent) -> Unit,
+    timeoutSeconds: Long,
+    checkSearch: Boolean,
+    checkDiscovery: Boolean,
+    checkInfo: Boolean,
+    checkCategory: Boolean,
+    checkContent: Boolean,
+    onTimeoutChange: (Long) -> Unit,
+    onCheckSearchChange: (Boolean) -> Unit,
+    onCheckDiscoveryChange: (Boolean) -> Unit,
+    onCheckInfoChange: (Boolean) -> Unit,
+    onCheckCategoryChange: (Boolean) -> Unit,
+    onCheckContentChange: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
 
@@ -41,9 +51,9 @@ fun CheckSourceBottomSheet(
             GlassCard {
                 SliderSettingItem(
                     title = stringResource(R.string.check_source_timeout),
-                    value = state.checkSourceTimeoutSeconds.toFloat(),
+                    value = timeoutSeconds.toFloat(),
                     defaultValue = 180f,
-                    onValueChange = { onIntent(OtherConfigIntent.CheckSourceTimeoutChanged(it.toLong())) },
+                    onValueChange = { onTimeoutChange(it.toLong()) },
                     valueRange = 0f..300f,
                 )
             }
@@ -56,38 +66,38 @@ fun CheckSourceBottomSheet(
             ) {
                 CheckboxItem(
                     title = stringResource(R.string.search),
-                    checked = state.checkSearch,
-                    onCheckedChange = { onIntent(OtherConfigIntent.CheckSearchChanged(it)) }
+                    checked = checkSearch,
+                    onCheckedChange = onCheckSearchChange
                 )
 
                 CheckboxItem(
                     title = stringResource(R.string.discovery),
-                    checked = state.checkDiscovery,
-                    onCheckedChange = { onIntent(OtherConfigIntent.CheckDiscoveryChanged(it)) }
+                    checked = checkDiscovery,
+                    onCheckedChange = onCheckDiscoveryChange
                 )
 
 
 
                 CheckboxItem(
                     title = stringResource(R.string.source_tab_info),
-                    checked = state.checkInfo,
-                    onCheckedChange = { onIntent(OtherConfigIntent.CheckInfoChanged(it)) }
+                    checked = checkInfo,
+                    onCheckedChange = onCheckInfoChange
                 )
 
 
                 CheckboxItem(
                     title = stringResource(R.string.chapter_list),
-                    checked = state.checkCategory,
-                    enabled = state.checkInfo,
-                    onCheckedChange = { onIntent(OtherConfigIntent.CheckCategoryChanged(it)) }
+                    checked = checkCategory,
+                    enabled = checkInfo,
+                    onCheckedChange = onCheckCategoryChange
                 )
 
 
                 CheckboxItem(
                     title = stringResource(R.string.source_tab_content),
-                    checked = state.checkContent,
-                    enabled = state.checkCategory,
-                    onCheckedChange = { onIntent(OtherConfigIntent.CheckContentChanged(it)) }
+                    checked = checkContent,
+                    enabled = checkCategory,
+                    onCheckedChange = onCheckContentChange
                 )
             }
 
@@ -96,7 +106,7 @@ fun CheckSourceBottomSheet(
                     .fillMaxWidth()
                     .padding(top = 16.dp),
                 onDismiss = onDismiss,
-                onConfirm = { onIntent(OtherConfigIntent.ConfirmCheckSource) },
+                onConfirm = onConfirm,
                 dismissText = stringResource(R.string.cancel),
                 confirmText = stringResource(R.string.ok)
             )

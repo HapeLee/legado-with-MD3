@@ -7,11 +7,11 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
 import io.legado.app.service.WebService
 import io.legado.app.utils.eventBus.FlowEventBus
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,6 +28,7 @@ sealed class PrefClickEvent {
     data class StartActivity(val destination: Class<*>, val configTag: String? = null) : PrefClickEvent()
     object OpenReadRecord : PrefClickEvent()
     object OpenBookCacheManage : PrefClickEvent()
+    object OpenBookSourceManage : PrefClickEvent()
     object OpenHighlightTagRule : PrefClickEvent()
     object OpenAbout : PrefClickEvent()
     object ToggleWebService : PrefClickEvent()

@@ -202,7 +202,8 @@ data class AiModelDraft(
     val modelId: String,
     val contextWindow: Int = 0,
     val maxOutputTokens: Int = 0,
-    val temperature: Float = TranslationConstants.DEFAULT_TEMPERATURE
+    val temperature: Float = TranslationConstants.DEFAULT_TEMPERATURE,
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM
 )
 
 /**
@@ -219,11 +220,30 @@ enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
     LOW("low", 1_000),
     MEDIUM("medium", 2_000),
     HIGH("high", 8_000),
-    XHIGH("xhigh", 16_000);
+    XHIGH("xhigh", 16_000),
+    MAX("max", 32_000);
 
     val isEnabled: Boolean get() = this != OFF
 
+    fun effortFor(provider: AiProviderConfig): String? {
+        val identity = "${provider.id} ${provider.name} ${provider.baseUrl}".lowercase()
+        return when {
+            "mimo" in identity || "xiaomi" in identity -> null
+            "deepseek" in identity ||
+                "openai" in identity ||
+                "anthropic" in identity ||
+                "claude" in identity -> standardEffort()
+            else -> null
+        }
+    }
+
+    private fun standardEffort(): String? {
+        return takeIf { it in modelConfigEntries }?.effort
+    }
+
     companion object {
+        val modelConfigEntries = listOf(LOW, MEDIUM, HIGH, XHIGH, MAX)
+
         fun fromEffort(effort: String): AiReasoningLevel =
             entries.firstOrNull { it.effort == effort } ?: AUTO
 

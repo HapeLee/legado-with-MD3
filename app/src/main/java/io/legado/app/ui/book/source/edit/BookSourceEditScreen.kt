@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -55,7 +54,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import kotlinx.coroutines.launch
+import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,21 +64,22 @@ fun BookSourceEditScreen(
     onMenuExpandedChange: (Boolean) -> Unit,
     onIntent: (BookSourceEditIntent) -> Unit,
 ) {
-    BackHandler { onIntent(BookSourceEditIntent.RequestBack) }
+    BackHandler(enabled = state.dirty) {
+        onIntent(BookSourceEditIntent.RequestBack)
+    }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val tabs = BookSourceEditTab.entries
     val pagerState = rememberPagerState(initialPage = state.selectedTab.ordinal) { tabs.size }
-    val pagerScope = rememberCoroutineScope()
     var editingFieldPath by remember { mutableStateOf<String?>(null) }
     val editingField =
         state.fieldGroups.values.flatten().firstOrNull { it.path == editingFieldPath }
     androidx.compose.runtime.LaunchedEffect(state.selectedTab) {
-        if (pagerState.currentPage != state.selectedTab.ordinal) {
+        if (pagerState.settledPage != state.selectedTab.ordinal) {
             pagerState.animateScrollToPage(state.selectedTab.ordinal)
         }
     }
     androidx.compose.runtime.LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
+        snapshotFlow { pagerState.settledPage }.collect { page ->
             tabs.getOrNull(page)?.let { onIntent(BookSourceEditIntent.SelectTab(it)) }
         }
     }
@@ -116,7 +116,6 @@ fun BookSourceEditScreen(
                     selectedTabIndex = state.selectedTab.ordinal,
                     onTabSelected = { page ->
                         onIntent(BookSourceEditIntent.SelectTab(tabs[page]))
-                        pagerScope.launch { pagerState.animateScrollToPage(page) }
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -164,6 +163,13 @@ fun BookSourceEditScreen(
             }
         }
     }
+    val variableSheet = state.activeSheet as? BookSourceEditSheet.Variable
+    VariableEditorSheet(
+        state = variableSheet?.editor,
+        onValueChange = { onIntent(BookSourceEditIntent.UpdateVariable(it)) },
+        onSave = { onIntent(BookSourceEditIntent.SaveVariable) },
+        onDismissRequest = { onIntent(BookSourceEditIntent.DismissSheet) },
+    )
     SourceEditFieldSheet(
         field = editingField,
         onDismissRequest = { editingFieldPath = null },

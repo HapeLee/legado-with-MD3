@@ -24416,7 +24416,6 @@ Lio/legado/app/ui/widget/dialog/TextDialog$special$$inlined$viewBindingFragment$
 HSPLio/legado/app/ui/widget/dialog/TextDialog$special$$inlined$viewBindingFragment$default$1;-><init>()V
 HSPLio/legado/app/ui/widget/dialog/TextDialog$special$$inlined$viewBindingFragment$default$1;->invoke(Landroidx/fragment/app/Fragment;)Landroidx/viewbinding/ViewBinding;
 HSPLio/legado/app/ui/widget/dialog/TextDialog$special$$inlined$viewBindingFragment$default$1;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
-Lio/legado/app/ui/widget/dialog/VariableDialog$Callback;
 Lio/legado/app/ui/widget/text/ScrollTextView;
 HSPLio/legado/app/ui/widget/text/ScrollTextView;-><clinit>()V
 HSPLio/legado/app/ui/widget/text/ScrollTextView;-><init>(Landroid/content/Context;Landroid/util/AttributeSet;)V

@@ -22,6 +22,8 @@ object MainIntent {
     const val EXTRA_CHAPTER_CHANGED = "chapterChanged"
     const val EXTRA_EXPLORE_NAME = "exploreName"
     const val EXTRA_SOURCE_URL = "sourceUrl"
+    const val EXTRA_SOURCE_LOGIN_TYPE = "source_login_type"
+    const val EXTRA_SOURCE_LOGIN_KEY = "source_login_key"
     const val EXTRA_EXPLORE_URL = "exploreUrl"
 
     const val EXTRA_RSS_SOURCE_URL = "extra_rss_source_url"
@@ -48,6 +50,52 @@ object MainIntent {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_MAIN)
         }
     }
+
+    fun createSourceLoginIntent(
+        context: Context,
+        type: io.legado.app.ui.login.SourceLoginType,
+        sourceKey: String? = null,
+        bookUrl: String? = null,
+    ): Intent = createLauncherIntent(context).apply {
+        putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_SOURCE_LOGIN)
+        putExtra(EXTRA_SOURCE_LOGIN_TYPE, type.name)
+        putExtra(EXTRA_SOURCE_LOGIN_KEY, sourceKey)
+        putExtra(EXTRA_BOOK_URL, bookUrl)
+    }
+
+    fun createBookSourceManageIntent(context: Context): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE)
+        }
+
+    fun createBookSourceEditIntent(context: Context, sourceUrl: String? = null): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_SOURCE_EDIT)
+            putExtra(EXTRA_SOURCE_URL, sourceUrl)
+        }
+
+    fun createRssSourceManageIntent(context: Context): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_RSS_SOURCE_MANAGE)
+        }
+
+    fun createRssSourceEditIntent(context: Context, sourceUrl: String? = null): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_RSS_SOURCE_EDIT)
+            putExtra(EXTRA_SOURCE_URL, sourceUrl)
+        }
+
+    fun createBookSourceDebugIntent(context: Context, sourceUrl: String?): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_SOURCE_DEBUG)
+            putExtra(EXTRA_SOURCE_URL, sourceUrl)
+        }
+
+    fun createRssSourceDebugIntent(context: Context, sourceUrl: String?): Intent =
+        createLauncherIntent(context).apply {
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_RSS_SOURCE_DEBUG)
+            putExtra(EXTRA_SOURCE_URL, sourceUrl)
+        }
 
     fun createIntent(context: Context, configTag: String? = null): Intent {
         return createLauncherIntent(context).apply {

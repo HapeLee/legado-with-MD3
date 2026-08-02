@@ -852,14 +852,7 @@ private fun ChatInputBar(
     onUpdateReasoningLevel: (AiReasoningLevel) -> Unit
 ) {
     var showThinkingSheet by rememberSaveable { mutableStateOf(false) }
-    val thinkingLabel = when (reasoningLevel) {
-        AiReasoningLevel.OFF -> stringResource(R.string.ai_thinking_off)
-        AiReasoningLevel.AUTO -> "Auto"
-        AiReasoningLevel.LOW -> "Low"
-        AiReasoningLevel.MEDIUM -> "Med"
-        AiReasoningLevel.HIGH -> "High"
-        AiReasoningLevel.XHIGH -> "Max"
-    }
+    val thinkingLabel = reasoningLevel.label()
     val isThinkingOn = reasoningLevel != AiReasoningLevel.OFF
     val isKeyboardVisible =
         WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
@@ -882,14 +875,7 @@ private fun ChatInputBar(
     ) {
         AiReasoningLevel.entries.forEach { level ->
             val isSelected = level == reasoningLevel
-            val label = when (level) {
-                AiReasoningLevel.OFF -> stringResource(R.string.ai_thinking_off)
-                AiReasoningLevel.AUTO -> "Auto"
-                AiReasoningLevel.LOW -> "Low"
-                AiReasoningLevel.MEDIUM -> "Med"
-                AiReasoningLevel.HIGH -> "High"
-                AiReasoningLevel.XHIGH -> "Max"
-            }
+            val label = level.label()
 
             Row(
                 modifier = Modifier
@@ -1004,6 +990,19 @@ private fun ChatInputBar(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AiReasoningLevel.label(): String {
+    return when (this) {
+        AiReasoningLevel.OFF -> stringResource(R.string.ai_thinking_off)
+        AiReasoningLevel.AUTO -> stringResource(R.string.ai_thinking_auto)
+        AiReasoningLevel.LOW -> stringResource(R.string.ai_reasoning_level_low)
+        AiReasoningLevel.MEDIUM -> stringResource(R.string.ai_reasoning_level_medium)
+        AiReasoningLevel.HIGH -> stringResource(R.string.ai_reasoning_level_high)
+        AiReasoningLevel.XHIGH -> stringResource(R.string.ai_reasoning_level_xhigh)
+        AiReasoningLevel.MAX -> stringResource(R.string.ai_reasoning_level_max)
     }
 }
 

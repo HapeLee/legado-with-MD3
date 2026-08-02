@@ -20,7 +20,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
-import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
@@ -28,13 +27,14 @@ import io.legado.app.data.repository.HighlightTagRuleRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.SearchRepository
-import io.legado.app.domain.usecase.ChangeBookSourceUseCase
-import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
@@ -270,6 +270,8 @@ class BookInfoViewModel(
     fun onIntent(intent: BookInfoIntent) {
         when (intent) {
             BookInfoIntent.DismissSheet -> dismissSheet()
+            is BookInfoIntent.UpdateVariable -> updateVariableDraft(intent.value)
+            BookInfoIntent.SaveVariable -> saveVariableDraft()
             BookInfoIntent.DismissDialog -> dismissDialog()
             is BookInfoIntent.MenuAction -> handleMenuAction(intent.action)
             is BookInfoIntent.AuthorClick -> onAuthorClick(intent.longClick)
@@ -493,25 +495,27 @@ class BookInfoViewModel(
         syncUiState()
     }
 
-    fun requestSourceVariableDialog() {
+    fun requestSourceVariableSheet() {
         execute {
             val source = bookSource ?: throw NoStackTraceException("书源不存在")
             val comment = source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
             val variable = source.getVariable()
-            BookInfoEffect.ShowVariableDialog(
+            BookInfoSheet.Variable(
+                io.legado.app.ui.widget.components.variable.VariableEditorUiState(
                 title = context.getString(R.string.set_source_variable),
                 key = source.getKey(),
-                variable = variable,
+                    value = variable.orEmpty(),
                 comment = comment,
+                )
             )
         }.onSuccess {
-            emitEffect(it)
+            setSheet(it)
         }.onError {
             showMessage(it.localizedMessage ?: "书源不存在")
         }
     }
 
-    fun requestBookVariableDialog() {
+    fun requestBookVariableSheet() {
         execute {
             val source = bookSource ?: throw NoStackTraceException("书源不存在")
             val book = currentBook ?: throw NoStackTraceException("book is null")
@@ -519,14 +523,16 @@ class BookInfoViewModel(
             val comment = source.getDisplayVariableComment(
                 "书籍变量可在js中通过book.getVariable(\"custom\")获取"
             )
-            BookInfoEffect.ShowVariableDialog(
+            BookInfoSheet.Variable(
+                io.legado.app.ui.widget.components.variable.VariableEditorUiState(
                 title = context.getString(R.string.set_book_variable),
                 key = book.bookUrl,
-                variable = variable,
+                    value = variable.orEmpty(),
                 comment = comment,
+                )
             )
         }.onSuccess {
-            emitEffect(it)
+            setSheet(it)
         }.onError {
             showMessage(it.localizedMessage ?: "书源不存在")
         }
@@ -542,6 +548,19 @@ class BookInfoViewModel(
                 }
             }
         }
+    }
+
+    private fun updateVariableDraft(value: String) {
+        _screenState.update { state ->
+            val sheet = state.sheet as? BookInfoSheet.Variable ?: return@update state
+            state.copy(sheet = sheet.copy(editor = sheet.editor.copy(value = value)))
+        }
+    }
+
+    private fun saveVariableDraft() {
+        val editor = (_screenState.value.sheet as? BookInfoSheet.Variable)?.editor ?: return
+        setVariable(editor.key, editor.value)
+        dismissSheet()
     }
 
     fun topBook() {
@@ -1213,8 +1232,8 @@ class BookInfoViewModel(
             }
 
             BookInfoMenuAction.Top -> topBook()
-            BookInfoMenuAction.SetSourceVariable -> requestSourceVariableDialog()
-            BookInfoMenuAction.SetBookVariable -> requestBookVariableDialog()
+            BookInfoMenuAction.SetSourceVariable -> requestSourceVariableSheet()
+            BookInfoMenuAction.SetBookVariable -> requestBookVariableSheet()
             BookInfoMenuAction.CopyBookUrl -> emitEffect(
                 BookInfoEffect.RunSourceCallback(
                     event = SourceCallBack.CLICK_COPY_BOOK_URL,

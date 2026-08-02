@@ -28,6 +28,7 @@ data class HighlightRule(
     var fontPath: String? = null,
     var fontWeight: Int = 400,
     var isItalic: Boolean = false,
+    var fontSizeOffset: Int = 0,
     var npLeft: Float = 0.1f,
     var npRight: Float = 0.1f,
     var npTop: Float = 0.1f,
@@ -67,6 +68,9 @@ data class HighlightRule(
         }
         if (!fontPath.isNullOrBlank()) {
             parts.add("自定义字体")
+        }
+        if (fontSizeOffset != 0) {
+            parts.add("字号${if (fontSizeOffset > 0) "+" else ""}${fontSizeOffset}")
         }
         if (parts.isEmpty()) {
             parts.add("无样式")

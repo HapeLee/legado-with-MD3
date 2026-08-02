@@ -1,6 +1,7 @@
 package io.legado.app.ui.main
 
 import androidx.navigation3.runtime.NavKey
+import io.legado.app.ui.login.SourceLoginType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -8,6 +9,31 @@ sealed interface MainRoute : NavKey
 
 @Serializable
 data object MainRouteHome : MainRoute
+
+@Serializable
+data class MainRouteSourceLogin(
+    val type: SourceLoginType,
+    val sourceKey: String? = null,
+    val bookUrl: String? = null,
+) : MainRoute
+
+@Serializable
+data object MainRouteBookSourceManage : MainRoute
+
+@Serializable
+data class MainRouteBookSourceEdit(val sourceUrl: String? = null) : MainRoute
+
+@Serializable
+data object MainRouteRssSourceManage : MainRoute
+
+@Serializable
+data class MainRouteRssSourceEdit(val sourceUrl: String? = null) : MainRoute
+
+@Serializable
+data class MainRouteBookSourceDebug(val sourceUrl: String? = null) : MainRoute
+
+@Serializable
+data class MainRouteRssSourceDebug(val sourceUrl: String? = null) : MainRoute
 
 @Serializable
 data object MainRouteSettings : MainRoute
@@ -188,6 +214,13 @@ data object MainRouteAbout : MainRoute
 
 object MainRouteConst {
     const val ROUTE_MAIN = "main"
+    const val ROUTE_SOURCE_LOGIN = "source/login"
+    const val ROUTE_BOOK_SOURCE_MANAGE = "source/book/manage"
+    const val ROUTE_BOOK_SOURCE_EDIT = "source/book/edit"
+    const val ROUTE_RSS_SOURCE_MANAGE = "source/rss/manage"
+    const val ROUTE_RSS_SOURCE_EDIT = "source/rss/edit"
+    const val ROUTE_BOOK_SOURCE_DEBUG = "source/book/debug"
+    const val ROUTE_RSS_SOURCE_DEBUG = "source/rss/debug"
     const val ROUTE_SETTINGS = "settings"
     const val ROUTE_SETTINGS_OTHER = "settings/other"
     const val ROUTE_SETTINGS_READ = "settings/read"

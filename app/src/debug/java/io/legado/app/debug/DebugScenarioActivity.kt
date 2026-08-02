@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.room.withTransaction
+import com.google.gson.reflect.TypeToken
 import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
@@ -16,11 +17,9 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfigStore
-import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.utils.GSON
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,9 +56,8 @@ class DebugScenarioActivity : AppCompatActivity() {
                         AppConfigStore.putLong(PreferKey.saveTabPosition, BookGroup.IdAll)
                         MainIntent.createHomeIntent(this@DebugScenarioActivity)
                     }
-                    ENTRY_SOURCE_MANAGE -> Intent(
-                        this@DebugScenarioActivity,
-                        BookSourceActivity::class.java,
+                    ENTRY_SOURCE_MANAGE -> MainIntent.createBookSourceManageIntent(
+                        this@DebugScenarioActivity
                     )
                     ENTRY_THEME_CONFIG -> MainIntent.createIntent(
                         this@DebugScenarioActivity,

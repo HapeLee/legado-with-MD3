@@ -3,7 +3,6 @@ package io.legado.app.data.repository.ai
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.legado.app.domain.model.AiCapability
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.utils.GSON
 import okhttp3.Response
 
@@ -65,12 +64,4 @@ internal fun JsonElement.asJsonArrayOrNull() = if (isJsonArray) asJsonArray else
  */
 internal fun hasReasoningCapability(capabilities: Set<String>): Boolean {
     return AiCapability.REASONING in capabilities
-}
-
-/**
- * Map AiReasoningLevel to OpenAI-compatible reasoning_effort value.
- * OpenAI doesn't accept "none" — remap to "low".
- */
-internal fun AiReasoningLevel.toOpenAiEffort(): String {
-    return if (effort == "none") "low" else effort
 }

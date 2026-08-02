@@ -51,9 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
-import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
-import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -68,7 +65,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -87,6 +83,9 @@ fun RssRouteScreen(
     ) -> Unit,
     onOpenRuleSub: () -> Unit,
     onOpenFavorites: () -> Unit,
+    onOpenLogin: (sourceUrl: String) -> Unit,
+    onOpenSourceEdit: (sourceUrl: String) -> Unit,
+    onOpenSourceManage: () -> Unit,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -95,6 +94,9 @@ fun RssRouteScreen(
     val currentOnOpenRead by rememberUpdatedState(onOpenRead)
     val currentOnOpenRuleSub by rememberUpdatedState(onOpenRuleSub)
     val currentOnOpenFavorites by rememberUpdatedState(onOpenFavorites)
+    val currentOnOpenLogin by rememberUpdatedState(onOpenLogin)
+    val currentOnOpenSourceEdit by rememberUpdatedState(onOpenSourceEdit)
+    val currentOnOpenSourceManage by rememberUpdatedState(onOpenSourceManage)
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
@@ -119,16 +121,11 @@ fun RssRouteScreen(
                 }
 
                 is RssEffect.OpenSourceEdit -> {
-                    currentContext.startActivity<RssSourceEditActivity> {
-                        putExtra("sourceUrl", effect.sourceUrl)
-                    }
+                    currentOnOpenSourceEdit(effect.sourceUrl)
                 }
 
                 is RssEffect.Login -> {
-                    currentContext.startActivity<SourceLoginActivity> {
-                        putExtra("type", "rssSource")
-                        putExtra("key", effect.sourceUrl)
-                    }
+                    currentOnOpenLogin(effect.sourceUrl)
                 }
 
                 RssEffect.OpenRuleSub -> {
@@ -140,7 +137,7 @@ fun RssRouteScreen(
                 }
 
                 RssEffect.OpenSourceManage -> {
-                    currentContext.startActivity<RssSourceActivity>()
+                    currentOnOpenSourceManage()
                 }
             }
         }
@@ -318,7 +315,7 @@ fun RssSourceGridItem(
     val openLabel = stringResource(R.string.open)
     val moreMenuLabel = stringResource(R.string.more_menu)
 
-    GlassCard(
+    Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
@@ -331,86 +328,79 @@ fun RssSourceGridItem(
             .semantics(mergeDescendants = true) {
                 contentDescription = source.sourceName
                 role = Role.Button
-            },
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-        cornerRadius = 16.dp,
+            }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box {
-                SourceIcon(
-                    path = source.sourceIcon,
-                    sourceOrigin = source.sourceUrl,
-                    modifier = Modifier.size(48.dp)
-                )
-                RoundDropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    PillHeaderDivider(title = source.sourceName)
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                        text = stringResource(R.string.to_top),
-                        onClick = {
-                            onTop()
-                            showMenu = false
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                        text = stringResource(R.string.edit),
-                        onClick = {
-                            onEdit()
-                            showMenu = false
-                        }
-                    )
-                    if (!source.loginUrl.isNullOrBlank()) {
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                            text = stringResource(R.string.login),
-                            onClick = {
-                                onLogin()
-                                showMenu = false
-                            }
-                        )
+        Box {
+            SourceIcon(
+                path = source.sourceIcon,
+                sourceOrigin = source.sourceUrl,
+                modifier = Modifier.size(48.dp)
+            )
+            RoundDropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                PillHeaderDivider(title = source.sourceName)
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                    text = stringResource(R.string.to_top),
+                    onClick = {
+                        onTop()
+                        showMenu = false
                     }
+                )
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                    text = stringResource(R.string.edit),
+                    onClick = {
+                        onEdit()
+                        showMenu = false
+                    }
+                )
+                if (!source.loginUrl.isNullOrBlank()) {
                     RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.Close) },
-                        text = stringResource(R.string.disable_source),
+                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                        text = stringResource(R.string.login),
                         onClick = {
-                            onDisable()
-                            showMenu = false
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        leadingIcon = {
-                            MenuItemIcon(
-                                Icons.Default.Delete,
-                                tint = LegadoTheme.colorScheme.error
-                            )
-                        },
-                        text = stringResource(R.string.delete),
-                        color = LegadoTheme.colorScheme.error,
-                        onClick = {
-                            onDelete()
+                            onLogin()
                             showMenu = false
                         }
                     )
                 }
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.Default.Close) },
+                    text = stringResource(R.string.disable_source),
+                    onClick = {
+                        onDisable()
+                        showMenu = false
+                    }
+                )
+                RoundDropdownMenuItem(
+                    leadingIcon = {
+                        MenuItemIcon(
+                            Icons.Default.Delete,
+                            tint = LegadoTheme.colorScheme.error
+                        )
+                    },
+                    text = stringResource(R.string.delete),
+                    color = LegadoTheme.colorScheme.error,
+                    onClick = {
+                        onDelete()
+                        showMenu = false
+                    }
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            AppText(
-                text = source.sourceName,
-                style = LegadoTheme.typography.labelMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        AppText(
+            text = source.sourceName,
+            style = LegadoTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

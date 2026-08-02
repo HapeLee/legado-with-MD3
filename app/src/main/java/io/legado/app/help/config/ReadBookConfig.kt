@@ -537,17 +537,17 @@ object ReadBookConfig {
         val bgType: Int = 1,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
         val bgTypeNight: Int = 0,//夜间背景类型
         val bgTypeEInk: Int = 0,//EInk背景类型
-        private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
-        private var darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
-        private var darkStatusIconEInk: Boolean = true,
-        private var textColor: String = "#3E3D3B",//白天文字颜色
-        private var textColorNight: String = "#ADADAD",//夜间文字颜色
-        private var textColorEInk: String = "#000000",
-        private var textAccentColor: String = "#834E00",//白天强调文字颜色
-        private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
-        private var textAccentColorEInk: String = "#000000",
-        private var pageAnim: Int = 2,//翻页动画
-        private var pageAnimEInk: Int = 4,
+        private val darkStatusIcon: Boolean = true,//白天是否暗色状态栏
+        private val darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
+        private val darkStatusIconEInk: Boolean = true,
+        private val textColor: String = "#3E3D3B",//白天文字颜色
+        private val textColorNight: String = "#ADADAD",//夜间文字颜色
+        private val textColorEInk: String = "#000000",
+        private val textAccentColor: String = "#834E00",//白天强调文字颜色
+        private val textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
+        private val textAccentColorEInk: String = "#000000",
+        private val pageAnim: Int = 2,//翻页动画
+        private val pageAnimEInk: Int = 4,
         val textFont: String = "",//字体
         val titleFont: String = "",//标题字体
         val headerFont: String = "",//页眉字体
@@ -562,13 +562,13 @@ object ReadBookConfig {
         val shadowRadius: Float = 16f,// 阴影模糊半径
         val shadowDx: Float = 1f,// 阴影x偏移
         val shadowDy: Float = 1f,// 阴影y偏移
-        private var shadowColor: String = "#3E3D3B",
-        private var shadowColorN: String = "#3E3D3B",
+        private val shadowColor: String = "#3E3D3B",
+        private val shadowColorN: String = "#3E3D3B",
         val letterSpacing: Float = 0.1f,//字间距
         val lineSpacingExtra: Int = 12,//行间距
         val paragraphSpacing: Int = 2,//段距
         val titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
-        val titleSize: Int = 0,
+        val titleSize: Int = 20,
         val titleTopSpacing: Int = 0,
         val titleBottomSpacing: Int = 0,
         val titleColor: Int = 0,
@@ -760,7 +760,7 @@ object ReadBookConfig {
             "tipDividerColor" to tipDividerColor,
             "headerMode" to headerMode,
             "footerMode" to footerMode,
-            "highlightRules" to highlightRules.map { mapOf("id" to it.id, "name" to it.name, "pattern" to it.pattern, "sampleText" to it.sampleText, "targetScope" to it.targetScope, "enabled" to it.enabled, "position" to it.position, "textColor" to it.textColor, "bgColor" to it.bgColor, "underlineMode" to it.underlineMode, "underlineColor" to it.underlineColor, "underlineWidth" to it.underlineWidth, "underlineOffset" to it.underlineOffset, "underlineSvgPath" to it.underlineSvgPath, "bgImage" to it.bgImage, "bgImageFit" to it.bgImageFit, "bgImageScale" to it.bgImageScale, "configName" to it.configName, "fontPath" to it.fontPath) }
+            "highlightRules" to highlightRules.map { mapOf("id" to it.id, "name" to it.name, "pattern" to it.pattern, "sampleText" to it.sampleText, "targetScope" to it.targetScope, "enabled" to it.enabled, "position" to it.position, "textColor" to it.textColor, "bgColor" to it.bgColor, "underlineMode" to it.underlineMode, "underlineColor" to it.underlineColor, "underlineWidth" to it.underlineWidth, "underlineOffset" to it.underlineOffset, "underlineSvgPath" to it.underlineSvgPath, "bgImage" to it.bgImage, "bgImageFit" to it.bgImageFit, "bgImageScale" to it.bgImageScale, "configName" to it.configName, "fontPath" to it.fontPath, "fontSizeOffset" to it.fontSizeOffset) }
         )
 
         fun getBgPath(bgIndex: Int): String? {

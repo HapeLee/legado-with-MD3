@@ -44,6 +44,14 @@ class SourceLoginJsExtensions(
         callbackRef.get()?.reUiView()
     }
 
+    override fun open(name: String, url: String?, title: String?, origin: String?) {
+        if (name == "login") {
+            activityRef.get()?.toastOnUi("已在登录界面")
+            return
+        }
+        super.open(name, url, title, origin)
+    }
+
     fun refreshBookInfo() {
         postEvent(EventBus.REFRESH_BOOK_INFO, true)
     }

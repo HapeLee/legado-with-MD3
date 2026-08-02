@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.MainActivity
 import splitties.init.appCtx
 
@@ -53,7 +52,7 @@ class SharedReceiverActivity : AppCompatActivity() {
         if (result.length > 1) {
             startActivity(MainActivity.createHomeIntent(this))
         } else {
-            SearchActivity.start(this, text)
+            startActivity(MainActivity.createSearchIntent(this, text))
         }
     }
 }

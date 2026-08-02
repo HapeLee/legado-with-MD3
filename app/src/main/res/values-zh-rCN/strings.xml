@@ -781,6 +781,8 @@
     <string name="underline_svg">自定义SVG</string>
     <string name="underline_width">下划线宽度</string>
     <string name="underline_offset">下划线偏移</string>
+    <string name="font_size_offset">字号偏移</string>
+    <string name="font_size_offset_value">%1$+d sp</string>
     <string name="svg_path">SVG路径</string>
     <string name="svg_path_hint">坐标范围：X(0-100)，Y(0-100)</string>
     <string name="bg_image_fit">背景适配</string>
@@ -2102,6 +2104,11 @@
     <string name="ai_regenerate">重新生成</string>
     <string name="ai_thinking_mode">思考模式</string>
     <string name="ai_thinking_strength">强度</string>
+    <string name="ai_reasoning_level_low">轻度</string>
+    <string name="ai_reasoning_level_medium">中</string>
+    <string name="ai_reasoning_level_high">高</string>
+    <string name="ai_reasoning_level_xhigh">极高</string>
+    <string name="ai_reasoning_level_max">最高</string>
     <string name="ai_thinking_off">关闭</string>
     <string name="ai_thinking_auto">自动</string>
     <string name="ai_thinking_deep">深度</string>

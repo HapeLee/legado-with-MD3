@@ -50,8 +50,8 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
-import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
@@ -61,10 +61,10 @@ import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
-import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginType
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LocalAppUiConfiguration
@@ -186,7 +186,7 @@ fun ReadBookRouteScreen(
     // ── ActivityResult Launchers ──────────────────────────────────────
 
     val sourceEditLauncher = rememberLauncherForActivityResult(
-        StartActivityContract(BookSourceEditActivity::class.java)
+        ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             viewModel.onIntent(ReadBookIntent.SourceEditResult)
@@ -321,7 +321,12 @@ fun ReadBookRouteScreen(
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
                             is ReadBookEffect.OpenSourceEdit -> {
-                                sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
+                                sourceEditLauncher.launch(
+                                    MainActivity.createBookSourceEditIntent(
+                                        context,
+                                        effect.sourceUrl
+                                    )
+                                )
                             }
                             is ReadBookEffect.OpenChapterList -> {
                                 tocLauncher.launch(effect.bookUrl)
@@ -335,9 +340,10 @@ fun ReadBookRouteScreen(
                             }
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
-                                    Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("bookType", BookType.text)
-                                    }
+                                    MainActivity.createSourceLoginIntent(
+                                        context,
+                                        SourceLoginType.ReadingBook
+                                    )
                                 )
                             }
                             is ReadBookEffect.OpenWebView -> {
@@ -364,7 +370,7 @@ fun ReadBookRouteScreen(
                                     )
                                 }
                             }
-                            is ReadBookEffect.OpenSearchActivity -> {
+                            is ReadBookEffect.OpenSearch -> {
                                 onOpenSearch(effect.word, effect.bookUrl, effect.autoFocus)
                             }
                             is ReadBookEffect.OpenBookVoiceCasting -> {

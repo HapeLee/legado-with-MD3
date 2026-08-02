@@ -3,8 +3,11 @@ package io.legado.app.model
 import android.annotation.SuppressLint
 import android.util.Log
 import io.legado.app.BuildConfig
-import io.legado.app.constant.AppPattern
-import io.legado.app.data.entities.*
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.RssArticle
+import io.legado.app.data.entities.RssSource
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.source.sortUrls
@@ -17,18 +20,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.util.concurrent.atomic.AtomicLong
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 
 object Debug {
     private val nextSessionId = AtomicLong()
     private var activeSession: Session? = null
     private var debugSource: String? = null
     private val tasks: CompositeCoroutine = CompositeCoroutine()
-    val debugMessageMap = HashMap<String, String>()
-    private val debugTimeMap = HashMap<String, Long>()
-    var isChecking: Boolean = false
 
     @SuppressLint("ConstantLocale")
     private val debugTimeFormat = SimpleDateFormat("[mm:ss.SSS]", Locale.getDefault())
@@ -70,19 +71,6 @@ object Debug {
             val structuredEvent = event.copy(message = printMsg)
             activeSession?.emit(structuredEvent)
         }
-        if (isChecking && sourceUrl != null && (msg).length < 30) {
-            var printMsg = msg
-            if (isHtml) {
-                printMsg = HtmlFormatter.format(msg)
-            }
-            if (showTime && debugTimeMap[sourceUrl] != null) {
-                val time =
-                    debugTimeFormat.format(Date(System.currentTimeMillis() - debugTimeMap[sourceUrl]!!))
-                printMsg = printMsg.replace(AppPattern.debugMessageSymbolRegex, "")
-
-                debugMessageMap[sourceUrl] = "$time $printMsg"
-            }
-        }
     }
 
     @Synchronized
@@ -110,31 +98,6 @@ object Debug {
 
     val hasActiveSession: Boolean
         @Synchronized get() = activeSession != null
-
-    fun startChecking(source: BookSource) {
-        isChecking = true
-        debugTimeMap[source.bookSourceUrl] = System.currentTimeMillis()
-        debugMessageMap[source.bookSourceUrl] = "${debugTimeFormat.format(Date(0))} 开始校验"
-    }
-
-    fun finishChecking() {
-        isChecking = false
-    }
-
-    fun getRespondTime(sourceUrl: String): Long {
-        val responseTime = debugTimeMap[sourceUrl]
-        return if (responseTime == null) CheckSource.timeout else responseTime
-    }
-
-    fun updateFinalMessage(sourceUrl: String, state: String) {
-        if (debugTimeMap[sourceUrl] != null && debugMessageMap[sourceUrl] != null) {
-            val spendingTime = System.currentTimeMillis() - debugTimeMap[sourceUrl]!!
-            debugTimeMap[sourceUrl] =
-                if (state == "校验成功") spendingTime else CheckSource.timeout + spendingTime
-            val printTime = debugTimeFormat.format(Date(spendingTime))
-            debugMessageMap[sourceUrl] = "$printTime $state"
-        }
-    }
 
     suspend fun startDebug(scope: CoroutineScope, rssSource: RssSource): Session {
         val session = replaceSession(rssSource.sourceUrl)
