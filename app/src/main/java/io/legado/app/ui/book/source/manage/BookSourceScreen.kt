@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.source.manage
 
+import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +55,7 @@ import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
@@ -121,6 +126,7 @@ fun BookSourceScreen(
     var checkSheet by remember { mutableStateOf<CheckSheet?>(null) }
     var checkOptionsDraft by remember { mutableStateOf(state.checkOptions) }
     var pendingExportIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showExportSheet by remember { mutableStateOf(false) }
     var showImportOptions by remember { mutableStateOf(false) }
     var showCustomGroup by remember { mutableStateOf(false) }
     val importSuccess = state.importState as? BaseImportUiState.Success
@@ -146,10 +152,22 @@ fun BookSourceScreen(
         }
     }
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboard.current
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
-                is BookSourceEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
+                is BookSourceEffect.ShowSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = effect.message,
+                        actionLabel = effect.actionLabel,
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed && effect.url != null) {
+                        clipboardManager.setClipEntry(
+                            ClipEntry(ClipData.newPlainText("url", effect.url))
+                        )
+                    }
+                }
             }
         }
     }
@@ -177,6 +195,20 @@ fun BookSourceScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             uri?.let { onIntent(BookSourceIntent.Export(it, pendingExportIds)) }
         }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        title = stringResource(R.string.export),
+        onSelectSysDir = {
+            showExportSheet = false
+            exportDocument.launch("bookSource.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            onIntent(BookSourceIntent.Upload(pendingExportIds))
+        },
+        allowExtensions = arrayOf("json"),
+    )
     SourceInputDialog(
         show = showOnlineImport,
         title = stringResource(R.string.import_on_line),
@@ -432,7 +464,7 @@ fun BookSourceScreen(
             },
             ActionItem(stringResource(R.string.export)) {
                 pendingExportIds = selectedIds
-                exportDocument.launch("bookSource.json")
+                showExportSheet = true
             },
         ),
         onDeleteSelected = { deleteIds = it as Set<String> },

@@ -10,6 +10,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookSourceCheckGateway
 import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
@@ -50,6 +51,7 @@ import kotlinx.coroutines.launch
 class BookSourceViewModel(
     private val application: Application,
     private val repository: BookSourceRepository,
+    private val uploadRepository: UploadRepository,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val checkGateway: BookSourceCheckGateway,
     private val checkSettingsGateway: CheckSourceSettingsGateway,
@@ -242,6 +244,7 @@ class BookSourceViewModel(
             BookSourceIntent.CancelCheck -> checkJob?.cancel()
             is BookSourceIntent.Import -> importSources(intent.text)
             is BookSourceIntent.Export -> exportSources(intent.uri, intent.ids)
+            is BookSourceIntent.Upload -> uploadSources(intent.ids)
             is BookSourceIntent.ToggleImportItem -> updateImportItems { items ->
                 items.mapIndexed { index, item -> if (index == intent.index) item.copy(isSelected = !item.isSelected) else item }
             }
@@ -504,6 +507,27 @@ class BookSourceViewModel(
                 ?: error("无法打开导出文件")
         }.onSuccess { _effects.tryEmit(BookSourceEffect.ShowSnackbar("导出成功")) }
             .onFailure { _effects.tryEmit(BookSourceEffect.ShowSnackbar("导出失败: ${it.localizedMessage}")) }
+    }
+
+    private fun uploadSources(ids: Set<String>) = launch {
+        runCatching {
+            val selected = repository.getAll().filter { ids.isEmpty() || it.bookSourceUrl in ids }
+            uploadRepository.upload(
+                fileName = "bookSource.json",
+                file = GSON.toJson(selected),
+                contentType = "application/json",
+            )
+        }.onSuccess { url ->
+            _effects.tryEmit(
+                BookSourceEffect.ShowSnackbar(
+                    message = "上传成功: $url",
+                    actionLabel = "复制链接",
+                    url = url,
+                )
+            )
+        }.onFailure {
+            _effects.tryEmit(BookSourceEffect.ShowSnackbar("上传失败: ${it.localizedMessage}"))
+        }
     }
 
 }

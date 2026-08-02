@@ -95,6 +95,7 @@ sealed interface BookSourceIntent {
     data object CancelCheck : BookSourceIntent
     data class Import(val text: String) : BookSourceIntent
     data class Export(val uri: Uri, val ids: Set<String>) : BookSourceIntent
+    data class Upload(val ids: Set<String>) : BookSourceIntent
     data class ToggleImportItem(val index: Int) : BookSourceIntent
     data class ToggleImportAll(val selected: Boolean) : BookSourceIntent
     data class UpdateImportItem(val index: Int, val source: BookSource) : BookSourceIntent
@@ -108,5 +109,9 @@ sealed interface BookSourceIntent {
 }
 
 sealed interface BookSourceEffect {
-    data class ShowSnackbar(val message: String) : BookSourceEffect
+    data class ShowSnackbar(
+        val message: String,
+        val actionLabel: String? = null,
+        val url: String? = null,
+    ) : BookSourceEffect
 }
