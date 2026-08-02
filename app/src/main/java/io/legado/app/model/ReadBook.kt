@@ -27,6 +27,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
+import io.legado.app.model.ReadBook.callBack
+import io.legado.app.model.ReadBook.publishSnapshot
+import io.legado.app.model.ReadBook.renderCallBack
+import io.legado.app.model.ReadBook.snapshot
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.TextFile
 import io.legado.app.model.translation.TranslationChapterState
@@ -41,8 +45,8 @@ import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
-import io.legado.app.ui.book.read.pageestimate.ChapterLengthInfo
 import io.legado.app.ui.book.read.pageestimate.ChapterContentHasher
+import io.legado.app.ui.book.read.pageestimate.ChapterLengthInfo
 import io.legado.app.ui.book.read.pageestimate.LocalPageEstimateCalibrationStore
 import io.legado.app.ui.book.read.pageestimate.LocalPageEstimateMetrics
 import io.legado.app.ui.book.read.pageestimate.PageEstimateConfig
@@ -51,8 +55,8 @@ import io.legado.app.ui.book.read.pageestimate.RoomExactChapterPageCountStore
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageCoordinator
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageState
 import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.dpToPx
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
@@ -69,7 +73,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -1421,6 +1424,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         resetPageOffset: Boolean,
         preserveReadAloudPosition: Boolean,
     ) {
+        if (!isCurrentLocalChapter(chapter)) return
         val pageEstimateGeneration = wholeBookPageCoordinator.generation
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
         val displayTitle = chapter.getDisplayTitle(
@@ -1448,6 +1452,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             this, book, bookSource, chapter, displayTitle, contents, simulatedChapterSize
         ).apply {
             this.pageEstimateGeneration = pageEstimateGeneration
+        }
+        if (!isCurrentLocalChapter(chapter)) {
+            textChapter.cancelLayout()
+            return
         }
         when (val offset = chapter.index - durChapterIndex) {
             0 -> curChapterLoadingLock.withLock {
@@ -1680,20 +1688,59 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun onChapterListUpdated(newBook: Book) {
         if (newBook.isSameNameAuthor(book)) {
+            // 本地 TXT 改目录规则后，旧目录中的章节序号已经不再能表示同一段正文。
+            // 在替换目录前保留当前章节的文件偏移，随后在新目录中重新定位，避免目录
+            // 已更新而阅读页仍显示旧 TextChapter 的标题和序号。
+            val currentChapterStart = curTextChapter?.chapter?.start
             book = newBook
             chapterSize = newBook.totalChapterNum
             simulatedChapterSize = newBook.simulatedTotalChapterNum()
-            if (simulatedChapterSize > 0 && durChapterIndex > simulatedChapterSize - 1) {
+            if (newBook.isLocalTxt && currentChapterStart != null) {
+                val chapters = appDb.bookChapterDao.getChapterList(newBook.bookUrl)
+                val matchedIndex = chapters.indexOfFirst { chapter ->
+                    val start = chapter.start
+                    val end = chapter.end
+                    start != null && end != null && currentChapterStart in start until end
+                }
+                durChapterIndex = if (matchedIndex >= 0) {
+                    matchedIndex
+                } else {
+                    durChapterIndex.coerceIn(0, (simulatedChapterSize - 1).coerceAtLeast(0))
+                }
+                durChapterPos = 0
+                newBook.durChapterIndex = durChapterIndex
+                newBook.durChapterPos = durChapterPos
+            } else if (simulatedChapterSize > 0 && durChapterIndex > simulatedChapterSize - 1) {
                 durChapterIndex = simulatedChapterSize - 1
+            }
+            clearTextChapter()
+            synchronized(this) {
+                loadingChapters.clear()
+                downloadedChapters.clear()
+                downloadFailChapters.clear()
             }
             requestWholeBookPageEstimate()
             publishSnapshot()
             if (callBack == null) {
-                clearTextChapter()
+                return
             } else {
                 loadContent(true)
             }
         }
+    }
+
+    /**
+     * TXT 目录重建不会取消尚在读文件的旧内容任务。旧任务回调时章节索引可能仍然
+     * 合法，但标题和偏移已经属于上一版目录，不能再进入排版或覆盖当前正文。
+     */
+    private fun isCurrentLocalChapter(chapter: BookChapter): Boolean {
+        if (book?.isLocalTxt != true) return true
+        val current =
+            appDb.bookChapterDao.getChapter(chapter.bookUrl, chapter.index) ?: return false
+        return current.url == chapter.url &&
+                current.title == chapter.title &&
+                current.start == chapter.start &&
+                current.end == chapter.end
     }
 
     private fun clearExpiredChapterLoadingJob(clearAll: Boolean = false) {

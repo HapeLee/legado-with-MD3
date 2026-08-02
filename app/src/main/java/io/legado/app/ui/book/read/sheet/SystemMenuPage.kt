@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
@@ -904,6 +905,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         context.getString(R.string.text_processing)
     ),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
+    ReadMenuButtonInfo(
+        "refresh_current",
+        Icons.Default.Refresh,
+        context.getString(R.string.menu_refresh_dur)
+    ),
     ReadMenuButtonInfo(
         "ai_summary",
         Icons.Default.AutoAwesome,

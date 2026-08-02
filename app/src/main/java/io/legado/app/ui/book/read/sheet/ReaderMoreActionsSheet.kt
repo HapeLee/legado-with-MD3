@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Toc
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -381,6 +382,9 @@ private fun moreActionSpecs(
         "text_processing", stringResource(R.string.text_processing), Icons.Default.FindReplace,
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextProcessing)) }),
     MoreActionSpec(
+        "highlight_rule", stringResource(R.string.highlight_rule_config), Icons.Default.Tune,
+        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig)) }),
+    MoreActionSpec(
         "reverse_content", stringResource(R.string.reverse_content), Icons.Default.SwapVert,
         onClick = { dispatch(ReadBookIntent.MenuReverseContent) }),
     MoreActionSpec(
@@ -411,6 +415,9 @@ private fun moreActionSpecs(
         "cover_progress", stringResource(R.string.cover_book_progress), Icons.Default.Sync,
         applicable = state.isReadingProgressSyncConfigured,
         onClick = { dispatch(ReadBookIntent.MenuCoverProgress) }),
+    MoreActionSpec(
+        "bottom_button_config", stringResource(R.string.config_btn), Icons.Default.Settings,
+        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig)) }),
     MoreActionSpec(
         "log", stringResource(R.string.log), Icons.Default.BugReport,
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AppLog)) }),

@@ -581,6 +581,7 @@ class TocViewModel(
             kotlin.runCatching {
                 LocalBook.getChapterList(book).let {
                     bookRepository.replaceChaptersAndUpdateBook(book, it)
+                    ReadBook.onChapterListUpdated(book)
                 }
             }.onFailure {
                 AppLog.put("LoadTocError:${it.localizedMessage}", it)
