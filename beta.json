@@ -1,49 +1,49 @@
 {
   "tag_name": "3.26.16-beta.12",
   "name": "Pre-release 3.26.16-beta.12",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 优化导出\n* feat: 阅读界面新增一些设置项入口和目录相关优化\n* feat: 书源列表导出URL\n* fix: expose JS crypto utilities to WebView",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 导航栏可以调整未选中已选中\n* fix: 一些朗读问题\n* fix: restore verification after source screen updates\n* feat: 书架书籍封面增加简介放在下面的神秘功能\n* 更新内容\n* fix: 列表简介兜底剥离书源状态面板\n* fix: 书架简介改用书源列表规则那一份\n* fix: 书签跳转位置有误\n* 修复书源页面无障碍相关问题，修复书源 替换规则管理页面底部操作，读屏软件无法聚焦的问题\n* test: 调试夹具补 kind/wordCount 字段\n* test: 修复 OtherConfigViewModelTest 编译失败\n* perf: 减少默认封面与渐变边缘的绘制期分配\n* test: 补简介摘要格式化用例\n* feat: 统一简介文本处理\n* 修复：书源管理，点击某书源菜单搜索一本书时，不在指定书源里搜索的问题\n* feat: 优化导出\n* feat: 阅读界面新增一些设置项入口和目录相关优化\n* feat: 书源列表导出URL\n* fix: expose JS crypto utilities to WebView",
   "prerelease": true,
   "created_at": "2026-08-01T17:37:12Z",
   "assets": [
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.12/legado-3.26.16-beta.12-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-02T18:29:20Z",
+      "created_at": "2026-08-03T18:42:22Z",
       "download_count": 0,
-      "id": 499158784,
+      "id": 500404820,
       "name": "legado-3.26.16-beta.12-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/499158784"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/500404820"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.12/legado-3.26.16-beta.12-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-02T18:29:20Z",
+      "created_at": "2026-08-03T18:42:22Z",
       "download_count": 0,
-      "id": 499158786,
+      "id": 500404824,
       "name": "legado-3.26.16-beta.12-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/499158786"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/500404824"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.12/legado-3.26.16-beta.12.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-02T18:29:20Z",
+      "created_at": "2026-08-03T18:42:22Z",
       "download_count": 0,
-      "id": 499158787,
+      "id": 500404819,
       "name": "legado-3.26.16-beta.12.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/499158787"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/500404819"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.12/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-08-02T18:29:20Z",
+      "created_at": "2026-08-03T18:42:22Z",
       "download_count": 0,
-      "id": 499158785,
+      "id": 500404822,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/499158785"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/500404822"
     }
   ]
 }
