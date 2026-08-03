@@ -5,6 +5,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -16,9 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -171,17 +170,17 @@ fun SearchBookListItem(
                 )
             }
 
-            val kinds = book.getKindList()
+            val kinds = remember(book.wordCount, book.kind) { book.getKindList() }
             if (kinds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
-                val lazyListState = rememberLazyListState()
-                LazyRow(
-                    state = lazyListState,
+                val scrollState = rememberScrollState()
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fadingEdge(lazyListState, gradientWidth = 8.dp)
+                        .fadingEdge(scrollState, gradientWidth = 8.dp)
+                        .horizontalScroll(scrollState)
                 ) {
-                    items(kinds) { kind ->
+                    kinds.forEach { kind ->
                         SearchBookTagChip(text = kind)
                         Spacer(modifier = Modifier.width(6.dp))
                     }

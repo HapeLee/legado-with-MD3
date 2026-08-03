@@ -138,7 +138,7 @@ fun SearchBookPreviewSheet(
                 }
             }
 
-            val kinds = book.getKindList()
+            val kinds = remember(book.wordCount, book.kind) { book.getKindList() }
             if (kinds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 val lazyListState = rememberLazyListState()

@@ -148,7 +148,7 @@ fun WaterfallItem(
                     )
                 }
 
-                val kinds = book.getKindList()
+                val kinds = remember(book.wordCount, book.kind) { book.getKindList() }
                 if (kinds.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     FlowRow(
