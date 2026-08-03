@@ -313,12 +313,20 @@ abstract class BaseReadAloudService : BaseService(),
                     pos = tmp
                 }
             }
-            var preparedNowSpeak = preparedChapter.getParagraphNum(
+            val usePreparedPlaybackQueue = useSpeechPlaybackQueue && !preparedPlaybackQueue.isEmpty
+            var preparedNowSpeak = preparedChapter.getParagraphNumAtOrAfter(
                 preparedReadAloudNumber + 1,
                 preparedReadAloudByPage,
             ) - 1
+            if (!usePreparedPlaybackQueue && preparedNowSpeak !in preparedContentList.indices) {
+                AppLog.put(
+                    "启动朗读失败：无法定位朗读段落 position=$preparedReadAloudNumber " +
+                        "pageIndex=$pageIndex startPos=$startPos"
+                )
+                return@execute
+            }
             val moveToLast = toLast
-            if (!preparedReadAloudByPage && startPos == 0 && !moveToLast) {
+            if (!usePreparedPlaybackQueue && !preparedReadAloudByPage && startPos == 0 && !moveToLast) {
                 pos = page.chapterPosition -
                         preparedChapter.paragraphs[preparedNowSpeak].chapterPosition
             }
@@ -331,7 +339,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
             }
             var preparedParagraphStartPos = pos
-            if (useSpeechPlaybackQueue && !preparedPlaybackQueue.isEmpty) {
+            if (usePreparedPlaybackQueue) {
                 preparedPlaybackQueue.cursorAt(preparedReadAloudNumber)?.let { cursor ->
                     preparedPlaybackCursor = cursor
                     preparedContentList = preparedPlaybackQueue.cues.map { it.text }
@@ -526,11 +534,19 @@ abstract class BaseReadAloudService : BaseService(),
         }
         if (nowSpeak > 0) {
             playStop()
+            var foundPreviousReadableParagraph = false
             do {
                 nowSpeak--
                 readAloudNumber -= contentList[nowSpeak].length + 1 + paragraphStartPos
                 paragraphStartPos = 0
-            } while (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex))
+                foundPreviousReadableParagraph =
+                    !contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)
+            } while (!foundPreviousReadableParagraph && nowSpeak > 0)
+            if (!foundPreviousReadableParagraph) {
+                toLast = true
+                ReadBook.moveToPrevChapter(true)
+                return
+            }
             textChapter?.let {
                 if (readAloudByPage) {
                     val paragraphs = it.getParagraphs(true)
