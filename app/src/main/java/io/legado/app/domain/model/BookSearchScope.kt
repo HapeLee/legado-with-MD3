@@ -53,6 +53,9 @@ data class BookSearchScope(val raw: String) {
 
     companion object {
 
+        fun encodeSource(name: String, url: String): String =
+            encodeSources(listOf(ScopeSourceItem(name, url)))
+
         fun encodeGroups(groups: List<String>): String {
             val selected = groups.filter { it.isNotBlank() }
             return if (selected.isEmpty()) {
