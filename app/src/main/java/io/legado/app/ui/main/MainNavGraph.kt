@@ -29,6 +29,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.R
+import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.model.Download
 import io.legado.app.ui.about.AboutEffect
@@ -77,7 +78,6 @@ import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
 import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchRouteScreen
-import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.search.SearchViewModel
 import io.legado.app.ui.book.searchContent.SearchContentRouteScreen
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
@@ -162,8 +162,9 @@ fun MainActivity.mainEntryProvider(
             onLoginSource = {
                 onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, it))
             },
-            onSearchSource = { sourceUrl ->
-                onNavigateToRoute(MainRouteSearch(null, SearchScope(sourceUrl).toString()))
+            onSearchSource = { sourceName, sourceUrl ->
+                val scopeRaw = BookSearchScope.encodeSource(sourceName, sourceUrl)
+                onNavigateToRoute(MainRouteSearch(null, scopeRaw))
             },
             onDebugSource = { sourceUrl ->
                 onNavigateToRoute(MainRouteBookSourceDebug(sourceUrl))

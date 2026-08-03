@@ -63,6 +63,8 @@ internal fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookshelfFolderLayoutListLandscape = compatDsInt(PreferKey.bookshelfFolderLayoutListLandscape) ?: 1,
     bookshelfGridLayout = compatDsInt(PreferKey.bookshelfGridLayout) ?: 0,
     bookshelfLayoutCompact = compatDsBoolean(PreferKey.bookshelfLayoutCompact) ?: false,
+    bookshelfListIntroBelowContent = compatDsBoolean(PreferKey.bookshelfListIntroBelowContent)
+        ?: false,
     bookshelfShowDivider = compatDsBoolean(PreferKey.bookshelfShowDivider) ?: true,
     bookshelfTitleSmallFont = compatDsBoolean(PreferKey.bookshelfTitleSmallFont) ?: false,
     bookshelfTitleCenter = compatDsBoolean(PreferKey.bookshelfTitleCenter) ?: true,
@@ -112,6 +114,7 @@ internal fun BookshelfSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfFolderLayoutListLandscape to bookshelfFolderLayoutListLandscape,
     PreferKey.bookshelfGridLayout to bookshelfGridLayout,
     PreferKey.bookshelfLayoutCompact to bookshelfLayoutCompact,
+    PreferKey.bookshelfListIntroBelowContent to bookshelfListIntroBelowContent,
     PreferKey.bookshelfShowDivider to bookshelfShowDivider,
     PreferKey.bookshelfTitleSmallFont to bookshelfTitleSmallFont,
     PreferKey.bookshelfTitleCenter to bookshelfTitleCenter,

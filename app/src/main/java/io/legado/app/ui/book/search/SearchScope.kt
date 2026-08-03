@@ -160,9 +160,7 @@ data class SearchScope(private var scope: String) {
         }
 
         private fun encodeSourceScope(name: String, url: String): String {
-            return BookSearchScope.encodeSources(
-                listOf(ScopeSourceItem(sanitizeSourceName(name), url))
-            )
+            return BookSearchScope.encodeSource(sanitizeSourceName(name), url)
         }
 
         private fun encodeSourceScope(sources: List<BookSourcePart>): String {

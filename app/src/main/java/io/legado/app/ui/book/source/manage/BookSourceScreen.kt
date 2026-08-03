@@ -4,7 +4,6 @@ import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,17 +12,20 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +39,10 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,7 +88,7 @@ fun BookSourceRouteScreen(
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
     onLoginSource: (String) -> Unit,
-    onSearchSource: (String) -> Unit,
+    onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,7 +114,7 @@ fun BookSourceScreen(
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
     onLoginSource: (String) -> Unit,
-    onSearchSource: (String) -> Unit,
+    onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
     effects: Flow<BookSourceEffect>,
 ) {
@@ -153,6 +159,7 @@ fun BookSourceScreen(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboard.current
+    val cancelLabel = stringResource(R.string.cancel)
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
@@ -175,7 +182,7 @@ fun BookSourceScreen(
         val progress = state.checkProgress ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message = progress,
-            actionLabel = context.getString(R.string.cancel),
+            actionLabel = cancelLabel,
             withDismissAction = false,
             duration = androidx.compose.material3.SnackbarDuration.Indefinite,
         )
@@ -233,6 +240,7 @@ fun BookSourceScreen(
         topBarActions = {
             Box {
                 SmallPlainButton(
+                    modifier = Modifier.minimumInteractiveComponentSize(),
                     icon = AppIcons.MoreVert,
                     contentDescription = stringResource(R.string.menu),
                     onClick = { showImportOptions = true },
@@ -247,16 +255,25 @@ fun BookSourceScreen(
                     RoundDropdownMenuItem(
                         text = stringResource(R.string.keep_original_name),
                         isSelected = importSuccess?.keepOriginalName == true,
+                        modifier = Modifier.semantics {
+                            this.selected = importSuccess?.keepOriginalName == true
+                        },
                         onClick = { onIntent(BookSourceIntent.SetImportKeepName(importSuccess?.keepOriginalName != true)) },
                     )
                     RoundDropdownMenuItem(
                         text = stringResource(R.string.keep_group),
                         isSelected = importSuccess?.keepOriginalGroup == true,
+                        modifier = Modifier.semantics {
+                            this.selected = importSuccess?.keepOriginalGroup == true
+                        },
                         onClick = { onIntent(BookSourceIntent.SetImportKeepGroup(importSuccess?.keepOriginalGroup != true)) },
                     )
                     RoundDropdownMenuItem(
                         text = stringResource(R.string.keep_enable),
                         isSelected = importSuccess?.keepOriginalEnable == true,
+                        modifier = Modifier.semantics {
+                            this.selected = importSuccess?.keepOriginalEnable == true
+                        },
                         onClick = { onIntent(BookSourceIntent.SetImportKeepEnable(importSuccess?.keepOriginalEnable != true)) },
                     )
                     RoundDropdownMenuItem(stringResource(R.string.diy_source_group), onClick = {
@@ -489,6 +506,7 @@ fun BookSourceScreen(
             RoundDropdownMenuItem(
                 text = stringResource(R.string.group_sources_by_domain),
                 isSelected = state.groupByDomain,
+                modifier = Modifier.semantics { this.selected = state.groupByDomain },
                 onClick = { dismiss(); onIntent(BookSourceIntent.ToggleGroupByDomain) },
             )
             PillDivider()
@@ -514,6 +532,7 @@ fun BookSourceScreen(
             RoundDropdownMenuItem(
                 text = stringResource(R.string.sort_desc),
                 isSelected = !state.sortAscending,
+                modifier = Modifier.semantics { this.selected = !state.sortAscending },
                 onClick = { dismiss(); onIntent(BookSourceIntent.ToggleSortDirection) },
             )
         }
@@ -537,11 +556,38 @@ fun BookSourceScreen(
                                 color = LegadoTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .semantics { heading() }
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }
                     }
                     item(key = item.id, contentType = "book-source") {
+                        val canReorder = state.sort == BookSourceSort.Default && !state.groupByDomain
+                        val enabledState = stringResource(
+                            if (item.enabled) R.string.enabled else R.string.disabled
+                        )
+                        val discoveryState = if (item.hasExploreUrl) {
+                            stringResource(
+                                if (item.enabledExplore) R.string.enabled_explore
+                                else R.string.disabled_explore
+                            )
+                        } else {
+                            null
+                        }
+                        val reorderHint = if (canReorder) {
+                            stringResource(R.string.a11y_long_press_reorder)
+                        } else {
+                            null
+                        }
+                        val itemDescription = listOfNotNull(
+                            item.name,
+                            item.domain.takeUnless { it == "#" },
+                            item.group,
+                            enabledState,
+                            discoveryState,
+                            item.checkMessage,
+                            reorderHint,
+                        ).joinToString()
                         ReorderableSelectionItem(
                             state = reorderState,
                             key = item.id,
@@ -567,7 +613,7 @@ fun BookSourceScreen(
                             ).joinToString(" · ").ifBlank { null },
                             isEnabled = item.enabled,
                             isSelected = item.id in selectedIds,
-                            canReorder = state.sort == BookSourceSort.Default && !state.groupByDomain,
+                            canReorder = canReorder,
                             inSelectionMode = selectedIds.isNotEmpty(),
                             onToggleSelection = { onIntent(BookSourceIntent.ToggleSelection(item.id)) },
                             onEnabledChange = {
@@ -578,16 +624,22 @@ fun BookSourceScreen(
                                     )
                                 )
                             },
-                            onClickEdit = { onEditSource(item.id) },
+                            contentDescription = itemDescription,
                             trailingAction = {
+                                SmallPlainButton(
+                                    modifier = Modifier.minimumInteractiveComponentSize(),
+                                    icon = AppIcons.Edit,
+                                    contentDescription = stringResource(R.string.edit),
+                                    onClick = { onEditSource(item.id) },
+                                )
                                 BookSourceItemMenu(
                                     item = item,
-                                    canMoveToEdge = state.sort == BookSourceSort.Default && !state.groupByDomain,
+                                    canMoveToEdge = canReorder,
                                     onMoveToEdge = { toTop ->
                                         onIntent(BookSourceIntent.MoveToEdge(setOf(item.id), toTop))
                                     },
                                     onLogin = { onLoginSource(item.id) },
-                                    onSearch = { onSearchSource(item.id) },
+                                    onSearch = { onSearchSource(item.name, item.id) },
                                     onDebug = { onDebugSource(item.id) },
                                     onDelete = { deleteIds = setOf(item.id) },
                                     onSetExploreEnabled = { enabled ->
@@ -697,6 +749,7 @@ private fun CheckBookSourceSheet(
 
 private enum class CheckSheet { Run, Settings }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BookSourceItemMenu(
     item: BookSourceItemUi,
@@ -711,6 +764,7 @@ private fun BookSourceItemMenu(
     var expanded by remember { mutableStateOf(false) }
     Box {
         SmallPlainButton(
+            modifier = Modifier.minimumInteractiveComponentSize(),
             icon = AppIcons.MoreVert,
             contentDescription = stringResource(R.string.menu),
             onClick = { expanded = true },
@@ -765,6 +819,7 @@ private fun SortMenuItem(
 ) = RoundDropdownMenuItem(
     text = stringResource(textRes),
     isSelected = state.sort == sort,
+    modifier = Modifier.semantics { this.selected = state.sort == sort },
     onClick = { dismiss(); onIntent(BookSourceIntent.SetSort(sort)) },
 )
 
@@ -848,6 +903,7 @@ private fun GroupFilterSectionTitle(text: String) {
         color = LegadoTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics { heading() }
             .padding(horizontal = 4.dp, vertical = 6.dp),
     )
 }
@@ -864,12 +920,17 @@ private fun GroupFilterItem(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .clip(shape = RoundedCornerShape(12.dp))
             .background(
                 color = if (selected) LegadoTheme.colorScheme.primaryContainer
                 else LegadoTheme.colorScheme.onSheetContent
             )
-            .clickable { onSelect(value) }
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = { onSelect(value) },
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         AppText(

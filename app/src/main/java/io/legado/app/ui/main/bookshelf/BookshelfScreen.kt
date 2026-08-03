@@ -863,8 +863,6 @@ fun BookshelfScreen(
                                         ?: emptyList(),
                                     countText = countText,
                                     isCompact = uiState.settings.bookshelfLayoutCompact,
-                                    titleSmallFont = uiState.settings.bookshelfTitleSmallFont,
-                                    titleCenter = uiState.settings.bookshelfTitleCenter,
                                     titleMaxLines = uiState.settings.bookshelfTitleMaxLines,
                                     coverShadow = uiState.settings.bookshelfCoverShadow,
                                     onClick = {
