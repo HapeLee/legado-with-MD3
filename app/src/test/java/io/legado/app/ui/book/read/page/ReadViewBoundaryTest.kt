@@ -31,6 +31,39 @@ class ReadViewBoundaryTest {
     }
 
     @Test
+    fun `ReadView 正文保持为可刷新的读屏文本节点`() {
+        val source = stripComments(readViewSource())
+        val contracts = mapOf(
+            "读屏焦点" to Regex(
+                """ViewCompat\.setScreenReaderFocusable\(\s*this\s*,\s*true\s*\)"""
+            ),
+            "绘制子树排除" to Regex(
+                """importantForAccessibility\s*=\s*View\.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"""
+            ),
+            "正文文本" to Regex("""info\.text\s*=\s*accessibilityPageText"""),
+            "当前页文本同步" to Regex(
+                """val\s+text\s*=\s*pageFactory\.curPage\.text\s+updateAccessibilityPageText\(\s*text\s*\)"""
+            ),
+            "触摸探索归属" to Regex(
+                """override\s+fun\s+onInterceptHoverEvent\s*\([^)]*\)\s*:\s*Boolean\s*=\s*true"""
+            ),
+            "翻页内容通知" to Regex(
+                """sendAccessibilityEvent\(\s*AccessibilityEvent\.TYPE_WINDOW_CONTENT_CHANGED\s*\)"""
+            ),
+            "文本变更类型" to Regex(
+                """event\.contentChangeTypes\s*=\s*AccessibilityEvent\.CONTENT_CHANGE_TYPE_TEXT"""
+            ),
+        )
+        val missing = contracts.filterValues { !it.containsMatchIn(source) }.keys
+        assertTrue(
+            "ReadView 的页级读屏契约缺失：${missing.joinToString()}。\n" +
+                "Canvas 正文没有独立文本节点；必须由 ReadView 保持可聚焦、提供当前页文本，" +
+                "并在翻页时通知无障碍服务刷新。",
+            missing.isEmpty(),
+        )
+    }
+
+    @Test
     fun `TextPageFactory 不引用业务单例`() {
         val violations = businessSingletonViolations(
             mainSourceFile(

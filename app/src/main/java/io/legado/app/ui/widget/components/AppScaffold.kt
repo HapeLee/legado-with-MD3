@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -105,7 +106,9 @@ fun AppScaffold(
                                 )
                                 .then(
                                     if (contentDrawsBehindBars) Modifier
-                                    else Modifier.padding(scaffoldPadding)
+                                    else Modifier
+                                        .padding(scaffoldPadding)
+                                        .consumeWindowInsets(scaffoldPadding)
                                 )
                         ) {
                             content(
@@ -147,7 +150,9 @@ fun AppScaffold(
                                 )
                                 .then(
                                     if (contentDrawsBehindBars) Modifier
-                                    else Modifier.padding(scaffoldPadding)
+                                    else Modifier
+                                        .padding(scaffoldPadding)
+                                        .consumeWindowInsets(scaffoldPadding)
                                 )
                         ) {
                             content(
