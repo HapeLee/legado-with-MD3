@@ -3,8 +3,14 @@ package io.legado.app.ui.widget.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.tappableElement
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
@@ -72,10 +78,15 @@ fun SelectionBottomBar(
     val selectAllDescription = stringResource(R.string.select_all)
     val invertSelectionDescription = stringResource(R.string.invert_selection)
     val moreActionsDescription = stringResource(R.string.more_menu)
+    val safeModifier = modifier.windowInsetsPadding(
+        WindowInsets.navigationBars
+            .union(WindowInsets.tappableElement)
+            .union(WindowInsets.ime)
+    )
 
     if (isMiuix) {
         MiuixFloatingToolbar(
-            modifier = modifier
+            modifier = safeModifier
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -135,7 +146,7 @@ fun SelectionBottomBar(
         }
     } else {
         HorizontalFloatingToolbar(
-            modifier = modifier,
+            modifier = safeModifier,
             expanded = true,
             leadingContent = {
                 IconButton(onClick = onSelectAll) {
