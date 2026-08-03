@@ -50,7 +50,7 @@ navigation3 = "1.1.4"
 # 1.2.0-alpha02 修复了预测式返回手势中 NavigationEventInput.dispatchOnBackProgressed
 # 对已分离输入抛 IllegalStateException 的崩溃（1.1.2 仍会 checkNotNull 抛异常）。
 # 覆盖 navigation3 1.1.4 传递依赖的 1.1.2，等上游发布含该修复的稳定版后可移除。
-navigationevent = "1.2.0-alpha02"
+navigationevent = "1.2.0-alpha03"
 markwon = "4.6.2"
 material = "1.14.0"
 material3 = "1.5.0-alpha23"
