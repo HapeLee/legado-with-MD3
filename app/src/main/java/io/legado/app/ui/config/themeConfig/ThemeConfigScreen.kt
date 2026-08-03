@@ -396,17 +396,6 @@ fun ThemeConfigScreen(
                             )
                         }
                     )
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.nav_label_mode),
-                        selectedValue = appShell.labelVisibilityMode,
-                        displayEntries = stringArrayResource(R.array.label_vis_mode),
-                        entryValues = stringArrayResource(R.array.label_vis_mode_value),
-                        onValueChange = {
-                            onIntent(
-                                ThemeConfigIntent.SetLabelVisibilityMode(it)
-                            )
-                        }
-                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.book_info_page)) {
@@ -964,6 +953,9 @@ fun ThemeConfigScreen(
         onSetDefault = { onIntent(ThemeConfigIntent.SetDefaultHomePage(it)) },
         onRequestNavigationIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
         onClearNavigationIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
+        onSetLabelVisibilityMode = {
+            onIntent(ThemeConfigIntent.SetLabelVisibilityMode(it))
+        },
     )
 
 

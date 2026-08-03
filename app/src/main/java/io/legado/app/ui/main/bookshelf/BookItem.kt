@@ -757,10 +757,12 @@ fun BookItem(
                                 text = label,
                                 backgroundColor = if (colorPair != null && colorPair.bgColor != 0) Color(
                                     colorPair.bgColor
-                                ) else LegadoTheme.colorScheme.cardPrimaryContainer,
-                                contentColor = if (colorPair != null && colorPair.textColor != 0) Color(colorPair.textColor) else LegadoTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                ) else LegadoTheme.colorScheme.secondaryContainer,
+                                contentColor = if (colorPair != null && colorPair.textColor != 0) Color(
+                                    colorPair.textColor
+                                ) else LegadoTheme.colorScheme.primary,
                                 cornerRadius = 4.dp,
-                                horizontalPadding = 4.dp,
+                                horizontalPadding = 6.dp,
                                 verticalPadding = 2.dp,
                                 textStyle = LegadoTheme.typography.labelSmallEmphasized
                             )

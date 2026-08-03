@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -22,18 +22,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
+import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.domain.model.settings.AppShellSettings
 
 private data class NavIconDestination(
     val key: String,
     @param:StringRes val labelRes: Int,
-    val path: String,
+    val unselectedPath: String,
+    val selectedPath: String,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,12 +52,23 @@ fun NavIconManageSheet(
         NavIconDestination(
             "home",
             R.string.home,
-            settings.navIconHome
+            settings.navIconHome,
+            settings.navIconHomeSelected,
         ),
-        NavIconDestination("bookshelf", R.string.bookshelf, settings.navIconBookshelf),
-        NavIconDestination("explore", R.string.discovery, settings.navIconExplore),
-        NavIconDestination("rss", R.string.rss, settings.navIconRss),
-        NavIconDestination("my", R.string.my, settings.navIconMy),
+        NavIconDestination(
+            "bookshelf",
+            R.string.bookshelf,
+            settings.navIconBookshelf,
+            settings.navIconBookshelfSelected,
+        ),
+        NavIconDestination(
+            "explore",
+            R.string.discovery,
+            settings.navIconExplore,
+            settings.navIconExploreSelected,
+        ),
+        NavIconDestination("rss", R.string.rss, settings.navIconRss, settings.navIconRssSelected),
+        NavIconDestination("my", R.string.my, settings.navIconMy, settings.navIconMySelected),
     )
 
     AppModalBottomSheet(
@@ -62,69 +76,60 @@ fun NavIconManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_nav_icons),
     ) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                destinations.forEach { dest ->
-                    val label = stringResource(dest.labelRes)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                Box(modifier = Modifier.weight(1f))
+                NavigationIconColumnHeader(stringResource(R.string.theme_config_nav_icon_unselected))
+                NavigationIconColumnHeader(stringResource(R.string.theme_config_nav_icon_selected))
+            }
+            destinations.forEach { destination ->
+                NormalCard(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(all = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        NormalCard(
-                            onClick = {
-                                onSelectIcon(dest.key)
-                            },
-                            cornerRadius = 12.dp,
-                            containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                        AppIcon(
+                            imageVector = AppIcons.mainDestination(
+                                destination.mainDestination,
+                                selected = false,
+                            ),
+                            contentDescription = null,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                        ) {
-                            if (dest.path.isNotEmpty()) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    AsyncImage(
-                                        model = dest.path,
-                                        contentDescription = label,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit
-                                    )
-                                    SmallTonalButton(
-                                        onClick = { onClearIcon(dest.key) },
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(4.dp)
-                                            .size(24.dp),
-                                        icon = Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.close)
-                                    )
-                                }
-                            } else {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    AppIcon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = stringResource(
-                                            R.string.theme_config_add_nav_icon,
-                                            label
-                                        ),
-                                        modifier = Modifier.size(32.dp),
-                                        tint = LegadoTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
+                                .padding(start = 4.dp)
+                                .size(24.dp),
+                        )
                         AppText(
-                            text = label,
-                            modifier = Modifier.padding(top = 8.dp),
+                            text = stringResource(destination.labelRes),
+                            style = LegadoTheme.typography.labelMediumEmphasized,
+                            modifier = Modifier.weight(1f),
+                        )
+                        NavigationIconSlot(
+                            label = stringResource(R.string.theme_config_nav_icon_unselected),
+                            path = destination.unselectedPath,
+                            onSelect = { onSelectIcon(destination.key) },
+                            onClear = { onClearIcon(destination.key) },
+                        )
+                        NavigationIconSlot(
+                            label = stringResource(R.string.theme_config_nav_icon_selected),
+                            path = destination.selectedPath,
+                            onSelect = { onSelectIcon("${destination.key}:selected") },
+                            onClear = { onClearIcon("${destination.key}:selected") },
                         )
                     }
                 }
@@ -132,3 +137,69 @@ fun NavIconManageSheet(
         }
     }
 }
+
+@Composable
+private fun NavigationIconSlot(
+    label: String,
+    path: String,
+    onSelect: () -> Unit,
+    onClear: () -> Unit,
+) {
+    NormalCard(
+        onClick = onSelect,
+        cornerRadius = 12.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.size(40.dp),
+    ) {
+        if (path.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = path,
+                    contentDescription = label,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                )
+                SmallTonalButton(
+                    onClick = onClear,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(24.dp),
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.close),
+                )
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                AppIcon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.theme_config_add_nav_icon, label),
+                    modifier = Modifier.size(24.dp),
+                    tint = LegadoTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavigationIconColumnHeader(label: String) {
+    Box(
+        modifier = Modifier.width(40.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppText(
+            text = label,
+            style = LegadoTheme.typography.labelSmallEmphasized
+        )
+    }
+}
+
+private val NavIconDestination.mainDestination: MainDestination
+    get() = when (key) {
+        MainDestination.Home.route -> MainDestination.Home
+        MainDestination.Bookshelf.route -> MainDestination.Bookshelf
+        MainDestination.Explore.route -> MainDestination.Explore
+        MainDestination.Rss.route -> MainDestination.Rss
+        else -> MainDestination.My
+    }

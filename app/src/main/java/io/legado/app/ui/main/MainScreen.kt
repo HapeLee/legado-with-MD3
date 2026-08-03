@@ -436,8 +436,7 @@ fun MainScreen(
                             }
                         },
                         label = if (labelVisibilityMode != "unlabeled") {
-                            val hasCustomIcon = mainUiState.customIconPath(destination).isNotEmpty()
-                            if (hasCustomIcon) null else {{ AppText(stringResource(destination.labelId)) }}
+                            { AppText(stringResource(destination.labelId)) }
                         } else null
                     )
                 }
@@ -455,6 +454,8 @@ fun MainScreen(
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
                             val customIconPath = mainUiState.customIconPath(destination)
+                            val selectedCustomIconPath =
+                                mainUiState.selectedCustomIconPath(destination)
                             val destinationLabel = stringResource(destination.labelId)
                             AppNavigationBarItem(
                                 modifier = Modifier.semantics(mergeDescendants = true) {
@@ -470,14 +471,16 @@ fun MainScreen(
                                     NavigationIcon(
                                         destination = destination,
                                         selected = selected,
-                                        customIconPath = mainUiState.customIconPath(destination),
+                                        customIconPath = if (selected) {
+                                            selectedCustomIconPath.ifEmpty { customIconPath }
+                                        } else customIconPath,
                                     )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
                                     noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
                                     blurAlpha = GlassDefaults.ThickBlurAlpha
                                 ),
-                                m3ShowLabel = showLabel && !customIconPath.isNotEmpty(),
+                                m3ShowLabel = showLabel,
                                 m3AlwaysShowLabel = alwaysShowLabel,
                                 useCustomIcon = customIconPath.isNotEmpty()
                             )
@@ -651,12 +654,15 @@ fun MainScreen(
                             tabsCount = destinations.size,
                             isBlurEnabled = useLiquidGlass,
                             hasCustomIcons = destinations.any { dest ->
-                                mainUiState.customIconPath(dest).isNotEmpty()
+                                mainUiState.customIconPath(dest).isNotEmpty() ||
+                                        mainUiState.selectedCustomIconPath(dest).isNotEmpty()
                             }
                         ) {
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index
-                                val hasCustomIcon = mainUiState.customIconPath(destination).isNotEmpty()
+                                val customIconPath = mainUiState.customIconPath(destination)
+                                val selectedCustomIconPath =
+                                    mainUiState.selectedCustomIconPath(destination)
                                 val destinationLabel = stringResource(destination.labelId)
                                 FloatingBottomBarItem(
                                     onClick = {
@@ -670,10 +676,12 @@ fun MainScreen(
                                 ) {
                                     NavigationIcon(
                                         destination = destination,
-                                        customIconPath = mainUiState.customIconPath(destination),
+                                        customIconPath = if (selected) {
+                                            selectedCustomIconPath.ifEmpty { customIconPath }
+                                        } else customIconPath,
                                         selected = selected
                                     )
-                                    if (!hasCustomIcon && showLabel && (alwaysShowLabel || selected)) {
+                                    if (showLabel && (alwaysShowLabel || selected)) {
                                         AppText(
                                             text = stringResource(destination.labelId),
                                             style = MaterialTheme.typography.labelSmall,

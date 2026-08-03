@@ -397,6 +397,11 @@ object PreferKey {
     const val navIconExplore = "navIconExplore"
     const val navIconRss = "navIconRss"
     const val navIconMy = "navIconMy"
+    const val navIconHomeSelected = "navIconHomeSelected"
+    const val navIconBookshelfSelected = "navIconBookshelfSelected"
+    const val navIconExploreSelected = "navIconExploreSelected"
+    const val navIconRssSelected = "navIconRssSelected"
+    const val navIconMySelected = "navIconMySelected"
 
     // Translation
     const val llmTranslateEnabled = "llmTranslateEnabled"

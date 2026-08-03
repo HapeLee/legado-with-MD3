@@ -8,7 +8,7 @@ import org.junit.Test
 class AppShellSettingsMappingTest {
 
     @Test
-    fun `AppShell 23 键写读映射逐字段对应`() {
+    fun `AppShell 28 键写读映射逐字段对应`() {
         appShellMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
@@ -56,6 +56,11 @@ private fun appShellMappingSamples(): List<AppShellSettings> {
         navIconExplore = "icon-explore",
         navIconRss = "icon-rss",
         navIconMy = "icon-my",
+        navIconHomeSelected = "icon-home-selected",
+        navIconBookshelfSelected = "icon-bookshelf-selected",
+        navIconExploreSelected = "icon-explore-selected",
+        navIconRssSelected = "icon-rss-selected",
+        navIconMySelected = "icon-my-selected",
         launcherIcon = "launcher-icon",
     )
     return listOf(
@@ -96,5 +101,10 @@ private fun AppShellSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.navIconExplore to navIconExplore,
     PreferKey.navIconRss to navIconRss,
     PreferKey.navIconMy to navIconMy,
+    PreferKey.navIconHomeSelected to navIconHomeSelected,
+    PreferKey.navIconBookshelfSelected to navIconBookshelfSelected,
+    PreferKey.navIconExploreSelected to navIconExploreSelected,
+    PreferKey.navIconRssSelected to navIconRssSelected,
+    PreferKey.navIconMySelected to navIconMySelected,
     PreferKey.launcherIcon to launcherIcon,
 )
