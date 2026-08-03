@@ -2244,6 +2244,7 @@
     <string name="night_card_bg_color">夜間卡片背景色</string>
     <string name="compact_details">精簡詳情</string>
     <string name="show_more_info">顯示更多資訊</string>
+    <string name="show_synopsis_below_content">簡介顯示在封面和資訊下方</string>
     <string name="show_latest_chapter">顯示最新章節</string>
     <string name="show_synopsis">顯示簡介</string>
     <string name="synopsis_lines">簡介行數</string>

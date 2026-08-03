@@ -35,6 +35,7 @@ data class BookshelfSettings(
     val bookshelfFolderLayoutListLandscape: Int = 1,
     val bookshelfGridLayout: Int = 0,
     val bookshelfLayoutCompact: Boolean = false,
+    val bookshelfListIntroBelowContent: Boolean = false,
     val bookshelfShowDivider: Boolean = true,
     val bookshelfTitleSmallFont: Boolean = false,
     val bookshelfTitleCenter: Boolean = true,

@@ -2352,6 +2352,7 @@
     <string name="night_card_bg_color">Night Card Background Color</string>
     <string name="compact_details">Compact Details</string>
     <string name="show_more_info">Show More Info</string>
+    <string name="show_synopsis_below_content">Show Synopsis Below Cover and Details</string>
     <string name="show_latest_chapter">Show Latest Chapter</string>
     <string name="show_synopsis">Show Synopsis</string>
     <string name="synopsis_lines">Synopsis Lines</string>

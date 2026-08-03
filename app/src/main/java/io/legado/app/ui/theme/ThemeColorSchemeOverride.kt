@@ -1,7 +1,6 @@
 package io.legado.app.ui.theme
 
 import androidx.compose.animation.animateColor
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
@@ -72,7 +71,7 @@ fun ColorScheme.toLegadoColorScheme(
         tertiaryFixedDim = tertiaryFixedDim,
         onTertiaryFixed = onTertiaryFixed,
         onTertiaryFixedVariant = onTertiaryFixedVariant,
-        cardContainer = primaryContainer.copy(alpha = 0.5f),
+        cardContainer = surfaceContainerLow,
         onCardContainer = primary,
         onSheetContent = surface,
         cardPrimaryContainer = primaryContainer,
