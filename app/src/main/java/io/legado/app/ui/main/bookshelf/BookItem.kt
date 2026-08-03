@@ -765,7 +765,7 @@ fun BookItem(
                 }
                 val intro = remember(book.intro, introMaxLines) {
                     val text = if (introMaxLines == Int.MAX_VALUE) {
-                        HtmlFormatter.formatDisplayText(book.intro)
+                        HtmlFormatter.formatIntroText(book.intro)
                     } else {
                         HtmlFormatter.formatSummaryText(book.intro)
                     }
