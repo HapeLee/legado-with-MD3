@@ -11,9 +11,9 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -386,113 +387,166 @@ private fun CoverTextOverlay(
     // If text contains Latin letters, force horizontal layout
     val isHorizontal = configIsHorizontal || isLatinBasedText(name)
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val viewWidth = size.width
-        val viewHeight = size.height
-
-        drawIntoCanvas { canvas ->
-            val nativeCanvas = canvas.nativeCanvas
-
-            if (showName && !name.isNullOrBlank()) {
-                val paint = Paint().apply {
-                    isAntiAlias = true
-                    textAlign = Paint.Align.CENTER
-                    typeface = Typeface.DEFAULT_BOLD
-                    textSize = viewWidth / 8f
-                    color = textColor
-                    if (coverSettings.showShadow) {
-                        setShadowLayer(4f, 2f, 2f, shadowColor)
-                    }
+    // Paints, StaticLayout and per-character positions are built in the cache block so they are
+    // rebuilt only when the size or the settings above change, not on every draw pass.
+    Spacer(
+        modifier = Modifier
+            .fillMaxSize()
+            .drawWithCache {
+                val viewWidth = size.width
+                val viewHeight = size.height
+                if (viewWidth <= 0f || viewHeight <= 0f) {
+                    return@drawWithCache onDrawBehind { }
                 }
 
-                if (isHorizontal) {
-                    val maxWidth = (viewWidth * 0.8f).toInt()
-                    val textPaint = TextPaint(paint).apply { textAlign = Paint.Align.LEFT }
-                    val layout = StaticLayout.Builder
-                        .obtain(name, 0, name.length, textPaint, maxWidth)
+                val namePaint = if (showName && !name.isNullOrBlank()) {
+                    Paint().apply {
+                        isAntiAlias = true
+                        textAlign = Paint.Align.CENTER
+                        typeface = Typeface.DEFAULT_BOLD
+                        textSize = viewWidth / 8f
+                        color = textColor
+                        if (coverSettings.showShadow) {
+                            setShadowLayer(4f, 2f, 2f, shadowColor)
+                        }
+                    }
+                } else null
+
+                val nameMaxWidth = (viewWidth * 0.8f).toInt().coerceAtLeast(1)
+                val nameTextPaint = if (namePaint != null && isHorizontal) {
+                    TextPaint(namePaint).apply { textAlign = Paint.Align.LEFT }
+                } else null
+                val nameLayout = if (nameTextPaint != null && name != null) {
+                    StaticLayout.Builder
+                        .obtain(name, 0, name.length, nameTextPaint, nameMaxWidth)
                         .setAlignment(Layout.Alignment.ALIGN_CENTER)
                         .setMaxLines(3)
                         .setEllipsize(TextUtils.TruncateAt.END)
                         .build()
+                } else null
+                val nameLayoutX = (viewWidth - nameMaxWidth) / 2f
+                val nameLayoutY = viewHeight * 0.08f
 
-                    nativeCanvas.withSave {
-                        val textX = (viewWidth - maxWidth) / 2f
-                        val textY = viewHeight * 0.08f
-                        translate(textX, textY)
-                        if (coverSettings.showStroke) {
-                            textPaint.style = Paint.Style.STROKE
-                            textPaint.strokeWidth = textPaint.textSize / 12
-                            val originalColor = textPaint.color
-                            textPaint.color = Color.White.toArgb()
-                            textPaint.clearShadowLayer()
-                            layout.draw(this)
-                            textPaint.style = Paint.Style.FILL
-                            textPaint.color = originalColor
-                            if (coverSettings.showShadow) {
-                                textPaint.setShadowLayer(4f, 2f, 2f, shadowColor)
-                            }
-                        }
-                        layout.draw(this)
-                    }
-                } else {
-                    var startX = viewWidth * 0.16f
-                    var startY = viewHeight * 0.16f
-                    val fm = paint.fontMetrics
-                    val charHeight = fm.bottom - fm.top
-                    name.forEach { char ->
-                        if (coverSettings.showStroke) {
-                            val strokePaint = Paint(paint).apply {
-                                color = Color.White.toArgb()
-                                style = Paint.Style.STROKE
-                                strokeWidth = paint.textSize / 10
-                                clearShadowLayer()
-                            }
-                            nativeCanvas.drawText(char.toString(), startX, startY, strokePaint)
-                        }
-                        nativeCanvas.drawText(char.toString(), startX, startY, paint)
-                        startY += charHeight
-                        if (startY > viewHeight * 0.8f) {
-                            startX += paint.textSize * 1.2f
-                            startY = viewHeight * 0.2f
-                        }
-                    }
-                }
-            }
-
-            if (showAuthor && !author.isNullOrBlank()) {
-                val paint = Paint().apply {
-                    isAntiAlias = true
-                    textAlign = Paint.Align.CENTER
-                    textSize = viewWidth / 12f
-                    color = textColor
-                    if (coverSettings.showShadow) {
-                        setShadowLayer(4f, 1f, 1f, shadowColor)
-                    }
-                }
-                if (isHorizontal) {
-                    val authorText = TextUtils.ellipsize(author, TextPaint(paint), viewWidth * 0.9f, TextUtils.TruncateAt.END)
-                    if (coverSettings.showStroke) {
-                        val strokePaint = Paint(paint).apply {
+                val nameStrokePaint =
+                    if (namePaint != null && !isHorizontal && coverSettings.showStroke) {
+                        Paint(namePaint).apply {
                             color = Color.White.toArgb()
                             style = Paint.Style.STROKE
-                            strokeWidth = paint.textSize / 10
+                            strokeWidth = namePaint.textSize / 10
                             clearShadowLayer()
                         }
-                        nativeCanvas.drawText(authorText.toString(), viewWidth / 2, viewHeight * 0.75f, strokePaint)
-                    }
-                    nativeCanvas.drawText(authorText.toString(), viewWidth / 2, viewHeight * 0.75f, paint)
-                } else {
-                    val startX = viewWidth * 0.84f
-                    val fm = paint.fontMetrics
-                    val charHeight = fm.bottom - fm.top
-                    var startY = viewHeight * 0.16f - (author.length * charHeight)
-                    startY = startY.coerceAtLeast(viewHeight * 0.2f)
-                    author.forEach { char ->
-                        nativeCanvas.drawText(char.toString(), startX, startY, paint)
+                    } else null
+                val nameCharDraws = if (namePaint != null && name != null && !isHorizontal) {
+                    val charHeight = namePaint.fontMetrics.let { it.bottom - it.top }
+                    var startX = viewWidth * 0.16f
+                    var startY = viewHeight * 0.16f
+                    name.map { char ->
+                        val draw = Triple(char.toString(), startX, startY)
                         startY += charHeight
+                        if (startY > viewHeight * 0.8f) {
+                            startX += namePaint.textSize * 1.2f
+                            startY = viewHeight * 0.2f
+                        }
+                        draw
+                    }
+                } else emptyList()
+
+                val authorPaint = if (showAuthor && !author.isNullOrBlank()) {
+                    Paint().apply {
+                        isAntiAlias = true
+                        textAlign = Paint.Align.CENTER
+                        textSize = viewWidth / 12f
+                        color = textColor
+                        if (coverSettings.showShadow) {
+                            setShadowLayer(4f, 1f, 1f, shadowColor)
+                        }
+                    }
+                } else null
+
+                val authorText = if (authorPaint != null && author != null && isHorizontal) {
+                    TextUtils.ellipsize(
+                        author,
+                        TextPaint(authorPaint),
+                        viewWidth * 0.9f,
+                        TextUtils.TruncateAt.END
+                    ).toString()
+                } else null
+                val authorStrokePaint =
+                    if (authorPaint != null && isHorizontal && coverSettings.showStroke) {
+                        Paint(authorPaint).apply {
+                            color = Color.White.toArgb()
+                            style = Paint.Style.STROKE
+                            strokeWidth = authorPaint.textSize / 10
+                            clearShadowLayer()
+                        }
+                    } else null
+                val authorCharDraws = if (authorPaint != null && author != null && !isHorizontal) {
+                    val charHeight = authorPaint.fontMetrics.let { it.bottom - it.top }
+                    val startX = viewWidth * 0.84f
+                    var startY = (viewHeight * 0.16f - (author.length * charHeight))
+                        .coerceAtLeast(viewHeight * 0.2f)
+                    author.map { char ->
+                        val draw = Triple(char.toString(), startX, startY)
+                        startY += charHeight
+                        draw
+                    }
+                } else emptyList()
+
+                onDrawBehind {
+                    drawIntoCanvas { canvas ->
+                        val nativeCanvas = canvas.nativeCanvas
+
+                        if (nameLayout != null && nameTextPaint != null) {
+                            nativeCanvas.withSave {
+                                translate(nameLayoutX, nameLayoutY)
+                                if (coverSettings.showStroke) {
+                                    nameTextPaint.style = Paint.Style.STROKE
+                                    nameTextPaint.strokeWidth = nameTextPaint.textSize / 12
+                                    val originalColor = nameTextPaint.color
+                                    nameTextPaint.color = Color.White.toArgb()
+                                    nameTextPaint.clearShadowLayer()
+                                    nameLayout.draw(this)
+                                    nameTextPaint.style = Paint.Style.FILL
+                                    nameTextPaint.color = originalColor
+                                    if (coverSettings.showShadow) {
+                                        nameTextPaint.setShadowLayer(4f, 2f, 2f, shadowColor)
+                                    }
+                                }
+                                nameLayout.draw(this)
+                            }
+                        } else if (namePaint != null) {
+                            nameCharDraws.forEach { (text, x, y) ->
+                                if (nameStrokePaint != null) {
+                                    nativeCanvas.drawText(text, x, y, nameStrokePaint)
+                                }
+                                nativeCanvas.drawText(text, x, y, namePaint)
+                            }
+                        }
+
+                        if (authorPaint != null) {
+                            if (authorText != null) {
+                                if (authorStrokePaint != null) {
+                                    nativeCanvas.drawText(
+                                        authorText,
+                                        viewWidth / 2,
+                                        viewHeight * 0.75f,
+                                        authorStrokePaint
+                                    )
+                                }
+                                nativeCanvas.drawText(
+                                    authorText,
+                                    viewWidth / 2,
+                                    viewHeight * 0.75f,
+                                    authorPaint
+                                )
+                            } else {
+                                authorCharDraws.forEach { (text, x, y) ->
+                                    nativeCanvas.drawText(text, x, y, authorPaint)
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
+    )
 }

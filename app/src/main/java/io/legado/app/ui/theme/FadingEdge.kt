@@ -6,9 +6,9 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -20,34 +20,40 @@ import androidx.compose.ui.unit.dp
 /**
  * Applies a horizontal fading edge effect to a scrollable container.
  *
+ * The alphas are passed as [State] and read inside the draw cache block, so a running
+ * fade animation invalidates the gradient without recomposing the caller.
+ *
  * @param leftAlpha  0f = fully faded, 1f = fully visible
  * @param rightAlpha 0f = fully faded, 1f = fully visible
  * @param gradientWidth width of the fade gradient on each side
  */
 fun Modifier.fadingEdge(
-    leftAlpha: Float,
-    rightAlpha: Float,
+    leftAlpha: State<Float>,
+    rightAlpha: State<Float>,
     gradientWidth: Dp = 24.dp
 ): Modifier = graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-    .drawWithContent {
-        drawContent()
+    .drawWithCache {
         val width = size.width
+        if (width <= 0f) {
+            return@drawWithCache onDrawWithContent { drawContent() }
+        }
         val gradientWidthPx = gradientWidth.toPx()
         val leftStop = gradientWidthPx / width
         val rightStop = 1f - (gradientWidthPx / width)
-        drawRect(
-            brush = Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0f to Color.Black.copy(alpha = 1f - leftAlpha),
-                    leftStop to Color.Black,
-                    rightStop to Color.Black,
-                    1f to Color.Black.copy(alpha = 1f - rightAlpha)
-                ),
-                startX = 0f,
-                endX = width
+        val brush = Brush.horizontalGradient(
+            colorStops = arrayOf(
+                0f to Color.Black.copy(alpha = 1f - leftAlpha.value),
+                leftStop to Color.Black,
+                rightStop to Color.Black,
+                1f to Color.Black.copy(alpha = 1f - rightAlpha.value)
             ),
-            blendMode = BlendMode.DstIn
+            startX = 0f,
+            endX = width
         )
+        onDrawWithContent {
+            drawContent()
+            drawRect(brush = brush, blendMode = BlendMode.DstIn)
+        }
     }
 
 /**
@@ -58,12 +64,12 @@ fun Modifier.fadingEdge(
     listState: LazyListState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val leftAlpha by animateFloatAsState(
+    val leftAlpha = animateFloatAsState(
         targetValue = if (listState.canScrollBackward) 1f else 0f,
         animationSpec = tween(300),
         label = "LeftFadeAlpha"
     )
-    val rightAlpha by animateFloatAsState(
+    val rightAlpha = animateFloatAsState(
         targetValue = if (listState.canScrollForward) 1f else 0f,
         animationSpec = tween(300),
         label = "RightFadeAlpha"
@@ -79,12 +85,12 @@ fun Modifier.fadingEdge(
     pagerState: PagerState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val leftAlpha by animateFloatAsState(
+    val leftAlpha = animateFloatAsState(
         targetValue = if (pagerState.canScrollBackward) 1f else 0f,
         animationSpec = tween(300),
         label = "LeftFadeAlpha"
     )
-    val rightAlpha by animateFloatAsState(
+    val rightAlpha = animateFloatAsState(
         targetValue = if (pagerState.canScrollForward) 1f else 0f,
         animationSpec = tween(300),
         label = "RightFadeAlpha"
@@ -100,12 +106,12 @@ fun Modifier.fadingEdge(
     scrollState: ScrollState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val leftAlpha by animateFloatAsState(
+    val leftAlpha = animateFloatAsState(
         targetValue = if (scrollState.canScrollBackward) 1f else 0f,
         animationSpec = tween(300),
         label = "LeftFadeAlpha"
     )
-    val rightAlpha by animateFloatAsState(
+    val rightAlpha = animateFloatAsState(
         targetValue = if (scrollState.canScrollForward) 1f else 0f,
         animationSpec = tween(300),
         label = "RightFadeAlpha"
