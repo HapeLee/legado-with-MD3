@@ -82,7 +82,7 @@ fun BookSourceRouteScreen(
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
     onLoginSource: (String) -> Unit,
-    onSearchSource: (String) -> Unit,
+    onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,7 +108,7 @@ fun BookSourceScreen(
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
     onLoginSource: (String) -> Unit,
-    onSearchSource: (String) -> Unit,
+    onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
     effects: Flow<BookSourceEffect>,
 ) {
@@ -587,7 +587,7 @@ fun BookSourceScreen(
                                         onIntent(BookSourceIntent.MoveToEdge(setOf(item.id), toTop))
                                     },
                                     onLogin = { onLoginSource(item.id) },
-                                    onSearch = { onSearchSource(item.id) },
+                                    onSearch = { onSearchSource(item.name, item.id) },
                                     onDebug = { onDebugSource(item.id) },
                                     onDelete = { deleteIds = setOf(item.id) },
                                     onSetExploreEnabled = { enabled ->
