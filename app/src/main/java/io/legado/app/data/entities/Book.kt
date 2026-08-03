@@ -121,12 +121,16 @@ data class Book(
     var readConfig: ReadConfig? = null,
     //同步时间
     @ColumnInfo(defaultValue = "0")
-    var syncTime: Long = 0L
+    var syncTime: Long = 0L,
+    // 简介内容(书源列表/发现规则获取), 与详情规则拿到的 intro 是书源作者写的两条规则,
+    // 聚合类书源常把服务状态排版进详情简介, 书架等列表场景优先用这一份
+    var listIntro: String? = null
 ) : Parcelable, BaseBook {
 
     init {
         kind = kind?.take(1000)
         intro = intro?.take(5000)
+        listIntro = listIntro?.take(5000)
         customTag = customTag?.take(1000)
         customIntro = customIntro?.take(5000)
         remark = remark?.take(1000)

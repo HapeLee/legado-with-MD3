@@ -8,7 +8,9 @@
     "author": "Legado Debug",
     "pageMode": "simulation",
     "startChapter": 0,
-    "startPosition": 0
+    "startPosition": 0,
+    "kind": "调试,长章节,离线夹具,标签溢出验证,第六个标签",
+    "wordCount": "12.3万字"
   },
   "chapters": [
     {

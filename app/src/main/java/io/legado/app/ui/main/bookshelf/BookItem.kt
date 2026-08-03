@@ -630,8 +630,13 @@ fun BookItem(
     onLongClick: (() -> Unit)?
 ) {
     val book = bookUi.book
-    val intro = remember(book.intro) {
-        HtmlFormatter.formatDisplayText(book.intro).takeIf { it.isNotBlank() }
+    val intro = remember(book.intro, settings.bookshelfIntroMaxLines) {
+        val formatted = if (settings.bookshelfIntroMaxLines == 0) {
+            HtmlFormatter.formatIntroText(book.intro)
+        } else {
+            HtmlFormatter.formatSummaryText(book.intro)
+        }
+        formatted.takeIf { it.isNotBlank() }
     }
     val showListDetails = layoutMode == 0 && !isCompact && settings.showBookIntro
     val showIntro = showListDetails && settings.bookshelfShowIntro && intro != null
