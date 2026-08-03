@@ -135,6 +135,7 @@ data class SearchBook(
         latestChapterTitle = latestChapterTitle,
         coverUrl = coverUrl,
         intro = intro,
+        listIntro = intro,
         tocUrl = tocUrl,
         originOrder = originOrder,
         variable = variable
