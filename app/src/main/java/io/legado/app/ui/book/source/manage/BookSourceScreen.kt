@@ -159,6 +159,7 @@ fun BookSourceScreen(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboard.current
+    val cancelLabel = stringResource(R.string.cancel)
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
@@ -181,7 +182,7 @@ fun BookSourceScreen(
         val progress = state.checkProgress ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message = progress,
-            actionLabel = context.getString(R.string.cancel),
+            actionLabel = cancelLabel,
             withDismissAction = false,
             duration = androidx.compose.material3.SnackbarDuration.Indefinite,
         )
