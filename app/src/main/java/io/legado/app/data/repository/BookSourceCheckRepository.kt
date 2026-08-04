@@ -5,7 +5,9 @@ import io.legado.app.constant.BookSourceType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.domain.gateway.BookSourceCheckGateway
+import io.legado.app.domain.gateway.BookSourceCheckResult
 import io.legado.app.domain.gateway.BookSourceCheckState
+import io.legado.app.domain.gateway.BookSourceCheckStatus
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.exception.ContentEmptyException
@@ -36,26 +38,76 @@ class BookSourceCheckRepository(
     override val state = _state.asStateFlow()
     override suspend fun check(sourceIds: Set<String>, keyword: String) {
         if (sourceIds.isEmpty() || _state.value.isRunning) return
-        _state.value = BookSourceCheckState(isRunning = true, total = sourceIds.size)
+        _state.value = BookSourceCheckState(
+            isRunning = true,
+            total = sourceIds.size,
+            results = sourceIds.associateWith {
+                BookSourceCheckResult(BookSourceCheckStatus.Pending, "等待校验")
+            },
+        )
         val dispatcher = Executors.newFixedThreadPool(
             downloadCacheSettingsGateway.currentSettings.threadCount.coerceAtLeast(1)
         ).asCoroutineDispatcher()
+        var completedNormally = false
         try {
             coroutineScope {
                 sourceIds.map { id ->
-                    async(dispatcher) { checkOne(id, keyword.ifBlank { "我的" }) }
+                    async(dispatcher) {
+                        runCatching { checkOne(id, keyword.ifBlank { "我的" }) }
+                            .onFailure { error ->
+                                coroutineContext.ensureActive()
+                                updateResult(
+                                    id = id,
+                                    name = "",
+                                    status = BookSourceCheckStatus.Failed,
+                                    message = "校验失败:${error.displayMessage()}",
+                                )
+                            }
+                    }
                 }.awaitAll()
             }
+            completedNormally = true
         } finally {
             dispatcher.close()
-            _state.update { it.copy(isRunning = false, currentSourceName = "") }
+            val unfinishedStatus = if (completedNormally) {
+                BookSourceCheckStatus.Failed
+            } else {
+                BookSourceCheckStatus.Cancelled
+            }
+            val unfinishedMessage = if (completedNormally) "校验失败:任务未完成" else "校验已取消"
+            _state.update { state ->
+                val results = state.results.mapValues { (_, result) ->
+                    if (result.status.isTerminal) result
+                    else BookSourceCheckResult(unfinishedStatus, unfinishedMessage)
+                }
+                state.copy(
+                    isRunning = false,
+                    completed = results.values.count { it.status.isTerminal },
+                    currentSourceName = "",
+                    results = results,
+                )
+            }
         }
     }
 
     private suspend fun checkOne(sourceId: String, keyword: String) {
-        val source = bookSourceRepository.getBookSource(sourceId) ?: return
+        val source = bookSourceRepository.getBookSource(sourceId)
+        if (source == null) {
+            updateResult(
+                id = sourceId,
+                name = "",
+                status = BookSourceCheckStatus.Failed,
+                message = "校验失败:书源不存在",
+            )
+            return
+        }
         val startedAt = System.currentTimeMillis()
-        updateResult(sourceId, source.bookSourceName, "开始校验")
+        updateResult(
+            sourceId,
+            source.bookSourceName,
+            BookSourceCheckStatus.Running,
+            "正在校验",
+        )
         val result = runCatching {
             withTimeout(settingsGateway.currentSettings.timeoutMillis) {
                 checkSource(source, keyword)
@@ -63,7 +115,6 @@ class BookSourceCheckRepository(
         }
         result.onSuccess {
             source.respondTime = System.currentTimeMillis() - startedAt
-            updateResult(sourceId, source.bookSourceName, "校验成功", completed = true)
         }.onFailure { error ->
             coroutineContext.ensureActive()
             when (error) {
@@ -74,27 +125,50 @@ class BookSourceCheckRepository(
             source.addErrorComment(error)
             source.respondTime =
                 settingsGateway.currentSettings.timeoutMillis + System.currentTimeMillis() - startedAt
-            updateResult(
+        }
+        val saveResult = runCatching { bookSourceRepository.updateSources(source) }
+        coroutineContext.ensureActive()
+        when {
+            result.isFailure -> updateResult(
                 sourceId,
                 source.bookSourceName,
-                "校验失败:${error.localizedMessage}",
-                completed = true
+                BookSourceCheckStatus.Failed,
+                "校验失败:${result.exceptionOrNull().displayMessage()}",
+            )
+
+            saveResult.isFailure -> updateResult(
+                sourceId,
+                source.bookSourceName,
+                BookSourceCheckStatus.Failed,
+                "校验失败:无法保存结果，${saveResult.exceptionOrNull().displayMessage()}",
+            )
+
+            else -> updateResult(
+                sourceId,
+                source.bookSourceName,
+                BookSourceCheckStatus.Succeeded,
+                "校验成功",
             )
         }
-        bookSourceRepository.updateSources(source)
     }
 
     private fun updateResult(
         id: String,
         name: String,
+        status: BookSourceCheckStatus,
         message: String,
-        completed: Boolean = false
     ) {
         _state.update { state ->
+            val previous = state.results[id]
+            val completed = when {
+                previous?.status?.isTerminal == true -> state.completed
+                status.isTerminal -> state.completed + 1
+                else -> state.completed
+            }
             state.copy(
-                completed = state.completed + if (completed) 1 else 0,
-                currentSourceName = name,
-                results = state.results + (id to message),
+                completed = completed,
+                currentSourceName = name.ifBlank { state.currentSourceName },
+                results = state.results + (id to BookSourceCheckResult(status, message)),
             )
         }
     }
@@ -161,3 +235,18 @@ class BookSourceCheckRepository(
         }
     }
 }
+
+private val BookSourceCheckStatus.isTerminal: Boolean
+    get() = when (this) {
+        BookSourceCheckStatus.Pending,
+        BookSourceCheckStatus.Running -> false
+
+        BookSourceCheckStatus.Succeeded,
+        BookSourceCheckStatus.Failed,
+        BookSourceCheckStatus.Cancelled -> true
+    }
+
+private fun Throwable?.displayMessage(): String =
+    this?.localizedMessage?.takeIf { it.isNotBlank() }
+        ?: this?.javaClass?.simpleName?.takeIf { it.isNotBlank() }
+        ?: "未知错误"

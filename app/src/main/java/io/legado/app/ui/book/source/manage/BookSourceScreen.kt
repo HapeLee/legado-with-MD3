@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.service.BookSourceCheckService
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -163,6 +164,12 @@ fun BookSourceScreen(
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
+                is BookSourceEffect.StartCheck -> {
+                    BookSourceCheckService.start(context, effect.ids, effect.keyword)
+                }
+
+                BookSourceEffect.CancelCheck -> BookSourceCheckService.stop(context)
+
                 is BookSourceEffect.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
                         message = effect.message,
@@ -607,10 +614,30 @@ fun BookSourceScreen(
                                 }
                             },
                             title = item.name,
-                            subtitle = listOfNotNull(
-                                item.group,
-                                item.checkMessage
-                            ).joinToString(" · ").ifBlank { null },
+                            supportingContent = if (
+                                item.group != null || item.checkMessage != null
+                            ) {
+                                {
+                                    Column {
+                                        item.group?.let { group ->
+                                            AppText(
+                                                text = group,
+                                                style = LegadoTheme.typography.bodySmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                        item.checkMessage?.let { message ->
+                                            AppText(
+                                                text = message,
+                                                style = LegadoTheme.typography.bodySmall,
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                             isEnabled = item.enabled,
                             isSelected = item.id in selectedIds,
                             canReorder = canReorder,

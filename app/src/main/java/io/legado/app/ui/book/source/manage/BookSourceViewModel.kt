@@ -12,10 +12,10 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookSourceCheckGateway
+import io.legado.app.domain.gateway.BookSourceCheckStatus
 import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.usecase.StartBookSourceCheckUseCase
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -36,7 +36,6 @@ import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,7 +54,6 @@ class BookSourceViewModel(
     private val otherSettingsGateway: OtherSettingsGateway,
     private val checkGateway: BookSourceCheckGateway,
     private val checkSettingsGateway: CheckSourceSettingsGateway,
-    private val startBookSourceCheck: StartBookSourceCheckUseCase,
 ) : ViewModel() {
     companion object {
         const val FILTER_ENABLED = "@enabled"
@@ -80,14 +78,36 @@ class BookSourceViewModel(
         MutableStateFlow<BaseImportUiState<BookSource>>(BaseImportUiState.Idle)
     private val _effects = MutableSharedFlow<BookSourceEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
-    private var checkJob: Job? = null
 
     init {
         viewModelScope.launch {
             var wasRunning = false
             checkGateway.state.collect { state ->
                 if (wasRunning && !state.isRunning) {
-                    _effects.tryEmit(BookSourceEffect.ShowSnackbar("书源校验完成"))
+                    val succeeded = state.results.values.count {
+                        it.status == BookSourceCheckStatus.Succeeded
+                    }
+                    val failed = state.results.values.count {
+                        it.status == BookSourceCheckStatus.Failed
+                    }
+                    val cancelled = state.results.values.count {
+                        it.status == BookSourceCheckStatus.Cancelled
+                    }
+                    val message = if (cancelled > 0) {
+                        application.getString(
+                            io.legado.app.R.string.book_source_check_cancelled,
+                            succeeded,
+                            failed,
+                            cancelled,
+                        )
+                    } else {
+                        application.getString(
+                            io.legado.app.R.string.book_source_check_completed,
+                            succeeded,
+                            failed,
+                        )
+                    }
+                    _effects.tryEmit(BookSourceEffect.ShowSnackbar(message))
                 }
                 wasRunning = state.isRunning
             }
@@ -160,7 +180,7 @@ class BookSourceViewModel(
         checkSettingsGateway.settings,
     ) { state, importing, check, settings ->
         state.copy(
-            items = state.items.map { it.copy(checkMessage = check.results[it.id]) }
+            items = state.items.map { it.copy(checkMessage = check.results[it.id]?.message) }
                 .toImmutableList(),
             importState = importing,
             checkProgress = if (check.isRunning) application.getString(
@@ -229,10 +249,16 @@ class BookSourceViewModel(
             is BookSourceIntent.DeleteGroup -> updateGroup(intent.group, "")
             is BookSourceIntent.CheckSelectedInterval -> checkInterval(intent.ids)
             is BookSourceIntent.StartCheck -> {
-                if (checkJob?.isActive != true) {
-                    checkJob = viewModelScope.launch {
+                if (checkGateway.state.value.isRunning) {
+                    _effects.tryEmit(
+                        BookSourceEffect.ShowSnackbar(
+                            application.getString(io.legado.app.R.string.source_already_checking)
+                        )
+                    )
+                } else {
+                    viewModelScope.launch {
                         checkSettingsGateway.update(intent.options.toSettings())
-                        startBookSourceCheck(intent.ids, intent.keyword)
+                        _effects.emit(BookSourceEffect.StartCheck(intent.ids, intent.keyword))
                     }
                 }
             }
@@ -241,7 +267,7 @@ class BookSourceViewModel(
                 checkSettingsGateway.update(intent.options.toSettings())
             }
 
-            BookSourceIntent.CancelCheck -> checkJob?.cancel()
+            BookSourceIntent.CancelCheck -> _effects.tryEmit(BookSourceEffect.CancelCheck)
             is BookSourceIntent.Import -> importSources(intent.text)
             is BookSourceIntent.Export -> exportSources(intent.uri, intent.ids)
             is BookSourceIntent.Upload -> uploadSources(intent.ids)

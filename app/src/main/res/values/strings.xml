@@ -391,6 +391,8 @@
     <string name="header_padding">Header Padding</string>
     <string name="footer_padding">Footer Padding</string>
     <string name="check_book_source">Check book sources</string>
+    <string name="book_source_check_completed">Check completed: %1$d succeeded, %2$d failed</string>
+    <string name="book_source_check_cancelled">Check stopped: %1$d succeeded, %2$d failed, %3$d cancelled</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
     <string name="tts_fix">Please install and select Chinese TTS!</string>
