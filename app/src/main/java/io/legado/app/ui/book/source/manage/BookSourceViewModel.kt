@@ -11,7 +11,9 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.gateway.BookSourceCheckFailure
 import io.legado.app.domain.gateway.BookSourceCheckGateway
+import io.legado.app.domain.gateway.BookSourceCheckResult
 import io.legado.app.domain.gateway.BookSourceCheckStatus
 import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
@@ -84,27 +86,18 @@ class BookSourceViewModel(
             var wasRunning = false
             checkGateway.state.collect { state ->
                 if (wasRunning && !state.isRunning) {
-                    val succeeded = state.results.values.count {
-                        it.status == BookSourceCheckStatus.Succeeded
-                    }
-                    val failed = state.results.values.count {
-                        it.status == BookSourceCheckStatus.Failed
-                    }
-                    val cancelled = state.results.values.count {
-                        it.status == BookSourceCheckStatus.Cancelled
-                    }
-                    val message = if (cancelled > 0) {
+                    val message = if (state.cancelledCount > 0) {
                         application.getString(
                             io.legado.app.R.string.book_source_check_cancelled,
-                            succeeded,
-                            failed,
-                            cancelled,
+                            state.succeededCount,
+                            state.failedCount,
+                            state.cancelledCount,
                         )
                     } else {
                         application.getString(
                             io.legado.app.R.string.book_source_check_completed,
-                            succeeded,
-                            failed,
+                            state.succeededCount,
+                            state.failedCount,
                         )
                     }
                     _effects.tryEmit(BookSourceEffect.ShowSnackbar(message))
@@ -180,7 +173,11 @@ class BookSourceViewModel(
         checkSettingsGateway.settings,
     ) { state, importing, check, settings ->
         state.copy(
-            items = state.items.map { it.copy(checkMessage = check.results[it.id]?.message) }
+            items = state.items.map { item ->
+                item.copy(
+                    checkMessage = check.results[item.id]?.displayMessage(application)
+                )
+            }
                 .toImmutableList(),
             importState = importing,
             checkProgress = if (check.isRunning) application.getString(
@@ -566,6 +563,48 @@ private fun BookSourceCheckOptionsUi.toSettings() = CheckSourceSettings(
     checkCategory = checkCategory,
     checkContent = checkContent,
 )
+
+private fun BookSourceCheckResult.displayMessage(application: Application): String {
+    val errorDetail = detail ?: application.getString(io.legado.app.R.string.unknown_error)
+    return when (status) {
+        BookSourceCheckStatus.Pending -> application.getString(
+            io.legado.app.R.string.book_source_check_waiting
+        )
+
+        BookSourceCheckStatus.Running -> application.getString(
+            io.legado.app.R.string.book_source_check_running
+        )
+
+        BookSourceCheckStatus.Succeeded -> application.getString(
+            io.legado.app.R.string.book_source_check_succeeded
+        )
+
+        BookSourceCheckStatus.Cancelled -> application.getString(
+            io.legado.app.R.string.book_source_check_item_cancelled
+        )
+
+        BookSourceCheckStatus.Failed -> when (failure) {
+            BookSourceCheckFailure.SourceMissing -> application.getString(
+                io.legado.app.R.string.book_source_check_source_missing
+            )
+
+            BookSourceCheckFailure.SaveFailed -> application.getString(
+                io.legado.app.R.string.book_source_check_save_failed,
+                errorDetail,
+            )
+
+            BookSourceCheckFailure.Incomplete -> application.getString(
+                io.legado.app.R.string.book_source_check_incomplete
+            )
+
+            BookSourceCheckFailure.CheckFailed,
+            null -> application.getString(
+                io.legado.app.R.string.book_source_check_failed,
+                errorDetail,
+            )
+        }
+    }
+}
 
 private fun List<BookSourcePart>.filterFor(filter: String?, query: String): List<BookSourcePart> =
     filter { source ->

@@ -76,7 +76,6 @@ import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -93,16 +92,43 @@ fun BookSourceRouteScreen(
     onDebugSource: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboard.current
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is BookSourceEffect.StartCheck -> {
+                    BookSourceCheckService.start(context, effect.ids, effect.keyword)
+                }
+
+                BookSourceEffect.CancelCheck -> BookSourceCheckService.stop(context)
+
+                is BookSourceEffect.ShowSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = effect.message,
+                        actionLabel = effect.actionLabel,
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed && effect.url != null) {
+                        clipboardManager.setClipEntry(
+                            ClipEntry(ClipData.newPlainText("url", effect.url))
+                        )
+                    }
+                }
+            }
+        }
+    }
     BookSourceScreen(
-        state,
-        viewModel::onIntent,
-        onBackClick,
-        onAddSource,
-        onEditSource,
-        onLoginSource,
-        onSearchSource,
-        onDebugSource,
-        viewModel.effects,
+        state = state,
+        onIntent = viewModel::onIntent,
+        snackbarHostState = snackbarHostState,
+        onBackClick = onBackClick,
+        onAddSource = onAddSource,
+        onEditSource = onEditSource,
+        onLoginSource = onLoginSource,
+        onSearchSource = onSearchSource,
+        onDebugSource = onDebugSource,
     )
 }
 
@@ -111,13 +137,13 @@ fun BookSourceRouteScreen(
 fun BookSourceScreen(
     state: BookSourceUiState,
     onIntent: (BookSourceIntent) -> Unit,
+    snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
     onLoginSource: (String) -> Unit,
     onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
-    effects: Flow<BookSourceEffect>,
 ) {
     val context = LocalContext.current
     val rules = state.items
@@ -158,33 +184,7 @@ fun BookSourceScreen(
             }
         }
     }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val clipboardManager = LocalClipboard.current
     val cancelLabel = stringResource(R.string.cancel)
-    LaunchedEffect(Unit) {
-        effects.collectLatest { effect ->
-            when (effect) {
-                is BookSourceEffect.StartCheck -> {
-                    BookSourceCheckService.start(context, effect.ids, effect.keyword)
-                }
-
-                BookSourceEffect.CancelCheck -> BookSourceCheckService.stop(context)
-
-                is BookSourceEffect.ShowSnackbar -> {
-                    val result = snackbarHostState.showSnackbar(
-                        message = effect.message,
-                        actionLabel = effect.actionLabel,
-                        withDismissAction = true,
-                    )
-                    if (result == SnackbarResult.ActionPerformed && effect.url != null) {
-                        clipboardManager.setClipEntry(
-                            ClipEntry(ClipData.newPlainText("url", effect.url))
-                        )
-                    }
-                }
-            }
-        }
-    }
     LaunchedEffect(state.checkProgress) {
         val progress = state.checkProgress ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(

@@ -12,7 +12,6 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.domain.gateway.BookSourceCheckGateway
-import io.legado.app.domain.gateway.BookSourceCheckStatus
 import io.legado.app.domain.usecase.StartBookSourceCheckUseCase
 import io.legado.app.help.IntentData
 import io.legado.app.ui.main.MainActivity
@@ -113,6 +112,7 @@ class BookSourceCheckService : BaseService() {
 
     @SuppressLint("WakelockTimeout")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             IntentAction.start -> {
                 val request = IntentData.get<CheckRequest>(
@@ -165,19 +165,19 @@ class BookSourceCheckService : BaseService() {
 
     private fun showFinishedNotification() {
         val state = checkGateway.state.value
-        val succeeded = state.results.values.count {
-            it.status == BookSourceCheckStatus.Succeeded
-        }
-        val failed = state.results.values.count {
-            it.status == BookSourceCheckStatus.Failed
-        }
-        val cancelled = state.results.values.count {
-            it.status == BookSourceCheckStatus.Cancelled
-        }
-        val content = if (cancelled > 0) {
-            getString(R.string.book_source_check_cancelled, succeeded, failed, cancelled)
+        val content = if (state.cancelledCount > 0) {
+            getString(
+                R.string.book_source_check_cancelled,
+                state.succeededCount,
+                state.failedCount,
+                state.cancelledCount,
+            )
         } else {
-            getString(R.string.book_source_check_completed, succeeded, failed)
+            getString(
+                R.string.book_source_check_completed,
+                state.succeededCount,
+                state.failedCount,
+            )
         }
         notificationBuilder
             .clearActions()
