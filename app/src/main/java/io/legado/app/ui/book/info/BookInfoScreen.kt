@@ -75,13 +75,14 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.size.Size
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.help.coil.CoverExtras
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -603,8 +604,8 @@ private fun rememberBookInfoColorTheme(
         data = coverPath,
         requestKey = requestKey,
     ) {
-        setParameter("sourceOrigin", sourceOrigin)
-        setParameter("loadOnlyWifi", loadOnlyWifi)
+        extras[CoverExtras.SourceOrigin] = sourceOrigin
+        extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
     }
 
     return rememberThemeOverride(seedColor)

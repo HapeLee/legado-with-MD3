@@ -5,10 +5,10 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
-import coil.ImageLoader
-import coil.request.SuccessResult
+import coil3.ImageLoader
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
@@ -647,7 +647,7 @@ class BookInfoViewModel(
             )
             val result = imageLoader.execute(request)
             if (result is SuccessResult) {
-                val bitmap = result.drawable.toBitmap()
+                val bitmap = result.image.toBitmap()
                 val outputStream = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                 val byteArray = outputStream.toByteArray()

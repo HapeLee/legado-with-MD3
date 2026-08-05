@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.size.Size
+import coil3.size.Size
 import io.legado.app.ui.theme.LegadoTheme
 
 @Composable

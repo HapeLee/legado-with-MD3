@@ -48,7 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.domain.model.settings.ReadStyleItem

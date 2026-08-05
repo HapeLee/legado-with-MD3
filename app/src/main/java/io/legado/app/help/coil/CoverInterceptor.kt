@@ -1,8 +1,7 @@
 package io.legado.app.help.coil
 
-import coil.intercept.Interceptor
-import coil.request.ImageResult
-import io.legado.app.data.entities.BaseSource
+import coil3.intercept.Interceptor
+import coil3.request.ImageResult
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +35,7 @@ class CoverInterceptor : Interceptor {
         val data = request.data
 
         if (data is String && data.isNotBlank()) {
-            val sourceOrigin = request.parameters.value("sourceOrigin") as? String
+            val sourceOrigin = request.extras[CoverExtras.SourceOrigin]
             val source = sourceOrigin?.let { origin ->
                 withContext(Dispatchers.IO) {
                     SourceHelp.getSource(origin)
@@ -59,15 +58,13 @@ class CoverInterceptor : Interceptor {
             val newRequest = request.newBuilder()
                 .data(finalUrl)
                 .apply {
-                    headers.forEach { (key, value) ->
-                        addHeader(key, value)
-                    }
-                    tag(BaseSource::class.java, source)
+                    extras[CoverExtras.Source] = source
+                    extras[CoverExtras.Headers] = headers
                 }
                 .build()
 
-            return chain.proceed(newRequest)
+            return chain.withRequest(newRequest).proceed()
         }
-        return chain.proceed(request)
+        return chain.proceed()
     }
 }

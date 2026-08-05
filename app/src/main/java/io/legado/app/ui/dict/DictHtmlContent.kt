@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import io.legado.app.ui.theme.LegadoTheme
 
 @Composable
@@ -77,9 +77,9 @@ private fun DictHtmlParagraphContent(
         if (inline !is DictHtmlInline.Image) return@forEach
         val id = "dict-image-$paragraphIndex-${imageIndex++}"
         val painter = rememberAsyncImagePainter(model = inline.source)
-        val drawable = (painter.state as? AsyncImagePainter.State.Success)?.result?.drawable
-        val drawableWidth = drawable?.intrinsicWidth?.coerceAtLeast(1) ?: 1
-        val drawableHeight = drawable?.intrinsicHeight?.coerceAtLeast(1) ?: 1
+        val image = (painter.state.value as? AsyncImagePainter.State.Success)?.result?.image
+        val drawableWidth = image?.width?.coerceAtLeast(1) ?: 1
+        val drawableHeight = image?.height?.coerceAtLeast(1) ?: 1
         val scale = if (maxWidthPx in 1..<drawableWidth) {
             maxWidthPx.toFloat() / drawableWidth
         } else {

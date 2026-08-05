@@ -14,10 +14,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
-import coil.size.Size
+import coil3.ImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.size.Size
 import com.materialkolor.quantize.QuantizerCelebi
 import com.materialkolor.score.Score
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +47,8 @@ suspend fun ImageLoader.extractSeedColor(
     } as? SuccessResult ?: return null
 
     return withContext(Dispatchers.Default) {
-        val bitmap = result.drawable.toSafeBitmap(IMAGE_COLOR_EXTRACT_SIZE_PX)
+        val bitmap = result.image.asDrawable(context.resources)
+            .toSafeBitmap(IMAGE_COLOR_EXTRACT_SIZE_PX)
         Color(bitmap.extractSeedColor())
     }
 }

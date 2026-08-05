@@ -1,16 +1,13 @@
 package io.legado.app.help.coil
 
-import android.net.Uri
 import android.util.Base64
-import coil.ImageLoader
-import coil.decode.DataSource
-import coil.decode.ImageSource
-import coil.fetch.FetchResult
-import coil.fetch.Fetcher
-import coil.fetch.SourceResult
-import coil.network.HttpException
-import coil.request.Options
-import io.legado.app.data.entities.BaseSource
+import coil3.ImageLoader
+import coil3.decode.DataSource
+import coil3.decode.ImageSource
+import coil3.fetch.FetchResult
+import coil3.fetch.Fetcher
+import coil3.fetch.SourceFetchResult
+import coil3.request.Options
 import io.legado.app.model.ReadManga
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.isWifiConnect
@@ -61,8 +58,8 @@ class CoverFetcher(
     }
 
     override suspend fun fetch(): FetchResult {
-        val source = options.tags.tag<BaseSource>()
-        val isManga = options.parameters.value("manga") as? Boolean == true
+        val source = options.extras[CoverExtras.Source]
+        val isManga = options.extras[CoverExtras.Manga] == true
 
         if (url.startsWith("data:", true)) {
             val base64Data = url.substringAfter("base64,", "")
@@ -70,8 +67,11 @@ class CoverFetcher(
                 throw IOException("Invalid data URI")
             }
             val bytes = Base64.decode(base64Data, Base64.DEFAULT)
-            return SourceResult(
-                source = ImageSource(source = Buffer().write(bytes), context = options.context),
+            return SourceFetchResult(
+                source = ImageSource(
+                    source = Buffer().write(bytes),
+                    fileSystem = options.fileSystem
+                ),
                 mimeType = null,
                 dataSource = DataSource.MEMORY
             )
@@ -86,9 +86,10 @@ class CoverFetcher(
         }
 
         // Try OkHttp HTTP cache: FORCE_CACHE serves from cache or returns 504 on miss
+        val requestHeaders = options.extras[CoverExtras.Headers]
         val cacheRequest = Request.Builder()
             .url(url)
-            .headers(options.headers)
+            .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
             .cacheControl(CacheControl.FORCE_CACHE)
             .build()
 
@@ -104,7 +105,7 @@ class CoverFetcher(
                     // Cache miss, fetch from network
                     val networkRequest = Request.Builder()
                         .url(url)
-                        .headers(options.headers)
+                        .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
                         .tag(COVER_REQUEST_TAG)
                         .cacheControl(
                             CacheControl.Builder()
@@ -116,7 +117,7 @@ class CoverFetcher(
                     val body = networkResponse.body
                     if (!networkResponse.isSuccessful) {
                         body.close()
-                        throw HttpException(networkResponse)
+                        throw IOException("HTTP ${networkResponse.code}")
                     }
                     body.use { it.bytes() }
                 }
@@ -139,8 +140,11 @@ class CoverFetcher(
             } ?: throw IOException("图片解密失败")
         }
 
-        return SourceResult(
-            source = ImageSource(source = Buffer().write(decodedBytes), context = options.context),
+        return SourceFetchResult(
+            source = ImageSource(
+                source = Buffer().write(decodedBytes),
+                fileSystem = options.fileSystem
+            ),
             mimeType = null,
             dataSource = if (fromCache) DataSource.DISK else DataSource.NETWORK
         )
@@ -149,13 +153,13 @@ class CoverFetcher(
     class Factory(
         private val okHttpClient: OkHttpClient,
         private val okHttpClientManga: OkHttpClient,
-    ) : Fetcher.Factory<Uri> {
-        override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
+    ) : Fetcher.Factory<coil3.Uri> {
+        override fun create(data: coil3.Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
             val scheme = data.scheme
             if (scheme != "http" && scheme != "https" && scheme != "data") return null
 
-            val isManga = options.parameters.value("manga") as? Boolean == true
-            val loadOnlyWifi = options.parameters.value("loadOnlyWifi") as? Boolean == true
+            val isManga = options.extras[CoverExtras.Manga] == true
+            val loadOnlyWifi = options.extras[CoverExtras.LoadOnlyWifi] == true
             val client = if (isManga) okHttpClientManga else okHttpClient
 
             return CoverFetcher(data.toString(), options, client, loadOnlyWifi)
