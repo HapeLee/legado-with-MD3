@@ -3,8 +3,8 @@ package io.legado.app.ui.book.toc.rule.preview
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.TxtTocRule
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 @Stable
 data class TxtTocRulePreviewUiState(
@@ -18,7 +18,6 @@ data class TxtTocRulePreviewUiState(
     val searchQuery: String = "",
     val showSearch: Boolean = false,
 ) {
-    val hasSelection: Boolean get() = selectedRule.isNotEmpty()
     val filteredRules: ImmutableList<TocRulePreviewItem>
         get() = if (searchQuery.isBlank()) rules
         else rules.filter {

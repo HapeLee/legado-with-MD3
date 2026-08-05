@@ -37,7 +37,7 @@ class ReadBookmarkDelegate(
                 bookAuthor = book.author,
                 chapterIndex = chapter.chapter.index,
                 chapterName = chapter.title,
-                chapterPos = ReadBook.durPageIndex,
+                chapterPos = ReadBook.durChapterPos,
                 bookText = page.text,
                 content = "",
             )

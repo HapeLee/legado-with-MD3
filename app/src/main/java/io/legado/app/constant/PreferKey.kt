@@ -57,6 +57,7 @@ object PreferKey {
     const val bookshelfLayoutModePortrait = "bookshelfLayoutPortrait"
     const val bookshelfLayoutModeLandscape = "bookshelf_layout_landscape"
     const val bookshelfLayoutCompact = "bookshelfLayoutCompact"
+    const val bookshelfListIntroBelowContent = "bookshelfListIntroBelowContent"
     const val bookshelfShowDivider = "bookshelfShowDivider"
     const val bookshelfGridLayout = "bookshelfGridLayout"
     const val bookshelfSort = "bookshelfSort"
@@ -396,6 +397,11 @@ object PreferKey {
     const val navIconExplore = "navIconExplore"
     const val navIconRss = "navIconRss"
     const val navIconMy = "navIconMy"
+    const val navIconHomeSelected = "navIconHomeSelected"
+    const val navIconBookshelfSelected = "navIconBookshelfSelected"
+    const val navIconExploreSelected = "navIconExploreSelected"
+    const val navIconRssSelected = "navIconRssSelected"
+    const val navIconMySelected = "navIconMySelected"
 
     // Translation
     const val llmTranslateEnabled = "llmTranslateEnabled"

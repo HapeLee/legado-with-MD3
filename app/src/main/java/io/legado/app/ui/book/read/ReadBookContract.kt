@@ -400,13 +400,15 @@ internal val ReadBookButtonIds = listOf(
     "replace",
     "replace_badge",
     "translate",
+    "refresh_current",
 )
 
 internal val MoreActionIds = listOf(
     "change_source", "refresh", "download", "edit_content", "add_bookmark",
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
-    "simulated_reading", "get_progress", "cover_progress", "log",
+    "simulated_reading", "get_progress", "cover_progress", "highlight_rule",
+    "bottom_button_config", "log",
 )
 
 sealed interface ReadBookIntent {

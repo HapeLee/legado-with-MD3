@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -39,6 +40,7 @@ fun MainNavigationSettingsSheet(
     onSetDefault: (String) -> Unit,
     onRequestNavigationIcon: (String) -> Unit,
     onClearNavigationIcon: (String) -> Unit,
+    onSetLabelVisibilityMode: (String) -> Unit,
 ) {
     var showNavigationIcons by remember(show) { mutableStateOf(false) }
     var navigationItems by remember(show) {
@@ -99,6 +101,13 @@ fun MainNavigationSettingsSheet(
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = onSetDefault,
             )
+            CompactDropdownSettingItem(
+                title = stringResource(R.string.nav_label_mode),
+                selectedValue = settings.labelVisibilityMode,
+                displayEntries = stringArrayResource(R.array.label_vis_mode),
+                entryValues = stringArrayResource(R.array.label_vis_mode_value),
+                onValueChange = onSetLabelVisibilityMode,
+            )
             Spacer(modifier = Modifier.padding(bottom = 4.dp))
             val customIconCount = listOf(
                 settings.navIconHome,
@@ -106,6 +115,11 @@ fun MainNavigationSettingsSheet(
                 settings.navIconExplore,
                 settings.navIconRss,
                 settings.navIconMy,
+                settings.navIconHomeSelected,
+                settings.navIconBookshelfSelected,
+                settings.navIconExploreSelected,
+                settings.navIconRssSelected,
+                settings.navIconMySelected,
             ).count { it.isNotEmpty() }
             CompactClickableSettingItem(
                 title = stringResource(R.string.theme_config_nav_icons),

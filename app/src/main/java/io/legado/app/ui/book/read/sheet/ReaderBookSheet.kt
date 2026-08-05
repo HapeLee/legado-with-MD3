@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Refresh
@@ -75,6 +76,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalTxt
 import io.legado.app.ui.book.toc.DownloadState
 import io.legado.app.ui.book.toc.TocActivity
 import io.legado.app.ui.book.toc.TocBookmarkItemUi
@@ -83,7 +85,7 @@ import io.legado.app.ui.book.toc.TocIntent
 import io.legado.app.ui.book.toc.TocItemUi
 import io.legado.app.ui.book.toc.TocUiState
 import io.legado.app.ui.book.toc.TocViewModel
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
+import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -192,7 +194,9 @@ fun ReaderBookSheetRoute(
         },
         onEditLocalTocRule = { regex ->
             tocRegexLauncher.launch(
-                Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
+                Intent(context, TxtTocRulePreviewActivity::class.java)
+                    .putExtra("bookUrl", bookUrl)
+                    .putExtra("tocRegex", regex)
             )
         },
         onExportBookmarks = { isMarkdown, fileName ->
@@ -530,7 +534,6 @@ private fun ReaderBookTocPage(
     val focusRequester = remember { FocusRequester() }
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     var fabExpanded by rememberSaveable { mutableStateOf(false) }
-    var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
     val selected = action.selectedIds.isNotEmpty()
     val selectAllText = stringResource(R.string.select_all)
     val invertText = stringResource(R.string.invert_selection)
@@ -570,12 +573,9 @@ private fun ReaderBookTocPage(
     LaunchedEffect(selected) {
         fabExpanded = false
     }
-    LaunchedEffect(action.items) {
-        if (!hasAutoScrolled && action.items.isNotEmpty()) {
-            val currentIndex = action.items.indexOfFirst { it.isDur }
-            if (currentIndex >= 0) listState.scrollToItem(currentIndex)
-            hasAutoScrolled = true
-        }
+    LaunchedEffect(state.book?.totalChapterNum, state.isReverse, action.items.isNotEmpty()) {
+        val currentIndex = action.items.indexOfFirst { it.isDur }
+        if (currentIndex >= 0) listState.scrollToItem(currentIndex)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -765,14 +765,28 @@ private fun ReaderSheetChapterItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                AppText(
+                Row(
                     modifier = Modifier.padding(vertical = 8.dp),
-                    text = item.title,
-                    style = LegadoTheme.typography.labelMediumEmphasized,
-                    color = contentColor,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (item.isVip && !item.isPay) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = stringResource(R.string.a11y_vip_locked),
+                            tint = LegadoTheme.colorScheme.error,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(end = 4.dp),
+                        )
+                    }
+                    AppText(
+                        text = item.title,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
+                        color = contentColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (!item.tag.isNullOrBlank()) {
                     AppText(
                         text = item.tag,
@@ -905,13 +919,15 @@ private fun ReaderBookTocMenu(
         onClick = { dispatch(TocIntent.UpdateToc) },
     )
     if (book?.isLocal == true) {
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.local_book_toc_rule),
-            onClick = {
-                onDismiss()
-                onEditLocalTocRule(book.tocUrl)
-            },
-        )
+        if (book.isLocalTxt) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.txt_toc_rule),
+                onClick = {
+                    onDismiss()
+                    onEditLocalTocRule(book.tocUrl)
+                },
+            )
+        }
         RoundDropdownMenuItem(
             text = stringResource(R.string.split_long_chapters),
             isSelected = state.isSplitLongChapter,

@@ -23,5 +23,10 @@ data class AppShellSettings(
     val navIconExplore: String = "",
     val navIconRss: String = "",
     val navIconMy: String = "",
+    val navIconHomeSelected: String = "",
+    val navIconBookshelfSelected: String = "",
+    val navIconExploreSelected: String = "",
+    val navIconRssSelected: String = "",
+    val navIconMySelected: String = "",
     val launcherIcon: String = "ic_launcher",
 )

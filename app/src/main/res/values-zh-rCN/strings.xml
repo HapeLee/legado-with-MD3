@@ -1554,6 +1554,8 @@
     <string name="theme_config_nav_icons_custom_count">已设置 %1$d 个自定义图标</string>
     <string name="theme_config_nav_icons_default">使用默认图标</string>
     <string name="theme_config_add_nav_icon">添加%1$s图标</string>
+    <string name="theme_config_nav_icon_unselected">未选中</string>
+    <string name="theme_config_nav_icon_selected">已选中</string>
     <string name="theme_config_no_font_files">没有字体文件</string>
     <string name="theme_config_reset_defaults">恢复默认主题配置</string>
     <string name="theme_config_reset_defaults_summary">恢复外观页设置，不影响已保存主题和封面</string>
@@ -2328,6 +2330,7 @@
     <string name="night_card_bg_color">夜间卡片背景颜色</string>
     <string name="compact_details">精简详情</string>
     <string name="show_more_info">显示更多信息</string>
+    <string name="show_synopsis_below_content">简介显示在封面和信息下方</string>
     <string name="show_latest_chapter">显示最新章节</string>
     <string name="show_synopsis">显示简介</string>
     <string name="synopsis_lines">简介行数</string>

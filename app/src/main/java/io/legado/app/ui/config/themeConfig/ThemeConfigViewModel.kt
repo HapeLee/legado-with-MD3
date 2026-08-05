@@ -7,9 +7,9 @@ import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
-import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.ThemeSettings
@@ -20,10 +20,6 @@ import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.openInputStream
-import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +32,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 
 class ThemeConfigViewModel(
     private val appShellSettingsGateway: AppShellSettingsGateway,
@@ -344,6 +344,25 @@ class ThemeConfigViewModel(
             }
             MainDestination.My.route -> { settings ->
                 settings.copy(navIconMy = intent.path)
+            }
+            "${MainDestination.Home.route}:selected" -> { settings ->
+                settings.copy(navIconHomeSelected = intent.path)
+            }
+
+            "${MainDestination.Bookshelf.route}:selected" -> { settings ->
+                settings.copy(navIconBookshelfSelected = intent.path)
+            }
+
+            "${MainDestination.Explore.route}:selected" -> { settings ->
+                settings.copy(navIconExploreSelected = intent.path)
+            }
+
+            "${MainDestination.Rss.route}:selected" -> { settings ->
+                settings.copy(navIconRssSelected = intent.path)
+            }
+
+            "${MainDestination.My.route}:selected" -> { settings ->
+                settings.copy(navIconMySelected = intent.path)
             }
             else -> return
         }

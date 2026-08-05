@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 import kotlinx.collections.immutable.ImmutableList
 
 /**
@@ -133,9 +135,8 @@ fun CardModule(
                     ),
                 )
 
-                val intro = book.intro?.takeIf { it.isNotBlank() }
-                    ?.replace("\\s+".toRegex(), " ")
-                if (intro != null) {
+                val intro = remember(book.intro) { HtmlFormatter.formatSummaryText(book.intro) }
+                if (intro.isNotEmpty()) {
                     AppText(
                         text = intro,
                         style = LegadoTheme.typography.labelSmallEmphasized,

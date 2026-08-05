@@ -497,6 +497,22 @@ object DatabaseMigrations {
     )
     class Migration_64_65 : AutoMigrationSpec
 
+    //已在书架的书没有 listIntro, 搜索缓存里还留着的就补回去(缓存只保留一天, 补不到的回落到 intro)
+    @Suppress("ClassName")
+    class Migration_100_101 : AutoMigrationSpec {
+
+        override fun onPostMigrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                update books set listIntro = (
+                    select intro from searchBooks where searchBooks.bookUrl = books.bookUrl
+                )
+                where listIntro is null
+            """.trimIndent()
+            )
+        }
+    }
+
     private val migration_98_99 = object : Migration(98, 99) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(

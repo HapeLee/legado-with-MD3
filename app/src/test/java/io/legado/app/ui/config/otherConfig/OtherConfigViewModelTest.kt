@@ -4,8 +4,6 @@ import android.app.Application
 import android.os.Looper
 import io.legado.app.R
 import io.legado.app.domain.gateway.AppLocaleGateway
-import io.legado.app.domain.gateway.CheckSourceSettings
-import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.DirectLinkRule
 import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -52,7 +50,6 @@ class OtherConfigViewModelTest {
             readAloudSettingsGateway = FakeReadAloudSettingsGateway(),
             otherSettingsGateway = otherSettingsGateway,
             downloadCacheSettingsGateway = FakeDownloadCacheSettingsGateway(),
-            checkSourceSettingsGateway = FakeCheckSourceSettingsGateway(),
             directLinkSettingsGateway = FakeDirectLinkSettingsGateway(),
             localPasswordGateway = FakeLocalPasswordGateway(),
             systemGateway = FakeOtherConfigSystemGateway(),
@@ -85,18 +82,6 @@ class OtherConfigViewModelTest {
         viewModel.onIntent(OtherConfigIntent.MessageShown(message.id))
 
         assertEquals(1, viewModel.uiState.value.pendingMessages.size)
-    }
-
-    @Test
-    fun confirmCheckSource_writesThroughGateway() = runBlocking {
-        val checkSourceGateway = FakeCheckSourceSettingsGateway()
-        val viewModel = createViewModel(checkSourceSettingsGateway = checkSourceGateway)
-
-        viewModel.onIntent(OtherConfigIntent.CheckSourceTimeoutChanged(42L))
-        viewModel.onIntent(OtherConfigIntent.ConfirmCheckSource)
-        Shadows.shadowOf(Looper.getMainLooper()).idle()
-
-        assertEquals(42_000L, checkSourceGateway.lastUpdate?.timeoutMillis)
     }
 
     @Test
@@ -153,8 +138,6 @@ class OtherConfigViewModelTest {
 
     private fun createViewModel(
         otherSettingsGateway: FakeOtherSettingsGateway = FakeOtherSettingsGateway(),
-        checkSourceSettingsGateway: FakeCheckSourceSettingsGateway =
-            FakeCheckSourceSettingsGateway(),
         directLinkSettingsGateway: FakeDirectLinkSettingsGateway =
             FakeDirectLinkSettingsGateway(),
         localPasswordGateway: FakeLocalPasswordGateway = FakeLocalPasswordGateway(),
@@ -164,7 +147,6 @@ class OtherConfigViewModelTest {
         readAloudSettingsGateway = FakeReadAloudSettingsGateway(),
         otherSettingsGateway = otherSettingsGateway,
         downloadCacheSettingsGateway = FakeDownloadCacheSettingsGateway(),
-        checkSourceSettingsGateway = checkSourceSettingsGateway,
         directLinkSettingsGateway = directLinkSettingsGateway,
         localPasswordGateway = localPasswordGateway,
         systemGateway = systemGateway,
@@ -227,20 +209,6 @@ class OtherConfigViewModelTest {
             transform: (DownloadCacheSettings) -> DownloadCacheSettings,
         ) {
             state.value = transform(state.value)
-        }
-    }
-
-    private class FakeCheckSourceSettingsGateway : CheckSourceSettingsGateway {
-        private val state = MutableStateFlow(CheckSourceSettings())
-        var lastUpdate: CheckSourceSettings? = null
-
-        override val currentSettings: CheckSourceSettings
-            get() = state.value
-        override val settings: Flow<CheckSourceSettings> = state
-
-        override suspend fun update(settings: CheckSourceSettings) {
-            lastUpdate = settings
-            state.value = settings
         }
     }
 

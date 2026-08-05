@@ -50,7 +50,7 @@ fun ThemeConfigRouteScreen(
         if (uri != null && destination != null) {
             runCatching {
                 val iconDir = File(context.filesDir, "nav_icons").apply { mkdirs() }
-                val destinationFile = File(iconDir, "$destination.png")
+                val destinationFile = File(iconDir, "${destination.replace(':', '-')}.png")
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     destinationFile.outputStream().use(input::copyTo)
                 }

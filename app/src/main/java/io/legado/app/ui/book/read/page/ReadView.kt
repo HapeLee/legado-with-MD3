@@ -11,8 +11,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowInsets
+import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.core.view.ViewCompat
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
@@ -118,6 +121,7 @@ class ReadView(
     private val upProgressThrottle = throttle(200) { post { upProgress() } }
     val autoPager = AutoPager(this)
     val isAutoPage get() = autoPager.isRunning
+    private var accessibilityPageText = ""
 
     init {
         if (!isInEditMode) {
@@ -130,10 +134,16 @@ class ReadView(
         addView(nextPage)
         addView(curPage)
         addView(prevPage)
+        // 三个 PageView 只负责把同一页绘制到 Canvas；它们的内部 View 没有正文语义。
+        // 读屏应只命中下面由 ReadView 提供的当前页文本节点。
+        listOf(prevPage, curPage, nextPage).forEach {
+            it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        }
         descendantFocusability = FOCUS_BLOCK_DESCENDANTS
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         isClickable = true
         isFocusable = true
+        ViewCompat.setScreenReaderFocusable(this, true)
         prevPage.invisible()
         nextPage.invisible()
         curPage.markAsMainView()
@@ -182,6 +192,9 @@ class ReadView(
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
         return true
     }
+
+    // Canvas 正文没有子级语义，触摸探索必须命中本页级节点。
+    override fun onInterceptHoverEvent(event: MotionEvent): Boolean = true
 
     /**
      * 触摸事件
@@ -289,7 +302,9 @@ class ReadView(
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
-        info.className = ReadView::class.java.name
+        // The Canvas-rendered page is exposed as one stable text node.
+        info.className = TextView::class.java.name
+        info.text = accessibilityPageText
         info.isScrollable = true
         info.addAction(
             AccessibilityNodeInfo.AccessibilityAction(
@@ -309,6 +324,13 @@ class ReadView(
                 context.getString(R.string.menu)
             )
         )
+    }
+
+    override fun onInitializeAccessibilityEvent(event: AccessibilityEvent) {
+        super.onInitializeAccessibilityEvent(event)
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
+        }
     }
 
     override fun performAccessibilityAction(action: Int, arguments: Bundle?): Boolean {
@@ -628,7 +650,7 @@ class ReadView(
     override fun upContent(relativePosition: Int, resetPageOffset: Boolean) {
         post {
             val text = pageFactory.curPage.text
-            contentDescription = text
+            updateAccessibilityPageText(text)
             if (BuildConfig.DEBUG) {
                 // Device-independent readiness/page-change signal for the debug
                 // scenario runner (uiautomator does not expose ReadView on all
@@ -659,6 +681,14 @@ class ReadView(
             }
         }
         callBack.screenOffTimerStart()
+    }
+
+    private fun updateAccessibilityPageText(text: String) {
+        if (accessibilityPageText == text) return
+        accessibilityPageText = text
+        if (isAttachedToWindow) {
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+        }
     }
 
     private fun upProgress() {

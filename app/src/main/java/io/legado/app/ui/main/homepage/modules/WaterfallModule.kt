@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +32,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 
 /**
  * 瀑布流单项组件
@@ -134,8 +136,8 @@ fun WaterfallItem(
                     )
                 }
 
-                val intro = book.intro?.replace("\\s+".toRegex(), " ")
-                if (!intro.isNullOrBlank()) {
+                val intro = remember(book.intro) { HtmlFormatter.formatSummaryText(book.intro) }
+                if (intro.isNotEmpty()) {
                     AppText(
                         text = intro,
                         style = LegadoTheme.typography.labelSmallEmphasized,
@@ -146,7 +148,7 @@ fun WaterfallItem(
                     )
                 }
 
-                val kinds = book.getKindList()
+                val kinds = remember(book.wordCount, book.kind) { book.getKindList() }
                 if (kinds.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     FlowRow(

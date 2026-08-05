@@ -435,6 +435,8 @@ internal fun TypographyTitleTab(
     var titleSegScaling by remember(config.titleSegScaling) { mutableFloatStateOf(config.titleSegScaling) }
     var titleLineSpacingExtra by remember(config.titleLineSpacingExtra) { mutableIntStateOf(config.titleLineSpacingExtra) }
     var titleLineSpacingSub by remember(config.titleLineSpacingSub) { mutableIntStateOf(config.titleLineSpacingSub) }
+    var titleTopSpacing by remember(config.titleTopSpacing) { mutableIntStateOf(config.titleTopSpacing) }
+    var titleBottomSpacing by remember(config.titleBottomSpacing) { mutableIntStateOf(config.titleBottomSpacing) }
 
     var titleSize by remember(config.titleSize) {
         mutableIntStateOf(config.titleSize)
@@ -585,6 +587,36 @@ internal fun TypographyTitleTab(
             onValueChange = { value ->
                 titleLineSpacingSub = value.toInt()
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(titleLineSpacingSub)))
+            },
+        )
+
+        SectionTitle(title = stringResource(R.string.title_padding))
+        TinySliderSettingItem(
+            title = stringResource(R.string.title_margin_top),
+            value = titleTopSpacing.toFloat(),
+            valueRange = 0f..200f,
+            imageVector = Icons.Default.VerticalAlignTop,
+            onValueChange = { value ->
+                titleTopSpacing = value.toInt()
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.TitleTopSpacing(titleTopSpacing)
+                    )
+                )
+            },
+        )
+        TinySliderSettingItem(
+            title = stringResource(R.string.title_margin_bottom),
+            value = titleBottomSpacing.toFloat(),
+            valueRange = 0f..200f,
+            imageVector = Icons.Default.VerticalAlignBottom,
+            onValueChange = { value ->
+                titleBottomSpacing = value.toInt()
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.TitleBottomSpacing(titleBottomSpacing)
+                    )
+                )
             },
         )
 

@@ -46,6 +46,16 @@ class ReadBookDomainSplitBoundaryTest {
     }
 
     @Test
+    fun `菜单书签保存章节内字符位置而不是页码`() {
+        val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookmarkDelegate.kt").readText()
+        assertTrue(
+            "书签 chapterPos 必须保存章节内字符位置，否则跳转时页码会被误当成字符偏移",
+            "chapterPos = ReadBook.durChapterPos" in source &&
+                "chapterPos = ReadBook.durPageIndex" !in source,
+        )
+    }
+
+    @Test
     fun `ReadBookViewModel 不再持有各域的实现`() {
         val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt").readText()
         DOMAINS.forEach { domain ->

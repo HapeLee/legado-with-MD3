@@ -40,6 +40,13 @@ object HtmlFormatter {
     private val introLabelRegex =
         "^(?:[【\\[(（](?:$introLabels)[】\\])）]|(?:$introLabels)\\s*[：:])\\s*".toRegex()
 
+    //聚合类书源常把服务/登录状态排版进简介, 统一是"图标 + 短标签：值"的整行, 标签词无法穷举
+    private const val lineIcons = "(?:\\p{So}[\\uFE0F\\u200D\\s\\u200E]*)+"
+    private val iconMetaLineRegex = "^$lineIcons[^：:\\s]{1,8}\\s*[：:]\\s*.{0,40}$".toRegex()
+
+    //只有符号没有文字的分隔行/占位行
+    private val decorationLineRegex = "^[^\\p{L}\\p{N}]+$".toRegex()
+
     fun format(html: String?, otherRegex: Regex = otherHtmlRegex): String =
         format(html, otherRegex, "　　")
 
@@ -75,6 +82,33 @@ object HtmlFormatter {
             .map { it.replaceFirst(introLabelRegex, "").trim(*blankChars) }
             .filterNot { it.isEmpty() }
             .joinToString("\n") { PARAGRAPH_INDENT + it }
+    }
+
+    /**
+     * 书架/列表用的简介: 在 [formatDisplayText] 之上再丢掉书源排版进简介的状态面板,
+     * 即"📡 当前服务：xxx"这类图标开头的整行, 以及纯符号的分隔行。
+     * 详情页不做这一步 —— 那里是书源和用户交互的地方(登录提示等), 状态面板有用。
+     */
+    fun formatIntroText(html: String?): String {
+        return formatDisplayText(html)
+            .lineSequence()
+            .map { it.trim(*blankChars) }
+            .filterNot {
+                it.isEmpty() || decorationLineRegex.matches(it) || iconMetaLineRegex.matches(it)
+            }
+            .joinToString("\n") { PARAGRAPH_INDENT + it }
+    }
+
+    /**
+     * 与 [formatIntroText] 同样清洗, 但压成单行摘要。
+     * 列表/卡片只显示一两行并 ellipsis, 保留换行会让首段之后的内容被直接截断。
+     */
+    fun formatSummaryText(html: String?): String {
+        return formatIntroText(html)
+            .lineSequence()
+            .map { it.trim(*blankChars) }
+            .filterNot { it.isEmpty() }
+            .joinToString(" ")
     }
 
     fun formatKeepImg(html: String?, redirectUrl: URL? = null): String {

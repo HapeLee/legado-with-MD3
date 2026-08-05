@@ -216,13 +216,19 @@ data class TextChapter(
         position: Int,
         pageSplit: Boolean,
     ): Int {
+        return findReadAloudParagraphNum(getParagraphs(pageSplit), position) ?: -1
+    }
+
+    /**
+     * Resolves a position between paragraphs to the next readable paragraph.
+     * Returns -1 only when the position is beyond all laid-out paragraphs.
+     */
+    fun getParagraphNumAtOrAfter(
+        position: Int,
+        pageSplit: Boolean,
+    ): Int {
         val paragraphs = getParagraphs(pageSplit)
-        paragraphs.forEach { paragraph ->
-            if (position in paragraph.chapterIndices) {
-                return paragraph.num
-            }
-        }
-        return -1
+        return findReadAloudParagraphNumAtOrAfter(paragraphs, position) ?: -1
     }
 
     fun getParagraphs(pageSplit: Boolean): List<TextParagraph> {
@@ -352,3 +358,14 @@ data class TextChapter(
     }
 
 }
+
+internal fun findReadAloudParagraphNum(
+    paragraphs: List<TextParagraph>,
+    position: Int,
+): Int? = paragraphs.firstOrNull { position in it.chapterIndices }?.num
+
+internal fun findReadAloudParagraphNumAtOrAfter(
+    paragraphs: List<TextParagraph>,
+    position: Int,
+): Int? = findReadAloudParagraphNum(paragraphs, position)
+    ?: paragraphs.firstOrNull { it.chapterIndices.last >= position }?.num

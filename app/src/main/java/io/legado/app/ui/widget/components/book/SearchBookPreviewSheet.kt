@@ -33,6 +33,7 @@ import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -137,7 +138,7 @@ fun SearchBookPreviewSheet(
                 }
             }
 
-            val kinds = book.getKindList()
+            val kinds = remember(book.wordCount, book.kind) { book.getKindList() }
             if (kinds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 val lazyListState = rememberLazyListState()
@@ -154,8 +155,8 @@ fun SearchBookPreviewSheet(
                 }
             }
 
-            val intro = book.intro?.replace("\\s+".toRegex(), " ")?.trim()
-            if (!intro.isNullOrBlank()) {
+            val intro = remember(book.intro) { HtmlFormatter.formatDisplayText(book.intro) }
+            if (intro.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier

@@ -141,6 +141,7 @@ class ReadAloudPlayerCoordinator(
         val chapter = ReadBook.curTextChapter ?: return
         val position = chapterPosition.coerceIn(0, chapterLength)
         val pageIndex = chapter.getPageIndexByCharIndex(position)
+        if (pageIndex < 0) return
         val startPos = position - chapter.getReadLength(pageIndex)
         ReadAloud.play(application, play = true, pageIndex = pageIndex, startPos = startPos)
     }

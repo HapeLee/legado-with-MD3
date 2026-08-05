@@ -1,11 +1,11 @@
 package io.legado.app.ui.book.toc.rule.preview
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.utils.toastOnUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -56,17 +54,17 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.AppFloatingActionButton
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -113,16 +111,27 @@ fun TxtTocRulePreviewScreen(
     // Chapter list bottom sheet
     when (val sheet = state.activeSheet) {
         is TxtTocRulePreviewSheet.ChapterList -> {
+            val item = state.rules.firstOrNull { it.rule.id == sheet.item.rule.id } ?: sheet.item
             AppModalBottomSheet(
-                data = sheet.item,
+                data = item,
                 onDismissRequest = { onIntent(TxtTocRulePreviewIntent.DismissSheet) },
+                title = item.rule.name,
+                startAction = {
+                    TopBarActionButton(
+                        onClick = { onIntent(TxtTocRulePreviewIntent.EditRule(item.rule)) },
+                        imageVector = AppIcons.Edit,
+                        contentDescription = stringResource(R.string.edit),
+                    )
+                },
+                endAction = {
+                    TopBarActionButton(
+                        onClick = { onIntent(TxtTocRulePreviewIntent.ApplyRule) },
+                        imageVector = AppIcons.Check,
+                        contentDescription = stringResource(R.string.ok),
+                    )
+                },
             ) {
-                ChapterListSheetContent(
-                    item = sheet.item,
-                    onEditRule = { rule ->
-                        onIntent(TxtTocRulePreviewIntent.EditRule(rule))
-                    },
-                )
+                ChapterListSheetContent(item = item)
             }
         }
 
@@ -221,15 +230,6 @@ fun TxtTocRulePreviewScreen(
                 },
             )
         },
-        floatingActionButton = {
-            if (state.hasSelection) {
-                AppFloatingActionButton(
-                    onClick = { onIntent(TxtTocRulePreviewIntent.ApplyRule) },
-                    icon = Icons.Default.Check,
-                    tooltipText = stringResource(R.string.ok),
-                )
-            }
-        },
     ) { contentPadding ->
         if (state.loading) {
             Box(
@@ -247,7 +247,7 @@ fun TxtTocRulePreviewScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = adaptiveContentPadding(
                         top = contentPadding.calculateTopPadding(),
-                        bottom = contentPadding.calculateBottomPadding() + 80.dp,
+                        bottom = contentPadding.calculateBottomPadding(),
                     ),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -258,9 +258,7 @@ fun TxtTocRulePreviewScreen(
                             isSelected = item.rule.chapterRule == state.selectedRule,
                             onClick = {
                                 onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.chapterRule))
-                                if (item.totalCount > 0) {
-                                    onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
-                                }
+                                onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
                             },
                         )
                     }
@@ -271,7 +269,7 @@ fun TxtTocRulePreviewScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = adaptiveContentPadding(
                         top = contentPadding.calculateTopPadding(),
-                        bottom = contentPadding.calculateBottomPadding() + 80.dp,
+                        bottom = contentPadding.calculateBottomPadding(),
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -281,9 +279,7 @@ fun TxtTocRulePreviewScreen(
                             isSelected = item.rule.chapterRule == state.selectedRule,
                             onClick = {
                                 onIntent(TxtTocRulePreviewIntent.SelectRule(item.rule.chapterRule))
-                                if (item.totalCount > 0) {
-                                    onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
-                                }
+                                onIntent(TxtTocRulePreviewIntent.ShowChapterList(item))
                             },
                         )
                     }
@@ -441,45 +437,17 @@ private fun RulePreviewListItem(
 @Composable
 private fun ChapterListSheetContent(
     item: TocRulePreviewItem,
-    onEditRule: (TxtTocRule) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = item.rule.name,
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            TopBarActionButton(
-                onClick = { onEditRule(item.rule) },
-                imageVector = AppIcons.Edit,
-                contentDescription = stringResource(R.string.edit),
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = stringResource(
-                    R.string.chapter_count_format,
-                    item.totalCount
-                ),
-                style = LegadoTheme.typography.bodyMedium,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            text = stringResource(R.string.chapter_count_format, item.totalCount),
+            style = LegadoTheme.typography.bodyMedium,
+            color = LegadoTheme.colorScheme.onSurfaceVariant,
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
