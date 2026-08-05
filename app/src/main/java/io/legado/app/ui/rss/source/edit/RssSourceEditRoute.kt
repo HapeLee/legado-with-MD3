@@ -55,8 +55,8 @@ fun RssSourceEditRoute(
         title = stringResource(R.string.exit),
         text = stringResource(R.string.exit_no_save),
         confirmText = stringResource(R.string.yes),
-        onConfirm = { viewModel.onIntent(RssSourceEditIntent.DiscardChanges) },
+        onConfirm = { viewModel.onIntent(RssSourceEditIntent.DismissDialog) },
         dismissText = stringResource(R.string.no),
-        onDismiss = { viewModel.onIntent(RssSourceEditIntent.DismissDialog) },
+        onDismiss = { viewModel.onIntent(RssSourceEditIntent.DiscardChanges) },
     )
 }
