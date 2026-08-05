@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.read
 
 import android.content.Context
-import android.content.Intent
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
@@ -48,7 +47,7 @@ import kotlin.coroutines.coroutineContext
 /**
  * 开书 / 目录加载 / 换源 / 进度同步域（R2.2 续批）。
  *
- * 从 intent 解析出书，装载目录与正文，处理本地文件缺失、换源（手动与自动）、
+ * 从导航请求解析出书，装载目录与正文，处理本地文件缺失、换源（手动与自动）、
  * 以及与云端阅读进度的双向同步。
  *
  * **无自持状态**：唯一的状态是 `isInitFinish`（ReadView 首帧靠它放行前后章排版，
@@ -92,8 +91,8 @@ class ReadBookLoadDelegate(
 
     private var changeSourceCoroutine: Coroutine<*>? = null
 
-    suspend fun initReadBookConfig(intent: Intent) {
-        val bookUrl = intent.getStringExtra("bookUrl")
+    suspend fun initReadBookConfig(request: ReadBookInitRequest) {
+        val bookUrl = request.bookUrl
         val book = when {
             bookUrl.isNullOrEmpty() -> bookRepository.getLastReadBook()
             else -> bookRepository.getBook(bookUrl)
@@ -101,12 +100,12 @@ class ReadBookLoadDelegate(
         ReadBook.upReadBookConfig(book)
     }
 
-    fun initData(intent: Intent, success: (() -> Unit)? = null) {
+    fun initData(request: ReadBookInitRequest, success: (() -> Unit)? = null) {
         Coroutine.async(scope, Dispatchers.IO) {
             host.syncReadPreferencesSnapshot()
-            ReadBook.inBookshelf = intent.getBooleanExtra("inBookshelf", true)
-            ReadBook.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
-            val bookUrl = intent.getStringExtra("bookUrl")
+            ReadBook.inBookshelf = request.inBookshelf
+            ReadBook.chapterChanged = request.chapterChanged
+            val bookUrl = request.bookUrl
             val book = when {
                 bookUrl.isNullOrEmpty() -> bookRepository.getLastReadBook()
                 else -> bookRepository.getBook(bookUrl)
@@ -118,8 +117,8 @@ class ReadBookLoadDelegate(
                     AppLog.put("未找到书籍\nbookUrl:$bookUrl")
                 }
             }
-            val index = intent.getIntExtra("index", -1)
-            val chapterPos = intent.getIntExtra("chapterPos", -1)
+            val index = request.chapterIndex
+            val chapterPos = request.chapterPos
             if (index >= 0 && chapterPos >= 0) {
                 ReadBook.saveCurrentBookProgress()
                 host.openChapter(index, chapterPos)

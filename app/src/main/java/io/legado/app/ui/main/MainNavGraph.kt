@@ -64,6 +64,7 @@ import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookInitRequest
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
@@ -566,11 +567,9 @@ fun MainActivity.mainEntryProvider(
             readBookViewModel.prepareCachedChapterFallback(route.bookUrl, route.chapterChanged)
         }
         val lifecycleOwner = LocalLifecycleOwner.current
-        val readIntent = remember(route) {
-            MainActivity.createReadBookIntent(
-                context = this@mainEntryProvider,
+        val initRequest = remember(route) {
+            ReadBookInitRequest(
                 bookUrl = route.bookUrl,
-                readAloud = route.readAloud,
                 inBookshelf = route.inBookshelf,
                 chapterChanged = route.chapterChanged,
             )
@@ -658,8 +657,8 @@ fun MainActivity.mainEntryProvider(
         LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
             effectsReady.await()
             collectorReady[0] = true
-            readBookViewModel.initReadBookConfig(readIntent)
-            readBookViewModel.initData(readIntent) {
+            readBookViewModel.initReadBookConfig(initRequest)
+            readBookViewModel.initData(initRequest) {
                 readBookViewModel.markJustInitData()
                 controller.onRouteInitialized()
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {

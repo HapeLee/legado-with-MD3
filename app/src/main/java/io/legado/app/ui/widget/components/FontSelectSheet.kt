@@ -3,9 +3,6 @@ package io.legado.app.ui.widget.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +16,8 @@ import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.isContentScheme
@@ -62,14 +61,14 @@ fun FontSelectSheet(
         startAction = {
             startAction?.invoke()
             if (systemTypefaces != null && onSelectSystemTypeface != null) {
-                DropdownMenu(
+                RoundDropdownMenu(
                     expanded = showTypefaceMenu,
                     onDismissRequest = { showTypefaceMenu = false },
                 ) {
                     ProvideAppDensity {
                         systemTypefaces.forEachIndexed { index, name ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
+                            RoundDropdownMenuItem(
+                                text = name,
                                 onClick = {
                                     onSelectSystemTypeface(index)
                                     showTypefaceMenu = false
