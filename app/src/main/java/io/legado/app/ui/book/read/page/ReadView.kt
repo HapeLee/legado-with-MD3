@@ -42,6 +42,7 @@ import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.invisible
 
 import io.legado.app.utils.throttle
@@ -104,6 +105,15 @@ class ReadView(
     var isTextSelected = false
     private var pressOnTextSelected = false
     private val initialTextPos = TextPos(0, 0, 0)
+
+    /**
+     * 本次手势已被判定为「下滑切换书签」。
+     *
+     * 归属在 [isMove] 刚成立那一帧就定下来（此时首次拿到方向），之后的 MOVE 一律不再喂给
+     * [pageDelegate]，否则横向委托会同时启动翻页动画。
+     */
+    private var isBookmarkSwipe = false
+    private val bookmarkSwipeMinDistance by lazy { BOOKMARK_SWIPE_MIN_DISTANCE_DP.dpToPx() }
 
     private val slopSquare by lazy { ViewConfiguration.get(context).scaledTouchSlop }
     private var pageSlopSquare: Int = slopSquare
@@ -233,6 +243,7 @@ class ReadView(
                 postDelayed(longPressRunnable, longPressTimeout)
                 pressDown = true
                 isMove = false
+                isBookmarkSwipe = false
                 pageDelegate?.onTouch(event)
                 pageDelegate?.onDown()
                 setStartPoint(event.x, event.y, false)
@@ -244,13 +255,18 @@ class ReadView(
                 val absY = abs(startY - event.y)
                 if (!isMove) {
                     isMove = absX > slopSquare || absY > slopSquare
+                    if (isMove) {
+                        // 手势归属只在这一帧判定：竖直向下且竖直位移占主导 → 归书签手势。
+                        isBookmarkSwipe = !isScroll && !isTextSelected &&
+                                event.y - startY > 0 && absY > absX * VERTICAL_DOMINANCE_RATIO
+                    }
                 }
                 if (isMove) {
                     longPressed = false
                     removeCallbacks(longPressRunnable)
                     if (isTextSelected) {
                         selectText(event.x, event.y)
-                    } else {
+                    } else if (!isBookmarkSwipe) {
                         pageDelegate?.onTouch(event)
                     }
                 }
@@ -271,7 +287,12 @@ class ReadView(
                         return true
                     }
                 }
-                if (isTextSelected) {
+                if (isBookmarkSwipe) {
+                    if (event.y - startY >= bookmarkSwipeMinDistance) {
+                        eventListener.onEvent(ReaderEvent.ToggleBookmark)
+                    }
+                    isBookmarkSwipe = false
+                } else if (isTextSelected) {
                     callBack.showTextActionMenu()
                 } else if (pageDelegate!!.isMoved) {
                     pageDelegate?.onTouch(event)
@@ -283,6 +304,7 @@ class ReadView(
                 removeCallbacks(longPressRunnable)
                 if (!pressDown) return true
                 pressDown = false
+                isBookmarkSwipe = false
                 if (isTextSelected) {
                     callBack.showTextActionMenu()
                 } else if (pageDelegate!!.isMoved) {
@@ -769,6 +791,15 @@ class ReadView(
     }
 
     /**
+     * 更新右上角书签角标
+     */
+    fun upBookmarkBadge() {
+        curPage.upBookmarkBadge()
+        prevPage.upBookmarkBadge()
+        nextPage.upBookmarkBadge()
+    }
+
+    /**
      * 更新电量信息
      */
     fun upBattery(battery: Int) {
@@ -891,5 +922,13 @@ class ReadView(
         fun screenOffTimerStart()
         fun showTextActionMenu()
         fun upSystemUiVisibility()
+    }
+
+    private companion object {
+        /** 下滑切换书签所需的最小竖直位移。取得比翻页 slop 大，避免与轻微斜划抢手势。 */
+        const val BOOKMARK_SWIPE_MIN_DISTANCE_DP = 80f
+
+        /** 竖直位移需超过水平位移的这个倍数，才判定为下滑而非斜向翻页。 */
+        const val VERTICAL_DOMINANCE_RATIO = 1.5f
     }
 }

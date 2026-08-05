@@ -461,6 +461,7 @@ class ReadBookController(
             ReaderEvent.OpenContentEdit -> openContentEdit()
             ReaderEvent.OpenSearch -> openSearch(null)
             ReaderEvent.AddBookmark -> addBookmark()
+            ReaderEvent.ToggleBookmark -> viewModel.onIntent(ReadBookIntent.ToggleBookmark)
             ReaderEvent.ChangeReplaceRuleState -> changeReplaceRuleState()
             ReaderEvent.NextChapter -> viewModel.onIntent(ReadBookIntent.NextChapter)
             ReaderEvent.PrevChapter -> viewModel.onIntent(ReadBookIntent.PrevChapter)
@@ -1247,6 +1248,10 @@ class ReadBookController(
             is ReadBookEffect.MenuChapterChangeSource,
             is ReadBookEffect.AddBookmark -> {
                 // Handled by route/ViewModel — no-op here
+            }
+
+            is ReadBookEffect.UpBookmarkBadge -> {
+                refs?.readView?.upBookmarkBadge()
             }
         }
     }
