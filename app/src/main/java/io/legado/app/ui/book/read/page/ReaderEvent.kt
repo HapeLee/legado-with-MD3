@@ -23,6 +23,9 @@ sealed interface ReaderEvent {
 
     data object AddBookmark : ReaderEvent
 
+    /** 下滑手势：切换当前页书签。 */
+    data object ToggleBookmark : ReaderEvent
+
     data object ChangeReplaceRuleState : ReaderEvent
 
     data object NextChapter : ReaderEvent

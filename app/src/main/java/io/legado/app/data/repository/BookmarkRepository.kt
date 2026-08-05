@@ -25,8 +25,22 @@ class BookmarkRepository(
             dao.getByBook(bookName, bookAuthor)
         }
 
+    suspend fun getByChapterRange(
+        bookName: String,
+        bookAuthor: String,
+        chapterIndex: Int,
+        startPos: Int,
+        endPos: Int,
+    ): List<Bookmark> = withContext(Dispatchers.IO) {
+        dao.getByChapterRange(bookName, bookAuthor, chapterIndex, startPos, endPos)
+    }
+
     suspend fun save(bookmark: Bookmark) = withContext(Dispatchers.IO) {
         dao.insert(bookmark)
+    }
+
+    suspend fun deleteAll(bookmarks: List<Bookmark>) = withContext(Dispatchers.IO) {
+        dao.delete(*bookmarks.toTypedArray())
     }
 
     suspend fun saveAll(bookmarks: List<Bookmark>) = withContext(Dispatchers.IO) {
