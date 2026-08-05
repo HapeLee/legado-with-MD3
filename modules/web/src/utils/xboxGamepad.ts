@@ -3,28 +3,37 @@
 // =====================================================
 
 interface GamepadConfig {
-  DEBUG: boolean;
-  AXIS_THRESHOLD: number;
-  AXIS_COOLDOWN: number;
+  DEBUG: boolean
+  AXIS_THRESHOLD: number
+  AXIS_COOLDOWN: number
+
   DPAD_INDEX: {
-    UP: number;
-    DOWN: number;
-    LEFT: number;
-    RIGHT: number;
-  };
+    UP: number
+    DOWN: number
+    LEFT: number
+    RIGHT: number
+  }
+
+  BUTTON_INDEX: {
+    A: number
+    B: number
+  }
 }
 
 interface DPadState {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
+  up: boolean
+  down: boolean
+  left: boolean
+  right: boolean
+
+  a: boolean
+  b: boolean
 }
 
 interface GlobalState {
-  lastAxisTime: number;
-  lastAxisDirection: number;
-  dpadPressed: DPadState;
+  lastAxisTime: number
+  lastAxisDirection: number
+  dpadPressed: DPadState
 }
 
 // =====================================================
@@ -32,24 +41,34 @@ interface GlobalState {
 // =====================================================
 
 const CONFIG: GamepadConfig = {
-  DEBUG: false,              // 日志总开关
-  AXIS_THRESHOLD: 0.7,      // 摇杆触发阈值
-  AXIS_COOLDOWN: 300,       // 摇杆触发冷却时间 (ms)
-  DPAD_INDEX: {             // Xbox 标准映射
+  DEBUG: false, // 日志总开关
+  AXIS_THRESHOLD: 0.7, // 摇杆触发阈值
+  AXIS_COOLDOWN: 300, // 摇杆触发冷却时间 (ms)
+
+  DPAD_INDEX: {
+    // Xbox 标准映射
     UP: 12,
     DOWN: 13,
     LEFT: 14,
-    RIGHT: 15
-  }
-};
+    RIGHT: 15,
+  },
+
+  // Xbox 按键
+  BUTTON_INDEX: {
+    A: 0,
+
+    B: 1,
+  },
+}
 
 // =====================================================
 // 日志工具函数
 // =====================================================
 
 function log(...args: any[]): void {
-  if (!CONFIG.DEBUG) return;
-  console.log(...args);
+  if (!CONFIG.DEBUG) return
+
+  console.log(...args)
 }
 
 // =====================================================
@@ -58,58 +77,133 @@ function log(...args: any[]): void {
 
 const state: GlobalState = {
   lastAxisTime: 0,
+
   lastAxisDirection: 0,
+
   dpadPressed: {
     up: false,
+
     down: false,
+
     left: false,
-    right: false
-  }
-};
+
+    right: false,
+
+    a: false,
+
+    b: false,
+  },
+}
 
 // =====================================================
 // 通用工具函数
 // =====================================================
 
 /**
- * 平滑翻页函数
- * @param direction 1 = 向下, -1 = 向上
+ * 平滑翻页
  */
 function scrollPage(direction: number): void {
-  const offset = window.innerHeight - 110;
-  const distance = direction === 1 ? offset : -offset;
+  const offset = window.innerHeight - 110
 
-  log(direction === 1 ? "🎮 翻页：向下" : "🎮 翻页：向上");
+  const distance = direction === 1 ? offset : -offset
 
   window.scrollBy({
     top: distance,
-    behavior: "smooth"
-  });
+
+    behavior: 'smooth',
+  })
 }
 
 /**
- * 章节切换函数
- * @param direction 1 = 下一章, -1 = 上一章
+ * 顶部
+ */
+function goTop(): void {
+  log('🎮 前往顶部')
+
+  window.scrollTo({
+    top: 0,
+
+    behavior: 'smooth',
+  })
+}
+
+/**
+ * 底部
+ */
+function goBottom(): void {
+  log('🎮 前往底部')
+
+  window.scrollTo({
+    top: document.body.scrollHeight,
+
+    behavior: 'smooth',
+  })
+}
+
+/**
+ * 章节切换
  */
 function switchChapter(direction: number): void {
-  const buttons = document.querySelectorAll<HTMLElement>(".read-bar .tool-icon");
+  const buttons = document.querySelectorAll<HTMLElement>('.read-bar .tool-icon')
 
-  if (buttons.length < 2) return;
+  if (buttons.length < 2) return
 
   if (direction === 1) {
-    log("🎮 切换章节：下一章");
-    buttons[1].click();
+    log('🎮 下一章')
+
+    buttons[1].click()
   } else {
-    log("🎮 切换章节：上一章");
-    buttons[0].click();
+    log('🎮 上一章')
+
+    buttons[0].click()
   }
 }
 
 /**
- * 边沿检测函数
+ * 全屏切换
+ */
+function toggleFullscreen(): void {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.()
+
+    log('🎮 进入浏览器全屏')
+  } else {
+    document.exitFullscreen?.()
+
+    log('🎮 退出浏览器全屏')
+  }
+}
+
+/**
+ * 目录显示隐藏
+ */
+function toggleCatalog(): void {
+  const catalog = document.querySelector('.pop-cata') as HTMLElement
+
+  if (!catalog) {
+    log('❌ 未找到目录')
+
+    return
+  }
+
+  const hidden = getComputedStyle(catalog).display === 'none'
+
+  if (hidden) {
+    catalog.style.display = 'block'
+
+    log('🎮 打开目录')
+  } else {
+    catalog.style.display = 'none'
+
+    log('🎮 关闭目录')
+  }
+}
+
+/**
+ * 边沿检测
  */
 function isPressedOnce(current: boolean, previous: boolean): boolean {
-  return current && !previous;
+  return current && !previous
 }
 
 // =====================================================
@@ -117,57 +211,87 @@ function isPressedOnce(current: boolean, previous: boolean): boolean {
 // =====================================================
 
 function handleAxis(gp: Gamepad, now: number): void {
-  const axisY = gp.axes[1] || 0;
+  const axisY = gp.axes[1] || 0
 
   if (Math.abs(axisY) <= CONFIG.AXIS_THRESHOLD) {
-    state.lastAxisDirection = 0;
-    return;
+    state.lastAxisDirection = 0
+
+    return
   }
 
-  const direction = axisY > 0 ? 1 : -1;
-  const cooldownPassed = now - state.lastAxisTime > CONFIG.AXIS_COOLDOWN;
-  const directionChanged = direction !== state.lastAxisDirection;
+  const direction = axisY > 0 ? 1 : -1
+
+  const cooldownPassed = now - state.lastAxisTime > CONFIG.AXIS_COOLDOWN
+
+  const directionChanged = direction !== state.lastAxisDirection
 
   if (cooldownPassed || directionChanged) {
-    state.lastAxisTime = now;
-    state.lastAxisDirection = direction;
-    log(`🎮 摇杆触发 | axisY=${axisY.toFixed(2)}`);
-    scrollPage(direction);
+    state.lastAxisTime = now
+
+    state.lastAxisDirection = direction
+
+    scrollPage(direction)
   }
 }
 
 // =====================================================
-// DPad 处理
+// DPad + 按键处理
 // =====================================================
 
 function handleDPad(gp: Gamepad): void {
-  const indexes = CONFIG.DPAD_INDEX;
+  const indexes = CONFIG.DPAD_INDEX
+
+  const buttons = CONFIG.BUTTON_INDEX
 
   const current: DPadState = {
     up: gp.buttons[indexes.UP]?.pressed || false,
+
     down: gp.buttons[indexes.DOWN]?.pressed || false,
+
     left: gp.buttons[indexes.LEFT]?.pressed || false,
-    right: gp.buttons[indexes.RIGHT]?.pressed || false
-  };
+
+    right: gp.buttons[indexes.RIGHT]?.pressed || false,
+
+    a: gp.buttons[buttons.A]?.pressed || false,
+
+    b: gp.buttons[buttons.B]?.pressed || false,
+  }
+
+  // 十字 ↑ 顶部
 
   if (isPressedOnce(current.up, state.dpadPressed.up)) {
-    log("🎮 DPad 上");
-    scrollPage(-1);
-  }
-  if (isPressedOnce(current.down, state.dpadPressed.down)) {
-    log("🎮 DPad 下");
-    scrollPage(1);
-  }
-  if (isPressedOnce(current.left, state.dpadPressed.left)) {
-    log("🎮 DPad 左");
-    switchChapter(-1);
-  }
-  if (isPressedOnce(current.right, state.dpadPressed.right)) {
-    log("🎮 DPad 右");
-    switchChapter(1);
+    goTop()
   }
 
-  state.dpadPressed = current;
+  // 十字 ↓ 底部
+
+  if (isPressedOnce(current.down, state.dpadPressed.down)) {
+    goBottom()
+  }
+
+  // 左右章节
+
+  if (isPressedOnce(current.left, state.dpadPressed.left)) {
+    switchChapter(-1)
+  }
+
+  if (isPressedOnce(current.right, state.dpadPressed.right)) {
+    switchChapter(1)
+  }
+
+  // A 全屏
+
+  if (isPressedOnce(current.a, state.dpadPressed.a)) {
+    toggleFullscreen()
+  }
+
+  // B 目录
+
+  if (isPressedOnce(current.b, state.dpadPressed.b)) {
+    toggleCatalog()
+  }
+
+  state.dpadPressed = current
 }
 
 // =====================================================
@@ -175,47 +299,57 @@ function handleDPad(gp: Gamepad): void {
 // =====================================================
 
 function handleGamepad(gp: Gamepad | null): void {
-  if (!gp) return;
-  const now = performance.now();
-  handleAxis(gp, now);
-  handleDPad(gp);
+  if (!gp) return
+
+  const now = performance.now()
+
+  handleAxis(gp, now)
+
+  handleDPad(gp)
 }
 
 // =====================================================
 // 主循环
 // =====================================================
 
-let running = false;
+let running = false
 
 function gamepadLoop(): void {
-  const gamepads = navigator.getGamepads?.() || [];
+  const gamepads = navigator.getGamepads?.() || []
 
   for (const gp of gamepads) {
-    if (gp) handleGamepad(gp);
+    if (gp) handleGamepad(gp)
   }
 
-  requestAnimationFrame(gamepadLoop);
+  requestAnimationFrame(gamepadLoop)
 }
 
 // =====================================================
-// 连接 / 断开 事件
+// 连接 / 断开事件
 // =====================================================
 
-window.addEventListener("gamepadconnected", (e: GamepadEvent) => {
-  log("🎮 手柄已连接：", e.gamepad.id);
-  if (!running) {
-    running = true;
-    requestAnimationFrame(gamepadLoop);
-  }
-});
+window.addEventListener('gamepadconnected', (e: GamepadEvent) => {
+  log('🎮 手柄已连接:', e.gamepad.id)
 
-window.addEventListener("gamepaddisconnected", (e: GamepadEvent) => {
-  log("🎮 手柄已断开：", e.gamepad.id);
-});
+  if (!running) {
+    running = true
+
+    requestAnimationFrame(gamepadLoop)
+  }
+})
+
+window.addEventListener('gamepaddisconnected', (e: GamepadEvent) => {
+  log('🎮 手柄断开:', e.gamepad.id)
+})
+
+// =====================================================
+// 外部调用
+// =====================================================
 
 export function initXboxGamepad(): void {
   if (!running) {
-    running = true;
-    requestAnimationFrame(gamepadLoop);
+    running = true
+
+    requestAnimationFrame(gamepadLoop)
   }
 }
