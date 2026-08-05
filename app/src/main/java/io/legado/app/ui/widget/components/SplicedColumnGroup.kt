@@ -4,8 +4,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -92,26 +94,42 @@ fun SplicedColumnGroup(
                     ),
                     cornerRadius = cornerRadius,
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize()
                             .clip(RoundedCornerShape(cornerRadius))
                     ) {
-                        currentIndex.intValue = 0
-                        items()
+                        Spacer(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .appContainerBackground(AppContainerBackgroundType.Large)
+                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            currentIndex.intValue = 0
+                            items()
+                        }
                     }
                 }
             } else {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateContentSize()
-                        .clip(RoundedCornerShape(cornerRadius)),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        .clip(RoundedCornerShape(cornerRadius))
                 ) {
-                    currentIndex.intValue = 0
-                    items()
+                    Spacer(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .appContainerBackground(AppContainerBackgroundType.Large)
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        currentIndex.intValue = 0
+                        items()
+                    }
                 }
             }
         }

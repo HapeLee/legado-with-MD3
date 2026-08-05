@@ -16,14 +16,16 @@ data class ThemeConfigUiState(
 )
 
 sealed interface ThemeConfigSheet {
-    data class Background(val dark: Boolean) : ThemeConfigSheet
-    data class ContainerBackground(val target: ContainerBackgroundTarget, val dark: Boolean) : ThemeConfigSheet
+    data class BackgroundImage(val target: BackgroundImageTarget) : ThemeConfigSheet
     data object MainNavigation : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
     data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet
     data object Font : ThemeConfigSheet
 }
+
+/** 背景图片类型：应用的背景图片 / 大容器背景图片 / 项目背景图片 */
+enum class BackgroundImageTarget { App, LargeContainer, Item }
 
 enum class ContainerBackgroundTarget { LargeContainer, Item }
 
