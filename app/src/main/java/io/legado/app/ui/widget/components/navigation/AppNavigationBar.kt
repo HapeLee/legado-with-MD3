@@ -3,7 +3,9 @@ package io.legado.app.ui.widget.components.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
@@ -23,11 +25,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.layout.Measured
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.legado.app.domain.model.settings.customColors
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
@@ -151,6 +156,15 @@ fun RowScope.AppNavigationBarItem(
             }
             m3Icon()
         }
+    } else if (isMiuix && useCustomIcon) {
+        MiuixCustomNavigationBarItem(
+            selected = selected,
+            onClick = onClick,
+            modifier = modifier,
+            labelString = labelString,
+            showLabel = m3ShowLabel && (m3AlwaysShowLabel || selected),
+            icon = m3Icon,
+        )
     } else if (isMiuix) {
         MiuixNavigationBarItem(
             selected = selected,
@@ -172,5 +186,42 @@ fun RowScope.AppNavigationBarItem(
                 }
             } else null
         )
+    }
+}
+
+@Composable
+private fun RowScope.MiuixCustomNavigationBarItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    labelString: String,
+    showLabel: Boolean,
+    icon: @Composable () -> Unit,
+) {
+    val itemColor = MiuixTheme.colorScheme.onSurfaceContainer.let { color ->
+        if (selected) color else color.copy(alpha = 0.4f)
+    }
+    Column(
+        modifier = modifier
+            .height(64.dp)
+            .weight(1f)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        icon()
+        if (showLabel) {
+            AnimatedText(
+                text = labelString,
+                color = itemColor,
+                fontSize = 12.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }

@@ -482,7 +482,8 @@ fun MainScreen(
                                 ),
                                 m3ShowLabel = showLabel,
                                 m3AlwaysShowLabel = alwaysShowLabel,
-                                useCustomIcon = customIconPath.isNotEmpty()
+                                useCustomIcon =
+                                    customIconPath.isNotEmpty() || selectedCustomIconPath.isNotEmpty(),
                             )
                         }
                     }
