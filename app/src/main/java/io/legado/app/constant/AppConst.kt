@@ -17,6 +17,7 @@ object AppConst {
     const val APP_TAG = "Legado"
 
     const val channelIdDownload = "channel_download"
+    const val channelIdBookSourceCheck = "channel_book_source_check"
     const val channelIdReadAloud = "channel_read_aloud"
     const val channelIdWeb = "channel_web"
 
