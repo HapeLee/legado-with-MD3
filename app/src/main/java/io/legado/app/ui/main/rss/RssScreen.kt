@@ -1,7 +1,5 @@
 package io.legado.app.ui.main.rss
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +16,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Close
@@ -38,11 +35,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -299,7 +297,6 @@ fun RssScreen(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RssSourceGridItem(
     modifier: Modifier = Modifier,
@@ -315,92 +312,107 @@ fun RssSourceGridItem(
     val openLabel = stringResource(R.string.open)
     val moreMenuLabel = stringResource(R.string.more_menu)
 
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .combinedClickable(
-                role = Role.Button,
-                onClickLabel = openLabel,
-                onLongClickLabel = moreMenuLabel,
-                onClick = onClick,
-                onLongClick = { showMenu = true }
-            )
-            .semantics(mergeDescendants = true) {
-                contentDescription = source.sourceName
-                role = Role.Button
+    GlassCard(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = source.sourceName
+            role = Role.Button
+            this.onClick(label = openLabel) {
+                onClick()
+                true
             }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            this.onLongClick(label = moreMenuLabel) {
+                showMenu = true
+                true
+            }
+        },
+        onClick = onClick,
+        onLongClick = { showMenu = true }
     ) {
-        Box {
-            SourceIcon(
-                path = source.sourceIcon,
-                sourceOrigin = source.sourceUrl,
-                modifier = Modifier.size(48.dp)
-            )
-            RoundDropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                PillHeaderDivider(title = source.sourceName)
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                    text = stringResource(R.string.to_top),
-                    onClick = {
-                        onTop()
-                        showMenu = false
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box {
+                SourceIcon(
+                    path = source.sourceIcon,
+                    sourceOrigin = source.sourceUrl,
+                    modifier = Modifier.size(48.dp)
                 )
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                    text = stringResource(R.string.edit),
-                    onClick = {
-                        onEdit()
-                        showMenu = false
-                    }
-                )
-                if (!source.loginUrl.isNullOrBlank()) {
+                RoundDropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    PillHeaderDivider(title = source.sourceName)
                     RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                        text = stringResource(R.string.login),
+                        leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                        text = stringResource(R.string.to_top),
                         onClick = {
-                            onLogin()
+                            onTop()
+                            showMenu = false
+                        }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                        text = stringResource(R.string.edit),
+                        onClick = {
+                            onEdit()
+                            showMenu = false
+                        }
+                    )
+                    if (!source.loginUrl.isNullOrBlank()) {
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                            text = stringResource(R.string.login),
+                            onClick = {
+                                onLogin()
+                                showMenu = false
+                            }
+                        )
+                    }
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Close) },
+                        text = stringResource(R.string.disable_source),
+                        onClick = {
+                            onDisable()
+                            showMenu = false
+                        }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = {
+                            MenuItemIcon(
+                                Icons.Default.Delete,
+                                tint = LegadoTheme.colorScheme.error
+                            )
+                        },
+                        text = stringResource(R.string.delete),
+                        color = LegadoTheme.colorScheme.error,
+                        onClick = {
+                            onDelete()
                             showMenu = false
                         }
                     )
                 }
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.Close) },
-                    text = stringResource(R.string.disable_source),
-                    onClick = {
-                        onDisable()
-                        showMenu = false
-                    }
-                )
-                RoundDropdownMenuItem(
-                    leadingIcon = {
-                        MenuItemIcon(
-                            Icons.Default.Delete,
-                            tint = LegadoTheme.colorScheme.error
-                        )
-                    },
-                    text = stringResource(R.string.delete),
-                    color = LegadoTheme.colorScheme.error,
-                    onClick = {
-                        onDelete()
-                        showMenu = false
-                    }
-                )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            AppText(
+                text = remember(source.sourceName) { ellipsizeSourceName(source.sourceName) },
+                style = LegadoTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        AppText(
-            text = source.sourceName,
-            style = LegadoTheme.typography.labelMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
+}
+
+/**
+ * 超过 4 个字时只保留前 3 个字并追加省略号。
+ * 按 code point 截断，避免把 emoji 等代理对切成半个字符。
+ */
+internal fun ellipsizeSourceName(name: String): String {
+    if (name.codePointCount(0, name.length) <= 5) return name
+    return name.substring(0, name.offsetByCodePoints(0, 3)) + "…"
 }

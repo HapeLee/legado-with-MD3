@@ -10,9 +10,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +31,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -44,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
@@ -53,16 +59,18 @@ import io.legado.app.R
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.LoadMoreFooter
-import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -337,7 +345,7 @@ fun ExploreShowScreen(
                             start = 12.dp,
                             end = 12.dp
                         ),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
@@ -389,7 +397,8 @@ fun ExploreShowScreen(
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding(),
                             bottom = paddingValues.calculateBottomPadding() + 16.dp
-                        )
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
                             items = books,
@@ -483,18 +492,37 @@ fun ExploreBookItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    SearchBookListItem(
-        book = book,
-        shelfState = shelfState,
+    GlassCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .adaptiveHorizontalPadding(),
         onClick = onClick,
-        onLongClick = onLongClick,
-        modifier = modifier,
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
-    )
+        onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } },
+    ) {
+        // 点击交给卡片，避免和 SearchBookListItem 内部的 combinedClickable 嵌套；
+        // showPadding = false 后由卡片内边距接管留白。
+        SearchBookListItem(
+            book = book,
+            shelfState = shelfState,
+            onClick = null,
+            onLongClick = null,
+            modifier = Modifier.padding(8.dp),
+            showPadding = false,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey
+        )
+    }
 }
 
+/**
+ * 发现页网格项。
+ *
+ * 不复用 SearchBookGridItem：那里的 `width(IntrinsicSize.Min)` 会让项收缩到最小固有宽度，
+ * 在 `GridCells.Fixed` 里会挤掉书名、缩小封面并使同行项宽高不一致。
+ * 这里让卡片撑满单元格宽度，封面固定 5:7、书名固定占 2 行，
+ * 单元格等宽 ⇒ 每张卡高度由构造保证一致。
+ */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ExploreBookGridItem(
@@ -507,14 +535,63 @@ fun ExploreBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    SearchBookGridItem(
-        book = book,
-        shelfState = shelfState,
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
         onClick = onClick,
-        onLongClick = onLongClick,
-        modifier = modifier.padding(4.dp),
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
-    )
+        onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(5f / 7f)
+            ) {
+                CoilBookCover(
+                    name = book.name,
+                    author = book.author,
+                    path = book.coverUrl,
+                    modifier = Modifier.fillMaxSize(),
+                    sourceOrigin = book.origin,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    sharedCoverKey = sharedCoverKey,
+                    showLoadingPlaceholder = sharedCoverKey == null
+                )
+
+                val shelfIcon = when (shelfState) {
+                    BookShelfState.IN_SHELF -> Icons.Default.Check
+                    BookShelfState.SAME_NAME_AUTHOR -> Icons.Default.Shuffle
+                    else -> null
+                }
+
+                if (shelfIcon != null) {
+                    TextCard(
+                        icon = shelfIcon,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp),
+                        cornerRadius = 4.dp,
+                        horizontalPadding = 2.dp,
+                        verticalPadding = 2.dp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            AppText(
+                text = book.name,
+                modifier = Modifier.fillMaxWidth(),
+                style = LegadoTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
