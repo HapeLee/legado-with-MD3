@@ -440,7 +440,6 @@ fun ReadBookScreen(
             )
             aloudPlayerViewModel.effects.collectLatest { effect ->
                 when (effect) {
-                    ReadAloudPlayerEffect.OpenToc -> onIntent(ReadBookIntent.OpenChapterList)
                     ReadAloudPlayerEffect.ReturnToReaderSettings ->
                         onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
                     ReadAloudPlayerEffect.ReturnToClassic ->

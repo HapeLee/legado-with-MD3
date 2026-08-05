@@ -6,6 +6,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadAloudBgMode
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsInt
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
@@ -41,7 +42,8 @@ class ReadAloudPlayerViewModel(
             ReadAloudPlayerIntent.NextChapter -> coordinator.nextChapter()
             ReadAloudPlayerIntent.OpenSettings -> effect(ReadAloudPlayerEffect.ReturnToReaderSettings)
             ReadAloudPlayerIntent.SwitchToClassic -> effect(ReadAloudPlayerEffect.ReturnToClassic)
-            ReadAloudPlayerIntent.OpenToc -> effect(ReadAloudPlayerEffect.OpenToc)
+            ReadAloudPlayerIntent.CycleBgMode -> cycleBgMode()
+            is ReadAloudPlayerIntent.SelectChapter -> coordinator.selectChapter(intent.index)
             is ReadAloudPlayerIntent.SetBgMode -> AppConfigStore.putInt(
                 PreferKey.readAloudPlayerBgMode,
                 intent.value,
@@ -57,6 +59,16 @@ class ReadAloudPlayerViewModel(
         }
     }
 
+    private fun cycleBgMode() {
+        val next = when (readBgMode()) {
+            ReadAloudBgMode.Solid -> ReadAloudBgMode.Blur
+            ReadAloudBgMode.Blur -> ReadAloudBgMode.FlowingLight
+            ReadAloudBgMode.FlowingLight -> ReadAloudBgMode.Transparent
+            else -> ReadAloudBgMode.Blur
+        }
+        AppConfigStore.putInt(PreferKey.readAloudPlayerBgMode, next)
+    }
+
     private fun toUiState(
         source: ReadAloudPlayerSourceState,
         bgMode: Int,
@@ -64,6 +76,14 @@ class ReadAloudPlayerViewModel(
         val activeIndex = source.textLines.indexOfLast {
             it.chapterPosition <= source.chapterPosition
         }
+        val chapters = source.chapters.map { chapter ->
+            ReadAloudChapterUi(
+                index = chapter.index,
+                title = chapter.title,
+                isVolume = chapter.isVolume,
+                tocLevel = chapter.tocLevel,
+            )
+        }.toImmutableList()
         return ReadAloudPlayerUiState(
             bookUrl = source.bookUrl,
             bookName = source.bookName,
@@ -72,6 +92,7 @@ class ReadAloudPlayerViewModel(
             sourceOrigin = source.sourceOrigin,
             chapterIndex = source.chapterIndex,
             chapterTitle = source.chapterTitle,
+            chapters = chapters,
             chapterText = source.chapterText,
             textLines = source.textLines,
             activeTextLine = activeIndex,
@@ -96,4 +117,5 @@ class ReadAloudPlayerViewModel(
         return AppConfigStore.preferences.compatDsInt(PreferKey.readAloudPlayerBgMode)
             ?: ReadAloudBgMode.Blur
     }
+
 }

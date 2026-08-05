@@ -11,7 +11,7 @@ fun TextChapter.toCanonicalSpeechParagraphs(): List<CanonicalSpeechParagraph> {
         .mapIndexed { fallbackIndex, paragraph ->
             CanonicalSpeechParagraph(
                 index = (paragraph.realNum - 1).takeIf { it >= 0 } ?: fallbackIndex,
-                text = paragraph.text,
+                text = paragraph.text.replace(Regex("[袮祢꧁]"), " "),
                 chapterPosition = paragraph.chapterPosition,
             )
         }

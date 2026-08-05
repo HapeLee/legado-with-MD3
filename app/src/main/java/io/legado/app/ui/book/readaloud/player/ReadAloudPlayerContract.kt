@@ -11,6 +11,14 @@ data class ReadAloudTextLineUi(
 )
 
 @Stable
+data class ReadAloudChapterUi(
+    val index: Int,
+    val title: String,
+    val isVolume: Boolean,
+    val tocLevel: Int,
+)
+
+@Stable
 data class ReadAloudPlayerUiState(
     val bookUrl: String = "",
     val bookName: String = "",
@@ -19,6 +27,7 @@ data class ReadAloudPlayerUiState(
     val sourceOrigin: String? = null,
     val chapterIndex: Int = -1,
     val chapterTitle: String = "",
+    val chapters: ImmutableList<ReadAloudChapterUi> = persistentListOf(),
     val chapterText: String = "",
     val textLines: ImmutableList<ReadAloudTextLineUi> = persistentListOf(),
     val activeTextLine: Int = -1,
@@ -43,7 +52,8 @@ sealed interface ReadAloudPlayerIntent {
     data object NextParagraph : ReadAloudPlayerIntent
     data object OpenSettings : ReadAloudPlayerIntent
     data object SwitchToClassic : ReadAloudPlayerIntent
-    data object OpenToc : ReadAloudPlayerIntent
+    data object CycleBgMode : ReadAloudPlayerIntent
+    data class SelectChapter(val index: Int) : ReadAloudPlayerIntent
     data class SetBgMode(val value: Int) : ReadAloudPlayerIntent
     data class SetSpeed(val value: Int) : ReadAloudPlayerIntent
     data class SetTimer(val minutes: Int) : ReadAloudPlayerIntent
@@ -51,7 +61,6 @@ sealed interface ReadAloudPlayerIntent {
 }
 
 sealed interface ReadAloudPlayerEffect {
-    data object OpenToc : ReadAloudPlayerEffect
     data object ReturnToReaderSettings : ReadAloudPlayerEffect
     data object ReturnToClassic : ReadAloudPlayerEffect
 }

@@ -8,9 +8,9 @@ import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
+import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
-import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.fastBinarySearchBy
 import kotlinx.coroutines.CoroutineScope
 import kotlin.math.abs
@@ -203,7 +203,7 @@ data class TextChapter(
         val stringBuilder = StringBuilder()
         if (pages.isNotEmpty()) {
             for (index in pageIndex..min(pageEndIndex, pages.lastIndex)) {
-                stringBuilder.append(pages[index].text.replace(Regex("[袮꧁]"), " "))
+                stringBuilder.append(pages[index].text.replace(Regex("[袮祢꧁]"), " "))
                 if (pageSplit && !stringBuilder.endsWith("\n")) {
                     stringBuilder.append("\n")
                 }
