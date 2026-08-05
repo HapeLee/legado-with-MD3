@@ -12,11 +12,13 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.AudioPlayService
@@ -59,6 +61,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     var durChapterPos = 0
     var durChapter: BookChapter? = null
     var durPlayUrl = ""
+    var durLyric: String? = null
     var durAudioSize = 0
     var inBookshelf = false
     var bookSource: BookSource? = null
@@ -153,14 +156,23 @@ object AudioPlay : CoroutineScope by MainScope() {
                     .onSuccess { content ->
                         if (content.isEmpty()) {
                             appCtx.toastOnUi("未获取到资源链接")
+                            // 加载失败时清空歌词
+                            durLyric = null
+                            callback?.upLyric(null)
                         } else {
                             contentLoadFinish(chapter, content)
                         }
-                    }.onError {
-                        AppLog.put("获取资源链接出错\n$it", it, true)
+                    }.onError { error ->
+                        AppLog.put("获取资源链接出错\n$error", error, true)
                         upLoading(false)
+                        // 加载失败时清空歌词
+                        durLyric = null
+                        callback?.upLyric(null)
                     }.onCancel {
                         removeLoading(index)
+                        // 取消加载时清空歌词
+                        durLyric = null
+                        callback?.upLyric(null)
                     }.onFinally {
                         removeLoading(index)
                     }
@@ -177,7 +189,10 @@ object AudioPlay : CoroutineScope by MainScope() {
     private fun contentLoadFinish(chapter: BookChapter, content: String) {
         if (chapter.index == book?.durChapterIndex) {
             durPlayUrl = content
+            durLyric = chapter.getVariable("lyric").takeIf { it.isNotBlank() }
             upPlayUrl()
+            // 重新加载歌词，确保循环播放时歌词进度重置
+            callback?.upLyric(durLyric)
         }
     }
 
@@ -322,14 +337,15 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun setTimer(minute: Int) {
+        val timer = PlaybackTimer.normalize(minute)
         if (AudioPlayService.isRun) {
             val intent = Intent(context, AudioPlayService::class.java)
             intent.action = IntentAction.setTimer
-            intent.putExtra("minute", minute)
+            intent.putExtra("minute", timer)
             context.startService(intent)
         } else {
-            AudioPlayService.timeMinute = minute
-            postEvent(EventBus.AUDIO_DS, minute)
+            AudioPlayService.timeMinute = timer
+            postEvent(EventBus.AUDIO_DS, timer)
         }
     }
 
@@ -359,7 +375,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                 appDb.bookChapterDao.getChapter(book.bookUrl, book.durChapterIndex)?.let {
                     book.durChapterTitle = it.getDisplayTitle(
                         ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
-                        book.getUseReplaceRule()
+                        book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                        chineseConverterType = AppConfig.chineseConverterType,
                     )
                     SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
                 }
@@ -397,6 +414,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun register(context: Context) {
         activityContext = context
         callback = context as CallBack
+        // 主动更新歌词状态，确保重新进入时歌词控件能正确显示
+        callback?.upLyric(durLyric)
     }
 
     fun unregister(context: Context) {
@@ -418,6 +437,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     interface CallBack {
 
         fun upLoading(loading: Boolean)
+        fun upLyric(lyric: String?)
+        fun upLyricP(position: Int)
 
     }
 

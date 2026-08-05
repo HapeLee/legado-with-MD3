@@ -7,18 +7,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.PreferenceManager
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.FragmentWebdavAuthBinding
+import io.legado.app.domain.usecase.WebDavBackupUseCase
+import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
-import io.legado.app.help.AppWebDav.testWebDav
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Restore
@@ -35,11 +32,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 
 class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
+    private val webDavBackupUseCase by inject<WebDavBackupUseCase>()
+    private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private var _binding: FragmentWebdavAuthBinding? = null
     private val binding get() = _binding!!
     private var restoreJob: Job? = null
@@ -70,8 +70,6 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-
         val urls = listOf(
             "https://dav.jianguoyun.com/dav/",
             "https://webdav.aliyundrive.com/",
@@ -86,8 +84,9 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
         binding.editUrl.setAdapter(adapter)
 
-        binding.editAccount.setText(prefs.getString(PreferKey.webDavAccount, ""))
-        binding.editPassword.setText(prefs.getString(PreferKey.webDavPassword, ""))
+        val backupSettings = backupSettingsGateway.currentSettings
+        binding.editAccount.setText(backupSettings.webDavAccount)
+        binding.editPassword.setText(backupSettings.webDavPassword)
         binding.editPassword.inputType =
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
 
@@ -103,9 +102,9 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                 account = binding.editAccount.text.toString(),
                 password = binding.editPassword.text.toString()
             )
-            saveWebDavConfig(config)
             lifecycleScope.launch {
-                testWebDav()
+                saveWebDavConfig(config)
+                webDavBackupUseCase.test()
             }
         }
 
@@ -120,7 +119,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                     binding.progressRestore.visible()
                     binding.btnRestore.text = ""
                     saveWebDavConfig(config)
-                    AppWebDav.upConfig()
+                    webDavBackupUseCase.refreshConfig()
                     restore()
                 } finally {
                     binding.progressRestore.gone()
@@ -131,13 +130,14 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     }
 
-    fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
-        PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-            putString(PreferKey.webDavUrl, config.url)
-            putString(PreferKey.webDavAccount, config.account)
-            putString(PreferKey.webDavPassword, config.password)
+    suspend fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
+        backupSettingsGateway.update {
+            it.copy(
+                webDavUrl = config.url,
+                webDavAccount = config.account,
+                webDavPassword = config.password,
+            )
         }
-
         onSaved?.invoke()
     }
 
@@ -169,8 +169,8 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     private suspend fun showRestoreDialog(context: Context) {
-        val names = withContext(IO) { AppWebDav.getBackupNames() }
-        if (AppWebDav.isJianGuoYun && names.size > 700) {
+        val names = withContext(IO) { webDavBackupUseCase.getBackupNames() }
+        if (webDavBackupUseCase.isJianGuoYun && names.size > 700) {
             context.toastOnUi("由于坚果云限制列出文件数量，部分备份可能未显示，请及时清理旧备份")
         }
         if (names.isNotEmpty()) {
@@ -194,7 +194,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
         waitDialog.setText("恢复中…")
         waitDialog.show()
         val task = Coroutine.async {
-            AppWebDav.restoreWebDav(name)
+            webDavBackupUseCase.restore(name)
         }.onError {
             AppLog.put("WebDav恢复出错\n${it.localizedMessage}", it)
             appCtx.toastOnUi("WebDav恢复出错\n${it.localizedMessage}")

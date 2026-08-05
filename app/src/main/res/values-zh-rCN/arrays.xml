@@ -7,11 +7,24 @@
         <item>文件</item>
     </string-array>
 
+    <string-array name="layout_type">
+        <item>列表</item>
+        <item>单列</item>
+        <item>双列</item>
+        <item>瀑布</item>
+        <item>三列</item>
+    </string-array>
+
+    <string-array name="rss_type">
+        <item>网页</item>
+        <item>图片</item>
+        <item>视频</item>
+    </string-array>
+
     <string-array name="group_style">
         <item>标签</item>
-        <item>文件夹</item>
         <item>隐藏标签</item>
-        <item>材料标签</item>
+        <item>文件夹</item>
     </string-array>
 
     <string-array name="text_suffix">
@@ -91,10 +104,13 @@
         <item>时间及电量</item>
         <item>经典电量及时间</item>
         <item>时间及电量%</item>
+        <item>全文页数</item>
+        <item>全文页数及进度</item>
+        <item>自定义</item>
     </string-array>
 
     <string-array name="text_font_weight">
-        <item>正常</item>
+        <item>常规</item>
         <item>粗体</item>
         <item>细体</item>
     </string-array>
@@ -110,6 +126,7 @@
         <item>书源</item>
         <item>订阅源</item>
         <item>替换规则</item>
+        <item>自动识别</item>
     </string-array>
 
     <string-array name="tip_color">
@@ -130,6 +147,14 @@
         <item>@string/bookshelf_px_3</item>
         <item>@string/bookshelf_px_4</item>
         <item>@string/bookshelf_px_5</item>
+    </string-array>
+
+    <string-array name="bookshelf_layout">
+        <item>@string/list</item>
+        <item>@string/compact_list</item>
+        <item>@string/grid</item>
+        <item>@string/compact_grid</item>
+        <item>@string/cover_grid</item>
     </string-array>
 
     <string-array name="themes_item">
@@ -170,7 +195,6 @@
 
     <string-array name="composeEngine">
         <item>Material Design</item>
-        <item>SaltUI</item>
         <item>Miuix</item>
     </string-array>
 
@@ -189,9 +213,14 @@
     <string-array name="read_slider_mode">
         <item>常驻</item>
         <item>不显示</item>
-        <item>按钮置左</item>
-        <item>按钮置右</item>
-        <item>仅显示滑动条</item>
+    </string-array>
+
+    <string-array name="click_image_way_title">
+        <item>新版行为</item>
+        <item>预览图片</item>
+        <item>经典</item>
+        <item>禁用点击</item>
+        <item>双击</item>
     </string-array>
 
     <string-array name="title_bar_mode">
@@ -199,6 +228,18 @@
         <item>在独立行上显示</item>
         <item>仅显示标题</item>
         <item>不显示</item>
+    </string-array>
+
+    <string-array name="bookshelf_grid_layout">
+        <item>标准</item>
+        <item>紧凑</item>
+        <item>仅封面</item>
+    </string-array>
+
+    <string-array name="customContrast">
+        <item>默认</item>
+        <item>较强</item>
+        <item>最强</item>
     </string-array>
 
     <string name="all_version">所有版本</string>

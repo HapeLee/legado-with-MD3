@@ -8,25 +8,28 @@ import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.widget.FrameLayout
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.ViewCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.slider.Slider
 import io.legado.app.R
 import io.legado.app.databinding.ViewMangaMenuBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.source.getSourceType
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.ui.browser.WebViewActivity
-import io.legado.app.utils.ConstraintModify
+import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.gone
 import io.legado.app.utils.invisible
 import io.legado.app.utils.loadAnimation
-import io.legado.app.utils.modifyBegin
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.visible
@@ -37,6 +40,9 @@ class MangaMenu @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
     private val binding = ViewMangaMenuBinding.inflate(LayoutInflater.from(context), this, true)
     private val callBack: CallBack get() = activity as CallBack
+    private val readSettingsGateway by lazy {
+        GlobalContext.get().get<ReadSettingsGateway>()
+    }
     var canShowMenu: Boolean = false
 
     private val sourceMenu by lazy {
@@ -90,6 +96,7 @@ class MangaMenu @JvmOverloads constructor(
         override fun onAnimationStart(animation: Animation) {
             binding.tvSourceAction.text =
                 ReadManga.bookSource?.bookSourceName ?: context.getString(R.string.book_source)
+            updateSourceActionDescription()
             callBack.upSystemUiVisibility(true)
             binding.tvSourceAction.isGone = false
         }
@@ -114,36 +121,21 @@ class MangaMenu @JvmOverloads constructor(
 //        val brightnessBackground = GradientDrawable()
 //        brightnessBackground.cornerRadius = 5F.dpToPx()
 //        //brightnessBackground.setColor(ColorUtils.adjustAlpha(bgColor, 0.5f))
-//        if (AppConfig.isEInkMode) {
+//        if (ReadConfig.isEInkMode) {
 //            titleBar.setBackgroundResource(R.drawable.bg_eink_border_bottom)
 //            bottomMenu.setBackgroundResource(R.drawable.bg_eink_border_top)
 //        } else {
 //            //bottomMenu.setBackgroundColor(bgColor)
 //        }
-        if (AppConfig.showReadTitleBarAddition) {
+        if (ReadConfig.showReadTitleAddition) {
             titleBarAddition.visible()
         } else {
             titleBarAddition.gone()
         }
-        upBrightnessVwPos()
         /**
          * 确保视图不被导航栏遮挡
          */
         bottomView.applyNavigationBarPadding()
-    }
-
-    private fun upBrightnessVwPos() {
-        if (AppConfig.brightnessVwPos) {
-            binding.root.modifyBegin()
-                .clear(R.id.ll_brightness, ConstraintModify.Anchor.LEFT)
-                .rightToRightOf(R.id.ll_brightness, R.id.vw_menu_root)
-                .commit()
-        } else {
-            binding.root.modifyBegin()
-                .clear(R.id.ll_brightness, ConstraintModify.Anchor.RIGHT)
-                .leftToLeftOf(R.id.ll_brightness, R.id.vw_menu_root)
-                .commit()
-        }
     }
 
     private fun initAnimation() {
@@ -151,7 +143,7 @@ class MangaMenu @JvmOverloads constructor(
         menuTopOut.setAnimationListener(menuOutListener)
     }
 
-    fun runMenuOut(anim: Boolean = !AppConfig.isEInkMode) {
+    fun runMenuOut(anim: Boolean = !ReadConfig.isEInkMode) {
         if (isMenuOutAnimating) {
             return
         }
@@ -166,7 +158,7 @@ class MangaMenu @JvmOverloads constructor(
         }
     }
 
-    fun runMenuIn(anim: Boolean = !AppConfig.isEInkMode) {
+    fun runMenuIn(anim: Boolean = !ReadConfig.isEInkMode) {
         this.visible()
         binding.titleBar.visible()
         binding.bottomMenu.visible()
@@ -182,6 +174,7 @@ class MangaMenu @JvmOverloads constructor(
     fun upBookView() {
         binding.titleBar.title = " "
         binding.tvBookName.text = ReadManga.book?.name
+        updateSourceActionDescription()
         ReadManga.curMangaChapter?.let {
             binding.tvChapterName.text = ReadManga.book?.durChapterTitle
             binding.tvPre.isEnabled = ReadManga.durChapterIndex != 0
@@ -198,7 +191,7 @@ class MangaMenu @JvmOverloads constructor(
             callBack.openBookInfoActivity()
         }
         val chapterViewClickListener = OnClickListener {
-            if (AppConfig.readUrlInBrowser) {
+            if (ReadConfig.readUrlInBrowser) {
                 context.openUrl(tvChapterUrl.text.toString().substringBefore(",{"))
             } else {
                 context.startActivity<WebViewActivity> {
@@ -216,10 +209,10 @@ class MangaMenu @JvmOverloads constructor(
             context.alert(R.string.open_fun) {
                 setMessage(R.string.use_browser_open)
                 okButton {
-                    AppConfig.readUrlInBrowser = true
+                    updateReadUrlInBrowser(true)
                 }
                 noButton {
-                    AppConfig.readUrlInBrowser = false
+                    updateReadUrlInBrowser(false)
                 }
             }
             true
@@ -232,6 +225,8 @@ class MangaMenu @JvmOverloads constructor(
         tvChapterUrl.setOnClickListener(chapterViewClickListener)
         tvChapterUrl.setOnLongClickListener(chapterViewLongClickListener)
         tvSourceAction.setOnLongClickListener {
+            sourceMenu.menu.findItem(R.id.menu_chapter_pay).isVisible =
+                !ReadManga.bookSource?.getContentRule()?.payAction.isNullOrBlank()
             sourceMenu.show()
             true
         }
@@ -245,6 +240,10 @@ class MangaMenu @JvmOverloads constructor(
         seekReadPage.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
                 HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE
+                updateSeekAccessibility(
+                    value = value.toInt(),
+                    count = seekReadPage.valueTo.toInt().coerceAtLeast(1),
+                )
                 callBack.skipToPage(value.toInt() - 1)
             }
         }
@@ -280,6 +279,12 @@ class MangaMenu @JvmOverloads constructor(
 
     }
 
+    private fun updateReadUrlInBrowser(enabled: Boolean) {
+        activity?.lifecycleScope?.launch {
+            readSettingsGateway.update { it.copy(readUrlInBrowser = enabled) }
+        }
+    }
+
     fun upSeekBar(value: Int, count: Int) {
         binding.seekReadPage.apply {
             if (count <= 1) {
@@ -294,7 +299,30 @@ class MangaMenu @JvmOverloads constructor(
                 stepSize = 1f
                 this.value = value.toFloat().coerceIn(valueFrom, valueTo)
             }
+            updateSeekAccessibility(
+                value = this.value.toInt(),
+                count = if (count <= 1) 1 else count,
+            )
         }
+    }
+
+    private fun updateSeekAccessibility(value: Int, count: Int) {
+        binding.seekReadPage.contentDescription = context.getString(R.string.progress)
+        ViewCompat.setStateDescription(
+            binding.seekReadPage,
+            context.getString(
+                R.string.a11y_read_progress_page,
+                value.coerceAtLeast(1),
+                count.coerceAtLeast(1),
+            )
+        )
+    }
+
+    private fun updateSourceActionDescription() {
+        binding.tvSourceAction.contentDescription = context.getString(
+            R.string.a11y_book_source_action,
+            binding.tvSourceAction.text,
+        )
     }
 
     interface CallBack {

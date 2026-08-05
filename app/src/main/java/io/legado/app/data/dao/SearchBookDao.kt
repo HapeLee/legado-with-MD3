@@ -1,6 +1,11 @@
 package io.legado.app.data.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import io.legado.app.data.entities.SearchBook
 
 @Dao
@@ -19,7 +24,8 @@ interface SearchBookDao {
         from searchBooks as t1 inner join book_sources as t2 
         on t1.origin = t2.bookSourceUrl 
         where t1.name = :name and t1.author like '%'||:author||'%' 
-        and t2.enabled = 1 and t2.bookSourceGroup like '%'||:sourceGroup||'%'
+        and t2.enabled = 1
+        and (:sourceGroup = "" or t2.bookSourceGroup like '%'||:sourceGroup||'%')
         order by t2.customOrder"""
     )
     fun changeSourceByGroup(name: String, author: String, sourceGroup: String): List<SearchBook>
@@ -31,7 +37,7 @@ interface SearchBookDao {
         from searchBooks as t1 inner join book_sources as t2 
         on t1.origin = t2.bookSourceUrl 
         where t1.name = :name and t1.author like '%'||:author||'%'
-        and t2.bookSourceGroup like '%'||:sourceGroup||'%'
+        and (:sourceGroup = "" or t2.bookSourceGroup like '%'||:sourceGroup||'%')
         and (originName like '%'||:key||'%' or t1.latestChapterTitle like '%'||:key||'%')
         and t2.enabled = 1 
         order by t2.customOrder"""
@@ -58,6 +64,9 @@ interface SearchBookDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg searchBook: SearchBook): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(searchBooks: List<SearchBook>): List<Long>
 
     @Query("delete from searchBooks where name = :name and author = :author")
     fun clear(name: String, author: String)

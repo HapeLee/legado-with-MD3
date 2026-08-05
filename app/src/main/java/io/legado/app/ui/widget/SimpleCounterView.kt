@@ -51,7 +51,7 @@ class SimpleCounterView @JvmOverloads constructor(
     var max: Int
         get() = _max
         set(value) {
-            _max = value
+            _max = value.coerceAtLeast(1)
             _progress = _progress.coerceAtMost(_max)
             updateValue()
         }

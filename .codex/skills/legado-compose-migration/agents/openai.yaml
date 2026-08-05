@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legado Compose Migration"
+  short_description: "Guide Legado Compose screens and migration"
+  default_prompt: "Use $legado-compose-migration to create or migrate a Legado Android Compose screen with MainActivity navigation and standard architecture."

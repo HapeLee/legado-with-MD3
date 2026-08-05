@@ -40,7 +40,7 @@ object BookList {
         body: String?,
         isSearch: Boolean = true,
         isRedirect: Boolean = false,
-        filter: ((name: String, author: String) -> Boolean)? = null,
+        filter: ((name: String, author: String, kind: String?) -> Boolean)? = null,
         shouldBreak: ((size: Int) -> Boolean)? = null
     ): ArrayList<SearchBook> {
         body ?: throw NoStackTraceException(
@@ -159,7 +159,7 @@ object BookList {
         baseUrl: String,
         variable: String?,
         isRedirect: Boolean,
-        filter: ((name: String, author: String) -> Boolean)?
+        filter: ((name: String, author: String, kind: String?) -> Boolean)?
     ): SearchBook? {
         val book = Book(variable = variable)
         book.bookUrl = if (isRedirect) {
@@ -181,7 +181,7 @@ object BookList {
             baseUrl,
             false
         )
-        if (filter?.invoke(book.name, book.author) == false) {
+        if (filter?.invoke(book.name, book.author, book.kind) == false) {
             return null
         }
         if (book.name.isNotBlank()) {
@@ -198,7 +198,7 @@ object BookList {
         baseUrl: String,
         variable: String?,
         log: Boolean,
-        filter: ((name: String, author: String) -> Boolean)?,
+        filter: ((name: String, author: String, kind: String?) -> Boolean)?,
         ruleName: List<AnalyzeRule.SourceRule>,
         ruleBookUrl: List<AnalyzeRule.SourceRule>,
         ruleAuthor: List<AnalyzeRule.SourceRule>,
@@ -224,17 +224,17 @@ object BookList {
             Debug.log(bookSource.bookSourceUrl, "┌获取作者", log)
             searchBook.author = BookHelp.formatBookAuthor(analyzeRule.getString(ruleAuthor))
             Debug.log(bookSource.bookSourceUrl, "└${searchBook.author}", log)
-            if (filter?.invoke(searchBook.name, searchBook.author) == false) {
-                return null
-            }
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取分类", log)
             try {
-                searchBook.kind = analyzeRule.getStringList(ruleKind)?.joinToString(",")
+                searchBook.kind = analyzeRule.getStringList(ruleKind)?.joinToString(",")?.take(1000)
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.kind ?: ""}", log)
             } catch (e: Exception) {
                 coroutineContext.ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+            }
+            if (filter?.invoke(searchBook.name, searchBook.author, searchBook.kind) == false) {
+                return null
             }
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取字数", log)
@@ -257,7 +257,7 @@ object BookList {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取简介", log)
             try {
-                searchBook.intro = HtmlFormatter.format(analyzeRule.getString(ruleIntro))
+                searchBook.intro = HtmlFormatter.format(analyzeRule.getString(ruleIntro)).take(5000)
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.intro}", log)
             } catch (e: Exception) {
                 coroutineContext.ensureActive()
@@ -289,7 +289,7 @@ object BookList {
     }
 
     private fun checkExploreJson(bookSource: BookSource) {
-        if (Debug.callback == null) {
+        if (!Debug.hasActiveSession) {
             return
         }
         val json = bookSource.exploreKindsJson()

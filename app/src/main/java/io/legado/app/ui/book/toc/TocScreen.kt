@@ -1,8 +1,8 @@
 package io.legado.app.ui.book.toc
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,8 +17,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,12 +35,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.ExpandMore
@@ -51,24 +50,12 @@ import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -83,34 +70,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.R
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.widget.CollapsibleHeader
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
+import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.CollapsibleHeader
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
-import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
+import io.legado.app.ui.widget.components.button.series.SmallToggleButton
+import io.legado.app.ui.widget.components.button.series.ToggleStyle
+import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -119,20 +130,81 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun TocScreen(
+fun TocRouteScreen(
     viewModel: TocViewModel = koinViewModel(),
+    bookUrl: String? = null,
+    initialPage: Int = 0,
     onBackClick: () -> Unit,
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
 ) {
-
+    val state by viewModel.screenState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val book by viewModel.bookState.collectAsStateWithLifecycle()
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var pendingExportMarkdown by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("*/*")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
+    }
+    val tocRegexLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onIntent(
+                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
+            )
+        }
+    }
+    LaunchedEffect(bookUrl) {
+        bookUrl?.let { viewModel.onIntent(TocIntent.LoadBook(it)) }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is TocEffect.ShowMessage ->
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    TocScreen(
+        uiState = state,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+        onChapterClick = onChapterClick,
+        onOpenReplaceRule = onOpenReplaceRule,
+        onBookmarkClick = onBookmarkClick,
+        onEditLocalTocRule = { regex ->
+            tocRegexLauncher.launch(
+                Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
+            )
+        },
+        onExportBookmarks = { isMarkdown, fileName ->
+            pendingExportMarkdown = isMarkdown
+            exportLauncher.launch(fileName)
+        },
+        initialPage = initialPage,
+    )
+}
 
-    val pagerState = rememberPagerState { 2 }
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun TocScreen(
+    uiState: TocUiState,
+    onIntent: (TocIntent) -> Unit,
+    onBackClick: () -> Unit,
+    onChapterClick: (Int) -> Unit,
+    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
+    onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    onEditLocalTocRule: (String?) -> Unit,
+    onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
+    initialPage: Int = 0,
+) {
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val book = uiState.book
+    val state = uiState.action
+
+    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, 1)) { 2 }
     val scope = rememberCoroutineScope()
 
     val listState = rememberLazyListState()
@@ -152,22 +224,88 @@ fun TocScreen(
 
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
 
-    val useReplace = viewModel.useReplace
-    val showWordCount = viewModel.showWordCount
+    val useReplace = state.useReplace
+    val showWordCount = state.showWordCount
+    val bookmarkManagementTitle = stringResource(R.string.bookmark_management)
+    val locateCurrentReadingText = stringResource(R.string.locate_current_reading)
+    val moveToTopText = stringResource(R.string.move_to_top)
+    val moveToBottomText = stringResource(R.string.move_to_bottom)
+    val downloadAllText = stringResource(R.string.download_all)
+    val invertSelectionText = stringResource(R.string.invert_selection)
+    val selectFollowingText = stringResource(R.string.select_following)
+    val addBookmarkText = stringResource(R.string.bookmark_add)
+    val bookmarkDefaultFileName = stringResource(R.string.bookmark)
 
-    val subtitle = remember(pagerState.currentPage, book?.durChapterTitle) {
+    val topBarTitle = remember(
+        pagerState.currentPage,
+        book?.name,
+        book?.durChapterTitle,
+    ) {
         when (pagerState.currentPage) {
-            0 -> book?.durChapterTitle
-            1 -> "书签管理"
+            0 -> {
+                book?.durChapterTitle?.takeIf { it.isNotBlank() } ?: (book?.name ?: "")
+            }
+
+            1 -> bookmarkManagementTitle
+            else -> book?.name ?: ""
+        }
+    }
+
+    val topBarSubtitle = remember(
+        pagerState.currentPage,
+        book?.durChapterIndex,
+        book?.totalChapterNum
+    ) {
+        when (pagerState.currentPage) {
+            0 -> {
+                val durIndex = (book?.durChapterIndex ?: -1) + 1
+                val totalNum = book?.totalChapterNum ?: 0
+                if (durIndex > 0 && totalNum > 0) {
+                    "$durIndex / $totalNum"
+                } else {
+                    null
+                }
+            }
+
             else -> null
         }
     }
 
     val isOnTocPage = pagerState.currentPage == 0
+    val collapsedVolumes = uiState.collapsedVolumes
+    val stickyVolume by remember(state.items, collapsedVolumes, isOnTocPage, listState) {
+        derivedStateOf {
+            if (!isOnTocPage || state.items.isEmpty()) return@derivedStateOf null
+            val firstVisibleIndex = listState.firstVisibleItemIndex
+            if (firstVisibleIndex !in state.items.indices) return@derivedStateOf null
 
-    val fabItems = remember(state.items) {
+            val firstVisibleItem = state.items[firstVisibleIndex]
+            val volumeIndex = if (firstVisibleItem.isVolume) {
+                firstVisibleIndex
+            } else {
+                (firstVisibleIndex - 1 downTo 0).firstOrNull {
+                    val candidate = state.items[it]
+                    candidate.isVolume && candidate.tocLevel < firstVisibleItem.tocLevel
+                }
+            } ?: return@derivedStateOf null
+            val volumeItem = state.items[volumeIndex]
+            val isCollapsed = collapsedVolumes.contains(volumeItem.id)
+            val shouldStick =
+                firstVisibleIndex > volumeIndex || listState.firstVisibleItemScrollOffset > 24
+
+            if (!isCollapsed && shouldStick) volumeItem else null
+        }
+    }
+
+    val fabItems = remember(
+        state.items,
+        locateCurrentReadingText,
+        moveToTopText,
+        moveToBottomText,
+        downloadAllText
+    ) {
         listOf(
-            FabAction(Icons.Default.LocationOn, "定位至当前阅读") {
+            FabMenuItem(Icons.Default.LocationOn, locateCurrentReadingText) {
                 scope.launch {
                     val target = state.items.indexOfFirst { it.isDur }
                     if (target != -1) {
@@ -178,54 +316,41 @@ fun TocScreen(
                     }
                 }
             },
-            FabAction(Icons.Default.VerticalAlignTop, "移至顶部") {
+            FabMenuItem(Icons.Default.VerticalAlignTop, moveToTopText) {
                 scope.launch { listState.animateScrollToItem(0) }
             },
-            FabAction(Icons.Default.VerticalAlignBottom, "移至底部") {
+            FabMenuItem(Icons.Default.VerticalAlignBottom, moveToBottomText) {
                 scope.launch { listState.animateScrollToItem(state.items.size) }
             },
-            FabAction(Icons.Default.DownloadForOffline, "下载全部") {
-                viewModel.downloadAll()
+            FabMenuItem(Icons.Default.DownloadForOffline, downloadAllText) {
+                onIntent(TocIntent.DownloadAll)
             }
         )
     }
 
-    val selectionSecondaryActions = remember(state.selectedIds) {
+    val selectionSecondaryActions = remember(
+        state.selectedIds,
+        invertSelectionText,
+        selectFollowingText,
+        addBookmarkText
+    ) {
         listOf(
             ActionItem(
-                text = "反选",
-                icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
-                onClick = { viewModel.invertSelection() }
+                text = invertSelectionText,
+                icon = Icons.Default.Refresh,
+                onClick = { onIntent(TocIntent.InvertSelection) }
             ),
             ActionItem(
-                text = "选择后续",
-                icon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
-                onClick = { viewModel.selectFromLast() }
+                text = selectFollowingText,
+                icon = Icons.Default.ExpandMore,
+                onClick = { onIntent(TocIntent.SelectFromLast) }
             ),
             ActionItem(
-                text = "添加书签",
-                icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
-                onClick = { /* TODO: viewModel.addBookmarksForSelected() */ }
+                text = addBookmarkText,
+                icon = Icons.Default.BookmarkAdd,
+                onClick = { onIntent(TocIntent.AddBookmarksForSelected) }
             )
         )
-    }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("*/*")
-    ) { uri: Uri? ->
-        uri?.let {
-            val isActuallyMd = it.toString().endsWith(".md", ignoreCase = true)
-            viewModel.exportCurrentBookBookmarks(it, isActuallyMd)
-        }
-    }
-
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val newRegex = result.data?.getStringExtra("tocRegex")
-            viewModel.saveTocRegex(newRegex ?: "")
-        }
     }
 
     var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
@@ -277,53 +402,65 @@ fun TocScreen(
     }
 
     BackHandler(enabled = isSelectionMode) {
-        viewModel.clearSelection()
+        onIntent(TocIntent.ClearSelection)
     }
 
-    Scaffold(
+    AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             DynamicTopAppBar(
-                title = book?.name ?: "",
-                subtitle = subtitle,
+                title = topBarTitle,
+                subtitle = topBarSubtitle,
                 state = state,
                 scrollBehavior = scrollBehavior,
                 onBackClick = onBackClick,
-                onSearchToggle = { viewModel.setSearchMode(it) },
-                onSearchQueryChange = { viewModel.setSearchKey(it) },
-                searchPlaceholder = "搜索章节...",
-                onClearSelection = { viewModel.clearSelection() },
+                onSearchToggle = { onIntent(TocIntent.SetSearchMode(it)) },
+                onSearchQueryChange = { onIntent(TocIntent.SetSearchQuery(it)) },
+                searchPlaceholder = stringResource(R.string.search_chapters),
+                onClearSelection = { onIntent(TocIntent.ClearSelection) },
                 dropDownMenuContent = { dismiss ->
                     when (pagerState.currentPage) {
                         0 -> {
                             RoundDropdownMenuItem(
-                                text = { Text("使用替换规则") },
-                                trailingIcon = {
-                                    Checkbox(checked = useReplace, onCheckedChange = null)
-                                },
-                                onClick = { viewModel.toggleUseReplace() }
+                                text = stringResource(R.string.use_replace_rule),
+                                isSelected = useReplace,
+                                onClick = {
+                                    dismiss()
+                                    onIntent(TocIntent.ToggleUseReplace)
+                                }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("显示字数") },
-                                trailingIcon = {
-                                    Checkbox(checked = showWordCount, onCheckedChange = null)
-                                },
-                                onClick = { viewModel.toggleShowWordCount() }
+                                text = stringResource(R.string.show_word_count),
+                                isSelected = showWordCount,
+                                onClick = {
+                                    dismiss()
+                                    onIntent(TocIntent.ToggleShowWordCount)
+                                }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("反转目录") },
-                                onClick = { viewModel.reverseToc() }
+                                text = stringResource(R.string.reverse_toc),
+                                onClick = {
+                                    dismiss()
+                                    onIntent(TocIntent.ReverseToc)
+                                }
+                            )
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.update_toc),
+                                onClick = {
+                                    dismiss()
+                                    onIntent(TocIntent.UpdateToc)
+                                }
                             )
                             PillDivider()
                             RoundDropdownMenuItem(
-                                text = { Text("替换规则") },
+                                text = stringResource(R.string.replace_rule_title),
                                 onClick = {
                                     onOpenReplaceRule(null)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("新建替换规则") },
+                                text = stringResource(R.string.add_replace_rule),
                                 onClick = {
                                     val scopes = mutableListOf<String>()
                                     book?.name?.let { scopes.add(it) }
@@ -341,28 +478,19 @@ fun TocScreen(
                                 }
                             )
                             if (book?.isLocal == true) {
-                                PillHeaderDivider(title = "本地书籍选项")
+                                PillHeaderDivider(title = stringResource(R.string.local_book_options))
                                 RoundDropdownMenuItem(
-                                    text = { Text("本地书籍目录规则") },
+                                    text = stringResource(R.string.local_book_toc_rule),
                                     onClick = {
-                                        val intent =
-                                            Intent(context, TxtTocRuleActivity::class.java).apply {
-                                                putExtra("tocRegex", book?.tocUrl)
-                                            }
-                                        tocRegexLauncher.launch(intent)
+                                        onEditLocalTocRule(book?.tocUrl)
                                         dismiss()
                                     }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = { Text("拆分超长章节") },
-                                    trailingIcon = {
-                                        Checkbox(
-                                            checked = viewModel.isSplitLongChapter,
-                                            onCheckedChange = null
-                                        )
-                                    },
+                                    text = stringResource(R.string.split_long_chapters),
+                                    isSelected = uiState.isSplitLongChapter,
                                     onClick = {
-                                        viewModel.toggleSplitLongChapter()
+                                        onIntent(TocIntent.ToggleSplitLongChapter)
                                         dismiss()
                                     }
                                 )
@@ -371,26 +499,28 @@ fun TocScreen(
 
                         else -> {
                             RoundDropdownMenuItem(
-                                text = { Text("导出书签为JSON") },
+                                text = stringResource(R.string.export_bookmarks_json),
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
                                         Locale.getDefault()
                                     ).format(Date())
-                                    val initialName = "${book?.name ?: "书签"}_$dateFormat.json"
-                                    exportLauncher.launch(initialName)
+                                    val initialName =
+                                        "${book?.name ?: bookmarkDefaultFileName}_$dateFormat.json"
+                                    onExportBookmarks(false, initialName)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("导出书签为MarkDown") },
+                                text = stringResource(R.string.export_bookmarks_markdown),
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
                                         Locale.getDefault()
                                     ).format(Date())
-                                    val initialName = "${book?.name ?: "书签"}_$dateFormat.md"
-                                    exportLauncher.launch(initialName)
+                                    val initialName =
+                                        "${book?.name ?: bookmarkDefaultFileName}_$dateFormat.md"
+                                    onExportBookmarks(true, initialName)
                                     dismiss()
                                 }
                             )
@@ -399,74 +529,59 @@ fun TocScreen(
                 },
                 bottomContent = {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .adaptiveHorizontalPadding(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PrimaryScrollableTabRow(
+                        AppTabRow(
+                            tabTitles = listOf(
+                                stringResource(R.string.chapter_list),
+                                stringResource(R.string.bookmark)
+                            ),
                             selectedTabIndex = pagerState.currentPage,
-                            edgePadding = 0.dp,
-                            divider = {},
+                            onTabSelected = { index ->
+                                scope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Tab(
-                                selected = pagerState.currentPage == 0,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                                text = {
-                                    Text(
-                                        text = "目录",
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = pagerState.currentPage == 1,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                                text = {
-                                    Text(
-                                        text = "书签",
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            )
-                        }
+                        )
 
                         if (pagerState.currentPage == 0 && hasVolumes) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 16.dp)
-                            ) {
-                                SmallOutlinedIconToggleButton(
+                            Box {
+                                SmallToggleButton(
                                     checked = showVolumeMenu,
                                     onCheckedChange = { showVolumeMenu = it },
+                                    style = ToggleStyle.Outlined,
                                     icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                    contentDescription = "卷管理"
+                                    contentDescription = stringResource(R.string.volume_management)
                                 )
                                 RoundDropdownMenu(
                                     expanded = showVolumeMenu,
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
                                     RoundDropdownMenuItem(
-                                        text = { Text("展开所有卷") },
+                                        text = stringResource(R.string.expand_volume),
                                         onClick = {
-                                            viewModel.expandAllVolumes(); showVolumeMenu = false
+                                            onIntent(TocIntent.ExpandAllVolumes); showVolumeMenu = false
                                         }
                                     )
                                     RoundDropdownMenuItem(
-                                        text = { Text("收起所有卷") },
+                                        text = stringResource(R.string.coll_volume),
                                         onClick = {
-                                            viewModel.collapseAllVolumes(); showVolumeMenu = false
+                                            onIntent(TocIntent.CollapseAllVolumes); showVolumeMenu = false
                                         }
                                     )
 
-                                    val volumeItems =
-                                        remember(state.items) { state.items.filter { it.isVolume } }
+                                    val volumeItems = remember(state.items) {
+                                        state.items.filter { it.isVolume && it.tocLevel == 0 }
+                                    }
                                     if (volumeItems.isNotEmpty()) {
-                                        PillHeaderDivider(title = "快速跳转")
+                                        PillHeaderDivider(title = stringResource(R.string.quick_jump))
                                         volumeItems.forEach { uiItem ->
                                             RoundDropdownMenuItem(
-                                                text = { Text(uiItem.title) },
+                                                text = uiItem.title,
                                                 onClick = {
                                                     scope.launch {
                                                         val targetIndex =
@@ -490,45 +605,15 @@ fun TocScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButtonMenu(
+            AppFloatingActionButtonMenu(
                 modifier = Modifier
                     .offset(x = 16.dp, y = 16.dp),
                 expanded = fabMenuExpanded,
-                button = {
-                    ToggleFloatingActionButton(
-                        modifier = Modifier
-                            .animateFloatingActionButton(
-                                visible = shouldShowFab,
-                                alignment = Alignment.BottomEnd,
-                            )
-                            .focusRequester(focusRequester),
-                        checked = fabMenuExpanded,
-                        onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                    ) {
-                        val imageVector by remember {
-                            derivedStateOf {
-                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.AutoMirrored.Filled.MenuOpen
-                            }
-                        }
-                        Icon(
-                            imageVector = imageVector,
-                            contentDescription = "Menu",
-                            modifier = Modifier.animateIcon({ checkedProgress }),
-                        )
-                    }
-                }
-            ) {
-                fabItems.forEach { (icon, label, action) ->
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            action()
-                            fabMenuExpanded = false
-                        },
-                        icon = { Icon(icon, contentDescription = null) },
-                        text = { Text(text = label) }
-                    )
-                }
-            }
+                onExpandedChange = { fabMenuExpanded = it },
+                items = fabItems,
+                visible = shouldShowFab,
+                focusRequester = focusRequester
+            )
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -543,67 +628,120 @@ fun TocScreen(
                 exit = slideOutVertically { it } + fadeOut()
             ) {
                 SelectionBottomBar(
-                    onSelectAll = { viewModel.selectAll() },
-                    onSelectInvert = { viewModel.invertSelection() },
+                    onSelectAll = { onIntent(TocIntent.SelectAll) },
+                    onSelectInvert = { onIntent(TocIntent.InvertSelection) },
                     primaryAction = ActionItem(
-                        text = "下载已选 (${state.selectedIds.size})",
-                        icon = { Icon(Icons.Default.Download, null) },
-                        onClick = { viewModel.downloadSelected() }
+                        text = stringResource(
+                            R.string.download_selected_count,
+                            state.selectedIds.size
+                        ),
+                        icon = Icons.Default.Download,
+                        onClick = { onIntent(TocIntent.DownloadSelected) }
                     ),
                     secondaryActions = selectionSecondaryActions
                 )
             }
 
-            Column(modifier = Modifier.padding(padding)) {
-                HorizontalPager(state = pagerState) { page ->
-                    when (page) {
-                        0 -> ChapterListContent(
-                            viewModel = viewModel,
-                            listState = listState,
-                            onChapterClick = onChapterClick,
-                            contentPadding = PaddingValues(bottom = if (isSelectionMode) 80.dp else 0.dp)
+            HorizontalPager(state = pagerState) { page ->
+                when (page) {
+                    0 -> ChapterListContent(
+                        state = state,
+                        collapsedVolumes = collapsedVolumes,
+                        onIntent = onIntent,
+                        listState = listState,
+                        onChapterClick = onChapterClick,
+                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                            top = padding.calculateTopPadding(),
+                            bottom = 120.dp
                         )
+                    )
 
-                        1 -> BookmarkListContent(
-                            viewModel = viewModel,
-                            onBookmarkLongClick = onBookmarkClick,
-                            onBookmarkClick = { bookmark ->
-                                editingBookmark = bookmark
-                            },
-                            contentPadding = PaddingValues(bottom = if (isSelectionMode) 80.dp else 0.dp)
+                    1 -> BookmarkListContent(
+                        bookmarks = uiState.bookmarks,
+                        book = book,
+                        onBookmarkLongClick = onBookmarkClick,
+                        onBookmarkClick = { bookmark ->
+                            editingBookmark = bookmark
+                        },
+                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                            top = padding.calculateTopPadding(),
+                            bottom = 120.dp
                         )
-                    }
+                    )
                 }
+            }
+
+            AnimatedVisibility(
+                visible = isOnTocPage && state.titleReplaceProgress != null,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = padding.calculateTopPadding())
+                    .fillMaxWidth()
+                    .zIndex(2f)
+            ) {
+                AppLinearProgressIndicator(
+                    progress = state.titleReplaceProgress ?: 0f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clearAndSetSemantics { }
+                )
+            }
+
+            TopFloatingStickyItem(
+                item = stickyVolume,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = padding.calculateTopPadding() + 4.dp, start = 8.dp)
+            ) { volume ->
+                TextCard(
+                    text = volume.title,
+                    textStyle = LegadoTheme.typography.labelLarge,
+                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                    contentColor = LegadoTheme.colorScheme.onCardContainer,
+                    cornerRadius = 8.dp,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 6.dp,
+                    onClick = {
+                        scope.launch {
+                            val index = state.items.indexOfFirst { it.id == volume.id }
+                            if (index >= 0) {
+                                listState.animateScrollToItem(index)
+                            }
+                        }
+                    }
+                )
             }
         }
 
-        if (editingBookmark != null) {
-            BookmarkEditSheet(
-                bookmark = editingBookmark!!,
-                onDismiss = { editingBookmark = null },
-                onSave = { updatedBookmark ->
-                    viewModel.updateBookmark(updatedBookmark)
-                    editingBookmark = null
-                },
-                onDelete = { bookmarkToDelete ->
-                    viewModel.deleteBookmark(bookmarkToDelete)
-                    editingBookmark = null
-                }
-            )
+        val bookmarkForSheet = editingBookmark ?: remember(editingBookmark == null) {
+            Bookmark()
         }
+        BookmarkEditSheet(
+            show = editingBookmark != null,
+            bookmark = bookmarkForSheet,
+            onDismiss = { editingBookmark = null },
+            onSave = { updatedBookmark ->
+                onIntent(TocIntent.UpdateBookmark(updatedBookmark))
+                editingBookmark = null
+            },
+            onDelete = { bookmarkToDelete ->
+                onIntent(TocIntent.DeleteBookmark(bookmarkToDelete))
+                editingBookmark = null
+            }
+        )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChapterListContent(
-    viewModel: TocViewModel,
+    state: TocActionState,
+    collapsedVolumes: Set<Int>,
+    onIntent: (TocIntent) -> Unit,
     listState: LazyListState,
     onChapterClick: (Int) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val collapsedVolumes by viewModel.collapsedVolumes.collectAsStateWithLifecycle()
 
     FastScrollLazyColumn(
         state = listState,
@@ -615,12 +753,25 @@ fun ChapterListContent(
 
             if (uiItem.isVolume) {
 
-                stickyHeader(key = "volume-${uiItem.id}") {
+                item(key = "volume-${uiItem.id}") {
                     CollapsibleHeader(
-                        modifier = Modifier.animateItem(),
+                        modifier = Modifier
+                            .animateItem()
+                            .adaptiveHorizontalPadding(),
                         title = uiItem.title,
                         isCollapsed = collapsedVolumes.contains(uiItem.id),
-                        onToggle = { viewModel.toggleVolume(uiItem.id) }
+                        onToggle = { onIntent(TocIntent.ToggleVolume(uiItem.id)) },
+                        leadingContent = {
+                            repeat(uiItem.tocLevel.coerceIn(0, 6) + 1) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 2.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(LegadoTheme.colorScheme.secondary),
+                                )
+                            }
+                        },
                     )
                 }
 
@@ -630,20 +781,21 @@ fun ChapterListContent(
                     ChapterItem(
                         modifier = Modifier
                             .animateItem()
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .tocIndent(uiItem.tocLevel),
                         item = uiItem,
-                        showWordCount = viewModel.showWordCount,
+                        showWordCount = state.showWordCount,
                         onClick = {
                             if (state.selectedIds.isNotEmpty())
-                                viewModel.toggleSelection(uiItem.id)
+                                onIntent(TocIntent.ToggleSelection(uiItem.id))
                             else
                                 onChapterClick(uiItem.id)
                         },
                         onLongClick = {
-                            viewModel.toggleSelection(uiItem.id)
+                            onIntent(TocIntent.ToggleSelection(uiItem.id))
                         },
                         onDownloadClick = {
-                            viewModel.downloadChapter(uiItem.id)
+                            onIntent(TocIntent.DownloadChapter(uiItem.id))
                         }
                     )
                 }
@@ -651,6 +803,10 @@ fun ChapterListContent(
         }
     }
 }
+
+private fun Modifier.tocIndent(level: Int): Modifier = padding(
+    start = (level.coerceIn(0, 6) * 16).dp,
+)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -664,31 +820,70 @@ fun ChapterItem(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-            item.isDur -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            item.isSelected -> LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            item.isDur -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
             else -> Color.Transparent
         }, label = "BgColor"
     )
 
     val textColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.onSurface
-            item.isDur -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurface
+            item.isSelected -> LegadoTheme.colorScheme.onSurface
+            item.isDur -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurface
         }, label = "BgColor"
     )
 
     val detailColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
-            item.isDur -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            item.isSelected -> LegadoTheme.colorScheme.onSurfaceVariant
+            item.isDur -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurfaceVariant
         }, label = "BgColor"
+    )
+    val currentReadingDescription = stringResource(R.string.a11y_current_reading)
+    val lockedDescription = stringResource(R.string.a11y_vip_locked)
+    val downloadedDescription = stringResource(R.string.a11y_downloaded)
+    val downloadingDescription = stringResource(R.string.a11y_downloading)
+    val downloadFailedDescription = stringResource(R.string.a11y_download_failed)
+    val notDownloadedDescription = stringResource(R.string.a11y_not_downloaded)
+    val wordCountDescription = item.wordCount?.let {
+        stringResource(R.string.a11y_word_count, it)
+    }
+    val downloadStateDescription = when (item.downloadState) {
+        DownloadState.SUCCESS -> downloadedDescription
+        DownloadState.DOWNLOADING -> downloadingDescription
+        DownloadState.ERROR -> downloadFailedDescription
+        DownloadState.NONE -> notDownloadedDescription
+        DownloadState.LOCAL -> null
+    }
+    val chapterContentDescription = buildList {
+        add(item.title)
+        item.tag?.takeIf { it.isNotBlank() }?.let(::add)
+        if (item.isDur) add(currentReadingDescription)
+        if (item.isVip && !item.isPay) add(lockedDescription)
+        if (showWordCount) wordCountDescription?.let(::add)
+        downloadStateDescription?.let(::add)
+    }.joinToString(", ")
+    val canDownload = item.downloadState == DownloadState.NONE ||
+            item.downloadState == DownloadState.ERROR
+    val downloadActionDescription = stringResource(
+        if (item.downloadState == DownloadState.ERROR) {
+            R.string.a11y_retry_chapter
+        } else {
+            R.string.download_chapter
+        },
+        item.title
     )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.Button
+                contentDescription = chapterContentDescription
+                selected = item.isSelected
+            }
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -697,7 +892,7 @@ fun ChapterItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .adaptiveHorizontalPadding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -706,26 +901,26 @@ fun ChapterItem(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = LegadoTheme.colorScheme.error,
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 4.dp)
                         )
                     }
 
-                    Text(
+                    AppText(
                         text = item.title,
-                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
+                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 if (!item.tag.isNullOrEmpty()) {
-                    Text(
+                    AppText(
                         text = item.tag,
-                        style = MaterialTheme.typography.labelSmallEmphasized,
+                        style = LegadoTheme.typography.labelSmallEmphasized,
                         color = detailColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -733,17 +928,33 @@ fun ChapterItem(
                 }
             }
 
-            if (item.downloadState != DownloadState.LOCAL) {
+            val showStatusIcon =
+                remember(item.isDur, item.downloadState, item.wordCount, showWordCount) {
+                    if (item.downloadState == DownloadState.LOCAL) {
+                        item.isDur || (showWordCount && !item.wordCount.isNullOrEmpty())
+                    } else {
+                        true
+                    }
+                }
+
+            if (showStatusIcon) {
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .wrapContentSize()
                         .clip(MaterialTheme.shapes.medium)
-                        .combinedClickable(
-                            onClick = {
-                                if (item.downloadState == DownloadState.NONE) {
-                                    onDownloadClick()
-                                }
+                        .then(
+                            if (canDownload) {
+                                Modifier
+                                    .combinedClickable(
+                                        role = Role.Button,
+                                        onClick = onDownloadClick
+                                    )
+                                    .semantics {
+                                        contentDescription = downloadActionDescription
+                                    }
+                            } else {
+                                Modifier.clearAndSetSemantics { }
                             }
                         ),
                     contentAlignment = Alignment.Center
@@ -763,13 +974,12 @@ fun ChapterItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookmarkListContent(
-    viewModel: TocViewModel,
+    bookmarks: List<TocBookmarkItemUi>,
+    book: Book?,
     onBookmarkLongClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     onBookmarkClick: (Bookmark) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val bookmarks by viewModel.bookmarkUiList.collectAsStateWithLifecycle()
-    val book by viewModel.bookState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     LaunchedEffect(bookmarks, book?.durChapterIndex) {
@@ -786,11 +996,16 @@ fun BookmarkListContent(
 
     if (bookmarks.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding()
+                ),
             contentAlignment = Alignment.Center
         ) {
-            EmptyMessageView(
-                message = "暂无书签"
+            EmptyMessage(
+                message = stringResource(R.string.no_bookmark)
             )
         }
     } else {
@@ -830,11 +1045,12 @@ private fun StatusIcon(
 ) {
 
     val targetState = when {
+        showWordCount && !wordCount.isNullOrEmpty() && (downloadState == DownloadState.LOCAL || downloadState == DownloadState.SUCCESS) -> "SUCCESS_WORD_COUNT"
         isDur -> "DUR"
         downloadState == DownloadState.DOWNLOADING -> "LOADING"
-        downloadState == DownloadState.SUCCESS && showWordCount && !wordCount.isNullOrEmpty() -> "SUCCESS_WORD_COUNT"
         downloadState == DownloadState.SUCCESS -> "SUCCESS_ICON"
         downloadState == DownloadState.ERROR -> "ERROR"
+        downloadState == DownloadState.LOCAL -> "EMPTY"
         else -> "NONE"
     }
 
@@ -849,39 +1065,37 @@ private fun StatusIcon(
 
         when (state) {
 
+            "EMPTY" -> {
+                Box(modifier = Modifier.size(24.dp))
+            }
+
             "DUR" -> {
                 Icon(
                     imageVector = Icons.Rounded.LocationOn,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = LegadoTheme.colorScheme.secondary
                 )
             }
 
             "LOADING" -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.secondary
+                AppContainedLoadingIndicator(
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
             "SUCCESS_WORD_COUNT" -> {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant
-                    ),
-                    color = Color.Transparent
+                NormalCard(
+                    cornerRadius = 12.dp,
+                    containerColor = if (isDur) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer
                 ) {
                     if (wordCount != null) {
-                        Text(
+                        AppText(
                             modifier = Modifier
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             text = wordCount,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = if (isDur) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -892,7 +1106,7 @@ private fun StatusIcon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = LegadoTheme.colorScheme.secondary
                 )
             }
 
@@ -901,7 +1115,7 @@ private fun StatusIcon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.error
+                    tint = LegadoTheme.colorScheme.error
                 )
             }
 
@@ -910,7 +1124,7 @@ private fun StatusIcon(
                     imageVector = Icons.Outlined.DownloadForOffline,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    tint = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                 )
             }
         }

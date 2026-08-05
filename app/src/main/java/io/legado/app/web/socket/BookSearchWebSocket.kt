@@ -1,101 +1,121 @@
 package io.legado.app.web.socket
 
-import fi.iki.elonen.NanoHTTPD
-import fi.iki.elonen.NanoWSD
+import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
+import io.ktor.websocket.send
 import io.legado.app.R
-import io.legado.app.data.entities.SearchBook
-import io.legado.app.help.config.AppConfig
-import io.legado.app.model.webBook.SearchModel
-import io.legado.app.ui.book.search.SearchScope
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.model.MatchMode
+import io.legado.app.domain.usecase.BookSearchControl
+import io.legado.app.domain.usecase.BookSearchRequest
+import io.legado.app.domain.usecase.SearchBooksUseCase
+import io.legado.app.domain.usecase.SearchRunEvent
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJson
+import io.legado.app.utils.printOnDebug
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
-import java.io.IOException
 
-class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
-    NanoWSD.WebSocket(handshakeRequest),
-    CoroutineScope by MainScope(),
-    SearchModel.CallBack {
+class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : CoroutineScope by session {
 
-    private val normalClosure = NanoWSD.WebSocketFrame.CloseCode.NormalClosure
-    private val searchModel = SearchModel(this, this)
+    private val searchBooksUseCase: SearchBooksUseCase by lazy { GlobalContext.get().get() }
+    private val localPreferencesRepository: SettingsRepository by lazy {
+        GlobalContext.get().get()
+    }
+    private val searchControl = BookSearchControl()
+    private val sentBookUrls = linkedSetOf<String>()
+    private var searchJob: Job? = null
 
     private val SEARCH_FINISH = "Search finish"
 
-    override fun onOpen() {
-        launch(IO) {
-            kotlin.runCatching {
-                while (isOpen) {
-                    ping("ping".toByteArray())
-                    delay(30000)
-                }
-            }
-        }
-    }
-
-    override fun onClose(
-        code: NanoWSD.WebSocketFrame.CloseCode,
-        reason: String,
-        initiatedByRemote: Boolean
-    ) {
-        cancel()
-        searchModel.close()
-    }
-
-    override fun onMessage(message: NanoWSD.WebSocketFrame) {
-        launch(IO) {
-            kotlin.runCatching {
-                if (!message.textPayload.isJson()) {
-                    send("数据必须为Json格式")
-                    close(normalClosure, SEARCH_FINISH, false)
-                    return@launch
-                }
-                val searchMap =
-                    GSON.fromJsonObject<Map<String, String>>(message.textPayload).getOrNull()
-                if (searchMap != null) {
-                    val key = searchMap["key"]
-                    if (key.isNullOrBlank()) {
-                        send(appCtx.getString(R.string.cannot_empty))
-                        close(normalClosure, SEARCH_FINISH, false)
-                        return@launch
+    suspend fun handle() {
+        try {
+            for (frame in session.incoming) {
+                if (frame is Frame.Text) {
+                    val text = frame.readText()
+                    if (!text.isJson()) {
+                        session.send("数据必须为Json格式")
+                        session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                        break
                     }
-                    searchModel.search(System.currentTimeMillis(), key)
+                    val searchMap = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
+                    if (searchMap != null) {
+                        val key = searchMap["key"]?.trim()
+                        if (key.isNullOrBlank()) {
+                            session.send(appCtx.getString(R.string.cannot_empty))
+                            session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                            break
+                        }
+                        startSearch(key)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printOnDebug()
+        } finally {
+            searchJob?.cancel()
         }
     }
 
-    override fun onPong(pong: NanoWSD.WebSocketFrame) {
+    private fun startSearch(key: String) {
+        searchJob?.cancel()
+        sentBookUrls.clear()
+        searchControl.resume()
+        searchJob = launch(Dispatchers.IO) {
+            try {
+                searchBooksUseCase
+                    .execute(
+                        BookSearchRequest(
+                            keyword = key,
+                            page = 1,
+                            scope = BookSearchScope(
+                                localPreferencesRepository
+                                    .getPreference(LocalPreferencesKeys.SEARCH_SCOPE, "")
+                                    .first()
+                            ),
+                            matchMode = MatchMode.of(
+                                localPreferencesRepository
+                                    .getPreference(
+                                        LocalPreferencesKeys.MATCH_MODE,
+                                        MatchMode.DEFAULT.value
+                                    )
+                                    .first()
+                            ),
+                            concurrency = OtherConfig.threadCount,
+                        ),
+                        searchControl
+                    )
+                    .collect { event ->
+                        when (event) {
+                            SearchRunEvent.Started -> Unit
+                            is SearchRunEvent.Progress -> {
+                                val newBooks = event.upsertBooks.filter { sentBookUrls.add(it.bookUrl) }
+                                if (newBooks.isNotEmpty()) {
+                                    session.send(GSON.toJson(newBooks))
+                                }
+                            }
 
+                            is SearchRunEvent.Finished -> session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                        }
+                    }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Throwable) {
+                session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, exception.toString()))
+            }
+        }
     }
-
-    override fun onException(exception: IOException) {
-
-    }
-
-    override fun getSearchScope(): SearchScope = SearchScope(AppConfig.searchScope)
-
-    override fun onSearchStart() {
-
-    }
-
-    override fun onSearchSuccess(
-        searchBooks: List<SearchBook>,
-        processedSources: Int,
-        totalSources: Int
-    ) {
-        send(GSON.toJson(searchBooks))
-    }
-
-    override fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) = close(normalClosure, SEARCH_FINISH, false)
-
-    override fun onSearchCancel(exception: Throwable?) = close(normalClosure, exception?.toString() ?: SEARCH_FINISH, false)
-
 }

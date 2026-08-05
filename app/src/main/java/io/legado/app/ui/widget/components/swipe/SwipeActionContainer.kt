@@ -21,11 +21,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +73,9 @@ fun SwipeActionContainer(
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier,
+        modifier = modifier.then(
+            swipeActionsSemantics(startAction, endAction)
+        ),
         enableDismissFromStartToEnd = startAction != null,
         enableDismissFromEndToStart = endAction != null,
         backgroundContent = {
@@ -103,13 +110,41 @@ fun SwipeActionContainer(
         content = {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.surface,
+                color = Color.Transparent,
                 shape = RectangleShape
             ) {
                 content()
             }
         }
     )
+}
+
+private fun swipeActionsSemantics(
+    startAction: SwipeAction?,
+    endAction: SwipeAction?
+): Modifier {
+    val accessibilityActions = buildList {
+        startAction?.contentDescription?.let { label ->
+            add(
+                CustomAccessibilityAction(label = label) {
+                    startAction.onSwipe()
+                    true
+                }
+            )
+        }
+        endAction?.contentDescription?.let { label ->
+            add(
+                CustomAccessibilityAction(label = label) {
+                    endAction.onSwipe()
+                    true
+                }
+            )
+        }
+    }
+    if (accessibilityActions.isEmpty()) return Modifier
+    return Modifier.semantics {
+        customActions = accessibilityActions
+    }
 }
 
 @Composable
@@ -127,7 +162,7 @@ private fun SwipeBackground(
         targetValue = if (isThresholdReached)
             action.background
         else
-            MaterialTheme.colorScheme.surfaceVariant,
+            LegadoTheme.colorScheme.surfaceVariant,
         label = "bgColor"
     )
 
@@ -159,7 +194,7 @@ private fun SwipeBackground(
             tint = if (isThresholdReached)
                 contentColorFor(action.background)
             else
-                MaterialTheme.colorScheme.onSurfaceVariant
+                LegadoTheme.colorScheme.onSurfaceVariant
         )
     }
 }

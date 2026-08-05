@@ -9,99 +9,111 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
-import androidx.compose.material3.Icon
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.legado.app.R
+import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.SelectionBottomBar
-import io.legado.app.ui.widget.components.rules.ListUiState
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun <T> ListScaffold(
     title: String,
     state: ListUiState<T>,
-    onBackClick: () -> Unit,
+    subtitle: String? = null,
+    onBackClick: (() -> Unit)? = null,
+    backNavigationIcon: ImageVector = AppIcons.Back,
+    showSearchAction: Boolean = true,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    searchPlaceholder: String = "搜索...",
+    onSearchSubmit: (String) -> Unit = {},
+    searchTrailingIcon: @Composable (() -> Unit)? = null,
+    searchPlaceholder: String? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
-    bottomContent: @Composable (ColumnScope.() -> Unit)? = null,
-    dropDownMenuContent: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},
+    bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
+    dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
+    onClearSelection: (() -> Unit)? = null,
     selectionActions: SelectionActions? = null,
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
         onAddClick?.let { onClick ->
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    TooltipAnchorPosition.Above
+            AppFloatingActionButton(
+                onClick = onClick,
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = state.selectedIds.isEmpty(),
+                    alignment = Alignment.BottomEnd,
                 ),
-                tooltip = { PlainTooltip { Text("添加") } },
-                state = rememberTooltipState(),
-            ) {
-                FloatingActionButton(
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = state.selectedIds.isEmpty(),
-                        alignment = Alignment.BottomEnd,
-                    ),
-                    onClick = onClick
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
-                }
-            }
+                tooltipText = stringResource(R.string.add),
+                icon = Icons.Default.Add
+            )
         }
     },
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
-    Scaffold(
+    val scrollBehavior = scrollBehavior ?: GlassTopAppBarDefaults.defaultScrollBehavior()
+    AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .padding(bottom = 72.dp)
+            )
+        },
         topBar = {
             DynamicTopAppBar(
                 title = title,
+                subtitle = subtitle,
                 state = state,
                 scrollBehavior = scrollBehavior,
                 onBackClick = onBackClick,
+                backNavigationIcon = backNavigationIcon,
+                showSearchAction = showSearchAction,
                 onSearchToggle = onSearchToggle,
                 onSearchQueryChange = onSearchQueryChange,
+                onSearchSubmit = onSearchSubmit,
+                searchTrailingIcon = searchTrailingIcon,
                 searchPlaceholder = searchPlaceholder,
-                onClearSelection = { selectionActions?.onSelectInvert?.invoke() }, // 或其他逻辑
+                onClearSelection = { onClearSelection?.invoke() ?: selectionActions?.onClearSelection?.invoke() },
                 topBarActions = topBarActions,
                 dropDownMenuContent = dropDownMenuContent,
                 bottomContent = bottomContent
             )
         },
-        floatingActionButton = floatingActionButton
+        floatingActionButton = floatingActionButton,
+        contentWindowInsets = contentWindowInsets
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
             content(paddingValues)
 
             AnimatedVisibility(

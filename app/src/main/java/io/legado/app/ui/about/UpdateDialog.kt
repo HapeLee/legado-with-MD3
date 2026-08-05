@@ -55,7 +55,7 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
 
         val updateBody = arguments?.getString("updateBody")
         if (updateBody.isNullOrBlank()) {
-            toastOnUi("没有数据")
+            toastOnUi(R.string.about_no_data)
             dismiss()
             return
         }
@@ -77,16 +77,16 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
                 binding.tvUrl.text = url
                 binding.btnUpdate.setOnClickListener {
                     if (url.isNullOrBlank() || fileName.isNullOrBlank()) {
-                        toastOnUi("下载信息不完整")
+                        toastOnUi(R.string.about_download_info_incomplete)
                         return@setOnClickListener
                     }
                     Download.start(requireContext(), url, fileName)
-                    toastOnUi("开始下载: $fileName")
+                    toastOnUi(getString(R.string.about_start_download, fileName))
                 }
             }
 
             Mode.VIEW_LOG -> {
-                binding.bottomSheetTitle.text = "已经更新至"
+                binding.bottomSheetTitle.setText(R.string.about_installed_version_title)
                 binding.tvVersion.text = BuildConfig.VERSION_NAME
                 binding.btnUpdate.gone()
                 binding.llCurrent.gone()

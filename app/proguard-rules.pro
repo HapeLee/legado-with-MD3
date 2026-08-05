@@ -61,6 +61,20 @@
 -keep class * extends io.legado.app.help.JsExtensions{*;}
 # 数据类
 -keep class **.data.entities.**{*;}
+# Gson反序列化用的数据传输类
+-keep class io.legado.app.model.translation.**{*;}
+-keep class io.legado.app.domain.model.DictPair{*;}
+-keep class io.legado.app.domain.model.BookDictionary{*;}
+-keep class io.legado.app.domain.model.TextChunk{*;}
+-keep class io.legado.app.domain.model.ModuleDef{*;}
+-keep class io.legado.app.domain.model.ModuleItem{*;}
+-keep class io.legado.app.domain.model.CustomSetItem{*;}
+-keep class io.legado.app.data.repository.GoogleTranslateResponse{*;}
+-keep class io.legado.app.data.repository.GoogleSentence{*;}
+-keep class io.legado.app.data.repository.GoogleSpell{*;}
+-keep class io.legado.app.data.repository.OpenAIResponse{*;}
+-keep class io.legado.app.data.repository.OpenAIChoice{*;}
+-keep class io.legado.app.data.repository.OpenAIMessage{*;}
 # hutool-core hutool-crypto
 -keep class
 !cn.hutool.core.util.RuntimeUtil,
@@ -133,3 +147,7 @@ cn.hutool.core.util.**{*;}
 # Throwable
 -keepnames class * extends java.lang.Throwable
 -keepclassmembernames,allowobfuscation class * extends java.lang.Throwable{*;}
+# 忽略 Ktor 在 Android 上对 Java SE 管理类的引用
+-dontwarn java.lang.management.**
+-dontwarn io.ktor.util.debug.IntellijIdeaDebugDetector
+-keep,allowobfuscation class io.ktor.util.debug.** { *; }

@@ -1,0 +1,123 @@
+package io.legado.app.ui.widget.components
+
+import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
+
+@Composable
+fun EmptyMessage(
+    message: String,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    buttonText: String? = null,
+    buttonImageVector: ImageVector = AppIcons.Search,
+    onButtonClick: (() -> Unit)? = null,
+    faces: List<String> = listOf(
+        "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
+        "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
+    ),
+    faceTextSize: TextUnit = 32.sp,
+    onFaceClick: (() -> Unit)? = null
+) {
+    var currentFace by remember { mutableStateOf(faces.random()) }
+
+    Column(
+        modifier = modifier
+            .wrapContentSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AnimatedContent(
+            targetState = isLoading,
+            label = "LoadingStateAnimation"
+        ) { loading ->
+            if (loading) {
+                AppContainedLoadingIndicator()
+            } else {
+                AnimatedTextLine(
+                    text = currentFace,
+                    fontSize = faceTextSize,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .clickable {
+                            currentFace = faces.random()
+                            onFaceClick?.invoke()
+                        }
+                )
+            }
+        }
+
+        AnimatedTextLine(
+            text = message,
+            style = LegadoTheme.typography.labelMediumEmphasized,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            softWrap = true,
+            modifier = Modifier.widthIn(max = 240.dp)
+        )
+
+        if (buttonText != null && onButtonClick != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallTonalButton(
+                onClick = onButtonClick,
+                text = buttonText,
+                icon = buttonImageVector
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyMessage(
+    @StringRes messageResId: Int,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    buttonText: String? = null,
+    buttonImageVector: ImageVector = AppIcons.Search,
+    onButtonClick: (() -> Unit)? = null,
+    faces: List<String> = listOf(
+        "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
+        "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
+    ),
+    faceTextSize: TextUnit = 32.sp,
+    onFaceClick: (() -> Unit)? = null
+) {
+    val message = stringResource(id = messageResId)
+    EmptyMessage(
+        message = message,
+        modifier = modifier,
+        isLoading = isLoading,
+        buttonText = buttonText,
+        buttonImageVector = buttonImageVector,
+        onButtonClick = onButtonClick,
+        faces = faces,
+        faceTextSize = faceTextSize,
+        onFaceClick = onFaceClick
+    )
+}

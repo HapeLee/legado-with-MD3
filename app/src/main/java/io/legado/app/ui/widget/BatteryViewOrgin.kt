@@ -11,7 +11,7 @@ import android.text.StaticLayout
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
 import androidx.appcompat.widget.AppCompatTextView
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.canvasrecorder.recordIfNeededThenDraw
 import io.legado.app.utils.dpToPx
@@ -75,7 +75,7 @@ class BatteryViewOrgin @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        if (AppConfig.optimizeRender) {
+        if (ReadConfig.optimizeRender) {
             canvasRecorder.recordIfNeededThenDraw(canvas, width, height) {
                 super.onDraw(this)
                 drawBattery(this)

@@ -1,6 +1,7 @@
 package io.legado.app.data.entities
 
 import android.os.Parcelable
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
@@ -18,7 +19,6 @@ import io.legado.app.help.book.getFolderNameNoCache
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.GSON
@@ -33,7 +33,10 @@ import kotlin.math.max
 @TypeConverters(Book.Converters::class)
 @Entity(
     tableName = "books",
-    indices = [Index(value = ["name", "author"], unique = false)]
+    indices = [
+        Index(value = ["name", "author"], unique = false),
+        Index(value = ["durChapterTime"], unique = false)
+    ]
 )
 data class Book(
     // 详情页Url(本地书源存储完整文件路径)
@@ -118,8 +121,22 @@ data class Book(
     var readConfig: ReadConfig? = null,
     //同步时间
     @ColumnInfo(defaultValue = "0")
-    var syncTime: Long = 0L
+    var syncTime: Long = 0L,
+    // 简介内容(书源列表/发现规则获取), 与详情规则拿到的 intro 是书源作者写的两条规则,
+    // 聚合类书源常把服务状态排版进详情简介, 书架等列表场景优先用这一份
+    var listIntro: String? = null
 ) : Parcelable, BaseBook {
+
+    init {
+        kind = kind?.take(1000)
+        intro = intro?.take(5000)
+        listIntro = listIntro?.take(5000)
+        customTag = customTag?.take(1000)
+        customIntro = customIntro?.take(5000)
+        remark = remark?.take(1000)
+        latestChapterTitle = latestChapterTitle?.take(200)
+        durChapterTitle = durChapterTitle?.take(200)
+    }
 
     @delegate:Transient
     @delegate:Ignore
@@ -187,7 +204,7 @@ data class Book(
         config.useReplaceRule = useReplaceRule
     }
 
-    fun getUseReplaceRule(): Boolean {
+    fun getUseReplaceRule(defaultReplaceEnabled: Boolean): Boolean {
         val useReplaceRule = config.useReplaceRule
         if (useReplaceRule != null) {
             return useReplaceRule
@@ -196,7 +213,7 @@ data class Book(
         if (isImage || isEpub) {
             return false
         }
-        return AppConfig.replaceEnableDefault
+        return defaultReplaceEnabled
     }
 
     fun setReSegment(reSegment: Boolean) {
@@ -280,6 +297,14 @@ data class Book(
         return this.durChapterIndex
     }
 
+    fun setTranslationMode(enabled: Boolean) {
+        config.translationMode = enabled
+    }
+
+    fun getTranslationMode(): Boolean {
+        return config.translationMode
+    }
+
     // dailyChapters 的 setter 和 getter
     fun setDailyChapters(dailyChapters: Int) {
         config.dailyChapters = dailyChapters
@@ -333,12 +358,18 @@ data class Book(
     /**
      * 迁移旧的书籍的一些信息到新的书籍中
      */
-    fun migrateTo(newBook: Book, toc: List<BookChapter>): Book {
+    fun migrateTo(
+        newBook: Book,
+        toc: List<BookChapter>,
+        defaultReplaceEnabled: Boolean,
+        chineseConverterType: Int,
+    ): Book {
         newBook.durChapterIndex = BookHelp
             .getDurChapter(durChapterIndex, durChapterTitle, toc, totalChapterNum)
         newBook.durChapterTitle = toc[newBook.durChapterIndex].getDisplayTitle(
             ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules(),
-            getUseReplaceRule()
+            getUseReplaceRule(defaultReplaceEnabled),
+            chineseConverterType = chineseConverterType,
         )
         newBook.durChapterPos = durChapterPos
         newBook.durChapterTime = durChapterTime
@@ -348,7 +379,13 @@ data class Book(
         newBook.customIntro = customIntro
         newBook.customTag = customTag
         newBook.canUpdate = canUpdate
+        if (config.fixedType) {
+            newBook.type = type
+        }
         newBook.readConfig = readConfig
+        if (newBook.wordCount.isNullOrBlank()) {
+            newBook.wordCount = wordCount
+        }
         return newBook
     }
 
@@ -360,6 +397,7 @@ data class Book(
     }
 
     fun save() {
+        applyTagGroupRulesForBook(this)
         if (appDb.bookDao.has(bookUrl)) {
             appDb.bookDao.update(this)
         } else {
@@ -368,9 +406,10 @@ data class Book(
     }
 
     fun delete() {
-        if (ReadBook.book?.bookUrl == bookUrl) {
-            ReadBook.book = null
+        if (ReadBook.isCurrentBook(bookUrl)) {
+            ReadBook.clearCurrentBook()
         }
+        appDb.bookChapterDao.delByBook(bookUrl)
         appDb.bookDao.delete(this)
     }
 
@@ -402,7 +441,11 @@ data class Book(
         val mangaColorFilter: String? = null,
         var mangaScrollMode: Int? = null,
         var webtoonSidePaddingDp: Int? = null,
-        var mangaBackground: String? = null
+        var mangaBackground: String? = null,
+
+        var fixedType: Boolean = false, // 固定书籍类型,不随书源更新
+
+        var translationMode: Boolean = false // 是否启用翻译阅读模式
 
     ) : Parcelable
 

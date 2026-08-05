@@ -24,6 +24,7 @@ object AppFreezeMonitor {
     }
 
     private var registeredReceiver = false
+    private var monitorRunnable: Runnable? = null
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun init(context: Context) {
@@ -31,6 +32,10 @@ object AppFreezeMonitor {
             if (registeredReceiver) {
                 registeredReceiver = false
                 context.unregisterReceiver(screenStatusReceiver)
+            }
+            monitorRunnable?.let {
+                handler.removeCallbacks(it)
+                monitorRunnable = null
             }
             return
         }
@@ -40,6 +45,7 @@ object AppFreezeMonitor {
             context.registerReceiver(screenStatusReceiver, screenStatusReceiver.filter)
         }
 
+        if (monitorRunnable != null) return
         var previous = SystemClock.uptimeMillis()
 
         val runnable = object : Runnable {
@@ -56,9 +62,12 @@ object AppFreezeMonitor {
 
                 if (AppConfig.recordLog) {
                     handler.postDelayed(this, 3000)
+                } else {
+                    monitorRunnable = null
                 }
             }
         }
+        monitorRunnable = runnable
         handler.postDelayed(runnable, 3000)
     }
 

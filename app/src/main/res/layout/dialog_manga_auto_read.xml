@@ -20,6 +20,7 @@
             android:layout_height="wrap_content"
             android:paddingVertical="16dp"
             android:minHeight="0dp"
+            android:importantForAccessibility="no"
             android:layout_gravity="center_horizontal" />
 
         <TextView
@@ -54,7 +55,7 @@
             android:layout_height="wrap_content"
             app:max="100"
             app:min="1"
-            app:title="翻页速度" />
+            app:title="@string/auto_next_page_speed" />
 
 
     </LinearLayout>

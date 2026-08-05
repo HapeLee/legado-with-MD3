@@ -1,224 +1,352 @@
 package io.legado.app.ui.book.explore
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
-import io.legado.app.help.config.AppConfig
-import io.legado.app.model.BookShelfState
-import io.legado.app.ui.book.search.BookKey
-import io.legado.app.utils.exploreLayoutGrid
-import kotlinx.coroutines.flow.Flow
+import io.legado.app.domain.usecase.AddToBookshelfUseCase
+import io.legado.app.domain.usecase.BookShelfKey
+import io.legado.app.domain.usecase.ExploreBooksUseCase
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.SaveSearchBooksUseCase
+import io.legado.app.domain.gateway.CoverSettingsGateway
+import android.content.res.Configuration
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.utils.stackTraceStr
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
 
-sealed class BookFilterState(val id: Int) {
-    data object SHOW_ALL : BookFilterState(0)
-    data object HIDE_IN_SHELF : BookFilterState(1)
-    data object HIDE_SAME_NAME_AUTHOR : BookFilterState(2)
-    data object SHOW_NOT_IN_SHELF_ONLY : BookFilterState(3)
+private data class ExploreShowLoadState(
+    val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val isEnd: Boolean = false,
+    val errorMsg: String? = null,
+)
 
-    companion object {
-        fun fromId(id: Int): BookFilterState = when (id) {
-            1 -> HIDE_IN_SHELF
-            2 -> HIDE_SAME_NAME_AUTHOR
-            3 -> SHOW_NOT_IN_SHELF_ONLY
-            else -> SHOW_ALL
-        }
-    }
-}
+private data class ExploreShowKindState(
+    val kinds: List<ExploreKind> = emptyList(),
+    val selectedKindTitle: String? = null,
+)
 
-sealed class UiState<out T> {
-    data object Loading : UiState<Nothing>()
-    data class Success<T>(val data: T) : UiState<T>()
-    data class Error(val message: String) : UiState<Nothing>()
-    data object Empty : UiState<Nothing>()
-}
+private data class ExploreShowDisplayState(
+    val sourceUrl: String? = null,
+    val layoutState: Int,
+    val gridCount: Int,
+    val sheet: ExploreShowSheet = ExploreShowSheet.None,
+)
 
 class ExploreShowViewModel(
-    private val repository: ExploreRepository
+    private val repository: ExploreRepository,
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
+    private val exploreBooksUseCase: ExploreBooksUseCase,
+    private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
+    private val addToBookshelfUseCase: AddToBookshelfUseCase,
+    private val localPreferencesRepository: SettingsRepository,
+    private val coverSettingsGateway: CoverSettingsGateway,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
-    private val _filterState = MutableStateFlow(BookFilterState.fromId(AppConfig.exploreFilterState))
-    private val _isLoading = MutableStateFlow(false)
-    private val _isRefreshing = MutableStateFlow(false)
-    private val _errorMsg = MutableStateFlow<String?>(null)
-    private var bookSource: BookSource? = null
+    private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
+    private val _loadState = MutableStateFlow(ExploreShowLoadState())
+    private val _kindState = MutableStateFlow(ExploreShowKindState())
+    private val _displayState = MutableStateFlow(
+        ExploreShowDisplayState(
+            layoutState = 0,
+            gridCount = if (appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 7 else 3,
+        )
+    )
+
+    private var sourceUrl: String? = null
     private var exploreUrl: String? = null
+    private var initialExploreUrl: String? = null
+    private var initialized = false
     private var page = 1
-    private val _isEndStateFlow = MutableStateFlow(false)
-    private val _bookshelf = MutableStateFlow<Set<BookKey>>(emptySet())
-    private val _kinds = MutableStateFlow<List<ExploreKind>>(emptyList())
-    val kinds = _kinds.asStateFlow()
-    private val _selectedKindTitle = MutableStateFlow<String?>(null)
-    val selectedKindTitle = _selectedKindTitle.asStateFlow()
-    private val _layoutState = MutableStateFlow(AppConfig.exploreLayoutState) // 0=列表, 1=网格
-    val layoutState: StateFlow<Int> = _layoutState.asStateFlow()
-    private val _gridCount = MutableStateFlow(appCtx.exploreLayoutGrid)
-    val gridCount = _gridCount.asStateFlow()
-    val isEnd: StateFlow<Boolean> = _isEndStateFlow.asStateFlow()
+    private var autoPageCount = 0
 
-    val isRefreshing = _isRefreshing.asStateFlow()
-
-    fun saveGridCount(value: Int) {
-        appCtx.exploreLayoutGrid = value
-        _gridCount.value = value
+    companion object {
+        private const val MAX_AUTO_PAGES = 3
+        private const val AUTO_PAGE_DELAY_MS = 500L
     }
 
-    val uiBooks = combine(
-        _rawBooks,
-        _filterState,
-        _bookshelf
-    ) { books, filter, bookshelf ->
-        books.filter { item ->
-            isBookValid(item, filter, bookshelf)
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _uiState = MutableStateFlow(
+        ExploreShowUiState(
+            layoutState = _displayState.value.layoutState,
+            gridCount = _displayState.value.gridCount,
+        )
+    )
+    val uiState = _uiState.asStateFlow()
 
-    val shouldTriggerAutoLoad = combine(
-        _isLoading,
-        uiBooks,
-        _rawBooks,
-        _isEndStateFlow
-    ) { loading, uiBooks, rawBooks, isEnd ->
-        !loading && uiBooks.isEmpty() && rawBooks.isNotEmpty() && !isEnd
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    val isLoading = _isLoading.asStateFlow()
-    val errorMsg = _errorMsg.asStateFlow()
-    val filterState = _filterState.asStateFlow()
+    private val _effects = MutableSharedFlow<ExploreShowEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     init {
+        observeBookshelf()
+        combineUiState()
+        loadLayoutMode()
+        loadGridCount()
+    }
+
+    fun onIntent(intent: ExploreShowIntent) {
+        when (intent) {
+            is ExploreShowIntent.InitData -> initData(intent.sourceUrl, intent.exploreUrl)
+            ExploreShowIntent.LoadMore -> loadMore()
+            ExploreShowIntent.ForceLoadNext -> loadMore(forceLoad = true)
+            ExploreShowIntent.Refresh -> loadMore(isRefresh = true)
+            is ExploreShowIntent.SwitchKind -> switchKind(intent.kind)
+            ExploreShowIntent.ToggleLayout -> toggleLayout()
+            is ExploreShowIntent.SaveGridCount -> saveGridCount(intent.count)
+            is ExploreShowIntent.ShowSheet -> _displayState.update { it.copy(sheet = intent.sheet) }
+            ExploreShowIntent.DismissSheet -> _displayState.update { it.copy(sheet = ExploreShowSheet.None) }
+            is ExploreShowIntent.OpenBook -> emitEffect(
+                ExploreShowEffect.OpenBookInfo(
+                    name = intent.book.name,
+                    author = intent.book.author,
+                    bookUrl = intent.book.bookUrl,
+                    origin = intent.book.origin,
+                    coverPath = intent.book.coverUrl,
+                    sharedCoverKey = intent.sharedCoverKey,
+                )
+            )
+
+            is ExploreShowIntent.AddToShelf -> viewModelScope.launch {
+                addToBookshelfUseCase.execute(intent.book)
+            }
+        }
+    }
+
+    private fun observeBookshelf() {
         viewModelScope.launch {
             repository.getBookshelfItems().collect { list ->
-                val keys = list.map { BookKey(it.name, it.author, it.bookUrl) }.toSet()
-                _bookshelf.value = keys
+                _bookshelf.value = list.map {
+                    BookShelfKey(it.name, it.author, it.bookUrl)
+                }.toSet()
             }
         }
     }
 
-    fun initData(intent: Intent) {
-        val sourceUrl = intent.getStringExtra("sourceUrl")
-        exploreUrl = intent.getStringExtra("exploreUrl")
-
+    private fun combineUiState() {
         viewModelScope.launch {
-            if (bookSource == null && sourceUrl != null) {
-                bookSource = repository.getBookSource(sourceUrl)
-                loadKinds(sourceUrl)
+            val displayAndCoverSettings = combine(
+                _displayState,
+                coverSettingsGateway.settings,
+            ) { displayState, coverSettings -> displayState to coverSettings }
+            combine(
+                _rawBooks,
+                _bookshelf,
+                _loadState,
+                _kindState,
+                displayAndCoverSettings,
+            ) { rawBooks, bookshelf, loadState, kindState, displayAndCover ->
+                val (displayState, coverSettings) = displayAndCover
+                val books = rawBooks.map { item ->
+                    ExploreBookItemUi(
+                        book = item,
+                        shelfState = resolveBookShelfStateUseCase.execute(
+                            name = item.name,
+                            author = item.author,
+                            url = item.bookUrl,
+                            shelf = bookshelf,
+                        )
+                    )
+                }
+
+                ExploreShowUiState(
+                    sourceUrl = displayState.sourceUrl,
+                    books = books.toImmutableList(),
+                    kinds = kindState.kinds.toImmutableList(),
+                    selectedKindTitle = kindState.selectedKindTitle,
+                    layoutState = displayState.layoutState,
+                    gridCount = displayState.gridCount,
+                    isLoading = loadState.isLoading,
+                    isRefreshing = loadState.isRefreshing,
+                    isEnd = loadState.isEnd,
+                    errorMsg = loadState.errorMsg,
+                    sheet = displayState.sheet,
+                    filterStateId = coverSettings.exploreFilterState,
+                )
+            }.collect { newState ->
+                _uiState.value = newState
             }
-            loadMore(isRefresh = true)
         }
     }
 
-    fun loadKinds(sourceUrl: String) {
-        viewModelScope.launch {
-            _kinds.value = repository.getSourceExploreKinds(sourceUrl)
+    private fun initData(incomingSourceUrl: String, incomingExploreUrl: String?) {
+        if (initialized && sourceUrl == incomingSourceUrl && initialExploreUrl == incomingExploreUrl) {
+            return
         }
-    }
+        initialized = true
+        sourceUrl = incomingSourceUrl
+        initialExploreUrl = incomingExploreUrl
+        exploreUrl = incomingExploreUrl
+        page = 1
+        autoPageCount = 0
+        _rawBooks.value = emptyList()
+        _loadState.value = ExploreShowLoadState()
+        _kindState.value = ExploreShowKindState()
+        _displayState.update {
+            it.copy(
+                sourceUrl = incomingSourceUrl,
+                sheet = ExploreShowSheet.None,
+            )
+        }
 
-    fun switchExploreUrl(kind: ExploreKind) {
-        _selectedKindTitle.value = kind.title
-        exploreUrl = kind.url
-        _isEndStateFlow.value = false
+        if (incomingExploreUrl == null) {
+            viewModelScope.launch {
+                loadKinds(incomingSourceUrl)
+            }
+        }
+
         loadMore(isRefresh = true)
     }
 
-    fun setFilterState(state: BookFilterState) {
-        _filterState.value = state
-        AppConfig.exploreFilterState = state.id
+    private suspend fun loadKinds(sourceUrl: String) {
+        _kindState.update { it.copy(kinds = repository.getSourceExploreKinds(sourceUrl)) }
     }
 
-    fun setLayout() {
-        val newState = if (_layoutState.value == 0) 1 else 0
-        _layoutState.value = newState
-        AppConfig.exploreLayoutState = newState
+    private fun switchKind(kind: ExploreKind) {
+        _kindState.update { it.copy(selectedKindTitle = kind.title) }
+        exploreUrl = kind.url
+        _loadState.update { it.copy(isEnd = false) }
+        autoPageCount = 0
+        loadMore(isRefresh = true)
     }
 
-    fun loadMore(isRefresh: Boolean = false) {
-        val source = bookSource
+    private fun toggleLayout() {
+        _displayState.update {
+            val layoutState = if (it.layoutState == 0) 1 else 0
+            viewModelScope.launch {
+                localPreferencesRepository.updatePreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, layoutState)
+            }
+            it.copy(layoutState = layoutState)
+        }
+    }
+
+    private fun loadLayoutMode() {
+        viewModelScope.launch {
+            val mode = localPreferencesRepository.getPreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, 0).first()
+            _displayState.update { it.copy(layoutState = mode) }
+        }
+    }
+
+    private fun loadGridCount() {
+        viewModelScope.launch {
+            val isLandscape = appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val key = if (isLandscape) {
+                LocalPreferencesKeys.EXPLORE_LAYOUT_GRID_LANDSCAPE
+            } else {
+                LocalPreferencesKeys.EXPLORE_LAYOUT_GRID_PORTRAIT
+            }
+            val default = if (isLandscape) 7 else 3
+            val count = localPreferencesRepository.getPreference(key, default).first()
+            _displayState.update { it.copy(gridCount = count) }
+        }
+    }
+
+    private fun saveGridCount(count: Int) {
+        val isLandscape = appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val key = if (isLandscape) {
+            LocalPreferencesKeys.EXPLORE_LAYOUT_GRID_LANDSCAPE
+        } else {
+            LocalPreferencesKeys.EXPLORE_LAYOUT_GRID_PORTRAIT
+        }
+        viewModelScope.launch {
+            localPreferencesRepository.updatePreference(key, count)
+        }
+        _displayState.update { it.copy(gridCount = count) }
+    }
+
+    private fun loadMore(isRefresh: Boolean = false, forceLoad: Boolean = false) {
+        val source = sourceUrl
         val url = exploreUrl
-        if (source == null || url == null || _isLoading.value || (_isEndStateFlow.value && !isRefresh)) return
+        val loadState = _loadState.value
+        if (source == null || loadState.isLoading || (loadState.isEnd && !isRefresh && !forceLoad)) return
+
+        _loadState.update {
+            it.copy(
+                isLoading = true,
+                isRefreshing = isRefresh,
+                isEnd = if (isRefresh || forceLoad) false else it.isEnd,
+                errorMsg = null,
+            )
+        }
 
         viewModelScope.launch {
-            _isLoading.value = true
-            _errorMsg.value = null
-
             if (isRefresh) {
                 page = 1
-                _isEndStateFlow.value = false
+                autoPageCount = 0
                 _rawBooks.value = emptyList()
             }
 
-            repository.exploreBook(source, url, page)
-                .onSuccess { newBooks ->
-                    if (newBooks.isEmpty()) {
-                        _isEndStateFlow.value = true
-                    } else {
-                        repository.saveSearchBooks(newBooks)
+            if (forceLoad) {
+                autoPageCount = 0
+            }
 
-                        val currentList = _rawBooks.value
-                        val existingUrls = currentList.map { it.bookUrl }.toSet()
-
-                        val uniqueNewBooks = newBooks
-                            .filter { it.bookUrl !in existingUrls }
-                            .distinctBy { it.bookUrl }
-
-                        if (uniqueNewBooks.isEmpty()) {
-                            _isEndStateFlow.value = true
-                        } else {
-                            _rawBooks.value = currentList + uniqueNewBooks
-                            page++
-                            _isEndStateFlow.value = false
-                        }
-                    }
-                }
-                .onFailure {
-                    _errorMsg.value = it.localizedMessage
-                }
-
-            _isLoading.value = false
+            fetchPage(source, url)
         }
     }
 
-    fun getCurrentBookShelfState(item: SearchBook): BookShelfState {
-        return getBookShelfState(item, _bookshelf.value)
-    }
+    private suspend fun fetchPage(sourceUrl: String, url: String?) {
+        kotlin.runCatching {
+            exploreBooksUseCase.execute(sourceUrl, url, args = null, page)
+        }.onSuccess { result ->
+            val currentList = _rawBooks.value
+            val existingUrls = currentList.map { it.bookUrl }.toSet()
+            val uniqueNewBooks = result.books
+                .filter { it.bookUrl !in existingUrls }
+                .distinctBy { it.bookUrl }
 
-    private fun isBookValid(book: SearchBook, filter: BookFilterState, shelf: Set<BookKey>): Boolean {
-        val state = getBookShelfState(book, shelf)
-        return when (filter) {
-            BookFilterState.SHOW_ALL -> true
-            BookFilterState.HIDE_IN_SHELF -> state != BookShelfState.IN_SHELF
-            BookFilterState.HIDE_SAME_NAME_AUTHOR -> state != BookShelfState.SAME_NAME_AUTHOR
-            BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state == BookShelfState.NOT_IN_SHELF
+            if (result.books.isNotEmpty()) {
+                saveSearchBooksUseCase.save(result.books)
+            }
+
+            if (uniqueNewBooks.isEmpty()) {
+                fetchNextAutoPageOrFinish(sourceUrl, url)
+            } else {
+                _rawBooks.value = currentList + uniqueNewBooks
+                page++
+                autoPageCount = 0
+                _loadState.update { it.copy(isEnd = false) }
+                finishLoading()
+            }
+        }.onFailure { throwable ->
+            _loadState.update { it.copy(errorMsg = throwable.stackTraceStr) }
+            finishLoading()
         }
     }
 
-    fun getBookShelfStateFlow(item: SearchBook): Flow<BookShelfState> {
-        return _bookshelf.map { shelf ->
-            getBookShelfState(item, shelf)
-        }.distinctUntilChanged()
+    private suspend fun fetchNextAutoPageOrFinish(sourceUrl: String, url: String?) {
+        page++
+        autoPageCount++
+        if (autoPageCount >= MAX_AUTO_PAGES) {
+            _loadState.update { it.copy(isEnd = true) }
+            finishLoading()
+        } else {
+            delay(AUTO_PAGE_DELAY_MS)
+            fetchPage(sourceUrl, url)
+        }
     }
 
-    private fun getBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {
-        val exactMatch = shelf.any { it.name == item.name && it.author == item.author && it.url == item.bookUrl }
-        if (exactMatch) return BookShelfState.IN_SHELF
+    private fun finishLoading() {
+        _loadState.update {
+            it.copy(
+                isLoading = false,
+                isRefreshing = false,
+            )
+        }
+    }
 
-        val sameNameAuthor = shelf.any { it.name == item.name && it.author == item.author && it.url != item.bookUrl }
-        if (sameNameAuthor) return BookShelfState.SAME_NAME_AUTHOR
-
-        return BookShelfState.NOT_IN_SHELF
+    private fun emitEffect(effect: ExploreShowEffect) {
+        _effects.tryEmit(effect)
     }
 }

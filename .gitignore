@@ -12,7 +12,12 @@ node_modules/
 /app/app
 /app/google
 /app/gradle.properties
-package-lock.json
+/package-lock.json
 .idea/
 # Kotlin 2.0
 .kotlin/
+/.vscode/settings.json
+/.codex/skills
+/.debug-runs/
+__pycache__/
+*.py[cod]

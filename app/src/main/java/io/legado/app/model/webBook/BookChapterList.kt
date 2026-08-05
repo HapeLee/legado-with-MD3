@@ -19,6 +19,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapAsync
 import kotlinx.coroutines.ensureActive
@@ -96,7 +97,7 @@ object BookChapterList {
                     for (urlStr in chapterData.second) {
                         emit(urlStr)
                     }
-                }.mapAsync(AppConfig.threadCount) { urlStr ->
+                }.mapAsync(OtherConfig.threadCount) { urlStr ->
                     val analyzeUrl = AnalyzeUrl(
                         mUrl = urlStr,
                         source = bookSource,
@@ -152,7 +153,11 @@ object BookChapterList {
         }
         val replaceRules = ContentProcessor.get(book).getTitleReplaceRules()
         book.durChapterTitle = list.getOrElse(book.durChapterIndex) { list.last() }
-            .getDisplayTitle(replaceRules, book.getUseReplaceRule())
+            .getDisplayTitle(
+                replaceRules,
+                book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
+            )
         if (book.totalChapterNum < list.size) {
             book.lastCheckCount = list.size - book.totalChapterNum
             book.latestChapterTime = System.currentTimeMillis()
@@ -161,9 +166,13 @@ object BookChapterList {
         book.totalChapterNum = list.size
         book.latestChapterTitle =
             list.getOrElse(book.simulatedTotalChapterNum() - 1) { list.last() }
-                .getDisplayTitle(replaceRules, book.getUseReplaceRule())
+                .getDisplayTitle(
+                    replaceRules,
+                    book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                    chineseConverterType = AppConfig.chineseConverterType,
+                )
         coroutineContext.ensureActive()
-        getWordCount(list, book)
+        preserveChapterMetadata(list, book)
         return list
     }
 
@@ -269,17 +278,18 @@ object BookChapterList {
         return Pair(chapterList, nextUrlList)
     }
 
-    private fun getWordCount(list: ArrayList<BookChapter>, book: Book) {
-        if (!AppConfig.tocCountWords) {
-            return
-        }
+    private fun preserveChapterMetadata(list: ArrayList<BookChapter>, book: Book) {
         val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl)
         if (chapterList.isNotEmpty()) {
-            val map = chapterList.associateBy({ it.getFileName() }, { it.wordCount })
+            val map = chapterList.associateBy(
+                keySelector = { it.getFileName() },
+                valueTransform = { Triple(it.wordCount, it.variable, it.reviewImg) },
+            )
             for (bookChapter in list) {
-                val wordCount = map[bookChapter.getFileName()]
-                if (wordCount != null) {
-                    bookChapter.wordCount = wordCount
+                map[bookChapter.getFileName()]?.let { (wordCount, variable, reviewImg) ->
+                    wordCount?.let { bookChapter.wordCount = it }
+                    variable?.let { bookChapter.variable = it }
+                    reviewImg?.let { bookChapter.reviewImg = it }
                 }
             }
         }

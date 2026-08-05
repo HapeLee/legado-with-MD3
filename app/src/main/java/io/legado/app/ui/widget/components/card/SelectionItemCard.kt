@@ -1,15 +1,12 @@
 package io.legado.app.ui.widget.components.card
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,17 +16,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,36 +29,63 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AdaptiveSwitch
+import io.legado.app.ui.widget.components.reorderAccessibility
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
+import top.yukonga.miuix.kmp.basic.BasicComponent
 
 @Composable
 fun SelectionItemCard(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
     isEnabled: Boolean = true,
     isSelected: Boolean = false,
     inSelectionMode: Boolean = false,
     elevation: Dp = 0.dp,
     onToggleSelection: () -> Unit = {},
+    leadingContent: @Composable (() -> Unit)? = null,
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
-    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
+    containerColor: Color? = null,
+    selectedContainerColor: Color? = null,
+    contentDescription: String? = null,
+    enableSwitchContentDescription: String? = null,
+    editContentDescription: String? = null,
+    moreContentDescription: String? = null
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    val containerColor by animateColorAsState(
+    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
+    val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
-            MaterialTheme.colorScheme.secondaryContainer
+            selectedContainerColor
+                ?: if (composeEngine) LegadoTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.secondaryContainer
         else
-            MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor
+                ?: if (composeEngine) LegadoTheme.colorScheme.surfaceContainer else LegadoTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -78,93 +93,192 @@ fun SelectionItemCard(
     GlassCard(
         onClick = onToggleSelection,
         modifier = modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = containerColor,
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+            .fillMaxWidth()
+            .then(
+                if (contentDescription != null || inSelectionMode) {
+                    Modifier.semantics {
+                        contentDescription?.let { this.contentDescription = it }
+                        if (inSelectionMode) {
+                            selected = isSelected
+                        }
+                        role = Role.Button
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        cornerRadius = 12.dp,
+        containerColor = animatedContainerColor,
+        elevation = elevation
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .animateContentSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AnimatedVisibility(
-                visible = inSelectionMode,
-                enter = fadeIn() + expandHorizontally(),
-                exit = fadeOut() + shrinkHorizontally()
-            ) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = null,
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
+        SelectionItemCardContent(
+            title = title,
+            subtitle = subtitle,
+            supportingContent = supportingContent,
+            isEnabled = isEnabled,
+            isSelected = isSelected,
+            inSelectionMode = inSelectionMode,
+            leadingContent = leadingContent,
+            onEnabledChange = onEnabledChange,
+            onClickEdit = onClickEdit,
+            trailingAction = trailingAction,
+            dropdownContent = dropdownContent,
+            enableSwitchContentDescription = enableSwitchContentDescription,
+            editContentDescription = editContentDescription,
+            moreContentDescription = moreContentDescription
+        )
+    }
+}
 
-            ListItem(
-                modifier = Modifier.weight(1f),
-                headlineContent = {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                supportingContent = if (!subtitle.isNullOrBlank()) {
-                    {
-                        Text(
+@Composable
+fun SelectionItemCardContent(
+    title: String,
+    subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
+    isEnabled: Boolean = true,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
+    leadingContent: @Composable (() -> Unit)? = null,
+    onEnabledChange: ((Boolean) -> Unit)? = null,
+    onClickEdit: (() -> Unit)? = null,
+    trailingAction: @Composable (RowScope.() -> Unit)? = null,
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
+    enableSwitchContentDescription: String? = null,
+    editContentDescription: String? = null,
+    moreContentDescription: String? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val defaultEditDescription = stringResource(R.string.edit)
+    val defaultMoreDescription = stringResource(R.string.more_menu)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AnimatedVisibility(
+            visible = inSelectionMode || leadingContent != null
+        ) {
+            Box(
+                modifier = Modifier.padding(start = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = inSelectionMode,
+                    label = "LeadingContent"
+                ) { selectionMode ->
+                    if (selectionMode) {
+                        AppCheckbox(
+                            checked = isSelected,
+                            onCheckedChange = null,
+                            includeStateSemantics = false,
+                            modifier = Modifier.clearAndSetSemantics { }
+                        )
+                    } else {
+                        leadingContent?.invoke()
+                    }
+                }
+            }
+        }
+
+        if (ThemeResolver.isMiuixEngine(composeEngine)) {
+            BasicComponent(
+                modifier = Modifier.weight(1f)
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                when {
+                    supportingContent != null -> supportingContent()
+                    !subtitle.isNullOrBlank() -> {
+                        AppText(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = LegadoTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                } else null,
+                }
+            }
+        } else {
+            ListItem(
+                modifier = Modifier.weight(1f),
+                headlineContent = {
+                    AppText(
+                        text = title,
+                        style = LegadoTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                supportingContent = when {
+                    supportingContent != null -> supportingContent
+                    !subtitle.isNullOrBlank() -> {
+                        {
+                            AppText(
+                                text = subtitle,
+                                style = LegadoTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    else -> null
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
+        }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .padding(end = 8.dp)
-            ) {
-                onEnabledChange?.let {
-                    Switch(
-                        modifier = Modifier.scale(0.8f),
-                        checked = isEnabled,
-                        onCheckedChange = it
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .padding(end = 8.dp)
+        ) {
+            onEnabledChange?.let {
+                AdaptiveSwitch(
+                    modifier = Modifier
+                        .scale(0.8f)
+                        .then(
+                            enableSwitchContentDescription?.let { description ->
+                                Modifier.semantics {
+                                    contentDescription = description
+                                }
+                            } ?: Modifier
+                        ),
+                    checked = isEnabled,
+                    onCheckedChange = it
+                )
+            }
+
+            if (onClickEdit != null) {
+                SmallPlainButton(
+                    onClick = onClickEdit,
+                    icon = AppIcons.Edit,
+                    contentDescription = editContentDescription ?: defaultEditDescription
+                )
+            }
+
+            if (trailingAction != null) {
+                trailingAction()
+            }
+
+            if (dropdownContent != null) {
+                Box {
+                    SmallPlainButton(
+                        onClick = { showMenu = true },
+                        icon = AppIcons.MoreVert,
+                        contentDescription = moreContentDescription ?: defaultMoreDescription
                     )
-                }
-
-                if (onClickEdit != null) {
-                    SmallIconButton(
-                        onClick = onClickEdit,
-                        icon = Icons.Default.Edit,
-                        contentDescription = "Edit"
-                    )
-                }
-
-                if (trailingAction != null) {
-                    trailingAction()
-                }
-
-                if (dropdownContent != null) {
-                    Box {
-                        SmallIconButton(
-                            onClick = { showMenu = true },
-                            icon = Icons.Default.MoreVert,
-                            contentDescription = "More"
-                        )
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            dropdownContent { showMenu = false }
-                        }
+                    RoundDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        dropdownContent { showMenu = false }
                     }
                 }
             }
@@ -180,17 +294,36 @@ fun LazyItemScope.ReorderableSelectionItem(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
     isEnabled: Boolean = true,
     isSelected: Boolean = false,
     inSelectionMode: Boolean = false,
     canReorder: Boolean = true,
     onToggleSelection: () -> Unit = {},
+    leadingContent: @Composable (() -> Unit)? = null,
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
-    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
+    containerColor: Color? = null,
+    selectedContainerColor: Color? = null,
+    contentDescription: String? = null,
+    enableSwitchContentDescription: String? = null,
+    editContentDescription: String? = null,
+    moreContentDescription: String? = null,
+    reorderIndex: Int? = null,
+    reorderItemCount: Int = 0,
+    onMoveItem: ((from: Int, to: Int) -> Unit)? = null,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    val reorderAccessibilityModifier = if (reorderIndex != null && onMoveItem != null) {
+        Modifier.reorderAccessibility(
+            index = reorderIndex,
+            itemCount = reorderItemCount,
+            enabled = canReorder && !inSelectionMode,
+            onMove = onMoveItem,
+        )
+    } else Modifier
 
     ReorderableItem(state, key = key) { isDragging ->
         val elevation by animateDpAsState(
@@ -201,16 +334,25 @@ fun LazyItemScope.ReorderableSelectionItem(
         SelectionItemCard(
             title = title,
             subtitle = subtitle,
+            supportingContent = supportingContent,
             isEnabled = isEnabled,
             isSelected = isSelected,
             inSelectionMode = inSelectionMode,
             elevation = elevation,
             onToggleSelection = onToggleSelection,
+            leadingContent = leadingContent,
             onEnabledChange = onEnabledChange,
             onClickEdit = onClickEdit,
             trailingAction = trailingAction,
             dropdownContent = dropdownContent,
+            containerColor = containerColor,
+            selectedContainerColor = selectedContainerColor,
+            contentDescription = contentDescription,
+            enableSwitchContentDescription = enableSwitchContentDescription,
+            editContentDescription = editContentDescription,
+            moreContentDescription = moreContentDescription,
             modifier = modifier
+                .then(reorderAccessibilityModifier)
                 .zIndex(if (isDragging) 1f else 0f)
                 .then(
                     if (canReorder && !inSelectionMode) {

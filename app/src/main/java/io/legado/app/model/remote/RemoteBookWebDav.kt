@@ -1,5 +1,6 @@
 package io.legado.app.model.remote
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
@@ -7,7 +8,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.update
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.Authorization
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavFile
@@ -57,7 +57,7 @@ class RemoteBookWebDav(
     }
 
     override suspend fun downloadRemoteBook(remoteBook: RemoteBook): Uri {
-        AppConfig.defaultBookTreeUri
+        OtherConfig.defaultBookTreeUri
             ?: throw NoStackTraceException("没有设置书籍保存位置!")
         if (!NetworkUtils.isAvailable()) throw NoStackTraceException("网络不可用")
         val webdav = WebDav(remoteBook.path, authorization)

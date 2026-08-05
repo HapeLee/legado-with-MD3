@@ -41,10 +41,9 @@ object ImageProvider {
     private const val M = 1024 * 1024
     val cacheSize: Int
         get() {
-            if (AppConfig.bitmapCacheSize !in 1..<2048) {
-                AppConfig.bitmapCacheSize = 50
-            }
-            return AppConfig.bitmapCacheSize * M
+            return AppConfig.bitmapCacheSize.takeIf { it in 1..<2048 }
+                ?.times(M)
+                ?: (50 * M)
         }
 
     val bitmapLruCache = BitmapLruCache()
@@ -70,12 +69,9 @@ object ImageProvider {
                     removeCount++
                 }
             }
-            //错误图片不能释放,占位用,防止一直重复获取图片
-            if (oldValue != errorBitmap) {
-                oldValue.recycle()
-                //putDebug("ImageProvider: trigger bitmap recycle. URI: $filePath")
-                //putDebug("ImageProvider : cacheUsage ${size()}bytes / ${maxSize()}bytes")
-            }
+            // 移除 oldValue.recycle()。
+            // 在 Android 8.0+ 像素内存由 GC 自动管理，手动回收容易导致 Canvas 绘制时崩溃。
+            // 特别是在阅读页返回书架时，DisplayList 可能仍持有 Bitmap 引用。
         }
 
     }
@@ -86,7 +82,12 @@ object ImageProvider {
     }
 
     fun get(key: String): Bitmap? {
-        return bitmapLruCache[key]
+        val bitmap = bitmapLruCache[key] ?: return null
+        if (bitmap.isRecycled) {
+            bitmapLruCache.remove(key)
+            return null
+        }
+        return bitmap
     }
 
     fun remove(key: String): Bitmap? {
@@ -183,7 +184,7 @@ object ImageProvider {
         height: Int? = null
     ): Bitmap {
         //src为空白时 可能被净化替换掉了 或者规则失效
-        if (book.getUseReplaceRule() && src.isBlank()) {
+        if (book.getUseReplaceRule(AppConfig.replaceEnableDefault) && src.isBlank()) {
             book.setUseReplaceRule(false)
             appCtx.toastOnUi(R.string.error_image_url_empty)
         }
@@ -205,8 +206,10 @@ object ImageProvider {
         }.getOrDefault(errorBitmap)
     }
 
-    fun clear() {
-        bitmapLruCache.evictAll()
+    suspend fun clear() {
+        withContext(IO) {
+            bitmapLruCache.evictAll()
+        }
     }
 
 }

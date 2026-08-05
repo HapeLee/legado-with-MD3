@@ -1,0 +1,306 @@
+package io.legado.app.ui.rss.subscription
+
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.animateFloatingActionButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import io.legado.app.R
+import io.legado.app.data.entities.RuleSub
+import io.legado.app.data.entities.RuleSubType
+import io.legado.app.ui.association.ImportBookSourceDialog
+import io.legado.app.ui.association.ImportReplaceRuleDialog
+import io.legado.app.ui.association.ImportRssSourceDialog
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.toastOnUi
+import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun RuleSubRouteScreen(
+    onBackClick: () -> Unit,
+    viewModel: RuleSubViewModel = koinViewModel()
+) {
+    val context = LocalContext.current
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is RuleSubEffect.ShowMessage -> context.toastOnUi(effect.message)
+                is RuleSubEffect.OpenRule -> {
+                    val ruleSub = effect.rule
+                    when (ruleSub.type) {
+                        RuleSubType.BOOK_SOURCE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportBookSourceDialog(ruleSub.url)
+                            )
+                        RuleSubType.RSS_SOURCE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportRssSourceDialog(ruleSub.url)
+                            )
+                        RuleSubType.REPLACE_RULE ->
+                            (context as? AppCompatActivity)?.showDialogFragment(
+                                ImportReplaceRuleDialog(ruleSub.url)
+                            )
+                        RuleSubType.AUTO -> {
+                            val encodedUrl = java.net.URLEncoder.encode(ruleSub.url, "UTF-8")
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    "legado://import/importonline?src=$encodedUrl".toUri(),
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    RuleSubScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun RuleSubScreen(
+    state: RuleSubUiState,
+    onIntent: (RuleSubIntent) -> Unit,
+    onBackClick: () -> Unit,
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    RuleListScaffold(
+        title = stringResource(R.string.rule_subscription),
+        state = state,
+        onBackClick = onBackClick,
+        onSearchToggle = { onIntent(RuleSubIntent.ToggleSearch(it)) },
+        onSearchQueryChange = { onIntent(RuleSubIntent.Search(it)) },
+        onClearSelection = { onIntent(RuleSubIntent.ClearSelection) },
+        onSelectAll = { onIntent(RuleSubIntent.SelectAll) },
+        onSelectInvert = { onIntent(RuleSubIntent.InvertSelection) },
+        onDeleteSelected = { onIntent(RuleSubIntent.DeleteSelected) },
+        snackbarHostState = snackbarHostState,
+        selectionSecondaryActions = emptyList(),
+        topBarActions = {},
+        dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.sort),
+                leadingIcon = {
+                    Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
+                },
+                onClick = {
+                    onIntent(RuleSubIntent.ResetOrder)
+                    dismiss()
+                }
+            )
+        },
+        floatingActionButton = {
+            AppFloatingActionButton(
+                modifier = Modifier
+                    .animateFloatingActionButton(
+                        visible = true,
+                        alignment = Alignment.BottomEnd,
+                    ),
+                onClick = {
+                    onIntent(RuleSubIntent.Add)
+                },
+                tooltipText = stringResource(R.string.add),
+                icon = Icons.Default.Add
+            )
+        }
+    ) { paddingValues ->
+        if (state.items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                EmptyMessage(
+                    message = stringResource(R.string.rule_sub_empty_msg),
+                    isLoading = state.isLoading
+                )
+            }
+        } else {
+            val typeArray = stringArrayResource(R.array.rule_type)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 120.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.items, key = { it.id }) { ruleSub ->
+                    val isSelected = state.selectedIds.contains(ruleSub.id)
+                    SelectionItemCard(
+                        title = ruleSub.name,
+                        subtitle = "${typeArray.getOrElse(ruleSub.type) { "" }}\n${ruleSub.url}",
+                        isSelected = isSelected,
+                        inSelectionMode = state.selectedIds.isNotEmpty(),
+                        onToggleSelection = {
+                            if (state.selectedIds.isNotEmpty()) {
+                                onIntent(RuleSubIntent.ToggleSelection(ruleSub))
+                            } else {
+                                onIntent(RuleSubIntent.Open(ruleSub))
+                            }
+                        },
+                        trailingAction = {
+                            SmallPlainButton(
+                                onClick = { onIntent(RuleSubIntent.Edit(ruleSub)) },
+                                icon = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit)
+                            )
+                        },
+                        dropdownContent = { dismiss ->
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.delete),
+                                onClick = {
+                                    onIntent(RuleSubIntent.Delete(ruleSub))
+                                    dismiss()
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    RuleSubEditDialog(
+        ruleSub = state.editingRule,
+        onDismiss = { onIntent(RuleSubIntent.DismissEditor) },
+        onConfirm = { updatedRuleSub ->
+            onIntent(RuleSubIntent.Save(updatedRuleSub))
+        }
+    )
+}
+
+@Composable
+fun RuleSubEditDialog(
+    ruleSub: RuleSub?,
+    onDismiss: () -> Unit,
+    onConfirm: (RuleSub) -> Unit
+) {
+    var cachedRule by remember { mutableStateOf(ruleSub) }
+    if (ruleSub != null) {
+        cachedRule = ruleSub
+    }
+
+    var name by remember(cachedRule) { mutableStateOf(cachedRule?.name ?: "") }
+    var url by remember(cachedRule) { mutableStateOf(cachedRule?.url ?: "") }
+    var type by remember(cachedRule) { mutableIntStateOf(cachedRule?.type ?: 0) }
+
+    val typeArray = stringArrayResource(R.array.rule_type)
+
+    AppAlertDialog(
+        show = ruleSub != null,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.rule_subscription),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 替换原生的 OutlinedTextField，确保双端主题适配
+                AppTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.name),
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AppTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = "URL",
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                AppText(
+                    text = "订阅类型",
+                    style = LegadoTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    typeArray.indices.chunked(2).forEach { indices ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            indices.forEach { index ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    CheckboxItem(
+                                        title = typeArray[index],
+                                        checked = (index == type),
+                                        onCheckedChange = { if (it) type = index }
+                                    )
+                                }
+                            }
+                            if (indices.size < 2) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            cachedRule?.let {
+                onConfirm(it.copy(name = name, url = url, type = type))
+            }
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss
+    )
+}

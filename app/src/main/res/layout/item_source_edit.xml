@@ -11,9 +11,10 @@
         android:id="@+id/editText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="48dp"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
         android:padding="16dp"
         android:inputType="textMultiLine"
-        tools:ignore="SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+        tools:ignore="SpeakableTextPresentCheck" />
 
 </com.google.android.material.textfield.TextInputLayout>

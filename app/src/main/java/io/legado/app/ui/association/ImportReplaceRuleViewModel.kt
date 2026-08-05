@@ -7,8 +7,8 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.help.http.decompressed
@@ -23,7 +23,10 @@ import io.legado.app.utils.readText
 import io.legado.app.utils.splitNotBlank
 import splitties.init.appCtx
 
-class ImportReplaceRuleViewModel(app: Application) : BaseViewModel(app) {
+class ImportReplaceRuleViewModel(
+    app: Application,
+    private val repository: ReplaceRuleRepository,
+) : BaseViewModel(app) {
     var isAddGroup = false
     var groupName: String? = null
     val errorLiveData = MutableLiveData<String>()
@@ -76,7 +79,7 @@ class ImportReplaceRuleViewModel(app: Application) : BaseViewModel(app) {
                     selectRules.add(rule)
                 }
             }
-            appDb.replaceRuleDao.insert(*selectRules.toTypedArray())
+            repository.insert(*selectRules.toTypedArray())
         }.onFinally {
             finally.invoke()
         }
@@ -130,7 +133,7 @@ class ImportReplaceRuleViewModel(app: Application) : BaseViewModel(app) {
     private fun comparisonSource() {
         execute {
             allRules.forEach {
-                val rule = appDb.replaceRuleDao.findById(it.id)
+                val rule = repository.findById(it.id)
                 checkRules.add(rule)
                 selectStatus.add(rule == null)
             }

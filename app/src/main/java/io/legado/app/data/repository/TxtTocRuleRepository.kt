@@ -1,13 +1,14 @@
 package io.legado.app.data.repository
 
-import io.legado.app.data.appDb
+import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.entities.TxtTocRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class TxtTocRuleRepository {
-    private val dao = appDb.txtTocRuleDao
+class TxtTocRuleRepository(
+    private val dao: TxtTocRuleDao,
+) {
 
     fun flowAll(): Flow<List<TxtTocRule>> = dao.observeAll()
 
@@ -23,6 +24,10 @@ class TxtTocRuleRepository {
 
     suspend fun delete(vararg rules: TxtTocRule) = withContext(Dispatchers.IO) {
         dao.delete(*rules)
+    }
+
+    suspend fun findById(id: Long): TxtTocRule? = withContext(Dispatchers.IO) {
+        dao.get(id)
     }
 
     suspend fun deleteByIds(ids: Collection<Long>) = withContext(Dispatchers.IO) {
@@ -42,4 +47,10 @@ class TxtTocRuleRepository {
         }
         dao.update(*rules.toTypedArray())
     }
+
+    fun all(): List<TxtTocRule> = dao.all
+
+    fun enabled(): List<TxtTocRule> = dao.enabled
+
+    fun count(): Int = dao.count
 }

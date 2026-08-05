@@ -1,37 +1,27 @@
 package io.legado.app.ui.theme
 
-import android.app.UiModeManager
-import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
-import androidx.core.content.getSystemService
-import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
+import io.legado.app.ui.theme.ThemeResolver.resolveColorSpecVersion
 
 class CustomColorScheme(
-    context: Context,
     seed: Int,
     style: PaletteStyle,
+    colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2021,
+    contrastLevel: Double = ThemeResolver.resolveContrastLevel(),
 ) : BaseColorScheme() {
 
-    private val contrastLevel: Double =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            context.getSystemService<UiModeManager>()
-                ?.contrast
-                ?.toDouble()
-                ?: Contrast.Default.value
-        } else {
-            Contrast.Default.value
-        }
+    private val specVersion = resolveColorSpecVersion(colorSpec)
 
     override val lightScheme: ColorScheme = dynamicColorScheme(
         seedColor = Color(seed),
         isDark = false,
         isAmoled = false,
         style = style,
-        contrastLevel = contrastLevel
+        contrastLevel = contrastLevel,
+        specVersion = specVersion
     )
 
     override val darkScheme: ColorScheme = dynamicColorScheme(
@@ -39,6 +29,7 @@ class CustomColorScheme(
         isDark = true,
         isAmoled = false,
         style = style,
-        contrastLevel = contrastLevel
+        contrastLevel = contrastLevel,
+        specVersion = specVersion
     )
 }

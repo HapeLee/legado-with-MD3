@@ -4,9 +4,9 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.os.SystemClock
 import androidx.core.graphics.withClip
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.canvasrecorder.recordIfNeeded
 import io.legado.app.utils.themeColor
@@ -25,11 +25,12 @@ class AutoPager(private val readView: ReadView) : Runnable {
     private var lastTimeMillis = 0L
     private var canvasRecorder = CanvasRecorderFactory.create()
     private val paint by lazy { Paint() }
+    var onStop: (() -> Unit)? = null
 
 
     fun start() {
         isRunning = true
-        isEInkMode = AppConfig.isEInkMode
+        isEInkMode = ReadConfig.isEInkMode
         readView.curPage.upSelectAble(false)
         if (isEInkMode) {
             readView.postDelayed(this, ReadBookConfig.autoReadSpeed * 1000L)
@@ -48,10 +49,11 @@ class AutoPager(private val readView: ReadView) : Runnable {
         isPausing = false
         isEInkMode = false
         readView.removeCallbacks(this)
-        readView.curPage.upSelectAble(AppConfig.textSelectAble)
+        readView.curPage.upSelectAble(ReadConfig.selectText)
         readView.invalidate()
         reset()
         canvasRecorder.recycle()
+        onStop?.invoke()
     }
 
     fun pause() {

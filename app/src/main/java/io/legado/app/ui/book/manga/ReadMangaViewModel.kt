@@ -10,30 +10,37 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.model.settings.MangaSettings
+import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -45,10 +52,32 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
+import io.legado.app.ui.config.readConfig.ReadConfig as GlobalReadConfig
 
-class ReadMangaViewModel(application: Application) : BaseViewModel(application) {
+class ReadMangaViewModel(
+    application: Application,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    private val mangaSettingsGateway: MangaSettingsGateway,
+    private val otherSettingsGateway: OtherSettingsGateway,
+    private val readSettingsGateway: ReadSettingsGateway,
+    private val bookRepository: BookRepository,
+    private val bookSourceRepository: BookSourceRepository,
+) : BaseViewModel(application) {
+
+    private val _mangaSettings = MutableStateFlow(mangaSettingsGateway.currentSettings)
+    val mangaSettings = _mangaSettings.asStateFlow()
 
     private var changeSourceCoroutine: Coroutine<*>? = null
+
+    init {
+        viewModelScope.launch {
+            mangaSettingsGateway.settings.collect { _mangaSettings.value = it }
+        }
+    }
+
+    suspend fun updateMangaSettings(transform: (MangaSettings) -> MangaSettings) {
+        mangaSettingsGateway.update(transform)
+    }
 
     /**
      * 初始化
@@ -59,8 +88,8 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             ReadManga.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
             val bookUrl = intent.getStringExtra("bookUrl")
             val book = when {
-                bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
-                else -> appDb.bookDao.getBook(bookUrl)
+                bookUrl.isNullOrEmpty() -> bookRepository.getLastReadBook()
+                else -> bookRepository.getBook(bookUrl)
             } ?: ReadManga.book
             when {
                 book != null -> initManga(book)
@@ -106,7 +135,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             // 有章节跳转不同步阅读进度
             ReadManga.chapterChanged = false
         } else if (!isSameBook) {
-            if (AppConfig.syncBookProgressPlus) {
+            if (GlobalReadConfig.syncBookProgressPlus) {
                 ReadManga.syncProgress(
                     { progress -> ReadManga.mCallback?.sureNewProgress(progress) })
             } else {
@@ -124,7 +153,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
     fun upBookSource(success: (() -> Unit)?) {
         execute {
             ReadManga.book?.let { book ->
-                ReadManga.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
+                ReadManga.bookSource = bookSourceRepository.getBookSource(book.origin)
             }
         }.onSuccess {
             success?.invoke()
@@ -141,7 +170,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         execute {
             ReadManga.bookSource?.let {
                 it.enabled = false
-                appDb.bookSourceDao.update(it)
+                bookSourceRepository.updateSources(it)
             }
         }
     }
@@ -151,13 +180,13 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             val oldBook = book.copy()
             WebBook.getChapterListAwait(it, book, true).onSuccess { cList ->
                 if (oldBook.bookUrl == book.bookUrl) {
-                    appDb.bookDao.update(book)
+                    bookRepository.update(book)
                 } else {
-                    appDb.bookDao.replace(oldBook, book)
+                    bookRepository.replace(oldBook, book)
                     BookHelp.updateCacheFolder(oldBook, book)
                 }
-                appDb.bookChapterDao.delByBook(oldBook.bookUrl)
-                appDb.bookChapterDao.insert(*cList.toTypedArray())
+                bookRepository.deleteChaptersByBook(oldBook.bookUrl)
+                bookRepository.insertChapters(*cList.toTypedArray())
                 ReadManga.onChapterListUpdated(book)
                 return true
             }.onFailure {
@@ -189,9 +218,9 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
      * 自动换源
      */
     private fun autoChangeSource(name: String, author: String) {
-        if (!AppConfig.autoChangeSource) return
+        if (!GlobalReadConfig.autoChangeSource) return
         execute {
-            val sources = appDb.bookSourceDao.allTextEnabledPart
+            val sources = bookSourceRepository.getAllTextEnabledPart()
             flow {
                 for (source in sources) {
                     source.getBookSource()?.let {
@@ -201,7 +230,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             }.onStart {
                 // 自动换源
 
-            }.mapParallelSafe(AppConfig.threadCount) { source ->
+        }.mapParallelSafe(OtherConfig.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
                     WebBook.getBookInfoAwait(source, book)
@@ -240,9 +269,9 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         book: Book,
         alertSync: ((progress: BookProgress) -> Unit)? = null
     ) {
-        if (!AppConfig.syncBookProgress) return
+        if (!GlobalReadConfig.syncBookProgress) return
         execute {
-            AppWebDav.getBookProgress(book)
+            getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
             AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
@@ -259,6 +288,15 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         }
     }
 
+    private fun ReadingProgress.toBookProgress() = BookProgress(
+        name = name,
+        author = author,
+        durChapterIndex = durChapterIndex,
+        durChapterPos = durChapterPos,
+        durChapterTime = durChapterTime,
+        durChapterTitle = durChapterTitle
+    )
+
     /**
      * 换源
      */
@@ -266,11 +304,16 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
             //换源中
-            ReadManga.book?.migrateTo(book, toc)
+            ReadManga.book?.migrateTo(
+                book,
+                toc,
+                otherSettingsGateway.currentSettings.replaceEnableDefault,
+                readSettingsGateway.currentSettings.chineseConverterType,
+            )
             book.removeType(BookType.updateError)
             ReadManga.book?.delete()
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            bookRepository.insert(book)
+            bookRepository.insertChapters(*toc.toTypedArray())
             ReadManga.resetData(book)
             ReadManga.loadContent()
         }.onError {
@@ -299,22 +342,35 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         }
     }
 
-    fun removeFromBookshelf(success: (() -> Unit)?) {
+    fun removeCurrentNotShelfBook(
+        success: () -> Unit,
+        onFailure: () -> Unit = {},
+    ) {
         val book = ReadManga.book
+        val bookUrl = book?.bookUrl
         Coroutine.async {
             book?.delete()
         }.onSuccess {
-            success?.invoke()
+            if (ReadManga.book?.bookUrl == bookUrl) {
+                ReadManga.book = null
+            }
+            success()
+        }.onError {
+            AppLog.put("移除临时漫画书籍失败", it)
+            context.toastOnUi("移除临时漫画书籍失败")
+            onFailure()
         }
     }
 
 
     fun getEffectiveScrollMode(): Int {
-        return ReadManga.book?.readConfig?.mangaScrollMode ?: AppConfig.mangaScrollMode
+        return ReadManga.book?.readConfig?.mangaScrollMode
+            ?: mangaSettings.value.scrollMode
     }
 
     fun getEffectiveWebtoonSidePadding(): Int {
-        return ReadManga.book?.readConfig?.webtoonSidePaddingDp ?: AppConfig.webtoonSidePaddingDp
+        return ReadManga.book?.readConfig?.webtoonSidePaddingDp
+            ?: mangaSettings.value.webtoonSidePaddingDp
     }
 
     fun saveImageToGallery(url: String, folderName: String = "Legado") {
@@ -358,7 +414,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         book.readConfig = config
 
         execute {
-            appDb.bookDao.update(book)
+            bookRepository.update(book)
         }.onError {
             AppLog.put("更新阅读配置失败\n${it.localizedMessage}", it)
         }
@@ -371,7 +427,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
 
     fun refreshContentDur(book: Book) {
         execute {
-            appDb.bookChapterDao.getChapter(book.bookUrl, ReadManga.durChapterIndex)
+            bookRepository.getChapter(book.bookUrl, ReadManga.durChapterIndex)
                 ?.let { chapter ->
                     BookHelp.delContent(book, chapter)
                     openChapter(ReadManga.durChapterIndex, ReadManga.durChapterPos)
@@ -379,20 +435,41 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         }
     }
 
+    fun addCurrentBookToBookshelf(
+        success: () -> Unit,
+        onFailure: () -> Unit = {},
+    ) {
+        val book = ReadManga.book ?: return onFailure()
+        execute {
+            val toc = bookRepository.getChapters(book.bookUrl)
+            persistOnBookshelf(book, toc)
+            ReadManga.inBookshelf = true
+        }.onSuccess {
+            success()
+        }.onError {
+            AppLog.put("添加书籍到书架失败", it)
+            context.toastOnUi("添加书籍失败")
+            onFailure()
+        }
+    }
+
     fun addToBookshelf(book: Book, toc: List<BookChapter>, success: (() -> Unit)? = null) {
         execute {
-            book.removeType(BookType.notShelf)
-            if (book.order == 0) {
-                book.order = appDb.bookDao.minOrder - 1
-            }
-
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            persistOnBookshelf(book, toc)
         }.onSuccess {
             success?.invoke()
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
             context.toastOnUi("添加书籍失败")
         }
+    }
+
+    private suspend fun persistOnBookshelf(book: Book, toc: List<BookChapter>) {
+        book.removeType(BookType.notShelf)
+        if (book.order == 0) {
+            book.order = bookRepository.getMinOrder() - 1
+        }
+        bookRepository.insert(book)
+        bookRepository.insertChapters(*toc.toTypedArray())
     }
 }

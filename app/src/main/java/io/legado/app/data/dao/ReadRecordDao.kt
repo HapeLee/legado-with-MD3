@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import io.legado.app.data.entities.readRecord.HomeRecentBookRow
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -22,8 +23,59 @@ interface ReadRecordDao {
 
     @get:Query("select * from readRecordSession")
     val allSession: List<ReadRecordSession>
+
     @Query("SELECT sum(readTime) FROM readRecord")
     fun getTotalReadTime(): Flow<Long?>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM (
+            SELECT 1
+            FROM readRecord
+            GROUP BY bookName, bookAuthor
+        )
+        """
+    )
+    fun observeTotalReadBookCount(): Flow<Int>
+
+    @Query("SELECT SUM(readTime) FROM readRecordDetail WHERE date = :date")
+    fun observeReadTimeByDate(date: String): Flow<Long?>
+
+    @Query(
+        """
+        WITH recent AS (
+            SELECT
+                bookName,
+                bookAuthor,
+                MAX(lastRead) AS lastRead
+            FROM readRecord
+            GROUP BY bookName, bookAuthor
+            ORDER BY lastRead DESC
+            LIMIT :limit
+        )
+        SELECT
+            recent.bookName AS recordName,
+            recent.bookAuthor AS recordAuthor,
+            book.bookUrl AS bookUrl,
+            book.origin AS origin,
+            book.coverUrl AS coverUrl,
+            book.customCoverUrl AS customCoverUrl,
+            book.durChapterTitle AS chapterTitle,
+            book.totalChapterNum AS totalChapterNum,
+            book.durChapterIndex AS chapterIndex
+        FROM recent
+        LEFT JOIN books AS book ON book.bookUrl = (
+            SELECT candidate.bookUrl
+            FROM books AS candidate
+            WHERE candidate.name = recent.bookName
+                AND candidate.author = recent.bookAuthor
+            ORDER BY candidate.durChapterTime DESC, candidate.bookUrl ASC
+            LIMIT 1
+        )
+        ORDER BY recent.lastRead DESC
+        """
+    )
+    fun observeRecentHomeBooks(limit: Int): Flow<List<HomeRecentBookRow>>
 
     @Query("select sum(readTime) from readRecord where bookName = :bookName")
     fun getReadTime(bookName: String): Long?
@@ -112,6 +164,21 @@ interface ReadRecordDao {
         excludeAuthor: String
     ): List<ReadRecord>
 
+    @Query(
+        """
+        SELECT * FROM readRecord
+        WHERE NOT (deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor)
+        ORDER BY
+            CASE WHEN bookName = :bookName THEN 0 ELSE 1 END,
+            lastRead DESC
+        """
+    )
+    suspend fun getMergeCandidates(
+        deviceId: String,
+        bookName: String,
+        bookAuthor: String
+    ): List<ReadRecord>
+
     /**
      * 获取某一天某一本书的所有会话记录
      */
@@ -160,6 +227,31 @@ interface ReadRecordDao {
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getSessionsByBook(deviceId: String, bookName: String, bookAuthor: String): List<ReadRecordSession>
 
+    @Query(
+        """
+        SELECT * FROM readRecordSession
+        WHERE deviceId = :deviceId
+        AND bookName = :bookName
+        AND bookAuthor = :bookAuthor
+        AND startTime = :startTime
+        AND endTime = :endTime
+        LIMIT 1
+        """
+    )
+    suspend fun getSession(
+        deviceId: String,
+        bookName: String,
+        bookAuthor: String,
+        startTime: Long,
+        endTime: Long
+    ): ReadRecordSession?
+
+    @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor ORDER BY startTime DESC")
+    fun getSessionsByBookFlow(deviceId: String, bookName: String, bookAuthor: String): Flow<List<ReadRecordSession>>
+
+    @Query("SELECT readTime FROM readRecord WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
+    fun getReadTimeFlow(deviceId: String, bookName: String, bookAuthor: String): Flow<Long?>
+
     @Delete
     suspend fun deleteDetail(detail: ReadRecordDetail)
 
@@ -185,6 +277,15 @@ interface ReadRecordDao {
     @Delete
     suspend fun deleteReadRecord(record: ReadRecord)
 
+    @Query("DELETE FROM readRecord")
+    suspend fun clearReadRecords()
+
+    @Query("DELETE FROM readRecordDetail")
+    suspend fun clearReadRecordDetails()
+
+    @Query("DELETE FROM readRecordSession")
+    suspend fun clearReadRecordSessions()
+
     @Query("DELETE FROM readRecordDetail WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun deleteDetailsByBook(deviceId: String, bookName: String, bookAuthor: String)
 
@@ -193,4 +294,5 @@ interface ReadRecordDao {
 
     @Query("SELECT * FROM readRecordDetail WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getDetailsByBook(deviceId: String, bookName: String, bookAuthor: String): List<ReadRecordDetail>
+
 }

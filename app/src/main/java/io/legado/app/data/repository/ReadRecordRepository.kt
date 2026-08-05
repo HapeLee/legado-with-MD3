@@ -1,22 +1,35 @@
 package io.legado.app.data.repository
 
-import androidx.room.Transaction
+import androidx.room.withTransaction
 import cn.hutool.core.date.DatePattern
 import cn.hutool.core.date.DateUtil
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Date
 import kotlin.math.max
 import kotlin.math.min
 
 class ReadRecordRepository(
-    private val dao: ReadRecordDao
+    private val dao: ReadRecordDao,
+    private val database: AppDatabase,
+    private val localPreferencesRepository: SettingsRepository,
 ) {
     private fun getCurrentDeviceId(): String = ""
+
+    val readRecordEnabled: Flow<Boolean> =
+        localPreferencesRepository.getPreference(LocalPreferencesKeys.ENABLE_READ_RECORD, true)
+
+    suspend fun setReadRecordEnabled(enabled: Boolean) {
+        localPreferencesRepository.updatePreference(LocalPreferencesKeys.ENABLE_READ_RECORD, enabled)
+    }
 
     /**
      * 获取总阅读时长流
@@ -51,8 +64,29 @@ class ReadRecordRepository(
         return dao.getAllSessions(getCurrentDeviceId())
     }
 
+    fun getBookSessions(bookName: String, bookAuthor: String): Flow<List<ReadRecordSession>> {
+        return dao.getSessionsByBookFlow(getCurrentDeviceId(), bookName, bookAuthor)
+    }
+
+    fun getBookTimelineDays(bookName: String, bookAuthor: String): Flow<List<ReadRecordTimelineDay>> {
+        return getBookSessions(bookName, bookAuthor).map { sessions ->
+            sessions.groupBy { DateUtil.format(Date(it.startTime), "yyyy-MM-dd") }
+                .toSortedMap(compareByDescending { it })
+                .map { (date, daySessions) ->
+                    ReadRecordTimelineDay(
+                        date = date,
+                        sessions = daySessions.sortedByDescending { it.startTime }
+                    )
+                }
+        }
+    }
+
+    fun getBookReadTime(bookName: String, bookAuthor: String): Flow<Long> {
+        return dao.getReadTimeFlow(getCurrentDeviceId(), bookName, bookAuthor).map { it ?: 0L }
+    }
+
     suspend fun getMergeCandidates(targetRecord: ReadRecord): List<ReadRecord> {
-        return dao.getReadRecordsByNameExcludingAuthor(
+        return dao.getMergeCandidates(
             targetRecord.deviceId,
             targetRecord.bookName,
             targetRecord.bookAuthor
@@ -63,11 +97,25 @@ class ReadRecordRepository(
      * 保存一个完整的阅读会话.
      */
     suspend fun saveReadSession(newSession: ReadRecordSession) {
-        val segmentDuration = newSession.endTime - newSession.startTime
-        dao.insertSession(newSession)
-        val dateString = DateUtil.format(Date(newSession.startTime), DatePattern.NORM_DATE_PATTERN)
-        updateReadRecordDetail(newSession, segmentDuration, newSession.words, dateString)
-        updateReadRecord(newSession, segmentDuration)
+        if (!readRecordEnabled.first()) return
+        if (newSession.endTime <= newSession.startTime) return
+        database.withTransaction {
+            val existingSession = dao.getSession(
+                newSession.deviceId,
+                newSession.bookName,
+                newSession.bookAuthor,
+                newSession.startTime,
+                newSession.endTime
+            )
+            if (existingSession != null) return@withTransaction
+
+            val segmentDuration = newSession.endTime - newSession.startTime
+            dao.insertSession(newSession)
+            val dateString =
+                DateUtil.format(Date(newSession.startTime), DatePattern.NORM_DATE_PATTERN)
+            updateReadRecordDetail(newSession, segmentDuration, newSession.words, dateString)
+            updateReadRecord(newSession, segmentDuration)
+        }
     }
 
     private suspend fun updateReadRecord(session: ReadRecordSession, durationDelta: Long) {
@@ -129,58 +177,72 @@ class ReadRecordRepository(
     }
 
     suspend fun deleteDetail(detail: ReadRecordDetail) {
-        dao.deleteDetail(detail)
-        dao.deleteSessionsByBookAndDate(
-            detail.deviceId,
-            detail.bookName,
-            detail.bookAuthor,
-            detail.date
-        )
-        updateReadRecordTotal(detail.deviceId, detail.bookName, detail.bookAuthor)
+        database.withTransaction {
+            dao.deleteDetail(detail)
+            dao.deleteSessionsByBookAndDate(
+                detail.deviceId,
+                detail.bookName,
+                detail.bookAuthor,
+                detail.date
+            )
+            updateReadRecordTotal(detail.deviceId, detail.bookName, detail.bookAuthor)
+        }
     }
 
-    @Transaction
     suspend fun deleteSession(session: ReadRecordSession) {
-        dao.deleteSession(session)
+        database.withTransaction {
+            dao.deleteSession(session)
 
-        val dateString = DateUtil.format(Date(session.startTime), "yyyy-MM-dd")
-        val remainingSessions =
-            dao.getSessionsByBookAndDate(
-                session.deviceId,
-                session.bookName,
-                session.bookAuthor,
-                dateString
-            )
+            val dateString = DateUtil.format(Date(session.startTime), "yyyy-MM-dd")
+            val remainingSessions =
+                dao.getSessionsByBookAndDate(
+                    session.deviceId,
+                    session.bookName,
+                    session.bookAuthor,
+                    dateString
+                )
 
-        if (remainingSessions.isEmpty()) {
-            val detail = dao.getDetail(
-                session.deviceId,
-                session.bookName,
-                session.bookAuthor,
-                dateString
-            )
-            detail?.let { dao.deleteDetail(it) }
-        } else {
-            val totalTime = remainingSessions.sumOf { it.endTime - it.startTime }
-            val totalWords = remainingSessions.sumOf { it.words }
-            val firstRead = remainingSessions.minOf { it.startTime }
-            val lastRead = remainingSessions.maxOf { it.endTime }
+            if (remainingSessions.isEmpty()) {
+                val detail = dao.getDetail(
+                    session.deviceId,
+                    session.bookName,
+                    session.bookAuthor,
+                    dateString
+                )
+                detail?.let { dao.deleteDetail(it) }
+            } else {
+                val totalTime = remainingSessions.sumOf { it.endTime - it.startTime }
+                val totalWords = remainingSessions.sumOf { it.words }
+                val firstRead = remainingSessions.minOf { it.startTime }
+                val lastRead = remainingSessions.maxOf { it.endTime }
 
-            val existingDetail = dao.getDetail(
-                session.deviceId,
-                session.bookName,
-                session.bookAuthor,
-                dateString
-            )
-            existingDetail?.copy(
-                readTime = totalTime,
-                readWords = totalWords,
-                firstReadTime = firstRead,
-                lastReadTime = lastRead
-            )?.let { dao.insertDetail(it) }
+                val existingDetail = dao.getDetail(
+                    session.deviceId,
+                    session.bookName,
+                    session.bookAuthor,
+                    dateString
+                )
+                dao.insertDetail(
+                    existingDetail?.copy(
+                        readTime = totalTime,
+                        readWords = totalWords,
+                        firstReadTime = firstRead,
+                        lastReadTime = lastRead
+                    ) ?: ReadRecordDetail(
+                        deviceId = session.deviceId,
+                        bookName = session.bookName,
+                        bookAuthor = session.bookAuthor,
+                        date = dateString,
+                        readTime = totalTime,
+                        readWords = totalWords,
+                        firstReadTime = firstRead,
+                        lastReadTime = lastRead,
+                    )
+                )
+            }
+
+            updateReadRecordTotal(session.deviceId, session.bookName, session.bookAuthor)
         }
-
-        updateReadRecordTotal(session.deviceId, session.bookName, session.bookAuthor)
     }
 
     private suspend fun updateReadRecordTotal(deviceId: String, bookName: String, bookAuthor: String) {
@@ -192,31 +254,55 @@ class ReadRecordRepository(
             val totalTime = allRemainingSessions.sumOf { it.endTime - it.startTime }
             val lastRead = allRemainingSessions.maxOf { it.endTime }
 
-            dao.getReadRecord(deviceId, bookName, bookAuthor)?.copy(
-                readTime = totalTime,
-                lastRead = lastRead
-            )?.let { dao.update(it) }
+            val existingRecord = dao.getReadRecord(deviceId, bookName, bookAuthor)
+            if (existingRecord == null) {
+                dao.insert(
+                    ReadRecord(
+                        deviceId = deviceId,
+                        bookName = bookName,
+                        bookAuthor = bookAuthor,
+                        readTime = totalTime,
+                        lastRead = lastRead,
+                    )
+                )
+            } else {
+                dao.update(
+                    existingRecord.copy(
+                        readTime = totalTime,
+                        lastRead = lastRead
+                    )
+                )
+            }
         }
     }
 
     suspend fun deleteReadRecord(record: ReadRecord) {
-        dao.deleteReadRecord(record)
-        dao.deleteDetailsByBook(record.deviceId, record.bookName, record.bookAuthor)
-        dao.deleteSessionsByBook(record.deviceId, record.bookName, record.bookAuthor)
-    }
-
-    @Transaction
-    suspend fun mergeReadRecordInto(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
-        sourceRecords.forEach { sourceRecord ->
-            mergeSingleReadRecordInto(targetRecord, sourceRecord)
+        database.withTransaction {
+            dao.deleteReadRecord(record)
+            dao.deleteDetailsByBook(record.deviceId, record.bookName, record.bookAuthor)
+            dao.deleteSessionsByBook(record.deviceId, record.bookName, record.bookAuthor)
         }
     }
 
-    @Transaction
+    suspend fun clearReadRecords() {
+        database.withTransaction {
+            dao.clearReadRecordSessions()
+            dao.clearReadRecordDetails()
+            dao.clearReadRecords()
+        }
+    }
+
+    suspend fun mergeReadRecordInto(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
+        database.withTransaction {
+            sourceRecords.forEach { sourceRecord ->
+                mergeSingleReadRecordInto(targetRecord, sourceRecord)
+            }
+        }
+    }
+
     private suspend fun mergeSingleReadRecordInto(targetRecord: ReadRecord, sourceRecord: ReadRecord) {
         if (targetRecord == sourceRecord) return
         if (targetRecord.deviceId != sourceRecord.deviceId) return
-        if (targetRecord.bookName != sourceRecord.bookName) return
 
         val source = dao.getReadRecord(
             sourceRecord.deviceId,
@@ -252,6 +338,7 @@ class ReadRecordRepository(
             if (existingTargetDetail == null) {
                 dao.insertDetail(
                     detail.copy(
+                        bookName = targetRecord.bookName,
                         bookAuthor = targetRecord.bookAuthor
                     )
                 )
@@ -274,7 +361,12 @@ class ReadRecordRepository(
             sourceRecord.bookAuthor
         )
         sourceSessions.forEach { session ->
-            dao.updateSession(session.copy(bookAuthor = targetRecord.bookAuthor))
+            dao.updateSession(
+                session.copy(
+                    bookName = targetRecord.bookName,
+                    bookAuthor = targetRecord.bookAuthor
+                )
+            )
         }
 
         dao.deleteReadRecord(source)

@@ -1,0 +1,254 @@
+package io.legado.app.ui.book.info
+
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.R
+import io.legado.app.data.entities.BookGroup
+import io.legado.app.help.book.isAudio
+import io.legado.app.help.book.isImage
+import io.legado.app.help.book.isLocal
+import io.legado.app.model.SourceCallBack
+import io.legado.app.ui.book.audio.AudioPlayActivity
+import io.legado.app.ui.book.info.edit.BookInfoEditActivity
+import io.legado.app.ui.book.manga.ReadMangaActivity
+import io.legado.app.ui.book.toc.TocActivityResult
+import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.utils.StartActivityContract
+import io.legado.app.utils.openFileUri
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.collectLatest
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun BookInfoRouteScreen(
+    bookUrl: String,
+    name: String? = null,
+    author: String? = null,
+    origin: String? = null,
+    coverPath: String? = null,
+    viewModel: BookInfoViewModel,
+    onBack: () -> Unit,
+    onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
+    onOpenSearch: (String) -> Unit,
+    onOpenBookSourceEdit: (String) -> Unit,
+    onOpenSourceLogin: (String) -> Unit,
+    onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
+    onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
+    onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
+    onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
+    onOpenCharacterNetwork: (bookUrl: String) -> Unit = {},
+    onOpenCharacterList: (bookUrl: String) -> Unit = {},
+    onOpenKnowledgeList: (bookUrl: String) -> Unit = {},
+    onOpenEventList: (bookUrl: String) -> Unit = {},
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
+) {
+    val context = LocalContext.current
+    val activity = context as AppCompatActivity
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showMangaUi by rememberUpdatedState(uiState.showMangaUi)
+
+    val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
+        viewModel.onTocResult(it)
+    }
+    val localBookTreeSelect = rememberLauncherForActivityResult(HandleFileContract()) {
+        it.uri?.let { treeUri ->
+            viewModel.onIntent(BookInfoIntent.SetDefaultBookTreeUri(treeUri.toString()))
+        }
+    }
+    val infoEditResult = rememberLauncherForActivityResult(
+        StartActivityContract(BookInfoEditActivity::class.java)
+    ) {
+        if (it.resultCode == Activity.RESULT_OK) {
+            viewModel.onInfoEdited()
+        }
+    }
+    val readBookResult = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.onReaderResult(it.resultCode)
+    }
+
+    LaunchedEffect(bookUrl, name, author, origin, coverPath, viewModel) {
+        viewModel.initData(
+            bookUrl = bookUrl,
+            name = name,
+            author = author,
+            origin = origin,
+            coverPath = coverPath
+        )
+    }
+
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshShelfState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(viewModel, activity) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is BookInfoEffect.ShowMessage -> context.toastOnUi(effect.message)
+                is BookInfoEffect.Finish -> {
+                    onFinish(effect.resultCode, effect.afterTransition)
+                }
+
+                is BookInfoEffect.OpenBookInfoEdit -> {
+                    infoEditResult.launch {
+                        putExtra("bookUrl", effect.bookUrl)
+                    }
+                }
+
+                is BookInfoEffect.OpenReader -> {
+                    val cls = when {
+                        effect.book.isAudio -> AudioPlayActivity::class.java
+                        !effect.book.isLocal && effect.book.isImage && showMangaUi -> {
+                            ReadMangaActivity::class.java
+                        }
+
+                        else -> null
+                    }
+                    if (cls == null) {
+                        onOpenReader(
+                            effect.book.bookUrl,
+                            effect.inBookshelf,
+                            effect.chapterChanged,
+                        )
+                        return@collectLatest
+                    }
+                    readBookResult.launch(
+                        Intent(activity, cls).apply {
+                            putExtra("bookUrl", effect.book.bookUrl)
+                            putExtra("inBookshelf", effect.inBookshelf)
+                            putExtra("chapterChanged", effect.chapterChanged)
+                        }
+                    )
+                }
+
+                is BookInfoEffect.OpenToc -> tocActivityResult.launch(effect.bookUrl)
+                is BookInfoEffect.OpenBookSourceEdit -> {
+                    onOpenBookSourceEdit(effect.sourceUrl)
+                }
+
+                is BookInfoEffect.OpenSourceLogin -> {
+                    onOpenSourceLogin(effect.sourceUrl)
+                }
+
+                BookInfoEffect.OpenSelectBooksDir -> localBookTreeSelect.launch {
+                    title = activity.getString(R.string.select_book_folder)
+                }
+
+                is BookInfoEffect.OpenFile -> activity.openFileUri(effect.uri, effect.mimeType)
+                is BookInfoEffect.RunSourceCallback -> {
+                    runSourceCallback(activity, effect, viewModel, onOpenSearch)
+                }
+
+
+                is BookInfoEffect.NavigateToBookInfo -> {
+                    onNavigateToBookInfo(effect.name, effect.author, effect.bookUrl, effect.origin, effect.coverPath)
+                }
+
+                is BookInfoEffect.NavigateToExploreShow -> {
+                    onNavigateToExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl)
+                }
+
+                is BookInfoEffect.OpenCharacterDetail -> {
+                    onOpenCharacterDetail(effect.bookUrl, effect.characterId)
+                }
+
+                is BookInfoEffect.OpenCharacterNetwork -> {
+                    onOpenCharacterNetwork(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenKnowledgeList -> {
+                    onOpenKnowledgeList(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenCharacterList -> {
+                    onOpenCharacterList(effect.bookUrl)
+                }
+
+                is BookInfoEffect.OpenEventList -> {
+                    onOpenEventList(effect.bookUrl)
+                }
+            }
+        }
+    }
+
+    BookInfoScreen(
+        state = uiState,
+        groups = viewModel.allGroups
+            .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
+        onIntent = viewModel::onIntent,
+        onBack = onBack,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = sharedCoverKey,
+    )
+}
+
+private fun runSourceCallback(
+    activity: AppCompatActivity,
+    effect: BookInfoEffect.RunSourceCallback,
+    viewModel: BookInfoViewModel,
+    onOpenSearch: (String) -> Unit,
+) {
+    SourceCallBack.callBackBtn(
+        activity,
+        effect.event,
+        effect.source,
+        effect.book,
+        null,
+    ) {
+        when (val action = effect.action) {
+            is BookInfoCallbackAction.Search -> {
+                onOpenSearch(action.keyword)
+            }
+
+            is BookInfoCallbackAction.ShareText -> {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    putExtra(Intent.EXTRA_TEXT, action.text)
+                    type = "text/plain"
+                }
+                activity.startActivity(Intent.createChooser(intent, action.chooserTitle))
+            }
+
+            is BookInfoCallbackAction.CopyText -> {
+                activity.sendToClip(action.text)
+            }
+
+            BookInfoCallbackAction.ClearCache -> {
+                viewModel.clearCache()
+            }
+
+            BookInfoCallbackAction.None -> Unit
+        }
+    }
+}

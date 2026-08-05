@@ -6,10 +6,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.graphics.scale
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
@@ -34,6 +35,10 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
+import io.legado.app.domain.gateway.AppLocaleGateway
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -43,9 +48,11 @@ import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
-import io.legado.app.help.config.OldThemeConfig.applyDayNightInit
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.Cronet
 import io.legado.app.help.http.ObsoleteUrlFactory
@@ -55,15 +62,20 @@ import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.BookCover
+import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
-import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.chromium.base.ThreadUtils
+import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 import splitties.init.appCtx
@@ -73,15 +85,49 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 
-class App : Application() {
+class App : Application(), ImageLoaderFactory {
 
-    private lateinit var oldConfig: Configuration
+    override fun newImageLoader(): ImageLoader {
+        return get()
+    }
 
     override fun onCreate() {
+        // 首行初始化设置快照层：同步预加载 DataStore（触发 SP 迁移），
+        // 之后所有 getPref* 门面读取均为纯内存查找，须先于一切主题/配置读取
+        AppConfigStore.init(this)
+        // 一次性迁移：把旧版语言偏好写入 AppCompat per-app locales，之后交由
+        // autoStoreLocales 持久化。不能每次启动都执行——API 33+ 上会覆盖用户在
+        // 系统设置里选择的应用语言，API <33 上此时 AppCompat 存储尚未加载、
+        // getApplicationLocales() 恒为空，isEmpty 守卫会形同虚设
+        val legacyLanguage = if (!LocalConfig.appLocaleMigrated) {
+            LocalConfig.appLocaleMigrated = true
+            AppConfigStore.getString(PreferKey.language) ?: "auto"
+        } else null
         startKoin {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
         }
+        AppConfig.initialize(
+            shellGateway = get(),
+            themeGateway = get(),
+            bookshelfGateway = get(),
+            otherGateway = get(),
+            backupGateway = get(),
+            cacheGateway = get(),
+            coverGateway = get(),
+            readGateway = get(),
+            aloudGateway = get(),
+            importBookGateway = get(),
+            exportGateway = get(),
+        )
+        ReadBookConfig.initialize(
+            configStore = get(),
+            readSettingsGateway = get(),
+        )
+        if (legacyLanguage != null) {
+            get<AppLocaleGateway>().migrateLegacyLanguage(legacyLanguage)
+        }
+        applyDayNightInit(this)
         if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")
                 setTheme(R.style.ThemeOverlay_WhiteBackground)
@@ -120,10 +166,26 @@ class App : Application() {
         if (isDebuggable) {
             ThreadUtils.setThreadAssertsDisabledForTesting(true)
         }
-        oldConfig = Configuration(resources.configuration)
-        applyDayNightInit(this)
         registerActivityLifecycleCallbacks(LifecycleHelp)
-        defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
+        Coroutine.async {
+            get<BackupSettingsGateway>().settings
+                .map {
+                    listOf(it.webDavUrl, it.webDavDir, it.webDavAccount, it.webDavPassword)
+                }
+                .distinctUntilChanged()
+                .collect { AppWebDav.upConfig() }
+        }
+        // themeMode 是日夜的唯一来源，除外观设置外（阅读页快捷按钮、主题包、恢复备份）
+        // 也会直接写网关。AppCompat 的夜间模式统一跟随网关，否则资源配置不变，
+        // WebView、旧 View 界面拿到的仍是切换前的深浅色。
+        Coroutine.async {
+            get<AppShellSettingsGateway>().settings
+                .map { it.themeMode }
+                .distinctUntilChanged()
+                .collect {
+                    withContext(Main) { ThemeConfigStore.initNightMode() }
+                }
+        }
         Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
@@ -153,8 +215,8 @@ class App : Application() {
             RuleBigDataHelp.clearInvalid()
             BookHelp.clearInvalidCache()
             Backup.clearCache()
-            ReadBookConfig.clearBgAndCache()
-            OldThemeConfig.clearBg()
+            get<ReadStyleGateway>().clearUnusedBackgrounds()
+            ThemeConfigStore.clearBg()
             //初始化简繁转换引擎
             when (AppConfig.chineseConverterType) {
                 1 -> {
@@ -168,19 +230,16 @@ class App : Application() {
             SourceHelp.adjustSortNumber()
             //同步阅读记录
             if (AppConfig.syncBookProgress) {
+                AppWebDav.upConfig()
                 AppWebDav.downloadAllBookProgress()
             }
         }
     }
 
-//    override fun onConfigurationChanged(newConfig: Configuration) {
-//        super.onConfigurationChanged(newConfig)
-//        val diff = newConfig.diff(oldConfig)
-//        if ((diff and ActivityInfo.CONFIG_UI_MODE) != 0) {
-//            applyDayNight(this)
-//        }
-//        oldConfig = Configuration(newConfig)
-//    }
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        TextLine.trimCaches(level)
+    }
 
     /**
      * 尝试在安装了GMS的设备上(GMS或者MicroG)使用GMS内置的Conscrypt

@@ -1,12 +1,11 @@
 package io.legado.app.ui.book.readRecord
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,28 +27,18 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Merge
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,17 +48,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -77,62 +66,150 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cn.hutool.core.date.DateUtil
+import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
-import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.Cover
-import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.SearchBarSection
-import io.legado.app.ui.widget.components.SectionHeader
-import io.legado.app.ui.widget.components.button.AlertButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
-import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
+import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.theme.fadingEdge
+import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.CollapsibleHeader
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.AppIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
 import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
 import io.legado.app.ui.widget.components.heatmap.HeatmapMode
 import io.legado.app.ui.widget.components.heatmap.HeatmapWeekColumn
 import io.legado.app.ui.widget.components.heatmap.NoEarlierDataIndicator
 import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
+import io.legado.app.ui.widget.components.heatmap.heatmapCalendarTitle
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.StringUtils.formatFriendlyDate
+import io.legado.app.utils.formatReadDuration
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
+data class TimelineItem(
+    val session: ReadRecordSession,
+    val showHeader: Boolean
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ReadRecordRouteScreen(
+    viewModel: ReadRecordViewModel = koinViewModel(),
+    onBackClick: () -> Unit,
+    onBookClick: (String, String) -> Unit,
+    onSummaryClick: () -> Unit
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ReadRecordScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        loadBookCover = viewModel::getBookCover,
+        loadChapterTitle = viewModel::getChapterTitle,
+        loadMergeCandidates = viewModel::getMergeCandidates,
+        onBackClick = onBackClick,
+        onBookClick = onBookClick,
+        onSummaryClick = onSummaryClick,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReadRecordScreen(
-    viewModel: ReadRecordViewModel = koinViewModel(),
+    state: ReadRecordUiState,
+    onIntent: (ReadRecordIntent) -> Unit,
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
+    loadMergeCandidates: suspend (ReadRecord) -> List<ReadRecord>,
     onBackClick: () -> Unit,
-    onBookClick: (String, String) -> Unit
+    onBookClick: (String, String) -> Unit,
+    onSummaryClick: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    val state by viewModel.uiState.collectAsState()
-    val displayMode by viewModel.displayMode.collectAsState()
+    val displayMode = state.displayMode
+    val readRecordEnabled = state.readRecordEnabled
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
+    var showActionsSheet by remember { mutableStateOf(false) }
+    var heatmapMode by remember { mutableStateOf(HeatmapMode.COUNT) }
+    var selectedItemKeys by remember { mutableStateOf(emptySet<String>()) }
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val inSelectionMode = selectedItemKeys.isNotEmpty()
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingDeleteCount by remember { mutableStateOf(1) }
     var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
-    val onConfirmDelete: (() -> Unit) -> Unit = { action ->
+    val onConfirmDelete: (Int, () -> Unit) -> Unit = { count, action ->
         if (skipDeleteConfirm) {
             action()
         } else {
+            pendingDeleteCount = count
             pendingDeleteAction = action
+        }
+    }
+    val stickyDate by remember(displayMode, listState) {
+        derivedStateOf {
+            if (displayMode == DisplayMode.LATEST) return@derivedStateOf null
+            val stickyKey = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { info ->
+                    val key = info.key.toString()
+                    key.startsWith("header_") ||
+                        key.startsWith("timeline_header_") ||
+                        key.startsWith("agg_item_") ||
+                        key.startsWith("timeline_item_")
+                }?.key?.toString() ?: return@derivedStateOf null
+
+            when {
+                stickyKey.startsWith("header_") -> stickyKey.removePrefix("header_")
+                stickyKey.startsWith("timeline_header_") -> stickyKey.removePrefix("timeline_header_")
+                stickyKey.startsWith("agg_item_") -> stickyKey.removePrefix("agg_item_").substringBefore("|")
+                stickyKey.startsWith("timeline_item_") -> stickyKey.removePrefix("timeline_item_").substringBefore("|")
+                else -> null
+            }
+        }
+    }
+    val floatingDate by remember(stickyDate, listState, displayMode) {
+        derivedStateOf {
+            if (displayMode == DisplayMode.LATEST) return@derivedStateOf null
+            if (stickyDate == null) return@derivedStateOf null
+            val shouldStick = listState.firstVisibleItemIndex > 1 ||
+                listState.firstVisibleItemScrollOffset > 24
+            if (shouldStick) stickyDate else null
         }
     }
 
@@ -142,116 +219,186 @@ fun ReadRecordScreen(
         }
     }
 
-    Scaffold(
+    BackHandler(enabled = inSelectionMode) {
+        selectedItemKeys = emptySet()
+    }
+
+    AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = {
-                        Text(
-                            text = "阅读记录"
-                        )
+                    title = if (inSelectionMode) {
+                        stringResource(R.string.selected_count, selectedItemKeys.size)
+                    } else {
+                        stringResource(R.string.read_record)
                     },
-                    subtitle = {
+                    subtitle = run {
+                        if (inSelectionMode) return@run stringResource(R.string.long_press_select_mode)
                         val subTitle = when (displayMode) {
-                            DisplayMode.AGGREGATE -> "汇总视图"
-                            DisplayMode.TIMELINE -> "时间线视图"
-                            DisplayMode.LATEST -> "最后阅读"
+                            DisplayMode.AGGREGATE -> stringResource(R.string.read_record_view_aggregate)
+                            DisplayMode.TIMELINE -> stringResource(R.string.read_record_view_timeline)
+                            DisplayMode.LATEST -> stringResource(R.string.read_record_view_latest)
                         }
-                        AnimatedTextLine(
-                            text = subTitle
-                        )
+                        subTitle
                     },
                     navigationIcon = {
-                        TopbarNavigationButton(onClick = onBackClick)
+                        TopBarNavigationButton(
+                            onClick = {
+                                if (inSelectionMode) {
+                                    selectedItemKeys = emptySet()
+                                } else {
+                                    onBackClick()
+                                }
+                            }
+                        )
                     },
                     actions = {
-                        IconButton(onClick = {
-                            val newMode = when (displayMode) {
-                                DisplayMode.AGGREGATE -> DisplayMode.TIMELINE
-                                DisplayMode.TIMELINE -> DisplayMode.LATEST
-                                DisplayMode.LATEST -> DisplayMode.AGGREGATE
+                        if (inSelectionMode) {
+                            AppIconButton(
+                                onClick = {
+                                    val action = {
+                                        deleteSelectedReadRecords(
+                                            state = state,
+                                            selectedItemKeys = selectedItemKeys,
+                                            onIntent = onIntent
+                                        )
+                                        selectedItemKeys = emptySet()
+                                    }
+                                    onConfirmDelete(selectedItemKeys.size, action)
+                                }
+                            ) {
+                                AppIcon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete_selected)
+                                )
                             }
-                            viewModel.setDisplayMode(newMode)
-                        }) {
-                            val icon = when (displayMode) {
-                                DisplayMode.AGGREGATE -> Icons.Default.Timeline
-                                DisplayMode.TIMELINE -> Icons.Default.Schedule
-                                DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
+                        } else {
+                            AppIconButton(onClick = {
+                                val newMode = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> DisplayMode.TIMELINE
+                                    DisplayMode.TIMELINE -> DisplayMode.LATEST
+                                    DisplayMode.LATEST -> DisplayMode.AGGREGATE
+                                }
+                                onIntent(ReadRecordIntent.SetDisplayMode(newMode))
+                                selectedItemKeys = emptySet()
+                            }) {
+                                val icon = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> Icons.Default.Timeline
+                                    DisplayMode.TIMELINE -> Icons.Default.Schedule
+                                    DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
+                                }
+                                val description = when (displayMode) {
+                                    DisplayMode.AGGREGATE -> stringResource(R.string.a11y_switch_to_timeline_view)
+                                    DisplayMode.TIMELINE -> stringResource(R.string.a11y_switch_to_latest_view)
+                                    DisplayMode.LATEST -> stringResource(R.string.a11y_switch_to_aggregate_view)
+                                }
+                                AppIcon(icon, description)
                             }
-                            val description = if (displayMode == DisplayMode.AGGREGATE) "Switch to Timeline" else "Switch to Aggregate"
-                            Icon(icon, description)
-                        }
-                        IconButton(onClick = { showCalendar = !showCalendar }) {
-                            Icon(Icons.Default.CalendarMonth, contentDescription = "Toggle Calendar")
-                        }
-                        IconButton(onClick = { showSearch = !showSearch }) {
-                            Icon(Icons.Default.Search, contentDescription = null)
+                            AppIconButton(onClick = { showSearch = !showSearch }) {
+                                AppIcon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                            }
+                            AppIconButton(onClick = { showActionsSheet = true }) {
+                                AppIcon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.more_actions)
+                                )
+                            }
                         }
                     },
                     scrollBehavior = scrollBehavior
                 )
 
-                AnimatedVisibility(visible = showSearch) {
-                    SearchBarSection(
+                AnimatedVisibility(
+                    modifier = Modifier.adaptiveHorizontalPadding(),
+                    visible = showSearch
+                ) {
+                    SearchBar(
                         query = state.searchKey ?: "",
-                        onQueryChange = { viewModel.setSearchKey(it) }
+                        onQueryChange = { onIntent(ReadRecordIntent.Search(it)) }
                     )
                 }
             }
         }
     ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
-            val contentState = when {
-                state.isLoading -> "LOADING"
-                (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
-                        (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
-                        (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
-                else -> "CONTENT"
-            }
-            AnimatedContent(
-                targetState = contentState,
-                label = "MainContentAnimation"
-            ) { targetState ->
-                when (targetState) {
-                    "LOADING" -> {
-                        EmptyMessageView(
-                            modifier = Modifier.fillMaxSize(),
-                            message = "加载中",
-                            isLoading = true
-                        )
-                    }
+        val contentState = when {
+            state.isLoading -> "LOADING"
+            (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
+                (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
+                (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
+            else -> "CONTENT"
+        }
+        AnimatedContent(
+            targetState = contentState,
+            label = "MainContentAnimation"
+        ) { targetState ->
+            when (targetState) {
+                "LOADING" -> {
+                    EmptyMessage(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding()
+                            ),
+                        message = stringResource(R.string.loading),
+                        isLoading = true
+                    )
+                }
 
-                    "EMPTY" -> {
-                        EmptyMessageView(
-                            modifier = Modifier.fillMaxSize(),
-                            message = "没有记录"
-                        )
-                    }
+                "EMPTY" -> {
+                    EmptyMessage(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding()
+                            ),
+                        message = stringResource(R.string.no_read_record)
+                    )
+                }
 
-                    "CONTENT" -> {
+                "CONTENT" -> {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier
-                                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = adaptiveContentPaddingOnlyVertical(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding() + 16.dp
+                            )
                         ) {
                             item(key = "summary_card") {
-                                SummarySection(state, viewModel)
+                                SummarySection(state, loadBookCover, onSummaryClick)
                             }
                             renderListByMode(
                                 displayMode = displayMode,
                                 state = state,
-                                viewModel = viewModel,
+                                onIntent = onIntent,
+                                loadBookCover = loadBookCover,
+                                loadChapterTitle = loadChapterTitle,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
+                                selectedItemKeys = selectedItemKeys,
+                                inSelectionMode = inSelectionMode,
+                                onToggleSelection = { key ->
+                                    selectedItemKeys = if (selectedItemKeys.contains(key)) {
+                                        selectedItemKeys - key
+                                    } else {
+                                        selectedItemKeys + key
+                                    }
+                                },
+                                onEnterSelection = { key ->
+                                    selectedItemKeys = selectedItemKeys + key
+                                },
                                 onMergeClick = { record ->
                                     scope.launch {
-                                        val candidates = viewModel.getMergeCandidates(record)
+                                        val candidates = loadMergeCandidates(record)
                                         if (candidates.isEmpty()) {
-                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.no_merge_candidates)
+                                            )
                                         } else {
                                             mergeDialogData = record to candidates
                                         }
@@ -259,141 +406,298 @@ fun ReadRecordScreen(
                                 }
                             )
                         }
-                    }
-                }
-            }
-        }
-    }
 
-    if (pendingDeleteAction != null) {
-        var skipDeleteConfirmTemp by remember { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = {
-                pendingDeleteAction = null
-            },
-            title = { Text("确认删除") },
-            text = {
-                Column {
-                    Text("确定要删除这条记录吗？")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.small)
-                            .background(
-                                color = if (skipDeleteConfirmTemp) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                                shape = MaterialTheme.shapes.small
+                        TopFloatingStickyItem(
+                            item = floatingDate,
+                            modifier = Modifier.padding(
+                                top = padding.calculateTopPadding() + 4.dp,
+                                start = 8.dp
                             )
-                            .clickable { skipDeleteConfirmTemp = !skipDeleteConfirmTemp }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = skipDeleteConfirmTemp, onCheckedChange = null)
-                        Text(
-                            text = "不再提示",
-                            modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                AlertButton(
-                    onClick = {
-                        pendingDeleteAction?.invoke()
-                        pendingDeleteAction = null
-                        skipDeleteConfirm = skipDeleteConfirmTemp
-                    },
-                    text = "删除"
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingDeleteAction = null
-                }) {
-                    Text("取消")
-                }
-            }
-        )
-    }
-
-    if (showCalendar) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showCalendar = false }
-        ) {
-            HeatmapCalendarSection(
-                dailyReadCounts = state.dailyReadCounts,
-                dailyReadTimes = state.dailyReadTimes,
-                selectedDate = state.selectedDate,
-                onDateSelected = { date ->
-                    viewModel.setSelectedDate(date)
-                    showCalendar = false
-                },
-                onClearDate = {
-                    viewModel.setSelectedDate(null)
-                    showCalendar = false
-                }
-            )
-        }
-    }
-
-
-    mergeDialogData?.let { (targetRecord, candidates) ->
-
-        var selectedAuthors by remember(targetRecord, candidates) {
-            mutableStateOf(candidates.map { it.bookAuthor }.toSet())
-        }
-
-        AlertDialog(
-            onDismissRequest = { mergeDialogData = null },
-            title = { Text("合并阅读记录") },
-            text = {
-                Column {
-                    Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    candidates.forEach { candidate ->
-                        val author = candidate.bookAuthor.ifBlank { "未知作者" }
-                        val isChecked = selectedAuthors.contains(candidate.bookAuthor)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedAuthors =
-                                        if (isChecked) selectedAuthors - candidate.bookAuthor
-                                        else selectedAuthors + candidate.bookAuthor
+                        ) { date ->
+                            val text = buildString {
+                                append(formatFriendlyDate(date))
+                                if (displayMode == DisplayMode.AGGREGATE) {
+                                    val dailyTotal = state.groupedRecords[date]?.sumOf { it.readTime } ?: 0L
+                                    append(" · ")
+                                    append(formatDuring(dailyTotal))
                                 }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = isChecked, onCheckedChange = null)
-                            Text(
-                                text = "$author（${formatDuring(candidate.readTime)}）",
-                                modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.bodyMedium
+                            }
+                            TextCard(
+                                text = text,
+                                textStyle = LegadoTheme.typography.labelLarge,
+                                backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                                contentColor = LegadoTheme.colorScheme.onCardContainer,
+                                cornerRadius = 8.dp,
+                                horizontalPadding = 8.dp,
+                                verticalPadding = 8.dp
                             )
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.mergeReadRecords(
-                            targetRecord,
-                            candidates.filter { selectedAuthors.contains(it.bookAuthor) }
-                        )
-                        mergeDialogData = null
+            }
+        }
+    }
+
+    ReadRecordActionsSheet(
+        show = showActionsSheet,
+        showCalendar = showCalendar,
+        readRecordEnabled = readRecordEnabled,
+        onDismissRequest = { showActionsSheet = false },
+        onToggleCalendar = {
+            showCalendar = !showCalendar
+            showActionsSheet = false
+        },
+        onReadRecordEnabledChange = { checked ->
+            onIntent(ReadRecordIntent.SetEnabled(checked))
+        },
+        onClearReadRecords = {
+            showActionsSheet = false
+            onConfirmDelete(-1) {
+                onIntent(ReadRecordIntent.ClearRecords)
+                selectedItemKeys = emptySet()
+            }
+        }
+    )
+
+    var skipDeleteConfirmTemp by remember(pendingDeleteAction != null) { mutableStateOf(false) }
+
+    AppAlertDialog(
+        data = pendingDeleteAction,
+        onDismissRequest = { pendingDeleteAction = null },
+        title = stringResource(R.string.confirm_delete_read_record),
+        content = { _ ->
+            Column {
+                AppText(
+                    if (pendingDeleteCount == -1) {
+                        stringResource(R.string.clear_read_records_message)
+                    } else if (pendingDeleteCount > 1) {
+                        stringResource(R.string.delete_selected_read_records_message, pendingDeleteCount)
+                    } else {
+                        stringResource(R.string.delete_read_record_message)
                     }
-                ) {
-                    Text("合并")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mergeDialogData = null }) {
-                    Text("取消")
+                )
+                if (pendingDeleteCount != -1) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CheckboxItem(
+                        title = stringResource(R.string.do_not_remind_again),
+                        checked = skipDeleteConfirmTemp,
+                        onCheckedChange = { skipDeleteConfirmTemp = it }
+                    )
                 }
             }
+        },
+        confirmText = stringResource(R.string.delete),
+        onConfirm = { action ->
+            action.invoke()
+            pendingDeleteAction = null
+            if (pendingDeleteCount != -1) {
+                skipDeleteConfirm = skipDeleteConfirmTemp
+            }
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = {
+            pendingDeleteAction = null
+        }
+    )
+
+    AppModalBottomSheet(
+        show = showCalendar,
+        onDismissRequest = { showCalendar = false },
+        title = heatmapCalendarTitle(),
+        startAction = {
+            HeatmapCalendarStartAction(
+                currentMode = heatmapMode,
+                onModeChanged = { heatmapMode = it }
+            )
+        },
+        endAction = {
+            HeatmapCalendarEndAction(
+                onClearDate = {
+                    onIntent(ReadRecordIntent.SelectDate(null))
+                    showCalendar = false
+                }
+            )
+        }
+    ) {
+        HeatmapCalendarSection(
+            dailyReadCounts = state.dailyReadCounts,
+            dailyReadTimes = state.dailyReadTimes,
+            currentMode = heatmapMode,
+            selectedDate = state.selectedDate,
+            onDateSelected = { date ->
+                onIntent(ReadRecordIntent.SelectDate(date))
+                showCalendar = false
+            }
+        )
+    }
+
+    var selectedMergeKeys by remember(mergeDialogData != null) {
+        mutableStateOf(
+            mergeDialogData?.let { (targetRecord, candidates) ->
+                candidates
+                    .filter { it.bookName == targetRecord.bookName }
+                    .map { it.mergeKey() }
+                    .toSet()
+            } ?: emptySet()
+        )
+    }
+
+    AppAlertDialog(
+        data = mergeDialogData,
+        onDismissRequest = { mergeDialogData = null },
+        title = stringResource(R.string.merge_read_records),
+        content = { (targetRecord, candidates) ->
+            val unknownAuthor = stringResource(R.string.unknown_author)
+            Column {
+                AppText(
+                    stringResource(
+                        R.string.merge_read_records_message,
+                        targetRecord.bookName,
+                        targetRecord.bookAuthor.ifBlank { unknownAuthor }
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(modifier = Modifier.height(320.dp)) {
+                    items(candidates, key = { it.mergeKey() }) { candidate ->
+                        val author = candidate.bookAuthor.ifBlank { unknownAuthor }
+                        val candidateKey = candidate.mergeKey()
+                        val isChecked = selectedMergeKeys.contains(candidateKey)
+
+                        CheckboxItem(
+                            title = stringResource(
+                                R.string.merge_read_record_candidate,
+                                candidate.bookName,
+                                author,
+                                formatDuring(candidate.readTime)
+                            ),
+                            checked = isChecked,
+                            onCheckedChange = { checked ->
+                                selectedMergeKeys = if (checked) {
+                                    selectedMergeKeys + candidateKey
+                                } else {
+                                    selectedMergeKeys - candidateKey
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmText = stringResource(R.string.merge),
+        onConfirm = { (targetRecord, candidates) ->
+            onIntent(
+                ReadRecordIntent.MergeRecords(
+                    targetRecord,
+                    candidates.filter { selectedMergeKeys.contains(it.mergeKey()) },
+                )
+            )
+            mergeDialogData = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { mergeDialogData = null }
+    )
+}
+
+@Composable
+private fun ReadRecordActionsSheet(
+    show: Boolean,
+    showCalendar: Boolean,
+    readRecordEnabled: Boolean,
+    onDismissRequest: () -> Unit,
+    onToggleCalendar: () -> Unit,
+    onReadRecordEnabledChange: (Boolean) -> Unit,
+    onClearReadRecords: () -> Unit
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.read_record_options)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CompactClickableSettingItem(
+                title = stringResource(
+                    if (showCalendar) R.string.hide_read_calendar else R.string.show_read_calendar
+                ),
+                imageVector = Icons.Default.CalendarMonth,
+                onClick = onToggleCalendar
+            )
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.enable_read_record),
+                checked = readRecordEnabled,
+                description = stringResource(R.string.enable_read_record_summary),
+                imageVector = Icons.Default.Schedule,
+                onCheckedChange = onReadRecordEnabledChange
+            )
+            CompactClickableSettingItem(
+                title = stringResource(R.string.clear_read_records),
+                description = stringResource(R.string.clear_read_records_summary),
+                imageVector = Icons.Default.Delete,
+                color = LegadoTheme.colorScheme.error,
+                onClick = onClearReadRecords
+            )
+        }
+    }
+}
+
+private fun ReadRecord.mergeKey(): String {
+    return "$deviceId|$bookName|$bookAuthor"
+}
+
+private fun ReadRecordDetail.selectionKey(): String {
+    return "detail|$deviceId|$bookName|$bookAuthor|$date"
+}
+
+private fun ReadRecordSession.selectionKey(): String {
+    return "session|$id"
+}
+
+private fun ReadRecord.selectionKey(): String {
+    return "record|$deviceId|$bookName|$bookAuthor"
+}
+
+private fun deleteSelectedReadRecords(
+    state: ReadRecordUiState,
+    selectedItemKeys: Set<String>,
+    onIntent: (ReadRecordIntent) -> Unit,
+) {
+    state.groupedRecords.values.flatten()
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach { onIntent(ReadRecordIntent.DeleteDetail(it)) }
+    state.timelineRecords.values.flatten()
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach { onIntent(ReadRecordIntent.DeleteSession(it)) }
+    state.latestRecords
+        .filter { selectedItemKeys.contains(it.selectionKey()) }
+        .forEach { onIntent(ReadRecordIntent.DeleteRecord(it)) }
+}
+
+@Composable
+private fun Modifier.selectionBackground(isSelected: Boolean): Modifier {
+    return if (isSelected) {
+        background(LegadoTheme.colorScheme.primary.copy(alpha = 0.12f))
+    } else {
+        this
+    }
+}
+
+@Composable
+private fun SelectionCheckmark(
+    inSelectionMode: Boolean,
+    isSelected: Boolean
+) {
+    AnimatedVisibility(visible = inSelectionMode) {
+        AppText(
+            text = if (isSelected) "✓" else "",
+            modifier = Modifier.width(24.dp),
+            color = LegadoTheme.colorScheme.primary,
+            style = LegadoTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -401,7 +705,8 @@ fun ReadRecordScreen(
 @Composable
 fun SummarySection(
     state: ReadRecordUiState,
-    viewModel: ReadRecordViewModel
+    loadBookCover: suspend (String, String) -> String?,
+    onSummaryClick: () -> Unit
 ) {
     val selectedDate = state.selectedDate
 
@@ -414,12 +719,16 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                title = stringResource(
+                    R.string.read_record_date_overview,
+                    selectedDate.monthValue,
+                    selectedDate.dayOfMonth
+                ),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
-                viewModel = viewModel,
-                onClick = { }
+                loadBookCover = loadBookCover,
+                onClick = onSummaryClick
             )
         }
     } else {
@@ -428,12 +737,12 @@ fun SummarySection(
 
         if (allBooksCount > 0) {
             ReadingSummaryCard(
-                title = "累计阅读成就",
+                title = stringResource(R.string.read_record_total_achievement),
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
-                viewModel = viewModel,
-                onClick = {  }
+                loadBookCover = loadBookCover,
+                onClick = onSummaryClick
             )
         }
     }
@@ -445,13 +754,11 @@ fun HeatmapCalendarSection(
     modifier: Modifier = Modifier,
     dailyReadCounts: Map<LocalDate, Int>,
     dailyReadTimes: Map<LocalDate, Long>,
+    currentMode: HeatmapMode,
     selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
-    onClearDate: () -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     config: HeatmapConfig = HeatmapConfig()
 ) {
-    var currentMode by remember { mutableStateOf(HeatmapMode.COUNT) }
-
     val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
     val days = rememberDaysInRange(startDate, endDate)
     val weeks = rememberWeeks(days, startDate)
@@ -464,46 +771,15 @@ fun HeatmapCalendarSection(
         }
     }
 
-    val showLeftGradient by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-        }
-    }
-    val showRightGradient by remember {
-        derivedStateOf {
-            listState.canScrollForward
-        }
-    }
-
-    val leftAlpha by animateFloatAsState(
-        targetValue = if (showLeftGradient) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "LeftGradientAlpha"
-    )
-
-    val rightAlpha by animateFloatAsState(
-        targetValue = if (showRightGradient) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "RightGradientAlpha"
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .padding(bottom = 32.dp)
     ) {
-        HeatmapCalendarTopBar(
-            currentMode = currentMode,
-            onModeChanged = { currentMode = it },
-            onClearDate = onClearDate
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         Row(modifier = Modifier.fillMaxWidth()) {
             WeekdayLabelsColumn(
-                cellSize = config.cellSize,
+                cellSize = config.interactiveCellSize,
                 cellSpacing = config.cellSpacing
             )
 
@@ -512,31 +788,7 @@ fun HeatmapCalendarSection(
                 horizontalArrangement = Arrangement.spacedBy(config.cellSpacing),
                 modifier = Modifier
                     .weight(1f)
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                    .drawWithContent {
-                        drawContent()
-
-                        val width = size.width
-                        val gradientWidthPx = config.gradientWidth.toPx()
-                        val leftStop = gradientWidthPx / width
-                        val rightStop = 1f - (gradientWidthPx / width)
-
-                        val colorStops = arrayOf(
-                            0f to Color.Black.copy(alpha = 1f - leftAlpha),
-                            leftStop to Color.Black,
-                            rightStop to Color.Black,
-                            1f to Color.Black.copy(alpha = 1f - rightAlpha)
-                        )
-
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colorStops = colorStops,
-                                startX = 0f,
-                                endX = width
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
+                    .fadingEdge(listState, config.gradientWidth)
             ) {
                 val firstReadDate = listOfNotNull(
                     dailyReadCounts.filterValues { it > 0 }.keys.minOrNull(),
@@ -545,7 +797,10 @@ fun HeatmapCalendarSection(
 
                 if (firstReadDate != null) {
                     item {
-                        NoEarlierDataIndicator(cellSize = config.cellSize)
+                        NoEarlierDataIndicator(
+                            cellSize = config.cellSize,
+                            touchTargetSize = config.interactiveCellSize,
+                        )
                     }
                 }
 
@@ -575,33 +830,66 @@ fun HeatmapCalendarSection(
 fun LazyListScope.renderListByMode(
     displayMode: DisplayMode,
     state: ReadRecordUiState,
-    viewModel: ReadRecordViewModel,
+    onIntent: (ReadRecordIntent) -> Unit,
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
     onBookClick: (String, String) -> Unit,
-    onConfirmDelete: (() -> Unit) -> Unit,
+    onConfirmDelete: (Int, () -> Unit) -> Unit,
+    selectedItemKeys: Set<String>,
+    inSelectionMode: Boolean,
+    onToggleSelection: (String) -> Unit,
+    onEnterSelection: (String) -> Unit,
     onMergeClick: (ReadRecord) -> Unit
 ) {
 
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
             state.groupedRecords.forEach { (date, details) ->
-                stickyHeader(key = "header_$date") {
+                item(key = "header_$date") {
                     DateHeader(date, details.sumOf { it.readTime })
                 }
-                items(items = details, key = { "${it.bookName}_${it.bookAuthor}_${it.date}" }) { detail ->
-                    SwipeActionContainer(
-                        modifier = Modifier.animateItem(),
-                        startAction = SwipeAction(
-                            icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.error,
-                            onSwipe = {
-                                onConfirmDelete { viewModel.deleteDetail(detail) }
-                            }
-                        )
-                    ) {
+                items(
+                    items = details,
+                    key = { "agg_item_${date}|${it.deviceId}_${it.bookName}_${it.bookAuthor}_${it.date}" }
+                ) { detail ->
+                    val itemKey = detail.selectionKey()
+                    val isSelected = selectedItemKeys.contains(itemKey)
+                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                         ReadRecordItem(
                             detail,
-                            viewModel,
-                            onClick = { onBookClick(detail.bookName, detail.bookAuthor) })
+                            loadBookCover,
+                            onClick = {
+                                if (inSelectionMode) {
+                                    onToggleSelection(itemKey)
+                                } else {
+                                    onBookClick(detail.bookName, detail.bookAuthor)
+                                }
+                            },
+                            onLongClick = { onEnterSelection(itemKey) },
+                            inSelectionMode = inSelectionMode,
+                            isSelected = isSelected,
+                            modifier = modifier
+                        )
+                    }
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
+                    if (inSelectionMode) {
+                        itemContent(Modifier.animateItem())
+                    } else {
+                        SwipeActionContainer(
+                            modifier = Modifier.animateItem(),
+                            startAction = SwipeAction(
+                                icon = Icons.Default.Delete,
+                                background = LegadoTheme.colorScheme.error,
+                                onSwipe = {
+                                    onConfirmDelete(1) {
+                                        onIntent(ReadRecordIntent.DeleteDetail(detail))
+                                    }
+                                },
+                                contentDescription = deleteActionDescription
+                            )
+                        ) {
+                            itemContent(Modifier)
+                        }
                     }
                 }
             }
@@ -609,98 +897,175 @@ fun LazyListScope.renderListByMode(
 
         DisplayMode.TIMELINE -> {
             state.timelineRecords.forEach { (date, sessions) ->
-                stickyHeader(key = "timeline_header_$date") { DateHeader(date) }
-                items(items = sessions, key = { it.id }) { session ->
-                    SwipeActionContainer(
-                        modifier = Modifier.animateItem(),
-                        startAction = SwipeAction(
-                            icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.error,
-                            onSwipe = {
-                                onConfirmDelete { viewModel.deleteSession(session) }
-                            }
-                        )
-                    ) {
+                item(key = "timeline_header_$date") { DateHeader(date) }
+                items(items = sessions, key = { "timeline_item_${date}|${it.id}" }) { session ->
+                    val itemKey = session.selectionKey()
+                    val isSelected = selectedItemKeys.contains(itemKey)
+                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
                         TimelineSessionItem(
                             item = TimelineItem(session, true),
-                            onBookClick = onBookClick,
-                            viewModel = viewModel
+                            onBookClick = { bookName, bookAuthor ->
+                                if (inSelectionMode) {
+                                    onToggleSelection(itemKey)
+                                } else {
+                                    onBookClick(bookName, bookAuthor)
+                                }
+                            },
+                            onLongClick = { onEnterSelection(itemKey) },
+                            inSelectionMode = inSelectionMode,
+                            isSelected = isSelected,
+                            loadBookCover = loadBookCover,
+                            loadChapterTitle = loadChapterTitle,
+                            modifier = modifier
                         )
+                    }
+                    val deleteActionDescription = stringResource(R.string.del_read_record)
+                    if (inSelectionMode) {
+                        itemContent(Modifier.animateItem())
+                    } else {
+                        SwipeActionContainer(
+                            modifier = Modifier.animateItem(),
+                            startAction = SwipeAction(
+                                icon = Icons.Default.Delete,
+                                background = LegadoTheme.colorScheme.error,
+                                onSwipe = {
+                                    onConfirmDelete(1) {
+                                        onIntent(ReadRecordIntent.DeleteSession(session))
+                                    }
+                                },
+                                contentDescription = deleteActionDescription
+                            )
+                        ) {
+                            itemContent(Modifier)
+                        }
                     }
                 }
             }
         }
 
         DisplayMode.LATEST -> {
-            items(items = state.latestRecords, key = { "${it.bookName}_${it.bookAuthor}" }) { record ->
-                SwipeActionContainer(
-                    modifier = Modifier.animateItem(),
-                    startAction = SwipeAction(
-                        icon = Icons.Default.Delete,
-                        background = MaterialTheme.colorScheme.error,
-                        onSwipe = {
-                            onConfirmDelete { viewModel.deleteReadRecord(record) }
-                        }
-                    ),
-                    endAction = SwipeAction(
-                        icon = Icons.Default.Merge,
-                        background = MaterialTheme.colorScheme.primary,
-                        onSwipe = {
-                            onMergeClick(record)
-                        }
+            items(items = state.latestRecords, key = { "${it.deviceId}_${it.bookName}_${it.bookAuthor}" }) { record ->
+                val itemKey = record.selectionKey()
+                val isSelected = selectedItemKeys.contains(itemKey)
+                val itemContent: @Composable (Modifier) -> Unit = { modifier ->
+                    LatestReadItem(
+                        record = record,
+                        loadBookCover = loadBookCover,
+                        onClick = {
+                            if (inSelectionMode) {
+                                onToggleSelection(itemKey)
+                            } else {
+                                onBookClick(record.bookName, record.bookAuthor)
+                            }
+                        },
+                        onLongClick = { onEnterSelection(itemKey) },
+                        inSelectionMode = inSelectionMode,
+                        isSelected = isSelected,
+                        modifier = modifier
                     )
-                ) {
-                        LatestReadItem(
-                            record = record,
-                            viewModel = viewModel,
-                            onClick = { onBookClick(record.bookName, record.bookAuthor) }
+                }
+                val deleteActionDescription = stringResource(R.string.del_read_record)
+                val mergeActionDescription = stringResource(R.string.a11y_merge_same_name_read_records)
+                if (inSelectionMode) {
+                    itemContent(Modifier.animateItem())
+                } else {
+                    SwipeActionContainer(
+                        modifier = Modifier.animateItem(),
+                        startAction = SwipeAction(
+                            icon = Icons.Default.Delete,
+                            background = LegadoTheme.colorScheme.error,
+                            onSwipe = {
+                                onConfirmDelete(1) {
+                                    onIntent(ReadRecordIntent.DeleteRecord(record))
+                                }
+                            },
+                            contentDescription = deleteActionDescription
+                        ),
+                        endAction = SwipeAction(
+                            icon = Icons.Default.Merge,
+                            background = LegadoTheme.colorScheme.primary,
+                            onSwipe = {
+                                onMergeClick(record)
+                            },
+                            contentDescription = mergeActionDescription
                         )
+                    ) {
+                        itemContent(Modifier)
                     }
                 }
             }
+        }
     }
 }
 
 @Composable
 fun LatestReadItem(
     record: ReadRecord,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(record.bookName, record.bookAuthor) {
-        coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
+        coverPath = loadBookCover(record.bookName, record.bookAuthor)
     }
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = record.bookAuthor.ifBlank { unknownAuthor }
+    val lastReadText = DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_latest_item,
+        record.bookName,
+        author,
+        formatDuring(record.readTime),
+        lastReadText
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
+            .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(coverPath)
+        CoilBookCover(
+            name = record.bookName,
+            author = record.bookAuthor,
+            path = coverPath,
+            modifier = Modifier.width(44.dp)
+        )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        SelectionCheckmark(inSelectionMode, isSelected)
+
+        Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 text = record.bookName,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = record.bookAuthor.ifBlank { "未知作者" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+            AppText(
+                text = author,
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 modifier = Modifier
                     .basicMarquee(
                         iterations = Int.MAX_VALUE,
@@ -713,10 +1078,10 @@ fun LatestReadItem(
                         append(" • ")
                     }
                     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                        append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
+                        append(lastReadText)
                     }
                 },
-                style = MaterialTheme.typography.labelSmall,
+                style = LegadoTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -727,20 +1092,38 @@ fun LatestReadItem(
 @Composable
 fun TimelineSessionItem(
     item: TimelineItem,
-    viewModel: ReadRecordViewModel,
-    onBookClick: (String, String) -> Unit
+    loadBookCover: suspend (String, String) -> String?,
+    loadChapterTitle: suspend (String, String, Long) -> String?,
+    onBookClick: (String, String) -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
-    var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
+    val loadingText = stringResource(R.string.loading)
+    val fallbackChapterTitle = stringResource(R.string.chapter_index_format, session.words)
+    var chapterTitle by remember { mutableStateOf<String?>(loadingText) }
 
-    LaunchedEffect(session.bookName, session.bookAuthor) {
-        coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
-        val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
-        chapterTitle = title ?: "第 ${session.words} 章"
+    LaunchedEffect(session.bookName, session.bookAuthor, session.words, fallbackChapterTitle) {
+        coverPath = loadBookCover(session.bookName, session.bookAuthor)
+        val title = loadChapterTitle(session.bookName, session.bookAuthor, session.words)
+        chapterTitle = title ?: fallbackChapterTitle
     }
 
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = session.bookAuthor.ifBlank { unknownAuthor }
+    val duration = formatDuring(session.endTime - session.startTime)
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_timeline_item,
+        session.bookName,
+        author,
+        chapterTitle.orEmpty(),
+        duration,
+        endTimeText
+    )
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
@@ -751,9 +1134,17 @@ fun TimelineSessionItem(
     val nodeColor = MaterialTheme.colorScheme.primary
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { onBookClick(session.bookName, session.bookAuthor) }
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = { onBookClick(session.bookName, session.bookAuthor) },
+                onLongClick = onLongClick
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
             .drawBehind {
                 val x = timelineX.toPx()
                 val h = size.height
@@ -783,35 +1174,41 @@ fun TimelineSessionItem(
                 modifier = Modifier.width(48.dp),
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
+                AppText(
                     text = endTimeText,
-                    style = MaterialTheme.typography.bodySmall
+                    style = LegadoTheme.typography.bodySmall
                 )
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Cover(coverPath)
+                CoilBookCover(
+                    name = session.bookName,
+                    author = session.bookAuthor,
+                    path = coverPath,
+                    modifier = Modifier.width(44.dp)
+                )
+                SelectionCheckmark(inSelectionMode, isSelected)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(
+                    AppText(
                         text = session.bookName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = LegadoTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = session.bookAuthor.ifBlank { "未知作者" },
-                        style = MaterialTheme.typography.bodySmall,
+                    AppText(
+                        text = author,
+                        style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
+                    AppText(
                         text = chapterTitle.orEmpty(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LegadoTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -825,43 +1222,69 @@ fun TimelineSessionItem(
 @Composable
 fun ReadRecordItem(
     detail: ReadRecordDetail,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    inSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(detail.bookName, detail.bookAuthor) {
-        coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
+        coverPath = loadBookCover(detail.bookName, detail.bookAuthor)
     }
+    val unknownAuthor = stringResource(R.string.unknown_author)
+    val author = detail.bookAuthor.ifBlank { unknownAuthor }
+    val itemDescription = stringResource(
+        R.string.a11y_read_record_detail_item,
+        detail.bookName,
+        author,
+        formatDuring(detail.readTime)
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .selectionBackground(isSelected)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = itemDescription
+                role = Role.Button
+            }
+            .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(coverPath)
+        CoilBookCover(
+            name = detail.bookName,
+            author = detail.bookAuthor,
+            path = coverPath,
+            modifier = Modifier.width(44.dp)
+        )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        SelectionCheckmark(inSelectionMode, isSelected)
+
+        Spacer(modifier = Modifier.width(if (inSelectionMode) 8.dp else 16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 text = detail.bookName,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 maxLines = 1
             )
-            Text(
-                text = detail.bookAuthor.ifBlank { "未知作者" },
-                style = MaterialTheme.typography.bodySmall,
+            AppText(
+                text = author,
+                style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "阅读时长: ${formatDuring(detail.readTime)}",
+            AppText(
+                text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
                 color = MaterialTheme.colorScheme.outline,
-                style = MaterialTheme.typography.labelSmall
+                style = LegadoTheme.typography.labelSmall
             )
         }
     }
@@ -872,28 +1295,28 @@ fun DateHeader(
     date: String,
     dailyTotalTime: Long? = null
 ) {
-    val dateText = formatFriendlyDate(date)
-    SectionHeader(
+    CollapsibleHeader(
+        modifier = Modifier.adaptiveHorizontalPadding(),
+        showIcon = false,
+        isCollapsed = false,
+        onToggle = { },
+        title = "",
         titleContent = {
-            Column {
-                Text(
-                    text = dateText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
+            val dateText = formatFriendlyDate(date)
+            AppText(
+                text = dateText,
+                style = LegadoTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = LegadoTheme.colorScheme.primary
+            )
+            dailyTotalTime?.let { total ->
+                AppText(
+                    text = stringResource(R.string.read_duration_done, formatDuring(total)),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurface
                 )
-
-                dailyTotalTime?.let { total ->
-                    Text(
-                        text = "已读 ${formatDuring(total)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
             }
-        },
-        detailContent = null,
-        horizontalArrangement = Arrangement.Start
+        }
     )
 }
 
@@ -903,26 +1326,34 @@ fun ReadingSummaryCard(
     bookCount: Int,
     totalTimeMillis: Long,
     bookNamesForCover: List<Pair<String, String>>,
-    viewModel: ReadRecordViewModel,
+    loadBookCover: suspend (String, String) -> String?,
     onClick: () -> Unit
 ) {
 
     val coverPaths by produceState(initialValue = emptyList(), key1 = bookNamesForCover) {
         value = bookNamesForCover.map { (name, author) ->
-            viewModel.getBookCover(name, author)
+            loadBookCover(name, author)
         }
     }
 
     val totalDurationMinutes = totalTimeMillis / 60000
+    val cardDescription = stringResource(
+        R.string.a11y_reading_summary_card,
+        title,
+        bookCount,
+        formatDuring(totalTimeMillis)
+    )
 
-    Card(
+    GlassCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+            .semantics(mergeDescendants = true) {
+                contentDescription = cardDescription
+                role = Role.Button
+            }
+            .adaptiveHorizontalPadding(vertical = 8.dp),
+        containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier
@@ -934,28 +1365,28 @@ fun ReadingSummaryCard(
 
             Column(modifier = Modifier.weight(1f)) {
 
-                Text(
+                AppText(
                     text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    style = LegadoTheme.typography.labelLarge,
+                    color = LegadoTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = "已读 ",
-                        style = MaterialTheme.typography.titleMedium
+                AppText(
+                    text = stringResource(R.string.read_books_prefix),
+                        style = LegadoTheme.typography.titleMedium
                     )
-                    Text(
+                    AppText(
                         text = "$bookCount",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = LegadoTheme.typography.headlineMedium,
+                        color = LegadoTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        text = " 本书",
-                        style = MaterialTheme.typography.titleMedium
+                AppText(
+                    text = stringResource(R.string.read_books_suffix),
+                        style = LegadoTheme.typography.titleMedium
                     )
                 }
 
@@ -963,34 +1394,39 @@ fun ReadingSummaryCard(
 
                 val hours = totalDurationMinutes / 60
                 val minutes = totalDurationMinutes % 60
-                val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
+                val timeString = if (hours > 0) {
+                    stringResource(R.string.hours_minutes_format, hours, minutes)
+                } else {
+                    stringResource(R.string.minutes_format, minutes)
+                }
 
-                Text(
-                    text = "共阅读 $timeString",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AppText(
+                    text = stringResource(R.string.total_reading_time_format, timeString),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             if (bookNamesForCover.isNotEmpty()) {
-                BookStackView(coverPaths = coverPaths)
+                val combined = bookNamesForCover.zip(coverPaths)
+                BookStackView(books = combined)
             }
         }
     }
 }
 
 @Composable
-fun BookStackView(coverPaths: List<String?>) {
+fun BookStackView(books: List<Pair<Pair<String, String>, String?>>) {
     val xOffsetStep = 12.dp
-    val stackWidth = 48.dp + (xOffsetStep * (coverPaths.size - 1).coerceAtLeast(0))
+    val stackWidth = 44.dp + (xOffsetStep * (books.size - 1).coerceAtLeast(0))
 
     Box(
         modifier = Modifier
             .width(stackWidth)
-            .height(72.dp),
+            .height(64.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        coverPaths.forEachIndexed { index, path ->
+        books.forEachIndexed { index, (info, path) ->
             Box(
                 modifier = Modifier
                     .padding(start = xOffsetStep * index)
@@ -1002,7 +1438,12 @@ fun BookStackView(coverPaths: List<String?>) {
                     shape = RoundedCornerShape(4.dp),
                     color = Color.Transparent
                 ) {
-                    Cover(path = path)
+                    CoilBookCover(
+                        name = info.first,
+                        author = info.second,
+                        path = path,
+                        modifier = Modifier.width(44.dp)
+                    )
                 }
             }
         }
@@ -1010,13 +1451,5 @@ fun BookStackView(coverPaths: List<String?>) {
 }
 
 fun formatDuring(mss: Long): String {
-    val days = mss / (1000 * 60 * 60 * 24)
-    val hours = mss % (1000 * 60 * 60 * 24) / (1000 * 60 * 60)
-    val minutes = mss % (1000 * 60 * 60) / (1000 * 60)
-    val seconds = mss % (1000 * 60) / 1000
-    val d = if (days > 0) "${days}天" else ""
-    val h = if (hours > 0) "${hours}小时" else ""
-    val m = if (minutes > 0) "${minutes}分钟" else ""
-    val s = if (seconds > 0) "${seconds}秒" else ""
-    return if ("$d$h$m$s".isBlank()) "0秒" else "$d$h$m$s"
+    return formatReadDuration(mss)
 }

@@ -4,10 +4,13 @@ package io.legado.app.ui.book.read.page.entities
 import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
+import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.fastBinarySearchBy
 import kotlinx.coroutines.CoroutineScope
 import kotlin.math.abs
@@ -27,8 +30,20 @@ data class TextChapter(
     val isVip: Boolean,
     val isPay: Boolean,
     //起效的替换规则
-    val effectiveReplaceRules: List<ReplaceRule>?
+    val effectiveReplaceRules: List<ReplaceRule>?,
+    val effectiveContentProcesses: List<BookContentProcess> = emptyList(),
 ) : LayoutProgressListener {
+
+    @Volatile
+    var visibleWidth: Int = 0
+        private set
+    @Volatile
+    var visibleHeight: Int = 0
+        private set
+
+    fun isLayoutSizeMatch(): Boolean {
+        return visibleWidth == ChapterProvider.visibleWidth && visibleHeight == ChapterProvider.visibleHeight
+    }
 
     private val textPages = arrayListOf<TextPage>()
     val pages: List<TextPage> get() = textPages
@@ -56,6 +71,8 @@ data class TextChapter(
     var listener: LayoutProgressListener? = null
 
     var isCompleted = false
+
+    var pageEstimateGeneration = 0L
 
     val paragraphs by lazy {
         paragraphsInternal
@@ -199,13 +216,19 @@ data class TextChapter(
         position: Int,
         pageSplit: Boolean,
     ): Int {
+        return findReadAloudParagraphNum(getParagraphs(pageSplit), position) ?: -1
+    }
+
+    /**
+     * Resolves a position between paragraphs to the next readable paragraph.
+     * Returns -1 only when the position is beyond all laid-out paragraphs.
+     */
+    fun getParagraphNumAtOrAfter(
+        position: Int,
+        pageSplit: Boolean,
+    ): Int {
         val paragraphs = getParagraphs(pageSplit)
-        paragraphs.forEach { paragraph ->
-            if (position in paragraph.chapterIndices) {
-                return paragraph.num
-            }
-        }
-        return -1
+        return findReadAloudParagraphNumAtOrAfter(paragraphs, position) ?: -1
     }
 
     fun getParagraphs(pageSplit: Boolean): List<TextParagraph> {
@@ -265,18 +288,34 @@ data class TextChapter(
         }
     }
 
-    fun createLayout(scope: CoroutineScope, book: Book, bookContent: BookContent) {
+    fun createLayout(
+        scope: CoroutineScope,
+        book: Book,
+        bookSource: BookSource?,
+        bookContent: BookContent,
+    ) {
         if (layout != null) {
             throw IllegalStateException("已经排版过了")
         }
-        layout = TextChapterLayout(
+        val textLayout = TextChapterLayout(
             scope,
             this,
             textPages,
             book,
+            bookSource,
             bookContent,
         )
+        layout = textLayout
+        visibleWidth = textLayout.visibleWidth
+        visibleHeight = textLayout.visibleHeight
     }
+
+    /**
+     * 排版还在进行中: 已经创建了排版任务, 既没有排完也没有出错/被取消.
+     * 用来区分"还在排"和"排到一半就废了", 前者可以继续用已排出的页.
+     */
+    val isLayoutRunning: Boolean
+        get() = layout?.let { !isCompleted && it.exception == null && !it.isCanceled } ?: false
 
     fun setProgressListener(l: LayoutProgressListener?) {
         if (isCompleted) {
@@ -319,3 +358,14 @@ data class TextChapter(
     }
 
 }
+
+internal fun findReadAloudParagraphNum(
+    paragraphs: List<TextParagraph>,
+    position: Int,
+): Int? = paragraphs.firstOrNull { position in it.chapterIndices }?.num
+
+internal fun findReadAloudParagraphNumAtOrAfter(
+    paragraphs: List<TextParagraph>,
+    position: Int,
+): Int? = findReadAloudParagraphNum(paragraphs, position)
+    ?: paragraphs.firstOrNull { it.chapterIndices.last >= position }?.num

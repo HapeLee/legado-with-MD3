@@ -5,13 +5,16 @@ import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import org.koin.core.context.GlobalContext
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
@@ -20,14 +23,19 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 
-class AudioPlayViewModel(application: Application) : BaseViewModel(application) {
+class AudioPlayViewModel(
+    application: Application,
+    private val bookRepository: BookRepository,
+) : BaseViewModel(application) {
+    private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
+    private val readSettingsGateway get() = GlobalContext.get().get<ReadSettingsGateway>()
     val titleData = MutableLiveData<String>()
     val coverData = MutableLiveData<String>()
 
     fun initData(intent: Intent) = AudioPlay.apply {
         execute {
             val bookUrl = intent.getStringExtra("bookUrl") ?: book?.bookUrl ?: return@execute
-            val book = appDb.bookDao.getBook(bookUrl) ?: return@execute
+            val book = bookRepository.getBook(bookUrl) ?: return@execute
             inBookshelf = intent.getBooleanExtra("inBookshelf", true)
             initBook(book)
         }.onFinally {
@@ -69,12 +77,12 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
             val oldBook = book.copy()
             val cList = WebBook.getChapterListAwait(bookSource, book).getOrThrow()
             if (oldBook.bookUrl == book.bookUrl) {
-                appDb.bookDao.update(book)
+                bookRepository.update(book)
             } else {
-                appDb.bookDao.replace(oldBook, book)
+                bookRepository.replace(oldBook, book)
             }
-            appDb.bookChapterDao.delByBook(book.bookUrl)
-            appDb.bookChapterDao.insert(*cList.toTypedArray())
+            bookRepository.deleteChaptersByBook(book.bookUrl)
+            bookRepository.insertChapters(*cList.toTypedArray())
             AudioPlay.chapterSize = cList.size
             AudioPlay.simulatedChapterSize = book.simulatedTotalChapterNum()
             AudioPlay.upDurChapter()
@@ -94,13 +102,18 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
 
     fun changeTo(source: BookSource, book: Book, toc: List<BookChapter>) {
         execute {
-            AudioPlay.book?.migrateTo(book, toc)
+            AudioPlay.book?.migrateTo(
+                book,
+                toc,
+                otherSettingsGateway.currentSettings.replaceEnableDefault,
+                readSettingsGateway.currentSettings.chineseConverterType,
+            )
             book.removeType(BookType.updateError)
             AudioPlay.book?.delete()
-            appDb.bookDao.insert(book)
+            bookRepository.insert(book)
             AudioPlay.book = book
             AudioPlay.bookSource = source
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            bookRepository.insertChapters(*toc.toTypedArray())
             AudioPlay.upDurChapter()
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
@@ -110,7 +123,7 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
     fun removeFromBookshelf(success: (() -> Unit)?) {
         execute {
             AudioPlay.book?.let {
-                appDb.bookDao.delete(it)
+                bookRepository.delete(it)
             }
         }.onSuccess {
             success?.invoke()
@@ -121,11 +134,11 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
         execute {
             book.removeType(BookType.notShelf)
             if (book.order == 0) {
-                book.order = appDb.bookDao.minOrder - 1
+                book.order = bookRepository.getMinOrder() - 1
             }
 
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            bookRepository.insert(book)
+            bookRepository.insertChapters(*toc.toTypedArray())
         }.onSuccess {
             success?.invoke()
         }.onError {

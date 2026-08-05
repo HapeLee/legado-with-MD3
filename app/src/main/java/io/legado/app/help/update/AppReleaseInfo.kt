@@ -27,7 +27,7 @@ enum class AppVariant {
 @Keep
 data class GithubRelease(
     val assets: List<Asset>?,
-    val body: String,
+    val body: String?,
     @SerializedName("prerelease")
     val isPreRelease: Boolean,
     @SerializedName("tag_name")
@@ -36,25 +36,43 @@ data class GithubRelease(
     @SerializedName("created_at")
     val createdAt: String?
 ) {
-    fun gitReleaseToAppReleaseInfo(): List<AppReleaseInfo> {
+    fun gitReleaseToAppReleaseInfo(
+        supportedAbis: List<String> = Build.SUPPORTED_ABIS.asList()
+    ): List<AppReleaseInfo> {
         assets ?: throw NoStackTraceException("获取新版本出错")
 
         val version = tagName
-        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: ""
-        val abiSuffix = when {
-            abi.contains("arm64") -> "arm64-v8a"
-            abi.contains("armeabi") -> "armeabi-v7a"
-            else -> ""
-        }
-
-        return assets
-            .filter { it.isValid }
-            .filter { asset ->
-                abiSuffix.isEmpty() || asset.name.contains(abiSuffix, ignoreCase = true)
-            }
-            .map { it.assetToAppReleaseInfo(isPreRelease, body, version) }
+        return selectCompatibleAssets(assets, supportedAbis)
+            .map { it.assetToAppReleaseInfo(isPreRelease, body.orEmpty(), version) }
     }
 }
+
+private val releaseAbis = listOf(
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86_64",
+    "armeabi",
+    "x86"
+)
+
+internal fun selectCompatibleAssets(
+    assets: List<Asset>,
+    supportedAbis: List<String>
+): List<Asset> {
+    val validAssets = assets.filter { it.isValid }
+
+    supportedAbis.forEach { supportedAbi ->
+        val matchingAssets = validAssets.filter { asset ->
+            asset.releaseAbi.equals(supportedAbi, ignoreCase = true)
+        }
+        if (matchingAssets.isNotEmpty()) return matchingAssets
+    }
+
+    return validAssets.filter { it.releaseAbi == null }
+}
+
+private val Asset.releaseAbi: String?
+    get() = releaseAbis.firstOrNull { name.contains(it, ignoreCase = true) }
 
 @Keep
 data class Asset(

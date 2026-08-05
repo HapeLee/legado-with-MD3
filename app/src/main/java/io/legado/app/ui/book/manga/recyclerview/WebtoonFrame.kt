@@ -7,9 +7,13 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.View
 import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.recyclerview.widget.RecyclerView
-import io.legado.app.help.config.AppConfig
+import io.legado.app.R
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.utils.findCenterViewPosition
 
 class WebtoonFrame : FrameLayout {
@@ -21,6 +25,22 @@ class WebtoonFrame : FrameLayout {
         attrs,
         defStyle
     )
+
+    init {
+        contentDescription = context.getString(R.string.manga)
+        isFocusable = true
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+
+        ViewCompat.replaceAccessibilityAction(
+            this,
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+            context.getString(R.string.menu),
+        ) { _, _ -> performClick() }
+        addAccessibilityAction(R.string.prev_page) { it.prevPage() }
+        addAccessibilityAction(R.string.next_page) { it.nextPage() }
+        addAccessibilityAction(R.string.a11y_previous_chapter) { it.prevChapter() }
+        addAccessibilityAction(R.string.a11y_next_chapter) { it.nextChapter() }
+    }
 
     /** 长按回调，返回手指坐标 */
     var longPressListener: ((centerPosition: Int) -> Unit)? = null
@@ -42,11 +62,12 @@ class WebtoonFrame : FrameLayout {
         get() = getChildAt(0) as? WebtoonRecyclerView
 
     var actionHandler: ClickActionHandler? = null
+    var settingsProvider: () -> MangaSettings = { MangaSettings() }
 
     private val gestureDetector =
         GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onLongPress(e: MotionEvent) {
-                if (AppConfig.mangaLongClick)
+                if (settingsProvider().longClick)
                 {
                     recycler?.let {
                         val centerPos = it.findCenterViewPosition()
@@ -68,16 +89,17 @@ class WebtoonFrame : FrameLayout {
             val key =
                 regionRects.entries.find { it.value.contains(x, y) }?.key ?: return@tapListener
 
+            val settings = settingsProvider()
             val action = when (key) {
-                "TL" -> AppConfig.mangaClickActionTL
-                "TC" -> AppConfig.mangaClickActionTC
-                "TR" -> AppConfig.mangaClickActionTR
-                "ML" -> AppConfig.mangaClickActionML
-                "MC" -> AppConfig.mangaClickActionMC
-                "MR" -> AppConfig.mangaClickActionMR
-                "BL" -> AppConfig.mangaClickActionBL
-                "BC" -> AppConfig.mangaClickActionBC
-                "BR" -> AppConfig.mangaClickActionBR
+                "TL" -> settings.clickActionTL
+                "TC" -> settings.clickActionTC
+                "TR" -> settings.clickActionTR
+                "ML" -> settings.clickActionML
+                "MC" -> settings.clickActionMC
+                "MR" -> settings.clickActionMR
+                "BL" -> settings.clickActionBL
+                "BC" -> settings.clickActionBC
+                "BR" -> settings.clickActionBR
                 else -> -1
             }
 
@@ -123,6 +145,29 @@ class WebtoonFrame : FrameLayout {
             )
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun performClick(): Boolean {
+        val handler = actionHandler ?: return super.performClick()
+        super.performClick()
+        handler.showMenu()
+        return true
+    }
+
+    fun updateAccessibilityState(description: String) {
+        ViewCompat.setStateDescription(this, description)
+    }
+
+    private fun addAccessibilityAction(
+        labelRes: Int,
+        action: (ClickActionHandler) -> Unit,
+    ) {
+        ViewCompat.addAccessibilityAction(this, context.getString(labelRes)) { _, _ ->
+            actionHandler?.let {
+                action(it)
+                true
+            } ?: false
+        }
     }
 
     private fun performClickAction(action: Int) {

@@ -8,6 +8,7 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.exception.EmptyFileException
 import io.legado.app.help.DefaultData
 import io.legado.app.help.book.isLocalModified
+import io.legado.app.help.book.upKind
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
@@ -71,11 +72,16 @@ class TextFile(private var book: Book) {
     private var bufferStart = -1L
     private var bufferEnd = -1L
 
+    private fun refreshCharset() {
+        charset = book.fileCharset()
+    }
+
     /**
      * 获取目录
      */
     @Throws(FileNotFoundException::class, SecurityException::class, EmptyFileException::class)
     fun getChapterList(): ArrayList<BookChapter> {
+        refreshCharset()
         val modified = book.isLocalModified()
         if (book.charset == null || book.tocUrl.isBlank() || modified) {
             LocalBook.getBookInputStream(book).use { bis ->
@@ -88,21 +94,30 @@ class TextFile(private var book: Book) {
                 charset = book.fileCharset()
                 if (book.tocUrl.isBlank() || modified) {
                     val blockContent = String(buffer, 0, length, charset)
-                    book.tocUrl = getTocRule(blockContent)?.pattern() ?: ""
+                    book.tocUrl = getTocRule(blockContent)?.chapterRule ?: ""
                 }
             }
         }
-        val (toc, wordCount) = analyze(book.tocUrl.toPattern(Pattern.MULTILINE))
+        val volumePattern = getVolumePattern(book.tocUrl)
+        val (toc, wordCount) = analyze(book.tocUrl.toPattern(Pattern.MULTILINE), volumePattern)
         book.wordCount = StringUtils.wordCountFormat(wordCount)
+        book.upKind()
         toc.forEachIndexed { index, bookChapter ->
             bookChapter.index = index
             bookChapter.bookUrl = book.bookUrl
             bookChapter.url = MD5Utils.md5Encode16(book.originName + index + bookChapter.title)
         }
+        var tocLevel = 0
+        toc.forEach { chapter ->
+            if (chapter.isVolume) tocLevel = 0
+            chapter.tocLevel = tocLevel
+            if (chapter.isVolume) tocLevel = 1
+        }
         return toc
     }
 
     fun getContent(chapter: BookChapter): String {
+        refreshCharset()
         val start = chapter.start!!
         val end = chapter.end!!
         if (txtBuffer == null || start > bufferEnd || end < bufferStart) {
@@ -143,7 +158,7 @@ class TextFile(private var book: Book) {
     /**
      * 按规则解析目录
      */
-    private fun analyze(pattern: Pattern?): Pair<ArrayList<BookChapter>, Int> {
+    private fun analyze(pattern: Pattern?, volumePattern: Pattern? = null): Pair<ArrayList<BookChapter>, Int> {
         if (pattern == null || pattern.pattern().isNullOrEmpty()) {
             return analyze()
         }
@@ -248,8 +263,12 @@ class TextFile(private var book: Book) {
                         } else { //否则就block分割之后，上一个章节的剩余内容
                             //获取上一章节
                             val lastChapter = toc.last()
-                            lastChapter.isVolume =
-                                chapterContent.substringAfter(lastChapter.title).isBlank()
+                            if (volumePattern == null) {
+                                lastChapter.isVolume =
+                                    chapterContent.substringAfter(lastChapter.title).isBlank()
+                            } else {
+                                lastChapter.isVolume = volumePattern.matcher(lastChapter.title).find()
+                            }
                             //将当前段落添加上一章去
                             lastChapter.end = lastChapter.end!! + chapterLength
                             lastChapterWordCount += chapterContent.length
@@ -268,8 +287,12 @@ class TextFile(private var book: Book) {
                         if (toc.isNotEmpty()) { //获取章节内容
                             //获取上一章节
                             val lastChapter = toc.last()
-                            lastChapter.isVolume =
-                                chapterContent.substringAfter(lastChapter.title).isBlank()
+                            if (volumePattern == null) {
+                                lastChapter.isVolume =
+                                    chapterContent.substringAfter(lastChapter.title).isBlank()
+                            } else {
+                                lastChapter.isVolume = volumePattern.matcher(lastChapter.title).find()
+                            }
                             lastChapter.end =
                                 lastChapter.start!! + chapterLength
                             lastChapter.wordCount =
@@ -306,7 +329,11 @@ class TextFile(private var book: Book) {
                     it.wordCount = StringUtils.wordCountFormat(lastChapterWordCount)
                 }
             }
+            // 检查最后一章是否为分卷（循环中无法检测到最后一章），并处理长章节拆分
             toc.lastOrNull()?.let { chapter ->
+                if (volumePattern != null) {
+                    chapter.isVolume = volumePattern.matcher(chapter.title).find()
+                }
                 //章节字数太多进行拆分
                 if (book.getSplitLongChapter() && chapter.end!! - chapter.start!! > maxLengthWithToc) {
                     val end = chapter.end!!
@@ -433,13 +460,13 @@ class TextFile(private var book: Book) {
     /**
      * 获取合适的目录规则
      */
-    private fun getTocRule(content: String): Pattern? {
+    private fun getTocRule(content: String): TxtTocRule? {
         val rules = getTocRules().reversed()
         var maxNum = 1
-        var tocPattern: Pattern? = null
+        var bestRule: TxtTocRule? = null
         for (tocRule in rules) {
             val pattern = try {
-                tocRule.rule.toPattern(Pattern.MULTILINE)
+                tocRule.chapterRule.toPattern(Pattern.MULTILINE)
             } catch (e: PatternSyntaxException) {
                 AppLog.put("TXT目录规则正则语法错误:${tocRule.name}\n$e", e)
                 continue
@@ -455,10 +482,26 @@ class TextFile(private var book: Book) {
             }
             if (num >= maxNum) {
                 maxNum = num
-                tocPattern = pattern
+                bestRule = tocRule
             }
         }
-        return tocPattern
+        return bestRule
+    }
+
+    /**
+     * 根据章节正则查找对应的分卷正则（搜索全部规则，含已禁用的）
+     */
+    private fun getVolumePattern(chapterPattern: String): Pattern? {
+        if (chapterPattern.isBlank()) return null
+        val rule = appDb.txtTocRuleDao.all.find { it.chapterRule == chapterPattern }
+        val volumeRule = rule?.volumeRule
+        if (volumeRule.isNullOrBlank()) return null
+        return try {
+            volumeRule.toPattern(Pattern.MULTILINE)
+        } catch (e: PatternSyntaxException) {
+            AppLog.put("TXT分卷规则正则语法错误:${rule?.name}\n$e", e)
+            null
+        }
     }
 
     /**

@@ -1,0 +1,133 @@
+﻿package io.legado.app.ui.widget.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import io.legado.app.R
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.SettingItem
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GroupManageBottomSheet(
+    show: Boolean,
+    groups: List<String>,
+    onDismissRequest: () -> Unit,
+    onUpdateGroup: (oldGroup: String, newGroup: String) -> Unit,
+    onDeleteGroup: (group: String) -> Unit
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.group_manage),
+    ) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(groups, key = { it }) { group ->
+                GroupItem(
+                    group = group,
+                    onUpdateGroup = onUpdateGroup,
+                    onDeleteGroup = onDeleteGroup
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupItem(
+    group: String,
+    onUpdateGroup: (oldGroup: String, newGroup: String) -> Unit,
+    onDeleteGroup: (group: String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val state = rememberTextFieldState(initialText = group)
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            state.edit {
+                replace(0, length, group)
+            }
+        }
+    }
+
+    SettingItem(
+        title = group,
+        expanded = expanded,
+        cornerRadius = 12.dp,
+        color = MaterialTheme.colorScheme.surface,
+        onExpandChange = { expanded = it },
+        trailingContent = {
+            Row {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = stringResource(id = R.string.edit)
+                    )
+                }
+                IconButton(onClick = { onDeleteGroup(group) }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(id = R.string.delete)
+                    )
+                }
+            }
+        },
+        expandContent = {
+            AppTextField(
+                state = state,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                label = stringResource(R.string.edit),
+                contentPadding = PaddingValues(
+                    top = 4.dp,
+                    bottom = 4.dp,
+                    start = 12.dp,
+                    end = 12.dp
+                ),
+                onKeyboardAction = {
+                    onUpdateGroup(group, state.text.toString())
+                    expanded = false
+                }
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                SmallPlainButton(
+                    onClick = {
+                        onUpdateGroup(group, state.text.toString())
+                        expanded = false
+                    },
+                    icon = Icons.Default.Check,
+                    text = stringResource(id = R.string.ok)
+                )
+            }
+        }
+    )
+}
+

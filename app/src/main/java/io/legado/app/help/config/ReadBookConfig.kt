@@ -1,38 +1,21 @@
 package io.legado.app.help.config
 
 import android.graphics.Color
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
-import com.google.android.material.color.MaterialColors
-import io.legado.app.constant.AppLog
+import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.constant.PreferKey
-import io.legado.app.help.DefaultData
-import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.utils.BitmapUtils
-import io.legado.app.utils.FileUtils
+import io.legado.app.constant.ReadTipType
+import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.ReadStyleConfigStore
+import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.model.ReadSessionState
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
-import io.legado.app.utils.compress.ZipUtils
-import io.legado.app.utils.createFolderReplace
-import io.legado.app.utils.externalCache
-import io.legado.app.utils.externalFiles
-import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getFile
-import io.legado.app.utils.getMeanColor
-import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.hexString
-import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.putPrefBoolean
-import io.legado.app.utils.putPrefInt
-import io.legado.app.utils.resizeAndRecycle
 import splitties.init.appCtx
-import java.io.File
 
 /**
  * 阅读界面配置
@@ -40,714 +23,621 @@ import java.io.File
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
+    private lateinit var configStore: ReadStyleConfigStore
+    private lateinit var readSettingsGateway: ReadSettingsGateway
+    private val readSettings get() = readSettingsGateway.currentSettings
+
+    internal fun initialize(
+        configStore: ReadStyleConfigStore,
+        readSettingsGateway: ReadSettingsGateway,
+    ) {
+        this.configStore = configStore
+        this.readSettingsGateway = readSettingsGateway
+        configStore.initConfigs()
+        configStore.initShareConfig()
+    }
+
+
     const val configFileName = "readConfig.json"
     const val shareConfigFileName = "shareReadConfig.json"
-    val configFilePath = FileUtils.getPath(appCtx.filesDir, configFileName)
-    val shareConfigFilePath = FileUtils.getPath(appCtx.filesDir, shareConfigFileName)
-    val configList: ArrayList<Config> = arrayListOf()
-    lateinit var shareConfig: Config
+    val configFilePath: String get() = configStore.configFilePath
+    val shareConfigFilePath: String get() = configStore.shareConfigFilePath
+
+    /** 共享排版那一份，`config` 与 `getExportConfig()` 要用。 */
+    private val shareConfig: Config get() = configStore.shareConfig
+
     var durConfig
-        get() = getConfig(styleSelect)
+        get() = configStore.configAt(styleSelect)
         set(value) {
-            configList[styleSelect] = value
-            if (shareLayout) {
-                shareConfig = value
-            }
+            configStore.replaceConfigAt(styleSelect, value, alsoShare = shareLayout)
         }
 
-    var isComic: Boolean = false
-    var bg: Drawable? = null
-    var bgMeanColor: Int = 0
     val textColor: Int get() = durConfig.curTextColor()
+    val textColorNight: Int
+        get() = try {
+            durConfig.getTextColorNight().toColorInt()
+        } catch (_: Exception) {
+            0xFFADADAD.toInt()
+        }
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
-    val menuColor: Int get() = durConfig.curMenuAc()
-    init {
-        initConfigs()
-        initShareConfig()
+    val menuColor: Int get() = readMenuAccentColor
+
+    // DataStore 标量已归入 ReadSettings；这里仅保留旧渲染层所需的同步只读快照。
+    val readBodyToLh get() = readSettings.readBodyToLh
+    val autoReadSpeed get() = readSettings.autoReadSpeed
+    val readStyleSelect get() = readSettings.readStyleSelect
+    val comicStyleSelect get() = readSettings.comicStyleSelect
+    val shareLayout get() = readSettings.shareLayout
+    val textFullJustify get() = readSettings.textFullJustify
+    val textBottomJustify get() = readSettings.textBottomJustify
+    val hideStatusBar get() = readSettings.hideStatusBar
+    val hideNavigationBar get() = readSettings.hideNavigationBar
+    val useZhLayout get() = readSettings.useZhLayout
+    val readMenuIconShowText get() = readSettings.readMenuIconShowText
+    val showMenuIcon get() = readSettings.showMenuIcon
+    val titleBarCompact get() = readSettings.titleBarCompact
+    val readMenuFloatingBottomBar get() = readSettings.readMenuFloatingBottomBar
+    val readMenuTopBarLiquidGlassButtons get() = readSettings.readMenuTopBarLiquidGlassButtons
+    val readMenuTopBarTitleCapsule get() = readSettings.readMenuTopBarTitleCapsule
+    val readMenuBottomBarLiquidGlassButtons get() = readSettings.readMenuBottomBarLiquidGlassButtons
+    val readMenuFloatingIconLiquidGlass get() = readSettings.readMenuFloatingIconLiquidGlass
+    val readMenuBorderColor get() = readSettings.readMenuBorderColor
+    val readMenuBorderColorNight get() = readSettings.readMenuBorderColorNight
+    val readMenuTextColor get() = readSettings.readMenuTextColor
+    val readMenuTextColorNight get() = readSettings.readMenuTextColorNight
+    val showTitleBarIcons get() = readSettings.showTitleBarIcons
+    val readSliderMode get() = readSettings.readSliderMode
+    val showBrightnessView get() = readSettings.showBrightnessView
+    val brightnessVwPos get() = readSettings.brightnessVwPos
+    val readBrightness get() = readSettings.readBrightness
+    val brightnessAuto get() = readSettings.brightnessAuto
+    val styleSelect get() = if (ReadSessionState.isComic) comicStyleSelect else readStyleSelect
+    val readMenuColorMode get() = readSettings.readMenuColorMode.coerceIn(0, 1)
+    val readMenuIconStyle get() = readSettings.readMenuIconStyle.coerceIn(0, 2)
+    val titleBarIconStyle get() = readSettings.titleBarIconStyle.coerceIn(0, 2)
+    val readMenuIconItemsPerRow get() = readSettings.readMenuIconItemsPerRow.coerceIn(2, 8)
+    val readMenuIconRowCount get() = readSettings.readMenuIconRowCount.coerceIn(1, 2)
+    val readMenuBottomCornerRadius get() = readSettings.readMenuBottomCornerRadius.coerceIn(0, 32)
+    val readMenuTopBarBlurMode get() = readSettings.readMenuTopBarBlurMode.coerceIn(0, 2)
+    val readMenuBottomBarBlurMode get() = readSettings.readMenuBottomBarBlurMode.coerceIn(0, 2)
+    val readMenuTopBarBlurStyle get() = readSettings.readMenuTopBarBlurStyle.coerceIn(0, 1)
+    val readMenuBottomBarBlurStyle get() = readSettings.readMenuBottomBarBlurStyle.coerceIn(0, 1)
+    val readMenuBlurRadius get() = readSettings.readMenuBlurRadius.coerceIn(0, 32)
+    val readMenuBlurAlpha get() = readSettings.readMenuBlurAlpha.coerceIn(0, 100)
+    val readMenuBlurColor get() = readSettings.readMenuBlurColor
+    val readMenuBlurColorNight get() = readSettings.readMenuBlurColorNight
+    val readMenuPaletteStyle get() = readSettings.readMenuPaletteStyle
+    val readMenuLensRadius get() = readSettings.readMenuLensRadius.coerceIn(0f, 48f)
+    val readMenuBorderWidth get() = readSettings.readMenuBorderWidth.coerceIn(0, 4)
+    val titleBarIconPosition get() = readSettings.titleBarIconPosition.coerceIn(0, 3)
+    val readMenuBgColor: Int
+        get() = readSettings.readMenuBgColor.takeIf { it != 0 }
+            ?: durConfig.menuBgColor(isNight = false)
+    val readMenuAccentColor: Int
+        get() = readSettings.readMenuAccentColor.takeIf { it != 0 }
+            ?: durConfig.menuAccentColor(isNight = false)
+    val readMenuContainerColor: Int
+        get() = readSettings.readMenuContainerColor.takeIf { it != 0 } ?: readMenuBgColor
+    val readMenuBgColorNight: Int
+        get() = readSettings.readMenuBgColorNight.takeIf { it != 0 }
+            ?: durConfig.menuBgColor(isNight = true)
+    val readMenuAccentColorNight: Int
+        get() = readSettings.readMenuAccentColorNight.takeIf { it != 0 }
+            ?: durConfig.menuAccentColor(isNight = true)
+    val readMenuContainerColorNight: Int
+        get() = readSettings.readMenuContainerColorNight.takeIf { it != 0 } ?: readMenuBgColorNight
+
+    // region Map properties (JSON string serialization)
+
+    fun encodeReadMenuCustomIcons(value: Map<String, String>): String {
+        return GSON.toJson(value.filterValues { it.isNotBlank() })
     }
 
-    @Synchronized
-    fun getConfig(index: Int): Config {
-        if (configList.size < 5) {
-            resetAll()
-        }
-        return configList.getOrNull(index) ?: configList[0]
+    private fun parseReadMenuCustomIcons(value: String?): Map<String, String> {
+        if (value.isNullOrBlank()) return emptyMap()
+        return GSON.fromJsonObject<Map<String, String>>(value).getOrNull()
+            ?.filterValues { it.isNotBlank() } ?: emptyMap()
     }
 
-    fun initConfigs() {
-        val configFile = File(configFilePath)
-        var configs: List<Config>? = null
-        if (configFile.exists()) {
-            try {
-                val json = configFile.readText()
-                configs = GSON.fromJsonArray<Config>(json).getOrThrow()
-            } catch (e: Exception) {
-                AppLog.put("读取排版配置文件出错", e)
-            }
-        }
-        (configs ?: DefaultData.readConfigs).let {
-            configList.clear()
-            configList.addAll(it)
-        }
-    }
+    val readMenuCustomIcons: Map<String, String>
+        get() = parseReadMenuCustomIcons(readSettings.readMenuCustomIcons)
 
-    fun initShareConfig() {
-        val configFile = File(shareConfigFilePath)
-        var c: Config? = null
-        if (configFile.exists()) {
-            try {
-                val json = configFile.readText()
-                c = GSON.fromJsonObject<Config>(json).getOrThrow()
-            } catch (e: Exception) {
-                e.printOnDebug()
-            }
-        }
-        shareConfig = c ?: configList.getOrNull(5) ?: Config()
-    }
+    val titleBarCustomIcons: Map<String, String>
+        get() = parseReadMenuCustomIcons(readSettings.titleBarCustomIcons)
 
-    fun upBg(width: Int, height: Int): Drawable? {
-        val drawable = durConfig.curBgDrawable(width, height)
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            bgMeanColor = drawable.bitmap.getMeanColor()
-        } else if (drawable is ColorDrawable) {
-            bgMeanColor = drawable.color
-        }
-        val tmp = bg
-        bg = drawable
-        // 返回旧 Drawable，由调用方在视图更新完成后再 recycle，
-        // 避免视图仍引用旧 BitmapDrawable 时 bitmap 已被 recycle 导致崩溃
-        return tmp
-    }
+    // endregion
 
-    fun save() {
-        Coroutine.async {
-            synchronized(this) {
-                GSON.toJson(configList).let {
-                    FileUtils.delete(configFilePath)
-                    FileUtils.createFileIfNotExist(configFilePath).writeText(it)
+    val resolvedMenuBgColor: Int
+        get() {
+            val isNight = ReadStyleResolver.isNightTheme()
+            return when (ReadConfig.readBarStyle) {
+                1 -> { // 跟随阅读背景
+                    val background = ReadStyleResolver.currentBackground(durConfig)
+                    if (background.type == 0) {
+                        try {
+                            background.value.toColorInt()
+                        } catch (_: Exception) {
+                            if (isNight) Color.BLACK else Color.WHITE
+                        }
+                    } else {
+                        ReadSessionState.backgroundMeanColor.takeIf { it != 0 }
+                            ?: (if (isNight) Color.BLACK else Color.WHITE)
+                    }
                 }
-                GSON.toJson(shareConfig).let {
-                    FileUtils.delete(shareConfigFilePath)
-                    FileUtils.createFileIfNotExist(shareConfigFilePath).writeText(it)
+                2 -> { // 自定义
+                    if (isNight) readMenuBgColorNight else readMenuBgColor
                 }
-            }
-        }
-    }
-
-    fun getAllPicBgStr(): ArrayList<String> {
-        val list = arrayListOf<String>()
-        configList.forEach {
-            if (it.bgType == 2) {
-                list.add(it.bgStr)
-            }
-            if (it.bgTypeNight == 2) {
-                list.add(it.bgStrNight)
-            }
-            if (it.bgTypeEInk == 2) {
-                list.add(it.bgStrEInk)
-            }
-        }
-        return list
-    }
-
-    fun deleteDur(): Boolean {
-        if (configList.size > 5) {
-            val removeIndex = styleSelect
-            configList.removeAt(removeIndex)
-            if (removeIndex <= readStyleSelect) {
-                readStyleSelect -= 1
-            }
-            if (removeIndex <= comicStyleSelect) {
-                comicStyleSelect -= 1
-            }
-            return true
-        }
-        return false
-    }
-
-    fun clearBgAndCache() {
-        val bgs = hashSetOf<String>()
-        configList.forEach { config ->
-            repeat(3) {
-                config.getBgPath(it)?.let { path ->
-                    bgs.add(path)
+                else -> {
+                    if (isNight) Color.BLACK else Color.WHITE
                 }
             }
         }
-        appCtx.externalFiles.getFile("bg").listFiles()?.forEach {
-            if (!bgs.contains(it.absolutePath)) {
-                it.delete()
-            }
-        }
-        FileUtils.delete(appCtx.externalCache.getFile("readConfig"))
-        val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
-        FileUtils.delete(configZipPath)
-    }
 
-    private fun resetAll() {
-        DefaultData.readConfigs.let {
-            configList.clear()
-            configList.addAll(it)
-            save()
-        }
-    }
+    val resolvedMenuAccentColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuAccentColorNight else readMenuAccentColor
 
-    //配置写入读取
-    var readBodyToLh = appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)
-    var autoReadSpeed = appCtx.getPrefInt(PreferKey.autoReadSpeed, 10)
-        set(value) {
-            field = value
-            appCtx.putPrefInt(PreferKey.autoReadSpeed, value)
-        }
-    var styleSelect: Int
-        get() = if (isComic) comicStyleSelect else readStyleSelect
-        set(value) {
-            if (isComic) {
-                comicStyleSelect = value
-            } else {
-                readStyleSelect = value
-            }
-        }
-    var readStyleSelect = appCtx.getPrefInt(PreferKey.readStyleSelect)
-        set(value) {
-            field = value
-            if (appCtx.getPrefInt(PreferKey.readStyleSelect) != value) {
-                appCtx.putPrefInt(PreferKey.readStyleSelect, value)
-            }
-        }
-    var comicStyleSelect = appCtx.getPrefInt(PreferKey.comicStyleSelect, readStyleSelect)
-        set(value) {
-            field = value
-            if (appCtx.getPrefInt(PreferKey.comicStyleSelect) != value) {
-                appCtx.putPrefInt(PreferKey.comicStyleSelect, value)
-            }
-        }
-    var shareLayout = appCtx.getPrefBoolean(PreferKey.shareLayout)
-        set(value) {
-            field = value
-            if (appCtx.getPrefBoolean(PreferKey.shareLayout) != value) {
-                appCtx.putPrefBoolean(PreferKey.shareLayout, value)
-            }
-        }
+    val resolvedMenuContainerColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuContainerColorNight else readMenuContainerColor
 
-    /**
-     * 两端对齐
-     */
-    val textFullJustify get() = appCtx.getPrefBoolean(PreferKey.textFullJustify, true)
+    val resolvedMenuBorderColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuBorderColorNight else readMenuBorderColor
 
-    /**
-     * 底部对齐
-     */
-    val textBottomJustify get() = appCtx.getPrefBoolean(PreferKey.textBottomJustify, true)
-    var hideStatusBar = appCtx.getPrefBoolean(PreferKey.hideStatusBar)
-    var hideNavigationBar = appCtx.getPrefBoolean(PreferKey.hideNavigationBar)
-    var useZhLayout = appCtx.getPrefBoolean(PreferKey.useZhLayout)
+    val resolvedMenuTextColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuTextColorNight else readMenuTextColor
+
+    val resolvedMenuBlurColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuBlurColorNight else readMenuBlurColor
+
 
     val config get() = if (shareLayout) shareConfig else durConfig
 
-    var bgAlpha: Int
+    val bgAlpha: Int
         get() = config.bgAlpha
-        set(value) {
-            config.bgAlpha = value
-        }
 
-    var pageAnim: Int
+    val pageAnim: Int
         get() = config.curPageAnim()
-        set(@PageAnim.Anim value) {
-            config.setCurPageAnim(value)
-        }
 
-    var textFont: String
+    val textFont: String
         get() = config.textFont
-        set(value) {
-            config.textFont = value
-        }
 
-    var textBold: Int
+    val titleFont: String
+        get() = config.titleFont
+
+    val headerFont: String
+        get() = config.headerFont
+
+    val footerFont: String
+        get() = config.footerFont
+
+    val headerFontSize: Int
+        get() = config.headerFontSize.takeIf { it > 0 } ?: 12
+
+    val footerFontSize: Int
+        get() = config.footerFontSize.takeIf { it > 0 } ?: 12
+
+    val applyHeaderStyle: Boolean
+        get() = config.applyHeaderStyle
+
+    val textBold: Int
         get() = config.textBold
-        set(value) {
-            config.textBold = value
-        }
 
-    var titleBold: Int
+    val titleBold: Int
         get() = config.titleBold
-        set(value) {
-            config.titleBold = value
-        }
 
-    var textItalic: Boolean
+    val textItalic: Boolean
         get() = config.textItalic
-        set(value) {
-            config.textItalic = value
-        }
 
-    var textShadow: Boolean
+    val textShadow: Boolean
         get() = config.textShadow
-        set(value) {
-            config.textShadow = value
-        }
 
-    var shadowRadius: Float
+    val shadowRadius: Float
         get() = config.shadowRadius
-        set(value) {
-            config.shadowRadius = value
-        }
 
-    var shadowDx: Float
+    val shadowDx: Float
         get() = config.shadowDx
-        set(value) {
-            config.shadowDx = value
-        }
 
-    var shadowDy: Float
+    val shadowDy: Float
         get() = config.shadowDy
-        set(value) {
-            config.shadowDy = value
-        }
 
-    var textSize: Int
+    val textSize: Int
         get() = config.textSize
-        set(value) {
-            config.textSize = value
-        }
 
-    var letterSpacing: Float
+    val letterSpacing: Float
         get() = config.letterSpacing
-        set(value) {
-            config.letterSpacing = value
-        }
 
-    var lineSpacingExtra: Int
+    val lineSpacingExtra: Int
         get() = config.lineSpacingExtra
-        set(value) {
-            config.lineSpacingExtra = value
-        }
 
-    var titleLineSpacingExtra: Int
+    val titleLineSpacingExtra: Int
         get() = config.titleLineSpacingExtra
-        set(value) {
-            config.titleLineSpacingExtra = value
-        }
 
-    var titleLineSpacingSub: Int
+    val titleLineSpacingSub: Int
         get() = config.titleLineSpacingSub
-        set(value) {
-            config.titleLineSpacingSub = value
-        }
 
-    var paragraphSpacing: Int
+    val paragraphSpacing: Int
         get() = config.paragraphSpacing
-        set(value) {
-            config.paragraphSpacing = value
-        }
 
     /**
      * 标题位置 0:居左 1:居中 2:隐藏
      */
-    var titleMode: Int
+    val titleMode: Int
         get() = config.titleMode
-        set(value) {
-            config.titleMode = value
-        }
-    var titleSize: Int
+    val titleSize: Int
         get() = config.titleSize
-        set(value) {
-            config.titleSize = value
-        }
 
-    var titleSegType: Int
+    val titleSegType: Int
         get() = config.titleSegType
-        set(value) {
-            config.titleSegType = value
-        }
 
-    var titleSegScaling: Float
-        get() = config.titleSegScaling
-        set(value) {
-            config.titleSegScaling = value
-        }
+    val titleSegScaling: Float
+        //旧版本可能存入负值，负值非法，回落到默认比例
+        get() = config.titleSegScaling.let { if (it < 0f) 1f else it.coerceAtMost(2f) }
 
-    var titleSegDistance: Int
+    val titleSegDistance: Int
         get() = config.titleSegDistance
-        set(value) {
-            config.titleSegDistance = value
-        }
 
-    var titleSegFlag: String
+    val titleSegFlag: String
         get() = config.titleSegFlag
-        set(value) {
-            config.titleSegFlag = value
-        }
 
     /**
      * 是否标题居中
      */
     val isMiddleTitle get() = titleMode == 1
 
-    var titleTopSpacing: Int
+    val titleTopSpacing: Int
         get() = config.titleTopSpacing
-        set(value) {
-            config.titleTopSpacing = value
-        }
 
-    var titleBottomSpacing: Int
+    val titleBottomSpacing: Int
         get() = config.titleBottomSpacing
-        set(value) {
-            config.titleBottomSpacing = value
-        }
 
-    var paragraphIndent: String
+    val titleColor: Int
+        get() = config.titleColor
+
+    val titleColorNight: Int
+        get() = config.titleColorNight
+
+    val resolvedTitleColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) titleColorNight else titleColor
+
+    val paragraphIndent: String
         get() = config.paragraphIndent
-        set(value) {
-            config.paragraphIndent = value
-        }
 
-    var underline: Boolean
+    val underline: Boolean
         get() = config.underline
-        set(value) {
-            config.underline = value
-        }
 
-    var underlineHeight: Int
+    val underlineHeight: Int
         get() = config.underlineHeight
-        set(value) {
-            config.underlineHeight = value
-        }
 
-    var underlinePadding: Int
+    val underlinePadding: Int
         get() = config.underlinePadding
-        set(value) {
-            config.underlinePadding = value
-        }
 
-    var dottedLine: Boolean
+    val underlineExtend: Boolean
+        get() = config.underlineExtend
+
+    val dottedLine: Boolean
         get() = config.dottedLine
-        set(value) {
-            config.dottedLine = value
-        }
 
-    var dottedBase: Float
+    val dottedBase: Float
         get() = config.dottedBase
-        set(value) {
-            config.dottedBase = value
-        }
 
-    var dottedRatio: Float
+    val dottedRatio: Float
         get() = config.dottedRatio
-        set(value) {
-            config.dottedRatio = value
-        }
 
-    var paddingBottom: Int
+    val paddingBottom: Int
         get() = config.paddingBottom
-        set(value) {
-            config.paddingBottom = value
-        }
 
-    var paddingLeft: Int
+    val paddingLeft: Int
         get() = config.paddingLeft
-        set(value) {
-            config.paddingLeft = value
-        }
 
-    var paddingRight: Int
+    val paddingRight: Int
         get() = config.paddingRight
-        set(value) {
-            config.paddingRight = value
-        }
 
-    var paddingTop: Int
+    val paddingTop: Int
         get() = config.paddingTop
-        set(value) {
-            config.paddingTop = value
-        }
 
-    var headerPaddingBottom: Int
+    val headerPaddingBottom: Int
         get() = config.headerPaddingBottom
-        set(value) {
-            config.headerPaddingBottom = value
-        }
 
-    var headerPaddingLeft: Int
+    val headerPaddingLeft: Int
         get() = config.headerPaddingLeft
-        set(value) {
-            config.headerPaddingLeft = value
-        }
 
-    var headerPaddingRight: Int
+    val headerPaddingRight: Int
         get() = config.headerPaddingRight
-        set(value) {
-            config.headerPaddingRight = value
-        }
 
-    var headerPaddingTop: Int
+    val headerPaddingTop: Int
         get() = config.headerPaddingTop
-        set(value) {
-            config.headerPaddingTop = value
-        }
 
-    var footerPaddingBottom: Int
+    val footerPaddingBottom: Int
         get() = config.footerPaddingBottom
-        set(value) {
-            config.footerPaddingBottom = value
-        }
 
-    var footerPaddingLeft: Int
+    val footerPaddingLeft: Int
         get() = config.footerPaddingLeft
-        set(value) {
-            config.footerPaddingLeft = value
-        }
 
-    var footerPaddingRight: Int
+    val footerPaddingRight: Int
         get() = config.footerPaddingRight
-        set(value) {
-            config.footerPaddingRight = value
-        }
 
-    var footerPaddingTop: Int
+    val footerPaddingTop: Int
         get() = config.footerPaddingTop
-        set(value) {
-            config.footerPaddingTop = value
-        }
 
-    var showHeaderLine: Boolean
+    val showHeaderLine: Boolean
         get() = config.showHeaderLine
-        set(value) {
-            config.showHeaderLine = value
-        }
 
-    var showFooterLine: Boolean
+    val showFooterLine: Boolean
         get() = config.showFooterLine
-        set(value) {
-            config.showFooterLine = value
-        }
 
-    var underlineColor: Int
+    val underlineColor: Int
         get() = config.curUnderlineColor()
-        set(value) {
-            config.setUnderlineColor(value)
-        }
 
-    var menuBgColor: Int
-        get() = config.curMenuBg()
-        set(value) {
-            config.setMenuCurBg(value)
-        }
+    val menuBgColor: Int
+        get() = readMenuBgColor
 
-    var menuAcColor: Int
-        get() = config.curMenuAc()
-        set(value) {
-            config.setMenuCurAc(value)
-        }
+    val menuAcColor: Int
+        get() = readMenuAccentColor
 
-    var shadowColor: Int
+    val shadowColor: Int
         get() = config.curTextShadowColor()
-        set(value) {
-            config.setCurShadColor(value)
-        }
+
+    // region Tip / Header / Footer
+
+    val tipHeaderLeft: Int
+        get() = config.tipHeaderLeft
+
+    val tipHeaderMiddle: Int
+        get() = config.tipHeaderMiddle
+
+    val tipHeaderRight: Int
+        get() = config.tipHeaderRight
+
+    val tipFooterLeft: Int
+        get() = config.tipFooterLeft
+
+    val tipFooterMiddle: Int
+        get() = config.tipFooterMiddle
+
+    val tipFooterRight: Int
+        get() = config.tipFooterRight
+
+    val customTipHeaderLeft: String
+        get() = config.customTipHeaderLeft
+
+    val customTipHeaderMiddle: String
+        get() = config.customTipHeaderMiddle
+
+    val customTipHeaderRight: String
+        get() = config.customTipHeaderRight
+
+    val customTipFooterLeft: String
+        get() = config.customTipFooterLeft
+
+    val customTipFooterMiddle: String
+        get() = config.customTipFooterMiddle
+
+    val customTipFooterRight: String
+        get() = config.customTipFooterRight
+
+    val headerMode: Int
+        get() = config.headerMode
+
+    val footerMode: Int
+        get() = config.footerMode
+
+    val tipHeaderColor: Int
+        get() = config.tipHeaderColor
+
+    val tipHeaderColorNight: Int
+        get() = config.tipHeaderColorNight
+
+    val resolvedTipHeaderColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) tipHeaderColorNight else tipHeaderColor
+
+    val tipFooterColor: Int
+        get() = config.tipFooterColor
+
+    val tipFooterColorNight: Int
+        get() = config.tipFooterColorNight
+
+    val resolvedTipFooterColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) tipFooterColorNight else tipFooterColor
+
+    val tipDividerColor: Int
+        get() = config.tipDividerColor
+
+    val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
+    val tipDividerColorNames get() = appCtx.resources.getStringArray(R.array.tip_divider_color).toList()
+
+    // endregion
 
     fun getExportConfig(): Config {
-        val exportConfig = durConfig.copy()
-        if (shareLayout) {
-            exportConfig.textFont = shareConfig.textFont
-            exportConfig.textBold = shareConfig.textBold
-            exportConfig.textSize = shareConfig.textSize
-            exportConfig.letterSpacing = shareConfig.letterSpacing
-            exportConfig.lineSpacingExtra = shareConfig.lineSpacingExtra
-            exportConfig.paragraphSpacing = shareConfig.paragraphSpacing
-            exportConfig.titleMode = shareConfig.titleMode
-            exportConfig.titleSize = shareConfig.titleSize
-            exportConfig.titleTopSpacing = shareConfig.titleTopSpacing
-            exportConfig.titleBottomSpacing = shareConfig.titleBottomSpacing
-            exportConfig.paddingBottom = shareConfig.paddingBottom
-            exportConfig.paddingLeft = shareConfig.paddingLeft
-            exportConfig.paddingRight = shareConfig.paddingRight
-            exportConfig.paddingTop = shareConfig.paddingTop
-            exportConfig.headerPaddingBottom = shareConfig.headerPaddingBottom
-            exportConfig.headerPaddingLeft = shareConfig.headerPaddingLeft
-            exportConfig.headerPaddingRight = shareConfig.headerPaddingRight
-            exportConfig.headerPaddingTop = shareConfig.headerPaddingTop
-            exportConfig.footerPaddingBottom = shareConfig.footerPaddingBottom
-            exportConfig.footerPaddingLeft = shareConfig.footerPaddingLeft
-            exportConfig.footerPaddingRight = shareConfig.footerPaddingRight
-            exportConfig.footerPaddingTop = shareConfig.footerPaddingTop
-            exportConfig.showHeaderLine = shareConfig.showHeaderLine
-            exportConfig.showFooterLine = shareConfig.showFooterLine
-            exportConfig.tipHeaderLeft = shareConfig.tipHeaderLeft
-            exportConfig.tipHeaderMiddle = shareConfig.tipHeaderMiddle
-            exportConfig.tipHeaderRight = shareConfig.tipHeaderRight
-            exportConfig.tipFooterLeft = shareConfig.tipFooterLeft
-            exportConfig.tipFooterMiddle = shareConfig.tipFooterMiddle
-            exportConfig.tipFooterRight = shareConfig.tipFooterRight
-            exportConfig.tipColor = shareConfig.tipColor
-            exportConfig.headerMode = shareConfig.headerMode
-            // MD3专有属性
-            exportConfig.footerMode = shareConfig.footerMode
-            exportConfig.textItalic = shareConfig.textItalic
-            exportConfig.textShadow = shareConfig.textShadow
-            exportConfig.shadowRadius = shareConfig.shadowRadius
-            exportConfig.shadowDx = shareConfig.shadowDx
-            exportConfig.shadowDy = shareConfig.shadowDy
-            exportConfig.titleBold = shareConfig.titleBold
-            exportConfig.titleLineSpacingExtra = shareConfig.titleLineSpacingExtra
-            exportConfig.titleLineSpacingSub = shareConfig.titleLineSpacingSub
-            exportConfig.titleSegType = shareConfig.titleSegType
-            exportConfig.titleSegScaling = shareConfig.titleSegScaling
-            exportConfig.titleSegDistance = shareConfig.titleSegDistance
-            exportConfig.titleSegFlag = shareConfig.titleSegFlag
-            exportConfig.paragraphIndent = shareConfig.paragraphIndent
-            exportConfig.underline = shareConfig.underline
-            exportConfig.underlineHeight = shareConfig.underlineHeight
-            exportConfig.underlinePadding = shareConfig.underlinePadding
-            exportConfig.dottedLine = shareConfig.dottedLine
-            exportConfig.dottedBase = shareConfig.dottedBase
-            exportConfig.dottedRatio = shareConfig.dottedRatio
-            exportConfig.bgAlpha = shareConfig.bgAlpha
-        }
-        return exportConfig
-    }
-
-    fun import(byteArray: ByteArray): Config {
-        val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
-        FileUtils.delete(configZipPath)
-        val zipFile = FileUtils.createFileIfNotExist(configZipPath)
-        zipFile.writeBytes(byteArray)
-        val configDir = appCtx.externalCache.getFile("readConfig")
-        configDir.createFolderReplace()
-        ZipUtils.unZipToPath(zipFile, configDir)
-        val configFile = configDir.getFile(configFileName)
-        val config: Config = GSON.fromJsonObject<Config>(configFile.readText()).getOrThrow()
-        if (config.textFont.isNotEmpty()) {
-            val fontName = config.textFont
-            val fontPath =
-                FileUtils.getPath(appCtx.externalFiles, "font", fontName)
-            val fontFile = configDir.getFile(fontName)
-            if (fontFile.exists()) {
-                if (!FileUtils.exist(fontPath)) {
-                    fontFile.copyTo(File(fontPath))
-                }
-                config.textFont = fontPath
-            } else {
-                config.textFont = ""
-            }
-        }
-        if (config.bgType == 2) {
-            val bgName = FileUtils.getName(config.bgStr)
-            config.bgStr = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrNight = bgPath
-        } else if (config.bgTypeNight == 0) {
-            config.bgStrNight.toColorInt()
-        }
-        if (config.bgTypeEInk == 2) {
-            val bgName = FileUtils.getName(config.bgStrEInk)
-            config.bgStrEInk = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrEInk = bgPath
-        } else if (config.bgTypeEInk == 0) {
-            config.bgStrEInk.toColorInt()
-        }
-        config.curTextColor()
-        config.curTextAccentColor()
-        config.curTextShadowColor()
-        return config
+        val exportConfig = durConfig.copy(highlightRules = arrayListOf())
+        if (!shareLayout) return exportConfig
+        // 共享排版开着时导出的是「当前样式的背景 + 共享那份的排版」，故只覆盖排版项。
+        return exportConfig.copy(
+            textFont = shareConfig.textFont,
+            titleFont = shareConfig.titleFont,
+            headerFont = shareConfig.headerFont,
+            footerFont = shareConfig.footerFont,
+            headerFontSize = shareConfig.headerFontSize,
+            footerFontSize = shareConfig.footerFontSize,
+            applyHeaderStyle = shareConfig.applyHeaderStyle,
+            textBold = shareConfig.textBold,
+            textSize = shareConfig.textSize,
+            letterSpacing = shareConfig.letterSpacing,
+            lineSpacingExtra = shareConfig.lineSpacingExtra,
+            paragraphSpacing = shareConfig.paragraphSpacing,
+            titleMode = shareConfig.titleMode,
+            titleSize = shareConfig.titleSize,
+            titleTopSpacing = shareConfig.titleTopSpacing,
+            titleBottomSpacing = shareConfig.titleBottomSpacing,
+            titleColor = shareConfig.titleColor,
+            titleColorNight = shareConfig.titleColorNight,
+            paddingBottom = shareConfig.paddingBottom,
+            paddingLeft = shareConfig.paddingLeft,
+            paddingRight = shareConfig.paddingRight,
+            paddingTop = shareConfig.paddingTop,
+            headerPaddingBottom = shareConfig.headerPaddingBottom,
+            headerPaddingLeft = shareConfig.headerPaddingLeft,
+            headerPaddingRight = shareConfig.headerPaddingRight,
+            headerPaddingTop = shareConfig.headerPaddingTop,
+            footerPaddingBottom = shareConfig.footerPaddingBottom,
+            footerPaddingLeft = shareConfig.footerPaddingLeft,
+            footerPaddingRight = shareConfig.footerPaddingRight,
+            footerPaddingTop = shareConfig.footerPaddingTop,
+            showHeaderLine = shareConfig.showHeaderLine,
+            showFooterLine = shareConfig.showFooterLine,
+            tipHeaderLeft = shareConfig.tipHeaderLeft,
+            tipHeaderMiddle = shareConfig.tipHeaderMiddle,
+            tipHeaderRight = shareConfig.tipHeaderRight,
+            tipFooterLeft = shareConfig.tipFooterLeft,
+            tipFooterMiddle = shareConfig.tipFooterMiddle,
+            tipFooterRight = shareConfig.tipFooterRight,
+            tipHeaderColor = shareConfig.tipHeaderColor,
+            tipHeaderColorNight = shareConfig.tipHeaderColorNight,
+            tipFooterColor = shareConfig.tipFooterColor,
+            tipFooterColorNight = shareConfig.tipFooterColorNight,
+            headerMode = shareConfig.headerMode,
+            footerMode = shareConfig.footerMode,
+            textItalic = shareConfig.textItalic,
+            textShadow = shareConfig.textShadow,
+            shadowRadius = shareConfig.shadowRadius,
+            shadowDx = shareConfig.shadowDx,
+            shadowDy = shareConfig.shadowDy,
+            titleBold = shareConfig.titleBold,
+            titleLineSpacingExtra = shareConfig.titleLineSpacingExtra,
+            titleLineSpacingSub = shareConfig.titleLineSpacingSub,
+            titleSegType = shareConfig.titleSegType,
+            titleSegScaling = shareConfig.titleSegScaling,
+            titleSegDistance = shareConfig.titleSegDistance,
+            titleSegFlag = shareConfig.titleSegFlag,
+            paragraphIndent = shareConfig.paragraphIndent,
+            underline = shareConfig.underline,
+            underlineHeight = shareConfig.underlineHeight,
+            underlinePadding = shareConfig.underlinePadding,
+            dottedLine = shareConfig.dottedLine,
+            dottedBase = shareConfig.dottedBase,
+            dottedRatio = shareConfig.dottedRatio,
+            bgAlpha = shareConfig.bgAlpha
+        )
     }
 
     @Keep
     data class Config(
-        var name: String = "",
-        var bgStr: String = "#EEEEEE",//白天背景
-        var bgStrNight: String = "#000000",//夜间背景
-        var menuBgColor: String = "#EEEFE3",
-        var menuAcColor: String = "#EEEFE3",
-        var menuBgColorNight: String = "#BFCBAD",
-        var menuAcColorNight: String = "#586249",
-        var bgStrEInk: String = "#FFFFFF",//EInk背景
-        var bgAlpha: Int = 100,//背景透明度
-        var bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
-        var bgTypeNight: Int = 0,//夜间背景类型
-        var bgTypeEInk: Int = 0,//EInk背景类型
-        private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
-        private var darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
-        private var darkStatusIconEInk: Boolean = true,
-        private var textColor: String = "#3E3D3B",//白天文字颜色
-        private var textColorNight: String = "#ADADAD",//夜间文字颜色
-        private var textColorEInk: String = "#000000",
-        private var textAccentColor: String = "#834E00",//白天强调文字颜色
-        private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
-        private var textAccentColorEInk: String = "#000000",
-        private var pageAnim: Int = 0,//翻页动画
-        private var pageAnimEInk: Int = 4,
-        var textFont: String = "",//字体
-        var textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
-        var textSize: Int = 20,//文字大小
-        var textItalic: Boolean = false,// 是否启用斜体
-        var textShadow: Boolean = false,// 是否启用阴影
-        var shadowRadius: Float = 16f,// 阴影模糊半径
-        var shadowDx: Float = 1f,// 阴影x偏移
-        var shadowDy: Float = 1f,// 阴影y偏移
-        private var shadowColor: String = "#3E3D3B",
-        private var shadowColorN: String = "#3E3D3B",
-        var letterSpacing: Float = 0.1f,//字间距
-        var lineSpacingExtra: Int = 12,//行间距
-        var paragraphSpacing: Int = 2,//段距
-        var titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
-        var titleSize: Int = 0,
-        var titleTopSpacing: Int = 0,
-        var titleBottomSpacing: Int = 0,
-        var titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
-        var titleLineSpacingExtra: Int = 12,
-        var titleLineSpacingSub: Int = 12,
-        var titleSegType: Int = 0,//分段模式
-        var titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
-        var titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
-        var titleSegFlag: String = "",//分段判断，碰到指定值时分段
-        var paragraphIndent: String = "　　",//段落缩进
-        var underline: Boolean = false, //下划线
-        var underlinePadding: Int = 10,
-        var underlineHeight: Int = 1,
-        var underlineColor: String = "#3E3D3B",
-        var underlineColorNight: String = "#ADADAD",
-        var dottedLine: Boolean = false, //虚线
-        var dottedBase: Float = 6f, //长度
-        var dottedRatio: Float = 6f,
-        var paddingBottom: Int = 6,
-        var paddingLeft: Int = 16,
-        var paddingRight: Int = 16,
-        var paddingTop: Int = 6,
-        var headerPaddingBottom: Int = 0,
-        var headerPaddingLeft: Int = 16,
-        var headerPaddingRight: Int = 16,
-        var headerPaddingTop: Int = 0,
-        var footerPaddingBottom: Int = 6,
-        var footerPaddingLeft: Int = 16,
-        var footerPaddingRight: Int = 16,
-        var footerPaddingTop: Int = 6,
-        var showHeaderLine: Boolean = false,
-        var showFooterLine: Boolean = true,
-        var tipHeaderLeft: Int = ReadTipConfig.time,
-        var tipHeaderMiddle: Int = ReadTipConfig.none,
-        var tipHeaderRight: Int = ReadTipConfig.battery,
-        var tipFooterLeft: Int = ReadTipConfig.chapterTitle,
-        var tipFooterMiddle: Int = ReadTipConfig.none,
-        var tipFooterRight: Int = ReadTipConfig.pageAndTotal,
-        var tipColor: Int = 0,
-        var tipDividerColor: Int = -1,
-        var headerMode: Int = 0,
-        var footerMode: Int = 0
+        val name: String = "",
+        val bgStr: String = "#EEEEEE",//白天背景
+        val bgStrNight: String = "#000000",//夜间背景
+        @Transient
+        val menuBgColor: String = "#EEEFE3",
+        @Transient
+        val menuAcColor: String = "#EEEFE3",
+        @Transient
+        val menuBgColorNight: String = "#BFCBAD",
+        @Transient
+        val menuAcColorNight: String = "#586249",
+        val bgStrEInk: String = "#FFFFFF",//EInk背景
+        val bgAlpha: Int = 100,//背景透明度
+        val bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
+        val bgTypeNight: Int = 0,//夜间背景类型
+        val bgTypeEInk: Int = 0,//EInk背景类型
+        private val darkStatusIcon: Boolean = true,//白天是否暗色状态栏
+        private val darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
+        private val darkStatusIconEInk: Boolean = true,
+        private val textColor: String = "#3E3D3B",//白天文字颜色
+        private val textColorNight: String = "#ADADAD",//夜间文字颜色
+        private val textColorEInk: String = "#000000",
+        private val textAccentColor: String = "#834E00",//白天强调文字颜色
+        private val textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
+        private val textAccentColorEInk: String = "#000000",
+        private val pageAnim: Int = 0,//翻页动画
+        private val pageAnimEInk: Int = 4,
+        val textFont: String = "",//字体
+        val titleFont: String = "",//标题字体
+        val headerFont: String = "",//页眉字体
+        val footerFont: String = "",//页脚字体
+        val headerFontSize: Int = 12,//页眉字号
+        val footerFontSize: Int = 12,//页脚字号
+        val applyHeaderStyle: Boolean = true,//页脚是否应用页眉字体样式
+        val textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
+        val textSize: Int = 20,//文字大小
+        val textItalic: Boolean = false,// 是否启用斜体
+        val textShadow: Boolean = false,// 是否启用阴影
+        val shadowRadius: Float = 16f,// 阴影模糊半径
+        val shadowDx: Float = 1f,// 阴影x偏移
+        val shadowDy: Float = 1f,// 阴影y偏移
+        private val shadowColor: String = "#3E3D3B",
+        private val shadowColorN: String = "#3E3D3B",
+        val letterSpacing: Float = 0.1f,//字间距
+        val lineSpacingExtra: Int = 12,//行间距
+        val paragraphSpacing: Int = 2,//段距
+        val titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
+        val titleSize: Int = 20,
+        val titleTopSpacing: Int = 0,
+        val titleBottomSpacing: Int = 0,
+        val titleColor: Int = 0,
+        val titleColorNight: Int = 0,
+        val titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
+        val titleLineSpacingExtra: Int = 12,
+        val titleLineSpacingSub: Int = 12,
+        val titleSegType: Int = 0,//分段模式
+        val titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
+        val titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
+        val titleSegFlag: String = "",//分段判断，碰到指定值时分段
+        val paragraphIndent: String = "　　",//段落缩进
+        val underline: Boolean = false, //下划线
+        val underlinePadding: Int = 10,
+        val underlineHeight: Int = 1,
+        val underlineExtend: Boolean = false, //下划线延伸
+        val underlineColor: String = "#3E3D3B",
+        val underlineColorNight: String = "#ADADAD",
+        val dottedLine: Boolean = false, //虚线
+        val dottedBase: Float = 6f, //长度
+        val dottedRatio: Float = 6f,
+        val paddingBottom: Int = 6,
+        val paddingLeft: Int = 16,
+        val paddingRight: Int = 16,
+        val paddingTop: Int = 6,
+        val headerPaddingBottom: Int = 0,
+        val headerPaddingLeft: Int = 16,
+        val headerPaddingRight: Int = 16,
+        val headerPaddingTop: Int = 0,
+        val footerPaddingBottom: Int = 6,
+        val footerPaddingLeft: Int = 16,
+        val footerPaddingRight: Int = 16,
+        val footerPaddingTop: Int = 6,
+        val showHeaderLine: Boolean = false,
+        val showFooterLine: Boolean = true,
+        val tipHeaderLeft: Int = ReadTipType.tipTime,
+        val tipHeaderMiddle: Int = ReadTipType.tipNone,
+        val tipHeaderRight: Int = ReadTipType.tipBattery,
+        val tipFooterLeft: Int = ReadTipType.tipChapterTitle,
+        val tipFooterMiddle: Int = ReadTipType.tipNone,
+        val tipFooterRight: Int = ReadTipType.tipPageAndTotal,
+        val customTipHeaderLeft: String = "",
+        val customTipHeaderMiddle: String = "",
+        val customTipHeaderRight: String = "",
+        val customTipFooterLeft: String = "",
+        val customTipFooterMiddle: String = "",
+        val customTipFooterRight: String = "",
+        val tipHeaderColor: Int = 0,
+        val tipHeaderColorNight: Int = 0,
+        val tipFooterColor: Int = 0,
+        val tipFooterColorNight: Int = 0,
+        val tipDividerColor: Int = -1,
+        val headerMode: Int = 0,
+        val footerMode: Int = 0,
+        @Transient
+        val menuIconShowText: Boolean = true,
+        @Transient
+        val menuIconStyle: Int = 0,
+        @Transient
+        val menuIconItemsPerRow: Int = 5,
+        @Transient
+        val menuIconRowCount: Int = 1,
+        @Transient
+        val menuBottomCornerRadius: Int = 0,
+        @Transient
+        val menuBottomHorizontalMargin: Int = 0,
+        @Transient
+        val menuBottomBottomMargin: Int = 0,
+        val highlightRules: ArrayList<HighlightRule> = arrayListOf()
     ) {
 
         @Transient
@@ -825,6 +715,12 @@ object ReadBookConfig {
             "pageAnim" to pageAnim,
             "pageAnimEInk" to pageAnimEInk,
             "textFont" to textFont,
+            "titleFont" to titleFont,
+            "headerFont" to headerFont,
+            "footerFont" to footerFont,
+            "headerFontSize" to headerFontSize,
+            "footerFontSize" to footerFontSize,
+            "applyHeaderStyle" to applyHeaderStyle,
             "textBold" to textBold,
             "textSize" to textSize,
             "letterSpacing" to letterSpacing,
@@ -834,6 +730,8 @@ object ReadBookConfig {
             "titleSize" to titleSize,
             "titleTopSpacing" to titleTopSpacing,
             "titleBottomSpacing" to titleBottomSpacing,
+            "titleColor" to titleColor,
+            "titleColorNight" to titleColorNight,
             "paragraphIndent" to paragraphIndent,
             "paddingBottom" to paddingBottom,
             "paddingLeft" to paddingLeft,
@@ -855,303 +753,236 @@ object ReadBookConfig {
             "tipFooterLeft" to tipFooterLeft,
             "tipFooterMiddle" to tipFooterMiddle,
             "tipFooterRight" to tipFooterRight,
-            "tipColor" to tipColor,
+            "tipHeaderColor" to tipHeaderColor,
+            "tipHeaderColorNight" to tipHeaderColorNight,
+            "tipFooterColor" to tipFooterColor,
+            "tipFooterColorNight" to tipFooterColorNight,
             "tipDividerColor" to tipDividerColor,
             "headerMode" to headerMode,
-            "footerMode" to footerMode
+            "footerMode" to footerMode,
+            "highlightRules" to highlightRules.map { mapOf("id" to it.id, "name" to it.name, "pattern" to it.pattern, "sampleText" to it.sampleText, "targetScope" to it.targetScope, "enabled" to it.enabled, "position" to it.position, "textColor" to it.textColor, "bgColor" to it.bgColor, "underlineMode" to it.underlineMode, "underlineColor" to it.underlineColor, "underlineWidth" to it.underlineWidth, "underlineOffset" to it.underlineOffset, "underlineSvgPath" to it.underlineSvgPath, "bgImage" to it.bgImage, "bgImageFit" to it.bgImageFit, "bgImageScale" to it.bgImageScale, "configName" to it.configName, "fontPath" to it.fontPath, "fontSizeOffset" to it.fontSizeOffset) }
         )
 
         fun getBgPath(bgIndex: Int): String? {
-            val bgType = when (bgIndex) {
-                0 -> bgType
-                1 -> bgTypeNight
-                2 -> bgTypeEInk
-                else -> error("unknown bgIndex: $bgIndex")
-            }
-            if (bgType != 2) {
-                return null
-            }
-            val bgStr = when (bgIndex) {
-                0 -> bgStr
-                1 -> bgStrNight
-                2 -> bgStrEInk
-                else -> error("unknown bgIndex: $bgIndex")
-            }
-            val path = if (bgStr.contains(File.separator)) {
-                bgStr
-            } else {
-                FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
-            }
-            return path
+            return ReadStyleResolver.backgroundPath(this, bgIndex)
         }
 
-        private fun initColorInt() {
-            textColorIntEInk = textColorEInk.toColorInt()
-            textColorIntNight = textColorNight.toColorInt()
-            textColorInt = textColor.toColorInt()
-            shadowColorNightInt = shadowColorN.toColorInt()
-            shadowColorInt = shadowColor.toColorInt()
-            menuBgColorInt = menuBgColor.toColorInt()
-            menuBgColorNightInt = menuBgColorNight.toColorInt()
-            menuAcColorInt = menuAcColor.toColorInt()
-            menuAcColorNightInt = menuAcColorNight.toColorInt()
-            underlineColorInt = underlineColor.toColorInt()
-            underlineColorNightInt = underlineColorNight.toColorInt()
+        private inline fun <T> currentModeValue(
+            eInk: () -> T,
+            night: () -> T,
+            day: () -> T
+        ): T {
+            return when (ReadStyleResolver.currentMode()) {
+                ReadStyleResolver.ReadStyleMode.EInk -> eInk()
+                ReadStyleResolver.ReadStyleMode.Night -> night()
+                ReadStyleResolver.ReadStyleMode.Day -> day()
+            }
+        }
+
+        private inline fun <T> nightThemeValue(
+            night: () -> T,
+            day: () -> T
+        ): T {
+            return if (ReadStyleResolver.isNightTheme()) {
+                night()
+            } else {
+                day()
+            }
+        }
+
+        private fun String.toColorIntSafe(fallback: Int): Int {
+            return runCatching { toColorInt() }.getOrDefault(fallback)
+        }
+
+        private fun ensureColorInts() {
+            if (initColorInt) {
+                return
+            }
+            textColorIntEInk = textColorEInk.toColorIntSafe(0xFF000000.toInt())
+            textColorIntNight = textColorNight.toColorIntSafe(0xFFADADAD.toInt())
+            textColorInt = textColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            shadowColorNightInt = shadowColorN.toColorIntSafe(0xFF3E3D3B.toInt())
+            shadowColorInt = shadowColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            menuBgColorInt = menuBgColor.toColorIntSafe(-1)
+            menuBgColorNightInt = menuBgColorNight.toColorIntSafe(-1)
+            menuAcColorInt = menuAcColor.toColorIntSafe(-1)
+            menuAcColorNightInt = menuAcColorNight.toColorIntSafe(-1)
+            underlineColorInt = underlineColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            underlineColorNightInt = underlineColorNight.toColorIntSafe(0xFFADADAD.toInt())
             initColorInt = true
         }
 
-        private fun initAccentColorInt() {
-            textAccentColorIntEInk = textAccentColorEInk.toColorInt()
-            textAccentColorIntNight = textAccentColorNight.toColorInt()
-            textAccentColorInt = textAccentColor.toColorInt()
+        private fun ensureAccentColorInts() {
+            if (initAccentColorInt) {
+                return
+            }
+            textAccentColorIntEInk = textAccentColorEInk.toColorIntSafe(0xFF000000.toInt())
+            textAccentColorIntNight = textAccentColorNight.toColorIntSafe(0xFFFE4D55.toInt())
+            textAccentColorInt = textAccentColor.toColorIntSafe(0xFF834E00.toInt())
             initAccentColorInt = true
         }
 
-        fun setCurTextAccentColor(color: Int) {
-            when {
-                AppConfig.isEInkMode -> {
-                    textAccentColorEInk = "#${color.hexString}"
-                    textAccentColorIntEInk = color
-                }
-
-                AppConfig.isNightTheme -> {
-                    textAccentColorNight = "#${color.hexString}"
-                    textAccentColorIntNight = color
-                }
-
-                else -> {
-                    textAccentColor = "#${color.hexString}"
-                    textAccentColorInt = color
-                }
-            }
+        fun withCurTextAccentColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return currentModeValue(
+                eInk = { copy(textAccentColorEInk = hex) },
+                night = { copy(textAccentColorNight = hex) },
+                day = { copy(textAccentColor = hex) }
+            )
         }
 
         fun curTextAccentColor(): Int {
-            if (!initAccentColorInt) {
-                initAccentColorInt()
-            }
-            return when {
-                AppConfig.isEInkMode -> textAccentColorIntEInk
-                AppConfig.isNightTheme -> textAccentColorIntNight
-                else -> textAccentColorInt
-            }
+            ensureAccentColorInts()
+            return currentModeValue(
+                eInk = { textAccentColorIntEInk },
+                night = { textAccentColorIntNight },
+                day = { textAccentColorInt }
+            )
         }
 
-        fun setCurShadColor(color: Int){
-            when {
-                AppConfig.isNightTheme -> {
-                    shadowColorN = "#${color.hexString}"
-                    shadowColorNightInt = color
-                }
-                else -> {
-                    shadowColor = "#${color.hexString}"
-                    shadowColorInt = color
-                }
-            }
+        fun withCurShadowColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return nightThemeValue(
+                night = { copy(shadowColorN = hex) },
+                day = { copy(shadowColor = hex) }
+            )
         }
 
-        fun setCurTextColor(color: Int) {
-            when {
-                AppConfig.isEInkMode -> {
-                    textColorEInk = "#${color.hexString}"
-                    textColorIntEInk = color
-                }
-
-                AppConfig.isNightTheme -> {
-                    textColorNight = "#${color.hexString}"
-                    textColorIntNight = color
-                }
-
-                else -> {
-                    textColor = "#${color.hexString}"
-                    textColorInt = color
-                }
-            }
+        fun withCurTextColor(color: Int): Config {
+            val hex = "#${color.hexString}"
+            return currentModeValue(
+                eInk = { copy(textColorEInk = hex) },
+                night = { copy(textColorNight = hex) },
+                day = { copy(textColor = hex) }
+            )
         }
 
         fun curTextColor(): Int {
-            if (!initColorInt) {
-                initColorInt()
-            }
-            return when {
-                AppConfig.isEInkMode -> textColorIntEInk
-                AppConfig.isNightTheme -> textColorIntNight
-                else -> textColorInt
-            }
+            ensureColorInts()
+            return currentModeValue(
+                eInk = { textColorIntEInk },
+                night = { textColorIntNight },
+                day = { textColorInt }
+            )
         }
 
         fun curTextShadowColor(): Int {
-            if (!initColorInt) {
-                initColorInt()
-            }
-            return when {
-                AppConfig.isNightTheme -> shadowColorNightInt
-                else -> shadowColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { shadowColorNightInt },
+                day = { shadowColorInt }
+            )
         }
 
-        fun setCurStatusIconDark(isDark: Boolean) {
-            when {
-                AppConfig.isEInkMode -> darkStatusIconEInk = isDark
-                AppConfig.isNightTheme -> darkStatusIconNight = isDark
-                else -> darkStatusIcon = isDark
-            }
-        }
+        fun withCurStatusIconDark(isDark: Boolean): Config = currentModeValue(
+            eInk = { copy(darkStatusIconEInk = isDark) },
+            night = { copy(darkStatusIconNight = isDark) },
+            day = { copy(darkStatusIcon = isDark) }
+        )
 
         fun curStatusIconDark(): Boolean {
-            return when {
-                AppConfig.isEInkMode -> darkStatusIconEInk
-                AppConfig.isNightTheme -> darkStatusIconNight
-                else -> darkStatusIcon
-            }
+            return currentModeValue(
+                eInk = { darkStatusIconEInk },
+                night = { darkStatusIconNight },
+                day = { darkStatusIcon }
+            )
         }
 
-        fun setCurPageAnim(@PageAnim.Anim anim: Int) {
-            when {
-                AppConfig.isEInkMode -> pageAnimEInk = anim
-                else -> pageAnim = anim
-            }
-        }
+        fun withCurPageAnim(@PageAnim.Anim anim: Int): Config = currentModeValue(
+            eInk = { copy(pageAnimEInk = anim) },
+            night = { copy(pageAnim = anim) },
+            day = { copy(pageAnim = anim) }
+        )
 
         fun curPageAnim(): Int {
-            return when {
-                AppConfig.isEInkMode -> pageAnimEInk
-                else -> pageAnim
-            }
+            return currentModeValue(
+                eInk = { pageAnimEInk },
+                night = { pageAnim },
+                day = { pageAnim }
+            )
         }
 
-        fun setCurBg(bgType: Int, bg: String) {
-            when {
-                AppConfig.isEInkMode -> {
-                    bgTypeEInk = bgType
-                    bgStrEInk = bg
-                }
+        // Public getters for mode-specific values (for ReadBookStyleConfig)
+        fun getDarkStatusIcon(): Boolean = darkStatusIcon
+        fun getDarkStatusIconNight(): Boolean = darkStatusIconNight
+        fun getDarkStatusIconEInk(): Boolean = darkStatusIconEInk
+        fun getTextColor(): String = textColor
+        fun getTextColorNight(): String = textColorNight
+        fun getTextColorEInk(): String = textColorEInk
+        fun getPageAnim(): Int = pageAnim
+        fun getPageAnimEInk(): Int = pageAnimEInk
 
-                AppConfig.isNightTheme -> {
-                    bgTypeNight = bgType
-                    bgStrNight = bg
-                }
-
-                else -> {
-                    this.bgType = bgType
-                    bgStr = bg
-                }
-            }
-        }
+        fun withCurBg(bgType: Int, bg: String): Config =
+            ReadStyleResolver.withCurrentBackground(this, bgType, bg)
 
         fun curBgStr(): String {
-            return when {
-                AppConfig.isEInkMode -> bgStrEInk
-                AppConfig.isNightTheme -> bgStrNight
-                else -> bgStr
-            }
+            return ReadStyleResolver.currentBackground(this).value
         }
 
         fun curMenuBg(): Int {
-            return when {
-                AppConfig.isNightTheme -> menuBgColorNightInt
-                else -> menuBgColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { menuBgColorNightInt },
+                day = { menuBgColorInt }
+            )
         }
 
-        fun setMenuCurBg(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
-                    menuBgColorNight = "#${bg.hexString}"
-                    menuBgColorNightInt = bg
-                }
+        fun menuBgColor(isNight: Boolean): Int {
+            ensureColorInts()
+            return if (isNight) menuBgColorNightInt else menuBgColorInt
+        }
 
-                else -> {
-                    menuBgColor = "#${bg.hexString}"
-                    menuBgColorInt = bg
-                }
-            }
+        fun withMenuCurBg(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(menuBgColorNight = hex) },
+                day = { copy(menuBgColor = hex) }
+            )
         }
 
         fun curMenuAc(): Int {
-            return when {
-                AppConfig.isNightTheme -> menuAcColorNightInt
-                else -> menuAcColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { menuAcColorNightInt },
+                day = { menuAcColorInt }
+            )
         }
 
-        fun setMenuCurAc(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
-                    menuAcColorNight = "#${bg.hexString}"
-                    menuAcColorNightInt = bg
-                }
+        fun menuAccentColor(isNight: Boolean): Int {
+            ensureColorInts()
+            return if (isNight) menuAcColorNightInt else menuAcColorInt
+        }
 
-                else -> {
-                    menuAcColor = "#${bg.hexString}"
-                    menuAcColorInt = bg
-                }
-            }
+        fun withMenuCurAc(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(menuAcColorNight = hex) },
+                day = { copy(menuAcColor = hex) }
+            )
         }
 
         fun curUnderlineColor(): Int {
-            return when {
-                AppConfig.isNightTheme -> underlineColorNightInt
-                else -> underlineColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { underlineColorNightInt },
+                day = { underlineColorInt }
+            )
         }
 
-        fun setUnderlineColor(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
-                    underlineColorNight = "#${bg.hexString}"
-                    underlineColorNightInt = bg
-                }
-
-                else -> {
-                    underlineColor = "#${bg.hexString}"
-                    underlineColorInt = bg
-                }
-            }
+        fun withCurUnderlineColor(bg: Int): Config {
+            val hex = "#${bg.hexString}"
+            return nightThemeValue(
+                night = { copy(underlineColorNight = hex) },
+                day = { copy(underlineColor = hex) }
+            )
         }
 
         fun curBgType(): Int {
-            return when {
-                AppConfig.isEInkMode -> bgTypeEInk
-                AppConfig.isNightTheme -> bgTypeNight
-                else -> bgType
-            }
+            return ReadStyleResolver.currentBackground(this).type
         }
 
         fun curBgDrawable(width: Int, height: Int): Drawable {
-            if (width == 0 || height == 0) {
-                val backgroundColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-                return backgroundColor.toDrawable()
-            }
-
-            var bgDrawable: Drawable? = null
-            val resources = appCtx.resources
-            try {
-                bgDrawable = when (curBgType()) {
-                    0 -> curBgStr().toColorInt().toDrawable()
-                    1 -> {
-                        val path = "bg" + File.separator + curBgStr()
-                        val bitmap = BitmapUtils.decodeAssetsBitmap(appCtx, path, width, height)
-                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
-                    }
-                    else -> {
-                        val path = curBgStr().let {
-                            if (it.contains(File.separator)) it
-                            else FileUtils.getPath(appCtx.externalFiles, "bg", curBgStr())
-                        }
-                        val bitmap = BitmapUtils.decodeBitmap(path, width, height)
-                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
-                    }
-                }
-            } catch (e: OutOfMemoryError) {
-                e.printOnDebug()
-            } catch (e: Exception) {
-                e.printOnDebug()
-            }
-
-            // fallback 使用 MD3 的 colorSurface 作为背景色
-            val fallbackColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-            return bgDrawable ?: fallbackColor.toDrawable()
+            return ReadStyleResolver.currentBackgroundDrawable(this, width, height)
         }
     }
 }

@@ -1,0 +1,274 @@
+package io.legado.app.ui.rss.favorites
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import io.legado.app.R
+import io.legado.app.data.entities.RssStar
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.dialog.TextListInputDialog
+import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RssFavoritesRouteScreen(
+    onBackClick: () -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    viewModel: RssFavoritesViewModel = koinViewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    RssFavoritesScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onBackClick = onBackClick,
+        onOpenRead = onOpenRead,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RssFavoritesScreen(
+    state: RssFavoritesUiState,
+    onIntent: (RssFavoritesIntent) -> Unit,
+    onBackClick: () -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+) {
+    val groups = state.groups
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var showAddToGroupDialog by remember { mutableStateOf(false) }
+    var showRemoveFromGroupDialog by remember { mutableStateOf(false) }
+    var showSetGroupDialog by remember { mutableStateOf<RssStar?>(null) }
+
+    TextListInputDialog(
+        show = showAddToGroupDialog,
+        title = stringResource(R.string.add_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showAddToGroupDialog = false },
+        onConfirm = { text ->
+            onIntent(RssFavoritesIntent.AddSelectedToGroup(text))
+            showAddToGroupDialog = false
+        }
+    )
+
+    TextListInputDialog(
+        show = showRemoveFromGroupDialog,
+        title = stringResource(R.string.remove_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showRemoveFromGroupDialog = false },
+        onConfirm = { text ->
+            onIntent(RssFavoritesIntent.RemoveSelectedFromGroup(text))
+            showRemoveFromGroupDialog = false
+        }
+    )
+
+    TextListInputDialog(
+        data = showSetGroupDialog,
+        title = stringResource(R.string.change_group),
+        hint = stringResource(R.string.group_name),
+        initialValue = { rssStar -> rssStar.group },
+        suggestions = groups,
+        onDismissRequest = { showSetGroupDialog = null },
+        onConfirm = { rssStar, text ->
+            onIntent(RssFavoritesIntent.UpdateGroup(rssStar, text))
+            showSetGroupDialog = null
+        }
+    )
+
+    RuleListScaffold(
+        title = stringResource(R.string.favorite),
+        subtitle = state.currentGroup.ifEmpty { stringResource(R.string.all) },
+        state = state,
+        onBackClick = onBackClick,
+        onSearchToggle = { onIntent(RssFavoritesIntent.ToggleSearch(it)) },
+        onSearchQueryChange = { onIntent(RssFavoritesIntent.Search(it)) },
+        onClearSelection = { onIntent(RssFavoritesIntent.ClearSelection) },
+        onSelectAll = { onIntent(RssFavoritesIntent.SelectAll) },
+        onSelectInvert = { onIntent(RssFavoritesIntent.InvertSelection) },
+        onDeleteSelected = { onIntent(RssFavoritesIntent.DeleteSelected) },
+        snackbarHostState = snackbarHostState,
+        selectionSecondaryActions = listOf(
+            ActionItem(
+                text = stringResource(R.string.add_group),
+                onClick = { showAddToGroupDialog = true }
+            ),
+            ActionItem(
+                text = stringResource(R.string.remove_group),
+                onClick = { showRemoveFromGroupDialog = true }
+            )
+        ),
+        topBarActions = {},
+        dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.all),
+                leadingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Group, null, modifier = Modifier.size(18.dp))
+                    }
+                },
+                onClick = {
+                    onIntent(RssFavoritesIntent.ChangeGroup(""))
+                    dismiss()
+                }
+            )
+            groups.forEach { group ->
+                RoundDropdownMenuItem(
+                    text = group,
+                    leadingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Label,
+                                null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    },
+                    onClick = {
+                        onIntent(RssFavoritesIntent.ChangeGroup(group))
+                        dismiss()
+                    }
+                )
+            }
+            PillDivider()
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.delete_select_group),
+                leadingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
+                    }
+                },
+                onClick = {
+                    onIntent(RssFavoritesIntent.DeleteGroup(state.currentGroup))
+                    dismiss()
+                }
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.all),
+                leadingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
+                    }
+                },
+                onClick = {
+                    onIntent(RssFavoritesIntent.DeleteAll)
+                    dismiss()
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (state.items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                EmptyMessage(
+                    message = stringResource(R.string.no_favorites_rss),
+                    isLoading = state.isLoading
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 120.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.items, key = { "${it.origin}|${it.link}" }) { rssStar ->
+                    val id = "${rssStar.origin}|${rssStar.link}"
+                    val isSelected = state.selectedIds.contains(id)
+                    SelectionItemCard(
+                        title = rssStar.title,
+                        subtitle = if (rssStar.group.isNotBlank()) {
+                            "${rssStar.group} �?${rssStar.pubDate ?: ""}"
+                        } else {
+                            rssStar.pubDate
+                        },
+                        isSelected = isSelected,
+                        inSelectionMode = state.selectedIds.isNotEmpty(),
+                        onToggleSelection = {
+                            onIntent(RssFavoritesIntent.ToggleSelection(rssStar))
+                        },
+                        leadingContent = if (!rssStar.image.isNullOrBlank()) {
+                            {
+                                SourceIcon(
+                                    path = rssStar.image,
+                                    sourceOrigin = rssStar.origin,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .padding(vertical = 12.dp)
+                                        .size(54.dp)
+                                )
+                            }
+                        } else null,
+                        trailingAction = {
+                            val openAction = {
+                                onOpenRead(rssStar.title, rssStar.origin, rssStar.link, null)
+                            }
+                            SmallPlainButton(
+                                onClick = openAction,
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = stringResource(R.string.open)
+                            )
+                        },
+                        dropdownContent = { dismiss ->
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.change_group),
+                                onClick = {
+                                    showSetGroupDialog = rssStar
+                                    dismiss()
+                                }
+                            )
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.delete),
+                                onClick = {
+                                    onIntent(RssFavoritesIntent.DeleteStar(rssStar))
+                                    dismiss()
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}

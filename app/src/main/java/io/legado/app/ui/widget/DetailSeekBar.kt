@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.appcompat.widget.TooltipCompat
+import androidx.core.view.ViewCompat
 import com.google.android.material.slider.Slider
 import io.legado.app.R
 import io.legado.app.databinding.ViewDetailSeekBarBinding
@@ -58,8 +60,11 @@ class DetailSeekBar @JvmOverloads constructor(
 
         binding.tvSeekTitle.apply {
             text = title
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             TooltipCompat.setTooltipText(this, title)
         }
+        binding.tvSeekValue.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        binding.slider.contentDescription = title
 
         binding.slider.valueFrom = typedArray.getInteger(R.styleable.DetailSeekBar_min, 0).toFloat()
         binding.slider.valueTo = typedArray.getInteger(R.styleable.DetailSeekBar_max, 0).toFloat()
@@ -84,14 +89,13 @@ class DetailSeekBar @JvmOverloads constructor(
             }
         })
 
+        upValue()
     }
 
     private fun upValue(progress: Int = binding.slider.value.toInt()) {
-        valueFormat?.let {
-            binding.tvSeekValue.text = it.invoke(progress)
-        } ?: let {
-            binding.tvSeekValue.text = progress.toString()
-        }
+        val displayValue = valueFormat?.invoke(progress) ?: progress.toString()
+        binding.tvSeekValue.text = displayValue
+        ViewCompat.setStateDescription(binding.slider, displayValue)
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -100,6 +104,8 @@ class DetailSeekBar @JvmOverloads constructor(
 
     fun setTitle(title: CharSequence?) {
         binding.tvSeekTitle.text = title
+        binding.slider.contentDescription = title
         TooltipCompat.setTooltipText(binding.tvSeekTitle, title)
+        upValue()
     }
 }

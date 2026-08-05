@@ -1,0 +1,399 @@
+package io.legado.app.domain.usecase
+
+import io.legado.app.constant.AppLog
+import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.gateway.BookSearchGateway
+import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.model.MatchMode
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.model.webBook.WebBook
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.coroutineContext
+
+data class BookSearchRequest(
+    val keyword: String,
+    val page: Int,
+    val scope: BookSearchScope,
+    val matchMode: MatchMode,
+    val concurrency: Int,
+    val types: Set<Int>? = null,
+)
+
+sealed interface SearchRunEvent {
+    data object Started : SearchRunEvent
+
+    data class Progress(
+        val upsertBooks: List<SearchBook>,
+        val removedBookUrls: List<String>,
+        val resultCount: Int,
+        val processedSources: Int,
+        val totalSources: Int,
+    ) : SearchRunEvent
+
+    data class Finished(
+        val isEmpty: Boolean,
+        val hasMore: Boolean,
+    ) : SearchRunEvent
+}
+
+class BookSearchControl {
+    private val isResumed = MutableStateFlow(true)
+
+    fun pause() {
+        isResumed.value = false
+    }
+
+    fun resume() {
+        isResumed.value = true
+    }
+
+    suspend fun awaitResumed() {
+        isResumed.first { it }
+    }
+}
+
+class SearchBooksUseCase(
+    private val gateway: BookSearchGateway,
+) {
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun execute(
+        request: BookSearchRequest,
+        control: BookSearchControl,
+    ): Flow<SearchRunEvent> = flow {
+        val keyword = request.keyword.trim()
+        if (keyword.isBlank()) return@flow
+
+        val sourceParts = gateway.getBookSourceParts(request.scope)
+        if (sourceParts.isEmpty()) {
+            throw NoStackTraceException("启用书源为空")
+        }
+
+        val searchableSources = coroutineScope {
+            sourceParts.map { part ->
+                async(Dispatchers.IO) {
+                    val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
+                    if (source.searchUrl.isNullOrBlank()) {
+                        return@async null
+                    }
+                    if (request.types != null && !request.types.contains(source.bookSourceType)) {
+                        return@async null
+                    }
+                    SearchableSource(part, source)
+                }
+            }.awaitAll().filterNotNull()
+        }
+        if (searchableSources.isEmpty()) {
+            throw NoStackTraceException("可搜索书源为空")
+        }
+
+        val merger = SearchResultMerger(keyword, request.matchMode)
+        val concurrency = request.concurrency.coerceAtLeast(1)
+        var hasMore = false
+        var processedSources = 0
+        var failedSources = 0
+        var firstFailureMessage: String? = null
+
+        emit(SearchRunEvent.Started)
+
+        searchableSources.asFlow()
+            .flatMapMerge(concurrency) { searchableSource ->
+                flow {
+                    control.awaitResumed()
+                    emit(searchSource(searchableSource, keyword, request.page, request.matchMode))
+                }.flowOn(Dispatchers.IO)
+            }
+            .collect { result ->
+                currentCoroutineContext().ensureActive()
+                processedSources++
+                when (result) {
+                    is SourceSearchResult.Found -> {
+                        result.books.forEach { it.releaseHtmlData() }
+                        hasMore = hasMore || (result.supportsNextPage && result.books.isNotEmpty())
+                        if (result.books.isNotEmpty()) {
+                            gateway.saveSearchBooks(result.books)
+                        }
+                        val change = merger.merge(result.books)
+                        emit(
+                            SearchRunEvent.Progress(
+                                upsertBooks = change.upsertBooks,
+                                removedBookUrls = change.removedBookUrls,
+                                resultCount = merger.count,
+                                processedSources = processedSources,
+                                totalSources = searchableSources.size,
+                            )
+                        )
+                    }
+
+                    is SourceSearchResult.Failed -> {
+                        failedSources++
+                        if (firstFailureMessage.isNullOrBlank()) {
+                            firstFailureMessage = result.throwable.localizedMessage
+                        }
+                        AppLog.put("书源搜索出错\n${result.throwable.localizedMessage}", result.throwable)
+                        emit(
+                            SearchRunEvent.Progress(
+                                upsertBooks = emptyList(),
+                                removedBookUrls = emptyList(),
+                                resultCount = merger.count,
+                                processedSources = processedSources,
+                                totalSources = searchableSources.size,
+                            )
+                        )
+                    }
+                }
+            }
+
+        if (merger.count == 0 && failedSources == searchableSources.size) {
+            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "全部书源搜索失败"
+            throw NoStackTraceException(error)
+        }
+
+        emit(
+            SearchRunEvent.Finished(
+                isEmpty = merger.count == 0,
+                hasMore = hasMore && !merger.resultLimitReached,
+            )
+        )
+    }.flowOn(Dispatchers.IO)
+
+    private suspend fun searchSource(
+        searchableSource: SearchableSource,
+        keyword: String,
+        page: Int,
+        matchMode: MatchMode,
+    ): SourceSearchResult {
+        return try {
+            val source = searchableSource.source
+            val supportsSearchPage = source.supportsSearchPage()
+            if (page > 1 && !supportsSearchPage) {
+                return SourceSearchResult.Found(emptyList())
+            }
+            val books = withTimeout(30000L) {
+                WebBook.searchBookAwait(
+                    source,
+                    keyword,
+                    page,
+                    filter = { name, author, kind ->
+                        matchMode == MatchMode.DEFAULT ||
+                            name.contains(keyword, ignoreCase = true) ||
+                            author.contains(keyword, ignoreCase = true) ||
+                            kind?.contains(keyword, ignoreCase = true) == true
+                    }
+                )
+            }
+            SourceSearchResult.Found(books, supportsSearchPage)
+        } catch (exception: Throwable) {
+            coroutineContext.ensureActive()
+            if (exception is CancellationException) throw exception
+            SourceSearchResult.Failed(exception)
+        }
+    }
+
+
+
+    private data class SearchableSource(
+        val part: BookSourcePart,
+        val source: BookSource,
+    )
+    private sealed interface SourceSearchResult {
+        data class Found(
+            val books: List<SearchBook>,
+            val supportsNextPage: Boolean = false,
+        ) : SourceSearchResult
+
+        data class Failed(val throwable: Throwable) : SourceSearchResult
+    }
+
+    private class SearchResultMerger(
+        private val keyword: String,
+        private val matchMode: MatchMode,
+    ) {
+        private companion object {
+            const val MAX_RETAINED_SEARCH_RESULTS = 1000
+        }
+
+        private val equalBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val tagsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val containsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val otherBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val bookUrlIndex = HashMap<String, SearchBookKey>()
+        var resultLimitReached = false
+            private set
+
+        val count: Int
+            get() = equalBooks.size + tagsBooks.size + containsBooks.size + otherBooks.size
+
+        private fun allBuckets(): Sequence<Map.Entry<SearchBookKey, SearchBook>> =
+            sequenceOf(equalBooks, tagsBooks, containsBooks, otherBooks).flatMap { it.entries }
+
+        suspend fun merge(newBooks: List<SearchBook>): SearchBookChange {
+            if (newBooks.isEmpty()) return SearchBookChange()
+
+            val upsertBooks = arrayListOf<SearchBook>()
+            val removedBookUrls = linkedSetOf<String>()
+            val touchedBuckets = linkedSetOf<LinkedHashMap<SearchBookKey, SearchBook>>()
+            newBooks.forEach { newBook ->
+                coroutineContext.ensureActive()
+                val existingKey = bookUrlIndex[newBook.bookUrl]
+                if (existingKey != null) {
+                    val existingEntry = allBuckets().firstOrNull { it.key == existingKey }
+                    val existingBook = existingEntry?.value
+                    if (existingBook != null) {
+                        existingBook.addOrigin(newBook.origin)
+                        upsertBooks.add(existingBook)
+                        val existingBucket = findBucket(existingKey)
+                        if (existingBucket != null) {
+                            touchedBuckets.add(existingBucket)
+                        }
+                        return@forEach
+                    }
+                }
+                val bucket = classifyBucket(newBook) ?: return@forEach
+                val key = SearchBookKey(newBook.name, newBook.author)
+                val currentBook = bucket[key]
+                if (currentBook == null) {
+                    bucket[key] = newBook
+                    bookUrlIndex[newBook.bookUrl] = key
+                    upsertBooks.add(newBook)
+                } else {
+                    currentBook.addOrigin(newBook.origin)
+                    upsertBooks.add(currentBook)
+                }
+                touchedBuckets.add(bucket)
+                trimSearchBooks()?.let { removed ->
+                    removedBookUrls.add(removed.bookUrl)
+                    bookUrlIndex.remove(removed.bookUrl)
+                    upsertBooks.removeAll { it.bookUrl == removed.bookUrl }
+                }
+            }
+            // Re-sort touched buckets by origins.size descending
+            touchedBuckets.forEach { bucket ->
+                sortBucket(bucket)
+            }
+            return SearchBookChange(upsertBooks, removedBookUrls.toList())
+        }
+
+        /**
+         * 将书籍分类到对应的优先级桶中：
+         * - equalBooks: 书名或作者完全等于搜索词
+         * - tagsBooks:   分类标签包含搜索词
+         * - containsBooks: 书名或作者包含搜索词（非精确匹配）
+         * - otherBooks:  其他结果（仅 DEFAULT 模式保留）
+         */
+        private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
+            return when {
+                book.name.equals(keyword, ignoreCase = true) ||
+                    book.author.equals(keyword, ignoreCase = true) -> equalBooks
+                book.kind?.contains(keyword, ignoreCase = true) == true -> {
+                    if (matchMode != MatchMode.DEFAULT) null else tagsBooks
+                }
+                book.name.contains(keyword, ignoreCase = true) ||
+                    book.author.contains(keyword, ignoreCase = true) -> {
+                    if (matchMode == MatchMode.EXACT) null else containsBooks
+                }
+                matchMode != MatchMode.DEFAULT -> null
+                else -> otherBooks
+            }
+        }
+
+        private fun findBucket(key: SearchBookKey): LinkedHashMap<SearchBookKey, SearchBook>? {
+            return when {
+                key in equalBooks -> equalBooks
+                key in tagsBooks -> tagsBooks
+                key in containsBooks -> containsBooks
+                key in otherBooks -> otherBooks
+                else -> null
+            }
+        }
+
+        /**
+         * 按 origins.size 降序重新排列桶内元素。
+         * 使用 sortedEntries 重建 LinkedHashMap 以保持排序后的迭代顺序。
+         */
+        private fun sortBucket(bucket: LinkedHashMap<SearchBookKey, SearchBook>) {
+            if (bucket.size <= 1) return
+            val sorted = bucket.entries.sortedByDescending { it.value.origins.size }
+            bucket.clear()
+            sorted.forEach { (k, v) -> bucket[k] = v }
+        }
+
+        /**
+         * 获取排序后的最终结果列表。
+         * 每个桶内按来源数量降序排列（多源 = 更可靠），桶间按优先级拼接。
+         */
+        fun getSortedList(): List<SearchBook> {
+            val sorted = ArrayList<SearchBook>(count)
+            sorted.addAll(equalBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(tagsBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(containsBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(otherBooks.values)
+            return sorted
+        }
+
+        private fun trimSearchBooks(): SearchBook? {
+            if (count <= MAX_RETAINED_SEARCH_RESULTS) return null
+            resultLimitReached = true
+            return removeLast(otherBooks)
+                ?: removeLast(tagsBooks)
+                ?: removeLowestOrigin(containsBooks)
+                ?: removeLowestOrigin(equalBooks)
+        }
+
+        private fun removeLast(bucket: LinkedHashMap<SearchBookKey, SearchBook>): SearchBook? {
+            val key = bucket.keys.lastOrNull() ?: return null
+            return bucket.remove(key)
+        }
+
+        private fun removeLowestOrigin(bucket: LinkedHashMap<SearchBookKey, SearchBook>): SearchBook? {
+            val key = bucket.entries.minByOrNull { it.value.origins.size }?.key ?: return null
+            return bucket.remove(key)
+        }
+    }
+
+    private data class SearchBookKey(
+        val name: String,
+        val author: String,
+    )
+
+    private data class SearchBookChange(
+        val upsertBooks: List<SearchBook> = emptyList(),
+        val removedBookUrls: List<String> = emptyList(),
+    )
+}
+
+internal fun BookSource.supportsSearchPage(): Boolean {
+    val url = searchUrl.orEmpty()
+    if (url.isBlank()) return false
+
+    if (searchPageScriptPattern.findAll(url).any { searchPageTokenPattern.containsMatchIn(it.value) }) {
+        return true
+    }
+
+    val staticUrl = searchPageScriptPattern.replace(url, "")
+    return searchPageGroupPattern.containsMatchIn(staticUrl)
+}
+
+private val searchPageScriptPattern = Regex(
+    pattern = """\{\{[\s\S]*?\}\}|<js>[\s\S]*?</js>|@js:[\s\S]*""",
+    option = RegexOption.IGNORE_CASE,
+)
+private val searchPageTokenPattern = Regex("""(?<![A-Za-z0-9_])page(?![A-Za-z0-9_])""")
+private val searchPageGroupPattern = Regex("""<[^<>]+>""")

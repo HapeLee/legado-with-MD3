@@ -7,10 +7,11 @@ import android.net.Uri
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
@@ -18,12 +19,20 @@ import io.legado.app.help.book.removeType
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
+import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
+import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileOutputStream
+
+enum class BookInfoEditType {
+    TEXT,
+    AUDIO,
+    IMAGE
+}
 
 data class BookInfoEditUiState(
     val name: String = "",
@@ -31,36 +40,52 @@ data class BookInfoEditUiState(
     val coverUrl: String? = null,
     val intro: String? = null,
     val remark: String? = null,
-    val selectedType: String = "文本",
-    val bookTypes: List<String> = listOf("文本", "音频", "图片"),
+    val sourceKindList: List<String> = emptyList(),
+    val kindList: List<String> = emptyList(),
+    val originalKindList: List<String> = emptyList(),
+    val selectedType: BookInfoEditType = BookInfoEditType.TEXT,
+    val fixedType: Boolean = false,
     val book: Book? = null,
 )
 
-class BookInfoEditViewModel(application: Application) : BaseViewModel(application) {
+class BookInfoEditViewModel(
+    application: Application,
+    private val bookRepository: BookRepository,
+) : BaseViewModel(application) {
     var book: Book? = null
     private val _uiState = MutableStateFlow(BookInfoEditUiState())
     val uiState: StateFlow<BookInfoEditUiState> = _uiState.asStateFlow()
 
     fun loadBook(bookUrl: String) {
         execute {
-            book = appDb.bookDao.getBook(bookUrl)
+            book = bookRepository.getBook(bookUrl)
             book?.let {
-                val selectedTypeIndex = when {
-                    it.isImage -> 2
-                    it.isAudio -> 1
-                    else -> 0
+                val selectedType = when {
+                    it.isImage -> BookInfoEditType.IMAGE
+                    it.isAudio -> BookInfoEditType.AUDIO
+                    else -> BookInfoEditType.TEXT
                 }
+                val sourceKinds = it.kind?.splitNotBlank(",", "\n").orEmpty().distinct()
+                val customTags = it.customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
                 _uiState.value = BookInfoEditUiState(
                     name = it.name,
                     author = it.author,
                     coverUrl = it.getDisplayCover(),
                     intro = it.getDisplayIntro(),
                     remark = it.remark,
-                    selectedType = _uiState.value.bookTypes[selectedTypeIndex],
+                    sourceKindList = sourceKinds,
+                    kindList = customTags,
+                    originalKindList = customTags,
+                    selectedType = selectedType,
+                    fixedType = it.config.fixedType,
                     book = it
                 )
             }
         }
+    }
+
+    fun resetKinds() {
+        _uiState.value = _uiState.value.copy(kindList = _uiState.value.originalKindList.toList())
     }
 
     fun onNameChange(name: String) {
@@ -83,8 +108,16 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         _uiState.value = _uiState.value.copy(remark = remark)
     }
 
-    fun onBookTypeChange(bookType: String) {
+    fun onKindListChange(kindList: List<String>) {
+        _uiState.value = _uiState.value.copy(kindList = kindList.distinct())
+    }
+
+    fun onBookTypeChange(bookType: BookInfoEditType) {
         _uiState.value = _uiState.value.copy(selectedType = bookType)
+    }
+
+    fun onFixedTypeChange(fixed: Boolean) {
+        _uiState.value = _uiState.value.copy(fixedType = fixed)
     }
 
     fun resetCover() {
@@ -101,20 +134,23 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 book.remark = currentState.remark
                 val local = if (book.isLocal) BookType.local else 0
                 val bookType = when (currentState.selectedType) {
-                    currentState.bookTypes[2] -> BookType.image or local
-                    currentState.bookTypes[1] -> BookType.audio or local
+                    BookInfoEditType.IMAGE -> BookType.image or local
+                    BookInfoEditType.AUDIO -> BookType.audio or local
                     else -> BookType.text or local
                 }
                 book.removeType(BookType.local, BookType.image, BookType.audio, BookType.text)
                 book.addType(bookType)
+                book.config.fixedType = currentState.fixedType
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
+                book.customTag = currentState.kindList.joinToString(",").ifBlank { null }
+                applyTagGroupRulesForBook(book)
                 BookHelp.updateCacheFolder(oldBook, book)
 
-                if (ReadBook.book?.bookUrl == book.bookUrl) {
-                    ReadBook.book = book
+                if (ReadBook.isCurrentBook(book.bookUrl)) {
+                    ReadBook.replaceCurrentBook(book)
                 }
-                appDb.bookDao.update(book)
+                bookRepository.update(book)
             }
         }.onSuccess {
             onSuccess.invoke()
@@ -130,20 +166,23 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
     fun coverChangeTo(context: Context, uri: Uri) {
         execute {
             runCatching {
-                context.externalCacheDir?.let { externalCacheDir ->
-                    val file = File(externalCacheDir, "covers")
-                    val suffix = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: "jpg"
-                    val fileName = uri.inputStream(context).getOrThrow().use { MD5Utils.md5Encode(it) } + ".$suffix"
-                    val coverFile = FileUtils.createFileIfNotExist(file, fileName)
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        FileOutputStream(coverFile).use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
+                val suffix = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: "jpg"
+                val coversDir = FileUtils.createFolderIfNotExist(context.externalFiles, "covers")
+                val tempFile = File(coversDir, "${System.currentTimeMillis()}.tmp")
+                uri.inputStream(context).getOrThrow().use { inputStream ->
+                    FileOutputStream(tempFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
                     }
-                    _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
-                } ?: run {
-                    AppLog.put("External cache directory is null", Throwable("Null directory"), true)
                 }
+                val md5 = tempFile.inputStream().use { MD5Utils.md5Encode(it) }
+                val coverFile = File(coversDir, "$md5.$suffix")
+                if (coverFile.exists()) {
+                    tempFile.delete()
+                } else if (!tempFile.renameTo(coverFile)) {
+                    tempFile.copyTo(coverFile, overwrite = true)
+                    tempFile.delete()
+                }
+                _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
             }.onFailure {
                 AppLog.put("书籍封面保存失败\n$it", it, true)
             }

@@ -20,7 +20,7 @@ object DatabaseMigrations {
             migration_31_32, migration_32_33, migration_33_34, migration_34_35,
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
-            migration_82_83,
+            migration_82_83, migration_98_99, migration_99_100,
         )
     }
 
@@ -451,7 +451,6 @@ object DatabaseMigrations {
         }
     }
 
-
     @Suppress("ClassName")
     class Migration_54_55 : AutoMigrationSpec {
 
@@ -498,4 +497,58 @@ object DatabaseMigrations {
     )
     class Migration_64_65 : AutoMigrationSpec
 
+    //已在书架的书没有 listIntro, 搜索缓存里还留着的就补回去(缓存只保留一天, 补不到的回落到 intro)
+    @Suppress("ClassName")
+    class Migration_100_101 : AutoMigrationSpec {
+
+        override fun onPostMigrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                update books set listIntro = (
+                    select intro from searchBooks where searchBooks.bookUrl = books.bookUrl
+                )
+                where listIntro is null
+            """.trimIndent()
+            )
+        }
+    }
+
+    private val migration_98_99 = object : Migration(98, 99) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `txtTocRules_new` (
+                    `id` INTEGER NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `chapterRule` TEXT NOT NULL,
+                    `volumeRule` TEXT NOT NULL DEFAULT '',
+                    `example` TEXT,
+                    `serialNumber` INTEGER NOT NULL,
+                    `enable` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                INSERT INTO txtTocRules_new (id, name, chapterRule, volumeRule, example, serialNumber, enable)
+                SELECT id, name, rule, '', example, serialNumber, enable FROM txtTocRules
+                """.trimIndent()
+            )
+            database.execSQL("DROP TABLE txtTocRules")
+            database.execSQL("ALTER TABLE txtTocRules_new RENAME TO txtTocRules")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN fontWeight INTEGER NOT NULL DEFAULT 400")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN isItalic INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN npLeft REAL NOT NULL DEFAULT 0.1")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN npRight REAL NOT NULL DEFAULT 0.1")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN npTop REAL NOT NULL DEFAULT 0.1")
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN npBottom REAL NOT NULL DEFAULT 0.1")
+        }
+    }
+
+    private val migration_99_100 = object : Migration(99, 100) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE highlightRules ADD COLUMN fontSizeOffset INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 }

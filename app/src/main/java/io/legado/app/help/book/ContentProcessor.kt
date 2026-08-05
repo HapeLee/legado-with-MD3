@@ -7,8 +7,10 @@ import io.legado.app.constant.AppPattern.spaceRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.exception.RegexTimeoutException
+import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.utils.ChineseUtils
@@ -101,6 +103,7 @@ class ContentProcessor private constructor(
         var mContent = content
         var sameTitleRemoved = false
         var effectiveReplaceRules: ArrayList<ReplaceRule>? = null
+        var effectiveContentProcesses: List<BookContentProcess> = emptyList()
         if (content != "null") {
             //去除重复标题
             val fileName = chapter.getFileName("nr")
@@ -112,11 +115,12 @@ class ContentProcessor private constructor(
                 if (matcher.find()) {
                     mContent = mContent.substring(matcher.end())
                     sameTitleRemoved = true
-                } else if (useReplace && book.getUseReplaceRule()) {
+                } else if (useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault)) {
                     title = Pattern.quote(
                         chapter.getDisplayTitle(
                             contentReplaceRules,
-                            chineseConvert = false
+                            chineseConvert = false,
+                            chineseConverterType = AppConfig.chineseConverterType,
                         )
                     )
                     matcher = Pattern.compile("^(\\s|\\p{P}|${name})*${title}(\\s)*")
@@ -152,7 +156,7 @@ class ContentProcessor private constructor(
                     placeholder
                 }
             }
-            if (useReplace && book.getUseReplaceRule()) {
+            if (useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault)) {
                 val replaceBook = book.toSearchBook()
                 //替换
                 effectiveReplaceRules = arrayListOf()
@@ -191,12 +195,22 @@ class ContentProcessor private constructor(
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 mContent = mContent.replace(placeholder, originalContent)
             }
+            val contentProcesses = appDb.bookContentProcessDao.getForChapterSync(
+                bookUrl = book.bookUrl,
+                chapterIndex = chapter.index,
+            )
+            if (contentProcesses.isNotEmpty()) {
+                val applyResult = BookContentProcessEngine.apply(mContent, contentProcesses)
+                mContent = applyResult.text
+                effectiveContentProcesses = applyResult.effectiveProcesses
+            }
         }
         if (includeTitle) {
             //重新添加标题
             mContent = chapter.getDisplayTitle(
                 getTitleReplaceRules(),
-                useReplace = useReplace && book.getUseReplaceRule()
+                useReplace = useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
             ) + "\n" + mContent
         }
         if (isAndroid8) {
@@ -215,7 +229,7 @@ class ContentProcessor private constructor(
                 }
             }
         }
-        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules)
+        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules, effectiveContentProcesses)
     }
 
 }

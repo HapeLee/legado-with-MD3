@@ -11,16 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,8 +30,18 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.SettingCard
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -42,6 +50,7 @@ fun SettingItem(
     painter: Painter? = null,
     imageVector: ImageVector? = null,
     color: Color? = null,
+    cornerRadius: androidx.compose.ui.unit.Dp = 4.dp,
     title: String,
     description: String? = null,
     option: String? = null,
@@ -49,6 +58,10 @@ fun SettingItem(
     dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    semanticRole: Role? = null,
+    semanticStateDescription: String? = null,
+    semanticToggleState: Boolean? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null
@@ -57,16 +70,28 @@ fun SettingItem(
     var showMenu by remember { mutableStateOf(false) }
     val isExpandable = expandContent != null && onExpandChange != null
 
-    GlassCard(
-        modifier = Modifier
+    SettingCard(
+        modifier = modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
-        color = color ?: MaterialTheme.colorScheme.surfaceContainerLow,
+        cornerRadius = cornerRadius,
+        colors = CardDefaults.cardColors(
+            containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
+        ),
     ) {
         Column {
             ListItem(
-                modifier = modifier
+                modifier = Modifier
+                    .semantics(mergeDescendants = true) {
+                        semanticRole?.let { role = it }
+                        semanticStateDescription?.let { stateDescription = it }
+                        semanticToggleState?.let {
+                            toggleableState = if (it) ToggleableState.On else ToggleableState.Off
+                        }
+                        if (!enabled) disabled()
+                    }
                     .combinedClickable(
+                        enabled = enabled,
+                        role = semanticRole,
                         onClick = {
                             when {
                                 dropdownMenu != null -> showMenu = true
@@ -96,26 +121,20 @@ fun SettingItem(
                         }
                     }
                 } else null,
-                headlineContent = {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
                 supportingContent = if (description != null || option != null) {
                     {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             description?.let {
-                                Text(
+                                AppText(
                                     it,
-                                    style = MaterialTheme.typography.bodySmallEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = LegadoTheme.typography.bodySmallEmphasized,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
                             option?.let {
-                                Text(
+                                AppText(
                                     it,
-                                    style = MaterialTheme.typography.labelMediumEmphasized,
+                                    style = LegadoTheme.typography.labelMediumEmphasized,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -139,7 +158,7 @@ fun SettingItem(
                         }
 
                         dropdownMenu?.let { menu ->
-                            DropdownMenu(
+                            RoundDropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }) {
                                 menu { showMenu = false }
@@ -148,7 +167,12 @@ fun SettingItem(
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleMedium
+                )
+            }
 
             if (isExpandable) {
                 AnimatedVisibility(

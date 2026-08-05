@@ -55,6 +55,8 @@
 
     //**********System Style******************//
 
+    <style name="Spinner" parent="android:Theme.Holo.Light" />
+
     <style name="ShapeAppearanceOverlay.Circle" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>

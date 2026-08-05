@@ -1,31 +1,61 @@
 package io.legado.app.ui.config.themeConfig
 
-import io.legado.app.constant.PreferKey
-import io.legado.app.ui.config.prefDelegate
+import androidx.appcompat.app.AppCompatDelegate
+import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.BackupSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import org.koin.core.context.GlobalContext
 
+data class TagColorPair(
+    val textColor: Int = 0,
+    val bgColor: Int = 0,
+)
+
+@Deprecated("使用 ThemeSettingsGateway / AppShellSettingsGateway.currentSettings")
 object ThemeConfig {
+    const val BOOK_INFO_BACKGROUND_BLUR_OFF = "off"
+    const val BOOK_INFO_BACKGROUND_BLUR_ON = "on"
+    const val BOOK_INFO_BACKGROUND_COVER_HIDDEN = "off_for_default"
 
-    var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
+    private val theme get() = GlobalContext.get().get<ThemeSettingsGateway>().currentSettings
+    private val shell get() = GlobalContext.get().get<AppShellSettingsGateway>().currentSettings
+    private val other get() = GlobalContext.get().get<OtherSettingsGateway>().currentSettings
+    private val backup get() = GlobalContext.get().get<BackupSettingsGateway>().currentSettings
 
-    var enableBlur by prefDelegate(PreferKey.enableBlur, false)
+    val containerOpacity get() = theme.containerOpacity
+    val enableBlur get() = theme.enableBlur
+    val paletteStyle get() = theme.paletteStyle
+    val materialVersion get() = theme.materialVersion
+    val appTheme get() = theme.appTheme
+    val themeMode get() = shell.themeMode
+    val isPureBlack get() = theme.isPureBlack
+    val bgImageLight get() = theme.backgroundImageLight
+    val bgImageDark get() = theme.backgroundImageDark
+    val bgImageBlurring get() = theme.backgroundImageBlurring
+    val bgImageNBlurring get() = theme.backgroundImageDarkBlurring
+    val isPredictiveBackEnabled get() = shell.predictiveBackEnabled
+    val customMode get() = theme.customMode
+    val fontScale get() = shell.fontScale
+    val appFontPath get() = theme.appFontPath
+    val showHome get() = shell.showHome
+    val showDiscovery get() = shell.showDiscovery
+    val showRss get() = shell.showRss
+    val showStatusBar get() = shell.showStatusBar
+    val swipeAnimation get() = shell.swipeAnimation
+    val showBottomView get() = shell.showBottomView
+    val tabletInterface get() = shell.tabletInterface
+    val labelVisibilityMode get() = shell.labelVisibilityMode
+    val defaultHomePage get() = shell.defaultHomePage
+    val autoRefreshBook get() = other.autoRefresh
+    val autoCheckNewBackup get() = backup.autoCheckNewBackup
 
-    var enableProgressiveBlur by prefDelegate(PreferKey.enableProgressiveBlur, true)
-
-    var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
-
-    var appTheme by prefDelegate(PreferKey.appTheme, "0")
-
-    var isPureBlack by prefDelegate(PreferKey.pureBlack, false)
-
-    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null)
-
-    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null)
-
-    fun hasImageBg(isDark: Boolean): Boolean {
-        return if (isDark) {
-            !bgImageDark.isNullOrEmpty()
-        } else {
-            !bgImageLight.isNullOrEmpty()
+    fun initNightMode() {
+        val mode = when (themeMode) {
+            "1" -> AppCompatDelegate.MODE_NIGHT_NO
+            "2" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
+        AppCompatDelegate.setDefaultNightMode(mode)
     }
 }

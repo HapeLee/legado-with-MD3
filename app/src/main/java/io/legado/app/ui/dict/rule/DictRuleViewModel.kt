@@ -1,16 +1,13 @@
 package io.legado.app.ui.dict.rule
 
 import android.app.Application
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.rules.InteractionState
-import io.legado.app.ui.widget.components.rules.ListUiState
-import io.legado.app.ui.widget.components.rules.SelectableItem
+import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
@@ -18,47 +15,93 @@ import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Immutable
-data class DictRuleItemUi(
-    override val id: String,
-    val urlRule: String,
-    val showRule: String,
-    val isEnabled: Boolean,
-    val rule: DictRule
-) : SelectableItem<String>
-
-data class DictRuleUiState(
-    override val items: List<DictRuleItemUi> = emptyList(),
-    override val selectedIds: Set<String> = emptySet(),
-    override val searchKey: String = "",
-    val interaction: InteractionState = InteractionState()
-) : ListUiState<DictRuleItemUi> {
-    override val isSearch: Boolean get() = interaction.isSearchMode
-    override val isLoading: Boolean get() = interaction.isUploading
-}
-
 class DictRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: DictRuleRepository,
 ) : BaseRuleViewModel<DictRuleItemUi, DictRule, String, DictRuleUiState>(
     application,
     DictRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = DictRuleRepository()
+    private val _effects = MutableSharedFlow<DictRuleEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     override val rawDataFlow: Flow<List<DictRule>> = repository.flowAll()
 
-    override fun filterData(data: List<DictRule>, key: String): List<DictRule> {
-        val filtered = if (key.isEmpty()) data
-        else data.filter { it.name.contains(key, ignoreCase = true) }
+    fun onIntent(intent: DictRuleIntent) {
+        when (intent) {
+            is DictRuleIntent.SetSearchMode -> setSearchMode(intent.active)
+            is DictRuleIntent.UpdateSearchQuery -> setSearchKey(intent.query)
+            DictRuleIntent.ClearSelection -> setSelection(emptySet())
+            DictRuleIntent.SelectAll -> selectAll()
+            DictRuleIntent.InvertSelection -> invertSelection()
+            is DictRuleIntent.SetSelection -> setSelection(intent.ids)
+            is DictRuleIntent.ToggleSelection -> toggleSelection(intent.id)
+            DictRuleIntent.EnableSelection -> {
+                enableSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            DictRuleIntent.DisableSelection -> {
+                disableSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            DictRuleIntent.DeleteSelection -> {
+                delSelectionByIds(uiState.value.selectedIds)
+                setSelection(emptySet())
+            }
+            DictRuleIntent.UploadSelection -> {
+                val state = uiState.value
+                uploadSelectedRules(state.selectedIds, state.items)
+            }
+            is DictRuleIntent.ExportSelection -> {
+                val state = uiState.value
+                exportToUri(intent.uri, state.items, state.selectedIds)
+            }
+            is DictRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
+            DictRuleIntent.SaveSortOrder -> saveSortOrder()
+            is DictRuleIntent.SaveRule -> {
+                if (intent.isNew) {
+                    insert(intent.rule)
+                } else if (intent.originalName != null &&
+                    intent.originalName != intent.rule.name
+                ) {
+                    replacePrimaryKey(intent.originalName, intent.rule)
+                } else {
+                    update(intent.rule)
+                }
+            }
+            is DictRuleIntent.DeleteRule -> delete(intent.rule)
+            is DictRuleIntent.SetRuleEnabled -> update(intent.rule.copy(enabled = intent.enabled))
+            is DictRuleIntent.CopyRule -> copyRule(intent.rule)
+            is DictRuleIntent.ImportSource -> importSource(intent.text)
+            DictRuleIntent.CancelImport -> cancelImport()
+            is DictRuleIntent.ToggleImportSelection -> toggleImportSelection(intent.index)
+            is DictRuleIntent.ToggleImportAll -> toggleImportAll(intent.isSelected)
+            is DictRuleIntent.UpdateImportItem -> updateImportItem(intent.index, intent.rule)
+            DictRuleIntent.SaveImportedRules -> saveImportedRules()
+        }
+    }
+
+    override fun filterData(
+        data: List<DictRule>,
+        searchKey: String,
+        groupFilter: String
+    ): List<DictRule> {
+        val key = groupFilter.ifEmpty { searchKey }
+        val filtered = if (key.isEmpty()) data else {
+            data.filter { it.name.contains(key, ignoreCase = true) }
+        }
         return filtered.sortedBy { it.sortNumber }
     }
 
@@ -70,8 +113,8 @@ class DictRuleViewModel(
         importState: BaseImportUiState<DictRule>
     ): DictRuleUiState {
         return DictRuleUiState(
-            items = items,
-            selectedIds = selectedIds,
+            items = items.toImmutableList(),
+            selectedIds = selectedIds.toImmutableSet(),
             searchKey = _searchKey.value,
             interaction = InteractionState(
                 isSearchMode = isSearch,
@@ -141,8 +184,19 @@ class DictRuleViewModel(
         }
     }
 
+    private fun selectAll() {
+        setSelection(uiState.value.items.map { it.id }.toSet())
+    }
+
+    private fun invertSelection() {
+        val state = uiState.value
+        setSelection(state.items.map { it.id }.toSet() - state.selectedIds)
+    }
+
     fun update(vararg rule: DictRule) = viewModelScope.launch { repository.update(*rule) }
     fun insert(vararg rule: DictRule) = viewModelScope.launch { repository.insert(*rule) }
+    fun replacePrimaryKey(oldName: String, rule: DictRule) =
+        viewModelScope.launch { repository.replacePrimaryKey(oldName, rule) }
     fun delete(vararg dictRule: DictRule) = viewModelScope.launch { repository.delete(*dictRule) }
 
     fun copyRule(dictRule: DictRule) {
@@ -152,13 +206,13 @@ class DictRuleViewModel(
     fun pasteRule(): DictRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            _effects.tryEmit(DictRuleEffect.ShowMessage("剪贴板没有内容"))
             return null
         }
         return try {
             GSON.fromJsonObject<DictRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            _effects.tryEmit(DictRuleEffect.ShowMessage("格式不对"))
             null
         }
     }

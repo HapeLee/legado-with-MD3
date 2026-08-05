@@ -16,6 +16,7 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.receiver.NetworkChangedListener
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.getPrefBoolean
@@ -29,14 +30,18 @@ import io.legado.app.utils.startForegroundServiceCompat
 import io.legado.app.utils.startService
 import io.legado.app.utils.stopService
 import io.legado.app.utils.toastOnUi
-import io.legado.app.web.HttpServer
-import io.legado.app.web.WebSocketServer
+import io.legado.app.web.KtorServer
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import splitties.init.appCtx
 import splitties.systemservices.powerManager
 import splitties.systemservices.wifiManager
 import java.io.IOException
 
 class WebService : BaseService() {
+
+    private val otherSettingsGateway by inject<OtherSettingsGateway>()
 
     companion object {
         var isRun = false
@@ -76,8 +81,7 @@ class WebService : BaseService() {
                 setReferenceCounted(false)
             }
     }
-    private var httpServer: HttpServer? = null
-    private var webSocketServer: WebSocketServer? = null
+    private var ktorServer: KtorServer? = null
     private var notificationList = mutableListOf(appCtx.getString(R.string.service_starting))
     private val networkChangedListener by lazy {
         NetworkChangedListener(this)
@@ -120,7 +124,9 @@ class WebService : BaseService() {
         when (intent?.action) {
             IntentAction.stop -> {
                 // ——————【修改开始】通知栏点击停止时，也记录关闭状态——————
-                appCtx.putPrefBoolean("web_service_auto", false)
+                lifecycleScope.launch {
+                    otherSettingsGateway.update { it.copy(webServiceAutoStart = false) }
+                }
                 stopSelf()
                 // ——————【修改结束】——————
             }
@@ -143,32 +149,21 @@ class WebService : BaseService() {
         }
         networkChangedListener.unRegister()
         isRun = false
-        if (httpServer?.isAlive == true) {
-            httpServer?.stop()
-        }
-        if (webSocketServer?.isAlive == true) {
-            webSocketServer?.stop()
-        }
+        ktorServer?.stop()
         postEvent(EventBus.WEB_SERVICE, "")
         FlowEventBus.post(EventBus.WEB_SERVICE, "")
         upTile(false)
     }
 
     private fun upWebServer() {
-        if (httpServer?.isAlive == true) {
-            httpServer?.stop()
-        }
-        if (webSocketServer?.isAlive == true) {
-            webSocketServer?.stop()
-        }
+        ktorServer?.stop()
         val addressList = NetworkUtils.getLocalIPAddress()
         if (addressList.any()) {
             val port = getPort()
-            httpServer = HttpServer(port)
-            webSocketServer = WebSocketServer(port + 1)
+            ktorServer = KtorServer(port)
             try {
-                httpServer?.start()
-                webSocketServer?.start(1000 * 30) // 通信超时设置
+                ktorServer?.start()
+                ktorServer?.startWebSocket(port + 1)
                 notificationList.clear()
                 notificationList.addAll(addressList.map { address ->
                     getString(
@@ -182,7 +177,9 @@ class WebService : BaseService() {
                 postEvent(EventBus.WEB_SERVICE, hostAddress)
                 FlowEventBus.post(EventBus.WEB_SERVICE, hostAddress)
                 startForegroundNotification()
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                ktorServer?.stop()
+                ktorServer = null
                 toastOnUi(e.localizedMessage ?: "")
                 e.printOnDebug()
                 stopSelf()

@@ -6,7 +6,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import io.legado.app.R
-import io.legado.app.help.config.AppConfig
 import kotlinx.parcelize.Parcelize
 
 @Suppress("ConstPropertyName")
@@ -23,7 +22,9 @@ data class BookGroup(
     @ColumnInfo(defaultValue = "1")
     var show: Boolean = true,
     @ColumnInfo(defaultValue = "-1")
-    var bookSort: Int = -1
+    var bookSort: Int = -1,
+    @ColumnInfo(defaultValue = "0")
+    var isPrivate: Boolean = false
 ) : Parcelable {
 
     companion object {
@@ -39,6 +40,8 @@ data class BookGroup(
         const val IdReading = -20L
         const val IdUnread = -21L
         const val IdReadFinished = -22L
+        const val IdReadFinishedUpdate = -23L
+        const val IdReadFinishedComplete = -24L
     }
 
     data class GroupNameInfo(
@@ -59,13 +62,15 @@ data class BookGroup(
             IdReading -> GroupNameInfo(groupName, context.getString(R.string.is_reading))
             IdUnread -> GroupNameInfo(groupName, context.getString(R.string.is_unread))
             IdReadFinished -> GroupNameInfo(groupName, context.getString(R.string.is_read_finished))
+            IdReadFinishedUpdate -> GroupNameInfo(groupName, context.getString(R.string.is_read_finished_update))
+            IdReadFinishedComplete -> GroupNameInfo(groupName, context.getString(R.string.is_read_finished_complete))
             else -> GroupNameInfo(groupName)
         }
     }
 
-    fun getRealBookSort(): Int {
+    fun getRealBookSort(defaultBookSort: Int): Int {
         if (bookSort < 0) {
-            return AppConfig.bookshelfSort
+            return defaultBookSort
         }
         return bookSort
     }
@@ -83,6 +88,7 @@ data class BookGroup(
                     && other.enableRefresh == enableRefresh
                     && other.show == show
                     && other.order == order
+                    && other.isPrivate == isPrivate
         }
         return false
     }

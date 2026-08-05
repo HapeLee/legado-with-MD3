@@ -43,6 +43,7 @@ object SourceCallBack {
         source: BookSource?,
         book: Book,
         chapter: BookChapter?,
+        bookType: Int = 0,
         noCall: (() -> Unit)? = null
     ) {
         if (source == null || !source.eventListener) {
@@ -55,7 +56,7 @@ object SourceCallBack {
             return
         }
         activity.lifecycleScope.launch(IO) {
-            val java = SourceLoginJsExtensions(activity, source)
+            val java = SourceLoginJsExtensions(activity, source, bookType)
             kotlin.runCatching {
                 val result = runScriptWithContext {
                     source.evalJS(jsStr) {

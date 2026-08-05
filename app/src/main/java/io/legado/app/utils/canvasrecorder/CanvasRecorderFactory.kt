@@ -1,7 +1,7 @@
 package io.legado.app.utils.canvasrecorder
 
 import android.os.Build
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 
 object CanvasRecorderFactory {
 
@@ -12,7 +12,7 @@ object CanvasRecorderFactory {
     // issue 3868
     fun create(locked: Boolean = false): CanvasRecorder {
         val impl = when {
-            !AppConfig.optimizeRender -> CanvasRecorderImpl()
+            !ReadConfig.optimizeRender -> CanvasRecorderImpl()
             atLeastApi29 -> CanvasRecorderApi29Impl()
             atLeastApi24 -> CanvasRecorderApi23Impl()
             else -> CanvasRecorderImpl()

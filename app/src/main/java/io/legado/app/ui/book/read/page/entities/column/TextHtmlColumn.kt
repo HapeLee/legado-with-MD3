@@ -4,7 +4,6 @@ import android.graphics.Canvas
 import android.os.Build
 import android.text.TextPaint
 import androidx.annotation.Keep
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
@@ -20,8 +19,27 @@ data class TextHtmlColumn(
     override val charData: String,
     val mTextSize: Float,
     val mTextColor: Int?,
-    val linkUrl: String?
+    val linkUrl: String?,
+    override val bgColor: Int? = null,
+    override val underlineMode: Int = 0,
+    override val underlineColor: Int? = null,
+    override val underlineWidth: Float = 1f,
+    override val underlineOffset: Float = 2f,
+    override val underlineSvgPath: String = "",
+    override val bgImage: String = "",
+    override val bgImageFit: Int = 0,
+    override val bgImageScale: Float = 1f,
+    override val fontPath: String = "",
+    override val fontWeight: Int = 400,
+    override val isItalic: Boolean = false,
+    override val fontSizeOffset: Int = 0,
+    override val npLeft: Float = 0.1f,
+    override val npRight: Float = 0.1f,
+    override val npTop: Float = 0.1f,
+    override val npBottom: Float = 0.1f,
 ) : TextBaseColumn {
+
+    override val textColor: Int? get() = mTextColor
 
     override var textLine: TextLine = emptyTextLine
 
@@ -54,9 +72,10 @@ data class TextHtmlColumn(
 
     override fun draw(view: ContentTextView, canvas: Canvas) {
         val y = textLine.lineBase - textLine.lineTop
+        val renderStyle = ChapterProvider.renderStyle
         if (linkUrl != null) {
             textPaint.run {
-                color = ReadBookConfig.textAccentColor
+                color = renderStyle.textAccentColor
                 isUnderlineText = true
             }
             drawText(view, canvas, y, textPaint)
@@ -64,9 +83,9 @@ data class TextHtmlColumn(
         }
         textPaint.run {
             color = if (textLine.isReadAloud || isSearchResult) {
-                ReadBookConfig.textAccentColor
+                renderStyle.textAccentColor
             } else {
-                mTextColor ?: ReadBookConfig.textColor
+                mTextColor ?: renderStyle.textColor
             }
             isUnderlineText = false
         }

@@ -12,11 +12,24 @@
 		<item>File</item>
 	</string-array>
 
+	<string-array name="layout_type">
+		<item>List</item>
+		<item>Single Column</item>
+		<item>Two Columns</item>
+		<item>Waterfall</item>
+		<item>Three Columns</item>
+	</string-array>
+
+	<string-array name="rss_type">
+		<item>Web Page</item>
+		<item>Image</item>
+		<item>Video</item>
+	</string-array>
+
 	<string-array name="group_style">
 		<item>Tab</item>
-		<item>Folder</item>
 		<item>Hide Tab</item>
-		<item>Material Tab</item>
+		<item>Folder</item>
 	</string-array>
 
 	<string-array name="book_sort">
@@ -90,9 +103,6 @@
 	<string-array name="read_slider_mode">
 		<item>Always</item>
 		<item>Disable</item>
-		<item>Left button</item>
-		<item>Right button</item>
-		<item>Only slider</item>
 	</string-array>
 
 	<string-array name="title_bar_mode">
@@ -114,14 +124,15 @@
 		<item>@string/screen_landscape</item>
 		<item>@string/screen_sensor</item>
 		<item>@string/screen_portrait_reversed</item>
+		<item>@string/screen_landscape_reversed</item>
 	</string-array>
 
     <string-array name="click_image_way_title">
-        <item>新包名行为</item>
-        <item>预览图片</item>
-        <item>经典行为</item>
-        <item>关闭点击</item>
-        <item>双击生效</item>
+        <item>New Package Behavior</item>
+        <item>Preview Image</item>
+        <item>Classic</item>
+        <item>Disable Click</item>
+        <item>Double Click</item>
     </string-array>
 
     <string-array name="double_page_title">
@@ -134,6 +145,17 @@
 	<string-array name="progress_bar_behavior_title">
 		<item>@string/adjust_chapter_page</item>
 		<item>@string/adjust_chapter_index</item>
+	</string-array>
+
+	<string-array name="brightness_bar_mode_title">
+		<item>@string/brightness_bar_off</item>
+		<item>@string/brightness_bar_horizontal</item>
+		<item>@string/brightness_bar_vertical</item>
+	</string-array>
+
+	<string-array name="brightness_bar_position_title">
+		<item>@string/brightness_bar_left</item>
+		<item>@string/brightness_bar_right</item>
 	</string-array>
 
 	<string-array name="icon_names" tools:ignore="Typos">
@@ -179,10 +201,13 @@
 		<item>Time and Battery</item>
 		<item>Time and Battery Classic</item>
 		<item>Time and Battery%</item>
+		<item>Whole-book pages</item>
+		<item>Whole-book pages and progress</item>
+		<item>Custom</item>
 	</string-array>
 
 	<string-array name="text_font_weight">
-		<item>Normal</item>
+		<item>Regular</item>
 		<item>Bold</item>
 		<item>Light</item>
 	</string-array>
@@ -197,7 +222,7 @@
 	<string-array name="tabletInterface">
 		<item>Auto</item>
 		<item>Always</item>
-		<item>In_Landscape_Mode</item>
+		<item>Landscape Mode</item>
 		<item>Off</item>
 	</string-array>
 
@@ -213,9 +238,13 @@
         <item>Content</item>
     </string-array>
 
-    <string-array name="composeEngine">
+	<string-array name="materialVersion">
+		<item>Material 3 (2021)</item>
+		<item>Material 3 Expressive (2025)</item>
+	</string-array>
+
+	<string-array name="composeEngine">
         <item>Material Design</item>
-        <item>SaltUI</item>
         <item>Miuix</item>
     </string-array>
 
@@ -228,11 +257,13 @@
 		<item>BookSource</item>
 		<item>RssSource</item>
 		<item>ReplaceRule</item>
+		<item>Auto Detect</item>
 	</string-array>
 
 	<string-array name="default_home_page">
+		<item>@string/home</item>
 		<item>@string/bookshelf</item>
-		<item>@string/discovery</item>
+        <item>@string/discovery</item>
 		<item>@string/rss</item>
 		<item>@string/my</item>
 	</string-array>
@@ -246,6 +277,7 @@
 	</string-array>
 
 	<string-array name="default_home_page_value">
+		<item>home</item>
 		<item>bookshelf</item>
 		<item>explore</item>
 		<item>rss</item>
@@ -279,12 +311,44 @@
 		<item>@string/bookshelf_px_5</item>
 	</string-array>
 
-    <string-array name="label_vis_mode" >
+	<string-array name="bookshelf_layout">
+		<item>@string/list</item>
+		<item>@string/compact_list</item>
+		<item>@string/grid</item>
+		<item>@string/compact_grid</item>
+		<item>@string/cover_grid</item>
+	</string-array>
+
+	<string-array name="bookshelf_grid_layout">
+		<item>Standard</item>
+		<item>Compact</item>
+		<item>Cover Only</item>
+	</string-array>
+
+	<string-array name="label_vis_mode" >
 		<item>Auto</item>
 		<item>Selected</item>
 		<item>Labeled</item>
 		<item>Unlabeled</item>
 	</string-array>
 
-	<string name="all_version">所有版本</string>
+	<string-array name="book_info_background_blur_entries">
+		<item>@string/book_info_background_blur_off</item>
+		<item>@string/book_info_background_blur_on</item>
+		<item>@string/book_info_background_blur_off_for_default</item>
+	</string-array>
+
+	<string-array name="customContrast">
+		<item>Default</item>
+		<item>High</item>
+		<item>Maximum</item>
+	</string-array>
+
+	<string-array name="backup_sync_mode">
+		<item>@string/backup_to_local_and_network</item>
+		<item>@string/backup_to_local</item>
+		<item>@string/backup_to_network</item>
+	</string-array>
+
+	<string name="all_version">All Version</string>
 </resources>

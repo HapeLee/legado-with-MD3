@@ -140,16 +140,16 @@ public class AndroidZipFile implements ZipConstants {
      * @throws IOException  if a i/o error occured.
      * @throws EOFException if the file ends prematurely
      */
-    private final int readLeInt(DataInput di, byte[] b) throws IOException {
+    private final long readLeUInt32(DataInput di, byte[] b) throws IOException {
         di.readFully(b, 0, 4);
-        return ((b[0] & 0xff) | (b[1] & 0xff) << 8)
-                | ((b[2] & 0xff) | (b[3] & 0xff) << 8) << 16;
+        return ((b[0] & 0xFFL) | (b[1] & 0xFFL) << 8)
+                | ((b[2] & 0xFFL) | (b[3] & 0xFFL) << 8) << 16;
     }
 
-    private final int readLeInt(ParcelFileDescriptor pfd, byte[] b) throws IOException {
+    private final long readLeUInt32(ParcelFileDescriptor pfd, byte[] b) throws IOException {
         PfdHelper.readFully(pfd, b, 0, 4);//di.readFully(b, 0, 4);
-        return ((b[0] & 0xff) | (b[1] & 0xff) << 8)
-                | ((b[2] & 0xff) | (b[3] & 0xff) << 8) << 16;
+        return ((b[0] & 0xFFL) | (b[1] & 0xFFL) << 8)
+                | ((b[2] & 0xFFL) | (b[3] & 0xFFL) << 8) << 16;
     }
 
 
@@ -173,9 +173,9 @@ public class AndroidZipFile implements ZipConstants {
      * @param off the offset to read from.
      * @return The value read.
      */
-    private final int readLeInt(byte[] b, int off) {
-        return ((b[off] & 0xff) | (b[off + 1] & 0xff) << 8)
-                | ((b[off + 2] & 0xff) | (b[off + 3] & 0xff) << 8) << 16;
+    private final long readLeUInt32(byte[] b, int off) {
+        return ((b[off] & 0xFFL) | (b[off + 1] & 0xFFL) << 8)
+                | ((b[off + 2] & 0xFFL) | (b[off + 3] & 0xFFL) << 8) << 16;
     }
 
 
@@ -205,7 +205,7 @@ public class AndroidZipFile implements ZipConstants {
             seek(pfd, pos--);
         }
         //while (readLeInt(raf, ebs) != ENDSIG);
-        while (readLeInt(pfd, ebs) != ENDSIG);
+        while (readLeUInt32(pfd, ebs) != ENDSIG);
 
         if (PfdHelper.skipBytes(pfd, ENDTOT - ENDNRD) != ENDTOT - ENDNRD)
             throw new EOFException(name);
@@ -213,7 +213,7 @@ public class AndroidZipFile implements ZipConstants {
         int count = readLeShort(pfd, ebs);
         if (PfdHelper.skipBytes(pfd, ENDOFF - ENDSIZ) != ENDOFF - ENDSIZ)
             throw new EOFException(name);
-        int centralOffset = readLeInt(pfd, ebs);
+        long centralOffset = readLeUInt32(pfd, ebs);
 
         entries = new HashMap<>(count + count / 2);
         //raf.seek(centralOffset);
@@ -223,19 +223,19 @@ public class AndroidZipFile implements ZipConstants {
         for (int i = 0; i < count; i++) {
             //raf.readFully(ebs);
             PfdHelper.readFully(pfd, ebs);
-            if (readLeInt(ebs, 0) != CENSIG)
+            if (readLeUInt32(ebs, 0) != CENSIG)
                 throw new ZipException("Wrong Central Directory signature: " + name);
 
             int method = readLeShort(ebs, CENHOW);
-            int dostime = readLeInt(ebs, CENTIM);
-            int crc = readLeInt(ebs, CENCRC);
-            int csize = readLeInt(ebs, CENSIZ);
-            int size = readLeInt(ebs, CENLEN);
+            long dostime = readLeUInt32(ebs, CENTIM);
+            long crc = readLeUInt32(ebs, CENCRC);
+            long csize = readLeUInt32(ebs, CENSIZ);
+            long size = readLeUInt32(ebs, CENLEN);
             int nameLen = readLeShort(ebs, CENNAM);
             int extraLen = readLeShort(ebs, CENEXT);
             int commentLen = readLeShort(ebs, CENCOM);
 
-            int offset = readLeInt(ebs, CENOFF);
+            long offset = readLeUInt32(ebs, CENOFF);
 
             int needBuffer = Math.max(nameLen, commentLen);
             if (buffer.length < needBuffer)
@@ -355,7 +355,7 @@ public class AndroidZipFile implements ZipConstants {
             seek(pfd, entry.offset);
             PfdHelper.readFully(pfd, locBuf);
 
-            if (readLeInt(locBuf, 0) != LOCSIG)
+            if (readLeUInt32(locBuf, 0) != LOCSIG)
                 throw new ZipException("Wrong Local header signature: " + name);
 
             if (entry.getMethod() != readLeShort(locBuf, LOCHOW))

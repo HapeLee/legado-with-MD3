@@ -1,0 +1,161 @@
+package io.legado.app.ui.config.themeConfig
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.ColorUtils
+import io.legado.app.R
+import io.legado.app.help.config.TagColorGenerator
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LabelColorManageSheet(
+    show: Boolean,
+    themeColor: Int,
+    colors: List<TagColorPair>,
+    onColorsChange: (List<TagColorPair>) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val primaryColor = LegadoTheme.colorScheme.primary
+    val tagColors = remember(show, colors) {
+        colors.toMutableStateList()
+    }
+    var showColorPicker by remember { mutableStateOf(false) }
+    var editingIndex by remember { mutableIntStateOf(-1) }
+    var editingTextColor by remember { mutableIntStateOf(0) }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.theme_config_manage_label_colors),
+        startAction = {
+            MediumTonalButton(
+                onClick = {
+                    val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
+                    val generatedColors = TagColorGenerator.generateTagColors(baseColor)
+                    tagColors.clear()
+                    tagColors.addAll(generatedColors)
+                    onColorsChange(tagColors.toList())
+                },
+                icon = Icons.Default.AutoAwesome,
+                contentDescription = stringResource(R.string.ai_generate)
+            )
+        },
+        endAction = {
+            MediumTonalButton(
+                onClick = {
+                    tagColors.add(TagColorPair(0, 0))
+                    editingIndex = tagColors.size - 1
+                    editingTextColor = 0
+                    showColorPicker = true
+                },
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
+            )
+        }
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(tagColors.size) { index ->
+                val colorPair = tagColors[index]
+                val label = stringResource(R.string.theme_config_label_color_name, index + 1)
+                NormalCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = LegadoTheme.colorScheme.onSheetContent
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextCard(
+                            text = label,
+                            backgroundColor = if (colorPair.bgColor != 0) Color(colorPair.bgColor) else LegadoTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = if (colorPair.textColor != 0) Color(colorPair.textColor) else LegadoTheme.colorScheme.primary,
+                            cornerRadius = 4.dp,
+                            horizontalPadding = 8.dp,
+                            verticalPadding = 4.dp,
+                            textStyle = LegadoTheme.typography.labelSmall
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            SmallPlainButton(
+                                onClick = {
+                                    editingIndex = index
+                                    editingTextColor = colorPair.textColor
+                                    showColorPicker = true
+                                },
+                                icon = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit)
+                            )
+                            SmallPlainButton(
+                                onClick = {
+                                    tagColors.removeAt(index)
+                                    onColorsChange(tagColors.toList())
+                                },
+                                icon = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showColorPicker && editingIndex in tagColors.indices) {
+        ColorPickerSheet(
+            show = true,
+            initialColor = editingTextColor,
+            onDismissRequest = { showColorPicker = false },
+            onColorSelected = { selectedColor ->
+                val hsl = FloatArray(3)
+                ColorUtils.colorToHSL(selectedColor, hsl)
+                hsl[1] = (hsl[1] * 0.4f).coerceAtMost(0.35f)
+                hsl[2] = 0.90f
+                val bgColor = Color.hsl(hsl[0], hsl[1], hsl[2]).toArgb()
+                tagColors[editingIndex] = TagColorPair(
+                    textColor = selectedColor,
+                    bgColor = bgColor
+                )
+                onColorsChange(tagColors.toList())
+                showColorPicker = false
+            }
+        )
+    }
+}

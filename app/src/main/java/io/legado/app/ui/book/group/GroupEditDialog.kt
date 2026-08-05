@@ -82,6 +82,11 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
                 binding.ivCover.load(group.cover)
             }
             binding.cbEnableRefresh.isChecked = group.enableRefresh
+            binding.cbPrivate.isChecked = group.isPrivate
+            if (group.groupId <= 0) {
+                binding.cbPrivate.gone()
+                binding.tvPrivateDesc.gone()
+            }
 
             selectedSortIndex = group.bookSort
             val displayIndex = selectedSortIndex + 1
@@ -101,6 +106,17 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
 
         binding.actvSortMenu.setOnItemClickListener { _, _, position, _ ->
             selectedSortIndex = position - 1
+        }
+
+        binding.cbPrivate.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (!isChecked && bookGroup?.isPrivate == true) {
+                alert(R.string.disable_private_group, R.string.sure_disable_private_group) {
+                    yesButton()
+                    noButton {
+                        buttonView.isChecked = true
+                    }
+                }
+            }
         }
 
         binding.run {
@@ -128,11 +144,13 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
                     val bookSort = selectedSortIndex
                     val coverPath = binding.ivCover.bitmapPath
                     val enableRefresh = binding.cbEnableRefresh.isChecked
+                    val isPrivate = binding.cbPrivate.isChecked
                     bookGroup?.let {
                         it.groupName = groupName
                         it.cover = coverPath
                         it.bookSort = bookSort
                         it.enableRefresh = enableRefresh
+                        it.isPrivate = isPrivate
                         viewModel.upGroup(it) {
                             dismiss()
                         }
@@ -141,6 +159,7 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
                             groupName,
                             bookSort,
                             enableRefresh,
+                            isPrivate,
                             coverPath
                         ) {
                             dismiss()
@@ -163,7 +182,12 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
 
 
     private fun deleteGroup(ok: () -> Unit) {
-        alert(R.string.delete, R.string.sure_del) {
+        val message = if (bookGroup?.isPrivate == true) {
+            R.string.sure_del_private_group
+        } else {
+            R.string.sure_del
+        }
+        alert(R.string.delete, message) {
             yesButton {
                 ok.invoke()
             }

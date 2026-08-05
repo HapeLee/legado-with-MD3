@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.ColorFilter
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.text.Html
 import android.widget.TextView
 import com.bumptech.glide.Glide
@@ -95,10 +94,11 @@ class GlideImageGetter(private val context: Context, textView: TextView, private
     }
 
     fun clear() {
-        targets.forEach {
+        val snapshot = targets.toList()
+        targets.clear()
+        snapshot.forEach {
             Glide.with(context).clear(it)
         }
-        targets.clear()
         textViewRef.clear()
     }
 

@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -75,6 +80,55 @@ fun FastScrollLazyColumn(
             reverseLayout = reverseLayout,
             verticalArrangement = verticalArrangement,
             horizontalAlignment = horizontalAlignment,
+            userScrollEnabled = userScrollEnabled,
+            content = content,
+        )
+    }
+}
+
+@Composable
+fun FastScrollLazyVerticalGrid(
+    columns: GridCells,
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    userScrollEnabled: Boolean = true,
+    showFastScroll: Boolean = true,
+    content: LazyGridScope.() -> Unit,
+) {
+    if (showFastScroll) {
+        VerticalGridFastScroller(
+            state = state,
+            columns = columns,
+            arrangement = horizontalArrangement,
+            contentPadding = contentPadding,
+            modifier = modifier,
+            topContentPadding = contentPadding.calculateTopPadding(),
+            endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
+        ) {
+            LazyVerticalGrid(
+                columns = columns,
+                state = state,
+                contentPadding = contentPadding,
+                reverseLayout = reverseLayout,
+                verticalArrangement = verticalArrangement,
+                horizontalArrangement = horizontalArrangement,
+                userScrollEnabled = userScrollEnabled,
+                content = content,
+            )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = columns,
+            modifier = modifier,
+            state = state,
+            contentPadding = contentPadding,
+            reverseLayout = reverseLayout,
+            verticalArrangement = verticalArrangement,
+            horizontalArrangement = horizontalArrangement,
             userScrollEnabled = userScrollEnabled,
             content = content,
         )

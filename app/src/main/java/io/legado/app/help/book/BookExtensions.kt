@@ -11,13 +11,20 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
+import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.book.info.HighlightedTag
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
@@ -26,6 +33,7 @@ import io.legado.app.utils.find
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isUri
 import io.legado.app.utils.normalizeFileName
+import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File
@@ -118,8 +126,18 @@ fun Book.contains(word: String?): Boolean {
             || originName.contains(word)
             || origin.contains(word)
             || kind?.contains(word) == true
+            || customTag?.contains(word) == true
             || intro?.contains(word) == true
 }
+
+fun Book.getSourceTagList(): List<String> =
+    kind?.splitNotBlank(",", "\n").orEmpty().distinct()
+
+fun Book.getCustomTagList(): List<String> =
+    customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
+
+fun Book.getDisplayTagList(): List<String> =
+    (getCustomTagList() + getSourceTagList()).distinct()
 
 /**
  * 仅在目标bookUrl未被其他书占用，或判定为同一本书时，允许迁移主键。
@@ -168,7 +186,7 @@ fun Book.getLocalUri(): Uri {
         return uri
     }
     //不同的设备书籍保存路径可能不一样, uri无效时尝试寻找当前保存路径下的文件
-    val defaultBookDir = AppConfig.defaultBookTreeUri
+    val defaultBookDir = OtherConfig.defaultBookTreeUri
     val importBookDir = AppConfig.importBookPath
 
     // 查找书籍保存目录
@@ -240,7 +258,7 @@ fun Book.getLocalUri(): Uri {
 
 
 fun Book.getArchiveUri(): Uri? {
-    val defaultBookDir = AppConfig.defaultBookTreeUri
+    val defaultBookDir = OtherConfig.defaultBookTreeUri
     return if (isArchive && !defaultBookDir.isNullOrBlank()) {
         FileDoc.fromUri(defaultBookDir.toUri(), true)
             .find(archiveName)?.uri
@@ -305,6 +323,212 @@ fun Book.upType() {
     }
 }
 
+fun Book.upKind() {
+    val fileSizePattern = Regex("""^\d[\d,.]*\s*(b|kb|M|G|T)$""", RegexOption.IGNORE_CASE)
+    val wordCountPattern = Regex(""".*?\d.*字$""")
+    val kinds = kind?.splitNotBlank(",", "\n").orEmpty()
+        .filter {
+            it.isNotBlank() && !fileSizePattern.matches(it.trim()) && !wordCountPattern.matches(
+                it.trim()
+            )
+        }
+        .toMutableList()
+
+    if (isLocal) {
+        // 添加格式
+        val typeName = getBookTypeName()
+        if (typeName != "未知类型" && !kinds.contains(typeName)) {
+            kinds.add(0, typeName)
+        }
+        // 添加大小
+        try {
+            val size = FileDoc.fromFile(bookUrl).size
+            if (size > 0) {
+                kinds.add(io.legado.app.utils.ConvertUtils.formatFileSize(size))
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    // 添加字数
+    wordCount?.let {
+        if (it.isNotBlank()) {
+            kinds.add(it)
+        }
+    }
+
+    kind = kinds.distinct().joinToString(",")
+}
+
+fun parseHighlightedTags(
+    kindLabels: List<String>,
+    rules: List<HighlightTagRule>,
+): Pair<List<HighlightedTag>, List<String>> {
+    if (rules.isEmpty()) {
+        return emptyList<HighlightedTag>() to kindLabels
+    }
+
+    val compiledRules = rules.sortedBy { it.order }.mapNotNull { rule ->
+        val regex = try {
+            Regex(rule.pattern)
+        } catch (_: Exception) {
+            return@mapNotNull null
+        }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) {
+        return emptyList<HighlightedTag>() to kindLabels
+    }
+
+    val ruleToLabels = mutableMapOf<HighlightTagRule, MutableList<String>>()
+    val regular = mutableListOf<String>()
+
+    for (tag in kindLabels) {
+        var matched = false
+        for ((rule, regex) in compiledRules) {
+            if (regex.containsMatchIn(tag)) {
+                matched = true
+                ruleToLabels.getOrPut(rule) { mutableListOf() }.add(tag)
+                break
+            }
+        }
+        if (!matched) {
+            regular.add(tag)
+        }
+    }
+
+    val highlighted = compiledRules.mapNotNull { (rule, _) ->
+        ruleToLabels[rule]?.let { labels ->
+            HighlightedTag(
+                matchedLabels = labels,
+                title = rule.title.takeIf { it.isNotBlank() },
+            )
+        }
+    }
+
+    return highlighted to regular
+}
+
+fun applyTagGroupRules(
+    books: List<Book>,
+    rules: List<TagGroupRule>,
+) {
+    appDb.runInTransaction {
+        applyTagGroupRules(
+            books = books,
+            rules = rules,
+            groupDao = appDb.bookGroupDao,
+            bookDao = appDb.bookDao,
+        )
+    }
+}
+
+fun applyTagGroupRules(
+    books: List<Book>,
+    rules: List<TagGroupRule>,
+    groupDao: BookGroupDao,
+    bookDao: BookDao,
+) {
+    if (rules.isEmpty()) return
+
+    val compiledRules = rules.mapNotNull { rule ->
+        val regex = try {
+            Regex(rule.pattern)
+        } catch (_: Exception) {
+            return@mapNotNull null
+        }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) return
+
+    // Resolve groupName -> groupId (find or create BookGroup)
+    val groupCache = mutableMapOf<String, Long>()
+    for ((rule, _) in compiledRules) {
+        if (rule.groupName !in groupCache) {
+            val existing = groupDao.getByName(rule.groupName)
+            val groupId = existing?.groupId ?: run {
+                val newId = groupDao.getUnusedId()
+                groupDao.insert(
+                    BookGroup(
+                        groupId = newId,
+                        groupName = rule.groupName,
+                    )
+                )
+                newId
+            }
+            groupCache[rule.groupName] = groupId
+        }
+    }
+
+    val updatedBooks = mutableListOf<Book>()
+    for (book in books) {
+        val kinds = book.getDisplayTagList()
+        var newGroupMask = 0L
+        for ((rule, regex) in compiledRules) {
+            if (kinds.any { regex.containsMatchIn(it) }) {
+                newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
+            }
+        }
+        // Tag rules only add matching groups; manually assigned groups are preserved.
+        val finalGroup = book.group or newGroupMask
+        if (book.group != finalGroup) {
+            book.group = finalGroup
+            updatedBooks.add(book)
+        }
+    }
+
+    if (updatedBooks.isNotEmpty()) {
+        bookDao.update(*updatedBooks.toTypedArray())
+    }
+}
+
+/**
+ * Apply tag group rules to a single book. Called from Book.save().
+ * Lightweight: only processes the given book, not all books.
+ */
+fun applyTagGroupRulesForBook(book: Book) {
+    val rules = appDb.tagGroupRuleDao.getAll()
+    if (rules.isEmpty()) return
+
+    val compiledRules = rules.mapNotNull { rule ->
+        val regex = try { Regex(rule.pattern) } catch (_: Exception) { return@mapNotNull null }
+        rule to regex
+    }
+    if (compiledRules.isEmpty()) return
+
+    val groupDao = appDb.bookGroupDao
+    val groupCache = mutableMapOf<String, Long>()
+    for ((rule, _) in compiledRules) {
+        if (rule.groupName !in groupCache) {
+            val existing = groupDao.getByName(rule.groupName)
+            val groupId = existing?.groupId ?: run {
+                val newId = groupDao.getUnusedId()
+                groupDao.insert(
+                    io.legado.app.data.entities.BookGroup(
+                        groupId = newId,
+                        groupName = rule.groupName,
+                    )
+                )
+                newId
+            }
+            groupCache[rule.groupName] = groupId
+        }
+    }
+
+    val kinds = book.getDisplayTagList()
+    var newGroupMask = 0L
+    for ((rule, regex) in compiledRules) {
+        if (kinds.any { regex.containsMatchIn(it) }) {
+            newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
+        }
+    }
+    val finalGroup = book.group or newGroupMask
+    if (book.group != finalGroup) {
+        book.group = finalGroup
+    }
+}
+
 fun Book.sync(oldBook: Book) {
     val curBook = appDb.bookDao.getBook(oldBook.bookUrl)!!
     durChapterTime = curBook.durChapterTime
@@ -313,7 +537,11 @@ fun Book.sync(oldBook: Book) {
         durChapterIndex = curBook.durChapterIndex
         val replaceRules = ContentProcessor.get(this).getTitleReplaceRules()
         appDb.bookChapterDao.getChapter(bookUrl, durChapterIndex)?.let {
-            durChapterTitle = it.getDisplayTitle(replaceRules, getUseReplaceRule())
+            durChapterTitle = it.getDisplayTitle(
+                replaceRules,
+                getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
+            )
         }
     }
     canUpdate = curBook.canUpdate
@@ -339,7 +567,14 @@ fun Book.updateTo(newBook: Book): Book {
     newBook.customIntro = customIntro
     newBook.customTag = customTag
     newBook.canUpdate = canUpdate
+    if (config.fixedType) {
+        newBook.type = type
+    }
     newBook.readConfig = readConfig
+    if (newBook.wordCount.isNullOrBlank()) {
+        newBook.wordCount = wordCount
+    }
+    newBook.upKind()
     val variableMap = variableMap.toMutableMap()
     variableMap.keys.removeIf {
         newBook.hasVariable(it)
@@ -379,8 +614,10 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
     return false
 }
 
-fun Book.getExportFileName(suffix: String): String {
-    val template = AppConfig.bookExportFileName
+fun Book.getExportFileName(
+    suffix: String,
+    template: String? = AppConfig.bookExportFileName,
+): String {
     if (template.isNullOrBlank()) {
         return "$name 作者：${getRealAuthor()}.$suffix"
     }

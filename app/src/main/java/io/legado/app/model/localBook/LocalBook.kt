@@ -35,11 +35,13 @@ import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isUmd
 import io.legado.app.help.book.removeLocalUriCache
 import io.legado.app.help.book.simulatedTotalChapterNum
+import io.legado.app.help.book.upKind
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.CustomUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -154,10 +156,18 @@ object LocalBook {
         }
         val replaceRules = ContentProcessor.get(book).getTitleReplaceRules()
         book.durChapterTitle = list.getOrElse(book.durChapterIndex) { list.last() }
-            .getDisplayTitle(replaceRules, book.getUseReplaceRule())
+            .getDisplayTitle(
+                replaceRules,
+                book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                chineseConverterType = AppConfig.chineseConverterType,
+            )
         book.latestChapterTitle =
             list.getOrElse(book.simulatedTotalChapterNum() - 1) { list.last() }
-                .getDisplayTitle(replaceRules, book.getUseReplaceRule())
+                .getDisplayTitle(
+                    replaceRules,
+                    book.getUseReplaceRule(AppConfig.replaceEnableDefault),
+                    chineseConverterType = AppConfig.chineseConverterType,
+                )
         book.totalChapterNum = list.size
         book.latestChapterTime = System.currentTimeMillis()
         return list
@@ -251,14 +261,17 @@ object LocalBook {
                 order = appDb.bookDao.minOrder - 1
             )
             upBookInfo(book)
+            book.upKind()
             appDb.bookDao.insert(book)
         } else {
             deleteBook(book, false)
             upBookInfo(book)
+            book.upKind()
             // 触发 isLocalModified
             book.latestChapterTime = 0
             //已有书籍说明是更新,删除原有目录
             appDb.bookChapterDao.delByBook(bookUrl)
+            appDb.bookDao.update(book)
         }
         return book
     }
@@ -289,6 +302,7 @@ object LocalBook {
                     //附加压缩包名称 以便解压文件被删后再解压
                     origin = "${BookType.localTag}::${archiveFileDoc.name}"
                     addType(BookType.archive)
+                    upKind()
                     save()
                 }
             }
@@ -401,7 +415,7 @@ object LocalBook {
         fileName: String,
         source: BaseSource? = null,
     ): Uri {
-        AppConfig.defaultBookTreeUri
+        OtherConfig.defaultBookTreeUri
             ?: throw NoBooksDirException()
         val inputStream = when {
             str.isAbsUrl() -> AnalyzeUrl(
@@ -427,7 +441,7 @@ object LocalBook {
         fileName: String
     ): Uri {
         inputStream.use {
-            val defaultBookTreeUri = AppConfig.defaultBookTreeUri
+            val defaultBookTreeUri = OtherConfig.defaultBookTreeUri
             if (defaultBookTreeUri.isNullOrBlank()) throw NoBooksDirException()
             val treeUri = defaultBookTreeUri.toUri()
             return if (treeUri.isContentScheme()) {
@@ -481,7 +495,7 @@ object LocalBook {
         val webDavUrl = localBook.getRemoteUrl()
         if (webDavUrl.isNullOrBlank()) throw NoStackTraceException("Book file is not webDav File")
         try {
-            AppConfig.defaultBookTreeUri
+            OtherConfig.defaultBookTreeUri
                 ?: throw NoBooksDirException()
             // 兼容旧版链接
             val webdav: WebDav = kotlin.runCatching {

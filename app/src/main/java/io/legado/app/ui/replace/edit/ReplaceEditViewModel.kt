@@ -1,83 +1,82 @@
 package io.legado.app.ui.replace.edit
 
 import android.app.Application
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
-import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
-data class ReplaceEditUiState(
-    val id: Long = 0,
-    val name: TextFieldValue = TextFieldValue(""),
-    val group: String = "默认",
-    val pattern: TextFieldValue = TextFieldValue(""),
-    val replacement: TextFieldValue = TextFieldValue(""),
-    val isRegex: Boolean = false,
-    val scope: TextFieldValue = TextFieldValue(""),
-    val scopeTitle: Boolean = false,
-    val scopeContent: Boolean = false,
-    val excludeScope: TextFieldValue = TextFieldValue(""),
-    val timeout: String = "3000",
-    val allGroups: List<String> = emptyList(),
-    val showGroupDialog: Boolean = false
-)
-
 class ReplaceEditViewModel(
     private val app: Application,
-    private val replaceRuleDao: ReplaceRuleDao,
-    private val savedStateHandle: SavedStateHandle
+    private val replaceRuleRepository: ReplaceRuleRepository,
+    private val route: ReplaceEditRoute
 ) : ViewModel() {
-
-    private val route = savedStateHandle.toRoute<ReplaceEditRoute>()
 
     private val _uiState = MutableStateFlow(ReplaceEditUiState())
     val uiState = _uiState.asStateFlow()
 
-    var activeField: ActiveField = ActiveField.None
-    enum class ActiveField { Name, None, Pattern, Replacement, Scope, Exclude }
+    private val _effects = MutableSharedFlow<ReplaceEditEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     init {
         initData()
         observeGroups()
     }
 
+    fun onIntent(intent: ReplaceEditIntent) {
+        when (intent) {
+            is ReplaceEditIntent.OnNameChange -> onNameChange(intent.value)
+            is ReplaceEditIntent.OnPatternChange -> onPatternChange(intent.value)
+            is ReplaceEditIntent.OnReplacementChange -> onReplacementChange(intent.value)
+            is ReplaceEditIntent.OnScopeChange -> onScopeChange(intent.value)
+            is ReplaceEditIntent.OnExcludeScopeChange -> onExcludeScopeChange(intent.value)
+            is ReplaceEditIntent.OnGroupChange -> onGroupChange(intent.value)
+            is ReplaceEditIntent.OnRegexChange -> onRegexChange(intent.value)
+            is ReplaceEditIntent.OnScopeTitleChange -> onScopeTitleChange(intent.value)
+            is ReplaceEditIntent.OnScopeContentChange -> onScopeContentChange(intent.value)
+            is ReplaceEditIntent.OnTimeoutChange -> onTimeoutChange(intent.value)
+            is ReplaceEditIntent.SetActiveField -> setActiveField(intent.field)
+            is ReplaceEditIntent.InsertTextAtCursor -> insertTextAtCursor(intent.text)
+            is ReplaceEditIntent.ToggleGroupDialog -> toggleGroupDialog(intent.show)
+            is ReplaceEditIntent.DeleteGroups -> deleteGroups(intent.groups)
+            ReplaceEditIntent.CopyRule -> copyRule()
+            ReplaceEditIntent.PasteRule -> pasteRule()
+            ReplaceEditIntent.Save -> save()
+        }
+    }
+
     private fun initData() {
         viewModelScope.launch {
-
             val id = route.id
 
             if (id > 0) {
-                val rule = replaceRuleDao.findById(id)
+                val rule = replaceRuleRepository.findById(id)
                 rule?.let { updateStateFromRule(it) }
             } else {
                 _uiState.update {
                     it.copy(
                         id = id,
-                        name = TextFieldValue(route.pattern ?: ""),
-                        pattern = TextFieldValue(route.pattern ?: ""),
+                        name = route.pattern ?: "",
+                        pattern = route.pattern ?: "",
                         isRegex = route.isRegex,
-                        scope = TextFieldValue(route.scope ?: ""),
+                        scope = route.scope ?: "",
                         scopeTitle = route.isScopeTitle,
                         scopeContent = route.isScopeContent,
-                        excludeScope = TextFieldValue(""),
+                        excludeScope = "",
                     )
                 }
             }
@@ -86,7 +85,7 @@ class ReplaceEditViewModel(
 
     private fun observeGroups() {
         viewModelScope.launch {
-            replaceRuleDao.flowGroups().collectLatest { groups ->
+            replaceRuleRepository.flowGroups().collectLatest { groups ->
                 _uiState.update { it.copy(allGroups = listOf("默认") + groups) }
             }
         }
@@ -96,15 +95,15 @@ class ReplaceEditViewModel(
         _uiState.update {
             it.copy(
                 id = rule.id,
-                name = TextFieldValue(rule.name),
+                name = rule.name,
                 group = rule.group ?: "默认",
-                pattern = TextFieldValue(rule.pattern),
-                replacement = TextFieldValue(rule.replacement),
+                pattern = rule.pattern,
+                replacement = rule.replacement,
                 isRegex = rule.isRegex,
                 scopeTitle = rule.scopeTitle,
                 scopeContent = rule.scopeContent,
-                scope = TextFieldValue(rule.scope ?: ""),
-                excludeScope = TextFieldValue(rule.excludeScope ?: ""),
+                scope = rule.scope ?: "",
+                excludeScope = rule.excludeScope ?: "",
                 timeout = rule.timeoutMillisecond.toString()
             )
         }
@@ -114,30 +113,30 @@ class ReplaceEditViewModel(
         val state = _uiState.value
         val rule = ReplaceRule().apply {
             id = state.id
-            name = state.name.text
+            name = state.name
             group = if (state.group == "默认" || state.group.isBlank()) null else state.group
-            pattern = state.pattern.text
-            replacement = state.replacement.text
+            pattern = state.pattern
+            replacement = state.replacement
             isRegex = state.isRegex
             scopeTitle = state.scopeTitle
             scopeContent = state.scopeContent
-            scope = state.scope.text
-            excludeScope = state.excludeScope.text
+            scope = state.scope
+            excludeScope = state.excludeScope
             timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
         }
         return rule
     }
 
-    fun copyRule() {
+    private fun copyRule() {
         viewModelScope.launch(Dispatchers.Main) {
             val ruleToCopy = getReplaceRuleFromState()
             val json = GSON.toJson(ruleToCopy)
             app.sendToClip(json)
-            app.toastOnUi("规则已复制到剪贴板")
+            _effects.tryEmit(ReplaceEditEffect.ShowMessage("规则已复制到剪贴板"))
         }
     }
 
-    fun pasteRule(onSuccess: () -> Unit) {
+    private fun pasteRule() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val text = app.getClipText()
@@ -150,118 +149,93 @@ class ReplaceEditViewModel(
 
                 launch(Dispatchers.Main) {
                     updateStateFromRule(pastedRule)
-                    onSuccess()
                 }
             } catch (e: Exception) {
-                launch(Dispatchers.Main) {
-                    app.toastOnUi(e.localizedMessage ?: "格式不对")
-                }
+                _effects.emit(ReplaceEditEffect.ShowMessage(e.localizedMessage ?: "格式不对"))
             }
         }
     }
 
-    fun onNameChange(v: TextFieldValue) {
+    private fun onNameChange(v: String) {
         _uiState.update { it.copy(name = v) }
-        activeField = ActiveField.Name
+        setActiveField(ActiveField.Name)
     }
-    fun onScopeChange(v: TextFieldValue) {
+
+    private fun onScopeChange(v: String) {
         _uiState.update { it.copy(scope = v) }
-        activeField = ActiveField.Scope
+        setActiveField(ActiveField.Scope)
     }
-    fun onPatternChange(v: TextFieldValue) {
+
+    private fun onPatternChange(v: String) {
         _uiState.update { it.copy(pattern = v) }
-        activeField = ActiveField.Pattern
+        setActiveField(ActiveField.Pattern)
     }
-    fun onReplacementChange(v: TextFieldValue) {
+
+    private fun onReplacementChange(v: String) {
         _uiState.update { it.copy(replacement = v) }
-        activeField = ActiveField.Replacement
+        setActiveField(ActiveField.Replacement)
     }
-    fun onExcludeScopeChange(v: TextFieldValue) {
+
+    private fun onExcludeScopeChange(v: String) {
         _uiState.update { it.copy(excludeScope = v) }
-        activeField = ActiveField.Exclude
+        setActiveField(ActiveField.Exclude)
     }
-    fun onGroupChange(v: String) = _uiState.update { it.copy(group = v) }
-    fun onRegexChange(v: Boolean) = _uiState.update { it.copy(isRegex = v) }
-    fun onScopeTitleChange(v: Boolean) = _uiState.update { it.copy(scopeTitle = v) }
-    fun onScopeContentChange(v: Boolean) = _uiState.update { it.copy(scopeContent = v) }
-    fun onTimeoutChange(v: String) = _uiState.update { it.copy(timeout = v) }
-    fun toggleGroupDialog(show: Boolean) = _uiState.update { it.copy(showGroupDialog = show) }
-    fun insertTextAtCursor(text: String) {
-        val state = _uiState.value
-        when (activeField) {
-            ActiveField.Name -> {
-                val newTfv = insertIntoTextFieldValue(state.name, text)
-                _uiState.update { it.copy(name = newTfv) }
-            }
-            ActiveField.Pattern -> {
-                val newTfv = insertIntoTextFieldValue(state.pattern, text)
-                _uiState.update { it.copy(pattern = newTfv) }
-            }
-            ActiveField.Replacement -> {
-                val newTfv = insertIntoTextFieldValue(state.replacement, text)
-                _uiState.update { it.copy(replacement = newTfv) }
-            }
-            ActiveField.Scope -> {
-                val newTfv = insertIntoTextFieldValue(state.scope, text)
-                _uiState.update { it.copy(scope = newTfv) }
-            }
-            ActiveField.Exclude -> {
-                val newTfv = insertIntoTextFieldValue(state.excludeScope, text)
-                _uiState.update { it.copy(excludeScope = newTfv) }
-            }
+
+    private fun onGroupChange(v: String) = _uiState.update { it.copy(group = v) }
+    private fun onRegexChange(v: Boolean) = _uiState.update { it.copy(isRegex = v) }
+    private fun onScopeTitleChange(v: Boolean) = _uiState.update { it.copy(scopeTitle = v) }
+    private fun onScopeContentChange(v: Boolean) = _uiState.update { it.copy(scopeContent = v) }
+    private fun onTimeoutChange(v: String) = _uiState.update { it.copy(timeout = v) }
+    private fun toggleGroupDialog(show: Boolean) = _uiState.update { it.copy(showGroupDialog = show) }
+
+    private fun setActiveField(field: ActiveField) {
+        _uiState.update { it.copy(activeField = field) }
+    }
+
+    private fun insertTextAtCursor(text: String) {
+        when (_uiState.value.activeField) {
+            ActiveField.Name -> _uiState.update { it.copy(name = it.name + text) }
+            ActiveField.Pattern -> _uiState.update { it.copy(pattern = it.pattern + text) }
+            ActiveField.Replacement -> _uiState.update { it.copy(replacement = it.replacement + text) }
+            ActiveField.Scope -> _uiState.update { it.copy(scope = it.scope + text) }
+            ActiveField.Exclude -> _uiState.update { it.copy(excludeScope = it.excludeScope + text) }
             else -> {}
         }
     }
 
-    private fun insertIntoTextFieldValue(current: TextFieldValue, insert: String): TextFieldValue {
-        val start = current.selection.start
-        val end = current.selection.end
-        val newText = current.text.replaceRange(start, end, insert)
-        val newCursor = start + insert.length
-        return TextFieldValue(
-            text = newText,
-            selection = TextRange(newCursor)
-        )
-    }
-
-    fun save(onSuccess: () -> Unit) {
+    private fun save() {
         viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
 
-            val rule = ReplaceRule().apply {
-                id = if (state.id <= 0) System.currentTimeMillis() else state.id
-                name = state.name.text
+            val existingRule = if (state.id > 0) replaceRuleRepository.findById(state.id) else null
+            val rule = (existingRule ?: ReplaceRule()).apply {
+                id = existingRule?.id ?: if (state.id <= 0) System.currentTimeMillis() else state.id
+                name = state.name
                 group = if (state.group == "默认" || state.group.isBlank()) null else state.group
-                pattern = state.pattern.text
-                replacement = state.replacement.text
+                pattern = state.pattern
+                replacement = state.replacement
                 isRegex = state.isRegex
                 scopeTitle = state.scopeTitle
                 scopeContent = state.scopeContent
-                scope = state.scope.text
-                excludeScope = state.excludeScope.text
+                scope = state.scope
+                excludeScope = state.excludeScope
                 timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
             }
 
-            if (state.id <= 0) {
-                rule.order = replaceRuleDao.maxOrder + 1
+            if (existingRule == null && rule.order == Int.MIN_VALUE) {
+                rule.order = replaceRuleRepository.getNextOrder()
             }
 
-            if (rule.order == Int.MIN_VALUE) {
-                rule.order = replaceRuleDao.maxOrder + 1
-            }
+            replaceRuleRepository.insert(rule)
 
-            replaceRuleDao.insert(rule)
-
-            launch(Dispatchers.Main) {
-                onSuccess()
-            }
+            _effects.tryEmit(ReplaceEditEffect.NavigateBack)
         }
     }
 
 
-    fun deleteGroups(groups: List<String>) {
+    private fun deleteGroups(groups: List<String>) {
         viewModelScope.launch {
-            replaceRuleDao.clearGroups(groups)
+            replaceRuleRepository.clearGroups(groups)
             toggleGroupDialog(false)
         }
     }

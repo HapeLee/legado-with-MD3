@@ -7,5 +7,6 @@ data class SwipeAction(
     val icon: ImageVector,
     val background: Color,
     val onSwipe: () -> Unit,
-    val hapticFeedback: Boolean = true
+    val hapticFeedback: Boolean = true,
+    val contentDescription: String? = null
 )

@@ -2,6 +2,8 @@ package io.legado.app.ui.book.read.page
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.LayerDrawable
 import android.view.LayoutInflater
@@ -13,35 +15,42 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import io.legado.app.R
 import io.legado.app.constant.AppConst.timeFormat
+import io.legado.app.constant.ReadTipType
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.databinding.ViewBookPageBinding
-import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ReadTipConfig
+import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.model.ReadBook
-import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.model.ReadSessionState
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
+import io.legado.app.ui.book.read.sheet.CustomTipTarget
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
+import androidx.core.view.updateLayoutParams
 import io.legado.app.utils.activity
-import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.applyStatusBarPadding
+import io.legado.app.utils.canvasrecorder.CanvasRecorder
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
+import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
 import java.util.Date
+import io.legado.app.utils.screenshot as viewScreenshot
 
 /**
  * 页面视图
  */
-class PageView(context: Context) : FrameLayout(context) {
+class PageView(
+    context: Context,
+    callBack: ContentTextView.CallBack? = null,
+) : FrameLayout(context) {
 
     private val binding = ViewBookPageBinding.inflate(LayoutInflater.from(context), this, true)
-    private val readBookActivity get() = activity as? ReadBookActivity
     private var battery = 100
     private var tvTitle: BatteryView? = null
     private var tvTime: BatteryView? = null
@@ -51,6 +60,8 @@ class PageView(context: Context) : FrameLayout(context) {
     private var tvTotalProgress: BatteryView? = null
     private var tvTotalProgress1: BatteryView? = null
     private var tvPageAndTotal: BatteryView? = null
+    private var tvWholeBookPage: BatteryView? = null
+    private var tvWholeBookPageAndProgress: BatteryView? = null
     private var tvBookName: BatteryView? = null
     private var tvTimeBattery: BatteryView? = null
     private var tvTimeBatteryP: BatteryView? = null
@@ -64,6 +75,8 @@ class PageView(context: Context) : FrameLayout(context) {
     private var isMainView = false
     var isScroll = false
 
+    private var currentTextPage: TextPage? = null
+
     val headerHeight: Int
         get() {
             val h1 = if (binding.vwStatusBar.isGone) 0 else binding.vwStatusBar.height
@@ -76,10 +89,38 @@ class PageView(context: Context) : FrameLayout(context) {
             return binding.vwRoot.paddingStart
         }
 
+    val contentOffsetX: Int get() = binding.contentTextView.left
+
+    val contentOffsetY: Int get() = binding.contentTextView.top
+
+    val contentWidth: Int get() = binding.contentTextView.width
+
+    val contentHeight: Int get() = binding.contentTextView.height
+
     init {
+        callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
-        binding.vwNavigationBar.applyNavigationBarPadding()
+        if (ReadSessionState.lastNavigationBarHeight > 0) {
+            binding.vwNavigationBar.updateLayoutParams {
+                height = ReadSessionState.lastNavigationBarHeight
+            }
+        }
+        binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
+            val isImeVisible = windowInsets.isVisible(WindowInsetsCompat.Type.ime())
+            if (isImeVisible) {
+                return@setOnApplyWindowInsetsListenerCompat windowInsets
+            }
+            //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
+            val navHeight = windowInsets.navigationBarHeight
+            if (navHeight > 0) {
+                ReadSessionState.lastNavigationBarHeight = navHeight
+            }
+            v.updateLayoutParams {
+                height = navHeight
+            }
+            windowInsets
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -88,47 +129,54 @@ class PageView(context: Context) : FrameLayout(context) {
     }
 
     fun upStyle() = binding.run {
-        upTipStyle()
-        ReadBookConfig.let {
-            val textColor = it.textColor
-            val tipColor = with(ReadTipConfig) {
-                if (tipColor == 0) textColor else tipColor
-            }
-            val tipDividerColor = with(ReadTipConfig) {
-                when (tipDividerColor) {
-                    -1 -> ContextCompat.getColor(context, R.color.divider)
-                    0 -> textColor
-                    else -> tipDividerColor
-                }
-            }
-            tvHeaderLeft.setColor(tipColor)
-            tvHeaderMiddle.setColor(tipColor)
-            tvHeaderRight.setColor(tipColor)
-            tvFooterLeft.setColor(tipColor)
-            tvFooterMiddle.setColor(tipColor)
-            tvFooterRight.setColor(tipColor)
-            vwTopDivider.backgroundColor = tipDividerColor
-            vwBottomDivider.backgroundColor = tipDividerColor
-            upStatusBar()
-            upNavigationBar()
-            upPaddingDisplayCutouts()
-            llHeader.setPadding(
-                it.headerPaddingLeft.dpToPx(),
-                it.headerPaddingTop.dpToPx(),
-                it.headerPaddingRight.dpToPx(),
-                it.headerPaddingBottom.dpToPx()
-            )
-            llFooter.setPadding(
-                it.footerPaddingLeft.dpToPx(),
-                it.footerPaddingTop.dpToPx(),
-                it.footerPaddingRight.dpToPx(),
-                it.footerPaddingBottom.dpToPx()
-            )
-            vwTopDivider.gone(llHeader.isGone || !it.showHeaderLine)
-            vwBottomDivider.gone(llFooter.isGone || !it.showFooterLine)
-        }
+        val style = TipStyleProvider.style
+        upTipStyle(style)
+        applyTipColors(style)
+        upStatusBar()
+        upNavigationBar()
+        upPaddingDisplayCutouts()
+        llHeader.setPadding(
+            style.headerPaddingLeft.dpToPx(),
+            style.headerPaddingTop.dpToPx(),
+            style.headerPaddingRight.dpToPx(),
+            style.headerPaddingBottom.dpToPx()
+        )
+        llFooter.setPadding(
+            style.footerPaddingLeft.dpToPx(),
+            style.footerPaddingTop.dpToPx(),
+            style.footerPaddingRight.dpToPx(),
+            style.footerPaddingBottom.dpToPx()
+        )
+        vwTopDivider.gone(llHeader.isGone || !style.showHeaderLine)
+        vwBottomDivider.gone(llFooter.isGone || !style.showFooterLine)
         upTime()
         upBattery(battery)
+    }
+
+    /** 仅更新日夜模式相关颜色，避免主题切换时重新加载字体和重排正文。 */
+    fun upThemeColors() = binding.run {
+        applyTipColors(TipStyleProvider.style)
+        contentTextView.invalidate()
+    }
+
+    /** 页眉/页脚文字色与分隔线色：0 表示跟随正文色，-1（分隔线）表示用主题色。 */
+    private fun applyTipColors(style: TipStyleProvider.TipStyle) = binding.run {
+        val textColor = style.textColor
+        val headerColor = if (style.tipHeaderColor == 0) textColor else style.tipHeaderColor
+        val footerColor = if (style.tipFooterColor == 0) textColor else style.tipFooterColor
+        val dividerColor = when (style.tipDividerColor) {
+            -1 -> ContextCompat.getColor(context, R.color.divider)
+            0 -> textColor
+            else -> style.tipDividerColor
+        }
+        tvHeaderLeft.setColor(headerColor)
+        tvHeaderMiddle.setColor(headerColor)
+        tvHeaderRight.setColor(headerColor)
+        tvFooterLeft.setColor(footerColor)
+        tvFooterMiddle.setColor(footerColor)
+        tvFooterRight.setColor(footerColor)
+        vwTopDivider.backgroundColor = dividerColor
+        vwBottomDivider.backgroundColor = dividerColor
     }
 
     /**
@@ -136,15 +184,15 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     fun upStatusBar() = with(binding.vwStatusBar) {
         setPadding(paddingLeft, context.statusBarHeight, paddingRight, paddingBottom)
-        isGone = ReadBookConfig.hideStatusBar || readBookActivity?.isInMultiWindow == true
+        isGone = TipStyleProvider.style.hideStatusBar || activity?.isInMultiWindowMode == true
     }
 
     fun upNavigationBar() {
-        binding.vwNavigationBar.isGone = ReadBookConfig.hideNavigationBar
+        binding.vwNavigationBar.isGone = TipStyleProvider.style.hideNavigationBar
     }
 
     fun upPaddingDisplayCutouts() {
-        if (AppConfig.paddingDisplayCutouts) {
+        if (ReadConfig.paddingDisplayCutouts) {
             binding.vwRoot.setOnApplyWindowInsetsListenerCompat { _, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
                 binding.vwRoot.setPadding(
@@ -164,27 +212,27 @@ class PageView(context: Context) : FrameLayout(context) {
     /**
      * 更新阅读信息
      */
-    private fun upTipStyle() = binding.run {
+    private fun upTipStyle(style: TipStyleProvider.TipStyle) = binding.run {
         tvHeaderLeft.tag = null
         tvHeaderMiddle.tag = null
         tvHeaderRight.tag = null
         tvFooterLeft.tag = null
         tvFooterMiddle.tag = null
         tvFooterRight.tag = null
-        llHeader.isGone = when (ReadTipConfig.headerMode) {
+        llHeader.isGone = when (style.headerMode) {
             1 -> false
             2 -> true
-            else -> !ReadBookConfig.hideStatusBar
+            else -> !style.hideStatusBar
         }
-        llFooter.isGone = when (ReadTipConfig.footerMode) {
+        llFooter.isGone = when (style.footerMode) {
             1 -> true
             else -> false
         }
-        ReadTipConfig.apply {
-            tvHeaderLeft.isGone = tipHeaderLeft == none
-            tvHeaderMiddle.isGone = tipHeaderMiddle == none
-            if (tipHeaderRight == none) {
-                if (tipHeaderMiddle == none && tipHeaderLeft == none) {
+        style.apply {
+            tvHeaderLeft.isGone = tipHeaderLeft == ReadTipType.tipNone
+            tvHeaderMiddle.isGone = tipHeaderMiddle == ReadTipType.tipNone
+            if (tipHeaderRight == ReadTipType.tipNone) {
+                if (tipHeaderMiddle == ReadTipType.tipNone && tipHeaderLeft == ReadTipType.tipNone) {
                     tvHeaderRight.isGone = true
                 } else {
                     tvHeaderRight.isGone = false
@@ -194,10 +242,10 @@ class PageView(context: Context) : FrameLayout(context) {
                 tvHeaderRight.isGone = false
                 tvHeaderRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
             }
-            tvFooterLeft.isGone = tipFooterLeft == none
-            tvFooterMiddle.isGone = tipFooterMiddle == none
-            if (tipFooterRight == none) {
-                if (tipFooterLeft == none && tipFooterMiddle == none) {
+            tvFooterLeft.isGone = tipFooterLeft == ReadTipType.tipNone
+            tvFooterMiddle.isGone = tipFooterMiddle == ReadTipType.tipNone
+            if (tipFooterRight == ReadTipType.tipNone) {
+                if (tipFooterLeft == ReadTipType.tipNone && tipFooterMiddle == ReadTipType.tipNone) {
                     tvFooterRight.isGone = true
                 } else {
                     tvFooterRight.isGone = false
@@ -208,106 +256,158 @@ class PageView(context: Context) : FrameLayout(context) {
                 tvFooterRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
             }
         }
-        tvTitle = getTipView(ReadTipConfig.chapterTitle)?.apply {
-            tag = ReadTipConfig.chapterTitle
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+        val tipTypeface = style.tipTypeface ?: ChapterProvider.typeface
+        val tipTextSize = style.tipTextSize
+        tvTitle = getTipView(ReadTipType.tipChapterTitle)?.apply {
+            tag = ReadTipType.tipChapterTitle
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
-            tag = ReadTipConfig.chapterTitleArrow
+        tvTitleArrow = getTipView(ReadTipType.tipChapterTitleArrow)?.apply {
+            tag = ReadTipType.tipChapterTitleArrow
             typeface = Typeface.DEFAULT
-            textSize = 12f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
-        tvTitleArrowClassic = getTipView(ReadTipConfig.chapterTitleArrowClassic)?.apply {
-            tag = ReadTipConfig.chapterTitleArrowClassic
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+        tvTitleArrowClassic = getTipView(ReadTipType.tipChapterTitleArrowClassic)?.apply {
+            tag = ReadTipType.tipChapterTitleArrowClassic
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
-        tvTime = getTipView(ReadTipConfig.time)?.apply {
-            tag = ReadTipConfig.time
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+        tvTime = getTipView(ReadTipType.tipTime)?.apply {
+            tag = ReadTipType.tipTime
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvBattery = getTipView(ReadTipConfig.battery)?.apply {
-            tag = ReadTipConfig.battery
+        tvBattery = getTipView(ReadTipType.tipBattery)?.apply {
+            tag = ReadTipType.tipBattery
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.OUTER
         }
-        tvBatteryClassic = getTipView(ReadTipConfig.batteryClassic)?.apply {
-            tag = ReadTipConfig.batteryClassic
-            textSize = 11f
+        tvBatteryClassic = getTipView(ReadTipType.tipBatteryClassic)?.apply {
+            tag = ReadTipType.tipBatteryClassic
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
-        tvBatteryInside = getTipView(ReadTipConfig.batteryInside)?.apply {
-            tag = ReadTipConfig.batteryInside
+        tvBatteryInside = getTipView(ReadTipType.tipBatteryInside)?.apply {
+            tag = ReadTipType.tipBatteryInside
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.INNER
         }
-        tvBatteryIcon = getTipView(ReadTipConfig.batteryIcon)?.apply {
-            tag = ReadTipConfig.batteryIcon
+        tvBatteryIcon = getTipView(ReadTipType.tipBatteryIcon)?.apply {
+            tag = ReadTipType.tipBatteryIcon
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ICON
         }
-        tvPage = getTipView(ReadTipConfig.page)?.apply {
-            tag = ReadTipConfig.page
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+        tvPage = getTipView(ReadTipType.tipPage)?.apply {
+            tag = ReadTipType.tipPage
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvTotalProgress = getTipView(ReadTipConfig.totalProgress)?.apply {
-            tag = ReadTipConfig.totalProgress
+        tvTotalProgress = getTipView(ReadTipType.tipTotalProgress)?.apply {
+            tag = ReadTipType.tipTotalProgress
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
-        tvTotalProgress1 = getTipView(ReadTipConfig.totalProgress1)?.apply {
-            tag = ReadTipConfig.totalProgress1
+        tvTotalProgress1 = getTipView(ReadTipType.tipTotalProgress1)?.apply {
+            tag = ReadTipType.tipTotalProgress1
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
-        tvPageAndTotal = getTipView(ReadTipConfig.pageAndTotal)?.apply {
-            tag = ReadTipConfig.pageAndTotal
+        tvPageAndTotal = getTipView(ReadTipType.tipPageAndTotal)?.apply {
+            tag = ReadTipType.tipPageAndTotal
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
-        tvBookName = getTipView(ReadTipConfig.bookName)?.apply {
-            tag = ReadTipConfig.bookName
+        tvWholeBookPage = getTipView(ReadTipType.tipWholeBookPage)?.apply {
+            tag = ReadTipType.tipWholeBookPage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
-        tvTimeBattery = getTipView(ReadTipConfig.timeBattery)?.apply {
-            tag = ReadTipConfig.timeBattery
+        tvWholeBookPageAndProgress =
+            getTipView(ReadTipType.tipWholeBookPageAndProgress)?.apply {
+                tag = ReadTipType.tipWholeBookPageAndProgress
+                batteryMode = BatteryView.BatteryMode.NO_BATTERY
+                typeface = tipTypeface
+                textSize = tipTextSize
+            }
+        tvBookName = getTipView(ReadTipType.tipBookName)?.apply {
+            tag = ReadTipType.tipBookName
+            batteryMode = BatteryView.BatteryMode.NO_BATTERY
+            typeface = tipTypeface
+            textSize = tipTextSize
+        }
+        tvTimeBattery = getTipView(ReadTipType.tipTimeBattery)?.apply {
+            tag = ReadTipType.tipTimeBattery
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.TIME
         }
-        tvTimeBatteryClassic = getTipView(ReadTipConfig.timeBatteryClassic)?.apply {
-            tag = ReadTipConfig.timeBatteryClassic
-            typeface = ChapterProvider.typeface
-            textSize = 11f
+        tvTimeBatteryClassic = getTipView(ReadTipType.tipTimeBatteryClassic)?.apply {
+            tag = ReadTipType.tipTimeBatteryClassic
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
-        tvBatteryP = getTipView(ReadTipConfig.batteryPercentage)?.apply {
-            tag = ReadTipConfig.batteryPercentage
+        tvBatteryP = getTipView(ReadTipType.tipBatteryPercentage)?.apply {
+            tag = ReadTipType.tipBatteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
-        tvTimeBatteryP = getTipView(ReadTipConfig.timeBatteryPercentage)?.apply {
-            tag = ReadTipConfig.timeBatteryPercentage
+        tvTimeBatteryP = getTipView(ReadTipType.tipTimeBatteryPercentage)?.apply {
+            tag = ReadTipType.tipTimeBatteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
+        }
+        // 自定义页眉/页脚模板：6 个位置共享同一段配置逻辑
+        val customTypeface = tipTypeface
+        val customTextSize = tipTextSize
+        for (target in CUSTOM_TIP_TARGETS) {
+            if (target.currentTipValue() != ReadTipType.tipCustom) continue
+            val view = customTipViewFor(target)
+            view.tag = ReadTipType.tipCustom
+            view.typeface = customTypeface
+            view.textSize = customTextSize
+            view.batteryMode = BatteryView.BatteryMode.NO_BATTERY
+        }
+
+        // 当页脚不应用页眉字体样式时，覆盖页脚视图的字体和字号
+        if (!style.applyHeaderStyle) {
+            val footerTypeface = style.footerTypeface ?: tipTypeface
+            val footerTextSize = style.footerTextSize
+            listOf(tvFooterLeft, tvFooterMiddle, tvFooterRight).forEach { view ->
+                if (view.tag != null) {
+                    view.typeface = footerTypeface
+                    view.textSize = footerTextSize
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据 [target] 取得对应的页眉/页脚 [BatteryView] 实例。
+     */
+    private fun customTipViewFor(target: CustomTipTarget): BatteryView = binding.run {
+        when (target) {
+            CustomTipTarget.HEADER_LEFT -> tvHeaderLeft
+            CustomTipTarget.HEADER_MIDDLE -> tvHeaderMiddle
+            CustomTipTarget.HEADER_RIGHT -> tvHeaderRight
+            CustomTipTarget.FOOTER_LEFT -> tvFooterLeft
+            CustomTipTarget.FOOTER_MIDDLE -> tvFooterMiddle
+            CustomTipTarget.FOOTER_RIGHT -> tvFooterRight
         }
     }
 
@@ -316,13 +416,14 @@ class PageView(context: Context) : FrameLayout(context) {
      * @param tip 信息类型
      */
     private fun getTipView(tip: Int): BatteryView? = binding.run {
+        val style = TipStyleProvider.style
         return when (tip) {
-            ReadTipConfig.tipHeaderLeft -> tvHeaderLeft
-            ReadTipConfig.tipHeaderMiddle -> tvHeaderMiddle
-            ReadTipConfig.tipHeaderRight -> tvHeaderRight
-            ReadTipConfig.tipFooterLeft -> tvFooterLeft
-            ReadTipConfig.tipFooterMiddle -> tvFooterMiddle
-            ReadTipConfig.tipFooterRight -> tvFooterRight
+            style.tipHeaderLeft -> tvHeaderLeft
+            style.tipHeaderMiddle -> tvHeaderMiddle
+            style.tipHeaderRight -> tvHeaderRight
+            style.tipFooterLeft -> tvFooterLeft
+            style.tipFooterMiddle -> tvFooterMiddle
+            style.tipFooterRight -> tvFooterRight
             else -> null
         }
     }
@@ -333,8 +434,8 @@ class PageView(context: Context) : FrameLayout(context) {
     fun upBg() {
         binding.vwRoot.background = LayerDrawable(
             arrayOf(
-                ReadBookConfig.bgMeanColor.toDrawable(),
-                ReadBookConfig.bg
+                ReadSessionState.backgroundMeanColor.toDrawable(),
+                ReadSessionState.background
             )
         )
         upBgAlpha()
@@ -344,7 +445,7 @@ class PageView(context: Context) : FrameLayout(context) {
      * 更新背景透明度
      */
     fun upBgAlpha() {
-        ReadBookConfig.bg?.alpha = (ReadBookConfig.bgAlpha / 100f * 255).toInt()
+        ReadSessionState.background?.alpha = (TipStyleProvider.style.bgAlpha / 100f * 255).toInt()
         binding.vwRoot.invalidate()
     }
 
@@ -354,6 +455,7 @@ class PageView(context: Context) : FrameLayout(context) {
     fun upTime() {
         tvTime?.text = timeFormat.format(Date(System.currentTimeMillis()))
         upTimeBattery()
+        upCustomTip(currentTextPage)
     }
 
     /**
@@ -368,6 +470,7 @@ class PageView(context: Context) : FrameLayout(context) {
         tvBatteryIcon?.setBattery(battery)
         tvBatteryP?.text = "$battery%"
         upTimeBattery()
+        upCustomTip(currentTextPage)
     }
 
     /**
@@ -381,6 +484,77 @@ class PageView(context: Context) : FrameLayout(context) {
         tvTimeBatteryClassic?.setBattery(battery, time)
         tvTimeBatteryClassic?.text = "$time $battery%"
         tvTimeBatteryP?.text = "$time $battery%"
+    }
+
+    /**
+     * 将所有启用自定义模板的页眉/页脚视图按当前 textPage 与最新时间/电池进行渲染。
+     * 当位置未启用 tipCustom 或模板为空时不做任何处理。
+     */
+    fun upCustomTip(textPage: TextPage?) {
+        val page = textPage ?: return
+        for (target in CUSTOM_TIP_TARGETS) {
+            if (target.currentTipValue() != ReadTipType.tipCustom) continue
+            val template = target.currentCustomTemplate()
+            val view = customTipViewFor(target)
+            if (template.isEmpty()) {
+                view.setTextIfNotEqual("")
+            } else {
+                view.setTextIfNotEqual(resolveCustomTemplate(template, page))
+            }
+        }
+    }
+
+    /**
+     * 将 [template] 中的预定义占位符替换为当前页面、时间、电池等实际值。
+     *
+     * 仅会替换 [CustomTipPlaceholder] 中枚举的合法 token；未识别的 `{Xxx}` 段将被原样保留
+     * （校验由 [CustomTipDialog] / [CustomTipPlaceholder.isValid] 在保存前完成）。
+     */
+    @SuppressLint("SetTextI18n")
+    private fun resolveCustomTemplate(template: String, textPage: TextPage): String {
+        if (template.isEmpty()) return ""
+        val time = timeFormat.format(Date(System.currentTimeMillis()))
+        val bookName = ReadBook.book?.name.orEmpty()
+        val chapterTitle = textPage.title
+        val chapterIndexDisplay = textPage.chapterIndex.plus(1).toString()
+        val chapterSizeDisplay = textPage.chapterSize.toString()
+        val pageIndexDisplay = textPage.index.plus(1).toString()
+        val pageSizeDisplay = if (textPage.textChapter.isCompleted) {
+            textPage.pageSize.toString()
+        } else {
+            val pageSizeInt = textPage.pageSize
+            if (pageSizeInt <= 0) "-" else pageSizeInt.toString()
+        }
+        val pageRemainingDisplay = formatCustomTipPageRemaining(
+            pageSize = textPage.pageSize,
+            pageIndex = textPage.index,
+            isChapterCompleted = textPage.textChapter.isCompleted,
+        )
+        val readProgressDisplay = textPage.readProgress
+        val wholeBookPage = ReadBook.getWholeBookPageState(textPage.chapterIndex, textPage.index)
+        val fullPageIndexDisplay = wholeBookPage?.currentPage?.toString() ?: pageIndexDisplay
+        val fullPageSizeDisplay = wholeBookPage?.totalPages?.toString() ?: pageSizeDisplay
+        // 使用本 PageView 实例持有的电池字段，值由 [upBattery] 在系统电量变化时持续刷新。
+        val batteryPercentDisplay = "$battery%"
+        var result = template
+        for (placeholder in CUSTOM_TIP_PLACEHOLDERS) {
+            val replacement = when (placeholder) {
+                CustomTipPlaceholder.BOOK_NAME -> bookName
+                CustomTipPlaceholder.CHAPTER_TITLE -> chapterTitle
+                CustomTipPlaceholder.TIME -> time
+                CustomTipPlaceholder.BATTERY_PERCENT -> batteryPercentDisplay
+                CustomTipPlaceholder.CHAPTER_INDEX -> chapterIndexDisplay
+                CustomTipPlaceholder.CHAPTER_SIZE -> chapterSizeDisplay
+                CustomTipPlaceholder.PAGE_INDEX -> pageIndexDisplay
+                CustomTipPlaceholder.PAGE_SIZE -> pageSizeDisplay
+                CustomTipPlaceholder.PAGE_REMAINING -> pageRemainingDisplay
+                CustomTipPlaceholder.READ_PROGRESS -> readProgressDisplay
+                CustomTipPlaceholder.FULL_PAGE_INDEX -> fullPageIndexDisplay
+                CustomTipPlaceholder.FULL_PAGE_SIZE -> fullPageSizeDisplay
+            }
+            result = result.replace(placeholder.token, replacement)
+        }
+        return result
     }
 
     /**
@@ -405,13 +579,6 @@ class PageView(context: Context) : FrameLayout(context) {
     }
 
     /**
-     * 设置无障碍文本
-     */
-    fun setContentDescription(content: String) {
-        binding.contentTextView.contentDescription = content
-    }
-
-    /**
      * 重置滚动位置
      */
     fun resetPageOffset() {
@@ -423,11 +590,24 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     @SuppressLint("SetTextI18n")
     fun setProgress(textPage: TextPage) = textPage.apply {
+        currentTextPage = textPage
         tvBookName?.setTextIfNotEqual(ReadBook.book?.name)
         tvTitle?.setTextIfNotEqual(textPage.title)
         tvTitleArrow?.setTextIfNotEqual(textPage.title)
         tvTitleArrowClassic?.setTextIfNotEqual(textPage.title)
         val readProgress = readProgress
+        val wholeBookPage = ReadBook.getWholeBookPageState(chapterIndex, index)
+        val pageDisplay = wholeBookPage?.let {
+            if (!it.estimated && it.allPreviousChaptersExact) {
+                context.getString(R.string.whole_book_page_format, it.currentPage, it.totalPages)
+            } else {
+                context.getString(
+                    R.string.whole_book_page_estimated_format,
+                    it.currentPage.toString(),
+                    it.totalPages.toString(),
+                )
+            }
+        }
         tvTotalProgress?.setTextIfNotEqual(readProgress)
         tvTotalProgress1?.setTextIfNotEqual("${chapterIndex.plus(1)}/${chapterSize}")
         if (textChapter.isCompleted) {
@@ -435,10 +615,42 @@ class PageView(context: Context) : FrameLayout(context) {
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         } else {
             val pageSizeInt = pageSize
-            val pageSize = if (pageSizeInt <= 0) "-" else "~$pageSizeInt"
+            val pageSize = if (pageSizeInt <= 0) "-" else pageSizeInt.toString()
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }
+        val wholeBookPageDisplay = pageDisplay
+            ?: context.getString(R.string.whole_book_page_unavailable)
+        tvWholeBookPage?.setTextIfNotEqual(wholeBookPageDisplay)
+        tvWholeBookPageAndProgress?.setTextIfNotEqual(
+            "$wholeBookPageDisplay  $readProgress"
+        )
+        upCustomTip(textPage)
+        this@PageView.layoutSync()
+    }
+
+    fun layoutSync() {
+        if (width <= 0 || height <= 0) return
+        if (!isLayoutRequested) return
+        measure(
+            MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+        )
+        layout(left, top, right, bottom)
+    }
+
+    fun screenshot(canvasRecorder: CanvasRecorder) {
+        if (!isMainView && !isScroll) {
+            setProgress(textPage)
+        }
+        viewScreenshot(canvasRecorder)
+    }
+
+    fun screenshot(bitmap: Bitmap? = null, canvas: Canvas? = null): Bitmap? {
+        if (!isMainView && !isScroll) {
+            setProgress(textPage)
+        }
+        return viewScreenshot(bitmap, canvas)
     }
 
     fun setAutoPager(autoPager: AutoPager?) {
@@ -574,4 +786,28 @@ class PageView(context: Context) : FrameLayout(context) {
     val selectedText: String get() = binding.contentTextView.getSelectedText()
 
     val selectStartPos get() = binding.contentTextView.selectStart
+
+    val selectEndPos get() = binding.contentTextView.selectEndPosition
+
+    companion object {
+        /**
+         * 缓存枚举数组，避免每次调用 `values()` 触发 Kotlin 内部数组克隆。
+         * 模板渲染在 `upCustomTip` / `upTime` / `upBattery` 等热路径上会反复触发。
+         */
+        private val CUSTOM_TIP_TARGETS: Array<CustomTipTarget> = CustomTipTarget.values()
+        private val CUSTOM_TIP_PLACEHOLDERS: Array<CustomTipPlaceholder> = CustomTipPlaceholder.values()
+    }
 }
+
+/**
+ * 渲染层按位置取当前 tip 类型 / 自定义模板，读的是 [TipStyleProvider] 快照。
+ *
+ * 这两个函数在 `upCustomTip` / `upTime` / `upBattery` 热路径上反复触发，过去每次都直读
+ * 可变全局 `ReadBookConfig`。设置面读的是 `ReadSheetConfigUiState`
+ * （`CustomTipTarget.tipValueOf` / `customTemplateOf`），两侧互不影响。
+ */
+private fun CustomTipTarget.currentTipValue(): Int =
+    TipStyleProvider.style.tipValueOf(this)
+
+private fun CustomTipTarget.currentCustomTemplate(): String =
+    TipStyleProvider.style.customTemplateOf(this)

@@ -19,6 +19,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginBottom="8dp"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_cfg_about" />
 
         <TextView
@@ -30,4 +31,3 @@
             android:textSize="12sp" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
-

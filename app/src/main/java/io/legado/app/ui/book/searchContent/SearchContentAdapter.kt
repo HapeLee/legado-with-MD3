@@ -6,6 +6,7 @@ import androidx.core.view.isVisible
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.ItemSearchListBinding
+import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.themeColor
 
 
@@ -29,8 +30,13 @@ class SearchContentAdapter(context: Context, val callback: Callback) :
         binding.run {
             val isDur = callback.durChapterIndex() == item.chapterIndex
             if (payloads.isEmpty()) {
-                tvTitle.text = item.getTitleSpannable(textColorInt)
-                tvContent.text = item.getContentSpannable(textColorInt, accentColorInt, bgColorInt)
+                tvTitle.text = item.getTitleSpannable(textColorInt, AppConfig.isEInkMode)
+                tvContent.text = item.getContentSpannable(
+                    textColorInt,
+                    accentColorInt,
+                    bgColorInt,
+                    AppConfig.isEInkMode,
+                )
 
                 if (item.progressPercent > 0) {
                     cdCount.isVisible = true

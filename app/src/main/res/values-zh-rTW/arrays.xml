@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="click_image_way_title">
+        <item>新版行為</item>
+        <item>預覽圖片</item>
+        <item>經典</item>
+        <item>停用點擊</item>
+        <item>雙擊</item>
+    </string-array>
     <string-array name="book_type">
         <item>文字</item>
         <item>音訊</item>
@@ -9,9 +16,8 @@
 
     <string-array name="group_style">
         <item>標籤</item>
-        <item>資料夾</item>
         <item>隐藏標籤</item>
-        <item>材料標籤</item>
+        <item>資料夾</item>
     </string-array>
 
     <string-array name="text_suffix">
@@ -104,10 +110,13 @@
         <item>時間及電量</item>
         <item>時間及電量经典</item>
         <item>時間及電量%</item>
+        <item>全書頁數</item>
+        <item>全書頁數及進度</item>
+        <item>自訂</item>
     </string-array>
 
     <string-array name="text_font_weight">
-        <item>正常</item>
+        <item>常規</item>
         <item>粗體</item>
         <item>細體</item>
     </string-array>
@@ -123,6 +132,13 @@
         <item>書源</item>
         <item>訂閱源</item>
         <item>取代規則</item>
+        <item>自動識別</item>
+    </string-array>
+
+    <string-array name="bookshelf_grid_layout">
+        <item>标准</item>
+        <item>紧凑</item>
+        <item>仅封面</item>
     </string-array>
 
 </resources>

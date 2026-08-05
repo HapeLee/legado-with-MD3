@@ -14,7 +14,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.service.AudioPlayService
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.audio.AudioPlayActivity
-import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.postEvent
@@ -94,7 +94,7 @@ class MediaButtonReceiver : BroadcastReceiver() {
                     // break
                 }
 
-                LifecycleHelp.isExistActivity(ReadBookActivity::class.java) ->
+                MainActivity.hasActiveReadBookRoute ->
                     postEvent(EventBus.MEDIA_BUTTON, true)
 
                 LifecycleHelp.isExistActivity(AudioPlayActivity::class.java) ->

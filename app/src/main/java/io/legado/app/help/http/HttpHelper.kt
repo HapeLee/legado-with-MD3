@@ -8,12 +8,16 @@ import io.legado.app.help.glide.progress.ProgressResponseBody
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.model.ReadManga
 import io.legado.app.utils.NetworkUtils
+import okhttp3.Cache
 import okhttp3.ConnectionSpec
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.Credentials
 import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import splitties.init.appCtx
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.concurrent.ConcurrentHashMap
@@ -47,6 +51,22 @@ val cookieJar by lazy {
     }
 }
 
+/**
+ * 强制缓存拦截器，对于封面请求（由CoverFetcher标记），强制缓存30天
+ */
+private val cacheControlInterceptor = Interceptor { chain ->
+    val request = chain.request()
+    val response = chain.proceed(request)
+    if (request.tag() === io.legado.app.help.coil.CoverFetcher.COVER_REQUEST_TAG) {
+        response.newBuilder()
+            .header("Cache-Control", "public, max-age=2592000")
+            .removeHeader("Pragma")
+            .build()
+    } else {
+        response
+    }
+}
+
 val okHttpClient: OkHttpClient by lazy {
     val specs = arrayListOf(
         ConnectionSpec.MODERN_TLS,
@@ -54,7 +74,11 @@ val okHttpClient: OkHttpClient by lazy {
         ConnectionSpec.CLEARTEXT
     )
 
+    //TODO：自定义缓存大小
+    val cache = Cache(File(appCtx.cacheDir, "http_cache"), 100L * 1024L * 1024L)
+
     val builder = OkHttpClient.Builder()
+        .cache(cache)
         .connectTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -77,9 +101,9 @@ val okHttpClient: OkHttpClient by lazy {
             }
             builder.addHeader("Keep-Alive", "300")
             builder.addHeader("Connection", "Keep-Alive")
-            builder.addHeader("Cache-Control", "no-cache")
             chain.proceed(builder.build())
         }
+        .addNetworkInterceptor(cacheControlInterceptor) // 添加强制缓存拦截器
         .addNetworkInterceptor { chain ->
             var request = chain.request()
             val enableCookieJar = request.header(cookieJarHeader) != null
@@ -121,6 +145,7 @@ val okHttpClient: OkHttpClient by lazy {
 
 val okHttpClientManga by lazy {
     okHttpClient.newBuilder().run {
+        cache(Cache(File(appCtx.cacheDir, "manga_cache"), 100L * 1024L * 1024L))
         val interceptors = interceptors()
         interceptors.add(1) { chain ->
             val request = chain.request()
@@ -136,6 +161,24 @@ val okHttpClientManga by lazy {
             }
         }
         build()
+    }
+}
+
+enum class HttpCacheType(val dirName: String, val maxSize: Long) {
+    COVER("http_cache", 100L * 1024 * 1024),
+    MANGA("manga_cache", 100L * 1024 * 1024),
+}
+
+fun getHttpCacheSize(type: HttpCacheType): Long {
+    val dir = File(appCtx.cacheDir, type.dirName)
+    if (!dir.exists()) return 0
+    return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+}
+
+fun clearHttpCache(type: HttpCacheType) {
+    when (type) {
+        HttpCacheType.COVER -> okHttpClient.cache?.delete()
+        HttpCacheType.MANGA -> okHttpClientManga.cache?.delete()
     }
 }
 

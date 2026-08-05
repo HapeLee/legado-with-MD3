@@ -1,67 +1,39 @@
 package io.legado.app.ui.book.explore
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,105 +41,165 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.model.BookShelfState
+import io.legado.app.R
+import io.legado.app.domain.model.BookShelfState
+import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
-import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.Cover
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.SearchBarSection
-import io.legado.app.ui.widget.components.button.AnimatedTextButton
-import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.AppPullToRefresh
+import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppSlider
+import io.legado.app.ui.widget.components.LoadMoreFooter
+import io.legado.app.ui.widget.components.book.SearchBookGridItem
+import io.legado.app.ui.widget.components.book.SearchBookListItem
+import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
+import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import org.koin.androidx.compose.koinViewModel
+
+private enum class BookFilterState(val id: Int) {
+    SHOW_ALL(0),
+    HIDE_IN_SHELF(1),
+    HIDE_SAME_NAME_AUTHOR(2),
+    SHOW_NOT_IN_SHELF_ONLY(3);
+
+    companion object {
+        fun fromId(id: Int) = entries.getOrElse(id) { SHOW_ALL }
+    }
+}
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class
+)
+@Composable
+fun ExploreShowRouteScreen(
+    viewModel: ExploreShowViewModel = koinViewModel(),
+    title: String = "",
+    onBack: () -> Unit,
+    onBookClick: (SearchBook, String?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is ExploreShowEffect.OpenBookInfo -> onBookClick(
+                    SearchBook(
+                        name = effect.name,
+                        author = effect.author,
+                        bookUrl = effect.bookUrl,
+                        origin = effect.origin ?: "",
+                        coverUrl = effect.coverPath,
+                    ),
+                    effect.sharedCoverKey,
+                )
+
+                is ExploreShowEffect.ShowMessage -> {}
+            }
+        }
+    }
+
+    ExploreShowScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        title = title,
+        onBack = onBack,
+        onBookClick = onBookClick,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+    )
+}
+
+@SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class,
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class
 )
 @Composable
 fun ExploreShowScreen(
-    title: String,
-    intent: Intent,
+    state: ExploreShowUiState,
+    onIntent: (ExploreShowIntent) -> Unit,
+    title: String = "",
     onBack: () -> Unit,
-    onBookClick: (SearchBook) -> Unit,
-    viewModel: ExploreShowViewModel = koinViewModel()
+    onBookClick: (SearchBook, String?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
 
-    LaunchedEffect(Unit) {
-        viewModel.initData(intent)
-    }
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
 
-    val books by viewModel.uiBooks.collectAsState()
-    val isBookEnd by viewModel.isEnd.collectAsState()
-    val shouldTriggerAutoLoad by viewModel.shouldTriggerAutoLoad.collectAsState()
-    val kinds by viewModel.kinds.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val errorMsg by viewModel.errorMsg.collectAsState()
-    val filterState by viewModel.filterState.collectAsState()
-    val selectedTitle by viewModel.selectedKindTitle.collectAsState()
+    val filterStateId = state.filterStateId
+    val books = remember(state.books, filterStateId) {
+        val filter = BookFilterState.fromId(filterStateId)
+        when (filter) {
+            BookFilterState.SHOW_ALL -> state.books
+            BookFilterState.HIDE_IN_SHELF -> state.books.filter { it.shelfState != BookShelfState.IN_SHELF }
+            BookFilterState.HIDE_SAME_NAME_AUTHOR -> state.books.filter { it.shelfState != BookShelfState.SAME_NAME_AUTHOR }
+            BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state.books.filter { it.shelfState == BookShelfState.NOT_IN_SHELF }
+        }
+    }
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    var showKindSheet by remember { mutableStateOf(false) }
-    val layoutState by viewModel.layoutState.collectAsState()
-    val isGridMode = layoutState == 1
-    var showGridCountSheet by remember { mutableStateOf(false) }
-    val gridColumnCount by viewModel.gridCount.collectAsState()
-
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val pullToRefreshState = rememberPullToRefreshState()
-
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val isGridMode = state.layoutState == 1
     val hazeState = remember { HazeState() }
-    val shouldLoadMoreList = remember {
+    val showLoadMoreFooter = !state.isRefreshing &&
+        (state.isLoading || state.errorMsg != null || state.isEnd)
+    val canLoadMore = state.books.isNotEmpty() &&
+        !state.isLoading &&
+        !state.isRefreshing &&
+        !state.isEnd &&
+        state.errorMsg == null
+    val shouldLoadMore by remember(isGridMode) {
         derivedStateOf {
-            val total = listState.layoutInfo.totalItemsCount
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 3
+            if (isGridMode) {
+                val total = gridState.layoutInfo.totalItemsCount
+                val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                total > 0 && last >= total - 1
+            } else {
+                val total = listState.layoutInfo.totalItemsCount
+                val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                total > 0 && last >= total - 3
+            }
         }
     }
 
-    val shouldLoadMoreGrid = remember {
-        derivedStateOf {
-            val total = gridState.layoutInfo.totalItemsCount
-            val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 1
+    LaunchedEffect(
+        shouldLoadMore,
+        isGridMode,
+        canLoadMore,
+        state.books.size,
+    ) {
+        if (shouldLoadMore && canLoadMore) {
+            onIntent(ExploreShowIntent.LoadMore)
         }
     }
-    var showMenu by remember { mutableStateOf(false) }
 
-    LaunchedEffect(shouldLoadMoreList.value, isGridMode) {
-        if (!isGridMode && shouldLoadMoreList.value) viewModel.loadMore()
-    }
-
-    LaunchedEffect(shouldLoadMoreGrid.value, isGridMode) {
-        if (isGridMode && shouldLoadMoreGrid.value) viewModel.loadMore()
-    }
-
-    LaunchedEffect(shouldTriggerAutoLoad) {
-        if (shouldTriggerAutoLoad) {
-            viewModel.loadMore()
+    // Auto-load next page when filter removes all books on the current page
+    // but the ViewModel hasn't reached the end of data yet.
+    LaunchedEffect(books.isEmpty(), state.isLoading, state.isEnd, state.books.size) {
+        if (books.isEmpty() && !state.isLoading && !state.isEnd && state.books.isNotEmpty()) {
+            onIntent(ExploreShowIntent.ForceLoadNext)
         }
     }
 
@@ -183,240 +215,109 @@ fun ExploreShowScreen(
         }
     }
 
-    if (showGridCountSheet) {
-
-        GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = state.sheet == ExploreShowSheet.GridCount,
+        onDismissRequest = { onIntent(ExploreShowIntent.DismissSheet) }
+    ) {
+        Row(
             modifier = Modifier
-                .padding(16.dp),
-            onDismissRequest = { showGridCountSheet = false }
+                .fillMaxWidth()
+                .padding(bottom = 32.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "布局列数",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                TextCard(
-                    text = "$gridColumnCount 列",
-                    textStyle = MaterialTheme.typography.titleSmall,
-                    verticalPadding = 4.dp,
-                    horizontalPadding = 12.dp,
-                    cornerRadius = 12.dp
-                )
-            }
-
-            Slider(
-                value = gridColumnCount.toFloat(),
-                onValueChange = {
-                    val col = it.toInt().coerceIn(1, 10)
-                    viewModel.saveGridCount(col)
-                },
-                valueRange = 1f..10f,
-                steps = 8,
-                modifier = Modifier.padding(horizontal = 20.dp)
+            AppText(
+                text = "布局列数",
+                style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
-
-            Spacer(Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = { showGridCountSheet = false },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("完成")
-            }
+            Spacer(modifier = Modifier.width(12.dp))
+            TextCard(
+                text = "${state.gridCount} 列",
+                textStyle = LegadoTheme.typography.titleSmall,
+                backgroundColor = LegadoTheme.colorScheme.onSheetContent,
+                verticalPadding = 4.dp,
+                horizontalPadding = 12.dp,
+                cornerRadius = 12.dp
+            )
         }
+
+        AppSlider(
+            value = state.gridCount.toFloat(),
+            onValueChange = {
+                onIntent(ExploreShowIntent.SaveGridCount(it.toInt().coerceIn(1, 10)))
+            },
+            valueRange = 1f..10f,
+            steps = 8,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
     }
 
-    if (showKindSheet) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showKindSheet = false },
-            modifier = Modifier
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
-        ) {
-
-            var kindQuery by remember { mutableStateOf("") }
-
-            SearchBarSection(
-                query = kindQuery,
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                onQueryChange = { kindQuery = it },
-                placeholder = "选择或搜索分类",
-            )
-
-            val filteredKinds = remember(kindQuery, kinds) {
-                if (kindQuery.isBlank()) kinds
-                else kinds.filter { kind ->
-                    kind.title.contains(kindQuery, ignoreCase = true) ||
-                            (kind.url?.contains(kindQuery, ignoreCase = true) == true)
-                }
+    ExploreKindSelectSheet(
+        show = state.sheet == ExploreShowSheet.KindSelect,
+        onDismissRequest = { onIntent(ExploreShowIntent.DismissSheet) },
+        sourceUrl = state.sourceUrl,
+        onSelected = { selectedKinds ->
+            selectedKinds.firstOrNull()?.let { kind ->
+                onIntent(ExploreShowIntent.SwitchKind(kind))
             }
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                itemsIndexed(
-                    items = filteredKinds,
-                    key = { index, kind -> "${kind.url ?: kind.title}_$index" },
-                    span = { _, kind ->
-                        val isClickable = !kind.url.isNullOrBlank()
-                        if (isClickable) GridItemSpan(1) else GridItemSpan(3)
-                    }
-                ) { _, kind ->
-                    KindGridItem(
-                        modifier = Modifier.animateItem(),
-                        kind = kind,
-                        currentTitle = selectedTitle ?: title,
-                        onClick = {
-                            showKindSheet = false
-                            viewModel.switchExploreUrl(kind)
-                        }
-                    )
-                }
-            }
-
         }
-    }
+    )
 
-    Scaffold(
+    AppScaffold(
         modifier = Modifier
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                modifier = Modifier.responsiveHazeEffect(
-                    state = hazeState
-                ),
-                title = {
-                    AnimatedTextLine(
-                        selectedTitle ?: title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                colors = GlassTopAppBarDefaults.glassColors(),
+                modifier = Modifier.responsiveHazeEffect(state = hazeState),
+                title = state.selectedKindTitle ?: title,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBack)
+                    TopBarNavigationButton(onClick = onBack)
                 },
                 actions = {
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.animateContentSize(tween(300))
+
+                    AnimatedVisibility(
+                        visible = isGridMode,
+                        enter = fadeIn(tween(300)),
+                        exit = fadeOut(tween(300))
                     ) {
                         TopBarActionButton(
-                            onClick = { showMenu = true },
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter"
+                            onClick = {
+                                onIntent(
+                                    ExploreShowIntent.ShowSheet(
+                                        ExploreShowSheet.GridCount
+                                    )
+                                )
+                            },
+                            imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                            contentDescription = stringResource(R.string.a11y_grid_columns)
                         )
-
-                        TopBarActionButton(
-                            onClick = { showKindSheet = true },
-                            imageVector = Icons.Outlined.FilterAlt,
-                            contentDescription = "分类"
-                        )
-
-                        AnimatedVisibility(
-                            visible = isGridMode,
-                            enter = fadeIn(tween(300)),
-                            exit = fadeOut(tween(300))
-                        ) {
-                            TopBarActionButton(
-                                onClick = { showGridCountSheet = true },
-                                imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                                contentDescription = "列数设置"
-                            )
-                        }
                     }
 
                     TopBarActionButton(
-                        onClick = { viewModel.setLayout() },
-                        imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                        contentDescription = "切换布局"
+                        onClick = { onIntent(ExploreShowIntent.ShowSheet(ExploreShowSheet.KindSelect)) },
+                        imageVector = Icons.Outlined.FilterAlt,
+                        contentDescription = stringResource(R.string.select_or_search_category)
                     )
 
-                    RoundDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        RoundDropdownMenuItem(
-                            text = { Text("全部显示") },
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.SHOW_ALL)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.SHOW_ALL)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = { Text("隐藏已在书架的同源书籍") },
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.HIDE_IN_SHELF)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = { Text("隐藏已在书架的非同源书籍") },
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.HIDE_SAME_NAME_AUTHOR)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = { Text("只显示不在书架的书籍") },
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-                    }
+                    TopBarActionButton(
+                        onClick = { onIntent(ExploreShowIntent.ToggleLayout) },
+                        imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
+                        contentDescription = stringResource(R.string.a11y_switch_layout)
+                    )
                 },
                 scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
-        PullToRefreshBox(
+        AppPullToRefresh(
             modifier = Modifier.fillMaxSize(),
-            isRefreshing = isRefreshing,
-            state = pullToRefreshState,
-            onRefresh = { viewModel.loadMore(isRefresh = true) },
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = paddingValues.calculateTopPadding())
-                )
-            }
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onIntent(ExploreShowIntent.Refresh) },
+            topPadding = paddingValues.calculateTopPadding(),
+            scrollBehavior = scrollBehavior
         ) {
             Crossfade(
                 targetState = isGridMode,
@@ -429,7 +330,7 @@ fun ExploreShowScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .responsiveHazeSource(hazeState),
-                        columns = GridCells.Fixed(gridColumnCount),
+                        columns = GridCells.Fixed(state.gridCount),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding() + 12.dp,
                             bottom = paddingValues.calculateBottomPadding() + 12.dp,
@@ -439,25 +340,44 @@ fun ExploreShowScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(
+                        itemsIndexed(
                             items = books,
-                            key = { it.bookUrl }
-                        ) { book ->
+                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                        ) { index, item ->
+                            val sharedCoverKey = bookCoverSharedElementKey(
+                                item.book.bookUrl,
+                                "explore:grid:$index"
+                            )
                             ExploreBookGridItem(
-                                book = book,
-                                shelfState = viewModel.getBookShelfStateFlow(book),
-                                onClick = { onBookClick(book) },
-                                modifier = Modifier.animateItem()
+                                book = item.book,
+                                shelfState = item.shelfState,
+                                onClick = {
+                                    onIntent(
+                                        ExploreShowIntent.OpenBook(
+                                            item.book,
+                                            sharedCoverKey
+                                        )
+                                    )
+                                },
+                                onLongClick = { book, coverKey ->
+                                    previewBook = book
+                                    previewSharedCoverKey = coverKey
+                                },
+                                modifier = Modifier.animateItem(),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                sharedCoverKey = sharedCoverKey,
                             )
                         }
 
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            LoadMoreFooter(
-                                isLoading = isLoading,
-                                errorMsg = errorMsg,
-                                isEnd = isBookEnd,
-                                onRetry = viewModel::loadMore
-                            )
+                        if (showLoadMoreFooter) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                ExploreShowLoadMoreFooter(
+                                    state = state,
+                                    onRetry = { onIntent(ExploreShowIntent.LoadMore) },
+                                    onLoadMore = { onIntent(ExploreShowIntent.ForceLoadNext) },
+                                )
+                            }
                         }
                     }
                 } else {
@@ -471,299 +391,130 @@ fun ExploreShowScreen(
                             bottom = paddingValues.calculateBottomPadding() + 16.dp
                         )
                     ) {
-                        items(
+                        itemsIndexed(
                             items = books,
-                            key = { it.bookUrl }
-                        ) { book ->
+                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                        ) { index, item ->
+                            val sharedCoverKey = bookCoverSharedElementKey(
+                                item.book.bookUrl,
+                                "explore:list:$index"
+                            )
                             ExploreBookItem(
-                                book = book,
-                                shelfState = viewModel.getBookShelfStateFlow(book),
-                                onClick = { onBookClick(book) },
-                                modifier = Modifier.animateItem()
+                                book = item.book,
+                                shelfState = item.shelfState,
+                                onClick = {
+                                    onIntent(
+                                        ExploreShowIntent.OpenBook(
+                                            item.book,
+                                            sharedCoverKey
+                                        )
+                                    )
+                                },
+                                onLongClick = { book, coverKey ->
+                                    previewBook = book
+                                    previewSharedCoverKey = coverKey
+                                },
+                                modifier = Modifier.animateItem(),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                sharedCoverKey = sharedCoverKey,
                             )
                         }
 
-                        item {
-                            LoadMoreFooter(
-                                isLoading = isLoading,
-                                errorMsg = errorMsg,
-                                isEnd = isBookEnd,
-                                onRetry = viewModel::loadMore
-                            )
+                        if (showLoadMoreFooter) {
+                            item {
+                                ExploreShowLoadMoreFooter(
+                                    state = state,
+                                    onRetry = { onIntent(ExploreShowIntent.LoadMore) },
+                                    onLoadMore = { onIntent(ExploreShowIntent.ForceLoadNext) },
+                                )
+                            }
                         }
                     }
                 }
-
             }
         }
     }
-}
 
-@Composable
-fun KindGridItem(
-    kind: ExploreKind,
-    currentTitle: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isClickable = !kind.url.isNullOrBlank()
-    val isSelected = kind.title == currentTitle
-
-    FilterChip(
-        onClick = { if (isClickable) onClick() },
-        enabled = isClickable,
-        selected = isSelected,
-        label = {
-            Text(
-                text = kind.title,
-                fontSize = 12.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+    val previewShelfState = previewBook?.let { book ->
+        books.find { it.book.bookUrl == book.bookUrl }?.shelfState
+            ?: BookShelfState.NOT_IN_SHELF
+    }
+    SearchBookPreviewSheet(
+        data = previewBook,
+        shelfState = previewShelfState,
+        sharedCoverKey = previewSharedCoverKey,
+        onDismissRequest = { previewBook = null },
+        onOpenDetail = { book, sharedCoverKey ->
+            previewBook = null
+            onBookClick(book, sharedCoverKey)
         },
-        modifier = modifier.fillMaxWidth()
+        onAddToShelf = { book ->
+            onIntent(ExploreShowIntent.AddToShelf(book))
+        },
     )
 }
 
 @Composable
-fun ExploreBookItem(
-    book: SearchBook,
-    shelfState: Flow<BookShelfState>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun ExploreShowLoadMoreFooter(
+    state: ExploreShowUiState,
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
 ) {
-    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
-
-    val badge: (@Composable RowScope.() -> Unit)?
-            = when (shelfState) {
-
-        BookShelfState.IN_SHELF -> {
-            {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "已在书架",
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
-
-        BookShelfState.SAME_NAME_AUTHOR -> {
-            {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = "同名书籍",
-                    modifier = Modifier.size(12.dp)
-                )
-
-            }
-        }
-
-        BookShelfState.NOT_IN_SHELF -> null
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-
-        Cover(
-            path = book.coverUrl,
-            modifier = Modifier.width(72.dp),
-            badgeContent = badge)
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column(modifier = Modifier
-            .weight(1f)
-            .align(Alignment.CenterVertically)) {
-
-            Text(
-                text = book.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row {
-                Text(
-                    text = book.author,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1
-                )
-
-                val latestChapter = book.latestChapterTitle
-                if (!latestChapter.isNullOrEmpty()) {
-                    Text(
-                        text = " • ",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
-                        maxLines = 1
-                    )
-
-                    Text(
-                        text = "最新: $latestChapter",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
-            if (intro.isNotEmpty()) {
-                Text(
-                    text = intro,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    minLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            val kinds = book.getKindList()
-            if (kinds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    kinds.forEach { kind ->
-                        TagChip(text = kind)
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-                }
-            }
-        }
-    }
+    LoadMoreFooter(
+        isLoading = state.isLoading,
+        errorMsg = state.errorMsg,
+        isEnd = state.isEnd,
+        onRetry = onRetry,
+        onLoadMore = onLoadMore,
+        autoLoad = false,
+    )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun ExploreBookItem(
+    book: SearchBook,
+    shelfState: BookShelfState,
+    onClick: () -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
+) {
+    SearchBookListItem(
+        book = book,
+        shelfState = shelfState,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        modifier = modifier,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = sharedCoverKey
+    )
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ExploreBookGridItem(
     book: SearchBook,
     onClick: () -> Unit,
-    shelfState: Flow<BookShelfState>,
-    modifier: Modifier = Modifier
+    shelfState: BookShelfState,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
-
-    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
-
-    val badgeText: String? = when (shelfState) {
-        BookShelfState.IN_SHELF -> "已在书架"
-        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
-        BookShelfState.NOT_IN_SHELF -> null
-    }
-
-    val content: (@Composable RowScope.() -> Unit)? = if (!badgeText.isNullOrBlank()) {
-        {
-            Text(
-                text = badgeText,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp)
-            )
-        }
-    } else {
-        null
-    }
-
-    Column(
-        modifier = modifier
-            .width(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-    ) {
-
-        Cover(
-            path = book.coverUrl,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(12 / 17f),
-            badgeContent = content
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = book.name,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-// 简单的标签组件
-@Composable
-fun TagChip(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun LoadMoreFooter(
-    isLoading: Boolean,
-    errorMsg: String?,
-    isEnd: Boolean,
-    onRetry: () -> Unit
-) {
-
-    LaunchedEffect(isLoading, errorMsg, isEnd) {
-        if (!isLoading && errorMsg == null && !isEnd) {
-            while (true) {
-                onRetry()
-                delay(1000L)
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-            AnimatedContent(
-                targetState = when {
-                    isLoading -> "加载中…"
-                    errorMsg != null -> "加载失败: $errorMsg"
-                    isEnd -> "已经到底了~"
-                    else -> "我爱你"
-                },
-                label = "FooterTextChange"
-            ) { text ->
-                Text(
-                    text = text,
-                    color = when {
-                        errorMsg != null -> Color.Red
-                        else -> Color.Gray
-                    },
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            AnimatedTextButton(
-                isLoading = isLoading,
-                onClick = onRetry,
-                text = if (errorMsg != null) "重试" else "再试一次",
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
+    SearchBookGridItem(
+        book = book,
+        shelfState = shelfState,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        modifier = modifier.padding(4.dp),
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = sharedCoverKey
+    )
 }

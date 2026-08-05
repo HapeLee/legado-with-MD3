@@ -16,6 +16,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.JsExtensions
@@ -130,7 +131,7 @@ class AnalyzeUrl(
         val urlMatcher = paramPattern.matcher(baseUrl)
         if (urlMatcher.find()) baseUrl = baseUrl.substring(0, urlMatcher.start())
         (headerMapF ?: runScriptWithContext(coroutineContext) {
-            source?.getHeaderMap(hasLoginHeader)
+            source?.getHeaderMap(AppConfig.userAgent, hasLoginHeader)
         })?.let {
             headerMap.putAll(it)
             if (it.containsKey("proxy")) {
@@ -238,7 +239,11 @@ class AnalyzeUrl(
             }
             urlOption?.let { option ->
                 option.getMethod()?.let {
-                    if (it.equals("POST", true)) method = RequestMethod.POST
+                    method = when (it.uppercase()) {
+                        "POST" -> RequestMethod.POST
+                        "HEAD" -> RequestMethod.HEAD
+                        else -> RequestMethod.GET
+                    }
                 }
                 option.getHeaderMap()?.forEach { entry ->
                     headerMap[entry.key.toString()] = entry.value.toString()
@@ -277,6 +282,8 @@ class AnalyzeUrl(
                     analyzeFields(it)
                 }
             }
+
+            RequestMethod.HEAD -> Unit
         }
     }
 
@@ -484,6 +491,11 @@ class AnalyzeUrl(
                             }
                         }
 
+                        RequestMethod.HEAD -> {
+                            get(urlNoQuery, encodedQuery)
+                            head()
+                        }
+
                         else -> get(urlNoQuery, encodedQuery)
                     }
                 }.let {
@@ -556,6 +568,11 @@ class AnalyzeUrl(
                         } else {
                             postJson(body)
                         }
+                    }
+
+                    RequestMethod.HEAD -> {
+                        get(urlNoQuery, encodedQuery)
+                        head()
                     }
 
                     else -> get(urlNoQuery, encodedQuery)
@@ -668,9 +685,10 @@ class AnalyzeUrl(
      * 上传文件
      */
     suspend fun upload(fileName: String, file: Any, contentType: String): StrResponse {
+        val bodyMap = GSON.fromJsonObject<HashMap<String, Any>>(body).getOrNull()
+            ?: return getErrStrResponse(NoStackTraceException("请求体不是合法的JSON格式"))
         return getProxyClient(proxy).newCallStrResponse(retry) {
             url(urlNoQuery)
-            val bodyMap = GSON.fromJsonObject<HashMap<String, Any>>(body).getOrNull()!!
             bodyMap.forEach { entry ->
                 if (entry.value.toString() == "fileRequest") {
                     bodyMap[entry.key] = mapOf(

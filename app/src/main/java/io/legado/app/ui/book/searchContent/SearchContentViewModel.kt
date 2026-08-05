@@ -1,37 +1,59 @@
 package io.legado.app.ui.book.searchContent
 
-import androidx.lifecycle.SavedStateHandle
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.SearchContentRepository
-import io.legado.app.help.IntentData
-import io.legado.app.utils.postEvent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.legado.app.domain.gateway.ThemeSettingsGateway
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class SearchUiState(
+@Stable
+data class SearchContentUiState(
     val isSearching: Boolean = false,
-    val searchResults: List<SearchResult> = emptyList(),
+    val searchResults: ImmutableList<SearchResult> = persistentListOf(),
     val durChapterIndex: Int = -1,
     val book: Book? = null,
-    val error: Throwable? = null
+    val error: Throwable? = null,
+    val searchQuery: String = "",
+    val replaceEnabled: Boolean = false,
+    val regexReplace: Boolean = false,
+    val searchHistory: ImmutableList<SearchContentHistory> = persistentListOf(),
+    val historyOnlyThisBook: Boolean = true,
+    val shouldAutoScroll: Boolean = false,
+    val isEInkMode: Boolean = false,
 )
+
+sealed interface SearchContentIntent {
+    data class UpdateQuery(val value: String) : SearchContentIntent
+    data class ToggleReplace(val enabled: Boolean) : SearchContentIntent
+    data class ToggleRegex(val enabled: Boolean) : SearchContentIntent
+    data object ToggleHistoryScope : SearchContentIntent
+    data class DeleteHistory(val history: SearchContentHistory) : SearchContentIntent
+    data object ClearHistory : SearchContentIntent
+    data object StopSearch : SearchContentIntent
+    data object MarkAutoScrollDone : SearchContentIntent
+    data class OpenResult(val result: SearchResult) : SearchContentIntent
+    data object LeaveSearch : SearchContentIntent
+}
+
+sealed interface SearchContentEffect {
+    data object NavigateBack : SearchContentEffect
+}
 
 sealed interface SearchContentState {
     data object Loading : SearchContentState
@@ -40,161 +62,179 @@ sealed interface SearchContentState {
     data class Error(val throwable: Throwable) : SearchContentState
 }
 
-
 class SearchContentViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val bookUrl: String,
+    initialSearchWord: String?,
+    private val searchResultIndex: Int,
     private val bookRepository: BookRepository,
-    private val searchContentRepository: SearchContentRepository
+    private val searchContentRepository: SearchContentRepository,
+    private val themeSettingsGateway: ThemeSettingsGateway,
 ) : ViewModel() {
+    private val restoredSession = if (initialSearchWord == null) {
+        searchContentRepository.getLastSession(bookUrl)
+    } else null
 
-    val bookUrl: String = savedStateHandle.get<String>("bookUrl") ?: ""
-    private val initialSearchWord: String? = savedStateHandle.get<String>("searchWord")
-    private val searchResultIndex: Int = savedStateHandle.get<Int>("searchResultIndex") ?: 0
-
-    private val _searchQuery = MutableStateFlow(initialSearchWord ?: "")
-    val searchQuery = _searchQuery.asStateFlow()
-
-    private val _replaceEnabled = MutableStateFlow(false)
-    val replaceEnabled = _replaceEnabled.asStateFlow()
-
-    private val _regexReplace = MutableStateFlow(false)
-    val regexReplace = _regexReplace.asStateFlow()
-
-    private val _uiState = MutableStateFlow(SearchUiState())
+    private val _uiState = MutableStateFlow(
+        SearchContentUiState(
+            searchQuery = initialSearchWord ?: restoredSession?.query.orEmpty(),
+            replaceEnabled = restoredSession?.replaceEnabled ?: false,
+            regexReplace = restoredSession?.regexReplace ?: false,
+            shouldAutoScroll = searchResultIndex > 0,
+            isEInkMode = themeSettingsGateway.currentSettings.appTheme == "4",
+        )
+    )
     val uiState = _uiState.asStateFlow()
 
-    private val _historyOnlyThisBook = MutableStateFlow(true)
-    val historyOnlyThisBook = _historyOnlyThisBook.asStateFlow()
+    private val _effects = MutableSharedFlow<SearchContentEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val searchHistory = combine(_historyOnlyThisBook, _uiState) { onlyThisBook, uiState ->
-        onlyThisBook to uiState.book
-    }.flatMapLatest { (onlyThisBook, book) ->
-        if (onlyThisBook && book != null) {
-            appDb.searchContentHistoryDao.getByBook(book.name, book.author)
-        } else {
-            appDb.searchContentHistoryDao.getAll()
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private var hasAutoScrolled = false
     private var searchJob: Job? = null
+    private var historyJob: Job? = null
+    private var resultOpened = false
 
     init {
         initBook()
+        viewModelScope.launch {
+            themeSettingsGateway.settings.collect { settings ->
+                _uiState.update { it.copy(isEInkMode = settings.appTheme == "4") }
+            }
+        }
+    }
+
+    fun onIntent(intent: SearchContentIntent) {
+        when (intent) {
+            is SearchContentIntent.UpdateQuery -> {
+                _uiState.update { it.copy(searchQuery = intent.value) }
+                executeSearch()
+            }
+            is SearchContentIntent.ToggleReplace -> {
+                _uiState.update { it.copy(replaceEnabled = intent.enabled) }
+                executeSearch()
+            }
+            is SearchContentIntent.ToggleRegex -> {
+                _uiState.update { it.copy(regexReplace = intent.enabled) }
+                executeSearch()
+            }
+            SearchContentIntent.ToggleHistoryScope -> {
+                _uiState.update { it.copy(historyOnlyThisBook = !it.historyOnlyThisBook) }
+                observeHistory()
+            }
+            is SearchContentIntent.DeleteHistory -> viewModelScope.launch {
+                searchContentRepository.deleteHistory(intent.history.id)
+            }
+            SearchContentIntent.ClearHistory -> viewModelScope.launch {
+                val state = _uiState.value
+                searchContentRepository.clearHistory(state.book, state.historyOnlyThisBook)
+            }
+            SearchContentIntent.StopSearch -> stopSearch()
+            SearchContentIntent.MarkAutoScrollDone ->
+                _uiState.update { it.copy(shouldAutoScroll = false) }
+            is SearchContentIntent.OpenResult -> openResult(intent.result)
+            SearchContentIntent.LeaveSearch -> leaveSearch()
+        }
     }
 
     private fun initBook() {
         viewModelScope.launch {
+            val state = _uiState.value
             val book = bookRepository.getBook(bookUrl)
-            val cachedResults = searchContentRepository.getCache(bookUrl, _searchQuery.value)
-
+            val cachedResults = searchContentRepository.getCache(
+                bookUrl,
+                state.searchQuery,
+                state.replaceEnabled,
+                state.regexReplace,
+            )
             _uiState.update {
                 it.copy(
-                book = book,
+                    book = book,
                     durChapterIndex = book?.durChapterIndex ?: -1,
-                    searchResults = cachedResults ?: it.searchResults
+                    searchResults = cachedResults?.toImmutableList() ?: it.searchResults,
                 )
             }
-
-            if ((cachedResults == null || cachedResults.isEmpty()) && _searchQuery.value.isNotBlank()) {
-                executeSearch()
-            }
+            observeHistory()
+            if (cachedResults.isNullOrEmpty() && state.searchQuery.isNotBlank()) executeSearch()
         }
     }
 
-    fun onQueryChange(newQuery: String) {
-        _searchQuery.value = newQuery
-        executeSearch()
-    }
-
-    fun toggleReplace(enabled: Boolean) {
-        _replaceEnabled.value = enabled
-        executeSearch()
-    }
-
-    fun toggleRegex(enabled: Boolean) {
-        _regexReplace.value = enabled
-        executeSearch()
-    }
-
-    fun toggleHistoryScope() {
-        _historyOnlyThisBook.value = !_historyOnlyThisBook.value
+    private fun observeHistory() {
+        historyJob?.cancel()
+        val state = _uiState.value
+        historyJob = viewModelScope.launch {
+            searchContentRepository.observeHistory(state.book, state.historyOnlyThisBook)
+                .collect { history ->
+                    _uiState.update { it.copy(searchHistory = history.toImmutableList()) }
+                }
+        }
     }
 
     private fun executeSearch() {
         searchJob?.cancel()
-        val query = _searchQuery.value
-        val replace = _replaceEnabled.value
-        val regex = _regexReplace.value
-
-        if (query.isBlank()) {
+        val state = _uiState.value
+        if (state.searchQuery.isBlank()) {
+            searchContentRepository.clearSession(bookUrl)
+            SearchContentResult.clearResults(bookUrl)
             _uiState.update {
-                it.copy(
-                    isSearching = false,
-                    searchResults = emptyList(),
-                    error = null
-                )
+                it.copy(isSearching = false, searchResults = persistentListOf(), error = null)
             }
             return
         }
-
+        searchContentRepository.beginSearch(
+            bookUrl,
+            state.searchQuery,
+            state.replaceEnabled,
+            state.regexReplace,
+        )
         searchJob = viewModelScope.launch {
-            _uiState.value.book?.let { book ->
-                saveSearchHistory(book, query)
-                searchContentRepository
-                    .search(book, query, replace, regex)
+            state.book?.let { book ->
+                searchContentRepository.saveHistory(book, state.searchQuery)
+                searchContentRepository.search(
+                    book,
+                    state.searchQuery,
+                    state.replaceEnabled,
+                    state.regexReplace,
+                )
                     .onStart { _uiState.update { it.copy(isSearching = true, error = null) } }
                     .onCompletion { _uiState.update { it.copy(isSearching = false) } }
-                    .catch { e -> _uiState.update { it.copy(isSearching = false, error = e) } }
+                    .catch { error -> _uiState.update { it.copy(isSearching = false, error = error) } }
                     .collect { results ->
-                        _uiState.update { it.copy(searchResults = results) }
+                        _uiState.update { it.copy(searchResults = results.toImmutableList()) }
                     }
             }
         }
     }
 
-    private suspend fun saveSearchHistory(book: Book, query: String) {
-        val history = appDb.searchContentHistoryDao.get(book.name, book.author, query)
-            ?: SearchContentHistory(bookName = book.name, bookAuthor = book.author, query = query)
-        history.time = System.currentTimeMillis()
-        appDb.searchContentHistoryDao.insert(history)
-    }
-
-    fun deleteHistory(history: SearchContentHistory) {
-        viewModelScope.launch {
-            appDb.searchContentHistoryDao.delete(history.id)
-        }
-    }
-
-    fun clearHistory() {
-        viewModelScope.launch {
-            val book = _uiState.value.book
-            if (_historyOnlyThisBook.value && book != null) {
-                appDb.searchContentHistoryDao.deleteByBook(book.name, book.author)
-            } else {
-                appDb.searchContentHistoryDao.deleteAll()
-            }
-        }
-    }
-
-    fun stopSearch() {
+    private fun stopSearch() {
         searchJob?.cancel()
         _uiState.update { it.copy(isSearching = false) }
     }
 
-    fun shouldAutoScroll(): Boolean = searchResultIndex > 0 && !hasAutoScrolled
-
-    fun markScrollDone() {
-        hasAutoScrolled = true
+    private fun leaveSearch() {
+        searchJob?.cancel()
+        if (!resultOpened) SearchContentResult.clearResults(bookUrl)
+        _uiState.update {
+            it.copy(
+                searchQuery = "",
+                isSearching = false,
+                searchResults = persistentListOf(),
+                error = null,
+            )
+        }
     }
 
-    fun onSearchResultClick(searchResult: SearchResult, onSuccess: (key: Long) -> Unit) {
+    private fun openResult(result: SearchResult) {
         stopSearch()
-        postEvent(EventBus.SEARCH_RESULT, uiState.value.searchResults)
-        val key = System.currentTimeMillis()
-        IntentData.put("searchResult$key", searchResult)
-        IntentData.put("searchResultList$key", uiState.value.searchResults)
-        onSuccess(key)
+        val results = _uiState.value.searchResults
+        val index = results.indexOf(result)
+        if (index < 0) return
+        resultOpened = true
+        SearchContentResult.emitResult(
+            SearchContentResult.Result(
+                bookUrl = bookUrl,
+                searchResults = results,
+                index = index,
+                query = result.query,
+            )
+        )
+        _effects.tryEmit(SearchContentEffect.NavigateBack)
     }
 }

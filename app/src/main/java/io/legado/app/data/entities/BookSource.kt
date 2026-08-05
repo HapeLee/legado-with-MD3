@@ -4,6 +4,7 @@ import android.os.Parcelable
 import android.text.TextUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
@@ -19,6 +20,7 @@ import io.legado.app.data.entities.rule.TocRule
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.splitNotBlank
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Suppress("unused")
@@ -98,8 +100,14 @@ data class BookSource(
     @ColumnInfo(defaultValue = "0")
     var eventListener: Boolean = false, // 是否监听事件来执行回调规则
     @ColumnInfo(defaultValue = "0")
-    var customButton: Boolean = false //由书源控制的自定义按钮
+    var customButton: Boolean = false, //由书源控制的自定义按钮
+    // 首页模块定义，JSON数组。每个元素: key, type(banner/ranking/grid/card/filter), title, args?, url?
+    var homepageModules: String? = null
 ) : Parcelable, BaseSource {
+
+    @Ignore
+    @IgnoredOnParcel
+    private var temporaryVariable: String? = null
 
     override fun getTag(): String {
         return bookSourceName
@@ -107,6 +115,14 @@ data class BookSource(
 
     override fun getKey(): String {
         return bookSourceUrl
+    }
+
+    override fun setTemporaryVariable(variable: String?) {
+        temporaryVariable = variable
+    }
+
+    override fun getTemporaryVariable(): String? {
+        return temporaryVariable
     }
 
     override fun hashCode(): Int {
@@ -254,6 +270,7 @@ data class BookSource(
                 && equal(loginUi, source.loginUi)
                 && equal(loginCheckJs, source.loginCheckJs)
                 && equal(coverDecodeJs, source.coverDecodeJs)
+                && equal(homepageModules, source.homepageModules)
                 && equal(exploreUrl, source.exploreUrl)
                 && equal(searchUrl, source.searchUrl)
                 && getSearchRule() == source.getSearchRule()

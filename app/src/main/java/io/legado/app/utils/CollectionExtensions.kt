@@ -58,3 +58,9 @@ fun <T> MutableList<T>.removeLastElement(): T {
         removeAt(lastIndex)
     }
 }
+
+fun <T> MutableList<T>.move(fromIndex: Int, toIndex: Int) {
+    if (fromIndex == toIndex) return
+    val element = removeAt(fromIndex)
+    add(toIndex, element)
+}

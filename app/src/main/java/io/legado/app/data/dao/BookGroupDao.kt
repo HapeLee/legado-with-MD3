@@ -1,13 +1,11 @@
 package io.legado.app.data.dao
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookGroup
 import kotlinx.coroutines.flow.Flow
 
@@ -23,58 +21,8 @@ interface BookGroupDao {
     @Query("SELECT * FROM book_groups ORDER BY `order`")
     fun flowAll(): Flow<List<BookGroup>>
 
-    @get:Query(
-        """
-    with const as (SELECT sum(groupId) sumGroupId FROM book_groups where groupId > 0)
-    SELECT book_groups.* FROM book_groups join const 
-    where show > 0 
-    and (
-        (groupId >= 0  and exists (select 1 from books where `group` & book_groups.groupId > 0))
-        or groupId = ${BookGroup.IdAll}
-        or (groupId = ${BookGroup.IdLocal} and exists (select 1 from books where type & ${BookType.local} > 0))
-        or (groupId = ${BookGroup.IdAudio} and exists (select 1 from books where type & ${BookType.audio} > 0))
-        or (groupId = ${BookGroup.IdManga} and exists (select 1 FROM books where type & ${BookType.image} > 0))
-        or (groupId = ${BookGroup.IdText} and exists (select 1 FROM books where type & ${BookType.text} > 0))
-        or (groupId = ${BookGroup.IdReading} and exists (
-            SELECT 1 FROM books 
-            WHERE totalChapterNum > 0 
-            AND durChapterIndex > 0 
-            AND durChapterIndex < totalChapterNum - 1
-        ))
-        or (groupId = ${BookGroup.IdUnread} and exists (
-            SELECT 1 FROM books 
-            WHERE durChapterIndex = 0 
-            AND durChapterPos = 0
-        ))
-        or (groupId = ${BookGroup.IdReadFinished} and exists (
-            SELECT 1 FROM books 
-            WHERE totalChapterNum > 0 
-            AND durChapterIndex >= totalChapterNum - 1
-            AND durChapterPos != 0
-        ))
-        
-        or (groupId = ${BookGroup.IdError} and exists (select 1 from books where type & ${BookType.updateError} > 0))
-        
-        or (groupId = ${BookGroup.IdNetNone} 
-            and exists (
-                select 1 from books 
-                where type & ${BookType.audio} = 0
-                and type & ${BookType.local} = 0
-                and const.sumGroupId & `group` = 0
-            )
-        )
-        or (groupId = ${BookGroup.IdLocalNone}
-            and exists (
-                select 1 from books 
-                where type & ${BookType.audio} = 0
-                and type & ${BookType.local} > 0
-                and const.sumGroupId & `group` = 0
-            )
-        )
-    )
-    ORDER BY `order`"""
-    )
-    val show: LiveData<List<BookGroup>>
+    @Query("SELECT * FROM book_groups WHERE show > 0 ORDER BY `order`")
+    fun flowShow(): Flow<List<BookGroup>>
 
     @Query("SELECT * FROM book_groups where groupId >= 0 ORDER BY `order`")
     fun flowSelect(): Flow<List<BookGroup>>
@@ -99,6 +47,17 @@ interface BookGroupDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg bookGroup: BookGroup)
+
+    @androidx.room.Transaction
+    fun replaceAll(bookGroups: List<BookGroup>) {
+        deleteAll()
+        if (bookGroups.isNotEmpty()) {
+            insert(*bookGroups.toTypedArray())
+        }
+    }
+
+    @Query("DELETE FROM book_groups")
+    fun deleteAll()
 
     @Update
     fun update(vararg bookGroup: BookGroup)

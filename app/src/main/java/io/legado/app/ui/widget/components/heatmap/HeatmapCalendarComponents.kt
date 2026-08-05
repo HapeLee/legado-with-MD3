@@ -19,13 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,57 +31,60 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.legado.app.ui.widget.components.button.AnimatedActionButton
+import androidx.compose.ui.res.stringResource
+import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.MediumToggleButton
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.formatReadDuration
 import java.time.LocalDate
 
 /**
- * 热力图日历顶部操作栏
+ * 热力图日历弹窗标题
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HeatmapCalendarTopBar(
+fun heatmapCalendarTitle(): String = stringResource(R.string.timeline)
+
+/**
+ * 热力图日历弹窗左侧操作
+ */
+@Composable
+fun HeatmapCalendarStartAction(
     currentMode: HeatmapMode,
     onModeChanged: (HeatmapMode) -> Unit,
-    onClearDate: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("时间线", style = MaterialTheme.typography.titleMedium)
+    MediumToggleButton(
+        checked = currentMode == HeatmapMode.TIME,
+        onCheckedChange = {
+            onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
+        },
+        icon = Icons.Default.FormatListNumbered,
+        iconChecked = Icons.Default.AccessTime,
+        text = stringResource(R.string.by_duration)
+    )
+}
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimatedActionButton(
-                checked = currentMode == HeatmapMode.TIME,
-                onCheckedChange = {
-                    onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
-                },
-                iconChecked = Icons.Default.AccessTime,
-                iconUnchecked = Icons.Default.FormatListNumbered,
-                activeText = "按时长",
-                inactiveText = "按次数"
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            OutlinedIconButton(
-                onClick = onClearDate,
-                shapes = IconButtonDefaults.shapes(),
-                border = ButtonDefaults.outlinedButtonBorder()
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = "清除选择"
-                )
-            }
-        }
-    }
+/**
+ * 热力图日历弹窗右侧操作
+ */
+@Composable
+fun HeatmapCalendarEndAction(
+    onClearDate: () -> Unit
+) {
+    MediumTonalButton(
+        onClick = onClearDate,
+        icon = Icons.Outlined.Delete,
+        contentDescription = stringResource(R.string.clear),
+    )
 }
 
 /**
@@ -103,14 +100,22 @@ fun WeekdayLabelsColumn(
         modifier = modifier
             .padding(top = 20.dp, end = 8.dp)
     ) {
-        val labels = listOf("一", "二", "三", "四", "五", "六", "日")
+        val labels = listOf(
+            stringResource(R.string.weekday_mon),
+            stringResource(R.string.weekday_tue),
+            stringResource(R.string.weekday_wed),
+            stringResource(R.string.weekday_thu),
+            stringResource(R.string.weekday_fri),
+            stringResource(R.string.weekday_sat),
+            stringResource(R.string.weekday_sun)
+        )
 
         labels.forEachIndexed { index, label ->
             if (index % 2 == 0) {
-                Text(
+                AppText(
                     text = label,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.height(cellSize)
                 )
             } else {
@@ -128,6 +133,7 @@ fun WeekdayLabelsColumn(
 @Composable
 fun NoEarlierDataIndicator(
     cellSize: Dp,
+    touchTargetSize: Dp = cellSize,
     modifier: Modifier = Modifier
 ) {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
@@ -143,23 +149,29 @@ fun NoEarlierDataIndicator(
             repeat(7) {
                 Box(
                     modifier = Modifier
-                        .size(cellSize)
-                        .drawBehind {
-                            val strokeWidth = 1.dp.toPx()
-                            val stroke = Stroke(
-                                width = strokeWidth,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
-                            )
-                            val inset = strokeWidth / 2
-                            drawRoundRect(
-                                color = outlineColor,
-                                style = stroke,
-                                topLeft = Offset(inset, inset),
-                                size = Size(size.width - strokeWidth, size.height - strokeWidth),
-                                cornerRadius = CornerRadius(4.dp.toPx())
-                            )
-                        }
-                )
+                        .size(maxOf(cellSize, touchTargetSize)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(cellSize)
+                            .drawBehind {
+                                val strokeWidth = 1.dp.toPx()
+                                val stroke = Stroke(
+                                    width = strokeWidth,
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                                )
+                                val inset = strokeWidth / 2
+                                drawRoundRect(
+                                    color = outlineColor,
+                                    style = stroke,
+                                    topLeft = Offset(inset, inset),
+                                    size = Size(size.width - strokeWidth, size.height - strokeWidth),
+                                    cornerRadius = CornerRadius(4.dp.toPx())
+                                )
+                            }
+                    )
+                }
             }
         }
 
@@ -169,8 +181,8 @@ fun NoEarlierDataIndicator(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            "没有更早数据".forEach { char ->
-                Text(
+            stringResource(R.string.no_earlier_data).forEach { char ->
+                AppText(
                     text = char.toString(),
                     fontSize = 9.sp,
                     lineHeight = 12.sp,
@@ -192,24 +204,46 @@ fun HeatmapCalendarCell(
     dailyReadTimes: Map<LocalDate, Long>,
     isSelected: Boolean,
     config: HeatmapConfig,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val level = rememberHeatmapLevel(day, mode, dailyReadCounts, dailyReadTimes)
     val cellColor = heatmapColorForLevel(level)
-
+    val readCount = dailyReadCounts[day] ?: 0
+    val readDuration = formatReadDuration(dailyReadTimes[day] ?: 0L)
+    val cellDescription = if (mode == HeatmapMode.COUNT) {
+        stringResource(R.string.a11y_heatmap_day_count, day.toString(), readCount)
+    } else {
+        stringResource(R.string.a11y_heatmap_day_duration, day.toString(), readDuration)
+    }
     Box(
         modifier = modifier
-            .size(config.cellSize)
-            .clip(RoundedCornerShape(config.cornerRadius))
-            .background(cellColor)
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                shape = RoundedCornerShape(config.cornerRadius)
+            .size(config.interactiveCellSize)
+            .then(
+                onDateSelected?.let { onSelect ->
+                    Modifier.clickable { onSelect(day) }
+                } ?: Modifier
             )
-            .clickable { onDateSelected(day) }
-    )
+            .semantics {
+                contentDescription = cellDescription
+                if (isSelected) {
+                    selected = true
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(config.cellSize)
+                .clip(RoundedCornerShape(config.cornerRadius))
+                .background(cellColor)
+                .border(
+                    width = if (isSelected) 2.dp else 0.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                    shape = RoundedCornerShape(config.cornerRadius)
+                )
+        )
+    }
 }
 
 /**
@@ -223,19 +257,19 @@ fun HeatmapWeekColumn(
     dailyReadTimes: Map<LocalDate, Long>,
     selectedDate: LocalDate?,
     config: HeatmapConfig,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelected: ((LocalDate) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val firstDayOfMonth = week.firstOrNull { it?.dayOfMonth == 1 }
 
-    Box(modifier = modifier.width(config.cellSize)) {
+    Box(modifier = modifier.width(config.interactiveCellSize)) {
         Column(
             modifier = Modifier.padding(top = 24.dp),
             verticalArrangement = Arrangement.spacedBy(config.cellSpacing)
         ) {
             week.forEach { day ->
                 if (day == null) {
-                    Spacer(modifier = Modifier.size(config.cellSize))
+                    Spacer(modifier = Modifier.size(config.interactiveCellSize))
                 } else {
                     HeatmapCalendarCell(
                         day = day,
@@ -252,10 +286,10 @@ fun HeatmapWeekColumn(
 
         // 月份标签
         if (firstDayOfMonth != null) {
-            Text(
-                text = "${firstDayOfMonth.monthValue}月",
+            AppText(
+                text = stringResource(R.string.month_format, firstDayOfMonth.monthValue),
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .wrapContentWidth(unbounded = true)
@@ -278,11 +312,11 @@ fun HeatmapLegend(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val legendUnit = if (mode == HeatmapMode.COUNT) "次" else "长"
+        val legendUnit = if (mode == HeatmapMode.COUNT) stringResource(R.string.count_unit) else stringResource(R.string.duration_unit)
 
-        Text(
-            "少($legendUnit)",
-            style = MaterialTheme.typography.bodySmall,
+        AppText(
+            stringResource(R.string.less_count) + legendUnit + ")",
+            style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
 
@@ -298,9 +332,9 @@ fun HeatmapLegend(
             Spacer(modifier = Modifier.width(4.dp))
         }
 
-        Text(
-            "多($legendUnit)",
-            style = MaterialTheme.typography.bodySmall,
+        AppText(
+            stringResource(R.string.more_count) + legendUnit + ")",
+            style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
     }

@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.manga.recyclerview
 
 import android.content.Context
-import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.util.SparseArray
 import android.view.LayoutInflater
@@ -22,7 +21,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter.Companion.TYPE_FOOTER_VIEW
 import io.legado.app.databinding.ItemBookMangaEdgeBinding
 import io.legado.app.databinding.ItemBookMangaPageBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.help.glide.progress.ProgressManager
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadManga
@@ -31,10 +30,14 @@ import io.legado.app.ui.book.manga.entities.EpaperTransformation
 import io.legado.app.ui.book.manga.entities.GrayscaleTransformation
 import io.legado.app.ui.book.manga.entities.MangaPage
 import io.legado.app.ui.book.manga.entities.ReaderLoading
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.dpToPx
 
 
-class MangaAdapter(private val context: Context) :
+class MangaAdapter(
+    private val context: Context,
+    private val settingsProvider: () -> MangaSettings,
+) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>(), PreloadModelProvider<Any> {
 
     private val inflater: LayoutInflater = LayoutInflater.from(context)
@@ -122,18 +125,20 @@ class MangaAdapter(private val context: Context) :
             ) {
                 "ARGB values must be between 0-255"
             }
-            val matrix = floatArrayOf(
+            val baseMatrix = floatArrayOf(
                 (255 - mConfig.r) / 255f, 0f, 0f, 0f, 0f,
                 0f, (255 - mConfig.g) / 255f, 0f, 0f, 0f,
                 0f, 0f, (255 - mConfig.b) / 255f, 0f, 0f,
                 0f, 0f, 0f, (255 - mConfig.a) / 255f, 0f
             )
-            binding.image.colorFilter = ColorMatrixColorFilter(ColorMatrix(matrix))
+
+            binding.image.colorFilter = ColorMatrixColorFilter(baseMatrix)
         }
 
         fun setBackground() {
-            binding.rootView.setBackgroundColor(AppConfig.mangaBackground)
-            binding.flProgress.setBackgroundColor(AppConfig.mangaBackground)
+            val background = settingsProvider().background
+            binding.rootView.setBackgroundColor(background)
+            binding.flProgress.setBackgroundColor(background)
         }
     }
 

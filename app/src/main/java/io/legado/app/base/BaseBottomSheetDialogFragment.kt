@@ -12,8 +12,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.utils.setNavigationBarColorAuto
-import io.legado.app.utils.themeColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlin.coroutines.CoroutineContext
@@ -30,7 +28,6 @@ abstract class BaseBottomSheetDialogFragment(
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setNavigationBarColorAuto(requireContext().themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
         if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             val screenHeight = resources.displayMetrics.heightPixels
             (dialog as? BottomSheetDialog)?.behavior?.apply {

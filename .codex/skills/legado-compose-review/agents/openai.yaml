@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legado Compose Review"
+  short_description: "Review Legado Compose architecture quality"
+  default_prompt: "Use $legado-compose-review to review a Legado Compose screen for MVI, UDF, Clean Architecture, navigation, and project convention issues."

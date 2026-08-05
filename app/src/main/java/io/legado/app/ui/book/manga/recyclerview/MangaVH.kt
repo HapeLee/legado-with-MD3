@@ -36,7 +36,7 @@ open class MangaVH<VB : ViewBinding>(val binding: VB, private val context: Conte
     protected lateinit var mFlProgress: FrameLayout
     protected var mRetry: Button? = null
 
-    //private val minHeight = context.resources.displayMetrics.heightPixels * 2 / 3
+    private val minHeight = context.resources.displayMetrics.heightPixels * 2 / 3
 
     fun initComponent(
         loading: ProgressBar,
@@ -111,7 +111,7 @@ open class MangaVH<VB : ViewBinding>(val binding: VB, private val context: Conte
                             mImage.updateLayoutParams<FrameLayout.LayoutParams> {
                                 height = ViewGroup.LayoutParams.WRAP_CONTENT
                             }
-                            itemView.minimumHeight = 0
+                            itemView.minimumHeight = minHeight
                         } else {
                             mImage.updateLayoutParams<FrameLayout.LayoutParams> {
                                 height = ViewGroup.LayoutParams.MATCH_PARENT

@@ -1,0 +1,73 @@
+package io.legado.app.ui.widget.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
+import io.legado.app.ui.widget.components.card.TextCard
+
+@Composable
+fun ValueStepper(
+    value: Float,
+    displayValue: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    stepSize: Float = 1f,
+    showDecimal: Boolean = false,
+    valueFormat: ((Float) -> String)? = null,
+    content: (@Composable RowScope.() -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        SmallOutlinedButton(
+            onClick = {
+                val newValue = (value - stepSize).coerceIn(valueRange)
+                onValueChange(newValue)
+            },
+            enabled = enabled,
+            icon = Icons.Default.Remove,
+            contentDescription = stringResource(R.string.a11y_decrease),
+        )
+        if (content != null) {
+            content()
+        } else {
+            val displayText = valueFormat?.invoke(displayValue) ?: if (showDecimal) {
+                displayValue.toString()
+            } else {
+                displayValue.toInt().toString()
+            }
+            TextCard(
+                cornerRadius = 8.dp,
+                horizontalPadding = 8.dp,
+                verticalPadding = 4.dp,
+                text = displayText,
+                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                contentColor = LegadoTheme.colorScheme.onSurface
+            )
+        }
+        SmallOutlinedButton(
+            onClick = {
+                val newValue = (value + stepSize).coerceIn(valueRange)
+                onValueChange(newValue)
+            },
+            enabled = enabled,
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.a11y_increase),
+        )
+    }
+}

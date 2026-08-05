@@ -11,6 +11,7 @@ import io.legado.app.exception.ContentEmptyException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isAudio
+import io.legado.app.help.book.isOnLineTxt
 import io.legado.app.help.book.isVideo
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.Debug
@@ -19,6 +20,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setNextChapterUrl
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.mapAsync
@@ -33,6 +35,8 @@ import kotlin.coroutines.coroutineContext
  * 获取正文
  */
 object BookContent {
+
+    private const val maxNextPageConcurrency = 4
 
     @Throws(Exception::class)
     suspend fun analyzeContent(
@@ -49,14 +53,24 @@ object BookContent {
             appCtx.getString(R.string.error_get_web_content, baseUrl)
         )
         Debug.log(bookSource.bookSourceUrl, "≡获取成功:${baseUrl}")
-        Debug.log(bookSource.bookSourceUrl, body, state = 40)
+        if (!needSave) {
+            Debug.log(bookSource.bookSourceUrl, body, state = 40)
+        }
         val mNextChapterUrl = if (nextChapterUrl.isNullOrEmpty()) {
             appDb.bookChapterDao.getChapter(book.bookUrl, bookChapter.index + 1)?.url
                 ?: appDb.bookChapterDao.getChapter(book.bookUrl, 0)?.url
         } else {
             nextChapterUrl
         }
-        val contentList = arrayListOf<String>()
+        var pageCount = 0
+        val contentBuilder = StringBuilder()
+        fun appendContent(content: String) {
+            if (pageCount > 0) {
+                contentBuilder.append('\n')
+            }
+            contentBuilder.append(content)
+            pageCount++
+        }
         val nextUrlList = arrayListOf(redirectUrl)
         val contentRule = bookSource.getContentRule()
         val analyzeRule = AnalyzeRule(book, bookSource)
@@ -69,7 +83,7 @@ object BookContent {
         var contentData = analyzeContent(
             book, baseUrl, redirectUrl, body, contentRule, bookChapter, bookSource, mNextChapterUrl
         )
-        contentList.add(contentData.first)
+        appendContent(contentData.first)
         if (contentData.second.size == 1) {
             var nextUrl = contentData.second[0]
             while (nextUrl.isNotEmpty() && !nextUrlList.contains(nextUrl)) {
@@ -94,8 +108,8 @@ object BookContent {
                     )
                     nextUrl =
                         if (contentData.second.isNotEmpty()) contentData.second[0] else ""
-                    contentList.add(contentData.first)
-                    Debug.log(bookSource.bookSourceUrl, "第${contentList.size}页完成")
+                    appendContent(contentData.first)
+                    Debug.log(bookSource.bookSourceUrl, "第${pageCount}页完成")
                 }
             }
             Debug.log(bookSource.bookSourceUrl, "◇本章总页数:${nextUrlList.size}")
@@ -105,7 +119,7 @@ object BookContent {
                 for (urlStr in contentData.second) {
                     emit(urlStr)
                 }
-            }.mapAsync(AppConfig.threadCount) { urlStr ->
+            }.mapAsync(OtherConfig.threadCount.coerceIn(1, maxNextPageConcurrency)) { urlStr ->
                 val analyzeUrl = AnalyzeUrl(
                     mUrl = urlStr,
                     source = bookSource,
@@ -121,10 +135,30 @@ object BookContent {
                 ).first
             }.collect {
                 coroutineContext.ensureActive()
-                contentList.add(it)
+                appendContent(it)
             }
         }
-        var contentStr = contentList.joinToString("\n")
+        contentRule.subContent?.takeIf { it.isNotBlank() }?.let { rule ->
+            val rawSubContent = analyzeRule.getString(rule, unescape = false).trim()
+            val subContent = if (rawSubContent.startsWith("http", ignoreCase = true)) {
+                AnalyzeUrl(
+                    mUrl = rawSubContent,
+                    source = bookSource,
+                    ruleData = book,
+                    coroutineContext = coroutineContext,
+                ).getStrResponseAwait().body.orEmpty()
+            } else {
+                rawSubContent
+            }
+            if (subContent.isNotBlank()) {
+                if (book.isOnLineTxt) {
+                    appendContent(subContent)
+                } else if (book.isAudio) {
+                    bookChapter.putVariable("lyric", subContent)
+                }
+            }
+        }
+        var contentStr = contentBuilder.toString()
         val titleRule = contentRule.title //先正文再章节名称
         if (!titleRule.isNullOrBlank()) {
             var title = analyzeRule.runCatching {
@@ -159,7 +193,11 @@ object BookContent {
         Debug.log(bookSource.bookSourceUrl, "┌获取章节名称")
         Debug.log(bookSource.bookSourceUrl, "└${bookChapter.title}")
         Debug.log(bookSource.bookSourceUrl, "┌获取正文内容")
-        Debug.log(bookSource.bookSourceUrl, "└\n$contentStr")
+        if (needSave) {
+            Debug.log(bookSource.bookSourceUrl, "└正文长度:${contentStr.length}")
+        } else {
+            Debug.log(bookSource.bookSourceUrl, "└\n$contentStr")
+        }
         if (!bookChapter.isVolume && contentStr.isBlank()) {
             throw ContentEmptyException("内容为空")
         }
@@ -194,9 +232,9 @@ object BookContent {
         if (!book.isAudio && !book.isVideo) { //音频和视频获取的是链接，不需要html格式化 && !book.isVideo
             val useHtmlMap = mutableMapOf<String, String>()
             if (AppConfig.adaptSpecialStyle) {
-                content = AppPattern.useHtmlRegex.replace(content) { matchResult ->
+                content = AppPattern.useHtmlRegex.replace(content) {
                     val placeholder = "{usehtml_${useHtmlMap.size}}"
-                    useHtmlMap[placeholder] = matchResult.value
+                    useHtmlMap[placeholder] = it.value
                     placeholder
                 }
             }

@@ -6,12 +6,17 @@ import android.util.AttributeSet
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.FrameLayout
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
-import io.legado.app.ui.dict.DictDialog
+import io.legado.app.ui.dict.DictActivity
 import io.legado.app.utils.toastOnUi
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -20,7 +25,10 @@ class VisibleWebView(
     attrs: AttributeSet? = null
 ) : WebView(context, attrs) {
 
+    private var lastSelectedText: String = ""
+
     init {
+        setBackgroundColor(0)
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
 
@@ -32,30 +40,26 @@ class VisibleWebView(
         }, "TextSelectionBridge")
 
         val js = """
-        document.addEventListener('selectionchange', function() {
-            const text = window.getSelection().toString();
-            if (text) {
-                TextSelectionBridge.onTextSelected(text);
-            }
-        });
-    """
+            document.addEventListener('selectionchange', function() {
+                const text = window.getSelection().toString();
+                if (text) {
+                    TextSelectionBridge.onTextSelected(text);
+                }
+            });
+        """.trimIndent()
         evaluateJavascript(js, null)
     }
 
-    private var lastSelectedText: String = ""
-
-    override fun onWindowVisibilityChanged(visibility: Int) {
-        super.onWindowVisibilityChanged(VISIBLE)
+    override fun performClick(): Boolean {
+        return super.performClick()
     }
 
     override fun startActionMode(callback: ActionMode.Callback?): ActionMode {
-        val wrappedCallback = createWrappedCallback(callback)
-        return super.startActionMode(wrappedCallback)
+        return super.startActionMode(createWrappedCallback(callback))
     }
 
     override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode {
-        val wrappedCallback = createWrappedCallback(callback)
-        return super.startActionMode(wrappedCallback, type)
+        return super.startActionMode(createWrappedCallback(callback), type)
     }
 
     private fun createWrappedCallback(original: ActionMode.Callback?): ActionMode.Callback {
@@ -63,7 +67,7 @@ class VisibleWebView(
             override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
                 val result = original?.onCreateActionMode(mode, menu) ?: false
                 menu.add(Menu.NONE, MENU_ID_DICT, 0, R.string.dict)
-                getSelectedText { /* 触发缓存*/ }
+                getSelectedText { }
                 return result
             }
 
@@ -73,24 +77,24 @@ class VisibleWebView(
             }
 
             override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-                when (item.itemId) {
+                return when (item.itemId) {
                     MENU_ID_DICT -> {
                         postDelayed({
                             getSelectedText { selectedText ->
                                 if (selectedText.isNotBlank()) {
-                                    showDictDialog(selectedText)
+                                    showDictSheet(selectedText)
                                 } else {
                                     context.toastOnUi("未获取到选中文本，请重试")
                                 }
                             }
                         }, 200)
                         mode.finish()
-                        return true
+                        true
                     }
-                    else -> return original?.onActionItemClicked(mode, item) ?: false
+
+                    else -> original?.onActionItemClicked(mode, item) ?: false
                 }
             }
-
 
             override fun onDestroyActionMode(mode: ActionMode) {
                 original?.onDestroyActionMode(mode)
@@ -119,18 +123,55 @@ class VisibleWebView(
         }
     }
 
-    private fun showDictDialog(selectedText: String) {
-        val activity = context as? AppCompatActivity
-        activity?.let {
-            val dialog = DictDialog(selectedText)
-            it.supportFragmentManager.beginTransaction()
-                .add(dialog, "DictDialog")
-                .commitAllowingStateLoss()
-        }
+    private fun showDictSheet(selectedText: String) {
+        context.startActivity(DictActivity.startIntent(context, selectedText))
     }
 
     companion object {
         private const val MENU_ID_DICT = 1001
     }
+}
 
+@Composable
+fun VisibleWebViewCompose(
+    modifier: Modifier = Modifier,
+    onCreated: (VisibleWebView) -> Unit,
+    onDestroyed: (() -> Unit)? = null
+) {
+    val webViewHolder = remember { WebViewHolder() }
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            FrameLayout(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                val webView = VisibleWebView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+                addView(webView)
+                webViewHolder.webView = webView
+                onCreated(webView)
+            }
+        },
+        update = { container ->
+            webViewHolder.webView = container.getChildAt(0) as? VisibleWebView
+        }
+    )
+    DisposableEffect(Unit) {
+        onDispose {
+            onDestroyed?.invoke()
+            webViewHolder.webView?.let { webView ->
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.destroy()
+            }
+            webViewHolder.webView = null
+        }
+    }
+}
+
+private class WebViewHolder {
+    var webView: VisibleWebView? = null
 }

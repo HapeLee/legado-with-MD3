@@ -7,8 +7,8 @@ name: closeStaleIssue
 
 on:
   schedule:
-  # 每5天北京时间9点
-  - cron: '30 1 1/5 * *'
+  # 每天北京时间9点
+  - cron: '30 1 * * *'
   workflow_dispatch:
 
 jobs:

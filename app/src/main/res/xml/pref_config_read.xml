@@ -93,10 +93,12 @@
             android:title="@string/use_zh_layout"
             app:isBottomBackground="true" />
 
-        <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="true"
+        <io.legado.app.lib.prefs.ListPreference
+            android:defaultValue="1"
             android:key="showBrightnessView"
             android:title="@string/show_brightness_view"
+            android:entries="@array/brightness_bar_mode_title"
+            android:entryValues="@array/brightness_bar_mode_value"
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.SwitchPreference

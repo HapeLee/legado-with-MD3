@@ -1,25 +1,26 @@
 package io.legado.app.ui.book.read.page
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
-import android.graphics.drawable.BitmapDrawable
 import android.os.Build
+import android.os.Bundle
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowInsets
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.core.view.ViewCompat
+import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.data.entities.BookProgress
-import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadAloud
-import io.legado.app.model.ReadBook
-import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.book.read.ContentEditDialog
+import io.legado.app.model.ReadSessionState
+
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
 import io.legado.app.ui.book.read.page.delegate.FadePageDelegate
@@ -36,12 +37,13 @@ import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.invisible
-import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.showDialogFragment
+
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
 import java.util.Locale
@@ -50,12 +52,18 @@ import kotlin.math.abs
 /**
  * 阅读视图
  */
-class ReadView(context: Context, attrs: AttributeSet) :
+class ReadView(
+    context: Context,
+    attrs: AttributeSet? = null,
+    private val callBack: CallBack,
+    contentCallBack: ContentTextView.CallBack? = null,
+    private val eventListener: ReaderEventListener,
+    private val pageSource: ReaderPageSource,
+) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    val callBack: CallBack get() = activity as CallBack
-    var pageFactory: TextPageFactory = TextPageFactory(this)
+    var pageFactory: TextPageFactory = TextPageFactory(this, pageSource)
     var pageDelegate: PageDelegate? = null
         private set(value) {
             field?.onDestroy()
@@ -64,9 +72,9 @@ class ReadView(context: Context, attrs: AttributeSet) :
             upContent()
         }
     override var isScroll = false
-    val prevPage by lazy { PageView(context) }
-    val curPage by lazy { PageView(context) }
-    val nextPage by lazy { PageView(context) }
+    val prevPage by lazy { PageView(context, contentCallBack) }
+    val curPage by lazy { PageView(context, contentCallBack) }
+    val nextPage by lazy { PageView(context, contentCallBack) }
     val defaultAnimationSpeed = 300
     private var pressDown = false
     private var isMove = false
@@ -113,11 +121,29 @@ class ReadView(context: Context, attrs: AttributeSet) :
     private val upProgressThrottle = throttle(200) { post { upProgress() } }
     val autoPager = AutoPager(this)
     val isAutoPage get() = autoPager.isRunning
+    private var accessibilityPageText = ""
 
     init {
+        if (!isInEditMode) {
+            // 重开阅读器的唯一快照重建入口：ReadConfigUpdateBus 无 replay，上一会话关闭后改的
+            // 配置（如设置页的「隐藏状态栏」）没有任何 effect 会补发；PageView 构造期就要读
+            // TipStyleProvider.style，所以必须在 addView 之前重建。两份快照纯派生、幂等。
+            ChapterProvider.upRenderStyle()
+            TipStyleProvider.upTipStyle()
+        }
         addView(nextPage)
         addView(curPage)
         addView(prevPage)
+        // 三个 PageView 只负责把同一页绘制到 Canvas；它们的内部 View 没有正文语义。
+        // 读屏应只命中下面由 ReadView 提供的当前页文本节点。
+        listOf(prevPage, curPage, nextPage).forEach {
+            it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        }
+        descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        isClickable = true
+        isFocusable = true
+        ViewCompat.setScreenReaderFocusable(this, true)
         prevPage.invisible()
         nextPage.invisible()
         curPage.markAsMainView()
@@ -167,10 +193,12 @@ class ReadView(context: Context, attrs: AttributeSet) :
         return true
     }
 
+    // Canvas 正文没有子级语义，触摸探索必须命中本页级节点。
+    override fun onInterceptHoverEvent(event: MotionEvent): Boolean = true
+
     /**
      * 触摸事件
      */
-    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val insets = this.rootWindowInsets.getInsetsIgnoringVisibility(
@@ -235,6 +263,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
                 pressDown = false
                 if (pageDelegate?.isMoved == false && !isMove) {
                     if (!longPressed && !pressOnTextSelected) {
+                        performClick()
                         val handled = curPage.onClick(startX, startY)
                         if (!handled) {
                             onSingleTapUp()
@@ -266,8 +295,69 @@ class ReadView(context: Context, attrs: AttributeSet) :
         return true
     }
 
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        // The Canvas-rendered page is exposed as one stable text node.
+        info.className = TextView::class.java.name
+        info.text = accessibilityPageText
+        info.isScrollable = true
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                context.getString(R.string.prev_page)
+            )
+        )
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                context.getString(R.string.next_page)
+            )
+        )
+        info.addAction(
+            AccessibilityNodeInfo.AccessibilityAction(
+                AccessibilityNodeInfo.ACTION_CLICK,
+                context.getString(R.string.menu)
+            )
+        )
+    }
+
+    override fun onInitializeAccessibilityEvent(event: AccessibilityEvent) {
+        super.onInitializeAccessibilityEvent(event)
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
+        }
+    }
+
+    override fun performAccessibilityAction(action: Int, arguments: Bundle?): Boolean {
+        return when (action) {
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> {
+                pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
+                true
+            }
+
+            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> {
+                pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
+                true
+            }
+
+            AccessibilityNodeInfo.ACTION_CLICK -> {
+                performClick()
+                pageDelegate?.dismissSnackBar()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
+                true
+            }
+
+            else -> super.performAccessibilityAction(action, arguments)
+        }
+    }
+
     fun cancelSelect(clearSearchResult: Boolean = false) {
-        if (isTextSelected) {
+        if (isTextSelected || clearSearchResult) {
             curPage.cancelSelect(clearSearchResult)
             isTextSelected = false
         }
@@ -393,39 +483,39 @@ class ReadView(context: Context, attrs: AttributeSet) :
         when {
             isTextSelected -> Unit
             mcRect.contains(startX, startY) -> if (!isAbortAnim) {
-                click(AppConfig.clickActionMC)
+                click(ReadConfig.clickActionMC)
             }
 
             bcRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBC)
+                click(ReadConfig.clickActionBC)
             }
 
             blRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBL)
+                click(ReadConfig.clickActionBL)
             }
 
             brRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBR)
+                click(ReadConfig.clickActionBR)
             }
 
             mlRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionML)
+                click(ReadConfig.clickActionML)
             }
 
             mrRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionMR)
+                click(ReadConfig.clickActionMR)
             }
 
             tlRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTL)
+                click(ReadConfig.clickActionTL)
             }
 
             tcRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTC)
+                click(ReadConfig.clickActionTC)
             }
 
             trRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTR)
+                click(ReadConfig.clickActionTR)
             }
         }
     }
@@ -437,31 +527,22 @@ class ReadView(context: Context, attrs: AttributeSet) :
         when (action) {
             0 -> {
                 pageDelegate?.dismissSnackBar()
-                callBack.showActionMenu()
+                eventListener.onEvent(ReaderEvent.ShowActionMenu)
             }
 
             1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
             2 -> pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
-            3 -> ReadBook.moveToNextChapter(true)
-            4 -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
-            5 -> ReadAloud.prevParagraph(context)
-            6 -> ReadAloud.nextParagraph(context)
-            7 -> callBack.addBookmark()
-            8 -> activity?.showDialogFragment(ContentEditDialog())
-            9 -> callBack.changeReplaceRuleState()
-            10 -> callBack.openChapterList()
-            11 -> callBack.openSearchActivity(null)
-            12 -> ReadBook.syncProgress(
-                { progress -> callBack.sureNewProgress(progress) },
-                { context.longToastOnUi(context.getString(R.string.upload_book_success)) },
-                { context.longToastOnUi(context.getString(R.string.sync_book_progress_success)) })
-            13 -> {
-                if (BaseReadAloudService.isPlay()) {
-                    ReadAloud.pause(context)
-                } else {
-                    ReadAloud.resume(context)
-                }
-            }
+            3 -> eventListener.onEvent(ReaderEvent.NextChapter)
+            4 -> eventListener.onEvent(ReaderEvent.PrevChapter)
+            5 -> eventListener.onEvent(ReaderEvent.ReadAloudPrevParagraph)
+            6 -> eventListener.onEvent(ReaderEvent.ReadAloudNextParagraph)
+            7 -> eventListener.onEvent(ReaderEvent.AddBookmark)
+            8 -> eventListener.onEvent(ReaderEvent.OpenContentEdit)
+            9 -> eventListener.onEvent(ReaderEvent.ChangeReplaceRuleState)
+            10 -> eventListener.onEvent(ReaderEvent.OpenChapterList)
+            11 -> eventListener.onEvent(ReaderEvent.OpenSearch)
+            12 -> eventListener.onEvent(ReaderEvent.SyncProgress)
+            13 -> eventListener.onEvent(ReaderEvent.ToggleReadAloudPause)
         }
     }
 
@@ -520,9 +601,9 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 更新翻页动画
      */
     fun upPageAnim(upRecorder: Boolean = false) {
-        isScroll = ReadBook.pageAnim() == 3
+        isScroll = pageSource.pageAnim == 3
         ChapterProvider.upLayout()
-        when (ReadBook.pageAnim()) {
+        when (pageSource.pageAnim) {
             PageAnim.coverPageAnim -> if (pageDelegate !is CoverPageDelegate) {
                 pageDelegate = CoverPageDelegate(this)
             }
@@ -547,7 +628,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
                 pageDelegate = NoAnimPageDelegate(this)
             }
         }
-        (pageDelegate as? ScrollPageDelegate)?.noAnim = AppConfig.noAnimScrollPage
+        (pageDelegate as? ScrollPageDelegate)?.noAnim = ReadConfig.noAnimScrollPage
         if (upRecorder) {
             (pageDelegate as? HorizontalPageDelegate)?.upRecorder()
             autoPager.upRecorder()
@@ -568,7 +649,19 @@ class ReadView(context: Context, attrs: AttributeSet) :
      */
     override fun upContent(relativePosition: Int, resetPageOffset: Boolean) {
         post {
-            curPage.setContentDescription(pageFactory.curPage.text)
+            val text = pageFactory.curPage.text
+            updateAccessibilityPageText(text)
+            if (BuildConfig.DEBUG) {
+                // Device-independent readiness/page-change signal for the debug
+                // scenario runner (uiautomator does not expose ReadView on all
+                // devices). See tools/android/runner.py.
+                Log.i("LegadoDebug", "READER_PAGE " + text.replace("\n", " "))
+                if (text == context.getString(R.string.data_loading)) {
+                    // Locale-independent signal for the placeholder frame; the
+                    // scenario runner counts these. See tools/android/runner.py.
+                    Log.i("LegadoDebug", "READER_PAGE_PLACEHOLDER_FRAME")
+                }
+            }
         }
         if (isScroll && !isAutoPage) {
             if (relativePosition == 0) {
@@ -590,6 +683,14 @@ class ReadView(context: Context, attrs: AttributeSet) :
         callBack.screenOffTimerStart()
     }
 
+    private fun updateAccessibilityPageText(text: String) {
+        if (accessibilityPageText == text) return
+        accessibilityPageText = text
+        if (isAttachedToWindow) {
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+        }
+    }
+
     private fun upProgress() {
         curPage.setProgress(pageFactory.curPage)
     }
@@ -598,7 +699,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 更新滑动距离
      */
     fun upPageSlopSquare() {
-        val pageTouchSlop = AppConfig.pageTouchSlop
+        val pageTouchSlop = ReadConfig.pageTouchSlop
         this.pageSlopSquare = if (pageTouchSlop == 0) slopSquare else pageTouchSlop
         pageSlopSquare2 = this.pageSlopSquare * this.pageSlopSquare
     }
@@ -608,22 +709,45 @@ class ReadView(context: Context, attrs: AttributeSet) :
      */
     fun upStyle() {
         ChapterProvider.upStyle()
+        TipStyleProvider.upTipStyle()
         curPage.upStyle()
         prevPage.upStyle()
         nextPage.upStyle()
     }
 
     /**
+     * 原子应用日夜主题颜色：先废弃旧正文录制缓存，再在同一主线程任务内更新
+     * 背景、正文画笔和页眉页脚，避免新背景与旧文字位图出现在同一帧。
+     */
+    fun applyThemeColors() {
+        ChapterProvider.upThemeColors()
+        TipStyleProvider.upTipStyle()
+        invalidateTextPage()
+        ReadSessionState.updateBackground(width, height)
+        curPage.apply {
+            upThemeColors()
+            upBg()
+        }
+        prevPage.apply {
+            upThemeColors()
+            upBg()
+        }
+        nextPage.apply {
+            upThemeColors()
+            upBg()
+        }
+        pageDelegate?.postInvalidate()
+        invalidate()
+    }
+
+    /**
      * 更新背景
      */
     fun upBg() {
-        val oldBg = ReadBookConfig.upBg(width, height)
+        ReadSessionState.updateBackground(width, height)
         curPage.upBg()
         prevPage.upBg()
         nextPage.upBg()
-        // 所有视图背景更新完成后再 recycle 旧 bitmap，
-        // 防止视图仍持有旧 BitmapDrawable 引用时 bitmap 已被 recycle 导致崩溃
-        (oldBg as? BitmapDrawable)?.bitmap?.recycle()
     }
 
     /**
@@ -654,21 +778,10 @@ class ReadView(context: Context, attrs: AttributeSet) :
     }
 
     /**
-     * 从选择位置开始朗读
+     * 当前页内 行/列 对应的章节内位置（渲染面查询，翻页推进由外层负责）
      */
-    suspend fun aloudStartSelect() {
-        val selectStartPos = curPage.selectStartPos
-        var pagePos = selectStartPos.relativePagePos
-        val line = selectStartPos.lineIndex
-        val column = selectStartPos.columnIndex
-        while (pagePos > 0) {
-            if (!ReadBook.moveToNextPage()) {
-                ReadBook.moveToNextChapterAwait(false)
-            }
-            pagePos--
-        }
-        val startPos = curPage.textPage.getPosByLineColumn(line, column)
-        ReadBook.readAloud(startPos = startPos)
+    fun posByLineColumn(line: Int, column: Int): Int {
+        return curPage.textPage.getPosByLineColumn(line, column)
     }
 
     /**
@@ -695,7 +808,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
     }
 
     fun invalidateTextPage() {
-        if (!AppConfig.optimizeRender) {
+        if (!ReadConfig.optimizeRender) {
             return
         }
         pageFactory.run {
@@ -704,6 +817,14 @@ class ReadView(context: Context, attrs: AttributeSet) :
             nextPage.invalidateAll()
             nextPlusPage.invalidateAll()
         }
+    }
+
+    /**
+     * 供 [io.legado.app.ui.book.read.page.delegate.PageDelegate] 在翻到尽头时出站——
+     * 翻页委托不持有 eventListener，经这里转发（Track D·D1）。
+     */
+    internal fun requestAutoPageStop() {
+        eventListener.onEvent(ReaderEvent.AutoPageStop)
     }
 
     fun onScrollAnimStart() {
@@ -720,7 +841,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
     }
 
     fun submitRenderTask() {
-        if (!AppConfig.optimizeRender) {
+        if (!ReadConfig.optimizeRender) {
             return
         }
         curPage.submitRenderTask()
@@ -734,40 +855,41 @@ class ReadView(context: Context, attrs: AttributeSet) :
         upProgressThrottle.invoke()
     }
 
+    override val pageIndex: Int get() = pageSource.durPageIndex
+
     override val currentChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(0) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(0) else null
         }
 
     override val nextChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(1) else null
         }
 
     override val prevChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(-1) else null
+            return if (callBack.isInitFinish) pageSource.textChapter(-1) else null
         }
 
     override fun hasNextChapter(): Boolean {
-        return ReadBook.durChapterIndex < ReadBook.simulatedChapterSize - 1
+        return pageSource.durChapterIndex < pageSource.simulatedChapterSize - 1
     }
 
     override fun hasPrevChapter(): Boolean {
-        return ReadBook.durChapterIndex > 0
+        return pageSource.durChapterIndex > 0
     }
 
+    /**
+     * 与宿主的**瞬时 UI 副作用**协作面（Track D·D1）。
+     *
+     * 业务意图一律走 [ReaderEvent]；这里只留不属于业务状态、由 View 直接驱动宿主的那几项，
+     * 外加首帧放行门闩 `isInitFinish`（入站状态查询，随 D2 数据面一起处理）。
+     */
     interface CallBack {
         val isInitFinish: Boolean
-        fun showActionMenu()
         fun screenOffTimerStart()
         fun showTextActionMenu()
-        fun autoPageStop()
-        fun openChapterList()
-        fun addBookmark()
-        fun changeReplaceRuleState()
-        fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
-        fun sureNewProgress(progress: BookProgress)
     }
 }

@@ -57,6 +57,15 @@
             android:checkable="true"
             android:focusable="true"/>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sw_underline_extend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_swap_horiz"
+            android:checkable="true"
+            android:focusable="true"/>
+
         <io.legado.app.ui.widget.AccentColorButton
             android:id="@+id/btnUnderlineColor"
             android:layout_width="wrap_content"

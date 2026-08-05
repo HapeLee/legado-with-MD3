@@ -7,6 +7,24 @@ interface TextBaseColumn : BaseColumn {
     override var start: Float
     override var end: Float
     val charData: String
+    val textColor: Int?
+    val bgColor: Int?
+    val underlineMode: Int
+    val underlineColor: Int?
+    val underlineWidth: Float
+    val underlineOffset: Float
+    val underlineSvgPath: String
+    val bgImage: String
+    val bgImageFit: Int
+    val bgImageScale: Float
+    val fontPath: String
+    val fontWeight: Int
+    val isItalic: Boolean
+    val fontSizeOffset: Int
+    val npLeft: Float
+    val npRight: Float
+    val npTop: Float
+    val npBottom: Float
     var selected: Boolean
     var isSearchResult: Boolean
 }

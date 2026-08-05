@@ -5,18 +5,23 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
-import io.legado.app.base.BaseDialogFragment
-import io.legado.app.constant.PreferKey
+import io.legado.app.base.BaseOverlayDialogFragment
 import io.legado.app.databinding.DialogClickActionConfigBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.getCompatColor
-import io.legado.app.utils.putPrefInt
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
-class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_action_config) {
+class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_click_action_config) {
     private val binding by viewBinding(DialogClickActionConfigBinding::bind)
+    private val mangaSettingsGateway: MangaSettingsGateway by inject()
 
     private val actions by lazy {
         linkedMapOf(
@@ -48,15 +53,15 @@ class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_ac
     }
 
     private fun initData() = binding.run {
-        tvTopLeft.text = actions[AppConfig.mangaClickActionTL]
-        tvTopCenter.text = actions[AppConfig.mangaClickActionTC]
-        tvTopRight.text = actions[AppConfig.mangaClickActionTR]
-        tvMiddleLeft.text = actions[AppConfig.mangaClickActionML]
-        tvMiddleCenter.text = actions[AppConfig.mangaClickActionMC]
-        tvMiddleRight.text = actions[AppConfig.mangaClickActionMR]
-        tvBottomLeft.text = actions[AppConfig.mangaClickActionBL]
-        tvBottomCenter.text = actions[AppConfig.mangaClickActionBC]
-        tvBottomRight.text = actions[AppConfig.mangaClickActionBR]
+        tvTopLeft.text = actions[mangaSettingsGateway.currentSettings.clickActionTL]
+        tvTopCenter.text = actions[mangaSettingsGateway.currentSettings.clickActionTC]
+        tvTopRight.text = actions[mangaSettingsGateway.currentSettings.clickActionTR]
+        tvMiddleLeft.text = actions[mangaSettingsGateway.currentSettings.clickActionML]
+        tvMiddleCenter.text = actions[mangaSettingsGateway.currentSettings.clickActionMC]
+        tvMiddleRight.text = actions[mangaSettingsGateway.currentSettings.clickActionMR]
+        tvBottomLeft.text = actions[mangaSettingsGateway.currentSettings.clickActionBL]
+        tvBottomCenter.text = actions[mangaSettingsGateway.currentSettings.clickActionBC]
+        tvBottomRight.text = actions[mangaSettingsGateway.currentSettings.clickActionBR]
     }
 
     private fun initViewEvent() {
@@ -66,65 +71,71 @@ class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_ac
 
         binding.tvTopLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTL, action)
+                setClickAction { it.copy(clickActionTL = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTC, action)
+                setClickAction { it.copy(clickActionTC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTR, action)
+                setClickAction { it.copy(clickActionTR = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionML, action)
+                setClickAction { it.copy(clickActionML = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionMC, action)
+                setClickAction { it.copy(clickActionMC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionMR, action)
+                setClickAction { it.copy(clickActionMR = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBL, action)
+                setClickAction { it.copy(clickActionBL = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBC, action)
+                setClickAction { it.copy(clickActionBC = action) }
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBR, action)
+                setClickAction { it.copy(clickActionBR = action) }
                 (it as? TextView)?.text = actions[action]
             }
+        }
+    }
+
+    private fun setClickAction(transform: (MangaSettings) -> MangaSettings) {
+        lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            mangaSettingsGateway.update(transform)
         }
     }
 
@@ -138,8 +149,20 @@ class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_ac
     }
 
     override fun onDestroy() {
+        if (!hasMenuClickArea()) {
+            lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                mangaSettingsGateway.update { it.copy(clickActionMC = 0) }
+            }
+            context?.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
+        }
         super.onDestroy()
-        AppConfig.detectMangaClickArea()
+    }
+
+    private fun hasMenuClickArea(): Boolean {
+        return mangaSettingsGateway.currentSettings.clickActionTL * mangaSettingsGateway.currentSettings.clickActionTC *
+                mangaSettingsGateway.currentSettings.clickActionTR * mangaSettingsGateway.currentSettings.clickActionML *
+                mangaSettingsGateway.currentSettings.clickActionMC * mangaSettingsGateway.currentSettings.clickActionMR *
+                mangaSettingsGateway.currentSettings.clickActionBL * mangaSettingsGateway.currentSettings.clickActionBC *
+                mangaSettingsGateway.currentSettings.clickActionBR == 0
     }
 }
-

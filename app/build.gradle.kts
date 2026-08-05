@@ -4,12 +4,12 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.room)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.baselineprofile)
 }
 
 apply(from = "download.gradle")
@@ -27,17 +27,13 @@ val versionMinor = versionProps["VERSION_MINOR"]?.toString()?.toInt() ?: 0
 val versionPatch = versionProps["VERSION_PATCH"]?.toString()?.toInt() ?: 0
 val appName = "legado"
 val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
+val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
+    .map(String::toBoolean)
+    .getOrElse(true)
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     namespace = "io.legado.app"
-
-    kotlin {
-        jvmToolchain {
-            languageVersion.set(JavaLanguageVersion.of(21))
-            vendor.set(JvmVendorSpec.ADOPTIUM)
-        }
-    }
 
     signingConfigs {
         if (project.hasProperty("RELEASE_STORE_FILE")) {
@@ -57,7 +53,7 @@ android {
     defaultConfig {
         applicationId = "io.legato.kazusa"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = System.getenv("COMMIT_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
         versionName = System.getenv("APP_VERSION_NAME") ?: projectVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -100,6 +96,13 @@ android {
                 "cronet-proguard-rules.pro"
             )
         }
+        create("noR8") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            matchingFallbacks += listOf("release")
+            versionNameSuffix = "-noR8"
+        }
         getByName("debug") {
             applicationIdSuffix = ".debug"
             if (project.hasProperty("RELEASE_STORE_FILE")) {
@@ -118,7 +121,7 @@ android {
 
     splits {
         abi {
-            isEnable = true
+            isEnable = enableAbiSplits
             reset()
             include("armeabi-v7a", "arm64-v8a")
             isUniversalApk = true
@@ -133,31 +136,6 @@ android {
         }
     }
 
-    applicationVariants.all {
-        val variant = this
-        outputs.all {
-            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val abi = output.getFilter(com.android.build.OutputFile.ABI)
-            val flavor = variant.productFlavors[0].name
-            val baseVersionName = variant.versionName
-            var apkName = "${appName}_${flavor}_${baseVersionName}"
-            if (abi != null) {
-                apkName += "_$abi"
-            }
-            output.outputFileName = "$apkName.apk"
-        }
-    }
-
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
-
-    ksp {
-        arg("room.incremental", "true")
-        arg("room.expandProjection", "true")
-        arg("room.generateKotlin", "false")
-    }
-
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
@@ -169,19 +147,54 @@ android {
     }
 
     sourceSets {
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
 
     lint {
+        baseline = file("lint-baseline.xml")
         checkDependencies = true
+        // UnusedResources 在基线里占 1223/1621 条、12218 行（全文件的 75%），几乎全是
+        // 跟随上游时留下的资源；release 本来就开了精确资源压缩，它们不会进 APK。
+        // 关掉它让基线只剩真正值得盯的那部分，新增问题照样报红。
+        disable += "UnusedResources"
+    }
+
+    testOptions {
+        unitTests {
+            // 阅读器核心在构造期就读字符串资源（TextPageFactory 的 keepSwipeTip、
+            // TextPage 的默认 text/title、ReadView 的无障碍动作名）。不打开这个，
+            // Robolectric 下取任何 R.string 都是 Resources$NotFoundException，
+            // 整条阅读器测试线（Track D·D1c）就起不来。
+            isIncludeAndroidResources = true
+        }
     }
 }
 
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+ksp {
+    arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
+    arg("room.generateKotlin", "false")
+}
+
 dependencies {
+    implementation(libs.androidx.profileinstaller)
+    "baselineProfile"(project(":baselineprofile"))
     coreLibraryDesugaring(libs.desugar)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.bundles.androidTest)
     implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.coroutines)
     implementation(libs.core.ktx)
@@ -213,6 +226,7 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.json.path)
     implementation(libs.jsoupxpath)
+    implementation(libs.intellij.markdown)
     implementation(project(":modules:book"))
     implementation(project(":modules:rhino"))
     implementation(libs.okhttp)
@@ -224,10 +238,15 @@ dependencies {
     implementation(libs.androidsvg)
     implementation(libs.glide.svg)
     implementation(libs.glide.recyclerview)
-    implementation(libs.nanohttpd.nanohttpd)
-    implementation(libs.nanohttpd.websocket)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.gson)
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.websockets)
     implementation(libs.zxing.lite)
     implementation(libs.colorpicker)
+    implementation(libs.colorpicker.compose)
     implementation(libs.libarchive)
     implementation(libs.commons.text)
     implementation(libs.markwon.core)
@@ -236,6 +255,7 @@ dependencies {
     implementation(libs.markwon.html)
     implementation(libs.quick.chinese.transfer.core)
     implementation(libs.hutool.crypto)
+    //noinspection GradleDependency
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.perf)
@@ -251,15 +271,21 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.coil.svg)
     implementation(libs.accompanist.webview)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
+    // 直接声明并抬高 navigationevent 版本，覆盖 navigation3 传递依赖的 1.1.2（预测式返回崩溃）
+    implementation(libs.androidx.navigationevent)
+    implementation(libs.androidx.navigationevent.compose)
     implementation(libs.androidx.compose.adaptive)
     implementation(libs.androidx.compose.adaptive.layout)
     implementation(libs.androidx.compose.adaptive.navigation)
@@ -275,4 +301,13 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.haze.core)
     implementation(libs.haze.materials)
+    implementation(libs.miuix.ui.android)
+    implementation(libs.miuix.preference.android)
+    implementation(libs.miuix.icons.android)
+    implementation(libs.miuix.blur.android)
+    implementation(libs.miuix.core)
+    implementation(libs.capsule)
+    implementation(libs.backdrop)
+    implementation(libs.lyricViewx)
+    implementation(libs.timber)
 }
