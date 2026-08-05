@@ -275,7 +275,7 @@ private fun SourceLoginWebSheet(
     onOpenExternalUrl: (String) -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = state.mode == SourceLoginMode.Web && !state.loading,
         onDismissRequest = { onIntent(SourceLoginIntent.Back) },
         title = state.title,
         endAction = {
@@ -286,6 +286,7 @@ private fun SourceLoginWebSheet(
             )
         },
         contentPaddingEnabled = false,
+        sheetGesturesEnabled = false,
     ) {
         SourceLoginWebView(state, onIntent, onOpenExternalUrl)
     }
@@ -318,6 +319,7 @@ private fun SourceLoginWebView(
                         displayZoomControls = false
                         state.headers[AppConst.UA_NAME]?.let { userAgentString = it }
                     }
+                    isNestedScrollingEnabled = true
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             url?.let { currentIntent(SourceLoginIntent.WebPageStarted(it)) }

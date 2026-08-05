@@ -55,6 +55,7 @@ fun AppModalBottomSheet(
     animateContentSize: Boolean = true,
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     contentPaddingEnabled: Boolean = true,
+    sheetGesturesEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = LocalLegadoThemeColors.current.colorScheme
@@ -72,7 +73,10 @@ fun AppModalBottomSheet(
                     ProvideAppDensity {
                         ProvideAppContentColor(sheetContentColor) {
                             CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                                action()
+                                Box(
+                                    modifier = if (contentPaddingEnabled) Modifier
+                                    else Modifier.padding(start = 16.dp),
+                                ) { action() }
                             }
                         }
                     }
@@ -83,7 +87,10 @@ fun AppModalBottomSheet(
                     ProvideAppDensity {
                         ProvideAppContentColor(sheetContentColor) {
                             CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                                action()
+                                Box(
+                                    modifier = if (contentPaddingEnabled) Modifier
+                                    else Modifier.padding(end = 16.dp),
+                                ) { action() }
                             }
                         }
                     }
@@ -94,7 +101,6 @@ fun AppModalBottomSheet(
             dragHandleColor = sheetDragHandleColor,
             onDismissRequest = onDismissRequest,
             enableWindowDim = true,
-            allowDismiss = true
         ) {
             ProvideAppDensity {
                 ProvideAppContentColor(sheetContentColor) {
@@ -141,7 +147,8 @@ fun AppModalBottomSheet(
                     containerColor = sheetContainerColor,
                     contentColor = sheetContentColor,
                     dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
-                    contentWindowInsets = contentWindowInsets
+                    contentWindowInsets = contentWindowInsets,
+                    sheetGesturesEnabled = sheetGesturesEnabled,
                 ) {
                     ProvideAppDensity {
                         Column(
@@ -171,7 +178,15 @@ fun AppModalBottomSheet(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (startAction != null) {
-                                        Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.CenterStart)
+                                                .let {
+                                                    if (contentPaddingEnabled) it else it.padding(
+                                                        start = 16.dp
+                                                    )
+                                                }
+                                        ) {
                                             startAction()
                                         }
                                     }
@@ -189,7 +204,15 @@ fun AppModalBottomSheet(
                                     }
 
                                     if (endAction != null) {
-                                        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .let {
+                                                    if (contentPaddingEnabled) it else it.padding(
+                                                        end = 16.dp
+                                                    )
+                                                }
+                                        ) {
                                             endAction()
                                         }
                                     }
@@ -220,6 +243,7 @@ fun <T> AppModalBottomSheet(
     endAction: @Composable (() -> Unit)? = null,
     animateContentSize: Boolean = true,
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
+    sheetGesturesEnabled: Boolean = true,
     content: @Composable ColumnScope.(T) -> Unit
 ) {
     var cachedData by remember { mutableStateOf(data) }
@@ -238,6 +262,7 @@ fun <T> AppModalBottomSheet(
         endAction = endAction,
         animateContentSize = animateContentSize,
         contentWindowInsets = contentWindowInsets,
+        sheetGesturesEnabled = sheetGesturesEnabled,
         content = {
             if (currentData != null) {
                 content(currentData)

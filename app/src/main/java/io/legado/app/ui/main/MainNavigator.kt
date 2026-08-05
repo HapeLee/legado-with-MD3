@@ -34,6 +34,8 @@ object MainNavigator {
                 backStack.add(route)
             }
 
+            is MainRouteWebView -> backStack.add(route)
+
             MainRouteBookSourceManage,
             is MainRouteBookSourceEdit,
             MainRouteRssSourceManage,
@@ -331,6 +333,27 @@ object MainNavigator {
                 sourceKey = intent?.getStringExtra(MainIntent.EXTRA_SOURCE_LOGIN_KEY),
                 bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
             )
+
+            MainRouteConst.ROUTE_WEB_VIEW -> intent?.getStringExtra(MainIntent.EXTRA_WEB_VIEW_URL)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { url ->
+                    MainRouteWebView(
+                        title = intent.getStringExtra(MainIntent.EXTRA_WEB_VIEW_TITLE),
+                        url = url,
+                        sourceOrigin = intent.getStringExtra(MainIntent.EXTRA_WEB_VIEW_SOURCE_ORIGIN),
+                        sourceName = intent.getStringExtra(MainIntent.EXTRA_WEB_VIEW_SOURCE_NAME),
+                        sourceType = if (intent.hasExtra(MainIntent.EXTRA_WEB_VIEW_SOURCE_TYPE)) {
+                            intent.getIntExtra(MainIntent.EXTRA_WEB_VIEW_SOURCE_TYPE, 0)
+                        } else null,
+                        sourceVerificationEnable = intent.getBooleanExtra(
+                            MainIntent.EXTRA_WEB_VIEW_VERIFICATION, false
+                        ),
+                        refetchAfterSuccess = intent.getBooleanExtra(
+                            MainIntent.EXTRA_WEB_VIEW_REFETCH, true
+                        ),
+                        html = intent.getStringExtra(MainIntent.EXTRA_WEB_VIEW_HTML),
+                    )
+                } ?: MainRouteHome
 
             MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE -> MainRouteBookSourceManage
             MainRouteConst.ROUTE_BOOK_SOURCE_EDIT -> MainRouteBookSourceEdit(

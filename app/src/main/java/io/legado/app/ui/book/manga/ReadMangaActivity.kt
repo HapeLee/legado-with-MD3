@@ -72,7 +72,6 @@ import io.legado.app.ui.book.manga.recyclerview.ScrollTimer
 import io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
 import io.legado.app.ui.book.read.MangaMenu
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginType
@@ -92,7 +91,6 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -699,14 +697,17 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                     analyzeRule.evalJS(payAction).toString()
                 }.onSuccess(IO) {
                     if (it.isAbsUrl()) {
-                        startActivity<WebViewActivity> {
-                            val bookSource = ReadManga.bookSource
-                            putExtra("title", getString(R.string.chapter_pay))
-                            putExtra("url", it)
-                            putExtra("sourceOrigin", bookSource?.bookSourceUrl)
-                            putExtra("sourceName", bookSource?.bookSourceName)
-                            putExtra("sourceType", bookSource?.getSourceType())
-                        }
+                        val bookSource = ReadManga.bookSource
+                        startActivity(
+                            MainActivity.createWebViewIntent(
+                                this@ReadMangaActivity,
+                                getString(R.string.chapter_pay),
+                                it,
+                                bookSource?.bookSourceUrl,
+                                bookSource?.bookSourceName,
+                                bookSource?.getSourceType(),
+                            )
+                        )
                     } else if (it.isTrue()) {
                         //购买成功后刷新目录
                         ReadManga.book?.let {

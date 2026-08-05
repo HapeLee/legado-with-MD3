@@ -18,6 +18,18 @@ data class MainRouteSourceLogin(
 ) : MainRoute
 
 @Serializable
+data class MainRouteWebView(
+    val title: String? = null,
+    val url: String,
+    val sourceOrigin: String? = null,
+    val sourceName: String? = null,
+    val sourceType: Int? = null,
+    val sourceVerificationEnable: Boolean = false,
+    val refetchAfterSuccess: Boolean = true,
+    val html: String? = null,
+) : MainRoute
+
+@Serializable
 data object MainRouteBookSourceManage : MainRoute
 
 @Serializable
@@ -215,6 +227,7 @@ data object MainRouteAbout : MainRoute
 object MainRouteConst {
     const val ROUTE_MAIN = "main"
     const val ROUTE_SOURCE_LOGIN = "source/login"
+    const val ROUTE_WEB_VIEW = "web/view"
     const val ROUTE_BOOK_SOURCE_MANAGE = "source/book/manage"
     const val ROUTE_BOOK_SOURCE_EDIT = "source/book/edit"
     const val ROUTE_RSS_SOURCE_MANAGE = "source/rss/manage"

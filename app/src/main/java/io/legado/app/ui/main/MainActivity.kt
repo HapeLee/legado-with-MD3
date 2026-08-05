@@ -98,6 +98,21 @@ open class MainActivity : BaseComposeActivity() {
             bookUrl: String? = null,
         ): Intent = MainIntent.createSourceLoginIntent(context, type, sourceKey, bookUrl)
 
+        fun createWebViewIntent(
+            context: Context,
+            title: String? = null,
+            url: String,
+            sourceOrigin: String? = null,
+            sourceName: String? = null,
+            sourceType: Int? = null,
+            sourceVerificationEnable: Boolean = false,
+            refetchAfterSuccess: Boolean = true,
+            html: String? = null,
+        ): Intent = MainIntent.createWebViewIntent(
+            context, title, url, sourceOrigin, sourceName, sourceType,
+            sourceVerificationEnable, refetchAfterSuccess, html,
+        )
+
         fun createBookSourceManageIntent(context: Context) =
             MainIntent.createBookSourceManageIntent(context)
 

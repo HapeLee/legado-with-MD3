@@ -6,7 +6,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.IntentData
 import io.legado.app.ui.association.VerificationCodeActivity
-import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.isMainThread
 import io.legado.app.utils.startActivity
 import splitties.init.appCtx
@@ -85,17 +85,13 @@ object SourceVerificationHelp {
     ) {
         source ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
         require(url.length < 64 * 1024) { "startBrowser parameter url too long" }
-        appCtx.startActivity<WebViewActivity> {
-            putExtra("title", title)
-            putExtra("url", url)
-            putExtra("sourceOrigin", source.getKey())
-            putExtra("sourceName", source.getTag())
-            putExtra("sourceType", source.getSourceType())
-            putExtra("sourceVerificationEnable", saveResult)
-            putExtra("refetchAfterSuccess", refetchAfterSuccess)
-            putExtra("html", html)
-            IntentData.put(getVerificationResultKey(source), Thread.currentThread())
-        }
+        IntentData.put(getVerificationResultKey(source), Thread.currentThread())
+        appCtx.startActivity(
+            MainActivity.createWebViewIntent(
+                appCtx, title, url, source.getKey(), source.getTag(), source.getSourceType(),
+                saveResult == true, refetchAfterSuccess != false, html,
+            )
+        )
     }
 
 
