@@ -2354,6 +2354,8 @@
     <string name="night_card_bg_color">Night Card Background Color</string>
     <string name="compact_details">Compact Details</string>
     <string name="show_more_info">Show More Info</string>
+    <string name="center_cover_vertically">Center Cover Vertically</string>
+    <string name="center_cover_vertically_description">When disabled, the cover is aligned to the top.</string>
     <string name="show_synopsis_below_content">Show Synopsis Below Cover and Details</string>
     <string name="show_latest_chapter">Show Latest Chapter</string>
     <string name="show_synopsis">Show Synopsis</string>

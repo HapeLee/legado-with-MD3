@@ -179,9 +179,17 @@ fun BookshelfListItem(
             onLongClick = onLongClick
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier
-                    .align(Alignment.CenterVertically)
-                    .width(coverWidth.dp)) {
+                Box(
+                    Modifier
+                        .align(
+                            if (settings.bookshelfListCoverCenter) {
+                                Alignment.CenterVertically
+                            } else {
+                                Alignment.Top
+                            }
+                        )
+                        .width(coverWidth.dp)
+                ) {
                     BookshelfItemCover(coverShadow = coverShadow, cover = cover)
                 }
                 Column(

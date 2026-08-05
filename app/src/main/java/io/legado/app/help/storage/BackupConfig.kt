@@ -306,6 +306,7 @@ object BackupConfig {
         PreferKey.bookshelfLayoutModePortrait,
         PreferKey.bookshelfLayoutModeLandscape,
         PreferKey.bookshelfLayoutCompact,
+        PreferKey.bookshelfListCoverCenter,
         PreferKey.bookshelfListIntroBelowContent,
         PreferKey.bookshelfShowDivider,
         PreferKey.bookshelfGridLayout,
