@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -56,7 +55,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WbTwilight
-import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +100,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -337,7 +336,7 @@ fun ReadAloudPlayerScreenContent(
                                     verticalPagerState.animateScrollToPage(
                                         page = if (verticalPagerState.currentPage == 0) 1 else 0,
                                         animationSpec = tween(
-                                            durationMillis = 600,
+                                            durationMillis = 520,
                                             easing = FastOutSlowInEasing,
                                         ),
                                     )
@@ -496,50 +495,43 @@ private fun PlayerAdjustmentSlider(
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppText(
-                text = title,
-                style = LegadoTheme.typography.titleMediumEmphasized,
-            )
-            Spacer(Modifier.height(8.dp))
-            Slider(
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppText(
+                    modifier = Modifier.weight(1f),
+                    text = title,
+                    style = LegadoTheme.typography.labelMediumEmphasized,
+                )
+                TextCard(
+                    text = valueLabel,
+                )
+            }
+
+            AppSlider(
                 value = value,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = valueRange,
                 steps = steps,
-                thumb = {
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(LegadoTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AppText(
-                            text = valueLabel,
-                            style = LegadoTheme.typography.titleMediumEmphasized,
-                            color = LegadoTheme.colorScheme.onPrimaryContainer,
-                            maxLines = 1,
-                        )
-                    }
-                },
                 modifier = Modifier.fillMaxWidth(),
             )
+
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 AppText(
                     text = startLabel,
-                    style = LegadoTheme.typography.labelMedium,
+                    style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
                 AppText(
                     text = endLabel,
-                    style = LegadoTheme.typography.labelMedium,
+                    style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
