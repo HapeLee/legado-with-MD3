@@ -25,6 +25,14 @@ object MainIntent {
     const val EXTRA_SOURCE_LOGIN_TYPE = "source_login_type"
     const val EXTRA_SOURCE_LOGIN_KEY = "source_login_key"
     const val EXTRA_EXPLORE_URL = "exploreUrl"
+    const val EXTRA_WEB_VIEW_TITLE = "title"
+    const val EXTRA_WEB_VIEW_URL = "url"
+    const val EXTRA_WEB_VIEW_SOURCE_ORIGIN = "sourceOrigin"
+    const val EXTRA_WEB_VIEW_SOURCE_NAME = "sourceName"
+    const val EXTRA_WEB_VIEW_SOURCE_TYPE = "sourceType"
+    const val EXTRA_WEB_VIEW_VERIFICATION = "sourceVerificationEnable"
+    const val EXTRA_WEB_VIEW_REFETCH = "refetchAfterSuccess"
+    const val EXTRA_WEB_VIEW_HTML = "html"
 
     const val EXTRA_RSS_SOURCE_URL = "extra_rss_source_url"
     const val EXTRA_RSS_SORT_URL = "extra_rss_sort_url"
@@ -61,6 +69,28 @@ object MainIntent {
         putExtra(EXTRA_SOURCE_LOGIN_TYPE, type.name)
         putExtra(EXTRA_SOURCE_LOGIN_KEY, sourceKey)
         putExtra(EXTRA_BOOK_URL, bookUrl)
+    }
+
+    fun createWebViewIntent(
+        context: Context,
+        title: String? = null,
+        url: String,
+        sourceOrigin: String? = null,
+        sourceName: String? = null,
+        sourceType: Int? = null,
+        sourceVerificationEnable: Boolean = false,
+        refetchAfterSuccess: Boolean = true,
+        html: String? = null,
+    ): Intent = createLauncherIntent(context).apply {
+        putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_WEB_VIEW)
+        putExtra(EXTRA_WEB_VIEW_TITLE, title)
+        putExtra(EXTRA_WEB_VIEW_URL, url)
+        putExtra(EXTRA_WEB_VIEW_SOURCE_ORIGIN, sourceOrigin)
+        putExtra(EXTRA_WEB_VIEW_SOURCE_NAME, sourceName)
+        sourceType?.let { putExtra(EXTRA_WEB_VIEW_SOURCE_TYPE, it) }
+        putExtra(EXTRA_WEB_VIEW_VERIFICATION, sourceVerificationEnable)
+        putExtra(EXTRA_WEB_VIEW_REFETCH, refetchAfterSuccess)
+        putExtra(EXTRA_WEB_VIEW_HTML, html)
     }
 
     fun createBookSourceManageIntent(context: Context): Intent =

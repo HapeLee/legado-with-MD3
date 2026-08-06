@@ -62,7 +62,6 @@ import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -348,14 +347,10 @@ fun ReadBookRouteScreen(
                             }
                             is ReadBookEffect.OpenWebView -> {
                                 context.startActivity(
-                                    Intent(context, WebViewActivity::class.java).apply {
-                                        putExtra("title", effect.title)
-                                        putExtra("url", effect.url)
-                                        putExtra("sourceOrigin", effect.sourceOrigin)
-                                        putExtra("sourceName", effect.sourceName)
-                                        effect.sourceType?.let { putExtra("sourceType", it) }
-                                        effect.html?.let { putExtra("html", it) }
-                                    }
+                                    MainActivity.createWebViewIntent(
+                                        context, effect.title, effect.url, effect.sourceOrigin,
+                                        effect.sourceName, effect.sourceType, html = effect.html,
+                                    )
                                 )
                             }
                             is ReadBookEffect.RunSourceCustomButton -> {

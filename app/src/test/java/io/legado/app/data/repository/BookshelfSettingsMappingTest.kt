@@ -8,8 +8,8 @@ import org.junit.Test
 class BookshelfSettingsMappingTest {
 
     @Test
-    fun `Bookshelf 47 键写读映射逐字段对应`() {
-        assertEquals(47, BookshelfSettings().toPrefMap().size)
+    fun `Bookshelf 48 键写读映射逐字段对应`() {
+        assertEquals(48, BookshelfSettings().toPrefMap().size)
         bookshelfMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
@@ -66,6 +66,7 @@ private fun bookshelfMappingSamples(): List<BookshelfSettings> {
         bookshelfFolderLayoutListLandscape = 117,
         bookshelfGridLayout = 118,
         bookshelfLayoutCompact = false,
+        bookshelfListCoverCenter = false,
         bookshelfListIntroBelowContent = false,
         bookshelfShowDivider = false,
         bookshelfTitleSmallFont = false,
@@ -98,6 +99,7 @@ private fun bookshelfMappingSamples(): List<BookshelfSettings> {
         base.copy(showBookshelfFastScroller = true),
         base.copy(shouldShowExpandButton = true),
         base.copy(bookshelfLayoutCompact = true),
+        base.copy(bookshelfListCoverCenter = true),
         base.copy(bookshelfListIntroBelowContent = true),
         base.copy(bookshelfShowDivider = true),
         base.copy(bookshelfTitleSmallFont = true),
@@ -141,6 +143,7 @@ private fun BookshelfSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfFolderLayoutListLandscape to bookshelfFolderLayoutListLandscape,
     PreferKey.bookshelfGridLayout to bookshelfGridLayout,
     PreferKey.bookshelfLayoutCompact to bookshelfLayoutCompact,
+    PreferKey.bookshelfListCoverCenter to bookshelfListCoverCenter,
     PreferKey.bookshelfListIntroBelowContent to bookshelfListIntroBelowContent,
     PreferKey.bookshelfShowDivider to bookshelfShowDivider,
     PreferKey.bookshelfTitleSmallFont to bookshelfTitleSmallFont,

@@ -64,6 +64,7 @@ import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookInitRequest
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
@@ -86,6 +87,8 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditRoute
 import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceRouteScreen
+import io.legado.app.ui.browser.WebViewModel
+import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
@@ -141,6 +144,25 @@ fun MainActivity.mainEntryProvider(
     onNavigateToRoute: (NavKey) -> Unit,
     onNavigateBack: () -> Unit,
 ) = entryProvider {
+    entry<MainRouteWebView> { route ->
+        val viewModel = koinViewModel<WebViewModel>(
+            key = "WebView:${route.url}:${route.sourceOrigin}:${route.sourceVerificationEnable}",
+        )
+        WebViewRouteScreen(
+            intent = Intent().apply {
+                putExtra("title", route.title)
+                putExtra("url", route.url)
+                putExtra("sourceOrigin", route.sourceOrigin)
+                putExtra("sourceName", route.sourceName)
+                route.sourceType?.let { putExtra("sourceType", it) }
+                putExtra("sourceVerificationEnable", route.sourceVerificationEnable)
+                putExtra("refetchAfterSuccess", route.refetchAfterSuccess)
+                putExtra("html", route.html)
+            },
+            viewModel = viewModel,
+            onFinish = onNavigateBack,
+        )
+    }
     entry<MainRouteSourceLogin>(
         metadata = ModalOverlaySceneStrategy.modalOverlay(),
     ) { route ->
@@ -545,11 +567,9 @@ fun MainActivity.mainEntryProvider(
             readBookViewModel.prepareCachedChapterFallback(route.bookUrl, route.chapterChanged)
         }
         val lifecycleOwner = LocalLifecycleOwner.current
-        val readIntent = remember(route) {
-            MainActivity.createReadBookIntent(
-                context = this@mainEntryProvider,
+        val initRequest = remember(route) {
+            ReadBookInitRequest(
                 bookUrl = route.bookUrl,
-                readAloud = route.readAloud,
                 inBookshelf = route.inBookshelf,
                 chapterChanged = route.chapterChanged,
             )
@@ -637,8 +657,8 @@ fun MainActivity.mainEntryProvider(
         LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
             effectsReady.await()
             collectorReady[0] = true
-            readBookViewModel.initReadBookConfig(readIntent)
-            readBookViewModel.initData(readIntent) {
+            readBookViewModel.initReadBookConfig(initRequest)
+            readBookViewModel.initData(initRequest) {
                 readBookViewModel.markJustInitData()
                 controller.onRouteInitialized()
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {

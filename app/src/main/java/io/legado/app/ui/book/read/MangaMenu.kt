@@ -8,31 +8,30 @@ import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.widget.FrameLayout
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.view.ViewCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.slider.Slider
 import io.legado.app.R
 import io.legado.app.databinding.ViewMangaMenuBinding
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.help.source.getSourceType
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
-import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.readConfig.ReadConfig
-import io.legado.app.domain.gateway.ReadSettingsGateway
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import org.koin.core.context.GlobalContext
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.gone
 import io.legado.app.utils.invisible
 import io.legado.app.utils.loadAnimation
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.visible
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 
 class MangaMenu @JvmOverloads constructor(
     context: Context,
@@ -194,15 +193,17 @@ class MangaMenu @JvmOverloads constructor(
             if (ReadConfig.readUrlInBrowser) {
                 context.openUrl(tvChapterUrl.text.toString().substringBefore(",{"))
             } else {
-                context.startActivity<WebViewActivity> {
-                    val url = tvChapterUrl.text.toString()
-                    val bookSource = ReadBook.bookSource
-                    putExtra("title", tvChapterName.text)
-                    putExtra("url", url)
-                    putExtra("sourceOrigin", bookSource?.bookSourceUrl)
-                    putExtra("sourceName", bookSource?.bookSourceName)
-                    putExtra("sourceType", bookSource?.getSourceType())
-                }
+                val bookSource = ReadBook.bookSource
+                context.startActivity(
+                    MainActivity.createWebViewIntent(
+                        context,
+                        tvChapterName.text.toString(),
+                        tvChapterUrl.text.toString(),
+                        bookSource?.bookSourceUrl,
+                        bookSource?.bookSourceName,
+                        bookSource?.getSourceType(),
+                    )
+                )
             }
         }
         val chapterViewLongClickListener = OnLongClickListener {

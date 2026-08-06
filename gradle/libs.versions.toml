@@ -6,7 +6,7 @@ adaptiveLayout = "1.3.0-rc01"
 adaptiveNavigation = "1.3.0-rc01"
 animation = "1.11.4"
 biometric = "1.4.0-alpha07"
-coilCompose = "2.7.0"
+coilCompose = "3.5.0"
 composeBom = "2026.06.01"
 constraintlayoutCompose = "1.1.1"
 coreSplashscreen = "1.2.0"
@@ -143,9 +143,10 @@ koin-android = { group = "io.insert-koin", name = "koin-android" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose" }
 koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel" }
 
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
-coil-gif = { module = "io.coil-kt:coil-gif", version.ref = "coilCompose" }
-coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilCompose" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coilCompose" }
+coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coilCompose" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version = "3.7.0" }

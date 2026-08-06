@@ -361,6 +361,16 @@
     <string name="header_padding">页眉边距</string>
     <string name="footer_padding">页脚边距</string>
     <string name="check_book_source">校验书源</string>
+    <string name="book_source_check_completed">校验完成：成功 %1$d，失败 %2$d</string>
+    <string name="book_source_check_cancelled">校验已停止：成功 %1$d，失败 %2$d，取消 %3$d</string>
+    <string name="book_source_check_waiting">等待校验</string>
+    <string name="book_source_check_running">正在校验</string>
+    <string name="book_source_check_succeeded">校验成功</string>
+    <string name="book_source_check_failed">校验失败：%1$s</string>
+    <string name="book_source_check_source_missing">校验失败：书源不存在</string>
+    <string name="book_source_check_save_failed">校验失败：无法保存结果，%1$s</string>
+    <string name="book_source_check_incomplete">校验失败：任务未完成</string>
+    <string name="book_source_check_item_cancelled">校验已取消</string>
     <string name="check_select_source">校验所选</string>
     <string name="progress_show">%1$s      进度 %2$d/%3$d</string>
     <string name="tts_fix">请安装并选择中文 TTS！</string>
@@ -2330,6 +2340,8 @@
     <string name="night_card_bg_color">夜间卡片背景颜色</string>
     <string name="compact_details">精简详情</string>
     <string name="show_more_info">显示更多信息</string>
+    <string name="center_cover_vertically">封面垂直居中</string>
+    <string name="center_cover_vertically_description">关闭时，封面顶部对齐。</string>
     <string name="show_synopsis_below_content">简介显示在封面和信息下方</string>
     <string name="show_latest_chapter">显示最新章节</string>
     <string name="show_synopsis">显示简介</string>

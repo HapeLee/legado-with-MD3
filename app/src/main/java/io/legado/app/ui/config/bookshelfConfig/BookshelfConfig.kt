@@ -37,6 +37,7 @@ object BookshelfConfig {
     val bookshelfFolderLayoutListLandscape get() = settings.bookshelfFolderLayoutListLandscape
     val bookshelfGridLayout get() = settings.bookshelfGridLayout
     val bookshelfLayoutCompact get() = settings.bookshelfLayoutCompact
+    val bookshelfListCoverCenter get() = settings.bookshelfListCoverCenter
     val bookshelfListIntroBelowContent get() = settings.bookshelfListIntroBelowContent
     val bookshelfShowDivider get() = settings.bookshelfShowDivider
     val bookshelfTitleSmallFont get() = settings.bookshelfTitleSmallFont

@@ -57,6 +57,7 @@ object PreferKey {
     const val bookshelfLayoutModePortrait = "bookshelfLayoutPortrait"
     const val bookshelfLayoutModeLandscape = "bookshelf_layout_landscape"
     const val bookshelfLayoutCompact = "bookshelfLayoutCompact"
+    const val bookshelfListCoverCenter = "bookshelfListCoverCenter"
     const val bookshelfListIntroBelowContent = "bookshelfListIntroBelowContent"
     const val bookshelfShowDivider = "bookshelfShowDivider"
     const val bookshelfGridLayout = "bookshelfGridLayout"

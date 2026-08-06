@@ -75,9 +75,9 @@ fun BookSourceEditRoute(
         text = stringResource(R.string.exit_no_save),
         confirmText = stringResource(R.string.yes),
         onConfirm = {
-            viewModel.onIntent(BookSourceEditIntent.DiscardChanges)
+            viewModel.onIntent(BookSourceEditIntent.DismissDialog)
         },
         dismissText = stringResource(R.string.no),
-        onDismiss = { viewModel.onIntent(BookSourceEditIntent.DismissDialog) },
+        onDismiss = { viewModel.onIntent(BookSourceEditIntent.DiscardChanges) },
     )
 }

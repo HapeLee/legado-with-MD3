@@ -411,10 +411,19 @@ internal val MoreActionIds = listOf(
     "bottom_button_config", "log",
 )
 
+@Immutable
+data class ReadBookInitRequest(
+    val bookUrl: String? = null,
+    val inBookshelf: Boolean = true,
+    val chapterChanged: Boolean = false,
+    val chapterIndex: Int = -1,
+    val chapterPos: Int = -1,
+)
+
 sealed interface ReadBookIntent {
     // Initialization
-    data class InitData(val intent: android.content.Intent) : ReadBookIntent
-    data class InitReadBookConfig(val intent: android.content.Intent) : ReadBookIntent
+    data class InitData(val request: ReadBookInitRequest) : ReadBookIntent
+    data class InitReadBookConfig(val request: ReadBookInitRequest) : ReadBookIntent
     data class CheckSwitchDayNight(val lux: Float) : ReadBookIntent
     data object DismissReminder : ReadBookIntent
 

@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.read
 
 import android.app.Application
-import android.content.Intent
 import android.net.Uri
 import android.speech.tts.TextToSpeech
 import androidx.lifecycle.viewModelScope
@@ -641,11 +640,11 @@ class ReadBookViewModel(
     fun onIntent(intent: ReadBookIntent) {
         when (intent) {
             is ReadBookIntent.InitData -> {
-                initData(intent.intent)
+                initData(intent.request)
                 justInitData = true
             }
             is ReadBookIntent.InitReadBookConfig -> viewModelScope.launch {
-                initReadBookConfig(intent.intent)
+                initReadBookConfig(intent.request)
             }
             is ReadBookIntent.CheckSwitchDayNight -> styleDelegate.checkSwitchDayNight(intent.lux)
             is ReadBookIntent.DismissReminder -> styleDelegate.dismissReminder()
@@ -1982,10 +1981,11 @@ class ReadBookViewModel(
 
     // 开书 / 目录 / 换源 / 进度同步已迁入 [ReadBookLoadDelegate]，这里只留外部入口的转发。
 
-    suspend fun initReadBookConfig(intent: Intent) = loadDelegate.initReadBookConfig(intent)
+    suspend fun initReadBookConfig(request: ReadBookInitRequest) =
+        loadDelegate.initReadBookConfig(request)
 
-    fun initData(intent: Intent, success: (() -> Unit)? = null) =
-        loadDelegate.initData(intent, success)
+    fun initData(request: ReadBookInitRequest, success: (() -> Unit)? = null) =
+        loadDelegate.initData(request, success)
 
     fun markJustInitData() {
         justInitData = true

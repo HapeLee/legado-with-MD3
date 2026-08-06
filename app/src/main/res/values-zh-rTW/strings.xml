@@ -305,6 +305,16 @@
     <string name="padding_right">右邊距</string>
     <string name="padding_format">上: %1$d  下: %2$d  左: %3$d  右: %4$d</string>
     <string name="check_book_source">校驗書源</string>
+    <string name="book_source_check_completed">校驗完成：成功 %1$d，失敗 %2$d</string>
+    <string name="book_source_check_cancelled">校驗已停止：成功 %1$d，失敗 %2$d，取消 %3$d</string>
+    <string name="book_source_check_waiting">等待校驗</string>
+    <string name="book_source_check_running">正在校驗</string>
+    <string name="book_source_check_succeeded">校驗成功</string>
+    <string name="book_source_check_failed">校驗失敗：%1$s</string>
+    <string name="book_source_check_source_missing">校驗失敗：書源不存在</string>
+    <string name="book_source_check_save_failed">校驗失敗：無法儲存結果，%1$s</string>
+    <string name="book_source_check_incomplete">校驗失敗：工作未完成</string>
+    <string name="book_source_check_item_cancelled">校驗已取消</string>
     <string name="check_select_source">校驗所選</string>
     <string name="progress_show">%1$s      進度 %2$d/%3$d</string>
     <string name="tts_fix">請安裝並選擇中文TTS！</string>
@@ -2244,6 +2254,8 @@
     <string name="night_card_bg_color">夜間卡片背景色</string>
     <string name="compact_details">精簡詳情</string>
     <string name="show_more_info">顯示更多資訊</string>
+    <string name="center_cover_vertically">封面垂直置中</string>
+    <string name="center_cover_vertically_description">關閉時，封面頂部對齊。</string>
     <string name="show_synopsis_below_content">簡介顯示在封面和資訊下方</string>
     <string name="show_latest_chapter">顯示最新章節</string>
     <string name="show_synopsis">顯示簡介</string>

@@ -6,13 +6,16 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.view.LayoutInflater
+import android.view.WindowInsets
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
+import androidx.core.view.updateLayoutParams
 import io.legado.app.R
 import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.constant.ReadTipType
@@ -29,13 +32,11 @@ import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.sheet.CustomTipTarget
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
-import androidx.core.view.updateLayoutParams
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyStatusBarPadding
 import io.legado.app.utils.canvasrecorder.CanvasRecorder
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
-import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
@@ -101,9 +102,10 @@ class PageView(
         callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
-        if (ReadSessionState.lastNavigationBarHeight > 0) {
+        val initialNavigationBarHeight = currentNavigationBarHeight()
+        if (initialNavigationBarHeight > 0) {
             binding.vwNavigationBar.updateLayoutParams {
-                height = ReadSessionState.lastNavigationBarHeight
+                height = initialNavigationBarHeight
             }
         }
         binding.vwNavigationBar.setOnApplyWindowInsetsListenerCompat { v, windowInsets ->
@@ -112,7 +114,9 @@ class PageView(
                 return@setOnApplyWindowInsetsListenerCompat windowInsets
             }
             //Log.d("fansangg", "vwNavigationBar OnApplyWindowInsetsListener: navHeight=$navHeight, isImeVisible=${windowInsets.isVisible(WindowInsetsCompat.Type.ime())}, imeHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom}, systemBarsHeight=${windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom}")
-            val navHeight = windowInsets.navigationBarHeight
+            val navHeight = windowInsets.getInsetsIgnoringVisibility(
+                WindowInsetsCompat.Type.navigationBars()
+            ).bottom
             if (navHeight > 0) {
                 ReadSessionState.lastNavigationBarHeight = navHeight
             }
@@ -121,6 +125,20 @@ class PageView(
             }
             windowInsets
         }
+    }
+
+    private fun currentNavigationBarHeight(): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val stableHeight = activity?.windowManager?.currentWindowMetrics?.windowInsets
+                ?.getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars())
+                ?.bottom
+                ?: 0
+            if (stableHeight > 0) {
+                ReadSessionState.lastNavigationBarHeight = stableHeight
+                return stableHeight
+            }
+        }
+        return ReadSessionState.lastNavigationBarHeight
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

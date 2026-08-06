@@ -11,10 +11,11 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.ImageLoader
+import coil3.ImageLoader
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.help.coil.CoverExtras
 import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
 import io.legado.app.ui.book.read.sheet.AiTextRewriteSheet
@@ -414,8 +415,8 @@ fun ReadBookScreen(
             data = coverPath,
             requestKey = requestKey,
         ) {
-            setParameter("sourceOrigin", sourceOrigin)
-            setParameter("loadOnlyWifi", loadOnlyWifi)
+            extras[CoverExtras.SourceOrigin] = sourceOrigin
+            extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
         }
         rememberThemeOverride(seedColor)
     }
@@ -440,7 +441,6 @@ fun ReadBookScreen(
             )
             aloudPlayerViewModel.effects.collectLatest { effect ->
                 when (effect) {
-                    ReadAloudPlayerEffect.OpenToc -> onIntent(ReadBookIntent.OpenChapterList)
                     ReadAloudPlayerEffect.ReturnToReaderSettings ->
                         onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
                     ReadAloudPlayerEffect.ReturnToClassic ->

@@ -71,7 +71,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -482,7 +482,8 @@ fun MainScreen(
                                 ),
                                 m3ShowLabel = showLabel,
                                 m3AlwaysShowLabel = alwaysShowLabel,
-                                useCustomIcon = customIconPath.isNotEmpty()
+                                useCustomIcon =
+                                    customIconPath.isNotEmpty() || selectedCustomIconPath.isNotEmpty(),
                             )
                         }
                     }

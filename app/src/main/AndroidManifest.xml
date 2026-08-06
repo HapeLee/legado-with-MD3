@@ -276,12 +276,6 @@
             android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- WebView界面 -->
-        <activity
-            android:name=".ui.browser.WebViewActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="locale|layoutDirection|uiMode|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
-            android:launchMode="standard" />
         <!-- 字典管理 -->
         <activity
             android:name=".ui.dict.rule.DictRuleActivity"
@@ -447,6 +441,9 @@
 
         <service
             android:name=".service.CacheBookService"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".service.BookSourceCheckService"
             android:foregroundServiceType="dataSync" />
         <service
             android:name=".service.ExportBookService"

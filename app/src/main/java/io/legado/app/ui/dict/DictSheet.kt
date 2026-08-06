@@ -3,15 +3,15 @@ package io.legado.app.ui.dict
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,15 +23,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -39,7 +34,6 @@ import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
-import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -65,7 +59,7 @@ fun DictSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = word,
-        //内部pager管理高度，避免二次动画
+        contentPaddingEnabled = false,
         animateContentSize = false,
     ) {
         DictSheetContent(
@@ -175,7 +169,9 @@ private fun DictPagerContent(
                     )
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             isScrollable = true,
         )
 
@@ -261,59 +257,4 @@ private fun DictPageContent(
             }
         }
     }
-}
-
-@OptIn(ExperimentalTextApi::class)
-@Composable
-private fun DictHtmlContent(
-    htmlContent: String,
-    modifier: Modifier = Modifier,
-) {
-    val blocks = remember(htmlContent) { parseHtmlBlocks(htmlContent) }
-    Column(modifier = modifier.padding(horizontal = 32.dp, vertical = 16.dp)) {
-        blocks.forEach { block ->
-            when (block) {
-                is HtmlBlock.Text -> {
-                    AppText(
-                        text = remember(block.content) {
-                            AnnotatedString.fromHtml(block.content)
-                        },
-                    )
-                }
-                is HtmlBlock.Image -> {
-                    AsyncImage(
-                        model = block.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.FillWidth,
-                    )
-                }
-            }
-        }
-    }
-}
-
-private sealed interface HtmlBlock {
-    data class Text(val content: String) : HtmlBlock
-    data class Image(val url: String) : HtmlBlock
-}
-
-private val IMG_REGEX = Regex("""<img\s+[^>]*src\s*=\s*["']([^"']+)["'][^>]*/?>""")
-
-private fun parseHtmlBlocks(html: String): List<HtmlBlock> {
-    val blocks = mutableListOf<HtmlBlock>()
-    var lastIndex = 0
-    IMG_REGEX.findAll(html).forEach { match ->
-        if (match.range.first > lastIndex) {
-            val textPart = html.substring(lastIndex, match.range.first).trim()
-            if (textPart.isNotBlank()) blocks.add(HtmlBlock.Text(textPart))
-        }
-        blocks.add(HtmlBlock.Image(match.groupValues[1]))
-        lastIndex = match.range.last + 1
-    }
-    if (lastIndex < html.length) {
-        val remaining = html.substring(lastIndex).trim()
-        if (remaining.isNotBlank()) blocks.add(HtmlBlock.Text(remaining))
-    }
-    return blocks
 }

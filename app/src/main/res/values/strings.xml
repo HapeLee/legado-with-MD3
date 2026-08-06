@@ -391,6 +391,16 @@
     <string name="header_padding">Header Padding</string>
     <string name="footer_padding">Footer Padding</string>
     <string name="check_book_source">Check book sources</string>
+    <string name="book_source_check_completed">Check completed: %1$d succeeded, %2$d failed</string>
+    <string name="book_source_check_cancelled">Check stopped: %1$d succeeded, %2$d failed, %3$d cancelled</string>
+    <string name="book_source_check_waiting">Waiting to check</string>
+    <string name="book_source_check_running">Checking</string>
+    <string name="book_source_check_succeeded">Check succeeded</string>
+    <string name="book_source_check_failed">Check failed: %1$s</string>
+    <string name="book_source_check_source_missing">Check failed: source no longer exists</string>
+    <string name="book_source_check_save_failed">Check failed: unable to save result, %1$s</string>
+    <string name="book_source_check_incomplete">Check failed: task did not finish</string>
+    <string name="book_source_check_item_cancelled">Check cancelled</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
     <string name="tts_fix">Please install and select Chinese TTS!</string>
@@ -2354,6 +2364,8 @@
     <string name="night_card_bg_color">Night Card Background Color</string>
     <string name="compact_details">Compact Details</string>
     <string name="show_more_info">Show More Info</string>
+    <string name="center_cover_vertically">Center Cover Vertically</string>
+    <string name="center_cover_vertically_description">When disabled, the cover is aligned to the top.</string>
     <string name="show_synopsis_below_content">Show Synopsis Below Cover and Details</string>
     <string name="show_latest_chapter">Show Latest Chapter</string>
     <string name="show_synopsis">Show Synopsis</string>

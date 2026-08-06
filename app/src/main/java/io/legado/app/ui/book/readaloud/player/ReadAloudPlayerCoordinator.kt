@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.Observer
 import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.model.ReadAloud
@@ -13,12 +14,16 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 
@@ -27,6 +32,7 @@ class ReadAloudPlayerCoordinator(
     private val application: Application,
     private val sessionStore: ReadAloudSessionStore,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
+    private val bookRepository: BookRepository,
 ) {
     private val refreshRequests = MutableSharedFlow<Unit>(replay = 1)
     private val bookChanges = callbackFlow {
@@ -41,10 +47,29 @@ class ReadAloudPlayerCoordinator(
     private val bookState =
         merge(bookChanges, refreshRequests, configChanges).map { snapshotBook() }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val bookWithChapters = bookState.flatMapLatest { book ->
+        if (book.bookUrl.isBlank()) {
+            flowOf(book to persistentListOf<ReadAloudChapterSourceState>())
+        } else {
+            bookRepository.flowChapters(book.bookUrl).map { chapters ->
+                val sourceChapters = chapters.map { chapter ->
+                    ReadAloudChapterSourceState(
+                        index = chapter.index,
+                        title = chapter.title,
+                        isVolume = chapter.isVolume,
+                        tocLevel = chapter.tocLevel,
+                    )
+                }.toImmutableList()
+                book to sourceChapters
+            }
+        }
+    }
+
     val state: Flow<ReadAloudPlayerSourceState> = combine(
         sessionStore.state,
-        bookState,
-    ) { session, book ->
+        bookWithChapters,
+    ) { session, (book, chapters) ->
         val playback = session.playback
         ReadAloudPlayerSourceState(
             bookUrl = book.bookUrl,
@@ -54,6 +79,7 @@ class ReadAloudPlayerCoordinator(
             sourceOrigin = book.sourceOrigin,
             chapterIndex = book.chapterIndex,
             chapterTitle = book.chapterTitle,
+            chapters = chapters,
             chapterText = book.chapterText,
             textLines = book.textLines,
             chapterPosition = playback.chapterPosition,
@@ -79,6 +105,7 @@ class ReadAloudPlayerCoordinator(
             sourceOrigin = book.sourceOrigin,
             chapterIndex = book.chapterIndex,
             chapterTitle = book.chapterTitle,
+            chapters = persistentListOf(),
             chapterText = book.chapterText,
             textLines = book.textLines,
             chapterPosition = playback.chapterPosition,
@@ -109,7 +136,7 @@ class ReadAloudPlayerCoordinator(
             chapterTitle = chapter?.title.orEmpty(),
             chapterText = chapter?.getContent().orEmpty(),
             textLines = chapter?.paragraphs.orEmpty().mapNotNull { paragraph ->
-                paragraph.text.replace(Regex("[袮꧁]"), " ").trim()
+                paragraph.text.replace(Regex("[袮祢꧁]"), " ").trim()
                     .takeIf(String::isNotEmpty)?.let {
                     ReadAloudTextLineUi(it, paragraph.chapterPosition)
                 }
@@ -129,6 +156,7 @@ class ReadAloudPlayerCoordinator(
     fun nextParagraph() = ReadAloud.nextParagraph(application)
     fun previousChapter() = ReadBook.moveToPrevChapter(true, false)
     fun nextChapter() = ReadBook.moveToNextChapter(true)
+    fun selectChapter(index: Int) = ReadBook.openChapter(index, durChapterPos = 0)
 
     suspend fun setSpeed(value: Int) {
         readAloudSettingsGateway.update { it.copy(ttsSpeechRate = value.coerceIn(0, 80)) }
@@ -168,6 +196,13 @@ class ReadAloudPlayerCoordinator(
     )
 }
 
+data class ReadAloudChapterSourceState(
+    val index: Int,
+    val title: String,
+    val isVolume: Boolean,
+    val tocLevel: Int,
+)
+
 data class ReadAloudPlayerSourceState(
     val bookUrl: String,
     val bookName: String,
@@ -176,6 +211,7 @@ data class ReadAloudPlayerSourceState(
     val sourceOrigin: String?,
     val chapterIndex: Int,
     val chapterTitle: String,
+    val chapters: ImmutableList<ReadAloudChapterSourceState>,
     val chapterText: String,
     val textLines: ImmutableList<ReadAloudTextLineUi>,
     val chapterPosition: Int,

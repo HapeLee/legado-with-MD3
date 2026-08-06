@@ -14,6 +14,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -33,15 +34,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -50,7 +54,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Slider
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -96,14 +100,18 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.effect.BgEffectBackground
 import io.legado.app.ui.widget.components.effect.BgEffectConfig
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
+import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -116,6 +124,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.ui.graphics.BlendMode as ComposeBlendMode
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
@@ -125,7 +134,13 @@ fun ReadAloudPlayerScreenContent(
     onIntent: (ReadAloudPlayerIntent) -> Unit,
     onBack: () -> Unit,
 ) {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val horizontalPagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val verticalPagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val verticalPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
+        state = verticalPagerState,
+        orientation = Orientation.Vertical,
+    )
+    val coroutineScope = rememberCoroutineScope()
     var activeAdjustment by remember { mutableStateOf<PlayerAdjustment?>(null) }
     var speedPreview by remember(state.speed) { mutableFloatStateOf(state.speed.toFloat()) }
     var timerPreview by remember(state.timerMinutes) {
@@ -148,8 +163,8 @@ fun ReadAloudPlayerScreenContent(
     } else {
         Modifier
     }
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != 1) isTextPageUserScrolling = false
+    LaunchedEffect(horizontalPagerState.currentPage) {
+        if (horizontalPagerState.currentPage != 1) isTextPageUserScrolling = false
     }
     val pageContentPadding = PaddingValues(
         top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 88.dp,
@@ -259,8 +274,16 @@ fun ReadAloudPlayerScreenContent(
                             .padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        AppText(formatPosition(state.chapterPosition), style = LegadoTheme.typography.labelSmall, color = LegadoTheme.colorScheme.onSurfaceVariant)
-                        AppText("${(state.chapterPosition * 100 / state.chapterLength.coerceAtLeast(1))}%", style = LegadoTheme.typography.labelSmall, color = LegadoTheme.colorScheme.onSurfaceVariant)
+                        AppText(
+                            formatPosition(state.chapterPosition),
+                            style = LegadoTheme.typography.labelSmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        )
+                        AppText(
+                            "${(state.chapterPosition * 100 / state.chapterLength.coerceAtLeast(1))}%",
+                            style = LegadoTheme.typography.labelSmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
 
                     Row(
@@ -308,9 +331,29 @@ fun ReadAloudPlayerScreenContent(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         SmallPlainButton(
-                            onClick = { onIntent(ReadAloudPlayerIntent.OpenToc) },
-                            icon = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = stringResource(R.string.chapter_list),
+                            onClick = {
+                                coroutineScope.launch {
+                                    verticalPagerState.animateScrollToPage(
+                                        page = if (verticalPagerState.currentPage == 0) 1 else 0,
+                                        animationSpec = tween(
+                                            durationMillis = 520,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                }
+                            },
+                            icon = if (verticalPagerState.currentPage == 0) {
+                                Icons.AutoMirrored.Filled.FormatListBulleted
+                            } else {
+                                Icons.Default.KeyboardArrowUp
+                            },
+                            contentDescription = stringResource(
+                                if (verticalPagerState.currentPage == 0) {
+                                    R.string.chapter_list
+                                } else {
+                                    R.string.back
+                                }
+                            ),
                         )
                         SmallPlainButton(
                             onClick = { onIntent(ReadAloudPlayerIntent.SwitchToClassic) },
@@ -318,9 +361,9 @@ fun ReadAloudPlayerScreenContent(
                             contentDescription = stringResource(R.string.switch_to_classic_read_aloud),
                         )
                         SmallPlainButton(
-                            onClick = { onIntent(ReadAloudPlayerIntent.OpenSettings) },
-                            icon = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.setting),
+                            onClick = { onIntent(ReadAloudPlayerIntent.CycleBgMode) },
+                            icon = Icons.Default.WbTwilight,
+                            contentDescription = bgModeLabel(state.bgMode)
                         )
                         SmallPlainButton(
                             onClick = {
@@ -340,31 +383,43 @@ fun ReadAloudPlayerScreenContent(
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Speed) {
-                        Slider(
+                        PlayerAdjustmentSlider(
+                            title = stringResource(R.string.read_aloud_adjust_speed),
                             value = speedPreview.coerceIn(5f, 20f),
+                            valueLabel = (speedPreview / 10f).let {
+                                if (it == it.roundToInt().toFloat()) {
+                                    "${it.roundToInt()}.0"
+                                } else {
+                                    String.format("%.1f", it)
+                                }
+                            },
+                            startLabel = stringResource(R.string.fast_rewind),
+                            endLabel = stringResource(R.string.fast_forward),
                             onValueChange = { speedPreview = it },
                             onValueChangeFinished = {
                                 onIntent(ReadAloudPlayerIntent.SetSpeed(speedPreview.roundToInt()))
                             },
                             valueRange = 5f..20f,
                             steps = 14,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Timer) {
-                        Slider(
+                        PlayerAdjustmentSlider(
+                            title = stringResource(R.string.set_timer),
                             value = timerPreview.coerceIn(0f, 180f),
+                            valueLabel = if (timerPreview == 0f) {
+                                stringResource(R.string.close)
+                            } else {
+                                stringResource(R.string.timer_m, timerPreview.roundToInt())
+                            },
+                            startLabel = stringResource(R.string.close),
+                            endLabel = stringResource(R.string.timer_m, 180),
                             onValueChange = { timerPreview = (it / 10f).roundToInt() * 10f },
                             onValueChangeFinished = {
                                 onIntent(ReadAloudPlayerIntent.SetTimer(timerPreview.roundToInt()))
                             },
                             valueRange = 0f..180f,
                             steps = 17,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
                         )
                     }
                 }
@@ -384,12 +439,27 @@ fun ReadAloudPlayerScreenContent(
                 },
             )
             HorizontalPager(
-                state = pagerState,
+                state = horizontalPagerState,
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) { page ->
                 if (page == 0) {
-                    CoverPage(state, pageContentPadding, flowingTextModifier)
+                    VerticalPager(
+                        state = verticalPagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        pageNestedScrollConnection = verticalPagerNestedScrollConnection,
+                    ) { verticalPage ->
+                        if (verticalPage == 0) {
+                            CoverPage(state, pageContentPadding, flowingTextModifier)
+                        } else {
+                            ChapterTocPage(
+                                state = state,
+                                contentPadding = pageContentPadding,
+                                onIntent = onIntent,
+                            )
+                        }
+                    }
                 } else {
                     ChapterTextPage(
                         state = state,
@@ -403,6 +473,177 @@ fun ReadAloudPlayerScreenContent(
         }
     }
 }
+
+@Composable
+private fun PlayerAdjustmentSlider(
+    title: String,
+    value: Float,
+    valueLabel: String,
+    startLabel: String,
+    endLabel: String,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+) {
+    NormalCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        cornerRadius = 28.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppText(
+                    modifier = Modifier.weight(1f),
+                    text = title,
+                    style = LegadoTheme.typography.labelMediumEmphasized,
+                )
+                TextCard(
+                    text = valueLabel,
+                )
+            }
+
+            AppSlider(
+                value = value,
+                onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = valueRange,
+                steps = steps,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                AppText(
+                    text = startLabel,
+                    style = LegadoTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+                AppText(
+                    text = endLabel,
+                    style = LegadoTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChapterTocPage(
+    state: ReadAloudPlayerUiState,
+    contentPadding: PaddingValues,
+    onIntent: (ReadAloudPlayerIntent) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(state.chapterIndex, state.chapters) {
+        val currentItem = state.chapters.indexOfFirst {
+            !it.isVolume && it.index == state.chapterIndex
+        }
+        if (currentItem >= 0) {
+            listState.scrollToItem((currentItem - 2).coerceAtLeast(0))
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = contentPadding.calculateTopPadding() + 12.dp,
+            end = 16.dp,
+            bottom = contentPadding.calculateBottomPadding() + 12.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = state.chapters,
+            key = { chapter ->
+                if (chapter.isVolume) "player-volume-${chapter.index}"
+                else "player-chapter-${chapter.index}"
+            },
+            contentType = { chapter -> if (chapter.isVolume) "volume" else "chapter" },
+        ) { chapter ->
+            if (chapter.isVolume) {
+                AppText(
+                    text = chapter.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = (chapter.tocLevel.coerceIn(0, 6) * 10).dp,
+                            top = 12.dp,
+                            bottom = 4.dp,
+                        ),
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    color = LegadoTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                val isCurrent = chapter.index == state.chapterIndex
+                NormalCard(
+                    onClick = { onIntent(ReadAloudPlayerIntent.SelectChapter(chapter.index)) },
+                    cornerRadius = 12.dp,
+                    containerColor = if (isCurrent) {
+                        LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    } else {
+                        LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0f)
+                    },
+                    contentColor = if (isCurrent) {
+                        LegadoTheme.colorScheme.onSurface
+                    } else {
+                        LegadoTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = (chapter.tocLevel.coerceIn(0, 6) * 10).dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (isCurrent) {
+                            AppIcon(
+                                imageVector = if (state.isPaused) {
+                                    Icons.Default.PlayArrow
+                                } else {
+                                    Icons.Default.Pause
+                                },
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(16.dp),
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            AppText(
+                                text = chapter.title,
+                                style = if (isCurrent) {
+                                    LegadoTheme.typography.bodyMediumEmphasized
+                                } else {
+                                    LegadoTheme.typography.bodyMedium
+                                },
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun PlayerProgressSlider(
     value: Float,
@@ -615,7 +856,7 @@ private fun ChapterTextPage(
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 val releaseGeneration = userScrollGeneration.intValue
                 coroutineScope.launch {
-                    delay(BOTTOM_BAR_RESTORE_DELAY_MILLIS)
+                    delay(BOTTOM_BAR_RESTORE_DELAY_MILLIS.milliseconds)
                     if (userScrollGeneration.intValue == releaseGeneration) {
                         currentOnUserScrollChanged(false)
                     }
@@ -878,4 +1119,13 @@ private fun flowingTextBlend(): List<BlendColorEntry> {
             )
         }
     }
+}
+
+@Composable
+private fun bgModeLabel(mode: Int): String = when (mode) {
+    ReadAloudBgMode.Solid -> stringResource(R.string.read_aloud_bg_solid)
+    ReadAloudBgMode.Blur -> stringResource(R.string.read_aloud_bg_blur)
+    ReadAloudBgMode.FlowingLight -> stringResource(R.string.read_aloud_bg_flowing_light)
+    ReadAloudBgMode.Transparent -> stringResource(R.string.read_aloud_bg_transparent)
+    else -> stringResource(R.string.read_aloud_bg_blur)
 }

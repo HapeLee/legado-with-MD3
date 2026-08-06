@@ -23,9 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import io.legado.app.help.coil.CoverExtras
 import org.koin.compose.koinInject
 
 /**
@@ -59,8 +61,10 @@ fun SourceIcon(
         ImageRequest.Builder(context)
             .data(path)
             .crossfade(true)
-            .setParameter("sourceOrigin", sourceOrigin)
-            .setParameter("loadOnlyWifi", loadOnlyWifi)
+            .apply {
+                extras[CoverExtras.SourceOrigin] = sourceOrigin
+                extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
+            }
             .build()
     }
 
@@ -109,7 +113,7 @@ fun SourceIcon(
                 modifier = Modifier.fillMaxSize(),
                 onSuccess = { state ->
                     imageLoaded = true
-                    animatedDrawable = (state.result.drawable as? Animatable)?.also { drawable ->
+                    animatedDrawable = (state.result.image as? Animatable)?.also { drawable ->
                         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                             if (!drawable.isRunning) drawable.start()
                         } else {

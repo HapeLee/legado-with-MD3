@@ -1,7 +1,9 @@
 package io.legado.app.ui.widget.components.image.cover
 
 import android.content.Context
-import coil.request.ImageRequest
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import io.legado.app.help.coil.CoverExtras
 
 fun buildCoverImageRequest(
     context: Context,
@@ -20,9 +22,9 @@ fun buildCoverImageRequest(
                 memoryCacheKey(memoryCacheKey)
                 placeholderMemoryCacheKey(memoryCacheKey)
             }
+            extras[CoverExtras.SourceOrigin] = sourceOrigin
+            extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
         }
-        .setParameter("sourceOrigin", sourceOrigin)
-        .setParameter("loadOnlyWifi", loadOnlyWifi)
         .apply(configure)
         .build()
 }
