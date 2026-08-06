@@ -13,9 +13,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
+import kotlin.math.abs
 
 /**
  * 书签域（R2.2 续批）。
@@ -33,6 +37,12 @@ class ReadBookmarkDelegate(
      */
     private val bookKey: Flow<Pair<String, String>?>,
 ) {
+
+    /**
+     * 串行化下滑手势的切换：先查再写不是原子的，快速连滑会双双看到「空」而重复插入。
+     * 锁住读-查-写整段后，两次滑动退化成正确的两次 toggle（加一条再删一条），不会出现重复。
+     */
+    private val toggleMutex = Mutex()
 
     interface Host {
         /** 打开/关闭书签弹层的同时收起阅读菜单。 */
@@ -55,13 +65,17 @@ class ReadBookmarkDelegate(
                     .distinctUntilChanged()
                     .flatMapLatest { key ->
                         if (key == null) {
-                            flowOf(emptyList())
+                            flowOf(key to emptyList())
                         } else {
-                            bookmarkRepository.flowByBook(key.first, key.second)
+                            bookmarkRepository.flowByBook(key.first, key.second).map { key to it }
                         }
                     }
-                    .collect { bookmarks ->
-                        ReaderBookmarkState.update(bookmarks)
+                    .collect { (key, bookmarks) ->
+                        if (key == null) {
+                            ReaderBookmarkState.clear()
+                        } else {
+                            ReaderBookmarkState.update(key.first, key.second, bookmarks)
+                        }
                         host.emitEffect(ReadBookEffect.UpBookmarkBadge)
                     }
             } finally {
@@ -71,47 +85,55 @@ class ReadBookmarkDelegate(
     }
 
     /**
-     * 下滑手势：本页无书签则直接存一条（不弹编辑器），已有则删掉本页范围内的全部书签。
+     * 下滑手势：本页无书签则直接存一条（不弹编辑器），已有则删掉离当前阅读位置最近的一条。
      *
      * 页范围取 `[页首位置, 下一页页首位置)`——末页取到章节已排版长度，
      * 与 [addForCurrentPage] 存入的 `ReadBook.durChapterPos` 落点一致。
+     * 消息页/空页与角标判定一致地跳过（页首位置取 `textLines.first()`，空页会抛异常）。
+     * 整体串行化：先查后写不是原子的，快速连滑会双双看到「空」而重复插入。
      */
     fun toggleForCurrentPage() {
         scope.launch(IO) {
-            val book = ReadBook.book ?: return@launch
-            val chapter = ReadBook.curTextChapter ?: return@launch
-            val pageIndex = ReadBook.durPageIndex
-            val page = chapter.getPage(pageIndex) ?: return@launch
-            val startPos = page.chapterPosition
-            val endPos = chapter.getPage(pageIndex + 1)?.chapterPosition
-                ?: (startPos + page.charSize)
-            val existing = bookmarkRepository.getByChapterRange(
-                bookName = book.name,
-                bookAuthor = book.author,
-                chapterIndex = chapter.chapter.index,
-                startPos = startPos,
-                endPos = endPos,
-            )
-            if (existing.isEmpty()) {
-                bookmarkRepository.save(
-                    Bookmark(
-                        bookName = book.name,
-                        bookAuthor = book.author,
-                        chapterIndex = chapter.chapter.index,
-                        chapterName = chapter.title,
-                        chapterPos = ReadBook.durChapterPos,
-                        bookText = page.text.replace(BOOK_TEXT_MARKS, "").trim(),
-                        content = "",
+            toggleMutex.withLock {
+                val book = ReadBook.book ?: return@withLock
+                val chapter = ReadBook.curTextChapter ?: return@withLock
+                val pageIndex = ReadBook.durPageIndex
+                val page = chapter.getPage(pageIndex) ?: return@withLock
+                if (page.isMsgPage || page.lineSize <= 0) return@withLock
+                val startPos = page.chapterPosition
+                val endPos = chapter.getPage(pageIndex + 1)?.chapterPosition
+                    ?: (startPos + page.charSize)
+                val existing = bookmarkRepository.getByChapterRange(
+                    bookName = book.name,
+                    bookAuthor = book.author,
+                    chapterIndex = chapter.chapter.index,
+                    startPos = startPos,
+                    endPos = endPos,
+                )
+                if (existing.isEmpty()) {
+                    bookmarkRepository.save(
+                        Bookmark(
+                            bookName = book.name,
+                            bookAuthor = book.author,
+                            chapterIndex = chapter.chapter.index,
+                            chapterName = chapter.title,
+                            chapterPos = ReadBook.durChapterPos,
+                            bookText = page.text.replace(BOOK_TEXT_MARKS, "").trim(),
+                            content = "",
+                        )
                     )
-                )
-                host.emitEffect(
-                    ReadBookEffect.ShowToast(appCtx.getString(R.string.bookmark_added))
-                )
-            } else {
-                bookmarkRepository.deleteAll(existing)
-                host.emitEffect(
-                    ReadBookEffect.ShowToast(appCtx.getString(R.string.bookmark_removed))
-                )
+                    host.emitEffect(
+                        ReadBookEffect.ShowToast(appCtx.getString(R.string.bookmark_added))
+                    )
+                } else {
+                    // 只删离当前阅读位置最近的一条：同一页可能有多条书签，不应整页误删。
+                    val nearest = existing.minByOrNull { abs(it.chapterPos - ReadBook.durChapterPos) }
+                        ?: return@withLock
+                    bookmarkRepository.delete(nearest)
+                    host.emitEffect(
+                        ReadBookEffect.ShowToast(appCtx.getString(R.string.bookmark_removed))
+                    )
+                }
             }
         }
     }

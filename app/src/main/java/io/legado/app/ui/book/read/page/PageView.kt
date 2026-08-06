@@ -87,8 +87,11 @@ class PageView(
      */
     fun upBookmarkBadge() {
         val page = currentTextPage
-        val visible = page != null && !isScroll && !page.isMsgPage && page.lineSize > 0 &&
+        val book = ReadBook.book
+        val visible = book != null && page != null && !isScroll && !page.isMsgPage && page.lineSize > 0 &&
                 ReaderBookmarkState.hasBookmarkInRange(
+                    bookName = book.name,
+                    bookAuthor = book.author,
                     chapterIndex = page.chapterIndex,
                     startPos = page.chapterPosition,
                     endPos = page.chapterPosition + page.charSize,
