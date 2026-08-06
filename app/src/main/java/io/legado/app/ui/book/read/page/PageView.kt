@@ -93,10 +93,8 @@ class PageView(
                     startPos = page.chapterPosition,
                     endPos = page.chapterPosition + page.charSize,
                 )
+        // 角标是固定的黄色书签丝带（见 ic_bookmark_badge），不随主题变色。
         binding.ivBookmarkBadge.isGone = !visible
-        if (visible) {
-            binding.ivBookmarkBadge.setColorFilter(TipStyleProvider.style.textColor)
-        }
     }
 
     val headerHeight: Int

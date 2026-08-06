@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 阅读页右上角书签角标：黄色书签丝带（底部 V 形缺口），模拟真实纸质书签。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="24dp"
+    android:viewportWidth="12"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFC107"
+        android:pathData="M2,2 L10,2 L10,22 L6,17 L2,22 Z" />
+</vector>

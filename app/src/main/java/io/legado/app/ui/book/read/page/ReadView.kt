@@ -22,6 +22,8 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
@@ -50,6 +52,7 @@ import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.invisible
+import io.legado.app.utils.statusBarHeight
 
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
@@ -425,9 +428,20 @@ class ReadView(
 
     private fun showBookmarkSwipeHint() {
         if (bookmarkSwipeHint.visibility != View.VISIBLE) {
+            // 提示条是 ReadView 的直接子 View，edge-to-edge 下会被状态栏盖住；
+            // 每次显示前按当前系统栏顶部 inset 垫高，状态栏隐藏（inset 为 0）时自然回落顶部。
+            bookmarkSwipeHint.updateLayoutParams<FrameLayout.LayoutParams> {
+                topMargin = bookmarkSwipeHintTopInset() + BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP.dpToPx()
+            }
             bookmarkSwipeHint.visibility = View.VISIBLE
         }
     }
+
+    private fun bookmarkSwipeHintTopInset(): Int =
+        ViewCompat.getRootWindowInsets(this)
+            ?.getInsets(WindowInsetsCompat.Type.systemBars())
+            ?.top
+            ?: context.statusBarHeight
 
     private fun hideBookmarkSwipeHint() {
         if (bookmarkSwipeHint.visibility != View.GONE) {
