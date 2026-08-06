@@ -1,324 +1,466 @@
 package io.legado.app.domain.usecase
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import io.legado.app.data.AppDatabase
-import io.legado.app.data.entities.Book
+import com.google.gson.Gson
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
+import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
+import io.legado.app.domain.gateway.BookshelfAutoGroupPromptGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.BookshelfAutoGroupBook
+import io.legado.app.domain.model.BookshelfAutoGroupErrorReason
+import io.legado.app.domain.model.BookshelfAutoGroupException
 import io.legado.app.domain.model.BookshelfAutoGroupIgnoredBook
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
-import io.legado.app.domain.model.BookshelfAutoGroupPlanBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
+import io.legado.app.domain.model.BookshelfAutoGroupPreflight
+import io.legado.app.domain.model.BookshelfAutoGroupProgress
+import io.legado.app.domain.model.BookshelfAutoGroupPromptText
 import io.legado.app.domain.model.BookshelfAutoGroupSource
-import io.legado.app.help.book.isNotShelf
-import io.legado.app.utils.GSON
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.text.Charsets.UTF_8
 
 class GenerateBookshelfAutoGroupPlanUseCase(
-    private val database: AppDatabase,
+    private val gateway: BookshelfAutoGroupGateway,
+    private val promptGateway: BookshelfAutoGroupPromptGateway,
     private val aiProfileGateway: AiProfileGateway,
     private val aiTextGateway: AiTextGateway,
 ) {
 
-    suspend fun loadSource(): BookshelfAutoGroupSource = withContext(Dispatchers.IO) {
-        val books = database.bookDao.getAll()
-            .filterNot { it.isNotShelf }
-            .sortedWith(compareBy<Book> { it.name }.thenBy { it.author })
-        val existingGroups = database.bookGroupDao.all
-            .filter { it.groupId > 0 }
-            .map { it.groupName }
-            .filter { it.isNotBlank() }
-        BookshelfAutoGroupSource(
-            books = books.map { book ->
-                BookshelfAutoGroupBook(
-                    bookUrl = book.bookUrl,
-                    name = book.name,
-                    author = book.author,
-                    intro = book.groupingIntro(),
-                    kind = book.customTag ?: book.kind.orEmpty(),
-                    currentGroupNames = database.bookGroupDao.getGroupNames(book.group),
-                )
-            },
-            existingGroupNames = existingGroups,
+    private val gson = Gson()
+    private val parser = BookshelfAutoGroupPlanParser()
+
+    suspend fun loadSource(): BookshelfAutoGroupSource = gateway.loadSource()
+
+    suspend fun preflight(
+        source: BookshelfAutoGroupSource,
+        groupingInstruction: String = "",
+        options: BookshelfAutoGroupOptions = BookshelfAutoGroupOptions(),
+    ): BookshelfAutoGroupPreflight {
+        validateSource(source)
+        val promptText = promptGateway.getPromptText()
+        val preset = resolvePreset()
+        val systemPrompt = resolveSystemPrompt(preset, promptText)
+        val inputBudget = effectiveInputBudget(preset)
+        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildGeneratePrompt(source, books, groupingInstruction, emptyList(), options, promptText)
+        }
+        return BookshelfAutoGroupPreflight(
+            effectiveInputCharLimit = inputBudget.effectiveCharLimit,
+            estimatedRequestCount = batches.size,
         )
     }
 
     suspend fun generate(
         source: BookshelfAutoGroupSource,
         groupingInstruction: String,
+        options: BookshelfAutoGroupOptions = BookshelfAutoGroupOptions(),
+        onProgress: (BookshelfAutoGroupProgress) -> Unit = {},
     ): BookshelfAutoGroupPlan {
-        require(source.books.isNotEmpty()) { "书架没有可分析的书籍" }
-        val preset = resolvePreset() ?: error("请先配置默认 AI 模型")
-        val response = aiTextGateway.generate(
-            AiGenerateRequest(
-                model = preset.model,
-                messages = listOf(
-                    AiMessage(AiMessageRole.SYSTEM, buildSystemPrompt()),
-                    AiMessage(AiMessageRole.USER, buildGeneratePrompt(source, groupingInstruction)),
+        validateSource(source)
+        val promptText = promptGateway.getPromptText()
+        val preset = resolvePreset()
+        val systemPrompt = resolveSystemPrompt(preset, promptText)
+        val inputBudget = effectiveInputBudget(preset)
+        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildGeneratePrompt(source, books, groupingInstruction, emptyList(), options, promptText)
+        }
+        val plans = mutableListOf<BookshelfAutoGroupPlan>()
+        val proposedGroupNames = linkedSetOf<String>()
+        batches.forEachIndexed { index, batch ->
+            onProgress(BookshelfAutoGroupProgress(index + 1, batches.size))
+            val sharedGroupNames = fitSharedGroupNames(
+                candidates = proposedGroupNames,
+                inputBudget = inputBudget,
+                systemPrompt = systemPrompt,
+            ) { names ->
+                buildGeneratePrompt(source, batch, groupingInstruction, names, options, promptText)
+            }
+            val plan = generateBatch(
+                preset = preset,
+                systemPrompt = systemPrompt,
+                prompt = buildGeneratePrompt(
+                    source,
+                    batch,
+                    groupingInstruction,
+                    sharedGroupNames,
+                    options,
+                    promptText,
                 ),
-                params = preset.params,
+                books = batch,
+                existingGroupNames = source.existingGroupNames.toSet(),
+                options = options,
             )
-        ).getOrThrow().text
-        return parseAndSanitizePlan(response, source)
+            plans += plan
+            plan.groups.mapTo(proposedGroupNames, BookshelfAutoGroupPlanGroup::name)
+        }
+        return mergePlans(plans, source)
     }
 
     suspend fun revise(
         source: BookshelfAutoGroupSource,
         currentPlan: BookshelfAutoGroupPlan,
         instruction: String,
+        options: BookshelfAutoGroupOptions = BookshelfAutoGroupOptions(),
+        onProgress: (BookshelfAutoGroupProgress) -> Unit = {},
     ): BookshelfAutoGroupPlan {
-        require(instruction.isNotBlank()) { "调整要求不能为空" }
-        val preset = resolvePreset() ?: error("请先配置默认 AI 模型")
+        require(instruction.isNotBlank()) { "Revision instruction is required" }
+        validateSource(source)
+        val promptText = promptGateway.getPromptText()
+        val preset = resolvePreset()
+        val systemPrompt = resolveSystemPrompt(preset, promptText)
+        val inputBudget = effectiveInputBudget(preset)
+        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildRevisePrompt(source, currentPlan, books, instruction, emptyList(), options, promptText)
+        }
+        val plans = mutableListOf<BookshelfAutoGroupPlan>()
+        val proposedGroupNames = currentPlan.groups
+            .mapTo(linkedSetOf(), BookshelfAutoGroupPlanGroup::name)
+        batches.forEachIndexed { index, batch ->
+            onProgress(BookshelfAutoGroupProgress(index + 1, batches.size))
+            val sharedGroupNames = fitSharedGroupNames(
+                candidates = proposedGroupNames,
+                inputBudget = inputBudget,
+                systemPrompt = systemPrompt,
+            ) { names ->
+                buildRevisePrompt(source, currentPlan, batch, instruction, names, options, promptText)
+            }
+            val plan = generateBatch(
+                preset = preset,
+                systemPrompt = systemPrompt,
+                prompt = buildRevisePrompt(
+                    source,
+                    currentPlan,
+                    batch,
+                    instruction,
+                    sharedGroupNames,
+                    options,
+                    promptText,
+                ),
+                books = batch,
+                existingGroupNames = source.existingGroupNames.toSet(),
+                options = options,
+            )
+            plans += plan
+            plan.groups.mapTo(proposedGroupNames, BookshelfAutoGroupPlanGroup::name)
+        }
+        return mergePlans(plans, source)
+    }
+
+    private suspend fun generateBatch(
+        preset: AiTaskPresetConfig,
+        systemPrompt: String,
+        prompt: String,
+        books: List<PromptBook>,
+        existingGroupNames: Set<String>,
+        options: BookshelfAutoGroupOptions,
+    ): BookshelfAutoGroupPlan {
         val response = aiTextGateway.generate(
             AiGenerateRequest(
                 model = preset.model,
                 messages = listOf(
-                    AiMessage(AiMessageRole.SYSTEM, buildSystemPrompt()),
-                    AiMessage(AiMessageRole.USER, buildRevisePrompt(source, currentPlan, instruction)),
+                    AiMessage(AiMessageRole.SYSTEM, systemPrompt),
+                    AiMessage(AiMessageRole.USER, prompt),
                 ),
-                params = preset.params,
+                params = autoGroupParams(preset, options),
             )
         ).getOrThrow().text
-        return parseAndSanitizePlan(response, source)
+        return parser.parse(
+            response = response,
+            booksByPromptId = books.associate { it.id to it.book },
+            existingGroupNames = existingGroupNames,
+        )
     }
 
-    private suspend fun resolvePreset(): AiTaskPresetConfig? {
+    private suspend fun resolvePreset(): AiTaskPresetConfig {
         return aiProfileGateway.getTaskPreset(AiTaskType.BOOKSHELF_AUTO_GROUP)
             ?: aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
             ?: aiProfileGateway.getTaskPreset(AiTaskType.TEXT_FACTORY)
             ?: aiProfileGateway.getTaskPreset(AiTaskType.SUMMARIZE_BOOK)
             ?: aiProfileGateway.getTaskPreset(AiTaskType.SUMMARIZE_CHAPTER)
+            ?: throw BookshelfAutoGroupException(BookshelfAutoGroupErrorReason.MissingModel)
     }
 
-    private fun buildSystemPrompt(): String {
-        return """
-            你是阅读 App 的书架整理助手。
-            你的任务是根据书名、作者、分类、简介和当前分组，生成可由用户确认的书架分组方案。
-            只输出 JSON，不要 Markdown，不要代码块，不要解释。
-            不要虚构 bookUrl，只能使用用户输入中存在的 bookUrl。
-            分组名称使用简短中文，避免“其他”“综合”等过泛名称，除非确实无法判断。
-            可以复用已有分组名称；也可以提出新分组。
-            每本书最多放入一个建议分组。无法判断的书放入 ignoredBooks。
-        """.trimIndent()
+    private fun resolveSystemPrompt(
+        preset: AiTaskPresetConfig,
+        promptText: BookshelfAutoGroupPromptText,
+    ): String {
+        val taskPrompt = preset.promptTemplate.takeIf {
+            preset.taskType == AiTaskType.BOOKSHELF_AUTO_GROUP && it.isNotBlank()
+        }
+        return buildString {
+            append(taskPrompt ?: promptText.defaultSystemPrompt)
+            append("\n\n")
+            append(promptText.mandatoryRules)
+        }
+    }
+
+    private fun validateSource(source: BookshelfAutoGroupSource) {
+        if (source.books.isEmpty()) {
+            throw BookshelfAutoGroupException(BookshelfAutoGroupErrorReason.EmptyBookshelf)
+        }
+    }
+
+    private fun effectiveInputBudget(preset: AiTaskPresetConfig): InputBudget {
+        val configuredLimit = preset.runtimeOptions.maxInputChars
+            .takeIf { it > 0 }
+            ?: DEFAULT_MAX_INPUT_CHARS
+        val outputReserve = preset.params.maxOutputTokens
+            ?.takeIf { it > 0 }
+            ?: preset.model.maxOutputTokens.takeIf { it > 0 }?.coerceAtMost(DEFAULT_OUTPUT_RESERVE)
+            ?: DEFAULT_OUTPUT_RESERVE
+        val contextTokenLimit = preset.model.contextWindow
+            .takeIf { it > 0 }
+            ?.minus(outputReserve)
+            ?: Int.MAX_VALUE
+        if (contextTokenLimit < MIN_INPUT_CHARS) {
+            throw BookshelfAutoGroupException(BookshelfAutoGroupErrorReason.CapacityTooSmall)
+        }
+        return InputBudget(
+            maxChars = configuredLimit,
+            // UTF-8 bytes are a conservative upper bound for byte-level tokenizer input tokens.
+            maxUtf8Bytes = contextTokenLimit,
+        )
+    }
+
+    private fun autoGroupParams(
+        preset: AiTaskPresetConfig,
+        options: BookshelfAutoGroupOptions,
+    ) = preset.params.copy(
+        temperature = AUTO_GROUP_TEMPERATURE.takeUnless { options.enableDeepThinking },
+        reasoningLevel = if (options.enableDeepThinking) {
+            AiReasoningLevel.HIGH
+        } else {
+            AiReasoningLevel.OFF
+        },
+    )
+
+    private fun createBatches(
+        source: BookshelfAutoGroupSource,
+        inputBudget: InputBudget,
+        systemPrompt: String,
+        promptBuilder: (List<PromptBook>) -> String,
+    ): List<List<PromptBook>> {
+        val promptBooks = source.books.mapIndexed { index, book -> PromptBook("b${index + 1}", book) }
+        val batches = mutableListOf<List<PromptBook>>()
+        var current = mutableListOf<PromptBook>()
+        promptBooks.forEach { book ->
+            val candidate = current + book
+            val fits = candidate.size <= MAX_BOOKS_PER_BATCH &&
+                inputBudget.fits(systemPrompt, promptBuilder(candidate))
+            if (fits) {
+                current += book
+            } else {
+                if (current.isNotEmpty()) batches += current.toList()
+                if (!inputBudget.fits(systemPrompt, promptBuilder(listOf(book)))) {
+                    throw BookshelfAutoGroupException(BookshelfAutoGroupErrorReason.CapacityTooSmall)
+                }
+                current = mutableListOf(book)
+            }
+        }
+        if (current.isNotEmpty()) batches += current.toList()
+        return batches
+    }
+
+    private fun batchInputBudget(inputBudget: InputBudget): InputBudget {
+        return InputBudget(
+            maxChars = (inputBudget.maxChars - SHARED_GROUP_NAMES_RESERVE_CHARS)
+                .coerceAtLeast(minOf(MIN_INPUT_CHARS, inputBudget.maxChars)),
+            maxUtf8Bytes = (inputBudget.maxUtf8Bytes - SHARED_GROUP_NAMES_RESERVE_UTF8_BYTES)
+                .coerceAtLeast(minOf(MIN_INPUT_CHARS, inputBudget.maxUtf8Bytes)),
+        )
+    }
+
+    private fun fitSharedGroupNames(
+        candidates: Collection<String>,
+        inputBudget: InputBudget,
+        systemPrompt: String,
+        promptBuilder: (List<String>) -> String,
+    ): List<String> {
+        val included = mutableListOf<String>()
+        candidates.forEach { name ->
+            val candidate = included + name
+            if (inputBudget.fits(systemPrompt, promptBuilder(candidate))) {
+                included += name
+            }
+        }
+        return included
     }
 
     private fun buildGeneratePrompt(
         source: BookshelfAutoGroupSource,
+        books: List<PromptBook>,
         groupingInstruction: String,
-    ): String {
-        return buildString {
-            append("请为以下全部书籍生成分组方案。\n")
-            append("已有用户分组：")
-            append(source.existingGroupNames.joinToString("、").ifBlank { "无" })
-            groupingInstruction.trim().takeIf { it.isNotBlank() }?.let { instruction ->
-                append("\n\n用户补充分组要求：\n")
-                append(instruction)
-            }
-            append("\n\n返回 JSON 格式：\n")
-            append(OUTPUT_SCHEMA)
-            append("\n\n书籍数据：\n")
-            append(GSON.toJson(source.books.map { it.toPromptMap() }))
+        proposedGroupNames: List<String>,
+        options: BookshelfAutoGroupOptions,
+        promptText: BookshelfAutoGroupPromptText,
+    ): String = buildString {
+        append(promptText.generateTask)
+        append("\n")
+        append(promptText.existingGroups)
+        append(": ")
+        append(source.existingGroupNames.joinToString(", ").ifBlank { promptText.noExistingGroups })
+        groupingInstruction.trim().takeIf(String::isNotBlank)?.let { instruction ->
+            append("\n")
+            append(promptText.userRequirements)
+            append(":\n")
+            append(instruction)
         }
+        appendSharedGroupNames(proposedGroupNames, promptText)
+        appendReasonRequirement(promptText)
+        append("\n")
+        append(promptText.outputSchemaLabel)
+        append(":\n")
+        append(promptText.outputSchema)
+        append("\n")
+        append(promptText.books)
+        append(":\n")
+        append(gson.toJson(books.map { it.toPromptMap(options.includeBookIntro) }))
     }
 
     private fun buildRevisePrompt(
         source: BookshelfAutoGroupSource,
         currentPlan: BookshelfAutoGroupPlan,
+        books: List<PromptBook>,
         instruction: String,
-    ): String {
-        return buildString {
-            append("请根据用户调整要求，重新输出完整分组方案。\n")
-            append("用户调整要求：")
-            append(instruction)
-            append("\n\n已有用户分组：")
-            append(source.existingGroupNames.joinToString("、").ifBlank { "无" })
-            append("\n\n当前方案：\n")
-            append(currentPlan.toPromptJson())
-            append("\n\n书籍数据：\n")
-            append(GSON.toJson(source.books.map { it.toPromptMap() }))
-            append("\n\n返回 JSON 格式：\n")
-            append(OUTPUT_SCHEMA)
-        }
+        proposedGroupNames: List<String>,
+        options: BookshelfAutoGroupOptions,
+        promptText: BookshelfAutoGroupPromptText,
+    ): String = buildString {
+        append(promptText.reviseTask)
+        append("\n")
+        append(promptText.userRequirements)
+        append(": ")
+        append(instruction.trim())
+        append("\n")
+        append(promptText.existingGroups)
+        append(": ")
+        append(source.existingGroupNames.joinToString(", ").ifBlank { promptText.noExistingGroups })
+        appendSharedGroupNames(proposedGroupNames, promptText)
+        appendReasonRequirement(promptText)
+        append("\n")
+        append(promptText.currentPlan)
+        append(":\n")
+        append(currentPlan.toPromptJson(books))
+        append("\n")
+        append(promptText.books)
+        append(":\n")
+        append(gson.toJson(books.map { it.toPromptMap(options.includeBookIntro) }))
+        append("\n")
+        append(promptText.outputSchemaLabel)
+        append(":\n")
+        append(promptText.outputSchema)
     }
 
-    private fun parseAndSanitizePlan(
-        response: String,
+    private fun StringBuilder.appendSharedGroupNames(
+        names: List<String>,
+        promptText: BookshelfAutoGroupPromptText,
+    ) {
+        if (names.isEmpty()) return
+        append("\n")
+        append(promptText.previouslyProposedGroups)
+        append(": ")
+        append(gson.toJson(names))
+        append("\n")
+        append(promptText.reuseGroupNamesRule)
+    }
+
+    private fun StringBuilder.appendReasonRequirement(promptText: BookshelfAutoGroupPromptText) {
+        append("\n")
+        append(promptText.reasonRule)
+    }
+
+    private fun BookshelfAutoGroupPlan.toPromptJson(books: List<PromptBook>): String {
+        val idsByUrl = books.associate { it.book.bookUrl to it.id }
+        return gson.toJson(
+            mapOf(
+                "groups" to groups.mapNotNull { group ->
+                    val promptBooks = group.books.mapNotNull { book ->
+                        idsByUrl[book.bookUrl]?.let { id -> mapOf("id" to id, "reason" to book.reason) }
+                    }
+                    group.takeIf { promptBooks.isNotEmpty() }?.let {
+                        mapOf("name" to group.name, "description" to group.description, "books" to promptBooks)
+                    }
+                },
+                "ignoredBooks" to ignoredBooks.mapNotNull { book ->
+                    idsByUrl[book.bookUrl]?.let { id -> mapOf("id" to id, "reason" to book.reason) }
+                },
+            )
+        )
+    }
+
+    private fun PromptBook.toPromptMap(includeBookIntro: Boolean): Map<String, Any> = buildMap {
+        put("id", id)
+        put("name", book.name)
+        book.author.takeIf(String::isNotBlank)?.let { put("author", it) }
+        book.kind.takeIf(String::isNotBlank)?.let { put("kind", it) }
+        if (includeBookIntro) {
+            book.intro.takeIf(String::isNotBlank)?.let { put("intro", it) }
+        }
+        book.currentGroupNames.takeIf { it.isNotEmpty() }?.let { put("currentGroups", it) }
+    }
+
+    private fun mergePlans(
+        plans: List<BookshelfAutoGroupPlan>,
         source: BookshelfAutoGroupSource,
     ): BookshelfAutoGroupPlan {
-        val root = extractJsonObject(response)
-        val booksByUrl = source.books.associateBy { it.bookUrl }
         val existingNames = source.existingGroupNames.toSet()
-        val assignedBookUrls = linkedSetOf<String>()
-        val groups = mutableListOf<BookshelfAutoGroupPlanGroup>()
-
-        root.getAsJsonArrayOrNull("groups")?.forEach { groupElement ->
-            val groupObject = groupElement.asJsonObjectOrNull() ?: return@forEach
-            val name = groupObject.string("name")
-                ?.trim()
-                ?.take(24)
-                ?.takeIf { it.isNotBlank() }
-                ?: return@forEach
-            val description = groupObject.string("description")?.trim().orEmpty().take(120)
-            val books = groupObject.getAsJsonArrayOrNull("books")
-                ?.mapNotNull { bookElement ->
-                    val bookObject = bookElement.asJsonObjectOrNull() ?: return@mapNotNull null
-                    val bookUrl = bookObject.string("bookUrl") ?: return@mapNotNull null
-                    val book = booksByUrl[bookUrl] ?: return@mapNotNull null
-                    if (!assignedBookUrls.add(bookUrl)) return@mapNotNull null
-                    BookshelfAutoGroupPlanBook(
-                        bookUrl = book.bookUrl,
-                        name = book.name,
-                        author = book.author,
-                        currentGroupNames = book.currentGroupNames,
-                        reason = bookObject.string("reason")?.trim().orEmpty().take(120),
-                    )
-                }
-                .orEmpty()
-            if (books.isNotEmpty()) {
-                groups += BookshelfAutoGroupPlanGroup(
-                    key = UUID.randomUUID().toString(),
-                    name = name,
-                    description = description,
-                    reuseExisting = name in existingNames,
-                    books = books,
-                )
+        val assignedUrls = linkedSetOf<String>()
+        val groupsByName = linkedMapOf<String, BookshelfAutoGroupPlanGroup>()
+        plans.flatMap(BookshelfAutoGroupPlan::groups).forEach { group ->
+            val books = group.books.filter { assignedUrls.add(it.bookUrl) }
+            if (books.isEmpty()) return@forEach
+            val existing = groupsByName[group.name]
+            groupsByName[group.name] = if (existing == null) {
+                group.copy(reuseExisting = group.name in existingNames, books = books)
+            } else {
+                existing.copy(books = existing.books + books)
             }
         }
-
-        val ignored = mutableListOf<BookshelfAutoGroupIgnoredBook>()
-        root.getAsJsonArrayOrNull("ignoredBooks")?.forEach { ignoredElement ->
-            val ignoredObject = ignoredElement.asJsonObjectOrNull() ?: return@forEach
-            val bookUrl = ignoredObject.string("bookUrl") ?: return@forEach
-            val book = booksByUrl[bookUrl] ?: return@forEach
-            if (book.bookUrl !in assignedBookUrls) {
-                ignored += BookshelfAutoGroupIgnoredBook(
-                    bookUrl = book.bookUrl,
-                    name = book.name,
-                    author = book.author,
-                    reason = ignoredObject.string("reason")?.trim().orEmpty().take(120),
-                )
-                assignedBookUrls += book.bookUrl
+        val ignoredUrls = linkedSetOf<String>()
+        val ignored = plans.flatMap(BookshelfAutoGroupPlan::ignoredBooks)
+            .filter { it.bookUrl !in assignedUrls && ignoredUrls.add(it.bookUrl) }
+            .toMutableList()
+        source.books.forEach { book ->
+            if (book.bookUrl !in assignedUrls && ignoredUrls.add(book.bookUrl)) {
+                ignored += BookshelfAutoGroupIgnoredBook(book.bookUrl, book.name, book.author, "")
             }
         }
-
-        val missingIgnored = source.books
-            .filterNot { it.bookUrl in assignedBookUrls }
-            .map {
-                BookshelfAutoGroupIgnoredBook(
-                    bookUrl = it.bookUrl,
-                    name = it.name,
-                    author = it.author,
-                    reason = "AI 未给出明确分组",
-                )
-            }
-
-        return BookshelfAutoGroupPlan(
-            groups = groups.mergeSameName(existingNames),
-            ignoredBooks = ignored + missingIgnored,
-        )
+        return BookshelfAutoGroupPlan(groupsByName.values.toList(), ignored)
     }
 
-    private fun extractJsonObject(text: String): JsonObject {
-        val start = text.indexOf('{')
-        val end = text.lastIndexOf('}')
-        require(start >= 0 && end > start) { "AI 未返回可解析的分组方案" }
-        return JsonParser.parseString(text.substring(start, end + 1)).asJsonObject
-    }
+    private data class PromptBook(
+        val id: String,
+        val book: BookshelfAutoGroupBook,
+    )
 
-    private fun List<BookshelfAutoGroupPlanGroup>.mergeSameName(
-        existingNames: Set<String>,
-    ): List<BookshelfAutoGroupPlanGroup> {
-        return groupBy { it.name }.map { (name, groups) ->
-            val first = groups.first()
-            first.copy(
-                name = name,
-                reuseExisting = name in existingNames,
-                books = groups.flatMap { it.books },
-            )
+    private data class InputBudget(
+        val maxChars: Int,
+        val maxUtf8Bytes: Int,
+    ) {
+        val effectiveCharLimit: Int get() = minOf(maxChars, maxUtf8Bytes)
+
+        fun fits(systemPrompt: String, userPrompt: String): Boolean {
+            val charCount = systemPrompt.length + userPrompt.length
+            if (charCount > maxChars) return false
+            val utf8Bytes = systemPrompt.toByteArray(UTF_8).size +
+                userPrompt.toByteArray(UTF_8).size
+            return utf8Bytes <= maxUtf8Bytes
         }
-    }
-
-    private fun Book.groupingIntro(): String {
-        return (customIntro ?: intro ?: listIntro).orEmpty()
-            .replace(Regex("\\s+"), " ")
-            .take(MAX_INTRO_CHARS)
-    }
-
-    private fun BookshelfAutoGroupBook.toPromptMap(): Map<String, Any?> {
-        return mapOf(
-            "bookUrl" to bookUrl,
-            "name" to name,
-            "author" to author,
-            "kind" to kind,
-            "intro" to intro,
-            "currentGroups" to currentGroupNames,
-        )
-    }
-
-    private fun BookshelfAutoGroupPlan.toPromptJson(): String {
-        return GSON.toJson(
-            mapOf(
-                "groups" to groups.map { group ->
-                    mapOf(
-                        "name" to group.name,
-                        "description" to group.description,
-                        "books" to group.books.map { book ->
-                            mapOf(
-                                "bookUrl" to book.bookUrl,
-                                "reason" to book.reason,
-                            )
-                        },
-                    )
-                },
-                "ignoredBooks" to ignoredBooks.map { book ->
-                    mapOf(
-                        "bookUrl" to book.bookUrl,
-                        "reason" to book.reason,
-                    )
-                },
-            )
-        )
-    }
-
-    private fun JsonObject.string(name: String): String? {
-        return get(name)?.takeIf { !it.isJsonNull }?.asString
-    }
-
-    private fun JsonObject.getAsJsonArrayOrNull(name: String) = runCatching {
-        get(name)?.takeIf { !it.isJsonNull && it.isJsonArray }?.asJsonArray
-    }.getOrNull()
-
-    private fun com.google.gson.JsonElement.asJsonObjectOrNull(): JsonObject? {
-        return takeIf { !it.isJsonNull && it.isJsonObject }?.asJsonObject
     }
 
     private companion object {
-        const val MAX_INTRO_CHARS = 320
+        const val DEFAULT_MAX_INPUT_CHARS = 10_000
+        const val DEFAULT_OUTPUT_RESERVE = 4_096
+        const val MIN_INPUT_CHARS = 512
+        const val MAX_BOOKS_PER_BATCH = 30
+        const val SHARED_GROUP_NAMES_RESERVE_CHARS = 640
+        const val SHARED_GROUP_NAMES_RESERVE_UTF8_BYTES = 640
+        const val AUTO_GROUP_TEMPERATURE = 0.3f
 
-        val OUTPUT_SCHEMA = """
-            {
-              "groups": [
-                {
-                  "name": "分组名称",
-                  "description": "分组依据",
-                  "books": [
-                    {"bookUrl": "输入中的 bookUrl", "reason": "为什么放入该分组"}
-                  ]
-                }
-              ],
-              "ignoredBooks": [
-                {"bookUrl": "输入中的 bookUrl", "reason": "无法判断原因"}
-              ]
-            }
-        """.trimIndent()
     }
 }

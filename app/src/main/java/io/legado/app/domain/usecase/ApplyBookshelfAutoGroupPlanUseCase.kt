@@ -1,75 +1,46 @@
 package io.legado.app.domain.usecase
 
-import androidx.room.withTransaction
-import io.legado.app.data.AppDatabase
-import io.legado.app.data.entities.BookGroup
+import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
 import io.legado.app.domain.model.BookshelfAutoGroupApplyResult
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
 
 class ApplyBookshelfAutoGroupPlanUseCase(
-    private val database: AppDatabase,
+    private val gateway: BookshelfAutoGroupGateway,
 ) {
 
-    suspend fun execute(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupApplyResult =
-        withContext(Dispatchers.IO) {
-            require(plan.groups.isNotEmpty()) { "没有可执行的分组方案" }
+    suspend fun execute(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupApplyResult {
+        val normalizedPlan = normalize(plan)
+        require(normalizedPlan.groups.isNotEmpty()) { "No applicable grouping plan" }
+        return gateway.applyPlan(normalizedPlan)
+    }
 
-            database.withTransaction {
-                val groupDao = database.bookGroupDao
-                val bookDao = database.bookDao
-                val existingGroups = groupDao.all
-                    .filter { it.groupId > 0 }
-                    .associateBy { it.groupName }
-                    .toMutableMap()
-                var createdGroupCount = 0
-                var reusedGroupCount = 0
-
-                val targetGroupIds = plan.groups.associate { group ->
-                    val existing = existingGroups[group.name]
-                    val groupId = if (existing != null) {
-                        reusedGroupCount++
-                        existing.groupId
-                    } else {
-                        val newGroupId = groupDao.getUnusedId()
-                        val newGroup = BookGroup(
-                            groupId = newGroupId,
-                            groupName = group.name,
-                            order = groupDao.maxOrder.plus(1),
-                            enableRefresh = true,
-                            show = true,
-                            bookSort = -1,
-                            isPrivate = false,
-                        )
-                        bookDao.removeGroup(newGroupId)
-                        groupDao.insert(newGroup)
-                        existingGroups[group.name] = newGroup
-                        createdGroupCount++
-                        newGroupId
-                    }
-                    group.key to groupId
-                }
-
-                val updates = plan.groups.flatMap { group ->
-                    val targetGroupId = targetGroupIds[group.key] ?: return@flatMap emptyList()
-                    group.books.mapNotNull { book ->
-                        bookDao.getBook(book.bookUrl)
-                            ?.takeIf { it.group != targetGroupId }
-                            ?.copy(group = targetGroupId)
-                    }
-                }
-
-                if (updates.isNotEmpty()) {
-                    bookDao.update(*updates.toTypedArray())
-                }
-
-                BookshelfAutoGroupApplyResult(
-                    createdGroupCount = createdGroupCount,
-                    reusedGroupCount = reusedGroupCount,
-                    updatedBookCount = updates.size,
-                    ignoredBookCount = plan.ignoredBooks.size,
-                )
+    internal fun normalize(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupPlan {
+        val assignedBookUrls = linkedSetOf<String>()
+        val groupsByName = linkedMapOf<String, BookshelfAutoGroupPlanGroup>()
+        plan.groups.forEach { group ->
+            val name = group.name.trim().take(MAX_GROUP_NAME_CHARS)
+            if (name.isBlank()) return@forEach
+            val uniqueBooks = group.books.filter { assignedBookUrls.add(it.bookUrl) }
+            if (uniqueBooks.isEmpty()) return@forEach
+            val existing = groupsByName[name]
+            groupsByName[name] = if (existing == null) {
+                group.copy(name = name, books = uniqueBooks)
+            } else {
+                existing.copy(books = existing.books + uniqueBooks)
             }
         }
+        val ignoredBookUrls = linkedSetOf<String>()
+        val ignoredBooks = plan.ignoredBooks.filter { book ->
+            book.bookUrl !in assignedBookUrls && ignoredBookUrls.add(book.bookUrl)
+        }
+        return BookshelfAutoGroupPlan(
+            groups = groupsByName.values.toList(),
+            ignoredBooks = ignoredBooks,
+        )
+    }
+
+    private companion object {
+        const val MAX_GROUP_NAME_CHARS = 24
+    }
 }

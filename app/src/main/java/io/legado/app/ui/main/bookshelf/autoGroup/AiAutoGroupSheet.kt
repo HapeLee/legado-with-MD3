@@ -23,18 +23,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
@@ -44,6 +48,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 
@@ -54,11 +59,11 @@ fun AiAutoGroupSheet(
     onDismissRequest: () -> Unit,
     viewModel: AiAutoGroupViewModel = koinViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val closeSheet = {
         if (state.phase == AiAutoGroupPhase.Applying) {
-            context.toastOnUi("正在应用分组，请稍候")
+            context.toastOnUi(context.getString(R.string.ai_auto_group_applying_wait))
         } else {
             viewModel.onIntent(AiAutoGroupIntent.CloseSession)
             onDismissRequest()
@@ -74,8 +79,13 @@ fun AiAutoGroupSheet(
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is AiAutoGroupEffect.ShowMessage -> context.toastOnUi(effect.message)
-                AiAutoGroupEffect.Applied -> context.toastOnUi("AI 自动分组已完成")
+                is AiAutoGroupEffect.ShowMessage -> context.toastOnUi(
+                    context.getString(effect.message.stringRes)
+                )
+                is AiAutoGroupEffect.ShowError -> context.toastOnUi(effect.error.localizedText(context))
+                AiAutoGroupEffect.Applied -> context.toastOnUi(
+                    context.getString(R.string.ai_auto_group_completed)
+                )
             }
         }
     }
@@ -83,20 +93,20 @@ fun AiAutoGroupSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = closeSheet,
-        title = "AI 自动分组",
+        title = stringResource(R.string.ai_auto_group),
         endAction = {
             when (state.phase) {
                 AiAutoGroupPhase.Reviewing -> MediumTonalButton(
                     onClick = { viewModel.onIntent(AiAutoGroupIntent.RequestApply) },
                     icon = Icons.Default.Check,
-                    contentDescription = "确认执行",
+                    contentDescription = stringResource(R.string.ai_auto_group_confirm_execute),
                     enabled = state.assignedBookCount > 0,
                 )
 
                 AiAutoGroupPhase.Result -> MediumPlainButton(
                     onClick = closeSheet,
                     icon = Icons.Default.Close,
-                    contentDescription = "关闭",
+                    contentDescription = stringResource(R.string.close),
                 )
 
                 else -> Unit
@@ -104,7 +114,9 @@ fun AiAutoGroupSheet(
         }
     ) {
         when (state.phase) {
-            AiAutoGroupPhase.LoadingSource -> AutoGroupProgressContent("正在读取书架")
+            AiAutoGroupPhase.LoadingSource -> AutoGroupProgressContent(
+                text = stringResource(R.string.ai_auto_group_loading_shelf),
+            )
             AiAutoGroupPhase.Preflight -> AutoGroupPreflightContent(
                 state = state,
                 onDismiss = closeSheet,
@@ -112,30 +124,43 @@ fun AiAutoGroupSheet(
                 onGroupingInstructionChange = {
                     viewModel.onIntent(AiAutoGroupIntent.UpdateGroupingInstruction(it))
                 },
+                onIncludeBookIntroChange = {
+                    viewModel.onIntent(AiAutoGroupIntent.SetIncludeBookIntro(it))
+                },
+                onDeepThinkingChange = {
+                    viewModel.onIntent(AiAutoGroupIntent.SetDeepThinkingEnabled(it))
+                },
             )
 
             AiAutoGroupPhase.Analyzing -> AutoGroupProgressContent(
-                text = "正在分析书架",
+                text = stringResource(R.string.ai_auto_group_analyzing),
+                currentBatch = state.currentBatch,
+                totalBatches = state.totalBatches,
                 onCancel = { viewModel.onIntent(AiAutoGroupIntent.CancelRunning) },
             )
             AiAutoGroupPhase.Revising -> AutoGroupProgressContent(
-                text = "正在调整方案",
+                text = stringResource(R.string.ai_auto_group_revising),
+                currentBatch = state.currentBatch,
+                totalBatches = state.totalBatches,
                 onCancel = { viewModel.onIntent(AiAutoGroupIntent.CancelRunning) },
             )
-            AiAutoGroupPhase.Applying -> AutoGroupProgressContent("正在应用分组")
+            AiAutoGroupPhase.Applying -> AutoGroupProgressContent(
+                text = stringResource(R.string.ai_auto_group_applying),
+            )
             AiAutoGroupPhase.Reviewing -> AutoGroupReviewContent(
                 state = state,
                 onIntent = viewModel::onIntent,
             )
 
             AiAutoGroupPhase.Result -> AutoGroupResultContent(
-                resultText = state.resultText.orEmpty(),
+                result = state.applyResult,
                 onDone = closeSheet,
                 onReset = { viewModel.onIntent(AiAutoGroupIntent.Restart) },
             )
 
             AiAutoGroupPhase.Error -> AutoGroupErrorContent(
-                message = state.errorMessage.orEmpty(),
+                message = state.error?.localizedText(context)
+                    ?: stringResource(R.string.ai_auto_group_unknown_error),
                 onRetry = { viewModel.onIntent(AiAutoGroupIntent.Restart) },
                 onDismiss = closeSheet,
             )
@@ -145,11 +170,16 @@ fun AiAutoGroupSheet(
     AppAlertDialog(
         show = state.showApplyConfirm,
         onDismissRequest = { viewModel.onIntent(AiAutoGroupIntent.DismissApplyConfirm) },
-        title = "确认执行分组方案",
-        text = "将创建 ${state.newGroupCount} 个分组，调整 ${state.assignedBookCount} 本书，跳过 ${state.ignoredBooks.size} 本书。执行后会直接修改书架分组。",
-        confirmText = "执行",
+        title = stringResource(R.string.ai_auto_group_confirm_title),
+        text = stringResource(
+            R.string.ai_auto_group_confirm_message,
+            state.newGroupCount,
+            state.assignedBookCount,
+            state.ignoredBooks.size,
+        ),
+        confirmText = stringResource(R.string.ai_auto_group_execute),
         onConfirm = { viewModel.onIntent(AiAutoGroupIntent.ConfirmApply) },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { viewModel.onIntent(AiAutoGroupIntent.DismissApplyConfirm) },
     )
 }
@@ -160,6 +190,8 @@ private fun AutoGroupPreflightContent(
     onDismiss: () -> Unit,
     onAnalyze: () -> Unit,
     onGroupingInstructionChange: (String) -> Unit,
+    onIncludeBookIntroChange: (Boolean) -> Unit,
+    onDeepThinkingChange: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         GlassCard(containerColor = LegadoTheme.colorScheme.onSheetContent) {
@@ -170,46 +202,83 @@ private fun AutoGroupPreflightContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "将分析 ${state.bookCount} 本书",
+                    text = stringResource(R.string.ai_auto_group_will_analyze, state.bookCount),
                     style = LegadoTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "会使用书名、作者、分类、简介和当前分组生成建议。AI 只生成方案，不会直接修改书架。",
+                    text = stringResource(R.string.ai_auto_group_preflight_description),
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "已有 ${state.existingGroupCount} 个用户分组，${state.groupedBookCount} 本书已有分组。",
+                    text = stringResource(
+                        R.string.ai_auto_group_existing_summary,
+                        state.existingGroupCount,
+                        state.groupedBookCount,
+                    ),
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
+                if (state.estimatedRequestCount > 1) {
+                    Text(
+                        text = stringResource(
+                            R.string.ai_auto_group_batch_estimate,
+                            state.estimatedRequestCount,
+                        ),
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.primary,
+                    )
+                }
             }
+        }
+
+        SplicedColumnGroup(modifier = Modifier.fillMaxWidth()) {
+            SwitchSettingItem(
+                title = stringResource(R.string.ai_auto_group_include_intro),
+                description = stringResource(R.string.ai_auto_group_include_intro_desc),
+                checked = state.includeBookIntro,
+                onCheckedChange = onIncludeBookIntroChange,
+            )
+            SwitchSettingItem(
+                title = stringResource(R.string.ai_auto_group_deep_thinking),
+                description = stringResource(R.string.ai_auto_group_deep_thinking_desc),
+                checked = state.enableDeepThinking,
+                onCheckedChange = onDeepThinkingChange,
+            )
         }
 
         AppTextField(
             value = state.groupingInstruction,
             onValueChange = onGroupingInstructionChange,
-            label = "补充分组要求",
+            label = stringResource(R.string.ai_auto_group_instruction),
             minLines = 3,
             maxLines = 5,
             backgroundColor = LegadoTheme.colorScheme.onSheetContent,
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = "例如：按题材分组；玄幻和仙侠合并；不要处理本地书；分组数量控制在 8 个以内",
+                    text = stringResource(R.string.ai_auto_group_instruction_hint),
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             },
         )
 
+        state.error?.let { error ->
+            Text(
+                text = error.localizedText(LocalContext.current),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.error,
+            )
+        }
+
         ConfirmDismissButtonsRow(
             onDismiss = onDismiss,
             onConfirm = onAnalyze,
-            dismissText = "取消",
-            confirmText = "开始分析",
-            confirmEnabled = state.bookCount > 0,
+            dismissText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.ai_auto_group_start),
+            confirmEnabled = state.bookCount > 0 && state.error == null,
         )
     }
 }
@@ -217,6 +286,8 @@ private fun AutoGroupPreflightContent(
 @Composable
 private fun AutoGroupProgressContent(
     text: String,
+    currentBatch: Int = 0,
+    totalBatches: Int = 0,
     onCancel: (() -> Unit)? = null,
 ) {
     Column(
@@ -229,12 +300,23 @@ private fun AutoGroupProgressContent(
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = text, style = LegadoTheme.typography.bodyMedium)
+        if (totalBatches > 1 && currentBatch > 0) {
+            Text(
+                text = stringResource(
+                    R.string.ai_auto_group_batch_progress,
+                    currentBatch,
+                    totalBatches,
+                ),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (onCancel != null) {
             Spacer(modifier = Modifier.height(16.dp))
             MediumPlainButton(
                 onClick = onCancel,
                 icon = Icons.Default.Close,
-                text = "取消",
+                text = stringResource(R.string.cancel),
             )
         }
     }
@@ -258,7 +340,7 @@ private fun AutoGroupReviewContent(
                 AppTextField(
                     value = state.revisionInstruction,
                     onValueChange = { onIntent(AiAutoGroupIntent.UpdateRevisionInstruction(it)) },
-                    label = "让 AI 调整方案",
+                    label = stringResource(R.string.ai_auto_group_adjust),
                     minLines = 2,
                     backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                     modifier = Modifier.fillMaxWidth(),
@@ -267,13 +349,13 @@ private fun AutoGroupReviewContent(
                     MediumTonalButton(
                         onClick = { onIntent(AiAutoGroupIntent.Revise) },
                         icon = Icons.Default.Refresh,
-                        text = "重新调整",
+                        text = stringResource(R.string.ai_auto_group_readjust),
                         enabled = state.revisionInstruction.isNotBlank(),
                     )
                     MediumPlainButton(
                         onClick = { onIntent(AiAutoGroupIntent.RequestApply) },
                         icon = Icons.Default.PlayArrow,
-                        text = "确认执行",
+                        text = stringResource(R.string.ai_auto_group_confirm_execute),
                         enabled = state.assignedBookCount > 0,
                     )
                 }
@@ -288,7 +370,7 @@ private fun AutoGroupReviewContent(
             AppTextField(
                 value = newGroupName,
                 onValueChange = { newGroupName = it },
-                label = "新增分组",
+                label = stringResource(R.string.ai_auto_group_add_group),
                 singleLine = true,
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 modifier = Modifier.weight(1f),
@@ -299,7 +381,7 @@ private fun AutoGroupReviewContent(
                     newGroupName = ""
                 },
                 icon = Icons.Default.Add,
-                contentDescription = "新增分组",
+                contentDescription = stringResource(R.string.ai_auto_group_add_group),
             )
         }
 
@@ -335,10 +417,22 @@ private fun AutoGroupSummaryCard(state: AiAutoGroupUiState) {
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            SummaryMetric(label = "分组", value = state.groups.size.toString())
-            SummaryMetric(label = "新建", value = state.newGroupCount.toString())
-            SummaryMetric(label = "书籍", value = state.assignedBookCount.toString())
-            SummaryMetric(label = "跳过", value = state.ignoredBooks.size.toString())
+            SummaryMetric(
+                label = stringResource(R.string.ai_auto_group_metric_groups),
+                value = state.groups.size.toString(),
+            )
+            SummaryMetric(
+                label = stringResource(R.string.ai_auto_group_metric_new),
+                value = state.newGroupCount.toString(),
+            )
+            SummaryMetric(
+                label = stringResource(R.string.ai_auto_group_metric_books),
+                value = state.assignedBookCount.toString(),
+            )
+            SummaryMetric(
+                label = stringResource(R.string.ai_auto_group_metric_skipped),
+                value = state.ignoredBooks.size.toString(),
+            )
         }
     }
 }
@@ -378,14 +472,17 @@ private fun AutoGroupCard(
                     value = group.name,
                     onValueChange = { onIntent(AiAutoGroupIntent.RenameGroup(group.key, it)) },
                     singleLine = true,
-                    label = if (group.reuseExisting) "复用分组" else "新建分组",
+                    label = stringResource(
+                        if (group.reuseExisting) R.string.ai_auto_group_reuse_group
+                        else R.string.ai_auto_group_new_group
+                    ),
                     backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                     modifier = Modifier.weight(1f),
                 )
                 MediumPlainButton(
                     onClick = { onIntent(AiAutoGroupIntent.RemoveGroup(group.key)) },
                     icon = Icons.Default.Delete,
-                    contentDescription = "删除分组",
+                    contentDescription = stringResource(R.string.ai_auto_group_delete_group),
                 )
             }
 
@@ -418,14 +515,16 @@ private fun AutoGroupBookItem(
     allGroups: List<AiAutoGroupGroupUi>,
     onIntent: (AiAutoGroupIntent) -> Unit,
 ) {
+    val originalGroups = book.currentGroupNames.takeIf { it.isNotEmpty() }?.let {
+        stringResource(R.string.ai_auto_group_original_groups, it.joinToString(", "))
+    }
     SelectionItemCard(
         title = book.name,
         subtitle = buildString {
             if (book.author.isNotBlank()) append(book.author)
-            if (book.currentGroupNames.isNotEmpty()) {
+            if (originalGroups != null) {
                 if (isNotBlank()) append(" · ")
-                append("原分组：")
-                append(book.currentGroupNames.joinToString("、"))
+                append(originalGroups)
             }
         }.ifBlank { null },
         supportingContent = {
@@ -444,13 +543,13 @@ private fun AutoGroupBookItem(
             SmallPlainButton(
                 onClick = { onIntent(AiAutoGroupIntent.IgnoreBook(book.bookUrl)) },
                 icon = Icons.Default.Close,
-                contentDescription = "不处理",
+                contentDescription = stringResource(R.string.ai_auto_group_ignore),
             )
         },
         dropdownContent = { onDismiss ->
             allGroups.filterNot { it.key == currentGroupKey }.forEach { target ->
                 RoundDropdownMenuItem(
-                    text = "移到 ${target.name}",
+                    text = stringResource(R.string.ai_auto_group_move_to, target.name),
                     onClick = {
                         onIntent(AiAutoGroupIntent.MoveBook(book.bookUrl, target.key))
                         onDismiss()
@@ -470,7 +569,7 @@ private fun IgnoredBooksCard(books: List<AiAutoGroupIgnoredBookUi>) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "不处理 ${books.size} 本",
+                text = stringResource(R.string.ai_auto_group_ignored_count, books.size),
                 style = LegadoTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -491,7 +590,7 @@ private fun IgnoredBooksCard(books: List<AiAutoGroupIgnoredBookUi>) {
             }
             if (books.size > 12) {
                 Text(
-                    text = "还有 ${books.size - 12} 本未显示",
+                    text = stringResource(R.string.ai_auto_group_more_hidden, books.size - 12),
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
@@ -502,10 +601,21 @@ private fun IgnoredBooksCard(books: List<AiAutoGroupIgnoredBookUi>) {
 
 @Composable
 private fun AutoGroupResultContent(
-    resultText: String,
+    result: AiAutoGroupApplyResultUi?,
     onDone: () -> Unit,
     onReset: () -> Unit,
 ) {
+    val resultText = if (result == null) {
+        ""
+    } else {
+        stringResource(
+            R.string.ai_auto_group_result,
+            result.createdGroupCount,
+            result.reusedGroupCount,
+            result.updatedBookCount,
+            result.ignoredBookCount,
+        )
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         GlassCard(containerColor = LegadoTheme.colorScheme.onSheetContent) {
             Row(
@@ -516,14 +626,17 @@ private fun AutoGroupResultContent(
             ) {
                 Icon(Icons.Default.Check, contentDescription = null)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(text = resultText, style = LegadoTheme.typography.bodyMedium)
+                Text(
+                    text = resultText,
+                    style = LegadoTheme.typography.bodyMedium,
+                )
             }
         }
         ConfirmDismissButtonsRow(
             onDismiss = onReset,
             onConfirm = onDone,
-            dismissText = "重新分析",
-            confirmText = "完成",
+            dismissText = stringResource(R.string.ai_auto_group_reanalyze),
+            confirmText = stringResource(R.string.complete),
         )
     }
 }
@@ -541,12 +654,12 @@ private fun AutoGroupErrorContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "自动分组失败",
+                    text = stringResource(R.string.ai_auto_group_failure),
                     style = LegadoTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = message.ifBlank { "未知错误" },
+                    text = message.ifBlank { stringResource(R.string.ai_auto_group_unknown_error) },
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
@@ -555,8 +668,31 @@ private fun AutoGroupErrorContent(
         ConfirmDismissButtonsRow(
             onDismiss = onDismiss,
             onConfirm = onRetry,
-            dismissText = "关闭",
-            confirmText = "返回",
+            dismissText = stringResource(R.string.close),
+            confirmText = stringResource(R.string.back),
         )
     }
+}
+
+private val AiAutoGroupMessage.stringRes: Int
+    get() = when (this) {
+        AiAutoGroupMessage.EnterRevisionInstruction -> R.string.ai_auto_group_message_enter_revision
+        AiAutoGroupMessage.NoApplicablePlan -> R.string.ai_auto_group_message_no_plan
+        AiAutoGroupMessage.Cancelled -> R.string.ai_auto_group_message_cancelled
+        AiAutoGroupMessage.GroupNameRequired -> R.string.ai_auto_group_message_group_name_required
+    }
+
+private fun AiAutoGroupErrorUi.localizedText(context: android.content.Context): String {
+    val stringRes = when (this) {
+        AiAutoGroupErrorUi.EmptyBookshelf -> R.string.ai_auto_group_error_empty_shelf
+        AiAutoGroupErrorUi.MissingModel -> R.string.ai_auto_group_error_missing_model
+        AiAutoGroupErrorUi.CapacityTooSmall -> R.string.ai_auto_group_error_capacity
+        AiAutoGroupErrorUi.GroupCapacityExceeded ->
+            R.string.ai_auto_group_error_group_capacity
+        AiAutoGroupErrorUi.InvalidResponse -> R.string.ai_auto_group_error_invalid_response
+        is AiAutoGroupErrorUi.Unexpected -> R.string.ai_auto_group_error_unexpected
+    }
+    val base = context.getString(stringRes)
+    val detail = (this as? AiAutoGroupErrorUi.Unexpected)?.detail?.takeIf(String::isNotBlank)
+    return if (detail == null || detail == base) base else "$base\n$detail"
 }

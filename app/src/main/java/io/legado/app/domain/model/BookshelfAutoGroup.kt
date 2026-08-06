@@ -17,6 +17,34 @@ data class BookshelfAutoGroupSource(
     val groupedBookCount: Int get() = books.count { it.currentGroupNames.isNotEmpty() }
 }
 
+data class BookshelfAutoGroupPreflight(
+    val effectiveInputCharLimit: Int,
+    val estimatedRequestCount: Int,
+)
+
+data class BookshelfAutoGroupOptions(
+    val includeBookIntro: Boolean = false,
+    val enableDeepThinking: Boolean = false,
+)
+
+data class BookshelfAutoGroupProgress(
+    val currentBatch: Int,
+    val totalBatches: Int,
+)
+
+enum class BookshelfAutoGroupErrorReason {
+    EmptyBookshelf,
+    MissingModel,
+    CapacityTooSmall,
+    GroupCapacityExceeded,
+    InvalidResponse,
+}
+
+class BookshelfAutoGroupException(
+    val reason: BookshelfAutoGroupErrorReason,
+    cause: Throwable? = null,
+) : IllegalStateException(cause?.message, cause)
+
 data class BookshelfAutoGroupPlan(
     val groups: List<BookshelfAutoGroupPlanGroup>,
     val ignoredBooks: List<BookshelfAutoGroupIgnoredBook> = emptyList(),

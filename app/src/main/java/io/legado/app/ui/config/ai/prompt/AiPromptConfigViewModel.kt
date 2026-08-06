@@ -75,6 +75,12 @@ class AiPromptConfigViewModel(
             nameResId = R.string.ai_prompt_task_identify_characters,
             descResId = R.string.ai_prompt_task_identify_characters_desc,
             defaultPromptResId = R.string.ai_prompt_default_identify_characters
+        ),
+        TaskPromptMeta(
+            taskType = AiTaskType.BOOKSHELF_AUTO_GROUP,
+            nameResId = R.string.ai_prompt_task_bookshelf_auto_group,
+            descResId = R.string.ai_prompt_task_bookshelf_auto_group_desc,
+            defaultPromptResId = R.string.ai_prompt_default_bookshelf_auto_group
         )
     )
 

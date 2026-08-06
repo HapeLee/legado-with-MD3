@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -140,7 +141,7 @@ fun GroupManageSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "AI自动分组",
+                            text = stringResource(R.string.ai_auto_group),
                             leadingIcon = { Icon(Icons.Default.AutoAwesome, null) },
                             onClick = {
                                 showMenu = false

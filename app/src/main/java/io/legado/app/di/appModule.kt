@@ -26,6 +26,8 @@ import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookExportSettingsRepository
 import io.legado.app.data.repository.BookGroupMutationRepository
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.data.repository.BookshelfAutoGroupRepository
+import io.legado.app.data.repository.BookshelfAutoGroupPromptRepository
 import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
 import io.legado.app.data.repository.BookRepository
@@ -112,6 +114,8 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
+import io.legado.app.domain.gateway.BookshelfAutoGroupPromptGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.BookSourceCheckGateway
@@ -323,6 +327,8 @@ val appModule = module {
     singleOf(::BookCacheManageRepository)
     singleOf(::TagGroupRuleApplier)
     single<BookGroupMutationGateway> { BookGroupMutationRepository(get(), get()) }
+    single<BookshelfAutoGroupGateway> { BookshelfAutoGroupRepository(get()) }
+    single<BookshelfAutoGroupPromptGateway> { BookshelfAutoGroupPromptRepository(get()) }
     singleOf(::BookSourceRepository)
     singleOf(::BookshelfRepository)
     singleOf(::DictRuleRepository)
