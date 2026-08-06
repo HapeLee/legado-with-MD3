@@ -1625,6 +1625,7 @@
     <string name="theme_config_add_nav_icon">Add %1$s icon</string>
     <string name="theme_config_nav_icon_unselected">Unselected</string>
     <string name="theme_config_nav_icon_selected">Selected</string>
+    <string name="theme_config_replace_nav_icon">Replace image</string>
     <string name="theme_config_no_font_files">No font files</string>
     <string name="input_value_range">Enter value (%1$d-%2$d)</string>
     <string name="change_icon_success">Icon Updated</string>

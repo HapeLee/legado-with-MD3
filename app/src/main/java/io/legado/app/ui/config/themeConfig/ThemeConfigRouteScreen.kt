@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.constant.EventBus
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -50,9 +51,20 @@ fun ThemeConfigRouteScreen(
         if (uri != null && destination != null) {
             runCatching {
                 val iconDir = File(context.filesDir, "nav_icons").apply { mkdirs() }
-                val destinationFile = File(iconDir, "${destination.replace(':', '-')}.png")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    destinationFile.outputStream().use(input::copyTo)
+                val input = context.contentResolver.openInputStream(uri)
+                val destinationFile = if (input != null) {
+                    // 以内容摘要命名：同一张图重复选择命中同一路径，不同图片路径不同，
+                    // 避免覆盖固定文件名导致 Coil 缓存到旧图、修改后无法即时生效。
+                    val digest = input.use(MD5Utils::md5Encode)
+                    val file = File(iconDir, "$digest.png")
+                    if (!file.exists()) {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            file.outputStream().use(stream::copyTo)
+                        }
+                    }
+                    file
+                } else {
+                    return@runCatching
                 }
                 viewModel.onIntent(
                     ThemeConfigIntent.SelectNavigationIcon(
