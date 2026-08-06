@@ -36,7 +36,7 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassSmallTopAppBar
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.openUrl
@@ -84,8 +84,10 @@ fun WebViewRouteScreen(
     }
 
     AppScaffold(
+        // WebView 内容不能作为 haze 模糊采样源，否则会被反复重采样导致闪烁（与 RSS 页一致）
+        disableHazeSource = true,
         topBar = {
-            GlassTopAppBar(
+            GlassSmallTopAppBar(
                 title = viewModel.sourceName.ifBlank {
                     intent.getStringExtra("title") ?: context.getString(R.string.loading)
                 },
@@ -118,6 +120,8 @@ fun WebViewRouteScreen(
                     modifier = Modifier.fillMaxSize(),
                     factory = { viewContext ->
                         WebView(viewContext).apply {
+                            // 透明背景，避免页面加载/跳转时白屏闪烁（与 RSS 的 VisibleWebView 一致）
+                            setBackgroundColor(0)
                             settings.apply {
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 domStorageEnabled = true

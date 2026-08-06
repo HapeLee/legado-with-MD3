@@ -82,6 +82,9 @@ object MainIntent {
         refetchAfterSuccess: Boolean = true,
         html: String? = null,
     ): Intent = createLauncherIntent(context).apply {
+        // NEW_TASK: 支持从 Application context（如 SourceVerificationHelp）启动；
+        // SINGLE_TOP: MainActivity 已在栈顶时复用现有实例走 onNewIntent，直接把路由压进 nav3 back stack。
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_WEB_VIEW)
         putExtra(EXTRA_WEB_VIEW_TITLE, title)
         putExtra(EXTRA_WEB_VIEW_URL, url)

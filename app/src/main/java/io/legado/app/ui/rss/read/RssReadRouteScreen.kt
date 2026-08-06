@@ -13,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,9 +53,6 @@ import io.legado.app.help.http.CookieManager
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LocalHazeState
-import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -67,8 +63,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBar
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.GlassSmallTopAppBar
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.NetworkUtils
@@ -81,7 +76,6 @@ import io.legado.app.utils.toggleSystemBar
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar as MiuixSmallTopAppBar
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,7 +204,7 @@ fun RssReadRouteScreen(
         AppScaffold(
             disableHazeSource = true,
             topBar = {
-                RssReadTopAppBar(
+                GlassSmallTopAppBar(
                     title = pageTitle.ifBlank { defaultTopBarTitle },
                     navigationIcon = {
                         TopBarNavigationButton(onClick = onBackClick)
@@ -423,41 +417,6 @@ fun RssReadRouteScreen(
             showFavoriteSheet = false
         }
     )
-}
-
-@Composable
-private fun RssReadTopAppBar(
-    title: String,
-    navigationIcon: @Composable () -> Unit,
-    actions: @Composable RowScope.() -> Unit,
-) {
-    if (!ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        GlassTopAppBar(
-            title = title,
-            navigationIcon = navigationIcon,
-            actions = actions
-        )
-        return
-    }
-
-    val hazeState = LocalHazeState.current
-    val containerColor = GlassTopAppBarDefaults.getMiuixAppBarColor()
-    val modifier = if (hazeState != null) {
-        Modifier
-            .background(containerColor)
-            .responsiveHazeEffect(hazeState)
-    } else {
-        Modifier.background(containerColor)
-    }
-
-    Column(modifier = modifier) {
-        MiuixSmallTopAppBar(
-            title = title,
-            navigationIcon = navigationIcon,
-            actions = actions,
-            color = Color.Transparent
-        )
-    }
 }
 
 @Composable
