@@ -520,7 +520,11 @@ onMounted(async () => {
       document.title = (name as string) + ' | ' + chapters[chapterIndex].title
     }),
   )
-  initXboxGamepad()
+  initXboxGamepad({
+    onToggleCatalog: () => {
+      popCataVisible.value = !popCataVisible.value
+    },
+  })
 })
 
 onUnmounted(() => {
