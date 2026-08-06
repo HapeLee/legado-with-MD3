@@ -185,6 +185,15 @@ class ReadBookViewModel(
         _uiState.update { it.copy(menuState = ReadBookMenuState()) }
     }
 
+    /**
+     * 直接打开书籍详情（跳过阅读信息 Sheet，长按标题胶囊时使用）。
+     */
+    private fun openBookInfoDirect() {
+        val book = ReadBook.book ?: return
+        closeReadMenu()
+        _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
+    }
+
     // --- 正文处理域 ---
 
     private val contentProcessDelegate = ReadContentProcessDelegate(
@@ -933,6 +942,7 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenBookInfo -> openBookNavigation(ReaderBookSheetTab.Information) {
                 ReadBookEffect.OpenBookInfo(it.name, it.author, it.bookUrl)
             }
+            is ReadBookIntent.OpenBookInfoDirect -> openBookInfoDirect()
 
             is ReadBookIntent.OpenChapterList -> openBookNavigation(ReaderBookSheetTab.Toc) {
                 ReadBookEffect.OpenChapterList(it.bookUrl)

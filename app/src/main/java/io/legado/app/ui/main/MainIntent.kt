@@ -65,6 +65,10 @@ object MainIntent {
         sourceKey: String? = null,
         bookUrl: String? = null,
     ): Intent = createLauncherIntent(context).apply {
+        // NEW_TASK: 支持从 Application context（如 RssJsExtensions）启动；
+        // SINGLE_TOP: MainActivity 已在栈顶时复用现有实例走 onNewIntent，直接把登录路由
+        // 压进 nav3 back stack，避免 standard launchMode 下新建 MainActivity 先回主页面。
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_SOURCE_LOGIN)
         putExtra(EXTRA_SOURCE_LOGIN_TYPE, type.name)
         putExtra(EXTRA_SOURCE_LOGIN_KEY, sourceKey)

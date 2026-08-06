@@ -59,6 +59,7 @@ import io.legado.app.ui.book.read.page.ReaderEventListener
 import io.legado.app.ui.book.read.page.ReaderPageSource
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
+import io.legado.app.ui.book.read.sheet.ReaderBookSourceActions
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.toc.TocActivityResult
@@ -626,6 +627,17 @@ fun ReadBookRouteScreen(
                         }
                     }
                 },
+                bookSource = state.bookSource,
+                onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },
+                onToggleReadUrlInBrowser = {
+                    viewModel.onIntent(ReadBookIntent.ToggleReadUrlInBrowser)
+                },
+                sourceActions = ReaderBookSourceActions(
+                    onLogin = { viewModel.onIntent(ReadBookIntent.ShowLogin) },
+                    onPay = { viewModel.onIntent(ReadBookIntent.PayAction) },
+                    onEdit = { viewModel.onIntent(ReadBookIntent.OpenSourceEdit) },
+                    onDisable = { viewModel.onIntent(ReadBookIntent.DisableSource) },
+                ),
             )
             TextActionSelectionMenu(
                 menuState = textMenuState,

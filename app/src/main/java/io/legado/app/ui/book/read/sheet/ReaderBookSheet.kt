@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,16 +33,20 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
@@ -74,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalTxt
@@ -94,6 +100,7 @@ import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -121,6 +128,10 @@ fun ReaderBookSheetRoute(
     onDismissRequest: () -> Unit,
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     onOpenFullBookInfo: () -> Unit,
+    bookSource: BookSource? = null,
+    onOpenChapterUrl: () -> Unit = {},
+    onToggleReadUrlInBrowser: () -> Unit = {},
+    sourceActions: ReaderBookSourceActions? = null,
     viewModel: TocViewModel = koinViewModel(key = "reader-book-sheet-$bookUrl"),
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
@@ -203,6 +214,11 @@ fun ReaderBookSheetRoute(
             pendingExportMarkdown = isMarkdown
             exportLauncher.launch(fileName)
         },
+        bookSource = bookSource,
+        onOpenFullBookInfo = onOpenFullBookInfo,
+        onOpenChapterUrl = onOpenChapterUrl,
+        onToggleReadUrlInBrowser = onToggleReadUrlInBrowser,
+        sourceActions = sourceActions,
     )
 }
 
@@ -218,6 +234,11 @@ private fun ReaderBookSheet(
     onOpenFullScreen: (ReaderBookSheetTab) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
     onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
+    bookSource: BookSource? = null,
+    onOpenFullBookInfo: () -> Unit = {},
+    onOpenChapterUrl: () -> Unit = {},
+    onToggleReadUrlInBrowser: () -> Unit = {},
+    sourceActions: ReaderBookSourceActions? = null,
 ) {
     val initialPage = initialTab.ordinal
     val pagerState = rememberPagerState(initialPage = initialPage) { ReaderBookSheetTab.entries.size }
@@ -245,7 +266,14 @@ private fun ReaderBookSheet(
             .heightIn(max = maxHeight),
     ) {
         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            ReaderBookHeader(book = state.book)
+            ReaderBookHeader(
+                book = state.book,
+                bookSource = bookSource,
+                onOpenBookInfo = onOpenFullBookInfo,
+                onOpenChapterUrl = onOpenChapterUrl,
+                onToggleReadUrlInBrowser = onToggleReadUrlInBrowser,
+                sourceActions = sourceActions,
+            )
         }
         CardTabRow(
             tabTitles = listOf(
@@ -333,10 +361,27 @@ private fun ReaderBookSheet(
     )
 }
 
+data class ReaderBookSourceActions(
+    val onLogin: () -> Unit = {},
+    val onPay: () -> Unit = {},
+    val onEdit: () -> Unit = {},
+    val onDisable: () -> Unit = {},
+)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun ReaderBookHeader(book: Book?) {
+internal fun ReaderBookHeader(
+    book: Book?,
+    bookSource: BookSource? = null,
+    onOpenBookInfo: (() -> Unit)? = null,
+    onOpenChapterUrl: (() -> Unit)? = null,
+    onToggleReadUrlInBrowser: (() -> Unit)? = null,
+    sourceActions: ReaderBookSourceActions? = null,
+) {
     val current = ((book?.durChapterIndex ?: -1) + 1).coerceAtLeast(0)
     val total = book?.totalChapterNum?.coerceAtLeast(0) ?: 0
+    val isLocal = book?.isLocal == true
+    var sourceMenuExpanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -356,6 +401,11 @@ internal fun ReaderBookHeader(book: Book?) {
         ) {
             AppText(
                 text = book?.name.orEmpty(),
+                modifier = if (onOpenBookInfo != null) {
+                    Modifier.clickable { onOpenBookInfo() }
+                } else {
+                    Modifier
+                },
                 style = LegadoTheme.typography.labelLargeEmphasized,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -367,7 +417,17 @@ internal fun ReaderBookHeader(book: Book?) {
                     modifier = Modifier
                         .padding(end = 16.dp)
                         .basicMarquee()
-                        .weight(1f),
+                        .weight(1f)
+                        .then(
+                            if (!isLocal && onOpenChapterUrl != null) {
+                                Modifier.combinedClickable(
+                                    onClick = { onOpenChapterUrl() },
+                                    onLongClick = onToggleReadUrlInBrowser,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
                     text = book?.durChapterTitle.orEmpty(),
                     style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -379,8 +439,77 @@ internal fun ReaderBookHeader(book: Book?) {
                     text = if (total > 0) "$current / $total" else "--",
                 )
             }
-
+            if (!isLocal && sourceActions != null && !book?.originName.isNullOrBlank()) {
+                Box {
+                    AppText(
+                        text = book.originName,
+                        modifier = Modifier
+                            .clickable { sourceMenuExpanded = true }
+                            .padding(top = 4.dp),
+                        style = LegadoTheme.typography.labelSmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    ReaderBookSourceDropdown(
+                        expanded = sourceMenuExpanded,
+                        onDismiss = { sourceMenuExpanded = false },
+                        bookSource = bookSource,
+                        sourceActions = sourceActions,
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun ReaderBookSourceDropdown(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    bookSource: BookSource?,
+    sourceActions: ReaderBookSourceActions,
+) {
+    RoundDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+    ) {
+        if (!bookSource?.loginUrl.isNullOrBlank()) {
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                text = stringResource(R.string.login),
+                onClick = {
+                    onDismiss()
+                    sourceActions.onLogin()
+                },
+            )
+        }
+        if (!bookSource?.getContentRule()?.payAction.isNullOrBlank()) {
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
+                text = stringResource(R.string.chapter_pay),
+                onClick = {
+                    onDismiss()
+                    sourceActions.onPay()
+                },
+            )
+        }
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+            text = stringResource(R.string.edit_source),
+            onClick = {
+                onDismiss()
+                sourceActions.onEdit()
+            },
+        )
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Block) },
+            text = stringResource(R.string.disable_source),
+            onClick = {
+                onDismiss()
+                sourceActions.onDisable()
+            },
+        )
     }
 }
 

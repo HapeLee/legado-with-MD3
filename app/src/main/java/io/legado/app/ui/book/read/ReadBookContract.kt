@@ -533,6 +533,7 @@ sealed interface ReadBookIntent {
     data object OpenSourceEdit : ReadBookIntent
     data class OpenSourceEditByUrl(val sourceUrl: String) : ReadBookIntent
     data object OpenBookInfo : ReadBookIntent
+    data object OpenBookInfoDirect : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
     data object OpenChapterUrl : ReadBookIntent
     data class SourceCustomButton(val longClick: Boolean) : ReadBookIntent
