@@ -27,18 +27,18 @@ class ThemeSettingsMappingTest {
     }
 
     @Test
-    fun `Theme gateway 持久化边界固定为 67 键`() {
+    fun `Theme gateway 持久化边界固定为 69 键`() {
         val actualKeys = ThemeSettings().toGatewayPrefMap().keys
         val expectedKeys = ThemeSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(67, actualKeys.size)
+        assertEquals(69, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
         assertFalse(PreferKey.customMode in actualKeys)
         assertFalse(PreferKey.bookInfoInputColor in actualKeys)
     }
 
     @Test
-    fun `Theme gateway 67 键写读映射逐字段对应`() {
+    fun `Theme gateway 69 键写读映射逐字段对应`() {
         themeMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
@@ -186,6 +186,8 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         bottomBarBlurAlpha = 123,
         bottomBarLensRadius = 3.75f,
         useFlexibleTopAppBar = false,
+        topBarButtonStyle = "glass",
+        mergeTopBarActions = true,
         bookInfoFollowCoverColor = false,
         bookInfoNetworkCoverBackground = "network-background",
         bookInfoDefaultCoverBackground = "default-background",
@@ -277,6 +279,8 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bottomBarBlurAlpha to bottomBarBlurAlpha,
     PreferKey.bottomBarLensRadius to bottomBarLensRadius,
     PreferKey.useFlexibleTopAppBar to useFlexibleTopAppBar,
+    PreferKey.topBarButtonStyle to topBarButtonStyle,
+    PreferKey.mergeTopBarActions to mergeTopBarActions,
     PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
     PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
     PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,

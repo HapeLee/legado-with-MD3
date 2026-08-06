@@ -72,7 +72,7 @@ fun GlassTopAppBar(
                     )
                 },
                 navigationIcon = navigationIcon,
-                actions = actions,
+                actions = { TopBarActionsRow { actions() } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent

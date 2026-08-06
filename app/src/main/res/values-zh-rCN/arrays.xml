@@ -223,6 +223,20 @@
         <item>双击</item>
     </string-array>
 
+    <string-array name="top_bar_button_style">
+        <item>普通</item>
+        <item>填充</item>
+        <item>描边</item>
+        <item>玻璃</item>
+    </string-array>
+
+    <string-array name="top_bar_button_style_value">
+        <item>plain</item>
+        <item>tonal</item>
+        <item>outlined</item>
+        <item>glass</item>
+    </string-array>
+
     <string-array name="title_bar_mode">
         <item>在应用栏上显示</item>
         <item>在独立行上显示</item>

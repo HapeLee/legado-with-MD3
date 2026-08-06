@@ -42,6 +42,8 @@ data class ThemeSettings(
     val bottomBarBlurAlpha: Int = 40,
     val bottomBarLensRadius: Float = 24f,
     val useFlexibleTopAppBar: Boolean = true,
+    val topBarButtonStyle: String = "tonal",
+    val mergeTopBarActions: Boolean = false,
     val bookInfoFollowCoverColor: Boolean = true,
     val bookInfoNetworkCoverBackground: String = "on",
     val bookInfoDefaultCoverBackground: String = "on",

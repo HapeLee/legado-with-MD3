@@ -385,6 +385,8 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     bottomBarBlurAlpha = compatDsInt(PreferKey.bottomBarBlurAlpha) ?: 40,
     bottomBarLensRadius = compatDsFloat(PreferKey.bottomBarLensRadius) ?: 24f,
     useFlexibleTopAppBar = compatDsBoolean(PreferKey.useFlexibleTopAppBar) ?: true,
+    topBarButtonStyle = compatDsString(PreferKey.topBarButtonStyle) ?: "tonal",
+    mergeTopBarActions = compatDsBoolean(PreferKey.mergeTopBarActions) ?: false,
     bookInfoFollowCoverColor = compatDsBoolean(PreferKey.bookInfoFollowCoverColor) ?: true,
     bookInfoNetworkCoverBackground =
         compatDsString(PreferKey.bookInfoNetworkCoverBackground) ?: "on",
@@ -464,6 +466,8 @@ internal fun ThemeSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bottomBarBlurAlpha to bottomBarBlurAlpha,
     PreferKey.bottomBarLensRadius to bottomBarLensRadius,
     PreferKey.useFlexibleTopAppBar to useFlexibleTopAppBar,
+    PreferKey.topBarButtonStyle to topBarButtonStyle,
+    PreferKey.mergeTopBarActions to mergeTopBarActions,
     PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
     PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
     PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,

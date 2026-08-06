@@ -49,6 +49,8 @@ internal val SeriesIconSize: Dp
     get() = IconButtonDefaults.mediumIconSize
 internal val MediumSeriesIconButtonSize = DpSize(40.dp, 40.dp)
 internal val MediumSeriesIconSize = SeriesIconSize
+internal val TopBarSeriesIconButtonSize = DpSize(36.dp, 36.dp)
+internal val TopBarSeriesIconSize = 20.dp
 internal val SmallButtonShape = RoundedCornerShape(50)
 
 internal enum class SeriesIconButtonStyle {

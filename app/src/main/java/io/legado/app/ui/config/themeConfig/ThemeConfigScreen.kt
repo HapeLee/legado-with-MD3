@@ -532,6 +532,24 @@ fun ThemeConfigScreen(
                                 updateTheme { it.copy(useFlexibleTopAppBar = value) }
                             }
                         )
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.top_bar_button_style),
+                            selectedValue = theme.topBarButtonStyle,
+                            displayEntries = stringArrayResource(R.array.top_bar_button_style),
+                            entryValues = stringArrayResource(R.array.top_bar_button_style_value),
+                            onValueChange = { value ->
+                                updateTheme { it.copy(topBarButtonStyle = value) }
+                            }
+                        )
+                        AnimatedVisibility(visible = theme.topBarButtonStyle != "plain") {
+                            SwitchSettingItem(
+                                title = stringResource(R.string.merge_top_bar_actions),
+                                checked = theme.mergeTopBarActions,
+                                onCheckedChange = { value ->
+                                    updateTheme { it.copy(mergeTopBarActions = value) }
+                                }
+                            )
+                        }
                     }
                     SwitchSettingItem(
                         title = stringResource(R.string.is_blur_enable),

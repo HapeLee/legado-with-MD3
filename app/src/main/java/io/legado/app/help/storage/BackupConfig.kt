@@ -276,6 +276,8 @@ object BackupConfig {
         PreferKey.bottomBarBlurAlpha,
         PreferKey.bottomBarLensRadius,
         PreferKey.useFlexibleTopAppBar,
+        PreferKey.topBarButtonStyle,
+        PreferKey.mergeTopBarActions,
         PreferKey.bookInfoFollowCoverColor,
         PreferKey.bookInfoBackgroundBlur,
         PreferKey.bookInfoNetworkCoverBackground,

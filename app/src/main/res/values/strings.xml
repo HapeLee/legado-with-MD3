@@ -1864,6 +1864,8 @@
     <string name="click_image_way">Image Tap Action</string>
     <string name="show_web_log">Output Logs</string>
     <string name="is_blur_progressive_enable">Enable Progressive Blur</string>
+    <string name="top_bar_button_style">Top Bar Button Style</string>
+    <string name="merge_top_bar_actions">Merge Top Bar Buttons</string>
     <string name="enable_select_vibrator">Vibrate When Selecting Text</string>
     <string name="re_sync_webdav">Resync Remote Books</string>
     <string name="underline_padding">Underline Gap</string>

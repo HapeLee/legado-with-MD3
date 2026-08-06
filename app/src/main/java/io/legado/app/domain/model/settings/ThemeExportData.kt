@@ -79,6 +79,8 @@ data class ThemeExportData(
     val navIconMy: String = "",
     val useMiuixMonet: Boolean = false,
     val useFlexibleTopAppBar: Boolean = true,
+    val topBarButtonStyle: String = "tonal",
+    val mergeTopBarActions: Boolean = false,
     val bgImageLight: String? = null,
     val bgImageDark: String? = null,
     val bgImageBlurring: Int = 0,
