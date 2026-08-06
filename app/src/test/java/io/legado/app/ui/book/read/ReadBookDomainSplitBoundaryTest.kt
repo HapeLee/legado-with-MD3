@@ -78,16 +78,27 @@ class ReadBookDomainSplitBoundaryTest {
      * 再加两个对齐项，一个字段就是一行，纯派生、没有逻辑可摘。上游同批带来的
      * `useNewTocSheet` 分支（书籍信息/目录改开 Sheet）本来是两处复制粘贴，
      * 已合并成 `openBookNavigation()`，那部分没占额度。
+     *
+     * 2520 → 2523：下滑手势切换书签。新增的不是域，书签域早已是
+     * `ReadBookmarkDelegate`——切换判定、页范围计算、`ReaderBookmarkState` 快照的
+     * 订阅与清理全在该 delegate 里。留在 VM 的是 8 行纯接线，逐行都摘不掉：
+     * `bookKey` 的投影（`bookmarks` 表以书名+作者为关联键，只有 VM 持有 `_uiState`）、
+     * `Host.emitEffect` 的实现（`_effects` 只有 VM 能碰）、`start()` 与
+     * `ToggleBookmark` 的转发各一行，以及一个 `map` import。
+     *
+     * 2523 → 2533：分支基准移动了 10 行。2523 是 PR 基于更早的 main（VM 2515 行）定
+     * 的线；合入当前 main 后 VM 已 2525 行（上游页眉页脚对齐、书籍信息/目录改 Sheet
+     * 等），本 PR 的 8 行接线叠加为 2533。溢出全部来自上游合并，不是新长出来的域。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2520 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2533 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2520。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2533。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2520,
+            lineCount <= 2533,
         )
     }
 
@@ -208,7 +219,14 @@ class ReadBookDomainSplitBoundaryTest {
                 name = "书签",
                 delegateFile = "io/legado/app/ui/book/read/ReadBookmarkDelegate.kt",
                 stateFields = emptySet(),
-                stateTypes = listOf("bookmarkRepository.save", "bookmarkRepository.delete"),
+                // ReaderBookmarkState 是渲染层同步查角标用的快照：订阅 flowByBook 与
+                // 退出时清理都归本域，VM 只投影 bookKey。
+                stateTypes = listOf(
+                    "bookmarkRepository.save",
+                    "bookmarkRepository.delete",
+                    "bookmarkRepository.flowByBook",
+                    "ReaderBookmarkState",
+                ),
             ),
             // 样式域无自持状态：styleConfig 的重建由 VM 的 collectReadStyle() 统一驱动，
             // activeReminder / eyeProtection 被菜单栏直读；靠 stateTypes 守

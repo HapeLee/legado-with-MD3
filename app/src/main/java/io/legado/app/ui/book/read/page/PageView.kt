@@ -24,6 +24,7 @@ import io.legado.app.databinding.ViewBookPageBinding
 import io.legado.app.help.config.CustomTipPlaceholder
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
+import io.legado.app.model.ReaderBookmarkState
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -77,6 +78,27 @@ class PageView(
     var isScroll = false
 
     private var currentTextPage: TextPage? = null
+
+    /**
+     * 右上角书签角标：本页范围内落有书签时显示。
+     *
+     * 滚动模式一屏可见多页，`currentTextPage` 不再唯一对应可见内容，故该模式下不显示——
+     * 与下滑手势在滚动模式下同样不启用保持一致。
+     */
+    fun upBookmarkBadge() {
+        val page = currentTextPage
+        val book = ReadBook.book
+        val visible = book != null && page != null && !isScroll && !page.isMsgPage && page.lineSize > 0 &&
+                ReaderBookmarkState.hasBookmarkInRange(
+                    bookName = book.name,
+                    bookAuthor = book.author,
+                    chapterIndex = page.chapterIndex,
+                    startPos = page.chapterPosition,
+                    endPos = page.chapterPosition + page.charSize,
+                )
+        // 角标是固定的黄色书签丝带（见 ic_bookmark_badge），不随主题变色。
+        binding.ivBookmarkBadge.isGone = !visible
+    }
 
     val headerHeight: Int
         get() {
@@ -174,6 +196,7 @@ class PageView(
     /** 仅更新日夜模式相关颜色，避免主题切换时重新加载字体和重排正文。 */
     fun upThemeColors() = binding.run {
         applyTipColors(TipStyleProvider.style)
+        upBookmarkBadge()
         contentTextView.invalidate()
     }
 
@@ -644,6 +667,7 @@ class PageView(
             "$wholeBookPageDisplay  $readProgress"
         )
         upCustomTip(textPage)
+        upBookmarkBadge()
         this@PageView.layoutSync()
     }
 
@@ -682,6 +706,7 @@ class PageView(
     fun setIsScroll(value: Boolean) {
         isScroll = value
         binding.contentTextView.setIsScroll(value)
+        upBookmarkBadge()
     }
 
     /**

@@ -501,6 +501,9 @@ sealed interface ReadBookIntent {
 
     // Bookmark
     data object AddBookmark : ReadBookIntent
+
+    /** 下滑手势：本页无书签则直接存，有则取消。 */
+    data object ToggleBookmark : ReadBookIntent
     data class SaveBookmark(val bookmark: io.legado.app.data.entities.Bookmark) : ReadBookIntent
     data class DeleteBookmark(val bookmark: io.legado.app.data.entities.Bookmark) : ReadBookIntent
 
@@ -804,6 +807,9 @@ sealed interface ReadBookEffect {
 
     // Menu / UI actions
     data object AddBookmark : ReadBookEffect
+
+    /** 书签集合变化后刷新三页的右上角书签角标。 */
+    data object UpBookmarkBadge : ReadBookEffect
     data object CancelSelect : ReadBookEffect
     data object UpSystemUiVisibility : ReadBookEffect
     data class SetBrightness(val value: Int) : ReadBookEffect
@@ -1513,6 +1519,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class KeyPageOnLongPress(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class SwipeToAddBookmark(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {

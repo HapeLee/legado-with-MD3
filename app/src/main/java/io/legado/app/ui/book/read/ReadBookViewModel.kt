@@ -95,6 +95,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -340,8 +341,13 @@ class ReadBookViewModel(
             override fun setActiveSheet(sheet: ReadBookSheet?) {
                 _uiState.update { it.copy(menuState = ReadBookMenuState(), activeSheet = sheet) }
             }
+
+            override fun emitEffect(effect: ReadBookEffect) {
+                _effects.tryEmit(effect)
+            }
         },
         bookmarkRepository = bookmarkRepository,
+        bookKey = _uiState.map { it.book?.let { book -> book.name to book.author } },
     )
 
     // --- 开书 / 目录 / 换源 / 进度同步域（无自持状态，isInitFinish 仍在 UiState）---
@@ -565,6 +571,7 @@ class ReadBookViewModel(
         collectEventBus()
         collectReaderSession()
         collectReadStyle()
+        bookmarkDelegate.start()
         replaceRuleDelegate.start()
         execute { readAloudDelegate.syncConfiguredTtsVoices() }
     }
@@ -861,6 +868,7 @@ class ReadBookViewModel(
             is ReadBookIntent.SureNewProgress -> ReadBook.setProgress(intent.progress)
             is ReadBookIntent.SureSyncProgress -> ReadBook.setProgress(intent.progress)
             is ReadBookIntent.AddBookmark -> bookmarkDelegate.addForCurrentPage()
+            is ReadBookIntent.ToggleBookmark -> bookmarkDelegate.toggleForCurrentPage()
             is ReadBookIntent.SaveBookmark -> bookmarkDelegate.save(intent.bookmark)
             is ReadBookIntent.DeleteBookmark -> bookmarkDelegate.delete(intent.bookmark)
             is ReadBookIntent.CancelSelect -> _effects.tryEmit(ReadBookEffect.CancelSelect)

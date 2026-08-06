@@ -127,6 +127,7 @@ class ConfigUpdateActionsInvariantTest {
             "VolumeKeyPage",
             "VolumeKeyPageOnPlay",
             "KeyPageOnLongPress",
+            "SwipeToAddBookmark",
             "SliderVibrator",
             "SelectVibrator",
             "ClickImgWay",

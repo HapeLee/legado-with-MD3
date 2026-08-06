@@ -623,6 +623,11 @@ class ReadConfigUpdateDelegate(
                     readSettingsRepository.setKeyPageOnLongPress(update.value)
                 }
             }
+            is ConfigUpdate.SwipeToAddBookmark -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(swipeToAddBookmark = update.value) }
+                }
+            }
             is ConfigUpdate.SliderVibrator -> {
                 scope.launch {
                     readSettingsRepository.setSliderVibrator(update.value)

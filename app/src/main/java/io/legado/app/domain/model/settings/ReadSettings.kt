@@ -29,6 +29,7 @@ data class ReadSettings(
     val volumeKeyPage: Boolean = true,
     val volumeKeyPageOnPlay: Boolean = true,
     val keyPageOnLongPress: Boolean = false,
+    val swipeToAddBookmark: Boolean = false,
     val pageTouchSlop: Int = 0,
     val sliderVibrator: Boolean = false,
     val useNewTocSheet: Boolean = true,

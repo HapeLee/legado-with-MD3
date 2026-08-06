@@ -73,6 +73,18 @@
         app:layout_constraintBottom_toTopOf="@id/vw_bottom_divider"
         app:layout_constraintTop_toBottomOf="@id/vw_top_divider" />
 
+    <ImageView
+        android:id="@+id/iv_bookmark_badge"
+        android:layout_width="10dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="6dp"
+        android:contentDescription="@string/a11y_page_bookmarked"
+        android:src="@drawable/ic_bookmark_badge"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/content_text_view"
+        app:layout_constraintTop_toTopOf="@id/content_text_view" />
+
     <View
         android:id="@+id/vw_bottom_divider"
         android:layout_width="match_parent"

@@ -59,6 +59,21 @@ interface BookmarkDao {
     """)
     fun flowSearchAll(query: String): Flow<List<Bookmark>>
 
+    /** 落在某章某段位置区间内的书签，供「本页是否已有书签」判定使用。 */
+    @Query(
+        """select * from bookmarks
+        where bookName = :bookName and bookAuthor = :bookAuthor
+        and chapterIndex = :chapterIndex
+        and chapterPos >= :startPos and chapterPos < :endPos"""
+    )
+    fun getByChapterRange(
+        bookName: String,
+        bookAuthor: String,
+        chapterIndex: Int,
+        startPos: Int,
+        endPos: Int,
+    ): List<Bookmark>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg bookmark: Bookmark)
 

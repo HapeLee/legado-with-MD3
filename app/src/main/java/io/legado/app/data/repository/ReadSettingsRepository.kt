@@ -359,6 +359,7 @@ class ReadSettingsRepository(
             volumeKeyPage = compatDsValue(Keys.VolumeKeyPage, true),
             volumeKeyPageOnPlay = compatDsValue(Keys.VolumeKeyPageOnPlay, true),
             keyPageOnLongPress = compatDsValue(Keys.KeyPageOnLongPress, false),
+            swipeToAddBookmark = compatDsValue(Keys.SwipeToAddBookmark, false),
             pageTouchSlop = compatDsValue(Keys.PageTouchSlop, 0),
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
@@ -473,6 +474,7 @@ class ReadSettingsRepository(
         val VolumeKeyPage = booleanPreferencesKey(PreferKey.volumeKeyPage)
         val VolumeKeyPageOnPlay = booleanPreferencesKey(PreferKey.volumeKeyPageOnPlay)
         val KeyPageOnLongPress = booleanPreferencesKey(PreferKey.keyPageOnLongPress)
+        val SwipeToAddBookmark = booleanPreferencesKey(PreferKey.swipeToAddBookmark)
         val PageTouchSlop = intPreferencesKey(PreferKey.pageTouchSlop)
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val UseNewTocSheet = booleanPreferencesKey(PreferKey.useNewTocSheet)
@@ -596,6 +598,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.volumeKeyPage to volumeKeyPage,
     PreferKey.volumeKeyPageOnPlay to volumeKeyPageOnPlay,
     PreferKey.keyPageOnLongPress to keyPageOnLongPress,
+    PreferKey.swipeToAddBookmark to swipeToAddBookmark,
     PreferKey.pageTouchSlop to pageTouchSlop,
     PreferKey.sliderVibrator to sliderVibrator,
     PreferKey.useNewTocSheet to useNewTocSheet,

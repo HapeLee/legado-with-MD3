@@ -280,6 +280,11 @@
     <string name="group_yf">養肥區</string>
     <string name="bookmark">書籤</string>
     <string name="bookmark_add">新增書籤</string>
+    <string name="bookmark_added">已新增書籤</string>
+    <string name="bookmark_removed">已取消書籤</string>
+    <string name="swipe_to_add_bookmark">下滑新增書籤</string>
+    <string name="bookmark_swipe_release_to_add">鬆手新增書籤</string>
+    <string name="a11y_page_bookmarked">本頁已新增書籤</string>
     <string name="action_del">刪除</string>
     <string name="load_over_time">載入超時</string>
     <string name="join_group">關注：%s</string>

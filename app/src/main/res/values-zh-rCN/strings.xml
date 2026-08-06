@@ -332,6 +332,11 @@
     <string name="group_yf">养肥区</string>
     <string name="bookmark">书签</string>
     <string name="bookmark_add">添加书签</string>
+    <string name="bookmark_added">已添加书签</string>
+    <string name="bookmark_removed">已取消书签</string>
+    <string name="swipe_to_add_bookmark">下滑添加书签</string>
+    <string name="bookmark_swipe_release_to_add">松手添加书签</string>
+    <string name="a11y_page_bookmarked">本页已添加书签</string>
     <string name="action_del">删除</string>
     <string name="load_over_time">加载超时</string>
     <string name="join_group">关注：%s</string>

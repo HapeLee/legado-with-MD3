@@ -75,6 +75,7 @@ object ReadConfig {
     val volumeKeyPage get() = read.volumeKeyPage
     val volumeKeyPageOnPlay get() = read.volumeKeyPageOnPlay
     val keyPageOnLongPress get() = read.keyPageOnLongPress
+    val swipeToAddBookmark get() = read.swipeToAddBookmark
     val sliderVibrator get() = read.sliderVibrator
     val useNewTocSheet get() = read.useNewTocSheet
     val selectVibrator get() = read.selectVibrator
