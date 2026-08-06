@@ -26,7 +26,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -57,8 +57,8 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
-import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -390,8 +390,7 @@ private fun IgnoreItemsSheet(
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    var configExpanded by remember { mutableStateOf(true) }
-    var dbExpanded by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     AppModalBottomSheet(
         show = show,
@@ -409,44 +408,37 @@ private fun IgnoreItemsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            SettingItem(
-                title = stringResource(R.string.config_ignore),
-                description = stringResource(R.string.restore_ignore_summary),
-                expanded = configExpanded,
-                onExpandChange = { configExpanded = it },
-                expandContent = {
+            CardTabRow(
+                tabTitles = listOf(
+                    stringResource(R.string.config_ignore),
+                    stringResource(R.string.database_ignore),
+                ),
+                selectedTabIndex = selectedTab,
+                onTabSelected = { selectedTab = it },
+            )
+            when (selectedTab) {
+                0 -> {
                     ignoreItems.forEach { item: BackupIgnoreItem ->
                         CheckboxItem(
                             title = item.title,
                             checked = item.checked,
                             onCheckedChange = { onToggleIgnoreItem(item.key, it) },
                         )
-                        Spacer(
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
                     }
-                },
-            )
-            SettingItem(
-                title = stringResource(R.string.database_ignore),
-                description = stringResource(R.string.database_ignore_summary),
-                expanded = dbExpanded,
-                onExpandChange = { dbExpanded = it },
-                expandContent = {
+                }
+
+                1 -> {
                     dbIgnoreItems.forEach { item: BackupIgnoreItem ->
                         CheckboxItem(
                             title = item.title,
                             checked = item.checked,
                             onCheckedChange = { onToggleDbIgnoreItem(item.key, it) },
                         )
-                        Spacer(
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
                     }
-                },
-            )
+                }
+            }
         }
     }
 }
