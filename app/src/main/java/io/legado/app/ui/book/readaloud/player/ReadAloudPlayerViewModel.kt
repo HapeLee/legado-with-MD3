@@ -64,7 +64,7 @@ class ReadAloudPlayerViewModel(
             ReadAloudBgMode.Solid -> ReadAloudBgMode.Blur
             ReadAloudBgMode.Blur -> ReadAloudBgMode.FlowingLight
             ReadAloudBgMode.FlowingLight -> ReadAloudBgMode.Transparent
-            else -> ReadAloudBgMode.Blur
+            else -> ReadAloudBgMode.Solid
         }
         AppConfigStore.putInt(PreferKey.readAloudPlayerBgMode, next)
     }

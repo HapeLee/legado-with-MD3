@@ -333,6 +333,15 @@ fun ReadAloudPlayerScreenContent(
                         SmallPlainButton(
                             onClick = {
                                 coroutineScope.launch {
+                                    if (horizontalPagerState.currentPage != 0) {
+                                        horizontalPagerState.animateScrollToPage(
+                                            page = 0,
+                                            animationSpec = tween(
+                                                durationMillis = 520,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                        )
+                                    }
                                     verticalPagerState.animateScrollToPage(
                                         page = if (verticalPagerState.currentPage == 0) 1 else 0,
                                         animationSpec = tween(
