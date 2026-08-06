@@ -107,12 +107,20 @@ class ReadView(
     private val initialTextPos = TextPos(0, 0, 0)
 
     /**
-     * 本次手势已被判定为「下滑切换书签」。
+     * 本次手势**仍可能**是「下滑切换书签」。
      *
-     * 归属在 [isMove] 刚成立那一帧就定下来（此时首次拿到方向），之后的 MOVE 一律不再喂给
-     * [pageDelegate]，否则横向委托会同时启动翻页动画。
+     * 只是候选而非认领：每帧 MOVE 都按当前位移重新判定，因此中途转为横向占优的斜划会
+     * 交还 [pageDelegate] 正常翻页，不会被吞掉。候选期间不喂 [pageDelegate]，
+     * 否则横向委托会同时启动翻页动画。
      */
     private var isBookmarkSwipe = false
+
+    /**
+     * 手势已交还 [pageDelegate]，本次触摸不再收回。
+     *
+     * 交还那一刻委托就可能起了翻页动画，中途再抢回来会留下一个停在半路的动画。
+     */
+    private var bookmarkSwipeReleased = false
     private val bookmarkSwipeMinDistance by lazy { BOOKMARK_SWIPE_MIN_DISTANCE_DP.dpToPx() }
 
     private val slopSquare by lazy { ViewConfiguration.get(context).scaledTouchSlop }
@@ -243,7 +251,7 @@ class ReadView(
                 postDelayed(longPressRunnable, longPressTimeout)
                 pressDown = true
                 isMove = false
-                isBookmarkSwipe = false
+                resetBookmarkSwipe()
                 pageDelegate?.onTouch(event)
                 pageDelegate?.onDown()
                 setStartPoint(event.x, event.y, false)
@@ -255,15 +263,15 @@ class ReadView(
                 val absY = abs(startY - event.y)
                 if (!isMove) {
                     isMove = absX > slopSquare || absY > slopSquare
-                    if (isMove) {
-                        // 手势归属只在这一帧判定：竖直向下且竖直位移占主导 → 归书签手势。
-                        isBookmarkSwipe = !isScroll && !isTextSelected &&
-                                event.y - startY > 0 && absY > absX * VERTICAL_DOMINANCE_RATIO
-                    }
                 }
                 if (isMove) {
                     longPressed = false
                     removeCallbacks(longPressRunnable)
+                    // 每帧按当前累计位移重新判定，方向翻转时才能交还 pageDelegate。
+                    if (!bookmarkSwipeReleased) {
+                        isBookmarkSwipe = isBookmarkSwipeCandidate(event.y - startY, absX, absY)
+                        if (!isBookmarkSwipe) bookmarkSwipeReleased = true
+                    }
                     if (isTextSelected) {
                         selectText(event.x, event.y)
                     } else if (!isBookmarkSwipe) {
@@ -288,10 +296,14 @@ class ReadView(
                     }
                 }
                 if (isBookmarkSwipe) {
-                    if (event.y - startY >= bookmarkSwipeMinDistance) {
+                    // 以抬手时的最终位移复核：MOVE 之后手指还可能拐弯或回抽。
+                    val dy = event.y - startY
+                    if (dy >= bookmarkSwipeMinDistance &&
+                        isBookmarkSwipeCandidate(dy, abs(startX - event.x), abs(dy))
+                    ) {
                         eventListener.onEvent(ReaderEvent.ToggleBookmark)
                     }
-                    isBookmarkSwipe = false
+                    resetBookmarkSwipe()
                 } else if (isTextSelected) {
                     callBack.showTextActionMenu()
                 } else if (pageDelegate!!.isMoved) {
@@ -304,7 +316,7 @@ class ReadView(
                 removeCallbacks(longPressRunnable)
                 if (!pressDown) return true
                 pressDown = false
-                isBookmarkSwipe = false
+                resetBookmarkSwipe()
                 if (isTextSelected) {
                     callBack.showTextActionMenu()
                 } else if (pageDelegate!!.isMoved) {
@@ -315,6 +327,19 @@ class ReadView(
             }
         }
         return true
+    }
+
+    /**
+     * 当前位移是否仍算「下滑切换书签」：向下、且竖直位移压过水平位移。
+     *
+     * @param dy 相对按下点的竖直位移，向下为正
+     */
+    private fun isBookmarkSwipeCandidate(dy: Float, absX: Float, absY: Float): Boolean =
+        !isScroll && !isTextSelected && dy > 0 && absY > absX * VERTICAL_DOMINANCE_RATIO
+
+    private fun resetBookmarkSwipe() {
+        isBookmarkSwipe = false
+        bookmarkSwipeReleased = false
     }
 
     override fun performClick(): Boolean {

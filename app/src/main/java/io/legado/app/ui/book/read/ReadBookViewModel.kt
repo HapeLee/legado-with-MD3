@@ -62,7 +62,6 @@ import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
-import io.legado.app.model.ReaderBookmarkState
 import io.legado.app.model.ReaderSession
 import io.legado.app.model.ReaderSessionEvent
 import io.legado.app.model.SourceCallBack
@@ -86,7 +85,6 @@ import io.legado.app.utils.toStringArray
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -96,10 +94,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
@@ -352,6 +347,7 @@ class ReadBookViewModel(
             }
         },
         bookmarkRepository = bookmarkRepository,
+        bookKey = _uiState.map { it.book?.let { book -> book.name to book.author } },
     )
 
     // --- 开书 / 目录 / 换源 / 进度同步域（无自持状态，isInitFinish 仍在 UiState）---
@@ -575,7 +571,7 @@ class ReadBookViewModel(
         collectEventBus()
         collectReaderSession()
         collectReadStyle()
-        collectBookmarks()
+        bookmarkDelegate.start()
         replaceRuleDelegate.start()
         execute { readAloudDelegate.syncConfiguredTtsVoices() }
     }
@@ -608,32 +604,6 @@ class ReadBookViewModel(
                     )
                 }
             }
-        }
-    }
-
-    /**
-     * 维护 [ReaderBookmarkState]：渲染层要在主线程热路径上同步判定「本页是否有书签」画角标，
-     * 不能起协程查库，所以把当前书的书签位置整份缓存进会话快照。
-     *
-     * 书名/作者是 `bookmarks` 表的关联键（无 bookUrl 列），故以它们为 flow 的切换键。
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun collectBookmarks() {
-        viewModelScope.launch {
-            uiState
-                .map { it.book?.let { book -> book.name to book.author } }
-                .distinctUntilChanged()
-                .flatMapLatest { key ->
-                    if (key == null) {
-                        flowOf(emptyList())
-                    } else {
-                        bookmarkRepository.flowByBook(key.first, key.second)
-                    }
-                }
-                .collect { bookmarks ->
-                    ReaderBookmarkState.update(bookmarks)
-                    _effects.tryEmit(ReadBookEffect.UpBookmarkBadge)
-                }
         }
     }
 
@@ -2517,7 +2487,6 @@ class ReadBookViewModel(
 
     override fun onCleared() {
         translationStatusJob?.cancel()
-        ReaderBookmarkState.clear()
         super.onCleared()
         if (BaseReadAloudService.isRun && BaseReadAloudService.pause) {
             ReadAloud.stop(context)

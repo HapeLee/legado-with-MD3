@@ -4,9 +4,15 @@ import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReaderBookmarkState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
@@ -21,6 +27,11 @@ class ReadBookmarkDelegate(
     private val scope: CoroutineScope,
     private val host: Host,
     private val bookmarkRepository: BookmarkRepository,
+    /**
+     * 当前书的 `书名 to 作者`（未开书时为 null）——`bookmarks` 表没有 bookUrl 列，
+     * 这两个字段就是关联键。[start] 用它当切换键重订书签流。
+     */
+    private val bookKey: Flow<Pair<String, String>?>,
 ) {
 
     interface Host {
@@ -28,6 +39,35 @@ class ReadBookmarkDelegate(
         fun setActiveSheet(sheet: ReadBookSheet?)
 
         fun emitEffect(effect: ReadBookEffect)
+    }
+
+    /**
+     * 维护 [ReaderBookmarkState]：渲染层要在主线程热路径上同步判定「本页是否有书签」画角标，
+     * 不能起协程查库，所以把当前书的书签位置整份缓存进会话快照。VM 构造时调一次。
+     *
+     * 收集随 [scope] 结束，`finally` 里清掉快照——否则下一本书会读到上一本的书签位置。
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun start() {
+        scope.launch {
+            try {
+                bookKey
+                    .distinctUntilChanged()
+                    .flatMapLatest { key ->
+                        if (key == null) {
+                            flowOf(emptyList())
+                        } else {
+                            bookmarkRepository.flowByBook(key.first, key.second)
+                        }
+                    }
+                    .collect { bookmarks ->
+                        ReaderBookmarkState.update(bookmarks)
+                        host.emitEffect(ReadBookEffect.UpBookmarkBadge)
+                    }
+            } finally {
+                ReaderBookmarkState.clear()
+            }
+        }
     }
 
     /**
