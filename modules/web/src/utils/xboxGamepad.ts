@@ -30,10 +30,30 @@ interface DPadState {
   b: boolean
 }
 
-interface GlobalState {
+interface GamepadState {
   lastAxisTime: number
   lastAxisDirection: number
   dpadPressed: DPadState
+}
+
+export interface XboxGamepadOptions {
+  /** B 键切换目录：由调用方经 Vue 状态控制，避免直接操作 DOM */
+  onToggleCatalog?: () => void
+}
+
+function createGamepadState(): GamepadState {
+  return {
+    lastAxisTime: 0,
+    lastAxisDirection: 0,
+    dpadPressed: {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: false,
+      b: false,
+    },
+  }
 }
 
 // =====================================================
@@ -75,25 +95,14 @@ function log(...args: any[]): void {
 // 状态记录
 // =====================================================
 
-const state: GlobalState = {
-  lastAxisTime: 0,
+let running = false
 
-  lastAxisDirection: 0,
+let loopId: number | null = null
 
-  dpadPressed: {
-    up: false,
+let onToggleCatalog: (() => void) | null = null
 
-    down: false,
-
-    left: false,
-
-    right: false,
-
-    a: false,
-
-    b: false,
-  },
-}
+// 每个手柄独立一份按键/摇杆边沿状态，避免多手柄互相串触发
+const gamepadStates = new Map<number, GamepadState>()
 
 // =====================================================
 // 通用工具函数
@@ -164,7 +173,10 @@ function switchChapter(direction: number): void {
  */
 function toggleFullscreen(): void {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.()
+    const promise = document.documentElement.requestFullscreen?.()
+
+    // 手柄轮询触发通常没有用户激活，可能被浏览器拒绝，需要捕获
+    promise?.catch(() => log('🎮 进入浏览器全屏被拒绝'))
 
     log('🎮 进入浏览器全屏')
   } else {
@@ -178,25 +190,15 @@ function toggleFullscreen(): void {
  * 目录显示隐藏
  */
 function toggleCatalog(): void {
-  const catalog = document.querySelector('.pop-cata') as HTMLElement
+  if (onToggleCatalog) {
+    onToggleCatalog()
 
-  if (!catalog) {
-    log('❌ 未找到目录')
+    log('🎮 切换目录')
 
     return
   }
 
-  const hidden = getComputedStyle(catalog).display === 'none'
-
-  if (hidden) {
-    catalog.style.display = 'block'
-
-    log('🎮 打开目录')
-  } else {
-    catalog.style.display = 'none'
-
-    log('🎮 关闭目录')
-  }
+  log('❌ 未注册目录切换回调')
 }
 
 /**
@@ -210,25 +212,25 @@ function isPressedOnce(current: boolean, previous: boolean): boolean {
 // 摇杆处理
 // =====================================================
 
-function handleAxis(gp: Gamepad, now: number): void {
+function handleAxis(gp: Gamepad, now: number, gs: GamepadState): void {
   const axisY = gp.axes[1] || 0
 
   if (Math.abs(axisY) <= CONFIG.AXIS_THRESHOLD) {
-    state.lastAxisDirection = 0
+    gs.lastAxisDirection = 0
 
     return
   }
 
   const direction = axisY > 0 ? 1 : -1
 
-  const cooldownPassed = now - state.lastAxisTime > CONFIG.AXIS_COOLDOWN
+  const cooldownPassed = now - gs.lastAxisTime > CONFIG.AXIS_COOLDOWN
 
-  const directionChanged = direction !== state.lastAxisDirection
+  const directionChanged = direction !== gs.lastAxisDirection
 
   if (cooldownPassed || directionChanged) {
-    state.lastAxisTime = now
+    gs.lastAxisTime = now
 
-    state.lastAxisDirection = direction
+    gs.lastAxisDirection = direction
 
     scrollPage(direction)
   }
@@ -238,7 +240,7 @@ function handleAxis(gp: Gamepad, now: number): void {
 // DPad + 按键处理
 // =====================================================
 
-function handleDPad(gp: Gamepad): void {
+function handleDPad(gp: Gamepad, gs: GamepadState): void {
   const indexes = CONFIG.DPAD_INDEX
 
   const buttons = CONFIG.BUTTON_INDEX
@@ -259,97 +261,175 @@ function handleDPad(gp: Gamepad): void {
 
   // 十字 ↑ 顶部
 
-  if (isPressedOnce(current.up, state.dpadPressed.up)) {
+  if (isPressedOnce(current.up, gs.dpadPressed.up)) {
     goTop()
   }
 
   // 十字 ↓ 底部
 
-  if (isPressedOnce(current.down, state.dpadPressed.down)) {
+  if (isPressedOnce(current.down, gs.dpadPressed.down)) {
     goBottom()
   }
 
   // 左右章节
 
-  if (isPressedOnce(current.left, state.dpadPressed.left)) {
+  if (isPressedOnce(current.left, gs.dpadPressed.left)) {
     switchChapter(-1)
   }
 
-  if (isPressedOnce(current.right, state.dpadPressed.right)) {
+  if (isPressedOnce(current.right, gs.dpadPressed.right)) {
     switchChapter(1)
   }
 
   // A 全屏
 
-  if (isPressedOnce(current.a, state.dpadPressed.a)) {
+  if (isPressedOnce(current.a, gs.dpadPressed.a)) {
     toggleFullscreen()
   }
 
   // B 目录
 
-  if (isPressedOnce(current.b, state.dpadPressed.b)) {
+  if (isPressedOnce(current.b, gs.dpadPressed.b)) {
     toggleCatalog()
   }
 
-  state.dpadPressed = current
+  gs.dpadPressed = current
 }
 
 // =====================================================
 // 主手柄处理入口
 // =====================================================
 
-function handleGamepad(gp: Gamepad | null): void {
-  if (!gp) return
+function handleGamepad(gp: Gamepad): void {
+  let gs = gamepadStates.get(gp.index)
+
+  if (!gs) {
+    gs = createGamepadState()
+
+    gamepadStates.set(gp.index, gs)
+  }
 
   const now = performance.now()
 
-  handleAxis(gp, now)
+  handleAxis(gp, now, gs)
 
-  handleDPad(gp)
+  handleDPad(gp, gs)
 }
 
 // =====================================================
 // 主循环
 // =====================================================
 
-let running = false
+function stopLoop(): void {
+  running = false
+
+  if (loopId !== null) {
+    cancelAnimationFrame(loopId)
+
+    loopId = null
+  }
+}
+
+function startLoop(): void {
+  if (running) return
+
+  running = true
+
+  loopId = requestAnimationFrame(gamepadLoop)
+}
+
+function hasConnectedGamepad(): boolean {
+  if (typeof navigator.getGamepads !== 'function') return false
+
+  const gamepads = navigator.getGamepads()
+
+  for (const gp of gamepads) {
+    if (gp) return true
+  }
+
+  return false
+}
 
 function gamepadLoop(): void {
-  const gamepads = navigator.getGamepads?.() || []
+  // 不支持 getGamepads 的环境直接停止轮询
+  if (typeof navigator.getGamepads !== 'function') {
+    stopLoop()
+
+    return
+  }
+
+  const gamepads = navigator.getGamepads()
 
   for (const gp of gamepads) {
     if (gp) handleGamepad(gp)
   }
 
-  requestAnimationFrame(gamepadLoop)
+  // 没有已连接手柄时停止 60fps 轮询，等下次 gamepadconnected 再启动
+  if (hasConnectedGamepad()) {
+    loopId = requestAnimationFrame(gamepadLoop)
+  } else {
+    stopLoop()
+  }
 }
 
 // =====================================================
 // 连接 / 断开事件
 // =====================================================
 
-window.addEventListener('gamepadconnected', (e: GamepadEvent) => {
+let listenersRegistered = false
+
+function onGamepadConnected(e: GamepadEvent): void {
   log('🎮 手柄已连接:', e.gamepad.id)
 
-  if (!running) {
-    running = true
+  startLoop()
+}
 
-    requestAnimationFrame(gamepadLoop)
-  }
-})
-
-window.addEventListener('gamepaddisconnected', (e: GamepadEvent) => {
+function onGamepadDisconnected(e: GamepadEvent): void {
   log('🎮 手柄断开:', e.gamepad.id)
-})
+
+  gamepadStates.delete(e.gamepad.index)
+
+  if (!hasConnectedGamepad()) stopLoop()
+}
+
+function registerListeners(): void {
+  if (listenersRegistered) return
+
+  window.addEventListener('gamepadconnected', onGamepadConnected)
+
+  window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
+
+  listenersRegistered = true
+}
+
+function unregisterListeners(): void {
+  if (!listenersRegistered) return
+
+  window.removeEventListener('gamepadconnected', onGamepadConnected)
+
+  window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
+
+  listenersRegistered = false
+}
 
 // =====================================================
 // 外部调用
 // =====================================================
 
-export function initXboxGamepad(): void {
-  if (!running) {
-    running = true
+export function initXboxGamepad(options?: XboxGamepadOptions): void {
+  onToggleCatalog = options?.onToggleCatalog ?? null
 
-    requestAnimationFrame(gamepadLoop)
-  }
+  registerListeners()
+
+  startLoop()
+}
+
+export function disposeXboxGamepad(): void {
+  stopLoop()
+
+  unregisterListeners()
+
+  gamepadStates.clear()
+
+  onToggleCatalog = null
 }
