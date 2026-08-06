@@ -181,6 +181,7 @@ object PreferKey {
     const val previewImageByClick = "previewImageByClick"
     const val clickImgWay = "clickImgWay"
     const val keyPageOnLongPress = "keyPageOnLongPress"
+    const val swipeToAddBookmark = "swipeToAddBookmark"
     const val volumeKeyPage = "volumeKeyPage"
     const val volumeKeyPageOnPlay = "volumeKeyPageOnPlay"
     const val mouseWheelPage = "mouseWheelPage"

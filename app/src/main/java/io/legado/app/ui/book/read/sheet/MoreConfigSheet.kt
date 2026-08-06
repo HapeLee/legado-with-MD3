@@ -105,6 +105,9 @@ fun MoreConfigSheet(
                 onKeyPageOnLongPressChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.KeyPageOnLongPress(it)))
                 },
+                onSwipeToAddBookmarkChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SwipeToAddBookmark(it)))
+                },
             )
 
             // Other
@@ -235,6 +238,7 @@ private fun PageControlSettings(
     onVolumeKeyPageChange: (Boolean) -> Unit,
     onVolumeKeyPageOnPlayChange: (Boolean) -> Unit,
     onKeyPageOnLongPressChange: (Boolean) -> Unit,
+    onSwipeToAddBookmarkChange: (Boolean) -> Unit,
 ) {
     val doublePageEntries = stringArrayResource(R.array.double_page_title)
     val doublePageValues = stringArrayResource(R.array.double_page_value)
@@ -274,6 +278,11 @@ private fun PageControlSettings(
         title = stringResource(R.string.key_page_on_long_press),
         checked = preferences.keyPageOnLongPress,
         onCheckedChange = onKeyPageOnLongPressChange,
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.swipe_to_add_bookmark),
+        checked = preferences.swipeToAddBookmark,
+        onCheckedChange = onSwipeToAddBookmarkChange,
     )
 }
 

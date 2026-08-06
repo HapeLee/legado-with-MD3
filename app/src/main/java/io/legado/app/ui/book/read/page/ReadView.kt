@@ -2,19 +2,25 @@ package io.legado.app.ui.book.read.page
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.AttributeSet
 import android.util.Log
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import io.legado.app.BuildConfig
 import io.legado.app.R
@@ -123,6 +129,37 @@ class ReadView(
     private var bookmarkSwipeReleased = false
     private val bookmarkSwipeMinDistance by lazy { BOOKMARK_SWIPE_MIN_DISTANCE_DP.dpToPx() }
 
+    /**
+     * 本次触摸是否启用下滑书签手势。在 DOWN 时读一次开关（DataStore 快照重建较贵，
+     * 不宜放进逐帧的 [isBookmarkSwipeCandidate]），改设置在下次触摸生效。
+     */
+    private var bookmarkSwipeEnabled = false
+
+    /**
+     * 顶部「松手加入书签」提示条：下滑距离达标后出现，松手即执行切换。
+     */
+    private val bookmarkSwipeHint = TextView(context).apply {
+        text = context.getString(R.string.bookmark_swipe_release_to_add)
+        gravity = Gravity.CENTER
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        includeFontPadding = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        background = GradientDrawable().apply {
+            cornerRadius = BOOKMARK_SWIPE_HINT_CORNER_RADIUS_DP.dpToPx()
+            setColor(Color.argb(160, 0, 0, 0))
+        }
+        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+        layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+        ).apply {
+            topMargin = BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP.dpToPx()
+        }
+        visibility = View.GONE
+    }
+
     private val slopSquare by lazy { ViewConfiguration.get(context).scaledTouchSlop }
     private var pageSlopSquare: Int = slopSquare
     var pageSlopSquare2: Int = pageSlopSquare * pageSlopSquare
@@ -152,6 +189,7 @@ class ReadView(
         addView(nextPage)
         addView(curPage)
         addView(prevPage)
+        addView(bookmarkSwipeHint)
         // 三个 PageView 只负责把同一页绘制到 Canvas；它们的内部 View 没有正文语义。
         // 读屏应只命中下面由 ReadView 提供的当前页文本节点。
         listOf(prevPage, curPage, nextPage).forEach {
@@ -251,6 +289,7 @@ class ReadView(
                 postDelayed(longPressRunnable, longPressTimeout)
                 pressDown = true
                 isMove = false
+                bookmarkSwipeEnabled = ReadConfig.swipeToAddBookmark
                 resetBookmarkSwipe()
                 pageDelegate?.onTouch(event)
                 pageDelegate?.onDown()
@@ -270,7 +309,14 @@ class ReadView(
                     // 每帧按当前累计位移重新判定，方向翻转时才能交还 pageDelegate。
                     if (!bookmarkSwipeReleased) {
                         isBookmarkSwipe = isBookmarkSwipeCandidate(event.y - startY, absX, absY)
-                        if (!isBookmarkSwipe) bookmarkSwipeReleased = true
+                        if (!isBookmarkSwipe) {
+                            bookmarkSwipeReleased = true
+                            // 交还 pageDelegate 前把页面拉回原位，避免委托拿到被移位的 curPage。
+                            endBookmarkSwipeDrag()
+                        } else {
+                            // 页面随手指下移；到位后顶部亮起「松手加入书签」。
+                            updateBookmarkSwipeDrag(event.y - startY)
+                        }
                     }
                     if (isTextSelected) {
                         selectText(event.x, event.y)
@@ -335,11 +381,58 @@ class ReadView(
      * @param dy 相对按下点的竖直位移，向下为正
      */
     private fun isBookmarkSwipeCandidate(dy: Float, absX: Float, absY: Float): Boolean =
-        !isScroll && !isTextSelected && dy > 0 && absY > absX * VERTICAL_DOMINANCE_RATIO
+        bookmarkSwipeEnabled && !isScroll && !isTextSelected &&
+            dy > 0 && absY > absX * VERTICAL_DOMINANCE_RATIO
 
+    /**
+     * 手势结束（抬手/取消）：页面弹回原位、收起提示条。翻页委托不受影响。
+     */
     private fun resetBookmarkSwipe() {
         isBookmarkSwipe = false
         bookmarkSwipeReleased = false
+        hideBookmarkSwipeHint()
+        curPage.animate().cancel()
+        curPage.animate()
+            .translationY(0f)
+            .setDuration(BOOKMARK_SWIPE_SPRING_BACK_MS)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    /**
+     * 手势已交还 [pageDelegate]（中途转为横向翻页）：立即把页面拉回原位，
+     * 不起动画，避免与委托的翻页动画互相干扰。
+     */
+    private fun endBookmarkSwipeDrag() {
+        hideBookmarkSwipeHint()
+        curPage.animate().cancel()
+        curPage.translationY = 0f
+    }
+
+    /**
+     * 拖动跟随：页面随手指下移（封顶），达到最小距离后顶部亮起提示条。
+     *
+     * @param dy 相对按下点的竖直位移，向下为正
+     */
+    private fun updateBookmarkSwipeDrag(dy: Float) {
+        curPage.translationY = dy.coerceIn(0f, height.toFloat() * BOOKMARK_SWIPE_MAX_PULL_RATIO)
+        if (dy >= bookmarkSwipeMinDistance) {
+            showBookmarkSwipeHint()
+        } else {
+            hideBookmarkSwipeHint()
+        }
+    }
+
+    private fun showBookmarkSwipeHint() {
+        if (bookmarkSwipeHint.visibility != View.VISIBLE) {
+            bookmarkSwipeHint.visibility = View.VISIBLE
+        }
+    }
+
+    private fun hideBookmarkSwipeHint() {
+        if (bookmarkSwipeHint.visibility != View.GONE) {
+            bookmarkSwipeHint.visibility = View.GONE
+        }
     }
 
     override fun performClick(): Boolean {
@@ -795,6 +888,13 @@ class ReadView(
         curPage.upBg()
         prevPage.upBg()
         nextPage.upBg()
+        // 与页面同底：下拉书签手势把 curPage 移开后，露出的区域仍是页面背景而非主题色。
+        background = LayerDrawable(
+            arrayOf(
+                ReadSessionState.backgroundMeanColor.toDrawable(),
+                ReadSessionState.background
+            )
+        )
     }
 
     /**
@@ -955,5 +1055,17 @@ class ReadView(
 
         /** 竖直位移需超过水平位移的这个倍数，才判定为下滑而非斜向翻页。 */
         const val VERTICAL_DOMINANCE_RATIO = 1.5f
+
+        /** 顶部提示条相对页面顶部的距离。 */
+        const val BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP = 12
+
+        /** 顶部提示条圆角半径。 */
+        const val BOOKMARK_SWIPE_HINT_CORNER_RADIUS_DP = 24f
+
+        /** 松手/取消后页面弹回原位的动画时长。 */
+        const val BOOKMARK_SWIPE_SPRING_BACK_MS = 180L
+
+        /** 下拉时页面最多跟随手指移动的比例，防止整页拖出屏幕。 */
+        const val BOOKMARK_SWIPE_MAX_PULL_RATIO = 0.6f
     }
 }

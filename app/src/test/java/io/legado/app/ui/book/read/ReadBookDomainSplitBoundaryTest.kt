@@ -85,16 +85,20 @@ class ReadBookDomainSplitBoundaryTest {
      * `bookKey` 的投影（`bookmarks` 表以书名+作者为关联键，只有 VM 持有 `_uiState`）、
      * `Host.emitEffect` 的实现（`_effects` 只有 VM 能碰）、`start()` 与
      * `ToggleBookmark` 的转发各一行，以及一个 `map` import。
+     *
+     * 2523 → 2533：分支基准移动了 10 行。2523 是 PR 基于更早的 main（VM 2515 行）定
+     * 的线；合入当前 main 后 VM 已 2525 行（上游页眉页脚对齐、书籍信息/目录改 Sheet
+     * 等），本 PR 的 8 行接线叠加为 2533。溢出全部来自上游合并，不是新长出来的域。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2523 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2533 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2523。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2533。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2523,
+            lineCount <= 2533,
         )
     }
 

@@ -1521,6 +1521,9 @@ sealed interface ConfigUpdate {
     data class KeyPageOnLongPress(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
+    data class SwipeToAddBookmark(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
