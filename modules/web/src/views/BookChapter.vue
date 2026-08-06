@@ -113,7 +113,7 @@ import API from '@api'
 import { useLoading } from '@/hooks/loading'
 import { useThrottleFn } from '@vueuse/shared'
 import { isNullOrBlank } from '@/utils/utils'
-import { disposeXboxGamepad, initXboxGamepad } from '@/utils/xboxGamepad'
+import { initXboxGamepad } from '@/utils/xboxGamepad'
 
 const content = ref()
 // loading spinner
@@ -537,8 +537,6 @@ onUnmounted(() => {
   popCataVisible.value = false
   scrollObserver?.disconnect()
   scrollObserver = null
-
-  disposeXboxGamepad()
 })
 
 const addToBookShelfConfirm = async () => {
