@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +36,7 @@ import io.legado.app.ui.book.group.GroupDeleteAction
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
+import io.legado.app.ui.main.bookshelf.autoGroup.AiAutoGroupSheet
 import io.legado.app.ui.tagGroupRule.TagGroupRuleEditSheet
 import io.legado.app.ui.tagGroupRule.TagGroupRuleIntent
 import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
@@ -65,6 +68,8 @@ fun GroupManageSheet(
 
     var editingTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
     var showTagRuleEdit by remember { mutableStateOf(false) }
+    var showAiAutoGroup by remember { mutableStateOf(false) }
+    var aiAutoGroupSessionKey by rememberSaveable { mutableStateOf(0L) }
 
     var editingGroupTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
 
@@ -133,6 +138,15 @@ fun GroupManageSheet(
                                 editingGroup = null
                                 coverPath = null
                                 isEditing = true
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.ai_auto_group),
+                            leadingIcon = { Icon(Icons.Default.AutoAwesome, null) },
+                            onClick = {
+                                showMenu = false
+                                aiAutoGroupSessionKey += 1L
+                                showAiAutoGroup = true
                             }
                         )
                         RoundDropdownMenuItem(
@@ -239,6 +253,12 @@ fun GroupManageSheet(
                 tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.CopyRule(rule))
             },
             onPaste = { tagGroupRuleViewModel.pasteRule() }
+        )
+
+        AiAutoGroupSheet(
+            show = showAiAutoGroup,
+            sessionKey = aiAutoGroupSessionKey,
+            onDismissRequest = { showAiAutoGroup = false }
         )
     }
 }
