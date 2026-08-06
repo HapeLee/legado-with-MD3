@@ -12,7 +12,7 @@ import io.legado.app.utils.startActivity
 import splitties.init.appCtx
 import java.util.concurrent.locks.LockSupport
 import kotlin.time.Duration.Companion.minutes
-
+import android.content.Intent
 /**
  * 源验证
  */
@@ -86,12 +86,13 @@ object SourceVerificationHelp {
         source ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
         require(url.length < 64 * 1024) { "startBrowser parameter url too long" }
         IntentData.put(getVerificationResultKey(source), Thread.currentThread())
-        appCtx.startActivity(
-            MainActivity.createWebViewIntent(
-                appCtx, title, url, source.getKey(), source.getTag(), source.getSourceType(),
-                saveResult == true, refetchAfterSuccess != false, html,
-            )
-        )
+        val intent = MainActivity.createWebViewIntent(
+            appCtx, title, url, source.getKey(), source.getTag(), source.getSourceType(),
+            saveResult == true, refetchAfterSuccess != false, html,
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)   // ← 加上这一行
+        }
+        appCtx.startActivity(intent)
     }
 
 
