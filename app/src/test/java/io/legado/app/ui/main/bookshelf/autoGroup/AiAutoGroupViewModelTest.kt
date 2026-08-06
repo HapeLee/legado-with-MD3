@@ -12,6 +12,7 @@ import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiModelConfig
+import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskRuntimeOptions
@@ -149,7 +150,13 @@ class AiAutoGroupViewModelTest {
     private fun preset(): AiTaskPresetConfig {
         val model = AiModelConfig(
             id = "model",
-            provider = AiProviderConfig("provider", "Provider", "https://example.test", "key"),
+            provider = AiProviderConfig(
+                id = "provider",
+                name = "Provider",
+                protocol = AiProtocol.OPENAI_CHAT_COMPLETIONS,
+                baseUrl = "https://example.test",
+                apiKey = "key",
+            ),
             displayName = "Model",
             modelId = "model-id",
             maxOutputTokens = 4_096,

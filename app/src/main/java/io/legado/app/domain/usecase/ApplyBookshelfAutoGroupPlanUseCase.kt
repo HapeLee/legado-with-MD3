@@ -15,7 +15,10 @@ class ApplyBookshelfAutoGroupPlanUseCase(
         return gateway.applyPlan(normalizedPlan)
     }
 
-    internal fun normalize(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupPlan {
+    internal fun normalize(
+        plan: BookshelfAutoGroupPlan,
+        existingGroupNames: Set<String> = emptySet(),
+    ): BookshelfAutoGroupPlan {
         val assignedBookUrls = linkedSetOf<String>()
         val groupsByName = linkedMapOf<String, BookshelfAutoGroupPlanGroup>()
         plan.groups.forEach { group ->
@@ -25,9 +28,16 @@ class ApplyBookshelfAutoGroupPlanUseCase(
             if (uniqueBooks.isEmpty()) return@forEach
             val existing = groupsByName[name]
             groupsByName[name] = if (existing == null) {
-                group.copy(name = name, books = uniqueBooks)
+                group.copy(
+                    name = name,
+                    books = uniqueBooks,
+                    reuseExisting = name in existingGroupNames,
+                )
             } else {
-                existing.copy(books = existing.books + uniqueBooks)
+                existing.copy(
+                    books = existing.books + uniqueBooks,
+                    reuseExisting = name in existingGroupNames,
+                )
             }
         }
         val ignoredBookUrls = linkedSetOf<String>()

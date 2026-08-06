@@ -669,7 +669,7 @@ private fun AutoGroupErrorContent(
             onDismiss = onDismiss,
             onConfirm = onRetry,
             dismissText = stringResource(R.string.close),
-            confirmText = stringResource(R.string.back),
+            confirmText = stringResource(R.string.ai_auto_group_reanalyze),
         )
     }
 }

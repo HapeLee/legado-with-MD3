@@ -15,6 +15,7 @@ import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiModelConfig
 import io.legado.app.domain.model.AiModelDraft
 import io.legado.app.domain.model.AiProfileDraft
+import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiProviderDraft
 import io.legado.app.domain.model.AiReasoningLevel
@@ -264,7 +265,13 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
         taskPrompt: String,
         contextWindow: Int,
     ): AiTaskPresetConfig {
-        val provider = AiProviderConfig("provider", "Provider", "https://example.test", "key")
+        val provider = AiProviderConfig(
+            id = "provider",
+            name = "Provider",
+            protocol = AiProtocol.OPENAI_CHAT_COMPLETIONS,
+            baseUrl = "https://example.test",
+            apiKey = "key",
+        )
         val model = AiModelConfig(
             id = "model",
             provider = provider,

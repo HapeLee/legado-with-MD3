@@ -98,8 +98,9 @@ class BookshelfAutoGroupRepository(
                     existing.groupId
                 } else {
                     val newGroupId = groupDao.getUnusedId()
-                    // A zero id means all 64 group bits are already occupied.
-                    if (newGroupId == 0L) {
+                    // A zero id means all 64 group bits are already occupied; Long.MIN_VALUE
+                    // is the reserved private-group bit and must not back a public group.
+                    if (newGroupId == 0L || newGroupId == Long.MIN_VALUE) {
                         throw BookshelfAutoGroupException(
                             BookshelfAutoGroupErrorReason.GroupCapacityExceeded
                         )

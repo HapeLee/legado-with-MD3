@@ -9,7 +9,6 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.newCallResponse
@@ -56,7 +55,11 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.temperature?.let { body["temperature"] = it }
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
-        body.applyOpenAiChatReasoningOptions(request)
+        if (hasReasoningCapability(request.model.capabilities)) {
+            params.reasoningLevel.effortFor(provider)?.let {
+                body["reasoning_effort"] = it
+            }
+        }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
             val response = aiOkHttpClient.newCallStrResponse {
@@ -101,7 +104,11 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.temperature?.let { body["temperature"] = it }
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
-        body.applyOpenAiChatReasoningOptions(request)
+        if (hasReasoningCapability(request.model.capabilities)) {
+            params.reasoningLevel.effortFor(provider)?.let {
+                body["reasoning_effort"] = it
+            }
+        }
 
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
@@ -181,33 +188,7 @@ class OpenAiChatHandler : AiProtocolHandler {
             json?.data.toAvailableModels()
         }
     }
-
 }
-
-internal fun MutableMap<String, Any?>.applyOpenAiChatReasoningOptions(
-    request: AiGenerateRequest,
-) {
-    val params = request.params
-    val provider = request.model.provider
-    if (request.model.modelId.startsWith(DEEPSEEK_V4_MODEL_PREFIX, ignoreCase = true)) {
-        val thinkingEnabled = params.reasoningLevel != AiReasoningLevel.OFF
-        put(
-            "thinking",
-            mapOf("type" to if (thinkingEnabled) "enabled" else "disabled"),
-        )
-        if (thinkingEnabled) {
-            params.reasoningLevel.effortFor(provider)?.let {
-                put("reasoning_effort", it)
-            }
-        }
-    } else if (hasReasoningCapability(request.model.capabilities)) {
-        params.reasoningLevel.effortFor(provider)?.let {
-            put("reasoning_effort", it)
-        }
-    }
-}
-
-private const val DEEPSEEK_V4_MODEL_PREFIX = "deepseek-v4-"
 
 // ---- Message & tool format converters ----
 

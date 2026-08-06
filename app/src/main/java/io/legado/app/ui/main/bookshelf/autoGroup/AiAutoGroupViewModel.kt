@@ -263,7 +263,10 @@ class AiAutoGroupViewModel(
     }
 
     private fun requestApply() {
-        val normalizedPlan = applyPlanUseCase.normalize(_uiState.value.toDomainPlan())
+        val normalizedPlan = applyPlanUseCase.normalize(
+            plan = _uiState.value.toDomainPlan(),
+            existingGroupNames = source?.existingGroupNames.orEmpty().toSet(),
+        )
         if (normalizedPlan.assignedBookCount == 0) {
             showMessage(AiAutoGroupMessage.NoApplicablePlan)
             return
@@ -304,7 +307,14 @@ class AiAutoGroupViewModel(
                     }
                     _effects.tryEmit(AiAutoGroupEffect.Applied)
                 }
-                .onFailure(::handleTerminalFailure)
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    // 保留已审计划回到 Reviewing，避免失败后被迫重跑整个分析
+                    _uiState.update {
+                        it.copy(phase = AiAutoGroupPhase.Reviewing, currentBatch = 0, totalBatches = 0)
+                    }
+                    _effects.tryEmit(AiAutoGroupEffect.ShowError(error.toUiError()))
+                }
         }
     }
 
