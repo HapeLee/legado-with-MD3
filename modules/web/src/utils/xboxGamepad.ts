@@ -97,8 +97,6 @@ function log(...args: any[]): void {
 
 let running = false
 
-let loopId: number | null = null
-
 let onToggleCatalog: (() => void) | null = null
 
 // 每个手柄独立一份按键/摇杆边沿状态，避免多手柄互相串触发
@@ -320,97 +318,35 @@ function handleGamepad(gp: Gamepad): void {
 // 主循环
 // =====================================================
 
-function stopLoop(): void {
-  running = false
-
-  if (loopId !== null) {
-    cancelAnimationFrame(loopId)
-
-    loopId = null
-  }
-}
-
-function startLoop(): void {
-  if (running) return
-
-  running = true
-
-  loopId = requestAnimationFrame(gamepadLoop)
-}
-
-function hasConnectedGamepad(): boolean {
-  if (typeof navigator.getGamepads !== 'function') return false
-
-  const gamepads = navigator.getGamepads()
-
-  for (const gp of gamepads) {
-    if (gp) return true
-  }
-
-  return false
-}
-
 function gamepadLoop(): void {
-  // 不支持 getGamepads 的环境直接停止轮询
-  if (typeof navigator.getGamepads !== 'function') {
-    stopLoop()
-
-    return
-  }
-
-  const gamepads = navigator.getGamepads()
+  const gamepads = navigator.getGamepads?.() || []
 
   for (const gp of gamepads) {
     if (gp) handleGamepad(gp)
   }
 
-  // 没有已连接手柄时停止 60fps 轮询，等下次 gamepadconnected 再启动
-  if (hasConnectedGamepad()) {
-    loopId = requestAnimationFrame(gamepadLoop)
-  } else {
-    stopLoop()
-  }
+  requestAnimationFrame(gamepadLoop)
 }
 
 // =====================================================
 // 连接 / 断开事件
 // =====================================================
 
-let listenersRegistered = false
-
-function onGamepadConnected(e: GamepadEvent): void {
+window.addEventListener('gamepadconnected', (e: GamepadEvent) => {
   log('🎮 手柄已连接:', e.gamepad.id)
 
-  startLoop()
-}
+  if (!running) {
+    running = true
 
-function onGamepadDisconnected(e: GamepadEvent): void {
+    requestAnimationFrame(gamepadLoop)
+  }
+})
+
+window.addEventListener('gamepaddisconnected', (e: GamepadEvent) => {
   log('🎮 手柄断开:', e.gamepad.id)
 
   gamepadStates.delete(e.gamepad.index)
-
-  if (!hasConnectedGamepad()) stopLoop()
-}
-
-function registerListeners(): void {
-  if (listenersRegistered) return
-
-  window.addEventListener('gamepadconnected', onGamepadConnected)
-
-  window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
-
-  listenersRegistered = true
-}
-
-function unregisterListeners(): void {
-  if (!listenersRegistered) return
-
-  window.removeEventListener('gamepadconnected', onGamepadConnected)
-
-  window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
-
-  listenersRegistered = false
-}
+})
 
 // =====================================================
 // 外部调用
@@ -419,17 +355,9 @@ function unregisterListeners(): void {
 export function initXboxGamepad(options?: XboxGamepadOptions): void {
   onToggleCatalog = options?.onToggleCatalog ?? null
 
-  registerListeners()
+  if (!running) {
+    running = true
 
-  startLoop()
-}
-
-export function disposeXboxGamepad(): void {
-  stopLoop()
-
-  unregisterListeners()
-
-  gamepadStates.clear()
-
-  onToggleCatalog = null
+    requestAnimationFrame(gamepadLoop)
+  }
 }
