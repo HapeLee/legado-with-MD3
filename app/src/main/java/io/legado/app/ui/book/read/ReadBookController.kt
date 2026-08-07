@@ -194,7 +194,7 @@ class ReadBookController(
     private val prevPageDebounce by lazy { Debounce { keyPage(PageDirection.PREV) } }
 
     private val upSeekBarThrottle = throttle(200) {
-        onUnhandledEffect(ReadBookEffect.UpSeekBar)
+        viewModel.refreshSeekState()
     }
 
     fun onRefsReady(newRefs: ReadBookViewRefs) {
@@ -1050,6 +1050,7 @@ class ReadBookController(
                     consumePendingSearchResultMark()
                 }
                 if (effect.relativePosition == 0) onUnhandledEffect(ReadBookEffect.UpSeekBar)
+                if (effect.relativePosition == 0) viewModel.refreshSeekState()
             }
 
             is ReadBookEffect.UpPageAnim -> refs?.readView?.upPageAnim(effect.upRecorder)
