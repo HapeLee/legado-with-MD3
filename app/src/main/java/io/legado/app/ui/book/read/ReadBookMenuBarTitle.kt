@@ -222,12 +222,16 @@ internal fun MenuTitleBar(
             }
 
             // Right group: actions
-            if (readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig)) {
+            if (state.menuConfig.readMenuTopBarMergeButtons) {
                 MenuTitleBarMergedGlassButton(
                     state = state,
                     colors = colors,
                     onIntent = onIntent,
                     backdrop = backdrop,
+                    glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(
+                        backdrop,
+                        state.menuConfig
+                    ),
                 )
             } else {
                 val compact = state.menuConfig.titleBarCompact
@@ -735,6 +739,7 @@ private fun MenuTitleBarMergedGlassButton(
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     backdrop: Backdrop?,
+    glassEnabled: Boolean,
 ) {
     var sourceExpanded by remember { mutableStateOf(false) }
     var refreshExpanded by remember { mutableStateOf(false) }
@@ -742,34 +747,51 @@ private fun MenuTitleBarMergedGlassButton(
     val pillShape = RoundedCornerShape(50)
     val tint = LegadoTheme.colorScheme.onSurfaceVariant
     val compact = state.menuConfig.titleBarCompact
+    val iconStyle = state.menuConfig.titleBarIconStyle
 
     Box {
         Row(
             modifier = Modifier
                 .height(40.dp)
-                .readMenuLiquidGlass(
-                    backdrop = backdrop,
-                    colors = colors,
-                    shape = pillShape,
-                    useTopBarStyle = true,
-                    useLens = true,
-                    blurRadius = 32.dp,
-                    interactive = true,
-                    menuConfig = state.menuConfig,
-                )
                 .then(
-                    if (state.menuConfig.readMenuBorderWidth > 0 &&
-                        state.menuConfig.readMenuTopBarTitleCapsule
-                    ) {
-                        Modifier.border(
-                            BorderStroke(
-                                state.menuConfig.readMenuBorderWidth.dp,
-                                Color(readMenuBorderColor(state.menuConfig)),
-                            ),
-                            pillShape,
+                    if (glassEnabled) {
+                        Modifier.readMenuLiquidGlass(
+                            backdrop = backdrop,
+                            colors = colors,
+                            shape = pillShape,
+                            useTopBarStyle = true,
+                            useLens = true,
+                            blurRadius = 32.dp,
+                            interactive = true,
+                            menuConfig = state.menuConfig,
                         )
                     } else {
-                        Modifier
+                        val containerColor = when (iconStyle) {
+                            1 -> LegadoTheme.colorScheme.surfaceContainerLow
+                            else -> Color.Transparent
+                        }
+                        Modifier.background(containerColor, pillShape)
+                    }
+                )
+                .then(
+                    when {
+                        state.menuConfig.readMenuBorderWidth > 0 &&
+                                state.menuConfig.readMenuTopBarTitleCapsule ->
+                            Modifier.border(
+                                BorderStroke(
+                                    state.menuConfig.readMenuBorderWidth.dp,
+                                    Color(readMenuBorderColor(state.menuConfig)),
+                                ),
+                                pillShape,
+                            )
+
+                        !glassEnabled && iconStyle == 2 ->
+                            Modifier.border(
+                                BorderStroke(1.dp, tint.copy(alpha = 0.45f)),
+                                pillShape,
+                            )
+
+                        else -> Modifier
                     }
                 ),
             verticalAlignment = Alignment.CenterVertically,

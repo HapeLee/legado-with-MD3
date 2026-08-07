@@ -23,10 +23,10 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Save
@@ -72,6 +72,7 @@ import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
@@ -104,9 +105,10 @@ fun BookInfoEditScreen(
                     )
                 },
                 actions = {
-                    TopBarNavigationButton(
+                    TopBarActionButton(
                         onClick = { viewModel.save(onSave) },
-                        imageVector = Icons.Default.Save
+                        imageVector = Icons.Default.Save,
+                        contentDescription = stringResource(R.string.save)
                     )
                 },
                 scrollBehavior = scrollBehavior

@@ -2243,6 +2243,8 @@
     <string name="read_menu_bar_blur_style">着色样式</string>
     <string name="read_menu_blur_style_progressive">渐变</string>
     <string name="read_menu_top_bar_liquid_glass_buttons_summary">需要 Android 13 及以上系统</string>
+    <string name="read_menu_top_bar_merge_buttons">合并顶栏按钮</string>
+    <string name="read_menu_top_bar_merge_buttons_summary">将顶栏操作按钮合并为胶囊</string>
     <string name="read_menu_blur_radius">模糊半径</string>
     <string name="read_menu_blur_radius_summary">模糊半径越大，系统运行越卡顿</string>
     <string name="read_menu_blur_alpha">菜单不透明度</string>

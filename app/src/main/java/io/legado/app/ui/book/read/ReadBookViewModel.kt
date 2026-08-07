@@ -1908,6 +1908,7 @@ class ReadBookViewModel(
                 readMenuTopBarBlurMode = ReadBookConfig.readMenuTopBarBlurMode,
                 readMenuBottomBarBlurMode = ReadBookConfig.readMenuBottomBarBlurMode,
                 readMenuTopBarLiquidGlassButtons = ReadBookConfig.readMenuTopBarLiquidGlassButtons,
+                readMenuTopBarMergeButtons = ReadBookConfig.readMenuTopBarMergeButtons,
                 readMenuTopBarTitleCapsule = ReadBookConfig.readMenuTopBarTitleCapsule,
                 readMenuBottomBarLiquidGlassButtons = ReadBookConfig.readMenuBottomBarLiquidGlassButtons,
                 readMenuFloatingIconLiquidGlass = ReadBookConfig.readMenuFloatingIconLiquidGlass,

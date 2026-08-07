@@ -174,27 +174,23 @@ fun SearchContentScreen(
                     } else "搜索内容",
                     navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                     actions = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            TopBarAnimatedActionButton(
-                                checked = replaceEnabled,
-                                onCheckedChange = { onIntent(SearchContentIntent.ToggleReplace(it)) },
-                                iconChecked = Icons.Default.FindReplace,
-                                iconUnchecked = Icons.Default.FindReplace,
-                                activeText = "替换开启",
-                                inactiveText = "替换关闭"
-                            )
+                        TopBarAnimatedActionButton(
+                            checked = replaceEnabled,
+                            onCheckedChange = { onIntent(SearchContentIntent.ToggleReplace(it)) },
+                            iconChecked = Icons.Default.FindReplace,
+                            iconUnchecked = Icons.Default.FindReplace,
+                            activeText = "替换开启",
+                            inactiveText = "替换关闭"
+                        )
 
-                            TopBarAnimatedActionButton(
-                                checked = regexReplace,
-                                onCheckedChange = { onIntent(SearchContentIntent.ToggleRegex(it)) },
-                                iconChecked = Icons.Default.Code,
-                                iconUnchecked = Icons.Default.Code,
-                                activeText = "正则开启",
-                                inactiveText = "正则关闭"
-                            )
-                        }
+                        TopBarAnimatedActionButton(
+                            checked = regexReplace,
+                            onCheckedChange = { onIntent(SearchContentIntent.ToggleRegex(it)) },
+                            iconChecked = Icons.Default.Code,
+                            iconUnchecked = Icons.Default.Code,
+                            activeText = "正则开启",
+                            inactiveText = "正则关闭"
+                        )
                     },
                     scrollBehavior = scrollBehavior
                 )

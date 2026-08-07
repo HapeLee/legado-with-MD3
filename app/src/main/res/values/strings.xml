@@ -2270,6 +2270,8 @@
     <string name="read_menu_blur_style_solid">Fill</string>
     <string name="read_menu_blur_style_progressive">Gradient</string>
     <string name="read_menu_top_bar_liquid_glass_buttons_summary">Apply liquid glass to title bar action buttons. Requires Android 13+</string>
+    <string name="read_menu_top_bar_merge_buttons">Merge Top Bar Buttons</string>
+    <string name="read_menu_top_bar_merge_buttons_summary">Merge top bar action buttons into a capsule</string>
     <string name="read_menu_blur_radius">Blur radius</string>
     <string name="read_menu_blur_radius_summary">Higher radius may reduce performance</string>
     <string name="read_menu_blur_alpha">Menu opacity</string>

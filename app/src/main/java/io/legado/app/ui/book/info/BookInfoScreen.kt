@@ -120,6 +120,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import kotlinx.collections.immutable.ImmutableList
@@ -538,9 +539,7 @@ private fun BookInfoTransparentTopAppBar(
             },
             actions = {
                 Box(modifier = Modifier.padding(end = 12.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    TopBarActionsRow {
                         BookInfoTopBarActions(
                             state = state,
                             onMenuAction = onMenuAction,

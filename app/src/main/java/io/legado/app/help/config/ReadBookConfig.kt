@@ -79,6 +79,7 @@ object ReadBookConfig {
     val titleBarCompact get() = readSettings.titleBarCompact
     val readMenuFloatingBottomBar get() = readSettings.readMenuFloatingBottomBar
     val readMenuTopBarLiquidGlassButtons get() = readSettings.readMenuTopBarLiquidGlassButtons
+    val readMenuTopBarMergeButtons get() = readSettings.readMenuTopBarMergeButtons
     val readMenuTopBarTitleCapsule get() = readSettings.readMenuTopBarTitleCapsule
     val readMenuBottomBarLiquidGlassButtons get() = readSettings.readMenuBottomBarLiquidGlassButtons
     val readMenuFloatingIconLiquidGlass get() = readSettings.readMenuFloatingIconLiquidGlass

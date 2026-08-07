@@ -355,6 +355,7 @@ data class ReadMenuConfig(
     val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuTopBarLiquidGlassButtons: Boolean = false,
+    val readMenuTopBarMergeButtons: Boolean = false,
     val readMenuTopBarTitleCapsule: Boolean = false,
     val readMenuBottomBarLiquidGlassButtons: Boolean = false,
     val readMenuFloatingIconLiquidGlass: Boolean = false,
@@ -1395,6 +1396,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuTopBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class MenuTopBarMergeButtons(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuTopBarTitleCapsule(val value: Boolean) : ConfigUpdate {

@@ -18,7 +18,7 @@ class ReadSettingsMappingTest {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(105, actualKeys.size)
+        assertEquals(106, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 
@@ -166,6 +166,7 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         readMenuTopBarBlurMode = 1037,
         readMenuBottomBarBlurMode = 1038,
         readMenuTopBarLiquidGlassButtons = true,
+        readMenuTopBarMergeButtons = true,
         readMenuTopBarTitleCapsule = true,
         readMenuBottomBarLiquidGlassButtons = true,
         readMenuTopBarBlurStyle = 1042,
@@ -303,6 +304,7 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.readMenuTopBarBlurMode to readMenuTopBarBlurMode,
     PreferKey.readMenuBottomBarBlurMode to readMenuBottomBarBlurMode,
     PreferKey.readMenuTopBarLiquidGlassButtons to readMenuTopBarLiquidGlassButtons,
+    PreferKey.readMenuTopBarMergeButtons to readMenuTopBarMergeButtons,
     PreferKey.readMenuTopBarTitleCapsule to readMenuTopBarTitleCapsule,
     PreferKey.readMenuBottomBarLiquidGlassButtons to readMenuBottomBarLiquidGlassButtons,
     PreferKey.readMenuFloatingIconLiquidGlass to readMenuFloatingIconLiquidGlass,

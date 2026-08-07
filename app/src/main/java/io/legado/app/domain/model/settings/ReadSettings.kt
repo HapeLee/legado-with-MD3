@@ -87,6 +87,7 @@ data class ReadSettings(
     val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuTopBarLiquidGlassButtons: Boolean = false,
+    val readMenuTopBarMergeButtons: Boolean = false,
     val readMenuTopBarTitleCapsule: Boolean = false,
     val readMenuBottomBarLiquidGlassButtons: Boolean = false,
     val readMenuFloatingIconLiquidGlass: Boolean = false,

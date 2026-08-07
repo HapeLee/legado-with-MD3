@@ -864,6 +864,18 @@ private fun TopBarTab(
                 )
             },
         )
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_top_bar_merge_buttons),
+            description = stringResource(R.string.read_menu_top_bar_merge_buttons_summary),
+            checked = preferences.readMenuTopBarMergeButtons,
+            onCheckedChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarMergeButtons(it)
+                    )
+                )
+            },
+        )
     }
 }
 

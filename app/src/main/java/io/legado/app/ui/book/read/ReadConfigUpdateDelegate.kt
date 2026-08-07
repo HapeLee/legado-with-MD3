@@ -3,11 +3,11 @@ package io.legado.app.ui.book.read
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
-import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
 import io.legado.app.domain.gateway.ReadStyleFloatKey
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleIntKey
 import io.legado.app.domain.gateway.ReadStyleMutation
 import io.legado.app.domain.gateway.ReadStyleStringKey
@@ -350,6 +350,15 @@ class ReadConfigUpdateDelegate(
                 }
                 host.updateMenuConfig {
                     it.copy(readMenuTopBarLiquidGlassButtons = update.value)
+                }
+            }
+
+            is ConfigUpdate.MenuTopBarMergeButtons -> {
+                scope.launch {
+                    readSettingsRepository.setReadMenuTopBarMergeButtons(update.value)
+                }
+                host.updateMenuConfig {
+                    it.copy(readMenuTopBarMergeButtons = update.value)
                 }
             }
 
