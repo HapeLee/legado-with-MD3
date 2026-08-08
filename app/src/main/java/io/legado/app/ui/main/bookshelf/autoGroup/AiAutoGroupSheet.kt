@@ -61,9 +61,12 @@ fun AiAutoGroupSheet(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val applyingWaitMessage = stringResource(R.string.ai_auto_group_applying_wait)
+    val effectMessages = AiAutoGroupMessage.entries.associateWith { stringResource(it.stringRes) }
+    val completedMessage = stringResource(R.string.ai_auto_group_completed)
     val closeSheet = {
         if (state.phase == AiAutoGroupPhase.Applying) {
-            context.toastOnUi(context.getString(R.string.ai_auto_group_applying_wait))
+            context.toastOnUi(applyingWaitMessage)
         } else {
             viewModel.onIntent(AiAutoGroupIntent.CloseSession)
             onDismissRequest()
@@ -79,13 +82,9 @@ fun AiAutoGroupSheet(
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is AiAutoGroupEffect.ShowMessage -> context.toastOnUi(
-                    context.getString(effect.message.stringRes)
-                )
+                is AiAutoGroupEffect.ShowMessage -> context.toastOnUi(effectMessages.getValue(effect.message))
                 is AiAutoGroupEffect.ShowError -> context.toastOnUi(effect.error.localizedText(context))
-                AiAutoGroupEffect.Applied -> context.toastOnUi(
-                    context.getString(R.string.ai_auto_group_completed)
-                )
+                AiAutoGroupEffect.Applied -> context.toastOnUi(completedMessage)
             }
         }
     }

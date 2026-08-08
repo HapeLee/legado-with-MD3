@@ -263,7 +263,7 @@ fun BookSourceScreen(
         },
         topBarActions = {
             Box {
-                SmallPlainButton(
+                MediumTonalButton(
                     modifier = Modifier.minimumInteractiveComponentSize(),
                     icon = AppIcons.MoreVert,
                     contentDescription = stringResource(R.string.menu),
@@ -671,7 +671,6 @@ fun BookSourceScreen(
                             contentDescription = itemDescription,
                             trailingAction = {
                                 SmallPlainButton(
-                                    modifier = Modifier.minimumInteractiveComponentSize(),
                                     icon = AppIcons.Edit,
                                     contentDescription = stringResource(R.string.edit),
                                     onClick = { onEditSource(item.id) },
@@ -808,7 +807,6 @@ private fun BookSourceItemMenu(
     var expanded by remember { mutableStateOf(false) }
     Box {
         SmallPlainButton(
-            modifier = Modifier.minimumInteractiveComponentSize(),
             icon = AppIcons.MoreVert,
             contentDescription = stringResource(R.string.menu),
             onClick = { expanded = true },

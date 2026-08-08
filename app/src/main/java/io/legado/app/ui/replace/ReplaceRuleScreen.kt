@@ -212,7 +212,6 @@ fun ReplaceRuleScreen(
         onToggleAll = { onIntent(ReplaceRuleIntent.ToggleImportAll(it)) },
         onUpdateItem = { index, rule -> onIntent(ReplaceRuleIntent.UpdateImportItem(index, rule)) },
         onConfirm = { onIntent(ReplaceRuleIntent.SaveImportedRules) },
-        topBarActions = {},
         itemTitle = { rule -> rule.name },
         itemSubtitle = { rule ->
             rule.group?.takeIf { it.isNotBlank() }

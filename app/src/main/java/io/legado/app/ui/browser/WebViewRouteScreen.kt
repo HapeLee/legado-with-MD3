@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.help.http.CookieManager
@@ -70,6 +71,14 @@ fun WebViewRouteScreen(
     var imageUrlToSave by remember { mutableStateOf<String?>(null) }
     var pendingDownload by remember { mutableStateOf<Pair<String, String>?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val loadingText = stringResource(R.string.loading)
+    val refreshDescription = stringResource(R.string.refresh)
+    val openInBrowserDescription = stringResource(R.string.open_in_browser)
+    val copyUrlDescription = stringResource(R.string.copy_url)
+    val confirmDescription = stringResource(R.string.ok)
+    val selectOperationTitle = stringResource(R.string.select_operation)
+    val saveActionText = stringResource(R.string.action_save)
+    val downloadActionText = stringResource(R.string.action_download)
 
     LaunchedEffect(intent) {
         viewModel.initData(intent) { ready = true }
@@ -103,14 +112,14 @@ fun WebViewRouteScreen(
         topBar = {
             GlassSmallTopAppBar(
                 title = pageTitle ?: viewModel.sourceName.ifBlank {
-                    intent.getStringExtra("title") ?: context.getString(R.string.loading)
+                    intent.getStringExtra("title") ?: loadingText
                 },
                 navigationIcon = { TopBarNavigationButton(onClick = ::finishScreen) },
                 actions = {
                     TopBarActionButton(
                         onClick = { webView?.reload() },
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = context.getString(R.string.refresh),
+                        contentDescription = refreshDescription,
                     )
                     TopBarActionButton(
                         onClick = {
@@ -121,7 +130,7 @@ fun WebViewRouteScreen(
                             context.openUrl(externalUrl)
                         },
                         imageVector = Icons.Default.OpenInBrowser,
-                        contentDescription = context.getString(R.string.open_in_browser),
+                        contentDescription = openInBrowserDescription,
                     )
                     TopBarActionButton(
                         onClick = {
@@ -131,12 +140,12 @@ fun WebViewRouteScreen(
                             context.sendToClip(currentUrl)
                         },
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = context.getString(R.string.copy_url),
+                        contentDescription = copyUrlDescription,
                     )
                     TopBarActionButton(
                         onClick = ::finishWithVerification,
                         imageVector = Icons.Default.Check,
-                        contentDescription = context.getString(R.string.ok),
+                        contentDescription = confirmDescription,
                     )
                 },
             )
@@ -285,11 +294,11 @@ fun WebViewRouteScreen(
     OptionSheet(
         show = imageUrlToSave != null,
         onDismissRequest = { imageUrlToSave = null },
-        title = context.getString(R.string.select_operation),
+        title = selectOperationTitle,
     ) {
         OptionCard(
             icon = Icons.Default.Save,
-            text = context.getString(R.string.action_save),
+            text = saveActionText,
             onClick = {
                 val imageUrl = imageUrlToSave
                 imageUrlToSave = null
@@ -302,7 +311,7 @@ fun WebViewRouteScreen(
         download ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message = download.second,
-            actionLabel = context.getString(R.string.action_download),
+            actionLabel = downloadActionText,
             withDismissAction = true,
         )
         if (result == SnackbarResult.ActionPerformed) {

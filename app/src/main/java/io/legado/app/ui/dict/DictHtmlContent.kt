@@ -9,6 +9,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,7 +79,8 @@ private fun DictHtmlParagraphContent(
         if (inline !is DictHtmlInline.Image) return@forEach
         val id = "dict-image-$paragraphIndex-${imageIndex++}"
         val painter = rememberAsyncImagePainter(model = inline.source)
-        val image = (painter.state.value as? AsyncImagePainter.State.Success)?.result?.image
+        val painterState by painter.state.collectAsState()
+        val image = (painterState as? AsyncImagePainter.State.Success)?.result?.image
         val drawableWidth = image?.width?.coerceAtLeast(1) ?: 1
         val drawableHeight = image?.height?.coerceAtLeast(1) ?: 1
         val scale = if (maxWidthPx in 1..<drawableWidth) {
