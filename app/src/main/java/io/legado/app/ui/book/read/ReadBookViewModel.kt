@@ -2321,6 +2321,13 @@ class ReadBookViewModel(
         }
     }
 
+    fun refreshSeekState() {
+        _uiState.update { it.copy(
+            seekProgress = calculateSeekProgress(),
+            seekMax = calculateSeekMax(),
+        ) }
+    }
+
     private fun openChapterUrl() {
         if (ReadBook.isLocalBook) return
         viewModelScope.launch {
