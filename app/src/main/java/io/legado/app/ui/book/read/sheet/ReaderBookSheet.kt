@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
@@ -89,6 +88,7 @@ import io.legado.app.ui.book.toc.TocBookmarkItemUi
 import io.legado.app.ui.book.toc.TocEffect
 import io.legado.app.ui.book.toc.TocIntent
 import io.legado.app.ui.book.toc.TocItemUi
+import io.legado.app.ui.book.toc.TocMarkingItemUi
 import io.legado.app.ui.book.toc.TocUiState
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity
@@ -118,6 +118,7 @@ enum class ReaderBookSheetTab {
     Information,
     Toc,
     Bookmarks,
+    Marks,
 }
 
 @Composable
@@ -128,6 +129,12 @@ fun ReaderBookSheetRoute(
     onDismissRequest: () -> Unit,
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     onOpenFullBookInfo: () -> Unit,
+    /** 书签页跳转：携带完整书签供跳转前校验。 */
+    onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
+    /** 笔记页跳转：携带完整展示项供跳转前校验。 */
+    onMarkingNavigate: (TocMarkingItemUi) -> Unit = { _ -> },
+    /** 笔记页点击进入 MarkingSheet 编辑。 */
+    onMarkingEdit: (markingId: String) -> Unit = {},
     bookSource: BookSource? = null,
     onOpenChapterUrl: () -> Unit = {},
     onToggleReadUrlInBrowser: () -> Unit = {},
@@ -186,7 +193,9 @@ fun ReaderBookSheetRoute(
         },
         onIntent = viewModel::onIntent,
         onChapterClick = { index -> onChapterClick(index, 0) },
-        onBookmarkNavigate = onChapterClick,
+        onBookmarkNavigate = onBookmarkNavigate,
+        onMarkingNavigate = onMarkingNavigate,
+        onMarkingEdit = onMarkingEdit,
         onOpenFullScreen = { tab ->
             when (tab) {
                 ReaderBookSheetTab.Information -> onOpenFullBookInfo()
@@ -201,6 +210,9 @@ fun ReaderBookSheetRoute(
                             )
                     )
                 }
+
+                // 笔记页无全屏落地（TocActivity 暂无对应页）
+                ReaderBookSheetTab.Marks -> Unit
             }
         },
         onEditLocalTocRule = { regex ->
@@ -230,7 +242,9 @@ private fun ReaderBookSheet(
     onDismissRequest: () -> Unit,
     onIntent: (TocIntent) -> Unit,
     onChapterClick: (Int) -> Unit,
-    onBookmarkNavigate: (Int, Int) -> Unit,
+    onBookmarkNavigate: (Bookmark) -> Unit,
+    onMarkingNavigate: (TocMarkingItemUi) -> Unit,
+    onMarkingEdit: (String) -> Unit,
     onOpenFullScreen: (ReaderBookSheetTab) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
     onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
@@ -280,6 +294,7 @@ private fun ReaderBookSheet(
                 stringResource(R.string.information),
                 stringResource(R.string.chapter_list),
                 stringResource(R.string.bookmark),
+                stringResource(R.string.marks),
             ),
             selectedTabIndex = pagerState.currentPage,
             onTabSelected = {
@@ -287,28 +302,16 @@ private fun ReaderBookSheet(
                 onIntent(TocIntent.ClearSelection)
                 scope.launch { pagerState.animateScrollToPage(it) }
             },
+            onTabLongClick = { index ->
+                val tab = ReaderBookSheetTab.entries[index]
+                if (tab != ReaderBookSheetTab.Marks) {
+                    onDismissRequest()
+                    onOpenFullScreen(tab)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, top = 8.dp, end = 16.dp),
-            tabEndContent = { index ->
-                Box(
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .size(16.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable {
-                            onDismissRequest()
-                            onOpenFullScreen(ReaderBookSheetTab.entries[index])
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.MenuOpen,
-                        contentDescription = stringResource(R.string.open),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-            },
         )
         HorizontalPager(
             state = pagerState,
@@ -339,6 +342,14 @@ private fun ReaderBookSheet(
                         onBookmarkNavigate = onBookmarkNavigate,
                         onEditBookmark = { editingBookmark = it },
                         onExportBookmarks = onExportBookmarks,
+                    )
+
+                    ReaderBookSheetTab.Marks -> ReaderBookMarkingsPage(
+                        markings = state.markings,
+                        currentChapterIndex = state.book?.durChapterIndex,
+                        currentBookUrl = state.book?.bookUrl,
+                        onMarkingNavigate = onMarkingNavigate,
+                        onMarkingEdit = onMarkingEdit,
                     )
                 }
             }
@@ -1069,7 +1080,7 @@ private fun ReaderBookTocMenu(
 private fun ReaderBookBookmarksPage(
     state: TocUiState,
     onIntent: (TocIntent) -> Unit,
-    onBookmarkNavigate: (Int, Int) -> Unit,
+    onBookmarkNavigate: (Bookmark) -> Unit,
     onEditBookmark: (Bookmark) -> Unit,
     onExportBookmarks: (Boolean, String) -> Unit,
 ) {
@@ -1131,7 +1142,7 @@ private fun ReaderBookBookmarksPage(
 private fun ReaderSheetBookmarkList(
     bookmarks: List<TocBookmarkItemUi>,
     currentChapterIndex: Int?,
-    onBookmarkNavigate: (Int, Int) -> Unit,
+    onBookmarkNavigate: (Bookmark) -> Unit,
     onEditBookmark: (Bookmark) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -1170,7 +1181,7 @@ private fun ReaderSheetBookmarkList(
                 item = bookmark,
                 onClick = { onEditBookmark(bookmark.raw) },
                 onLongClick = {
-                    onBookmarkNavigate(bookmark.chapterIndex, bookmark.chapterPos)
+                    onBookmarkNavigate(bookmark.raw)
                 },
                 modifier = Modifier.animateItem(),
             )
@@ -1238,6 +1249,142 @@ private fun ReaderSheetBookmarkItem(
             if (item.content.isNotBlank()) {
                 AppText(
                     text = item.content,
+                    style = LegadoTheme.typography.labelMedium,
+                    color = LegadoTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 划线/高亮笔记页：与书签一致，点按进入编辑（MarkingSheet），长按跳转到标记位置。
+ */
+@Composable
+private fun ReaderBookMarkingsPage(
+    markings: List<TocMarkingItemUi>,
+    currentChapterIndex: Int?,
+    currentBookUrl: String?,
+    onMarkingNavigate: (TocMarkingItemUi) -> Unit,
+    onMarkingEdit: (String) -> Unit,
+) {
+    if (markings.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            EmptyMessage(message = stringResource(R.string.marks_empty))
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        items(
+            items = markings,
+            key = { it.id },
+            contentType = { "marking" },
+        ) { marking ->
+            ReaderSheetMarkingItem(
+                item = marking,
+                isOtherSource = currentBookUrl != null &&
+                        marking.bookUrl.isNotBlank() &&
+                        marking.bookUrl != currentBookUrl,
+                onClick = { onMarkingEdit(marking.id) },
+                onLongClick = { onMarkingNavigate(marking) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReaderSheetMarkingItem(
+    item: TocMarkingItemUi,
+    isOtherSource: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = if (item.isDur) {
+        LegadoTheme.colorScheme.secondaryContainer
+    } else {
+        LegadoTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = if (item.isDur) {
+        LegadoTheme.colorScheme.onSecondaryContainer
+    } else {
+        LegadoTheme.colorScheme.onSurface
+    }
+    val createdTime = remember(item.raw.createdAt) {
+        SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            .format(Date(item.raw.createdAt))
+    }
+
+    NormalCard(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        cornerRadius = 12.dp,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppText(
+                    text = createdTime,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                AppText(
+                    text = item.chapterName.ifBlank {
+                        stringResource(R.string.chapter_index_format, item.chapterIndex + 1)
+                    },
+                    style = LegadoTheme.typography.labelSmallEmphasized,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+                if (isOtherSource) {
+                    AppText(
+                        text = stringResource(R.string.marks_other_source),
+                        style = LegadoTheme.typography.labelSmall,
+                        color = LegadoTheme.colorScheme.error,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
+                if (item.isDur) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
+            if (item.text.isNotBlank()) {
+                AppText(
+                    text = item.text,
+                    style = LegadoTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (item.note.isNotBlank()) {
+                AppText(
+                    text = item.note,
                     style = LegadoTheme.typography.labelMedium,
                     color = LegadoTheme.colorScheme.primary,
                     maxLines = 2,

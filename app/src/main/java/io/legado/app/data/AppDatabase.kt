@@ -17,6 +17,7 @@ import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.dao.BookKnowledgeDao
+import io.legado.app.data.dao.BookMarkingDao
 import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.CacheDao
@@ -61,6 +62,7 @@ import io.legado.app.data.entities.BookCharacterRelation
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookKnowledgeEntry
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
@@ -110,7 +112,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 101,
+    version = 102,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -126,7 +128,8 @@ val appDb by lazy {
         BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
         BookOutlineNode::class, ReadAloudVoiceEntity::class, BookVoiceBindingEntity::class,
         ChapterSpeechAnalysisEntity::class, ChapterSpeechSegmentEntity::class,
-        CloudTtsEngineEntity::class, ExactChapterPageCountEntity::class],
+        CloudTtsEngineEntity::class, ExactChapterPageCountEntity::class,
+        BookMarking::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -184,7 +187,9 @@ val appDb by lazy {
         AutoMigration(from = 95, to = 96),
         AutoMigration(from = 96, to = 97),
         AutoMigration(from = 97, to = 98),
-        AutoMigration(from = 100, to = 101, spec = DatabaseMigrations.Migration_100_101::class)
+        AutoMigration(from = 100, to = 101, spec = DatabaseMigrations.Migration_100_101::class),
+        // book_marks 新表：Room AutoMigration 支持新增表，自动 CREATE TABLE
+        AutoMigration(from = 101, to = 102)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -203,6 +208,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val searchKeywordDao: SearchKeywordDao
     abstract val rssSourceDao: RssSourceDao
     abstract val bookmarkDao: BookmarkDao
+    abstract val bookMarkingDao: BookMarkingDao
     abstract val rssArticleDao: RssArticleDao
     abstract val rssStarDao: RssStarDao
     abstract val rssReadRecordDao: RssReadRecordDao

@@ -36,6 +36,9 @@ data class BookContentProcess(
     companion object {
         const val KIND_AI_CLEAN = "ai_clean"
         const val KIND_AI_REWRITE = "ai_rewrite"
+
+        // 用户划线/高亮标记：book_marks 无 kind 列（样式即类型），渲染桥从 styleJson
+        // 推导出这两个合成 kind 之一，供引擎/渲染层识别「这是标记、别改文本」。
         const val KIND_USER_UNDERLINE = "user_underline"
         const val KIND_USER_HIGHLIGHT = "user_highlight"
 

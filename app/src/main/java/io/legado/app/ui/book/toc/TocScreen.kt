@@ -204,7 +204,7 @@ fun TocScreen(
     val book = uiState.book
     val state = uiState.action
 
-    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, 1)) { 2 }
+    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, 2)) { 3 }
     val scope = rememberCoroutineScope()
 
     val listState = rememberLazyListState()
@@ -537,7 +537,8 @@ fun TocScreen(
                         AppTabRow(
                             tabTitles = listOf(
                                 stringResource(R.string.chapter_list),
-                                stringResource(R.string.bookmark)
+                                stringResource(R.string.bookmark),
+                                stringResource(R.string.marks),
                             ),
                             selectedTabIndex = pagerState.currentPage,
                             onTabSelected = { index ->
@@ -663,6 +664,16 @@ fun TocScreen(
                         onBookmarkClick = { bookmark ->
                             editingBookmark = bookmark
                         },
+                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                            top = padding.calculateTopPadding(),
+                            bottom = 120.dp
+                        )
+                    )
+
+                    2 -> MarkingListContent(
+                        markings = uiState.markings,
+                        book = book,
+                        onMarkingClick = onBookmarkClick,
                         contentPadding = adaptiveContentPaddingOnlyVertical(
                             top = padding.calculateTopPadding(),
                             bottom = 120.dp
@@ -1031,6 +1042,104 @@ fun BookmarkListContent(
                         onBookmarkLongClick(bookmark.chapterIndex, bookmark.chapterPos)
                     }
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MarkingListContent(
+    markings: List<TocMarkingItemUi>,
+    book: Book?,
+    onMarkingClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    if (markings.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding(),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            EmptyMessage(message = stringResource(R.string.marks_empty))
+        }
+        return
+    }
+
+    FastScrollLazyColumn(
+        state = rememberLazyListState(),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = contentPadding,
+    ) {
+        items(items = markings, key = { it.id }) { marking ->
+            val contentColor = if (marking.isDur) {
+                LegadoTheme.colorScheme.onSecondaryContainer
+            } else {
+                LegadoTheme.colorScheme.onSurface
+            }
+            NormalCard(
+                onClick = { onMarkingClick(marking.chapterIndex, marking.chapterPos) },
+                containerColor = if (marking.isDur) {
+                    LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                } else {
+                    LegadoTheme.colorScheme.surface
+                },
+                contentColor = contentColor,
+                cornerRadius = 0.dp,
+                modifier = Modifier
+                    .animateItem()
+                    .fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .adaptiveHorizontalPadding(),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppText(
+                            text = marking.chapterName.ifBlank {
+                                stringResource(
+                                    R.string.chapter_index_format,
+                                    marking.chapterIndex + 1
+                                )
+                            },
+                            style = LegadoTheme.typography.labelMediumEmphasized,
+                            color = contentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (marking.bookUrl.isNotBlank() && marking.bookUrl != book?.bookUrl) {
+                            AppText(
+                                text = stringResource(R.string.marks_other_source),
+                                style = LegadoTheme.typography.labelSmall,
+                                color = LegadoTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    AppText(
+                        text = marking.text,
+                        style = LegadoTheme.typography.bodyMedium,
+                        color = contentColor.copy(alpha = 0.78f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    if (marking.note.isNotBlank()) {
+                        AppText(
+                            text = marking.note,
+                            style = LegadoTheme.typography.labelMedium,
+                            color = LegadoTheme.colorScheme.primary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
             }
         }
     }

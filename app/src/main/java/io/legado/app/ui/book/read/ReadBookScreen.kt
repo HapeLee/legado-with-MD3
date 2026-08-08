@@ -15,6 +15,7 @@ import coil3.ImageLoader
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.domain.gateway.CoverSettingsGateway
+import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.book.read.sheet.AiTextCleanSheet
@@ -29,6 +30,7 @@ import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
+import io.legado.app.ui.book.read.sheet.MarkingSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
@@ -69,12 +71,15 @@ fun ReadBookScreen(
     state: ReadBookUiState,
     aiState: ReadAiUiState,
     highlightRuleState: HighlightRuleConfigUiState,
+    markingState: MarkingUiState,
     contentEditState: ContentEditUiState,
     contentProcessState: ContentProcessConfigUiState,
     preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
     onOpenTextSelectMenuConfig: () -> Unit,
+    onPickBookmarkBadgeImage: () -> Unit,
+    onResetBookmarkBadge: () -> Unit,
 ) {
     BackHandler {
         when {
@@ -165,6 +170,30 @@ fun ReadBookScreen(
         onConfirm = { onIntent(ReadBookIntent.ConfirmAddCurrentBookToBookshelf) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
+    )
+
+    // 书签/笔记跳转前校验未通过的确认框
+    val pendingTarget = state.pendingBookmarkTarget
+    AppAlertDialog(
+        show = pendingTarget != null,
+        onDismissRequest = { onIntent(ReadBookIntent.CancelBookmarkTargetJump) },
+        title = stringResource(R.string.bookmark_target_may_shift),
+        text = stringResource(
+            when (pendingTarget?.verdict) {
+                is BookmarkTargetVerdict.SourceChanged ->
+                    R.string.bookmark_target_source_changed
+
+                BookmarkTargetVerdict.TitleMismatch ->
+                    R.string.bookmark_target_title_mismatch
+
+                null -> R.string.bookmark_target_title_mismatch
+                BookmarkTargetVerdict.Match -> R.string.bookmark_target_title_mismatch
+            }
+        ),
+        confirmText = stringResource(R.string.bookmark_target_jump_anyway),
+        onConfirm = { onIntent(ReadBookIntent.ConfirmBookmarkTargetJump) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.CancelBookmarkTargetJump) },
     )
 
     // AppModalBottomSheet-based sheets — always composed, controlled by show flag
@@ -262,6 +291,15 @@ fun ReadBookScreen(
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
+    MarkingSheet(
+        show = state.activeSheet is ReadBookSheet.Marking,
+        state = markingState,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissMarking) },
+        onSave = { style, note ->
+            onIntent(ReadBookIntent.SaveMarking(style, note))
+        },
+        onDelete = { onIntent(ReadBookIntent.DeleteMarking) },
+    )
     ContentEditSheet(
         show = state.activeSheet is ReadBookSheet.ContentEdit,
         state = contentEditState,
@@ -305,6 +343,8 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
         },
         onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
+        onPickBookmarkBadgeImage = onPickBookmarkBadgeImage,
+        onResetBookmarkBadge = onResetBookmarkBadge,
     )
     ReadAloudNumberConfigSheet(
         show = state.activeSheet is ReadBookSheet.PreDownloadConfig,

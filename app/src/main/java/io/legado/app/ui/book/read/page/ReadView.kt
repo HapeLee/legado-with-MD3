@@ -22,13 +22,11 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.model.ReadSessionState
-
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
 import io.legado.app.ui.book.read.page.delegate.FadePageDelegate
@@ -45,15 +43,13 @@ import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.book.read.page.provider.TipStyleProvider
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.invisible
-import io.legado.app.utils.statusBarHeight
-
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
 import java.util.Locale
@@ -158,7 +154,7 @@ class ReadView(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             Gravity.TOP or Gravity.CENTER_HORIZONTAL,
         ).apply {
-            topMargin = BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP.dpToPx()
+            topMargin = BOOKMARK_SWIPE_HINT_CONTENT_TOP_MARGIN_DP.dpToPx()
         }
         visibility = View.GONE
     }
@@ -293,7 +289,9 @@ class ReadView(
                 pressDown = true
                 isMove = false
                 bookmarkSwipeEnabled = ReadConfig.swipeToAddBookmark
-                resetBookmarkSwipe()
+                // 新触摸先清零：取消上一手势遗留的弹回动画并把页面归位。若不取消，
+                // 动画会与 MOVE 的逐帧 translationY 互相抢占，起手一段明显顿挫。
+                resetBookmarkSwipe(animate = false)
                 pageDelegate?.onTouch(event)
                 pageDelegate?.onDown()
                 setStartPoint(event.x, event.y, false)
@@ -390,16 +388,20 @@ class ReadView(
     /**
      * 手势结束（抬手/取消）：页面弹回原位、收起提示条。翻页委托不受影响。
      */
-    private fun resetBookmarkSwipe() {
+    private fun resetBookmarkSwipe(animate: Boolean = true) {
         isBookmarkSwipe = false
         bookmarkSwipeReleased = false
         hideBookmarkSwipeHint()
         curPage.animate().cancel()
-        curPage.animate()
-            .translationY(0f)
-            .setDuration(BOOKMARK_SWIPE_SPRING_BACK_MS)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        if (animate && curPage.translationY != 0f) {
+            curPage.animate()
+                .translationY(0f)
+                .setDuration(BOOKMARK_SWIPE_SPRING_BACK_MS)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        } else {
+            curPage.translationY = 0f
+        }
     }
 
     /**
@@ -428,23 +430,34 @@ class ReadView(
 
     private fun showBookmarkSwipeHint() {
         if (bookmarkSwipeHint.visibility != View.VISIBLE) {
-            // 提示条是 ReadView 的直接子 View，edge-to-edge 下会被状态栏盖住；
-            // 每次显示前按当前系统栏顶部 inset 垫高，状态栏隐藏（inset 为 0）时自然回落顶部。
-            bookmarkSwipeHint.updateLayoutParams<FrameLayout.LayoutParams> {
-                topMargin = bookmarkSwipeHintTopInset() + BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP.dpToPx()
+            // 当前页已有书签时下滑是取消，文案随状态切换；书签只在抬手时变更，拖动期间稳定。
+            bookmarkSwipeHint.text = if (curPage.hasBookmarkOnCurrentPage()) {
+                context.getString(R.string.bookmark_swipe_release_to_remove)
+            } else {
+                context.getString(R.string.bookmark_swipe_release_to_add)
             }
+            // 提示条挂在阅读内容顶部（状态栏 + 页眉下方）而不是屏幕顶部——下拉时
+            // 页面移开露出的正是这块区域，提示条像从「阅读页上方」浮现。
+            bookmarkSwipeHint.updateLayoutParams<FrameLayout.LayoutParams> {
+                topMargin =
+                    bookmarkSwipeContentTop() + BOOKMARK_SWIPE_HINT_CONTENT_TOP_MARGIN_DP.dpToPx()
+            }
+            bookmarkSwipeHint.animate().cancel()
+            bookmarkSwipeHint.alpha = 0f
             bookmarkSwipeHint.visibility = View.VISIBLE
+            bookmarkSwipeHint.animate()
+                .alpha(1f)
+                .setDuration(BOOKMARK_SWIPE_HINT_FADE_MS)
+                .start()
         }
     }
 
-    private fun bookmarkSwipeHintTopInset(): Int =
-        ViewCompat.getRootWindowInsets(this)
-            ?.getInsets(WindowInsetsCompat.Type.systemBars())
-            ?.top
-            ?: context.statusBarHeight
+    /** 阅读内容顶部相对 ReadView 顶部的距离：状态栏占位 + 页眉 + 内边距。 */
+    private fun bookmarkSwipeContentTop(): Int = curPage.headerHeight
 
     private fun hideBookmarkSwipeHint() {
         if (bookmarkSwipeHint.visibility != View.GONE) {
+            bookmarkSwipeHint.animate().cancel()
             bookmarkSwipeHint.visibility = View.GONE
         }
     }
@@ -867,6 +880,8 @@ class ReadView(
         curPage.upStyle()
         prevPage.upStyle()
         nextPage.upStyle()
+        // 角标可能随样式刷新而切换自定义图/默认图（选图或恢复默认后立即生效）
+        upBookmarkBadge()
     }
 
     /**
@@ -1070,8 +1085,11 @@ class ReadView(
         /** 竖直位移需超过水平位移的这个倍数，才判定为下滑而非斜向翻页。 */
         const val VERTICAL_DOMINANCE_RATIO = 1.5f
 
-        /** 顶部提示条相对页面顶部的距离。 */
-        const val BOOKMARK_SWIPE_HINT_TOP_MARGIN_DP = 12
+        /** 顶部提示条相对阅读内容顶部的距离。 */
+        const val BOOKMARK_SWIPE_HINT_CONTENT_TOP_MARGIN_DP = 8
+
+        /** 顶部提示条淡入时长。 */
+        const val BOOKMARK_SWIPE_HINT_FADE_MS = 120L
 
         /** 顶部提示条圆角半径。 */
         const val BOOKMARK_SWIPE_HINT_CORNER_RADIUS_DP = 24f

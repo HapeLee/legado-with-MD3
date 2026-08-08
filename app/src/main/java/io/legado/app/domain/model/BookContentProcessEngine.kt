@@ -28,6 +28,19 @@ object BookContentProcessEngine {
                     it.stage == BookContentProcess.STAGE_CONTENT
             }
             .forEach { process ->
+                if (process.kind == BookContentProcess.KIND_USER_UNDERLINE ||
+                    process.kind == BookContentProcess.KIND_USER_HIGHLIGHT
+                ) {
+                    // 用户划线/高亮标记：不改文本。锚点能在正文里解析到说明标记仍有效，
+                    // 计入 effectiveProcesses 供渲染层把样式应用到区间。
+                    val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
+                        .getOrNull()
+                        ?: return@forEach
+                    if (findTargetRange(output, anchor) != null) {
+                        effectiveProcesses.add(process)
+                    }
+                    return@forEach
+                }
                 val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
                     .getOrNull()
                     ?: return@forEach
@@ -69,6 +82,13 @@ object BookContentProcessEngine {
             }
         return ApplyResult(output, effectiveProcesses)
     }
+
+    /**
+     * 在给定正文里解析锚点对应的字符区间，供渲染层把用户划线/高亮应用到该区间。
+     * 容错：按文本匹配 + 就近章节位置取最近命中，跨空白归一化。
+     */
+    fun resolveRange(content: String, anchor: TextProcessAnchor): IntRange? =
+        findTargetRange(content, anchor)
 
     fun normalizeProcessText(text: String): String {
         return text.lines()

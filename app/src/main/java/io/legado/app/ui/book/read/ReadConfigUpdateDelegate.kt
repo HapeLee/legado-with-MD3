@@ -16,6 +16,7 @@ import io.legado.app.model.ReadSessionState
 import io.legado.app.utils.postEvent
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -635,6 +636,16 @@ class ReadConfigUpdateDelegate(
             is ConfigUpdate.SwipeToAddBookmark -> {
                 scope.launch {
                     readSettingsRepository.update { it.copy(swipeToAddBookmark = update.value) }
+                }
+            }
+            is ConfigUpdate.BookmarkBadgeSize -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(bookmarkBadgeSize = update.value) }
+                    // 等写入落地再发 UpdateStyle，否则 upBookmarkBadge 读到旧尺寸
+                    readSettingsRepository.preferences.first { it.bookmarkBadgeSize == update.value }
+                    host.emitEffect(
+                        ReadBookEffect.UpdateReadViewConfig(setOf(ConfigUpdateAction.UpdateStyle))
+                    )
                 }
             }
             is ConfigUpdate.SliderVibrator -> {

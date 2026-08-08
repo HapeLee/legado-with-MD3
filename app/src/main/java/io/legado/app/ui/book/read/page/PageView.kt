@@ -77,7 +77,27 @@ class PageView(
     private var isMainView = false
     var isScroll = false
 
+    /** 已应用到角标 ImageView 的宽度 px，用于跳过 layout 重复更新的热路径。 */
+    private var appliedBadgeSizePx: Int = -1
+
     private var currentTextPage: TextPage? = null
+
+    /**
+     * 当前页范围内是否落有书签。与角标同源（[ReaderBookmarkState] 快照），
+     * 供角标显示与下滑手势的提示文案共用。
+     */
+    fun hasBookmarkOnCurrentPage(): Boolean {
+        val page = currentTextPage ?: return false
+        val book = ReadBook.book ?: return false
+        if (page.isMsgPage || page.lineSize <= 0) return false
+        return ReaderBookmarkState.hasBookmarkInRange(
+            bookName = book.name,
+            bookAuthor = book.author,
+            chapterIndex = page.chapterIndex,
+            startPos = page.chapterPosition,
+            endPos = page.chapterPosition + page.charSize,
+        )
+    }
 
     /**
      * 右上角书签角标：本页范围内落有书签时显示。
@@ -86,18 +106,30 @@ class PageView(
      * 与下滑手势在滚动模式下同样不启用保持一致。
      */
     fun upBookmarkBadge() {
-        val page = currentTextPage
-        val book = ReadBook.book
-        val visible = book != null && page != null && !isScroll && !page.isMsgPage && page.lineSize > 0 &&
-                ReaderBookmarkState.hasBookmarkInRange(
-                    bookName = book.name,
-                    bookAuthor = book.author,
-                    chapterIndex = page.chapterIndex,
-                    startPos = page.chapterPosition,
-                    endPos = page.chapterPosition + page.charSize,
-                )
-        // 角标是固定的黄色书签丝带（见 ic_bookmark_badge），不随主题变色。
-        binding.ivBookmarkBadge.isGone = !visible
+        val visible = !isScroll && hasBookmarkOnCurrentPage()
+        val badge = binding.ivBookmarkBadge
+        if (!visible) {
+            badge.isGone = true
+            return
+        }
+        badge.isGone = false
+        // 角标为 1:2 的丝带，宽度由 bookmarkBadgeSize 决定；仅当尺寸变化才更新布局。
+        val sizeDp = ReadConfig.bookmarkBadgeSize.coerceAtLeast(1)
+        val sizePx = sizeDp.dpToPx()
+        if (appliedBadgeSizePx != sizePx) {
+            appliedBadgeSizePx = sizePx
+            badge.updateLayoutParams {
+                width = sizePx
+                height = sizePx * 2
+            }
+        }
+        // 默认是固定的黄色书签丝带（见 ic_bookmark_badge）；用户可自定义为任意图片。
+        // 默认 drawable 每次 getDrawable 都是新实例，用 constantState 比对避免反复 setImageDrawable。
+        val custom = ReaderBookmarkBadge.drawable(context)
+        val target = custom ?: ContextCompat.getDrawable(context, R.drawable.ic_bookmark_badge)
+        if (badge.drawable !== target && badge.drawable?.constantState !== target?.constantState) {
+            badge.setImageDrawable(target)
+        }
     }
 
     val headerHeight: Int

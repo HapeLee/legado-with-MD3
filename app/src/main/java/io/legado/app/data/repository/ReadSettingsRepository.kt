@@ -363,6 +363,8 @@ class ReadSettingsRepository(
             volumeKeyPageOnPlay = compatDsValue(Keys.VolumeKeyPageOnPlay, true),
             keyPageOnLongPress = compatDsValue(Keys.KeyPageOnLongPress, false),
             swipeToAddBookmark = compatDsValue(Keys.SwipeToAddBookmark, false),
+            bookmarkBadgeImage = compatDsValue(Keys.BookmarkBadgeImage, ""),
+            bookmarkBadgeSize = compatDsValue(Keys.BookmarkBadgeSize, 10),
             pageTouchSlop = compatDsValue(Keys.PageTouchSlop, 0),
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
@@ -479,6 +481,8 @@ class ReadSettingsRepository(
         val VolumeKeyPageOnPlay = booleanPreferencesKey(PreferKey.volumeKeyPageOnPlay)
         val KeyPageOnLongPress = booleanPreferencesKey(PreferKey.keyPageOnLongPress)
         val SwipeToAddBookmark = booleanPreferencesKey(PreferKey.swipeToAddBookmark)
+        val BookmarkBadgeImage = stringPreferencesKey(PreferKey.bookmarkBadgeImage)
+        val BookmarkBadgeSize = intPreferencesKey(PreferKey.bookmarkBadgeSize)
         val PageTouchSlop = intPreferencesKey(PreferKey.pageTouchSlop)
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val UseNewTocSheet = booleanPreferencesKey(PreferKey.useNewTocSheet)
@@ -605,6 +609,8 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.volumeKeyPageOnPlay to volumeKeyPageOnPlay,
     PreferKey.keyPageOnLongPress to keyPageOnLongPress,
     PreferKey.swipeToAddBookmark to swipeToAddBookmark,
+    PreferKey.bookmarkBadgeImage to bookmarkBadgeImage,
+    PreferKey.bookmarkBadgeSize to bookmarkBadgeSize,
     PreferKey.pageTouchSlop to pageTouchSlop,
     PreferKey.sliderVibrator to sliderVibrator,
     PreferKey.useNewTocSheet to useNewTocSheet,

@@ -44,9 +44,12 @@ import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.CleanSelectedTextUseCase
 import io.legado.app.domain.usecase.GenerateChapterSummaryUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
+import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
+import io.legado.app.domain.usecase.SaveMarkingUseCase
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
+import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -122,6 +125,9 @@ class ReadBookViewModel(
     private val cleanSelectedTextUseCase: CleanSelectedTextUseCase,
     private val aiTextFactoryUseCase: AiTextFactoryUseCase,
     private val saveBookContentProcessUseCase: SaveBookContentProcessUseCase,
+    private val saveMarkingUseCase: SaveMarkingUseCase,
+    private val verifyBookmarkTargetUseCase: VerifyBookmarkTargetUseCase,
+    private val relocateMarkingTargetUseCase: RelocateMarkingTargetUseCase,
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val aiArtifactGateway: AiArtifactGateway,
     private val aiPromptPresetGateway: AiPromptPresetGateway,
@@ -209,6 +215,64 @@ class ReadBookViewModel(
     )
 
     val contentProcessState = contentProcessDelegate.uiState
+
+    // --- 划线/高亮笔记域：一次「选中 → 配置样式/备注 → 保存」的临时会话 ---
+
+    private val markingDelegate = MarkingDelegate(
+        scope = viewModelScope,
+        context = context,
+        highlightRuleRepository = highlightRuleRepository,
+        saveMarkingUseCase = saveMarkingUseCase,
+        host = object : MarkingDelegate.Host {
+            override fun reloadCurrentChapter() {
+                contentProcessDelegate.reloadCurrentChapter()
+            }
+
+            override fun dismissMarkingSheet() {
+                restoreMarkingReturnSheet()
+            }
+
+            override fun showToast(message: String) {
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }
+        },
+    )
+
+    val markingState = markingDelegate.uiState
+
+    /**
+     * 划线笔记编辑可能从目录 Sheet 进入：保存/删除/取消后应回到原 sheet（目录），
+     * 而不是被丢回阅读页。从划词菜单新建时无原 sheet，回 null。
+     */
+    private var markingReturnSheet: ReadBookSheet? = null
+
+    private fun restoreMarkingReturnSheet() {
+        val returnSheet = markingReturnSheet
+        markingReturnSheet = null
+        _uiState.update { it.copy(activeSheet = returnSheet) }
+    }
+
+    // --- 跳转校验域：书签/笔记跳转前比对源与章节标题 ---
+
+    private val bookmarkNavigateDelegate = ReadBookmarkNavigateDelegate(
+        scope = viewModelScope,
+        bookRepository = bookRepository,
+        verifyUseCase = verifyBookmarkTargetUseCase,
+        relocateMarkingTargetUseCase = relocateMarkingTargetUseCase,
+        host = object : ReadBookmarkNavigateDelegate.Host {
+            override val pendingTarget: PendingBookmarkTarget?
+                get() = _uiState.value.pendingBookmarkTarget
+
+            override fun jumpToChapter(chapterIndex: Int, chapterPos: Int) {
+                onIntent(ReadBookIntent.DismissSheet)
+                onIntent(ReadBookIntent.OpenChapterResult(chapterIndex, chapterPos))
+            }
+
+            override fun setPendingTarget(pending: PendingBookmarkTarget?) {
+                _uiState.update { it.copy(pendingBookmarkTarget = pending) }
+            }
+        },
+    )
 
     // --- AI 域（摘要 / 净化 / 重写 / 预设）---
 
@@ -423,6 +487,14 @@ class ReadBookViewModel(
         readStyleGateway = readBookStyleConfigRepository,
         appShellSettingsGateway = appShellSettingsGateway,
         themeSettingsGateway = themeSettingsGateway,
+    )
+
+    /** 自定义书签角标（拷贝落盘 + 刷新角标），独立于样式域的小委托。 */
+    private val bookmarkBadgeDelegate = BookmarkBadgeDelegate(
+        scope = viewModelScope,
+        context = context,
+        readSettingsRepository = readSettingsRepository,
+        emitEffect = _effects::tryEmit,
     )
 
     /** 日夜切换冷却期内不再弹提醒；光线传感器回调在 RouteScreen 里先问这个再发 intent。 */
@@ -919,6 +991,7 @@ class ReadBookViewModel(
                 aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
                 when (_uiState.value.activeSheet) {
                     is ReadBookSheet.HighlightRuleConfig -> highlightRuleDelegate.onSheetDismissed()
+                    is ReadBookSheet.Marking -> markingDelegate.onSheetDismissed()
                     is ReadBookSheet.ContentEdit -> contentEditDelegate.onSheetDismissed()
                     is ReadBookSheet.ContentProcesses,
                     is ReadBookSheet.TextProcessing -> contentProcessDelegate.onSheetDismissed()
@@ -1311,6 +1384,11 @@ class ReadBookViewModel(
                 styleDelegate.applyBackgroundImage(intent.uri)
             is ReadBookIntent.ReadStyleImageSelectedForMode ->
                 styleDelegate.applyBackgroundImageForMode(intent.uri, intent.isNight)
+            is ReadBookIntent.BookmarkBadgeImageSelected ->
+                bookmarkBadgeDelegate.applyBadgeImage(intent.uri)
+
+            is ReadBookIntent.ClearBookmarkBadgeImage ->
+                bookmarkBadgeDelegate.clearBadgeImage()
             is ReadBookIntent.ReadStyleConfigImportSelected -> styleDelegate.importConfig(intent.uri)
             is ReadBookIntent.ReadStyleConfigExportSelected -> styleDelegate.exportConfig(intent.uri)
             is ReadBookIntent.SaveReadStyleConfig -> styleDelegate.saveCurrentStyle()
@@ -1331,6 +1409,45 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.TextActionBookmark -> bookmarkDelegate.openEditor(intent.bookmark)
+
+            is ReadBookIntent.OpenMarking -> {
+                // 从划词菜单新建：无原 sheet 可回
+                markingReturnSheet = null
+                markingDelegate.open(intent.selection)
+                _uiState.update { it.copy(activeSheet = ReadBookSheet.Marking) }
+            }
+
+            is ReadBookIntent.EditMarking -> {
+                // 从目录 Sheet 进入：记住原 sheet，保存/删除/取消后返回
+                markingReturnSheet = _uiState.value.activeSheet
+                markingDelegate.openForEdit(intent.id)
+                _uiState.update { it.copy(activeSheet = ReadBookSheet.Marking) }
+            }
+
+            is ReadBookIntent.DismissMarking -> {
+                markingDelegate.onSheetDismissed()
+                restoreMarkingReturnSheet()
+            }
+
+            is ReadBookIntent.SaveMarking -> {
+                markingDelegate.save(intent.style, intent.note)
+            }
+
+            is ReadBookIntent.DeleteMarking -> {
+                markingDelegate.deleteCurrent()
+            }
+
+            is ReadBookIntent.NavigateToBookmark ->
+                bookmarkNavigateDelegate.navigateToBookmark(intent.bookmark)
+
+            is ReadBookIntent.NavigateToMarking ->
+                bookmarkNavigateDelegate.navigateToMarking(intent.marking)
+
+            is ReadBookIntent.ConfirmBookmarkTargetJump ->
+                bookmarkNavigateDelegate.confirmJump()
+
+            is ReadBookIntent.CancelBookmarkTargetJump ->
+                bookmarkNavigateDelegate.cancelJump()
 
             is ReadBookIntent.TextActionReplace -> {
                 _effects.tryEmit(

@@ -22,8 +22,10 @@ import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
 
 @Composable
 fun MoreConfigSheet(
@@ -33,6 +35,8 @@ fun MoreConfigSheet(
     onOpenClickRegionalConfig: () -> Unit,
     onOpenPageKeyConfig: () -> Unit,
     onOpenTextSelectMenuConfig: () -> Unit,
+    onPickBookmarkBadgeImage: () -> Unit,
+    onResetBookmarkBadge: () -> Unit,
 ) {
     val readSettingsRepository: ReadSettingsRepository = koinInject()
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
@@ -107,6 +111,11 @@ fun MoreConfigSheet(
                 },
                 onSwipeToAddBookmarkChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SwipeToAddBookmark(it)))
+                },
+                onPickBookmarkBadgeImage = onPickBookmarkBadgeImage,
+                onResetBookmarkBadge = onResetBookmarkBadge,
+                onBookmarkBadgeSizeChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BookmarkBadgeSize(it)))
                 },
             )
 
@@ -239,6 +248,9 @@ private fun PageControlSettings(
     onVolumeKeyPageOnPlayChange: (Boolean) -> Unit,
     onKeyPageOnLongPressChange: (Boolean) -> Unit,
     onSwipeToAddBookmarkChange: (Boolean) -> Unit,
+    onPickBookmarkBadgeImage: () -> Unit,
+    onResetBookmarkBadge: () -> Unit,
+    onBookmarkBadgeSizeChange: (Int) -> Unit,
 ) {
     val doublePageEntries = stringArrayResource(R.array.double_page_title)
     val doublePageValues = stringArrayResource(R.array.double_page_value)
@@ -283,6 +295,28 @@ private fun PageControlSettings(
         title = stringResource(R.string.swipe_to_add_bookmark),
         checked = preferences.swipeToAddBookmark,
         onCheckedChange = onSwipeToAddBookmarkChange,
+    )
+    TinyClickableSettingItem(
+        title = stringResource(R.string.bookmark_badge),
+        description = if (preferences.bookmarkBadgeImage.isBlank()) {
+            stringResource(R.string.bookmark_badge_default)
+        } else {
+            stringResource(R.string.bookmark_badge_custom)
+        },
+        onClick = onPickBookmarkBadgeImage,
+    )
+    if (preferences.bookmarkBadgeImage.isNotBlank()) {
+        TinyClickableSettingItem(
+            title = stringResource(R.string.bookmark_badge_reset),
+            onClick = onResetBookmarkBadge,
+        )
+    }
+    TinySliderSettingItem(
+        title = stringResource(R.string.bookmark_badge_size),
+        value = preferences.bookmarkBadgeSize.toFloat(),
+        valueRange = 6f..50f,
+        valueFormat = { "${it.roundToInt()}dp" },
+        onValueChange = { onBookmarkBadgeSizeChange(it.roundToInt()) },
     )
 }
 

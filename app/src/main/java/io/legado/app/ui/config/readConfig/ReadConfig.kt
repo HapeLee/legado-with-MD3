@@ -11,8 +11,6 @@ import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
-import io.legado.app.help.config.compatDsInt
-import io.legado.app.help.config.compatDsString
 import io.legado.app.utils.isNightMode
 import io.legado.app.utils.sysConfiguration
 import org.koin.core.context.GlobalContext
@@ -76,6 +74,8 @@ object ReadConfig {
     val volumeKeyPageOnPlay get() = read.volumeKeyPageOnPlay
     val keyPageOnLongPress get() = read.keyPageOnLongPress
     val swipeToAddBookmark get() = read.swipeToAddBookmark
+    val bookmarkBadgeImage get() = read.bookmarkBadgeImage
+    val bookmarkBadgeSize get() = read.bookmarkBadgeSize
     val sliderVibrator get() = read.sliderVibrator
     val useNewTocSheet get() = read.useNewTocSheet
     val selectVibrator get() = read.selectVibrator

@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read
 
+import io.legado.app.ui.book.read.ReadBookDomainSplitBoundaryTest.Companion.DOMAINS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -89,16 +90,42 @@ class ReadBookDomainSplitBoundaryTest {
      * 2523 → 2533：分支基准移动了 10 行。2523 是 PR 基于更早的 main（VM 2515 行）定
      * 的线；合入当前 main 后 VM 已 2525 行（上游页眉页脚对齐、书籍信息/目录改 Sheet
      * 等），本 PR 的 8 行接线叠加为 2533。溢出全部来自上游合并，不是新长出来的域。
+     *
+     * 2533 → 2546：自定义书签角标域。2533 是上一条合入后 VM 恰好在线的值；后续上游
+     * 又小幅增长到 2534，验收线本身已过时。本次新增 `BookmarkBadgeDelegate` 域留在
+     * VM 的是 12 行纯接线——构造参数四个、两个意图分支各一行，逐行都摘不掉：文件
+     * 拷贝需要 IO 协程与 context，只能住在 delegate，VM 只转发（与书签域同款）。
+     *
+     * 2546 → 2589：划线/高亮笔记域（初版联动了书签，`SaveBookmarkMarkingUseCase`
+     * 同批注入书签/正文处理两个 delegate 做双向删除）。VM 的 43 行增量全是接线——
+     * 新增构造参数与 import、delegate 装配（Host 三个方法）、三个意图分支。逐行都
+     * 摘不掉：意图入口与 Host 实现只能在 VM。
+     *
+     * 2589：该域后改为独立 `book_marks` 表（与书签、AI 正文处理完全解耦），
+     * `BookmarkMarking*` 更名为 `Marking*`，`SaveMarkingUseCase` 不再碰书签。查看迁到
+     * 目录 Sheet 的「笔记」页（TocViewModel 自持 flow），正文处理域退回纯 AI，VM 无
+     * bookMarkingGateway 注入，划线域接线总量反而下降，本线不缩。
+     *
+     * 2589 → 2595：划线笔记编辑入口。目录 Sheet 笔记页点标记项进 MarkingSheet 编辑，
+     * 新增 `EditMarking`/`DeleteMarking` 两个意图分支共 6 行，纯接线——意图入口只能在 VM。
+     *
+     * 2595 → 2608：编辑后返回原 sheet。从目录 Sheet 进编辑，保存/删除/取消要回目录而
+     * 非阅读页——`markingReturnSheet` 字段、恢复函数与三个意图分支各记几行，共 13 行。
+     * activeSheet 在 UiState 里，只有 VM 能管，摘不成 delegate。
+     *
+     * 2608 → 2643：书签/笔记跳转校验域。新增 `ReadBookmarkNavigateDelegate` 域，VM 留
+     * 35 行纯接线——构造 + Host（Host 的 jumpToChapter 要 onIntent 派发、setPendingTarget
+     * 要写 UiState，只能 VM）、四个意图分支、构造参数与 import。校验逻辑全在 delegate。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2533 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2643 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2533。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2643。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2533,
+            lineCount <= 2643,
         )
     }
 
@@ -275,6 +302,41 @@ class ReadBookDomainSplitBoundaryTest {
                     "replaceRuleRepository.moveReplaceRule",
                     "replaceRuleRepository.insert",
                     "upReplaceRules",
+                ),
+            ),
+            // 书签角标域无自持状态：图片拷贝落盘与解码缓存都在 delegate / 渲染层，
+            // 靠 stateTypes 守「文件操作逻辑不回流 VM」（VM 只转发意图）
+            DomainSplit(
+                name = "书签角标",
+                delegateFile = "io/legado/app/ui/book/read/BookmarkBadgeDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "copyToAppStorage",
+                    "bookmark_badge.",
+                ),
+            ),
+            // 划线笔记域自持临时会话状态：配置会话与落库都在 delegate / use case，
+            // book_marks 表独立于书签与 AI 正文处理，靠 stateTypes 守「标记会话与
+            // 保存逻辑不回流 VM」（VM 只转发意图并注入 use case）
+            DomainSplit(
+                name = "划线笔记",
+                delegateFile = "io/legado/app/ui/book/read/MarkingDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "MarkingUiState",
+                    "saveMarkingUseCase.save",
+                    "highlightRuleRepository.load",
+                ),
+            ),
+            // 跳转校验域无自持状态：校验逻辑在 delegate，确认框状态 pendingBookmarkTarget
+            // 是瞬态对话框（同 activeDialog），留 UiState；靠 stateTypes 守「校验与跳转不回流 VM」
+            DomainSplit(
+                name = "跳转校验",
+                delegateFile = "io/legado/app/ui/book/read/ReadBookmarkNavigateDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "verifyUseCase.verify",
+                    "bookRepository.getChapterTitle",
                 ),
             ),
         )

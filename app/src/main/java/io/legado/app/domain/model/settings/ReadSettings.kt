@@ -30,6 +30,8 @@ data class ReadSettings(
     val volumeKeyPageOnPlay: Boolean = true,
     val keyPageOnLongPress: Boolean = false,
     val swipeToAddBookmark: Boolean = false,
+    val bookmarkBadgeImage: String = "",
+    val bookmarkBadgeSize: Int = 10,
     val pageTouchSlop: Int = 0,
     val sliderVibrator: Boolean = false,
     val useNewTocSheet: Boolean = true,

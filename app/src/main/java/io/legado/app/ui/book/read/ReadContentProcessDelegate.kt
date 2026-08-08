@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * 正文处理（划词改写落库项）域（R2.2 续批）。
+ * 正文处理域（R2.2 续批）。
  *
  * 自持 [ContentProcessConfigUiState]，不再让每次加载/开关/删除都 copy 整个
  * [ReadBookUiState]。章节重载是本域和 AI 域共用的动作，故走 [Host]。
+ *
+ * 只承载 AI 改写（净化/重写）等「修改正文」的记录；用户划线/高亮笔记独立存于
+ * book_marks 表，查看在目录 Sheet，不混进本表。
  */
 class ReadContentProcessDelegate(
     private val context: Context,

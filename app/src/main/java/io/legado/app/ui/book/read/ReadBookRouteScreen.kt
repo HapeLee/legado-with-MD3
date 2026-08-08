@@ -140,6 +140,7 @@ fun ReadBookRouteScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val aiState by viewModel.aiState.collectAsStateWithLifecycle()
     val highlightRuleState by viewModel.highlightRuleState.collectAsStateWithLifecycle()
+    val markingState by viewModel.markingState.collectAsStateWithLifecycle()
     val contentEditState by viewModel.contentEditState.collectAsStateWithLifecycle()
     val contentProcessState by viewModel.contentProcessState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -271,6 +272,12 @@ fun ReadBookRouteScreen(
         if (id != null && uri != null) {
             viewModel.onIntent(ReadBookIntent.SaveTitleBarCustomIcon(id, uri))
         }
+    }
+
+    val bookmarkBadgeImagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.BookmarkBadgeImageSelected(it)) }
     }
 
     val txtTocRuleLauncher = rememberLauncherForActivityResult(
@@ -596,6 +603,7 @@ fun ReadBookRouteScreen(
                 state = state,
                 aiState = aiState,
                 highlightRuleState = highlightRuleState,
+                markingState = markingState,
                 contentEditState = contentEditState,
                 contentProcessState = contentProcessState,
                 preferences = readPreferences,
@@ -605,6 +613,8 @@ fun ReadBookRouteScreen(
                     viewModel.onIntent(ReadBookIntent.DismissSheet)
                     showSelectMenuConfigSheet = true
                 },
+                onPickBookmarkBadgeImage = { bookmarkBadgeImagePicker.launch("image/*") },
+                onResetBookmarkBadge = { viewModel.onIntent(ReadBookIntent.ClearBookmarkBadgeImage) },
             )
             val bookNavigationSheet = state.activeSheet as? ReadBookSheet.BookNavigation
             ReaderBookSheetRoute(
@@ -616,6 +626,19 @@ fun ReadBookRouteScreen(
                 onChapterClick = { index, chapterPos ->
                     viewModel.onIntent(ReadBookIntent.DismissSheet)
                     viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
+                },
+                onBookmarkNavigate = { bookmark ->
+                    viewModel.onIntent(ReadBookIntent.NavigateToBookmark(bookmark))
+                },
+                onMarkingNavigate = { item ->
+                    viewModel.onIntent(
+                        ReadBookIntent.NavigateToMarking(
+                            marking = item.raw,
+                        )
+                    )
+                },
+                onMarkingEdit = { markingId ->
+                    viewModel.onIntent(ReadBookIntent.EditMarking(markingId))
                 },
                 onOpenFullBookInfo = {
                     state.book?.let { book ->

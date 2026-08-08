@@ -11,13 +11,16 @@ import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.domain.gateway.BookMarkingGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -35,6 +38,8 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -93,6 +98,21 @@ data class TocBookmarkItemUi(
     val raw: Bookmark
 )
 
+/** 划线/高亮笔记（book_marks 表）在目录 Sheet 里的展示项。 */
+@Immutable
+data class TocMarkingItemUi(
+    val id: String,
+    val chapterIndex: Int,
+    val chapterPos: Int,
+    val text: String,
+    val note: String,
+    val chapterName: String,
+    /** 创建时的源（源指纹），用于在笔记页标出跨源笔记。 */
+    val bookUrl: String,
+    val isDur: Boolean,
+    val raw: BookMarking
+)
+
 @Stable
 data class TocActionState(
     override val items: ImmutableList<TocItemUi> = persistentListOf(),
@@ -112,6 +132,7 @@ data class TocUiState(
     val book: Book? = null,
     val collapsedVolumes: ImmutableSet<Int> = persistentSetOf(),
     val bookmarks: ImmutableList<TocBookmarkItemUi> = persistentListOf(),
+    val markings: ImmutableList<TocMarkingItemUi> = persistentListOf(),
     val isSplitLongChapter: Boolean = false,
     val isReverse: Boolean = false,
 )
@@ -221,6 +242,7 @@ class TocViewModel(
     private val bookRepository: BookRepository,
     private val bookSourceRepository: BookSourceRepository,
     private val bookmarkRepository: BookmarkRepository,
+    private val bookMarkingGateway: BookMarkingGateway,
     private val readSettingsRepository: ReadSettingsRepository,
     private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
@@ -310,18 +332,65 @@ class TocViewModel(
                 initialValue = emptyList()
             )
 
+    val markingUiList: StateFlow<List<TocMarkingItemUi>> =
+        combine(
+            bookState.filterNotNull(),
+            _searchKey
+        ) { book, query ->
+            book to query
+        }
+            .flatMapLatest { (book, query) ->
+                // 按「书名+作者」订阅全部章节的标记：换源后跨源笔记仍列出
+                bookMarkingGateway
+                    .flowByBook(book.name, book.author)
+                    .map { list ->
+                        list
+                            .asSequence()
+                            .mapNotNull { marking ->
+                                val anchor = GSON
+                                    .fromJsonObject<TextProcessAnchor>(marking.anchorJson)
+                                    .getOrNull()
+                                    ?: return@mapNotNull null
+                                TocMarkingItemUi(
+                                    id = marking.id,
+                                    chapterIndex = marking.chapterIndex ?: anchor.chapterIndex,
+                                    chapterPos = anchor.chapterPosition ?: 0,
+                                    text = anchor.selectedText,
+                                    note = marking.note,
+                                    chapterName = marking.chapterName,
+                                    bookUrl = marking.bookUrl,
+                                    isDur = marking.chapterIndex == book.durChapterIndex,
+                                    raw = marking,
+                                )
+                            }
+                            .filter {
+                                query.isBlank() ||
+                                        it.text.contains(query, ignoreCase = true) ||
+                                        it.note.contains(query, ignoreCase = true)
+                            }
+                            .toList()
+                    }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
+
     val screenState: StateFlow<TocUiState> by lazy {
         combine(
             uiState,
             bookState,
             collapsedVolumes,
             bookmarkUiList,
-        ) { action, book, collapsed, bookmarks ->
+            markingUiList,
+        ) { action, book, collapsed, bookmarks, markings ->
             TocUiState(
                 action = action,
                 book = book,
                 collapsedVolumes = collapsed.toImmutableSet(),
                 bookmarks = bookmarks.toImmutableList(),
+                markings = markings.toImmutableList(),
                 isSplitLongChapter = book?.getSplitLongChapter() ?: false,
                 isReverse = book?.getReverseToc() ?: false,
             )
@@ -749,6 +818,8 @@ class TocViewModel(
             Bookmark(
                 bookName = book.name,
                 bookAuthor = book.author,
+                // 保留创建时书源，换源后跳转时才能校验章节坐标是否仍可靠。
+                bookUrl = book.bookUrl,
                 chapterIndex = item.id,
                 chapterPos = 0,
                 chapterName = item.title,

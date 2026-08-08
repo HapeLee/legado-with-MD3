@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read
 
+import io.legado.app.ui.book.read.ConfigUpdateActionsInvariantTest.Companion.NO_RENDER_EFFECT
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.reflect.KClass
@@ -103,6 +104,7 @@ class ConfigUpdateActionsInvariantTest {
             "MenuTopBarBlurMode",
             "MenuTopBarBlurSelection",
             "MenuTopBarLiquidGlassButtons",
+            "MenuTopBarMergeButtons",
             "MenuTopBarTitleCapsule",
             "MenuBottomBarBlurMode",
             "MenuBottomBarBlurStyle",
@@ -128,6 +130,7 @@ class ConfigUpdateActionsInvariantTest {
             "VolumeKeyPageOnPlay",
             "KeyPageOnLongPress",
             "SwipeToAddBookmark",
+            "BookmarkBadgeSize",
             "SliderVibrator",
             "SelectVibrator",
             "ClickImgWay",

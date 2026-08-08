@@ -11,9 +11,9 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isOnLineTxt
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.association.OpenUrlConfirmActivity
-import io.legado.app.ui.book.read.page.delegate.PageDelegate
 import io.legado.app.ui.book.read.ReaderLayoutController
 import io.legado.app.ui.book.read.ReaderViewport
+import io.legado.app.ui.book.read.page.delegate.PageDelegate
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -326,6 +326,12 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                         activity?.startActivity<OpenUrlConfirmActivity> {
                             putExtra("uri", it)
                         }
+                        handled = true
+                    }
+                }
+                is TextColumn -> {
+                    column.markingId?.let { markingId ->
+                        requireCallBack.onMarkingClick(markingId)
                         handled = true
                     }
                 }
@@ -798,5 +804,6 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         fun onLongScreenshotTouchEvent(event: MotionEvent): Boolean
         fun oldClickImg(src: String): Boolean
         fun clickImg(click: String, src: String)
+        fun onMarkingClick(markingId: String)
     }
 }

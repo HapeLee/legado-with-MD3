@@ -1,25 +1,22 @@
 package io.legado.app.ui.widget.components.tabRow
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.animation.core.snap
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,6 +29,7 @@ fun CardTabRow(
     tabTitles: List<String>,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
+    onTabLongClick: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
     tabEndContent: (@Composable (Int) -> Unit)? = null,
 ) {
@@ -71,6 +69,7 @@ fun CardTabRow(
 
             NormalCard(
                 onClick = { onTabSelected(index) },
+                onLongClick = onTabLongClick?.let { { it(index) } },
                 modifier = Modifier.weight(1f),
                 containerColor = containerColor,
                 contentColor = contentColor,

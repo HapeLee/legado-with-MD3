@@ -1,7 +1,6 @@
 package io.legado.app.data.entities
 
 import android.os.Parcelable
-import io.legado.app.help.book.applyTagGroupRulesForBook
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
@@ -15,6 +14,7 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.applyTagGroupRulesForBook
 import io.legado.app.help.book.getFolderNameNoCache
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isImage
@@ -393,6 +393,8 @@ data class Book(
         return Bookmark(
             bookName = name,
             bookAuthor = author,
+            // 源指纹：创建时的书源，跳转校验用（换源后位置可能偏移）
+            bookUrl = bookUrl,
         )
     }
 

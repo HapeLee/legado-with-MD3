@@ -28,6 +28,7 @@
     <item name="menu_dict" type="id" />
     <item name="menu_edit" type="id" />
     <item name="menu_search_content" type="id" />
+    <item name="menu_mark" type="id" />
     <item name="menu_browser" type="id" />
     <item name="menu_share_str" type="id" />
 </resources>

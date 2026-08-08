@@ -23,9 +23,13 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.HighlightRuleRepository
+import io.legado.app.domain.model.BookContentProcessEngine
+import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getBookSource
@@ -1441,6 +1445,7 @@ class TextChapterLayout(
                     npRight = style?.npRight ?: 0.1f,
                     npTop = style?.npTop ?: 0.1f,
                     npBottom = style?.npBottom ?: 0.1f,
+                    markingId = style?.markingId,
                 )
             }
         }
@@ -1601,21 +1606,73 @@ class TextChapterLayout(
         contents: List<String>,
     ): HighlightStyleContext? {
         val rules = compiledHighlightRules
-        if (rules.isEmpty()) return null
-        val titleStyles = createHighlightStyles(
-            text = buildTitleHighlightText(titleSegments),
-            isTitle = true,
-            rules = rules
-        )
+        val markings = textChapter.effectiveContentProcesses.filter { it.isUserMarking() }
+        if (rules.isEmpty() && markings.isEmpty()) return null
+        val titleStyles = if (rules.isEmpty()) {
+            null
+        } else {
+            createHighlightStyles(
+                text = buildTitleHighlightText(titleSegments),
+                isTitle = true,
+                rules = rules
+            )
+        }
         val bodyHighlightText = buildBodyHighlightText(contents)
-        val bodyStyles = createHighlightStyles(
-            text = bodyHighlightText.text,
-            isTitle = false,
-            rules = rules
-        )
+        var bodyStyles = if (rules.isEmpty()) {
+            null
+        } else {
+            createHighlightStyles(
+                text = bodyHighlightText.text,
+                isTitle = false,
+                rules = rules
+            )
+        }
+        bodyStyles = applyUserMarkings(bodyStyles, bodyHighlightText.text, markings)
         if (titleStyles == null && bodyStyles == null) return null
         return HighlightStyleContext(titleStyles, bodyStyles, bodyHighlightText.contentOffsets)
     }
+
+    /**
+     * 把用户划线/高亮标记的样式合并进每字符样式数组。锚点按文本 + 章节位置就近匹配，
+     * 标记是显式操作，覆盖同位置的正则高亮规则。
+     */
+    private fun applyUserMarkings(
+        existing: Array<CharStyle?>?,
+        bodyText: String,
+        markings: List<BookContentProcess>,
+    ): Array<CharStyle?>? {
+        if (markings.isEmpty()) return existing
+        var styles = existing
+        for (process in markings) {
+            val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson).getOrNull()
+                ?: continue
+            val style = GSON.fromJsonObject<TextProcessStyle>(process.styleJson).getOrNull()
+                ?: continue
+            val range = BookContentProcessEngine.resolveRange(bodyText, anchor) ?: continue
+            if (bodyText.isEmpty()) break
+            val active = styles ?: arrayOfNulls<CharStyle>(bodyText.length).also { styles = it }
+            val charStyle = style.toCharStyle(process.id.removePrefix("mark:"))
+            for (i in range.first.coerceAtLeast(0)..range.last.coerceAtMost(active.lastIndex)) {
+                active[i] = charStyle
+            }
+        }
+        return styles
+    }
+
+    private fun TextProcessStyle.toCharStyle(markingId: String? = null): CharStyle = CharStyle(
+        textColor = textColor,
+        bgColor = bgColor,
+        underlineMode = underlineMode,
+        underlineColor = underlineColor ?: textColor ?: 0xFF63C37D.toInt(),
+        underlineWidth = underlineWidth,
+        underlineOffset = underlineOffset,
+        underlineSvgPath = underlineSvgPath.orEmpty(),
+        markingId = markingId,
+    )
+
+    private fun BookContentProcess.isUserMarking(): Boolean =
+        kind == BookContentProcess.KIND_USER_UNDERLINE ||
+                kind == BookContentProcess.KIND_USER_HIGHLIGHT
 
     private fun buildTitleHighlightText(titleSegments: List<TitleSegment>?): String {
         if (titleSegments.isNullOrEmpty()) return ""

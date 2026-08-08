@@ -2,7 +2,44 @@ package io.legado.app.di
 
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
-import io.legado.app.data.dao.*
+import io.legado.app.data.dao.AiArtifactDao
+import io.legado.app.data.dao.AiChatDao
+import io.legado.app.data.dao.AiMemoryDao
+import io.legado.app.data.dao.AiProfileDao
+import io.legado.app.data.dao.AiPromptPresetDao
+import io.legado.app.data.dao.BookChapterDao
+import io.legado.app.data.dao.BookContentProcessDao
+import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookGroupDao
+import io.legado.app.data.dao.BookKnowledgeDao
+import io.legado.app.data.dao.BookMarkingDao
+import io.legado.app.data.dao.BookSourceDao
+import io.legado.app.data.dao.BookmarkDao
+import io.legado.app.data.dao.CacheDao
+import io.legado.app.data.dao.ChapterSpeechDao
+import io.legado.app.data.dao.CloudTtsEngineDao
+import io.legado.app.data.dao.CookieDao
+import io.legado.app.data.dao.DictRuleDao
+import io.legado.app.data.dao.ExactChapterPageCountDao
+import io.legado.app.data.dao.HighlightRuleDao
+import io.legado.app.data.dao.HighlightTagRuleDao
+import io.legado.app.data.dao.HomepageCustomSetDao
+import io.legado.app.data.dao.HomepageModuleDao
+import io.legado.app.data.dao.HttpTTSDao
+import io.legado.app.data.dao.KeyboardAssistsDao
+import io.legado.app.data.dao.ReadAloudVoiceDao
+import io.legado.app.data.dao.ReadRecordDao
+import io.legado.app.data.dao.ReplaceRuleDao
+import io.legado.app.data.dao.RssArticleDao
+import io.legado.app.data.dao.RssReadRecordDao
+import io.legado.app.data.dao.RssSourceDao
+import io.legado.app.data.dao.RssStarDao
+import io.legado.app.data.dao.RuleSubDao
+import io.legado.app.data.dao.SearchBookDao
+import io.legado.app.data.dao.SearchKeywordDao
+import io.legado.app.data.dao.ServerDao
+import io.legado.app.data.dao.TagGroupRuleDao
+import io.legado.app.data.dao.TxtTocRuleDao
 import org.koin.dsl.module
 
 /**
@@ -25,6 +62,7 @@ val appDatabaseModule = module {
     factory<BookSourceDao> { get<AppDatabase>().bookSourceDao }
     factory<BookChapterDao> { get<AppDatabase>().bookChapterDao }
     factory<BookContentProcessDao> { get<AppDatabase>().bookContentProcessDao }
+    factory<BookMarkingDao> { get<AppDatabase>().bookMarkingDao }
     factory<BookKnowledgeDao> { get<AppDatabase>().bookKnowledgeDao }
     factory<ReadAloudVoiceDao> { get<AppDatabase>().readAloudVoiceDao }
     factory<ChapterSpeechDao> { get<AppDatabase>().chapterSpeechDao }

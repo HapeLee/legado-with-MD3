@@ -40,6 +40,10 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 
+/**
+ * 正文处理 Sheet：只承载 AI 改写（净化/重写）等修改正文的记录。
+ * 用户划线/高亮笔记独立于本表，查看在目录 Sheet 的「笔记」页。
+ */
 @Composable
 fun ContentProcessesSheet(
     show: Boolean,
@@ -97,7 +101,9 @@ fun ContentProcessesSheet(
                             item = item,
                             onClick = { viewingItem = item },
                             onToggle = {
-                                onIntent(ReadBookIntent.ToggleContentProcess(item.id, !item.enabled))
+                                onIntent(
+                                    ReadBookIntent.ToggleContentProcess(item.id, !item.enabled)
+                                )
                             },
                             onDelete = {
                                 onIntent(ReadBookIntent.RequestDeleteContentProcess(item))
@@ -252,8 +258,6 @@ private fun contentProcessTitle(item: ContentProcessItemUi): String {
     val kind = when (item.kind) {
         BookContentProcess.KIND_AI_CLEAN -> stringResource(R.string.content_process_ai_clean)
         BookContentProcess.KIND_AI_REWRITE -> stringResource(R.string.content_process_ai_rewrite)
-        BookContentProcess.KIND_USER_UNDERLINE -> stringResource(R.string.content_process_user_underline)
-        BookContentProcess.KIND_USER_HIGHLIGHT -> stringResource(R.string.content_process_user_highlight)
         else -> item.kind
     }
     val action = when (item.actionType) {

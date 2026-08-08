@@ -7,14 +7,17 @@ import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadAloudSettingsRepository
+import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.settings.ReadStyleItem
+import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -192,6 +195,14 @@ data class ReadSheetConfigUiState(
     val configNames: ImmutableList<String> = persistentListOf(),
 )
 
+/** 书签/笔记跳转前校验未通过的目标，弹「仍跳转」确认框。 */
+@Stable
+data class PendingBookmarkTarget(
+    val chapterIndex: Int,
+    val chapterPos: Int,
+    val verdict: BookmarkTargetVerdict,
+)
+
 @Stable
 data class ReadBookUiState(
     val book: Book? = null,
@@ -244,6 +255,8 @@ data class ReadBookUiState(
     // Active sheet / dialog
     val activeSheet: ReadBookSheet? = null,
     val activeDialog: ReadBookDialog? = null,
+    /** 书签/笔记跳转前校验不通过时的待确认目标（弹确认框）。 */
+    val pendingBookmarkTarget: PendingBookmarkTarget? = null,
     // Menu state (for overflow menu)
     val isLocalTxt: Boolean = false,
     val isEpub: Boolean = false,
@@ -599,6 +612,8 @@ sealed interface ReadBookIntent {
     data object OpenReadStyleExport : ReadBookIntent
     data class ReadStyleImageSelected(val uri: Uri) : ReadBookIntent
     data class ReadStyleImageSelectedForMode(val uri: Uri, val isNight: Boolean) : ReadBookIntent
+    data class BookmarkBadgeImageSelected(val uri: Uri) : ReadBookIntent
+    data object ClearBookmarkBadgeImage : ReadBookIntent
     data class ReadStyleConfigImportSelected(val uri: Uri) : ReadBookIntent
     data class ReadStyleConfigExportSelected(val uri: Uri) : ReadBookIntent
     data object SaveReadStyleConfig : ReadBookIntent
@@ -664,6 +679,19 @@ sealed interface ReadBookIntent {
     // Text action menu (moved from Activity)
     data class TextActionAloud(val text: String, val selectStartPos: TextPos?) : ReadBookIntent
     data class TextActionBookmark(val bookmark: Bookmark) : ReadBookIntent
+    data class OpenMarking(val selection: Bookmark) : ReadBookIntent
+
+    /** 从正文处理 Sheet 点标记项进入编辑模式。 */
+    data class EditMarking(val id: String) : ReadBookIntent
+    data object DismissMarking : ReadBookIntent
+    data class SaveMarking(val style: TextProcessStyle, val note: String) : ReadBookIntent
+    data object DeleteMarking : ReadBookIntent
+
+    /** 书签/笔记跳转：先校验定位（源/标题），不通过则弹确认框。 */
+    data class NavigateToBookmark(val bookmark: Bookmark) : ReadBookIntent
+    data class NavigateToMarking(val marking: BookMarking) : ReadBookIntent
+    data object ConfirmBookmarkTargetJump : ReadBookIntent
+    data object CancelBookmarkTargetJump : ReadBookIntent
     data class TextActionReplace(val text: String) : ReadBookIntent
     data class TextActionSearchContent(val text: String) : ReadBookIntent
     data class TextActionDict(val text: String) : ReadBookIntent
@@ -951,6 +979,7 @@ sealed interface ReadBookSheet {
     data object FontSelect : ReadBookSheet
     data object TitleFontSelect : ReadBookSheet
     data object HighlightRuleConfig : ReadBookSheet
+    data object Marking : ReadBookSheet
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
@@ -1527,6 +1556,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SwipeToAddBookmark(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class BookmarkBadgeSize(val value: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {

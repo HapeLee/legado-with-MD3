@@ -115,6 +115,7 @@ class ReadBookmarkDelegate(
                         Bookmark(
                             bookName = book.name,
                             bookAuthor = book.author,
+                            bookUrl = book.bookUrl,
                             chapterIndex = chapter.chapter.index,
                             chapterName = chapter.title,
                             chapterPos = ReadBook.durChapterPos,
@@ -127,6 +128,7 @@ class ReadBookmarkDelegate(
                     )
                 } else {
                     // 只删离当前阅读位置最近的一条：同一页可能有多条书签，不应整页误删。
+                    // 书签与划线笔记完全独立，这里只删书签本身。
                     val nearest = existing.minByOrNull { abs(it.chapterPos - ReadBook.durChapterPos) }
                         ?: return@withLock
                     bookmarkRepository.delete(nearest)
@@ -147,6 +149,7 @@ class ReadBookmarkDelegate(
             val bookmark = Bookmark(
                 bookName = book.name,
                 bookAuthor = book.author,
+                bookUrl = book.bookUrl,
                 chapterIndex = chapter.chapter.index,
                 chapterName = chapter.title,
                 chapterPos = ReadBook.durChapterPos,

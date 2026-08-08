@@ -8,13 +8,18 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.domain.model.BookContentProcessEngine
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessStyle
+import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.utils.ChineseUtils
+import io.legado.app.utils.GSON
 import io.legado.app.utils.escapeRegex
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.replace
 import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.toastOnUi
@@ -199,8 +204,15 @@ class ContentProcessor private constructor(
                 bookUrl = book.bookUrl,
                 chapterIndex = chapter.index,
             )
-            if (contentProcesses.isNotEmpty()) {
-                val applyResult = BookContentProcessEngine.apply(mContent, contentProcesses)
+            // 用户划线/高亮笔记独立存于 book_marks，渲染时转成合成 BookContentProcess
+            // 混进现有管线（锚点/样式不变，引擎对标记类不改文本）。
+            val markings = appDb.bookMarkingDao.getForChapterSync(
+                bookUrl = book.bookUrl,
+                chapterIndex = chapter.index,
+            ).map { it.toRenderProcess() }
+            if (contentProcesses.isNotEmpty() || markings.isNotEmpty()) {
+                val applyResult =
+                    BookContentProcessEngine.apply(mContent, contentProcesses + markings)
                 mContent = applyResult.text
                 effectiveContentProcesses = applyResult.effectiveProcesses
             }
@@ -230,6 +242,40 @@ class ContentProcessor private constructor(
             }
         }
         return BookContent(sameTitleRemoved, contents, effectiveReplaceRules, effectiveContentProcesses)
+    }
+
+    /**
+     * 把用户划线/高亮笔记转成「仅供渲染」的合成正文处理记录。
+     *
+     * 引擎对标记类（KIND_USER_UNDERLINE/HIGHLIGHT）不改文本，只按锚点能否解析决定
+     * 是否计入 effectiveProcesses；渲染层用 anchorJson + styleJson 画线。id 加
+     * `mark:` 前缀避免与真实正文处理记录冲突。
+     */
+    private fun BookMarking.toRenderProcess(): BookContentProcess {
+        // book_marks 无 kind 列（样式即类型）：按 styleJson 推导，供引擎/渲染层识别
+        val style = styleJson?.let { GSON.fromJsonObject<TextProcessStyle>(it).getOrNull() }
+        val derivedKind = if (style?.underlineMode != 0) {
+            BookContentProcess.KIND_USER_UNDERLINE
+        } else {
+            BookContentProcess.KIND_USER_HIGHLIGHT
+        }
+        return BookContentProcess(
+            id = "mark:$id",
+            bookUrl = bookUrl,
+            chapterIndex = chapterIndex,
+            kind = derivedKind,
+            stage = BookContentProcess.STAGE_CONTENT,
+            target = BookContentProcess.TARGET_SELECTION,
+            anchorJson = anchorJson,
+            actionJson = GSON.toJson(TextProcessAction(TextProcessAction.TYPE_MARK)),
+            styleJson = styleJson,
+            source = BookContentProcess.SOURCE_USER,
+            enabled = enabled,
+            status = BookContentProcess.STATUS_ACTIVE,
+            sortOrder = 0,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+        )
     }
 
 }
