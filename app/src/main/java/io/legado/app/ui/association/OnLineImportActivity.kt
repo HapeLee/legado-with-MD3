@@ -6,6 +6,7 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.databinding.ActivityTranslucenceBinding
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
@@ -23,9 +24,7 @@ class OnLineImportActivity :
         super.onCreate(savedInstanceState)
         viewModel.successLive.observe(this) {
             when (it.first) {
-                "bookSource" -> showDialogFragment(
-                    ImportBookSourceDialog(it.second, true)
-                )
+                "bookSource" -> openComposeBookSourceImport(it.second)
                 "rssSource" -> showDialogFragment(
                     ImportRssSourceDialog(it.second, true)
                 )
@@ -56,9 +55,7 @@ class OnLineImportActivity :
                 return
             }
             when (it.path) {
-                "/bookSource" -> showDialogFragment(
-                    ImportBookSourceDialog(url, true)
-                )
+                "/bookSource" -> openComposeBookSourceImport(url)
 
                 "/rssSource" -> showDialogFragment(
                     ImportRssSourceDialog(url, true)
@@ -86,9 +83,7 @@ class OnLineImportActivity :
                     AddToBookshelfDialog(url, true)
                 )
                 "/importonline" -> when (it.host) {
-                    "booksource" -> showDialogFragment(
-                        ImportBookSourceDialog(url, true)
-                    )
+                    "booksource" -> openComposeBookSourceImport(url)
                     "rsssource" -> showDialogFragment(
                         ImportRssSourceDialog(url, true)
                     )
@@ -111,6 +106,11 @@ class OnLineImportActivity :
                 finish()
             }
         }
+    }
+
+    private fun openComposeBookSourceImport(source: String) {
+        startActivity(MainActivity.createBookSourceManageIntent(this, source))
+        finish()
     }
 
 }

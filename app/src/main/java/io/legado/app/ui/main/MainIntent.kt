@@ -22,6 +22,7 @@ object MainIntent {
     const val EXTRA_CHAPTER_CHANGED = "chapterChanged"
     const val EXTRA_EXPLORE_NAME = "exploreName"
     const val EXTRA_SOURCE_URL = "sourceUrl"
+    const val EXTRA_BOOK_SOURCE_IMPORT = "bookSourceImport"
     const val EXTRA_SOURCE_LOGIN_TYPE = "source_login_type"
     const val EXTRA_SOURCE_LOGIN_KEY = "source_login_key"
     const val EXTRA_EXPLORE_URL = "exploreUrl"
@@ -100,9 +101,14 @@ object MainIntent {
         putExtra(EXTRA_WEB_VIEW_HTML, html)
     }
 
-    fun createBookSourceManageIntent(context: Context): Intent =
+    fun createBookSourceManageIntent(
+        context: Context,
+        importSource: String? = null,
+    ): Intent =
         createLauncherIntent(context).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE)
+            putExtra(EXTRA_BOOK_SOURCE_IMPORT, importSource)
         }
 
     fun createBookSourceEditIntent(context: Context, sourceUrl: String? = null): Intent =

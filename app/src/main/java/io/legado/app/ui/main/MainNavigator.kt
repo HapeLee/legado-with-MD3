@@ -36,7 +36,7 @@ object MainNavigator {
 
             is MainRouteWebView -> backStack.add(route)
 
-            MainRouteBookSourceManage,
+            is MainRouteBookSourceManage,
             is MainRouteBookSourceEdit,
             MainRouteRssSourceManage,
             is MainRouteRssSourceEdit,
@@ -355,7 +355,9 @@ object MainNavigator {
                     )
                 } ?: MainRouteHome
 
-            MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE -> MainRouteBookSourceManage
+            MainRouteConst.ROUTE_BOOK_SOURCE_MANAGE -> MainRouteBookSourceManage(
+                intent?.getStringExtra(MainIntent.EXTRA_BOOK_SOURCE_IMPORT)
+            )
             MainRouteConst.ROUTE_BOOK_SOURCE_EDIT -> MainRouteBookSourceEdit(
                 intent?.getStringExtra(MainIntent.EXTRA_SOURCE_URL)
             )

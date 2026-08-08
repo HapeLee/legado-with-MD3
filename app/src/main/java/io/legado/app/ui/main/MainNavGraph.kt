@@ -148,8 +148,8 @@ fun MainActivity.mainEntryProvider(
         val viewModel = koinViewModel<WebViewModel>(
             key = "WebView:${route.url}:${route.sourceOrigin}:${route.sourceVerificationEnable}",
         )
-        WebViewRouteScreen(
-            intent = Intent().apply {
+        val browserIntent = remember(route) {
+            Intent().apply {
                 putExtra("title", route.title)
                 putExtra("url", route.url)
                 putExtra("sourceOrigin", route.sourceOrigin)
@@ -158,9 +158,15 @@ fun MainActivity.mainEntryProvider(
                 putExtra("sourceVerificationEnable", route.sourceVerificationEnable)
                 putExtra("refetchAfterSuccess", route.refetchAfterSuccess)
                 putExtra("html", route.html)
-            },
+            }
+        }
+        WebViewRouteScreen(
+            intent = browserIntent,
             viewModel = viewModel,
             onFinish = onNavigateBack,
+            onImportBookSource = { importUrl ->
+                onNavigateToRoute(MainRouteBookSourceManage(importUrl))
+            },
         )
     }
     entry<MainRouteSourceLogin>(
@@ -176,8 +182,11 @@ fun MainActivity.mainEntryProvider(
             onBack = onNavigateBack,
         )
     }
-    entry<MainRouteBookSourceManage> {
+    entry<MainRouteBookSourceManage> { route ->
         BookSourceRouteScreen(
+            initialImportUrl = route.importUrl,
+            closeAfterImport = route.importUrl != null,
+            onImportClosed = onNavigateBack,
             onBackClick = onNavigateBack,
             onAddSource = { onNavigateToRoute(MainRouteBookSourceEdit()) },
             onEditSource = { onNavigateToRoute(MainRouteBookSourceEdit(it)) },
@@ -332,7 +341,7 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteSourceLogin(type, sourceUrl))
             },
             onNavigateToBookSourceManage = {
-                onNavigateToRoute(MainRouteBookSourceManage)
+                onNavigateToRoute(MainRouteBookSourceManage())
             },
             onNavigateToBookSourceEdit = {
                 onNavigateToRoute(MainRouteBookSourceEdit(it))
@@ -710,7 +719,7 @@ fun MainActivity.mainEntryProvider(
                 )
             },
             onOpenSourceManage = {
-                onNavigateToRoute(MainRouteBookSourceManage)
+                onNavigateToRoute(MainRouteBookSourceManage())
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
@@ -794,7 +803,10 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteRuleSub> {
         RuleSubRouteScreen(
-            onBackClick = { onNavigateBack() }
+            onBackClick = { onNavigateBack() },
+            onImportBookSource = {
+                onNavigateToRoute(MainRouteBookSourceManage(it))
+            },
         )
     }
 

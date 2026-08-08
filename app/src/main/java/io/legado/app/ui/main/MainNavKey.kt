@@ -30,7 +30,9 @@ data class MainRouteWebView(
 ) : MainRoute
 
 @Serializable
-data object MainRouteBookSourceManage : MainRoute
+data class MainRouteBookSourceManage(
+    val importUrl: String? = null,
+) : MainRoute
 
 @Serializable
 data class MainRouteBookSourceEdit(val sourceUrl: String? = null) : MainRoute

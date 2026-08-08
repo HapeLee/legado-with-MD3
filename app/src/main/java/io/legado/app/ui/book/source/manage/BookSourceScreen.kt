@@ -84,6 +84,9 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 @Composable
 fun BookSourceRouteScreen(
     viewModel: BookSourceViewModel = koinViewModel(),
+    initialImportUrl: String? = null,
+    closeAfterImport: Boolean = false,
+    onImportClosed: () -> Unit = {},
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
@@ -91,6 +94,9 @@ fun BookSourceRouteScreen(
     onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
 ) {
+    LaunchedEffect(initialImportUrl) {
+        initialImportUrl?.let { viewModel.onIntent(BookSourceIntent.Import(it)) }
+    }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -103,6 +109,10 @@ fun BookSourceRouteScreen(
                 }
 
                 BookSourceEffect.CancelCheck -> BookSourceCheckService.stop(context)
+
+                BookSourceEffect.ImportFinished -> {
+                    if (closeAfterImport) onImportClosed()
+                }
 
                 is BookSourceEffect.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
@@ -123,6 +133,9 @@ fun BookSourceRouteScreen(
         state = state,
         onIntent = viewModel::onIntent,
         snackbarHostState = snackbarHostState,
+        onImportDismissed = {
+            if (closeAfterImport) onImportClosed()
+        },
         onBackClick = onBackClick,
         onAddSource = onAddSource,
         onEditSource = onEditSource,
@@ -138,6 +151,7 @@ fun BookSourceScreen(
     state: BookSourceUiState,
     onIntent: (BookSourceIntent) -> Unit,
     snackbarHostState: SnackbarHostState,
+    onImportDismissed: () -> Unit = {},
     onBackClick: () -> Unit,
     onAddSource: () -> Unit,
     onEditSource: (String) -> Unit,
@@ -232,7 +246,10 @@ fun BookSourceScreen(
     BatchImportDialog(
         title = stringResource(R.string.import_book_source),
         importState = state.importState,
-        onDismissRequest = { onIntent(BookSourceIntent.CancelImport) },
+        onDismissRequest = {
+            onIntent(BookSourceIntent.CancelImport)
+            onImportDismissed()
+        },
         onConfirm = { onIntent(BookSourceIntent.SaveImportedSources) },
         onToggleItem = { onIntent(BookSourceIntent.ToggleImportItem(it)) },
         onToggleAll = { onIntent(BookSourceIntent.ToggleImportAll(it)) },

@@ -215,7 +215,6 @@ import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReaderSession
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatViewModel
-import io.legado.app.ui.association.ImportBookSourceViewModel
 import io.legado.app.ui.association.ImportDictRuleViewModel
 import io.legado.app.ui.association.ImportHttpTtsViewModel
 import io.legado.app.ui.association.ImportReplaceRuleViewModel
@@ -509,7 +508,6 @@ val appModule = module {
     }
 
     viewModelOf(::DictRuleViewModel)
-    viewModelOf(::ImportBookSourceViewModel)
     viewModelOf(::ImportDictRuleViewModel)
     viewModelOf(::ImportHttpTtsViewModel)
     viewModelOf(::ImportReplaceRuleViewModel)

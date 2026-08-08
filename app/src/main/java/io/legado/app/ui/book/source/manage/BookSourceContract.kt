@@ -116,6 +116,8 @@ sealed interface BookSourceEffect {
 
     data object CancelCheck : BookSourceEffect
 
+    data object ImportFinished : BookSourceEffect
+
     data class ShowSnackbar(
         val message: String,
         val actionLabel: String? = null,

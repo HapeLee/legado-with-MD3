@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,10 +35,10 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RuleSub
 import io.legado.app.data.entities.RuleSubType
-import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
 import io.legado.app.ui.theme.LegadoTheme
@@ -57,12 +56,12 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RuleSubRouteScreen(
     onBackClick: () -> Unit,
+    onImportBookSource: (String) -> Unit,
     viewModel: RuleSubViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
@@ -74,10 +73,7 @@ fun RuleSubRouteScreen(
                 is RuleSubEffect.OpenRule -> {
                     val ruleSub = effect.rule
                     when (ruleSub.type) {
-                        RuleSubType.BOOK_SOURCE ->
-                            (context as? AppCompatActivity)?.showDialogFragment(
-                                ImportBookSourceDialog(ruleSub.url)
-                            )
+                        RuleSubType.BOOK_SOURCE -> onImportBookSource(ruleSub.url)
                         RuleSubType.RSS_SOURCE ->
                             (context as? AppCompatActivity)?.showDialogFragment(
                                 ImportRssSourceDialog(ruleSub.url)
@@ -269,7 +265,9 @@ fun RuleSubEditDialog(
                 )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     typeArray.indices.chunked(2).forEach { indices ->

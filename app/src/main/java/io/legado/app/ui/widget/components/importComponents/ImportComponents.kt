@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +43,7 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -183,7 +183,7 @@ fun <T> BatchImportDialog(
         title = sheetTitle,
         startAction = if (isEditing) {
             {
-                SmallPlainButton(
+                MediumTonalButton(
                     onClick = { editingIndex = null },
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back)
@@ -191,9 +191,11 @@ fun <T> BatchImportDialog(
             }
         } else {
             {
-                Row {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     topBarActions()
-                    SmallPlainButton(
+                    MediumTonalButton(
                         onClick = { onToggleAll(!allSelected) },
                         icon = Icons.Default.SelectAll,
                         contentDescription = stringResource(if (allSelected) R.string.deselect_all else R.string.select_all)
@@ -203,7 +205,7 @@ fun <T> BatchImportDialog(
         },
         endAction = if (!isEditing && selectedCount > 0) {
             {
-                SmallPlainButton(
+                MediumTonalButton(
                     onClick = {
                         val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
                         onConfirm(selectedData)
@@ -364,10 +366,10 @@ fun ImportItemRow(
                 },
                 style = LegadoTheme.typography.labelMedium,
                 color = when (status) {
-                    ImportStatus.New -> MaterialTheme.colorScheme.primary
-                    ImportStatus.Update -> MaterialTheme.colorScheme.secondary
-                    ImportStatus.Error -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.outline
+                    ImportStatus.New -> LegadoTheme.colorScheme.primary
+                    ImportStatus.Update -> LegadoTheme.colorScheme.secondary
+                    ImportStatus.Error -> LegadoTheme.colorScheme.error
+                    else -> LegadoTheme.colorScheme.outline
                 },
                 modifier = Modifier.padding(end = 4.dp)
             )

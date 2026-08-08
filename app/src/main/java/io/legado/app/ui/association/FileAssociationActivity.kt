@@ -16,6 +16,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.canRead
@@ -82,7 +83,10 @@ class FileAssociationActivity :
         }
         viewModel.successLive.observe(this) {
             when (it.first) {
-                "bookSource" -> showDialogFragment(ImportBookSourceDialog(it.second, true))
+                "bookSource" -> {
+                    startActivity(MainActivity.createBookSourceManageIntent(this, it.second))
+                    finish()
+                }
                 "rssSource" -> showDialogFragment(ImportRssSourceDialog(it.second, true))
                 "replaceRule" -> showDialogFragment(ImportReplaceRuleDialog(it.second, true))
                 "httpTts" -> showDialogFragment(ImportHttpTtsDialog(it.second, true))

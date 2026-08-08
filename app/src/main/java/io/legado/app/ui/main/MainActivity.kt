@@ -113,8 +113,8 @@ open class MainActivity : BaseComposeActivity() {
             sourceVerificationEnable, refetchAfterSuccess, html,
         )
 
-        fun createBookSourceManageIntent(context: Context) =
-            MainIntent.createBookSourceManageIntent(context)
+        fun createBookSourceManageIntent(context: Context, importSource: String? = null) =
+            MainIntent.createBookSourceManageIntent(context, importSource)
 
         fun createBookSourceEditIntent(context: Context, sourceUrl: String? = null) =
             MainIntent.createBookSourceEditIntent(context, sourceUrl)

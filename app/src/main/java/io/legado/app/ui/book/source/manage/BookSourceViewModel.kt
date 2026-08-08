@@ -518,6 +518,7 @@ class BookSourceViewModel(
             SourceHelp.insertBookSource(*sources.toTypedArray())
             ContentProcessor.upReplaceRules()
             importState.value = BaseImportUiState.Idle
+            _effects.tryEmit(BookSourceEffect.ImportFinished)
             _effects.tryEmit(BookSourceEffect.ShowSnackbar("导入完成"))
         }
     }
