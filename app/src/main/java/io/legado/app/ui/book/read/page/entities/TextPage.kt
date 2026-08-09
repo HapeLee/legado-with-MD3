@@ -51,9 +51,20 @@ data class TextPage(
     val chapterPosition: Int get() = textLines.first().chapterPosition
     val searchResult = hashSetOf<TextBaseColumn>()
     var isMsgPage: Boolean = false
-    var canvasRecorder = CanvasRecorderFactory.create(true)
+
+    // 惰性创建：构造期不再拉 `CanvasRecorderFactory → ReadConfig → Koin` 全局链（D2/E5）。
+    // 原为 var 但全工程无赋值点，收窄为 val 以使用 by lazy。
+    val canvasRecorder by lazy { CanvasRecorderFactory.create(true) }
     var doublePage = false
-    var paddingTop = ChapterProvider.paddingTop
+
+    // 惰性取排版度量：`ChapterProvider` 对象初始化会读 `ReadBookConfig`（需全局配置存储就绪）。
+    // 延迟到首次访问，让 TextPage 构造本身不再依赖全局链；TextChapterLayout 会在排版时重赋值。
+    var paddingTop: Int
+        get() = lazyPaddingTop ?: ChapterProvider.paddingTop.also { lazyPaddingTop = it }
+        set(value) {
+            lazyPaddingTop = value
+        }
+    private var lazyPaddingTop: Int? = null
     var isCompleted = false
     var hasReadAloudSpan = false
 

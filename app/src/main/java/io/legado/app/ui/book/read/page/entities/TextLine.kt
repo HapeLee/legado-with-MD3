@@ -60,7 +60,11 @@ data class TextLine(
     val lineEnd: Float get() = textColumns.lastOrNull()?.end ?: 0f
     val chapterIndices: IntRange get() = chapterPosition..chapterPosition + charSize
     val height: Float inline get() = lineBottom - lineTop
-    val canvasRecorder = CanvasRecorderFactory.create()
+
+    // 惰性创建：构造期不再拉 `CanvasRecorderFactory → ReadConfig → Koin` 这条全局链。
+    // TextLine 在排版时成批构造，多数行用不到录制器，延迟到首次 draw/invalidate 再建
+    // 既让单测能构造实例，也省掉无效分配（D2/E5）。
+    val canvasRecorder by lazy { CanvasRecorderFactory.create() }
     private var nineSliceFrames: List<NineSliceFrameData> = emptyList()
     var searchResultColumnCount = 0
     var isReadAloud: Boolean = false
@@ -73,7 +77,19 @@ data class TextLine(
             }
             field = value
         }
-    var textPage: TextPage = emptyTextPage
+
+    /**
+     * 惰性取默认页：`TextPage.emptyTextPage` 的构造会拉起
+     * `TextPage → ChapterProvider → ReadBookConfig` 全局链。排版成批构造 TextLine
+     * 时不该为每一行都求值这条链，改为首次访问（draw / addLine 赋值）时才解析。
+     * `by lazy` 只支持 val，此处需要可写，用显式 getter/setter 实现（D2/E5）。
+     */
+    var textPage: TextPage
+        get() = lazyTextPage ?: emptyTextPage.also { lazyTextPage = it }
+        set(value) {
+            lazyTextPage = value
+        }
+    private var lazyTextPage: TextPage? = null
     var isLeftLine = true
     val useUnderline: Boolean
         get() = ChapterProvider.renderStyle.useUnderline

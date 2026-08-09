@@ -22,14 +22,19 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -68,13 +73,8 @@ enum class TopBarButtonStyle(val storageValue: String) {
     }
 }
 
-/** 合并模式下的共享计数器，记录下一个按钮的索引。 */
-internal class TopBarMergeCounter {
-    var index = 0
-}
-
 /** 合并模式的共享状态；null 表示未处于合并模式。 */
-internal val LocalTopBarMergeState = staticCompositionLocalOf<TopBarMergeCounter?> { null }
+internal val LocalTopBarMergeState = staticCompositionLocalOf { false }
 
 @Composable
 private fun currentTopBarButtonStyle(): TopBarButtonStyle =
@@ -126,22 +126,31 @@ internal fun miuixTopBarActionsEndPadding(): Dp =
 /** 合并模式下按钮左侧的竖向分隔线（首个按钮不画）。 */
 @Composable
 private fun Modifier.mergedDivider(): Modifier {
+    var showDivider by remember { mutableStateOf(false) }
     val dividerColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
-    return drawBehind {
-        drawLine(
-            color = dividerColor,
-            start = Offset(0f, size.height * 0.3f),
-            end = Offset(0f, size.height * 0.7f),
-            strokeWidth = 1.dp.toPx()
-        )
-    }
+    return onPlaced { coordinates ->
+        showDivider = coordinates.positionInParent().x > 0f
+    }.then(
+        if (showDivider) {
+            Modifier.drawBehind {
+                drawLine(
+                    color = dividerColor,
+                    start = Offset(0f, size.height * 0.3f),
+                    end = Offset(0f, size.height * 0.7f),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+        } else {
+            Modifier
+        }
+    )
 }
 
 /**
  * 顶栏 actions 的统一 Row。
  *
  * 开启「合并顶栏按钮」且样式为 Tonal/Outlined/半透明/液态玻璃时，把多个按钮的容器/边框
- * 融合成一个胶囊，按钮间用竖向分隔线隔开（复用 [TopBarMergeCounter] 自动分配索引）。
+ * 融合成一个胶囊，按钮间用竖向分隔线隔开。
  * 单个按钮时胶囊自然退化为普通按钮。Plain 无容器，始终走普通间距 Row。
  */
 @Composable
@@ -163,8 +172,6 @@ internal fun TopBarActionsRow(
         return
     }
 
-    val counter = remember { TopBarMergeCounter() }
-    counter.index = 0
     val capsuleShape = RoundedCornerShape(50)
     val capsuleBg = when (style) {
         TopBarButtonStyle.Tonal -> LegadoTheme.colorScheme.surfaceContainerLow
@@ -175,6 +182,7 @@ internal fun TopBarActionsRow(
     Box(
         modifier = modifier
             .height(TopBarSeriesIconButtonSize.height)
+            .then(if (!liquidGlassEnabled) Modifier.clip(capsuleShape) else Modifier)
             .then(
                 if (liquidGlassEnabled) {
                     Modifier.topBarLiquidGlass(capsuleShape)
@@ -190,7 +198,7 @@ internal fun TopBarActionsRow(
                 }
             )
     ) {
-        CompositionLocalProvider(LocalTopBarMergeState provides counter) {
+        CompositionLocalProvider(LocalTopBarMergeState provides true) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
@@ -207,20 +215,18 @@ private fun TopBarButton(
     contentDescription: String? = null,
     style: TopBarButtonStyle = currentTopBarButtonStyle()
 ) {
-    val mergeState = LocalTopBarMergeState.current
+    val isMerged = LocalTopBarMergeState.current
     val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
             topBarLiquidGlassEnabled()
-    if (mergeState != null) {
-        val index = mergeState.index
-        mergeState.index = index + 1
+    if (isMerged) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = modifier
                 .size(style.buttonSize)
-                .then(if (index > 0) Modifier.mergedDivider() else Modifier)
+                .mergedDivider()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(bounded = true),
+                    indication = if (liquidGlassEnabled) null else ripple(bounded = true),
                     role = Role.Button,
                     onClick = onClick
                 )
@@ -253,7 +259,8 @@ private fun TopBarButton(
             size = style.buttonSize,
             style = style.seriesStyle,
             contentColor = LegadoTheme.colorScheme.onSurface,
-            containerColor = containerColor
+            containerColor = containerColor,
+            indication = if (liquidGlassEnabled) null else ripple(bounded = true)
         ) { resolvedContentColor ->
             AppIcon(
                 imageVector = imageVector,
@@ -388,16 +395,9 @@ fun TopBarAnimatedActionButton(
         )
     } else {
         val topBarStyle = currentTopBarButtonStyle()
-        val mergeState = LocalTopBarMergeState.current
-        val mergeIndex = if (mergeState != null) {
-            val index = mergeState.index
-            mergeState.index = index + 1
-            index
-        } else {
-            -1
-        }
+        val isMerged = LocalTopBarMergeState.current
         val containerColor = if (
-            mergeState == null &&
+            !isMerged &&
             (topBarStyle == TopBarButtonStyle.SemiTransparent ||
                     topBarStyle == TopBarButtonStyle.LiquidGlass)
         ) {
@@ -420,13 +420,15 @@ fun TopBarAnimatedActionButton(
             textStartPadding = 8.dp,
             button = { buttonModifier, onToggle, content ->
                 val dividerModifier = buttonModifier
-                    .then(if (mergeIndex > 0) Modifier.mergedDivider() else Modifier)
-                if (mergeIndex >= 0) {
+                    .then(if (isMerged) Modifier.mergedDivider() else Modifier)
+                if (isMerged) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = dividerModifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(bounded = true),
+                            indication = if (topBarStyle == TopBarButtonStyle.LiquidGlass &&
+                                topBarLiquidGlassEnabled()
+                            ) null else ripple(bounded = true),
                             role = Role.Button,
                             onClick = { onToggle(!checked) }
                         )
@@ -452,7 +454,10 @@ fun TopBarAnimatedActionButton(
                         selected = checked,
                         style = topBarStyle.seriesStyle,
                         contentColor = LegadoTheme.colorScheme.onSurface,
-                        containerColor = containerColor
+                        containerColor = containerColor,
+                        indication = if (topBarStyle == TopBarButtonStyle.LiquidGlass &&
+                            topBarLiquidGlassEnabled()
+                        ) null else ripple(bounded = true)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
