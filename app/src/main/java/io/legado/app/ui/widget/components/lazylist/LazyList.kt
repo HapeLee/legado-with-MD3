@@ -71,8 +71,9 @@ fun FastScrollLazyColumn(
     VerticalFastScroller(
         listState = state,
         modifier = modifier,
+        // The thumb deliberately does not follow contentPadding's end inset (the adaptive
+        // horizontal margin), so it stays flush with the screen edge.
         topContentPadding = contentPadding.calculateTopPadding(),
-        endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
     ) {
         LazyColumn(
             state = state,
@@ -107,7 +108,6 @@ fun FastScrollLazyVerticalGrid(
             contentPadding = contentPadding,
             modifier = modifier,
             topContentPadding = contentPadding.calculateTopPadding(),
-            endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
         ) {
             LazyVerticalGrid(
                 columns = columns,

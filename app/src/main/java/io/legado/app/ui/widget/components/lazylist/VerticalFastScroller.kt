@@ -1,7 +1,7 @@
 package io.legado.app.ui.widget.components.lazylist
 
-import android.view.ViewConfiguration
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
@@ -24,15 +25,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
@@ -48,14 +49,12 @@ import androidx.compose.ui.util.fastLastOrNull
 import androidx.compose.ui.util.fastMaxBy
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.lazylist.Scroller.STICKY_HEADER_KEY_PREFIX
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Draws vertical fast scroller to a lazy list
@@ -67,7 +66,6 @@ import kotlin.math.roundToInt
 fun VerticalFastScroller(
     listState: LazyListState,
     modifier: Modifier = Modifier,
-    thumbAllowed: () -> Boolean = { true },
     thumbColor: Color = LegadoTheme.colorScheme.primary,
     topContentPadding: Dp = Dp.Hairline,
     bottomContentPadding: Dp = Dp.Hairline,
@@ -89,12 +87,18 @@ fun VerticalFastScroller(
 
             val dragInteractionSource = remember { MutableInteractionSource() }
             val isThumbDragged by dragInteractionSource.collectIsDraggedAsState()
-            val scrolled = remember {
-                MutableSharedFlow<Unit>(
-                    extraBufferCapacity = 1,
-                    onBufferOverflow = BufferOverflow.DROP_OLDEST,
-                )
+
+            // Keep the thumb in its active (large) form while dragging and for a moment after release
+            var recentlyTouched by remember { mutableStateOf(false) }
+            LaunchedEffect(isThumbDragged) {
+                if (isThumbDragged) {
+                    recentlyTouched = true
+                } else {
+                    delay(ThumbActiveDurationMillis.milliseconds)
+                    recentlyTouched = false
+                }
             }
+            val thumbActive = isThumbDragged || recentlyTouched
 
             // listState.isScrollInProgress occasionally flickers
             val scrollStateTracker = remember { MutableData(listState.isScrollInProgress) }
@@ -148,7 +152,6 @@ fun VerticalFastScroller(
                 if (thumbProportion <= 0.001f) {
                     estimateConfidence.value = -1f
                     listState.scrollToItem(index = 0, scrollOffset = 0)
-                    scrolled.tryEmit(Unit)
                     return@LaunchedEffect
                 }
                 val scrollRemainingSections = (1f - thumbProportion) * maxRemainingSections
@@ -160,38 +163,38 @@ fun VerticalFastScroller(
                 val scrollItemIndex = scrollSectionIndex.coerceIn(0, layoutInfo.totalItemsCount - 1)
                 val scrollItemOffset = scrollSectionOffset + (scrollSectionIndex - scrollItemIndex) * bottomItem.size
                 listState.scrollToItem(index = scrollItemIndex, scrollOffset = scrollItemOffset)
-                scrolled.tryEmit(Unit)
             }
 
             // When list scrolled
             if (layoutInfo.totalItemsCount != 0 && !isThumbDragged) {
                 val proportion = 1f - remainingSections / maxRemainingSections
                 thumbOffsetY = trackHeightPx * proportion + thumbTopPadding
-                if (stableScrollInProgress) scrolled.tryEmit(Unit)
             }
 
-            // Thumb alpha
-            val alpha = remember { Animatable(0f) }
-            val isThumbVisible = alpha.value > 0f
-            LaunchedEffect(scrolled, alpha) {
-                scrolled
-                    .sample(100)
-                    .collectLatest {
-                        if (thumbAllowed()) {
-                            alpha.snapTo(1f)
-                            alpha.animateTo(0f, animationSpec = FadeOutAnimationSpec)
-                        } else {
-                            alpha.animateTo(0f, animationSpec = ImmediateFadeOutAnimationSpec)
-                        }
-                    }
-            }
+            // The thumb rests as a small translucent capsule and grows to its full pill form
+            // while touched (kept for a moment after release)
+            val idleThumbColor = LegadoTheme.colorScheme.outlineVariant.copy(alpha = IdleThumbAlpha)
+            val thumbFormProgress by animateFloatAsState(
+                targetValue = if (thumbActive) 1f else 0f,
+                animationSpec = tween(durationMillis = ThumbFormDurationMillis),
+                label = "thumbForm",
+            )
+            val animatedThumbColor by animateColorAsState(
+                targetValue = if (thumbActive) thumbColor else idleThumbColor,
+                animationSpec = tween(durationMillis = ThumbFormDurationMillis),
+                label = "thumbColor",
+            )
+            val thumbDraggable = !listState.isScrollInProgress
+            val thumbWidth =
+                IdleThumbThickness + (ThumbThickness - IdleThumbThickness) * thumbFormProgress
+            val thumbHeight = IdleThumbLength + (ThumbLength - IdleThumbLength) * thumbFormProgress
 
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, thumbOffsetY.roundToInt()) }
                     .then(
                         // Recompose opts
-                        if (isThumbVisible && !listState.isScrollInProgress) {
+                        if (thumbDraggable) {
                             Modifier.draggable(
                                 interactionSource = dragInteractionSource,
                                 orientation = Orientation.Vertical,
@@ -209,19 +212,28 @@ fun VerticalFastScroller(
                     )
                     .then(
                         // Exclude thumb from gesture area only when needed
-                        if (isThumbVisible && !isThumbDragged && !listState.isScrollInProgress) {
+                        if (thumbDraggable && !isThumbDragged) {
                             Modifier.systemGestureExclusion()
                         } else {
                             Modifier
                         },
                     )
                     .height(ThumbLength)
-                    .padding(horizontal = 8.dp)
+                    .padding(start = 8.dp, end = 4.dp)
                     .padding(end = endContentPadding)
-                    .width(ThumbThickness)
-                    .alpha(alpha.value)
-                    .background(color = thumbColor, shape = ThumbShape),
-            )
+                    .width(ThumbThickness),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                // The pill keeps a perfect semicircular end cap at every size
+                Box(
+                    modifier = Modifier
+                        .size(thumbWidth, thumbHeight)
+                        .background(
+                            color = animatedThumbColor,
+                            shape = RoundedCornerShape(thumbWidth / 2)
+                        ),
+                )
+            }
         }.map { it.measure(scrollerConstraints) }
         val scrollerWidth = scrollerPlaceable.fastMaxBy { it.width }?.width ?: 0
 
@@ -278,7 +290,6 @@ fun VerticalGridFastScroller(
     arrangement: Arrangement.Horizontal,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    thumbAllowed: () -> Boolean = { true },
     thumbColor: Color = LegadoTheme.colorScheme.primary,
     topContentPadding: Dp = Dp.Hairline,
     bottomContentPadding: Dp = Dp.Hairline,
@@ -308,12 +319,18 @@ fun VerticalGridFastScroller(
 
             val dragInteractionSource = remember { MutableInteractionSource() }
             val isThumbDragged by dragInteractionSource.collectIsDraggedAsState()
-            val scrolled = remember {
-                MutableSharedFlow<Unit>(
-                    extraBufferCapacity = 1,
-                    onBufferOverflow = BufferOverflow.DROP_OLDEST,
-                )
+
+            // Keep the thumb in its active (large) form while dragging and for a moment after release
+            var recentlyTouched by remember { mutableStateOf(false) }
+            LaunchedEffect(isThumbDragged) {
+                if (isThumbDragged) {
+                    recentlyTouched = true
+                } else {
+                    delay(ThumbActiveDurationMillis)
+                    recentlyTouched = false
+                }
             }
+            val thumbActive = isThumbDragged || recentlyTouched
 
             val thumbBottomPadding = with(LocalDensity.current) { bottomContentPadding.toPx() }
             val heightPx = contentHeight.toFloat() -
@@ -342,7 +359,6 @@ fun VerticalGridFastScroller(
                 val rowOffset = scrollAmt - rowNumber * avgSizePerRow
 
                 state.scrollToItem(index = columnCount * rowNumber, scrollOffset = rowOffset.roundToInt())
-                scrolled.tryEmit(Unit)
             }
 
             // When list scrolled
@@ -356,31 +372,32 @@ fun VerticalGridFastScroller(
                 val extraScrollRange = (scrollRange.toFloat() - heightPx).coerceAtLeast(1f)
                 val proportion = (scrollOffset.toFloat() / extraScrollRange).coerceAtMost(1f)
                 thumbOffsetY = trackHeightPx * proportion + thumbTopPadding
-                scrolled.tryEmit(Unit)
             }
 
-            // Thumb alpha
-            val alpha = remember { Animatable(0f) }
-            val isThumbVisible = alpha.value > 0f
-            LaunchedEffect(scrolled, alpha) {
-                scrolled
-                    .sample(100)
-                    .collectLatest {
-                        if (thumbAllowed()) {
-                            alpha.snapTo(1f)
-                            alpha.animateTo(0f, animationSpec = FadeOutAnimationSpec)
-                        } else {
-                            alpha.animateTo(0f, animationSpec = ImmediateFadeOutAnimationSpec)
-                        }
-                    }
-            }
+            // The thumb rests as a small translucent capsule and grows to its full pill form
+            // while touched (kept for a moment after release)
+            val idleThumbColor = LegadoTheme.colorScheme.outlineVariant.copy(alpha = IdleThumbAlpha)
+            val thumbFormProgress by animateFloatAsState(
+                targetValue = if (thumbActive) 1f else 0f,
+                animationSpec = tween(durationMillis = ThumbFormDurationMillis),
+                label = "thumbForm",
+            )
+            val animatedThumbColor by animateColorAsState(
+                targetValue = if (thumbActive) thumbColor else idleThumbColor,
+                animationSpec = tween(durationMillis = ThumbFormDurationMillis),
+                label = "thumbColor",
+            )
+            val thumbDraggable = !state.isScrollInProgress
+            val thumbWidth =
+                IdleThumbThickness + (ThumbThickness - IdleThumbThickness) * thumbFormProgress
+            val thumbHeight = IdleThumbLength + (ThumbLength - IdleThumbLength) * thumbFormProgress
 
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, thumbOffsetY.roundToInt()) }
                     .then(
                         // Recompose opts
-                        if (isThumbVisible && !state.isScrollInProgress) {
+                        if (thumbDraggable) {
                             Modifier.draggable(
                                 interactionSource = dragInteractionSource,
                                 orientation = Orientation.Vertical,
@@ -398,18 +415,28 @@ fun VerticalGridFastScroller(
                     )
                     .then(
                         // Exclude thumb from gesture area only when needed
-                        if (isThumbVisible && !isThumbDragged && !state.isScrollInProgress) {
+                        if (thumbDraggable && !isThumbDragged) {
                             Modifier.systemGestureExclusion()
                         } else {
                             Modifier
                         },
                     )
                     .height(ThumbLength)
+                    .padding(start = 8.dp, end = 4.dp)
                     .padding(end = endContentPadding)
-                    .width(ThumbThickness)
-                    .alpha(alpha.value)
-                    .background(color = thumbColor, shape = ThumbShape),
-            )
+                    .width(ThumbThickness),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                // The pill keeps a perfect semicircular end cap at every size
+                Box(
+                    modifier = Modifier
+                        .size(thumbWidth, thumbHeight)
+                        .background(
+                            color = animatedThumbColor,
+                            shape = RoundedCornerShape(thumbWidth / 2)
+                        ),
+                )
+            }
         }.map { it.measure(scrollerConstraints) }
         val scrollerWidth = scrollerPlaceable.fastMaxBy { it.width }?.width ?: 0
 
@@ -461,14 +488,11 @@ object Scroller {
 
 private val ThumbLength = 48.dp
 private val ThumbThickness = 12.dp
-private val ThumbShape = RoundedCornerShape(ThumbThickness / 2)
-private val FadeOutAnimationSpec = tween<Float>(
-    durationMillis = ViewConfiguration.getScrollBarFadeDuration(),
-    delayMillis = 2000,
-)
-private val ImmediateFadeOutAnimationSpec = tween<Float>(
-    durationMillis = ViewConfiguration.getScrollBarFadeDuration(),
-)
+private val IdleThumbLength = 36.dp
+private val IdleThumbThickness = 4.dp
+private const val IdleThumbAlpha = 0.8f
+private const val ThumbFormDurationMillis = 250
+private const val ThumbActiveDurationMillis = 3000L
 
 private val LazyListItemInfo.top: Int
     get() = offset
