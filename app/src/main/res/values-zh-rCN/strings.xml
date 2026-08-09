@@ -41,6 +41,9 @@
     <string name="appearance_setting">外观设置</string>
     <string name="click_to_select">点击选择</string>
     <string name="compose_related">Compose 相关</string>
+    <string name="blur_effects">模糊效果</string>
+    <string name="top_bottom_bar_settings">顶栏与底栏</string>
+    <string name="top_bottom_bar_settings_summary">配置顶栏按钮与底部导航栏</string>
     <string name="use_flexible_top_bar">使用折叠应用栏</string>
     <string name="slider">滑块</string>
     <string name="input">输入</string>

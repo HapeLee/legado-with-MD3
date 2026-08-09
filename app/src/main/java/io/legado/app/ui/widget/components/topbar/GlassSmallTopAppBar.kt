@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components.topbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,8 +49,14 @@ fun GlassSmallTopAppBar(
         MiuixSmallTopAppBar(
             title = title,
             navigationIcon = navigationIcon,
-            actions = actions,
-            color = Color.Transparent
+            actions = {
+                TopBarActionsRow(
+                    modifier = Modifier.padding(end = miuixTopBarActionsEndPadding())
+                ) { actions() }
+            },
+            color = Color.Transparent,
+            navigationIconPadding = miuixTopBarSlotPadding(),
+            actionIconPadding = miuixTopBarSlotPadding(),
         )
     }
 }

@@ -251,6 +251,15 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup {
+                    if (!isMiuixEngine) {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.pure_black),
+                            checked = theme.isPureBlack,
+                            onCheckedChange = { value ->
+                                updateTheme { it.copy(isPureBlack = value) }
+                            }
+                        )
+                    }
                     ClickableSettingItem(
                         title = stringResource(R.string.font_setting),
                         onClick = { onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.Font)) }
@@ -351,53 +360,13 @@ fun ThemeConfigScreen(
                             )
                         }
                     )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.show_bottom_nav),
-                        description = stringResource(R.string.be_swiped),
-                        checked = appShell.showBottomView,
-                        onCheckedChange = {
-                            onIntent(
-                                ThemeConfigIntent.SetShowBottomView(it)
-                            )
-                        }
+                    ClickableSettingItem(
+                        title = stringResource(R.string.top_bottom_bar_settings),
+                        description = stringResource(R.string.top_bottom_bar_settings_summary),
+                        onClick = {
+                            onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.TopBottomBar))
+                        },
                     )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.floating_bottom_bar),
-                        description = stringResource(R.string.floating_bottom_bar_summary),
-                        checked = appShell.useFloatingBottomBar,
-                        onCheckedChange = {
-                            onIntent(
-                                ThemeConfigIntent.SetUseFloatingBottomBar(it)
-                            )
-                        }
-                    )
-                    AnimatedVisibility(visible = appShell.useFloatingBottomBar) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.floating_bottom_bar_liquid_glass),
-                                description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
-                                checked = appShell.useFloatingBottomBarLiquidGlass,
-                                onCheckedChange = {
-                                    onIntent(
-                                        ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it)
-                                    )
-                                }
-                            )
-                            SliderSettingItem(
-                                title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
-                                description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
-                                value = theme.bottomBarLensRadius,
-                                defaultValue = 24f,
-                                valueRange = 0f..50f,
-                                onValueChange = { value ->
-                                    updateTheme { it.copy(bottomBarLensRadius = value) }
-                                }
-                            )
-                        }
-
-                    }
                     DropdownListSettingItem(
                         title = stringResource(R.string.tabletInterface),
                         selectedValue = appShell.tabletInterface,
@@ -516,41 +485,7 @@ fun ThemeConfigScreen(
                     }
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
-                    if (!isMiuixEngine) {
-                        SwitchSettingItem(
-                            title = stringResource(R.string.pure_black),
-                            checked = theme.isPureBlack,
-                            onCheckedChange = { value ->
-                                updateTheme { it.copy(isPureBlack = value) }
-                            }
-                        )
-                        SwitchSettingItem(
-                            title = stringResource(R.string.use_flexible_top_bar),
-                            checked = theme.useFlexibleTopAppBar,
-                            onCheckedChange = { value ->
-                                updateTheme { it.copy(useFlexibleTopAppBar = value) }
-                            }
-                        )
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.top_bar_button_style),
-                            selectedValue = theme.topBarButtonStyle,
-                            displayEntries = stringArrayResource(R.array.top_bar_button_style),
-                            entryValues = stringArrayResource(R.array.top_bar_button_style_value),
-                            onValueChange = { value ->
-                                updateTheme { it.copy(topBarButtonStyle = value) }
-                            }
-                        )
-                        AnimatedVisibility(visible = theme.topBarButtonStyle != "plain") {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.merge_top_bar_actions),
-                                checked = theme.mergeTopBarActions,
-                                onCheckedChange = { value ->
-                                    updateTheme { it.copy(mergeTopBarActions = value) }
-                                }
-                            )
-                        }
-                    }
+                SplicedColumnGroup(title = stringResource(R.string.blur_effects)) {
                     SwitchSettingItem(
                         title = stringResource(R.string.is_blur_enable),
                         checked = theme.enableBlur,
@@ -564,78 +499,6 @@ fun ThemeConfigScreen(
                                 updateTheme { it.copy(enableProgressiveBlur = value) }
                             }
                         )
-                    }
-                    if (theme.enableBlur) {
-                        SliderSettingItem(
-                            title = stringResource(R.string.theme_manage_top_bar_blur_radius),
-                            description = stringResource(R.string.theme_config_blur_radius_performance_summary),
-                            value = theme.topBarBlurRadius.toFloat(),
-                            defaultValue = 24f,
-                            valueRange = 0f..30f,
-                            onValueChange = { value ->
-                                updateTheme { it.copy(topBarBlurRadius = value.toInt()) }
-                            }
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.theme_manage_bottom_bar_blur_radius),
-                            description = stringResource(R.string.theme_config_blur_radius_performance_summary),
-                            value = theme.bottomBarBlurRadius.toFloat(),
-                            defaultValue = 8f,
-                            valueRange = 0f..10f,
-                            onValueChange = { value ->
-                                updateTheme { it.copy(bottomBarBlurRadius = value.toInt()) }
-                            }
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
-                            value = theme.topBarBlurAlpha.toFloat(),
-                            defaultValue = 73f,
-                            valueRange = 0f..100f,
-                            onValueChange = { value ->
-                                updateTheme { it.copy(topBarBlurAlpha = value.toInt()) }
-                            }
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.theme_manage_bottom_bar_blur_opacity),
-                            value = theme.bottomBarBlurAlpha.toFloat(),
-                            defaultValue = 40f,
-                            valueRange = 0f..100f,
-                            onValueChange = { value ->
-                                updateTheme { it.copy(bottomBarBlurAlpha = value.toInt()) }
-                            }
-                        )
-                    }
-                    AnimatedVisibility(visible = !isMiuixEngine && !theme.enableBlur) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            SliderSettingItem(
-                                title = stringResource(R.string.top_bar_opacity),
-                                description = stringResource(
-                                    R.string.top_bar_opacity_summary,
-                                    theme.topBarOpacity
-                                ),
-                                value = theme.topBarOpacity.toFloat(),
-                                defaultValue = 100f,
-                                valueRange = 0f..100f,
-                                onValueChange = { value ->
-                                    updateTheme { it.copy(topBarOpacity = value.toInt()) }
-                                }
-                            )
-                            SliderSettingItem(
-                                title = stringResource(R.string.bottom_bar_opacity),
-                                description = stringResource(
-                                    R.string.bottom_bar_opacity_summary,
-                                    theme.bottomBarOpacity
-                                ),
-                                value = theme.bottomBarOpacity.toFloat(),
-                                defaultValue = 100f,
-                                valueRange = 0f..100f,
-                                onValueChange = { value ->
-                                    updateTheme { it.copy(bottomBarOpacity = value.toInt()) }
-                                }
-                            )
-                        }
                     }
                 }
 
@@ -1009,6 +872,15 @@ fun ThemeConfigScreen(
         onSetLabelVisibilityMode = {
             onIntent(ThemeConfigIntent.SetLabelVisibilityMode(it))
         },
+    )
+
+    TopBottomBarSettingsSheet(
+        show = state.activeSheet == ThemeConfigSheet.TopBottomBar,
+        appShell = appShell,
+        theme = theme,
+        isMiuixEngine = ThemeResolver.isMiuixEngine(appShell.composeEngine),
+        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
+        onIntent = onIntent,
     )
 
 

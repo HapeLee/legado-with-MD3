@@ -1694,6 +1694,9 @@
     <string name="complete_required_information">填寫所有必填資訊</string>
     <string name="compose_engine">主題樣式</string>
     <string name="compose_related">Compose 相關</string>
+    <string name="blur_effects">模糊效果</string>
+    <string name="top_bottom_bar_settings">頂欄與底欄</string>
+    <string name="top_bottom_bar_settings_summary">設定頂欄按鈕與底部導航欄</string>
     <string name="config_btn">配置底部按鈕</string>
     <string name="more_actions_config">設定更多選單</string>
     <string name="confirm_skip_to_chapter">跳轉到此章節？</string>

@@ -60,9 +60,15 @@ fun GlassTopAppBar(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility),
                 title = title,
                 navigationIcon = navigationIcon,
-                actions = actions,
+                actions = {
+                    TopBarActionsRow(
+                        modifier = Modifier.padding(end = miuixTopBarActionsEndPadding())
+                    ) { actions() }
+                },
                 color = Color.Transparent,
-                defaultWindowInsetsPadding = false
+                defaultWindowInsetsPadding = false,
+                navigationIconPadding = miuixTopBarSlotPadding(),
+                actionIconPadding = miuixTopBarSlotPadding(),
             )
         } else {
             TopAppBar(

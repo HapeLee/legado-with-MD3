@@ -106,9 +106,15 @@ fun GlassMediumFlexibleTopAppBar(
                     title = title,
                     subtitle = subtitleText.orEmpty(),
                     navigationIcon = navigationIcon,
-                    actions = actions,
+                    actions = {
+                        TopBarActionsRow(
+                            modifier = Modifier.padding(end = miuixTopBarActionsEndPadding())
+                        ) { actions() }
+                    },
                     color = Color.Transparent,
                     defaultWindowInsetsPadding = false,
+                    navigationIconPadding = miuixTopBarSlotPadding(),
+                    actionIconPadding = miuixTopBarSlotPadding(),
                     scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
                 )
             }

@@ -18,6 +18,7 @@ data class ThemeConfigUiState(
 sealed interface ThemeConfigSheet {
     data class BackgroundImage(val target: BackgroundImageTarget) : ThemeConfigSheet
     data object MainNavigation : ThemeConfigSheet
+    data object TopBottomBar : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
     data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet

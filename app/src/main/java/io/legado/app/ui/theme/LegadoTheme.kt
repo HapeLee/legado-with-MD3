@@ -8,6 +8,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import com.kyant.backdrop.Backdrop
 import com.materialkolor.PaletteStyle
 import dev.chrisbanes.haze.HazeState
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -134,6 +135,9 @@ val LocalLegadoThemeColors = staticCompositionLocalOf {
 }
 
 val LocalHazeState = compositionLocalOf<HazeState?> { null }
+
+/** AppScaffold supplies the content-only source; bars must never write to it. */
+val LocalTopBarBackdrop = compositionLocalOf<Backdrop?> { null }
 
 object LegadoTheme {
 

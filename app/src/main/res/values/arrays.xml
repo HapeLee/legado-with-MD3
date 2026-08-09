@@ -230,7 +230,8 @@
         <item>Plain</item>
         <item>Tonal</item>
         <item>Outlined</item>
-        <item>Glass</item>
+        <item>Semi-transparent</item>
+        <item>Liquid Glass</item>
     </string-array>
 
     <string-array name="top_bar_button_style_value">
@@ -238,6 +239,7 @@
         <item>tonal</item>
         <item>outlined</item>
         <item>glass</item>
+        <item>liquid</item>
     </string-array>
 
     <string-array name="paletteStyle">

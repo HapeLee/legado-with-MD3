@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -55,12 +54,13 @@ import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
-/** 顶栏按钮样式配置，与 M3 / 渐进模糊解耦。Glass 预留液态玻璃外观。 */
+/** 顶栏按钮样式配置。 */
 enum class TopBarButtonStyle(val storageValue: String) {
     Plain("plain"),
     Tonal("tonal"),
     Outlined("outlined"),
-    Glass("glass");
+    SemiTransparent("glass"),
+    LiquidGlass("liquid");
 
     companion object {
         fun fromStorage(value: String?): TopBarButtonStyle =
@@ -83,7 +83,8 @@ private fun currentTopBarButtonStyle(): TopBarButtonStyle =
 private val TopBarButtonStyle.seriesStyle: SeriesIconButtonStyle
     get() = when (this) {
         TopBarButtonStyle.Plain -> SeriesIconButtonStyle.Plain
-        TopBarButtonStyle.Tonal, TopBarButtonStyle.Glass -> SeriesIconButtonStyle.Tonal
+        TopBarButtonStyle.Tonal, TopBarButtonStyle.SemiTransparent,
+        TopBarButtonStyle.LiquidGlass -> SeriesIconButtonStyle.Tonal
         TopBarButtonStyle.Outlined -> SeriesIconButtonStyle.Outlined
     }
 
@@ -91,14 +92,16 @@ private val TopBarButtonStyle.seriesStyle: SeriesIconButtonStyle
 private val TopBarButtonStyle.buttonSize: DpSize
     get() = when (this) {
         TopBarButtonStyle.Plain -> MediumSeriesIconButtonSize
-        TopBarButtonStyle.Tonal, TopBarButtonStyle.Outlined, TopBarButtonStyle.Glass ->
+        TopBarButtonStyle.Tonal, TopBarButtonStyle.Outlined, TopBarButtonStyle.SemiTransparent,
+        TopBarButtonStyle.LiquidGlass ->
             TopBarSeriesIconButtonSize
     }
 
 private val TopBarButtonStyle.iconSize: Dp
     get() = when (this) {
         TopBarButtonStyle.Plain -> MediumSeriesIconSize
-        TopBarButtonStyle.Tonal, TopBarButtonStyle.Outlined, TopBarButtonStyle.Glass ->
+        TopBarButtonStyle.Tonal, TopBarButtonStyle.Outlined, TopBarButtonStyle.SemiTransparent,
+        TopBarButtonStyle.LiquidGlass ->
             TopBarSeriesIconSize
     }
 
@@ -111,6 +114,14 @@ internal fun topBarActionSpacing(): Dp {
     val style = currentTopBarButtonStyle()
     return if (style == TopBarButtonStyle.Plain) 4.dp else 8.dp
 }
+
+@Composable
+internal fun miuixTopBarSlotPadding(): Dp =
+    if (currentTopBarButtonStyle() == TopBarButtonStyle.Plain) 16.dp else 0.dp
+
+@Composable
+internal fun miuixTopBarActionsEndPadding(): Dp =
+    if (currentTopBarButtonStyle() == TopBarButtonStyle.Plain) 0.dp else 12.dp
 
 /** 合并模式下按钮左侧的竖向分隔线（首个按钮不画）。 */
 @Composable
@@ -129,7 +140,7 @@ private fun Modifier.mergedDivider(): Modifier {
 /**
  * 顶栏 actions 的统一 Row。
  *
- * 开启「合并顶栏按钮」且样式为 Tonal/Outlined/Glass 时，把多个按钮的容器/边框
+ * 开启「合并顶栏按钮」且样式为 Tonal/Outlined/半透明/液态玻璃时，把多个按钮的容器/边框
  * 融合成一个胶囊，按钮间用竖向分隔线隔开（复用 [TopBarMergeCounter] 自动分配索引）。
  * 单个按钮时胶囊自然退化为普通按钮。Plain 无容器，始终走普通间距 Row。
  */
@@ -140,6 +151,8 @@ internal fun TopBarActionsRow(
 ) {
     val style = currentTopBarButtonStyle()
     val mergeEnabled = LocalAppUiConfiguration.current.theme.mergeTopBarActions
+    val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
+            topBarLiquidGlassEnabled()
     if (!mergeEnabled || style == TopBarButtonStyle.Plain) {
         Row(
             modifier = modifier,
@@ -155,14 +168,20 @@ internal fun TopBarActionsRow(
     val capsuleShape = RoundedCornerShape(50)
     val capsuleBg = when (style) {
         TopBarButtonStyle.Tonal -> LegadoTheme.colorScheme.surfaceContainerLow
-        TopBarButtonStyle.Glass -> GlassTopAppBarDefaults.controlContainerColor()
+        TopBarButtonStyle.SemiTransparent, TopBarButtonStyle.LiquidGlass ->
+            GlassTopAppBarDefaults.controlContainerColor()
         else -> Color.Transparent // Outlined
     }
     Box(
         modifier = modifier
             .height(TopBarSeriesIconButtonSize.height)
-            .clip(capsuleShape)
-            .background(capsuleBg, capsuleShape)
+            .then(
+                if (liquidGlassEnabled) {
+                    Modifier.topBarLiquidGlass(capsuleShape)
+                } else {
+                    Modifier.background(capsuleBg, capsuleShape)
+                }
+            )
             .then(
                 if (style == TopBarButtonStyle.Outlined) {
                     Modifier.border(1.dp, LegadoTheme.colorScheme.outlineVariant, capsuleShape)
@@ -189,6 +208,8 @@ private fun TopBarButton(
     style: TopBarButtonStyle = currentTopBarButtonStyle()
 ) {
     val mergeState = LocalTopBarMergeState.current
+    val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
+            topBarLiquidGlassEnabled()
     if (mergeState != null) {
         val index = mergeState.index
         mergeState.index = index + 1
@@ -212,15 +233,23 @@ private fun TopBarButton(
             )
         }
     } else {
-        val containerColor = if (style == TopBarButtonStyle.Glass) {
-            GlassTopAppBarDefaults.controlContainerColor()
-        } else {
-            null
+        val containerColor = when {
+            liquidGlassEnabled -> Color.Transparent
+            style == TopBarButtonStyle.SemiTransparent ||
+                    style == TopBarButtonStyle.LiquidGlass ->
+                GlassTopAppBarDefaults.controlContainerColor()
+
+            else -> null
         }
         SeriesButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = if (liquidGlassEnabled) {
+                modifier.topBarLiquidGlass(RoundedCornerShape(50))
+            } else {
+                modifier
+            },
             enforceMinimumInteractiveSize = false,
+            clipToShape = !liquidGlassEnabled,
             size = style.buttonSize,
             style = style.seriesStyle,
             contentColor = LegadoTheme.colorScheme.onSurface,
@@ -243,7 +272,9 @@ fun TopBarNavigationButton(
     imageVector: ImageVector = AppIcons.Back,
     contentDescription: String? = stringResource(id = R.string.back)
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+        currentTopBarButtonStyle() == TopBarButtonStyle.Plain
+    ) {
         MiuixIconButton(
             onClick = onClick,
             modifier = modifier
@@ -270,7 +301,9 @@ fun TopBarActionButton(
     contentDescription: String?,
     modifier: Modifier = Modifier
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+        currentTopBarButtonStyle() == TopBarButtonStyle.Plain
+    ) {
         MiuixIconButton(
             onClick = onClick,
             modifier = modifier,
@@ -300,7 +333,9 @@ fun TopBarAnimatedActionButton(
     inactiveText: String,
     modifier: Modifier = Modifier
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+        currentTopBarButtonStyle() == TopBarButtonStyle.Plain
+    ) {
         val contentColor by animateColorAsState(
             targetValue = if (checked) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
             animationSpec = tween(150),
@@ -361,8 +396,14 @@ fun TopBarAnimatedActionButton(
         } else {
             -1
         }
-        val containerColor = if (mergeState == null && topBarStyle == TopBarButtonStyle.Glass) {
-            GlassTopAppBarDefaults.controlContainerColor()
+        val containerColor = if (
+            mergeState == null &&
+            (topBarStyle == TopBarButtonStyle.SemiTransparent ||
+                    topBarStyle == TopBarButtonStyle.LiquidGlass)
+        ) {
+            if (topBarStyle == TopBarButtonStyle.LiquidGlass && topBarLiquidGlassEnabled()) {
+                Color.Transparent
+            } else GlassTopAppBarDefaults.controlContainerColor()
         } else {
             null
         }
@@ -400,8 +441,14 @@ fun TopBarAnimatedActionButton(
                 } else {
                     SeriesButton(
                         onClick = { onToggle(!checked) },
-                        modifier = dividerModifier,
+                        modifier = if (topBarStyle == TopBarButtonStyle.LiquidGlass &&
+                            topBarLiquidGlassEnabled()
+                        ) {
+                            dividerModifier.topBarLiquidGlass(RoundedCornerShape(50))
+                        } else dividerModifier,
                         enforceMinimumInteractiveSize = false,
+                        clipToShape = !(topBarStyle == TopBarButtonStyle.LiquidGlass &&
+                                topBarLiquidGlassEnabled()),
                         selected = checked,
                         style = topBarStyle.seriesStyle,
                         contentColor = LegadoTheme.colorScheme.onSurface,

@@ -20,12 +20,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.domain.model.settings.hasBackgroundImage
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.LocalTopBarBackdrop
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeSource
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -52,6 +56,7 @@ fun AppScaffold(
     val themeSettings = configuration.theme
     val hasImageBg = themeSettings.hasBackgroundImage(isDark)
     val hazeState = remember { HazeState() }
+    val liquidGlassEnabled = configuration.theme.topBarButtonStyle == "liquid"
     val composeEngine = LegadoTheme.composeEngine
     val contentDrawsBehindBars =
         alwaysDrawBehindBars || themeSettings.enableBlur || themeSettings.enableProgressiveBlur
@@ -67,9 +72,20 @@ fun AppScaffold(
     } else {
         MiuixTheme.colorScheme.surface
     }
+    val topBarBackdropBaseColor = LegadoTheme.colorScheme.background
+    val topBarBackgroundBackdrop = rememberLayerBackdrop {
+        drawRect(topBarBackdropBaseColor)
+        drawContent()
+    }
+    val topBarContentBackdrop = rememberLayerBackdrop { drawContent() }
+    val topBarBackdrop = rememberCombinedBackdrop(
+        topBarBackgroundBackdrop,
+        topBarContentBackdrop
+    )
 
     CompositionLocalProvider(
-        LocalHazeState provides if (themeSettings.enableBlur) hazeState else null
+        LocalHazeState provides if (themeSettings.enableBlur) hazeState else null,
+        LocalTopBarBackdrop provides if (liquidGlassEnabled) topBarBackdrop else null,
     ) {
         when {
             ThemeResolver.isMiuixEngine(composeEngine) -> {
@@ -79,7 +95,19 @@ fun AppScaffold(
                     else -> MiuixFabPosition.End
                 }
                 Box(modifier = modifier.fillMaxSize()) {
-                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (liquidGlassEnabled) {
+                                    Modifier.layerBackdrop(topBarBackgroundBackdrop)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) {
+                        BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    }
                     MiuixScaffold(
                         modifier = Modifier.fillMaxSize(),
                         topBar = {
@@ -100,6 +128,13 @@ fun AppScaffold(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .then(
+                                    if (liquidGlassEnabled) {
+                                        Modifier.layerBackdrop(topBarContentBackdrop)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
                                 .then(
                                     if (!disableHazeSource) Modifier.responsiveHazeSource(hazeState)
                                     else Modifier
@@ -122,7 +157,19 @@ fun AppScaffold(
 
             else -> {
                 Box(modifier = modifier.fillMaxSize()) {
-                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (liquidGlassEnabled) {
+                                    Modifier.layerBackdrop(topBarBackgroundBackdrop)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) {
+                        BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    }
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         topBar = {
@@ -144,6 +191,13 @@ fun AppScaffold(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .then(
+                                    if (liquidGlassEnabled) {
+                                        Modifier.layerBackdrop(topBarContentBackdrop)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
                                 .then(
                                     if (!disableHazeSource) Modifier.responsiveHazeSource(hazeState)
                                     else Modifier

@@ -122,6 +122,8 @@ import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.miuixTopBarActionsEndPadding
+import io.legado.app.ui.widget.components.topbar.miuixTopBarSlotPadding
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -522,12 +524,20 @@ private fun BookInfoTransparentTopAppBar(
                 TopBarNavigationButton(onClick = onBackPressed)
             },
             actions = {
-                BookInfoTopBarActions(
-                    state = state,
-                    onMenuAction = onMenuAction,
-                )
+                TopBarActionsRow(
+                    modifier = Modifier.padding(
+                        end = miuixTopBarActionsEndPadding()
+                    )
+                ) {
+                    BookInfoTopBarActions(
+                        state = state,
+                        onMenuAction = onMenuAction,
+                    )
+                }
             },
             color = resolvedColor,
+            navigationIconPadding = miuixTopBarSlotPadding(),
+            actionIconPadding = miuixTopBarSlotPadding(),
             scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
         )
     } else {

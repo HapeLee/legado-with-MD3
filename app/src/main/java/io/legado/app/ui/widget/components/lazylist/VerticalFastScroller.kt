@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
@@ -99,6 +100,18 @@ fun VerticalFastScroller(
                 }
             }
             val thumbActive = isThumbDragged || recentlyTouched
+
+            // The capsule fades out a moment after it has shrunk back to its small form,
+            // and stays/reappears as long as the list is being used (scrolled or thumb-dragged)
+            var capsuleVisible by remember { mutableStateOf(true) }
+            LaunchedEffect(isThumbDragged, listState.isScrollInProgress, recentlyTouched) {
+                if (isThumbDragged || listState.isScrollInProgress || recentlyTouched) {
+                    capsuleVisible = true
+                } else {
+                    delay(ThumbHideDelayMillis.milliseconds)
+                    capsuleVisible = false
+                }
+            }
 
             // listState.isScrollInProgress occasionally flickers
             val scrollStateTracker = remember { MutableData(listState.isScrollInProgress) }
@@ -184,7 +197,12 @@ fun VerticalFastScroller(
                 animationSpec = tween(durationMillis = ThumbFormDurationMillis),
                 label = "thumbColor",
             )
-            val thumbDraggable = !listState.isScrollInProgress
+            val thumbVisibilityAlpha by animateFloatAsState(
+                targetValue = if (capsuleVisible) 1f else 0f,
+                animationSpec = tween(durationMillis = ThumbHideFadeMillis),
+                label = "thumbVisibility",
+            )
+            val thumbDraggable = !listState.isScrollInProgress && capsuleVisible
             val thumbWidth =
                 IdleThumbThickness + (ThumbThickness - IdleThumbThickness) * thumbFormProgress
             val thumbHeight = IdleThumbLength + (ThumbLength - IdleThumbLength) * thumbFormProgress
@@ -228,6 +246,7 @@ fun VerticalFastScroller(
                 Box(
                     modifier = Modifier
                         .size(thumbWidth, thumbHeight)
+                        .alpha(thumbVisibilityAlpha)
                         .background(
                             color = animatedThumbColor,
                             shape = RoundedCornerShape(thumbWidth / 2)
@@ -332,6 +351,18 @@ fun VerticalGridFastScroller(
             }
             val thumbActive = isThumbDragged || recentlyTouched
 
+            // The capsule fades out a moment after it has shrunk back to its small form,
+            // and stays/reappears as long as the list is being used (scrolled or thumb-dragged)
+            var capsuleVisible by remember { mutableStateOf(true) }
+            LaunchedEffect(isThumbDragged, state.isScrollInProgress, recentlyTouched) {
+                if (isThumbDragged || state.isScrollInProgress || recentlyTouched) {
+                    capsuleVisible = true
+                } else {
+                    delay(ThumbHideDelayMillis)
+                    capsuleVisible = false
+                }
+            }
+
             val thumbBottomPadding = with(LocalDensity.current) { bottomContentPadding.toPx() }
             val heightPx = contentHeight.toFloat() -
                     thumbTopPadding -
@@ -387,7 +418,12 @@ fun VerticalGridFastScroller(
                 animationSpec = tween(durationMillis = ThumbFormDurationMillis),
                 label = "thumbColor",
             )
-            val thumbDraggable = !state.isScrollInProgress
+            val thumbVisibilityAlpha by animateFloatAsState(
+                targetValue = if (capsuleVisible) 1f else 0f,
+                animationSpec = tween(durationMillis = ThumbHideFadeMillis),
+                label = "thumbVisibility",
+            )
+            val thumbDraggable = !state.isScrollInProgress && capsuleVisible
             val thumbWidth =
                 IdleThumbThickness + (ThumbThickness - IdleThumbThickness) * thumbFormProgress
             val thumbHeight = IdleThumbLength + (ThumbLength - IdleThumbLength) * thumbFormProgress
@@ -431,6 +467,7 @@ fun VerticalGridFastScroller(
                 Box(
                     modifier = Modifier
                         .size(thumbWidth, thumbHeight)
+                        .alpha(thumbVisibilityAlpha)
                         .background(
                             color = animatedThumbColor,
                             shape = RoundedCornerShape(thumbWidth / 2)
@@ -493,6 +530,8 @@ private val IdleThumbThickness = 4.dp
 private const val IdleThumbAlpha = 0.8f
 private const val ThumbFormDurationMillis = 250
 private const val ThumbActiveDurationMillis = 3000L
+private const val ThumbHideDelayMillis = 3000L
+private const val ThumbHideFadeMillis = 250
 
 private val LazyListItemInfo.top: Int
     get() = offset

@@ -1497,6 +1497,9 @@
     <string name="custom_theme_colors">自訂顏色</string>
     <string name="click_to_select">點擊選擇</string>
     <string name="compose_related">Compose 相關</string>
+    <string name="blur_effects">模糊效果</string>
+    <string name="top_bottom_bar_settings">頂欄與底欄</string>
+    <string name="top_bottom_bar_settings_summary">設定頂欄按鈕與底部導覽列</string>
     <string name="use_flexible_top_bar">使用彈性頂部工具列</string>
     <string name="slider">滑桿</string>
     <string name="input">輸入</string>
