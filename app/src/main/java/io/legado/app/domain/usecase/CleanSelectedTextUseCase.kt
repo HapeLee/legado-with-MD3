@@ -10,6 +10,7 @@ import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiPromptTemplate
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolContext
@@ -53,6 +54,7 @@ class CleanSelectedTextUseCase(
         selectedText: String,
         contextBefore: String,
         contextAfter: String,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): String {
         val preset = resolvePreset() ?: error("No AI model configured")
         val input = buildUserContent(
@@ -85,7 +87,8 @@ class CleanSelectedTextUseCase(
                 chapterTitle,
                 selectedText,
                 contextBefore,
-                contextAfter
+                contextAfter,
+                reasoningLevel,
             )
                 .collect { event ->
                     when (event) {
@@ -105,6 +108,7 @@ class CleanSelectedTextUseCase(
         selectedText: String,
         contextBefore: String,
         contextAfter: String,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             require(selectedText.isNotBlank()) { "Selected text is empty" }
@@ -145,6 +149,8 @@ class CleanSelectedTextUseCase(
                         maxOutputTokens = preset.params.maxOutputTokens
                             ?.coerceAtMost(MAX_OUTPUT_TOKENS)
                             ?: MAX_OUTPUT_TOKENS,
+                        reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                            ?: preset.params.reasoningLevel,
                     ),
                     toolContext = AiToolContext(
                         bookUrl = bookUrl,
@@ -183,6 +189,7 @@ class CleanSelectedTextUseCase(
         selectedText: String,
         contextBefore: String,
         contextAfter: String,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): Flow<StreamEvent> = flow {
         require(selectedText.isNotBlank()) { "Selected text is empty" }
         require(selectedText.length <= MAX_SELECTED_TEXT_CHARS) {
@@ -228,6 +235,8 @@ class CleanSelectedTextUseCase(
                     maxOutputTokens = preset.params.maxOutputTokens
                         ?.coerceAtMost(MAX_OUTPUT_TOKENS)
                         ?: MAX_OUTPUT_TOKENS,
+                    reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                        ?: preset.params.reasoningLevel,
                 ),
                 toolContext = AiToolContext(
                     bookUrl = bookUrl,

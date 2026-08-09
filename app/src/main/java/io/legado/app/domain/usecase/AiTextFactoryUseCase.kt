@@ -8,6 +8,7 @@ import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiPromptTemplate
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolContext
@@ -38,6 +39,7 @@ class AiTextFactoryUseCase(
         val maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
         val skipCache: Boolean = false,
         val artifactContentHash: String? = null,
+        val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     )
 
     sealed interface StreamEvent {
@@ -131,6 +133,7 @@ class AiTextFactoryUseCase(
                         referenceText = request.referenceText,
                     ),
                     toolContext = toolContext,
+                    reasoningLevel = request.reasoningLevel,
                 )
             }
             val output = if (partialOutputs.size == 1) {
@@ -141,6 +144,7 @@ class AiTextFactoryUseCase(
                     systemPrompt = systemPrompt,
                     userContent = buildMergeUserInput(partialOutputs),
                     toolContext = toolContext,
+                    reasoningLevel = request.reasoningLevel,
                 )
             }
             val now = System.currentTimeMillis()
@@ -216,6 +220,7 @@ class AiTextFactoryUseCase(
                 outputBuilder = outputBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
+                reasoningLevel = request.reasoningLevel,
             )
         } else {
             val partialOutputs = chunks.map { chunk ->
@@ -228,6 +233,7 @@ class AiTextFactoryUseCase(
                         referenceText = request.referenceText,
                     ),
                     toolContext = toolContext,
+                    reasoningLevel = request.reasoningLevel,
                 )
             }
             val merged = generate(
@@ -235,6 +241,7 @@ class AiTextFactoryUseCase(
                 systemPrompt = systemPrompt,
                 userContent = buildMergeUserInput(partialOutputs),
                 toolContext = toolContext,
+                reasoningLevel = request.reasoningLevel,
             )
             outputBuilder.append(merged)
             emit(StreamEvent.Content(merged))
@@ -322,6 +329,7 @@ class AiTextFactoryUseCase(
         systemPrompt: String,
         userContent: String,
         toolContext: AiToolContext?,
+        reasoningLevel: AiReasoningLevel,
     ): String {
         return aiToolAwareGenerationUseCase.generate(
             AiGenerateRequest(
@@ -330,7 +338,10 @@ class AiTextFactoryUseCase(
                     AiMessage(AiMessageRole.SYSTEM, systemPrompt),
                     AiMessage(AiMessageRole.USER, userContent),
                 ),
-                params = preset.params,
+                params = preset.params.copy(
+                    reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                        ?: preset.params.reasoningLevel,
+                ),
                 toolContext = toolContext,
             )
         )
@@ -344,6 +355,7 @@ class AiTextFactoryUseCase(
         outputBuilder: StringBuilder,
         reasoningBuilder: StringBuilder,
         emitEvent: suspend (StreamEvent) -> Unit,
+        reasoningLevel: AiReasoningLevel,
     ) {
         aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
@@ -352,7 +364,10 @@ class AiTextFactoryUseCase(
                     AiMessage(AiMessageRole.SYSTEM, systemPrompt),
                     AiMessage(AiMessageRole.USER, userContent),
                 ),
-                params = preset.params,
+                params = preset.params.copy(
+                    reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                        ?: preset.params.reasoningLevel,
+                ),
                 toolContext = toolContext,
             )
         ).collect { event ->

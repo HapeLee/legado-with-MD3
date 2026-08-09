@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.knowledge
 
 import androidx.compose.runtime.Stable
+import io.legado.app.domain.model.AiReasoningLevel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -16,6 +17,7 @@ data class CharacterListUiState(
 
 @Stable
 data class CharacterIdentifySheet(
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     val loading: Boolean = false,
     val error: String? = null,
     val candidates: ImmutableList<CharacterIdentifyCandidateUi> = persistentListOf(),
@@ -48,6 +50,7 @@ sealed interface CharacterListIntent {
     data object AddCharacter : CharacterListIntent
     data object OpenAiIdentify : CharacterListIntent
     data object RunAiIdentify : CharacterListIntent
+    data class SetAiIdentifyReasoningLevel(val level: AiReasoningLevel) : CharacterListIntent
     data class ToggleAiCandidate(val id: String) : CharacterListIntent
     data object SaveAiCandidates : CharacterListIntent
     data object DismissAiIdentify : CharacterListIntent

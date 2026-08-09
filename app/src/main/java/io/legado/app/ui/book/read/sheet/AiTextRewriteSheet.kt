@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.ai.chat.AiChatMessageUi
 import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
 import io.legado.app.ui.book.read.AiRewriteHistoryUi
@@ -41,8 +42,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppRadioButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -134,6 +133,13 @@ fun AiTextRewriteSheet(
                                 text = stringResource(R.string.ai_rewrite_requirements),
                                 modifier = Modifier.weight(1f),
                                 style = LegadoTheme.typography.titleSmall,
+                            )
+                            AiReasoningModeButton(
+                                level = state.reasoningLevel,
+                                enabled = !state.isLoading && !state.isApplying,
+                                onLevelChange = {
+                                    onIntent(ReadBookIntent.SetAiTextRewriteReasoningLevel(it))
+                                },
                             )
                             SmallOutlinedButton(
                                 onClick = { onIntent(ReadBookIntent.OpenAiRewritePresetConfig) },

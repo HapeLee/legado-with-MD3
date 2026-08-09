@@ -9,6 +9,7 @@ import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolContext
@@ -46,6 +47,7 @@ class GenerateChapterSummaryUseCase(
         bookChapter: BookChapter,
         contentOverride: String? = null,
         maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): String {
         val content = contentOverride ?: BookHelp.getContent(book, bookChapter)
         ?: error("Failed to read chapter content")
@@ -68,7 +70,13 @@ class GenerateChapterSummaryUseCase(
         )
         return aiTaskManager.submit(artifact) {
             var summary = ""
-            executeStream(book, bookChapter, content, maxCharsPerChunk).collect { event ->
+            executeStream(
+                book,
+                bookChapter,
+                content,
+                maxCharsPerChunk,
+                reasoningLevel
+            ).collect { event ->
                 when (event) {
                     is StreamEvent.Content -> appendContent(event.text)
                     is StreamEvent.Reasoning -> appendReasoning(event.text)
@@ -83,7 +91,8 @@ class GenerateChapterSummaryUseCase(
         book: Book,
         bookChapter: BookChapter,
         contentOverride: String? = null,
-        maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK
+        maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val content = contentOverride ?: BookHelp.getContent(book, bookChapter)
@@ -111,6 +120,7 @@ class GenerateChapterSummaryUseCase(
                     preset = preset,
                     userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}",
                     toolContext = toolContext,
+                    reasoningLevel = reasoningLevel,
                 )
             }
             val summary = if (partialSummaries.size == 1) {
@@ -120,6 +130,7 @@ class GenerateChapterSummaryUseCase(
                     preset = preset,
                     userContent = "Merge these partial summaries into one chapter summary:\n\n${partialSummaries.joinToString("\n\n")}",
                     toolContext = toolContext,
+                    reasoningLevel = reasoningLevel,
                 )
             }
             val now = System.currentTimeMillis()
@@ -148,7 +159,8 @@ class GenerateChapterSummaryUseCase(
         book: Book,
         bookChapter: BookChapter,
         contentOverride: String? = null,
-        maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK
+        maxCharsPerChunk: Int = DEFAULT_MAX_CHARS_PER_CHUNK,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): Flow<StreamEvent> = flow {
         val content = contentOverride ?: BookHelp.getContent(book, bookChapter)
             ?: error("Failed to read chapter content")
@@ -184,6 +196,7 @@ class GenerateChapterSummaryUseCase(
                 outputBuilder = summaryBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
+                reasoningLevel = reasoningLevel,
             )
         } else {
             val partialSummaries = chunks.map { chunk ->
@@ -191,6 +204,7 @@ class GenerateChapterSummaryUseCase(
                     preset = preset,
                     userContent = "Chapter title: ${bookChapter.title}\n\nText:\n${chunk.content}",
                     toolContext = toolContext,
+                    reasoningLevel = reasoningLevel,
                 )
             }
             collectGenerateStream(
@@ -200,6 +214,7 @@ class GenerateChapterSummaryUseCase(
                 outputBuilder = summaryBuilder,
                 reasoningBuilder = reasoningBuilder,
                 emitEvent = { emit(it) },
+                reasoningLevel = reasoningLevel,
             )
         }
 
@@ -233,6 +248,7 @@ class GenerateChapterSummaryUseCase(
         preset: AiTaskPresetConfig,
         userContent: String,
         toolContext: AiToolContext,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     ): String {
         return aiToolAwareGenerationUseCase.generate(
             AiGenerateRequest(
@@ -241,7 +257,10 @@ class GenerateChapterSummaryUseCase(
                     AiMessage(AiMessageRole.SYSTEM, preset.promptTemplate),
                     AiMessage(AiMessageRole.USER, userContent)
                 ),
-                params = preset.params,
+                params = preset.params.copy(
+                    reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                        ?: preset.params.reasoningLevel,
+                ),
                 toolContext = toolContext,
             )
         )
@@ -254,6 +273,7 @@ class GenerateChapterSummaryUseCase(
         outputBuilder: StringBuilder,
         reasoningBuilder: StringBuilder,
         emitEvent: suspend (StreamEvent) -> Unit,
+        reasoningLevel: AiReasoningLevel,
     ) {
         aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
@@ -262,7 +282,10 @@ class GenerateChapterSummaryUseCase(
                     AiMessage(AiMessageRole.SYSTEM, preset.promptTemplate),
                     AiMessage(AiMessageRole.USER, userContent)
                 ),
-                params = preset.params,
+                params = preset.params.copy(
+                    reasoningLevel = reasoningLevel.takeUnless { it == AiReasoningLevel.AUTO }
+                        ?: preset.params.reasoningLevel,
+                ),
                 toolContext = toolContext,
             )
         ).collect { event ->

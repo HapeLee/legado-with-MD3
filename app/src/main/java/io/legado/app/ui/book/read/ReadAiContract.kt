@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read
 
 import androidx.compose.runtime.Stable
+import io.legado.app.domain.model.AiReasoningLevel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -24,6 +25,7 @@ data class ChapterSummaryUiState(
     val bookUrl: String = "",
     val chapterIndex: Int = -1,
     val chapterTitle: String = "",
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     val isLoading: Boolean = false,
     val summary: String = "",
     val reasoningText: String = "",
@@ -36,6 +38,7 @@ data class AiTextCleanUiState(
     val bookUrl: String = "",
     val chapterIndex: Int = -1,
     val chapterTitle: String = "",
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     val isLoading: Boolean = false,
     val isApplying: Boolean = false,
     val originalText: String = "",
@@ -65,6 +68,7 @@ data class AiTextRewriteUiState(
     val bookUrl: String = "",
     val chapterIndex: Int = -1,
     val chapterTitle: String = "",
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
     val isLoading: Boolean = false,
     val isApplying: Boolean = false,
     val originalText: String = "",

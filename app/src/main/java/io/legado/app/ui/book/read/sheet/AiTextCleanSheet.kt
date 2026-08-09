@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.ai.chat.AiChatMessageUi
 import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
 import io.legado.app.ui.book.read.AiTextCleanUiState
@@ -44,6 +45,13 @@ fun AiTextCleanSheet(
             if (!state.isApplying) onDismissRequest()
         },
         title = stringResource(R.string.ai_text_clean),
+        endAction = {
+            AiReasoningModeButton(
+                level = state.reasoningLevel,
+                enabled = !state.isLoading && !state.isApplying,
+                onLevelChange = { onIntent(ReadBookIntent.SetAiTextCleanReasoningLevel(it)) },
+            )
+        },
     ) {
         Column(
             modifier = Modifier

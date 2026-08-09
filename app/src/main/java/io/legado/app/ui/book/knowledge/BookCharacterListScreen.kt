@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.ai.AiTaskResultSheet
 import io.legado.app.ui.ai.chat.ReasoningCard
 import io.legado.app.ui.theme.LegadoTheme
@@ -189,14 +190,25 @@ private fun CharacterIdentifySheet(
                 )
             }
         } else null,
-        endAction = if (sheet?.candidates?.isNotEmpty() == true) {
+        endAction = if (sheet != null) {
             {
-                MediumTonalButton(
-                    onClick = { onIntent(CharacterListIntent.SaveAiCandidates) },
-                    contentDescription = stringResource(R.string.ai_identify_characters_save),
-                    icon = Icons.Default.Save,
-                    enabled = !sheet.loading,
-                )
+                Row {
+                    AiReasoningModeButton(
+                        level = sheet.reasoningLevel,
+                        enabled = !sheet.loading,
+                        onLevelChange = {
+                            onIntent(CharacterListIntent.SetAiIdentifyReasoningLevel(it))
+                        },
+                    )
+                    if (sheet.candidates.isNotEmpty()) {
+                        MediumTonalButton(
+                            onClick = { onIntent(CharacterListIntent.SaveAiCandidates) },
+                            contentDescription = stringResource(R.string.ai_identify_characters_save),
+                            icon = Icons.Default.Save,
+                            enabled = !sheet.loading,
+                        )
+                    }
+                }
             }
         } else null,
     ) {

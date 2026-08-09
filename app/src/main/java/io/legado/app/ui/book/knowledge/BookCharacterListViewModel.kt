@@ -85,6 +85,9 @@ class BookCharacterListViewModel(
 
             CharacterListIntent.DismissAiIdentify -> _uiState.update { it.copy(isAiSheetVisible = false) }
             CharacterListIntent.RunAiIdentify -> identifyCharacters()
+            is CharacterListIntent.SetAiIdentifyReasoningLevel -> _uiState.update { state ->
+                state.copy(aiSheet = state.aiSheet?.copy(reasoningLevel = intent.level))
+            }
             is CharacterListIntent.ToggleAiCandidate -> _uiState.update { state ->
                 state.copy(aiSheet = state.aiSheet?.copy(candidates = state.aiSheet.candidates.map { candidate ->
                     if (candidate.id == intent.id) candidate.copy(selected = !candidate.selected) else candidate
@@ -215,6 +218,8 @@ class BookCharacterListViewModel(
             _uiState.update {
                 it.copy(
                     aiSheet = CharacterIdentifySheet(
+                        reasoningLevel = _uiState.value.aiSheet?.reasoningLevel
+                            ?: io.legado.app.domain.model.AiReasoningLevel.AUTO,
                         loading = true,
                         startedAt = System.currentTimeMillis()
                     ),
@@ -222,7 +227,13 @@ class BookCharacterListViewModel(
                 )
             }
             try {
-                withContext(Dispatchers.IO) { identifyBookCharacters.start(bookUrl) }
+                withContext(Dispatchers.IO) {
+                    identifyBookCharacters.start(
+                        bookUrl,
+                        _uiState.value.aiSheet?.reasoningLevel
+                            ?: io.legado.app.domain.model.AiReasoningLevel.AUTO,
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {

@@ -17,13 +17,14 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.ai.chat.AiChatMessageUi
 import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
 import io.legado.app.ui.book.read.ChapterSummaryUiState
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -41,6 +42,13 @@ fun ChapterSummarySheet(
         onDismissRequest = onDismissRequest,
         title = state.chapterTitle.ifBlank {
             stringResource(R.string.ai_chapter_summary)
+        },
+        endAction = {
+            AiReasoningModeButton(
+                level = state.reasoningLevel,
+                enabled = !state.isLoading,
+                onLevelChange = { onIntent(ReadBookIntent.SetChapterSummaryReasoningLevel(it)) },
+            )
         },
     ) {
         when {

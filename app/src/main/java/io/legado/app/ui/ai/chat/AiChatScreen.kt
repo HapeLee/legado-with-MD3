@@ -1,7 +1,6 @@
 package io.legado.app.ui.ai.chat
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -9,7 +8,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,23 +33,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
@@ -87,9 +78,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -98,10 +89,7 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
-import io.legado.app.ui.widget.components.image.cover.CoilBookCover
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.widget.components.text.MarkdownBlock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -851,9 +839,6 @@ private fun ChatInputBar(
     onStop: () -> Unit,
     onUpdateReasoningLevel: (AiReasoningLevel) -> Unit
 ) {
-    var showThinkingSheet by rememberSaveable { mutableStateOf(false) }
-    val thinkingLabel = reasoningLevel.label()
-    val isThinkingOn = reasoningLevel != AiReasoningLevel.OFF
     val isKeyboardVisible =
         WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
     val horizontalPadding by animateDpAsState(
@@ -866,56 +851,6 @@ private fun ChatInputBar(
         animationSpec = tween(durationMillis = 250),
         label = "AiChatInputBottomPadding"
     )
-
-    // Thinking mode bottom sheet
-    AppModalBottomSheet(
-        show = showThinkingSheet,
-        onDismissRequest = { showThinkingSheet = false },
-        title = stringResource(R.string.ai_thinking_mode)
-    ) {
-        AiReasoningLevel.entries.forEach { level ->
-            val isSelected = level == reasoningLevel
-            val label = level.label()
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
-                        onUpdateReasoningLevel(level)
-                        showThinkingSheet = false
-                    }
-                    .background(
-                        if (isSelected) LegadoTheme.colorScheme.primaryContainer
-                        else LegadoTheme.colorScheme.surface
-                    )
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    AppText(
-                        text = label,
-                        style = LegadoTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer
-                        else LegadoTheme.colorScheme.onSurface
-                    )
-                }
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = LegadoTheme.colorScheme.primary
-                    )
-                }
-            }
-            if (level != AiReasoningLevel.entries.last()) {
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-    }
 
     // Floating capsule input bar
     Surface(
@@ -937,11 +872,10 @@ private fun ChatInputBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Thinking mode button
-            MediumTonalButton(
-                onClick = { showThinkingSheet = true },
-                icon = Icons.Default.Lightbulb,
-                selected = isThinkingOn,
-                contentDescription = stringResource(R.string.ai_thinking_mode)
+            AiReasoningModeButton(
+                level = reasoningLevel,
+                enabled = !isSending,
+                onLevelChange = onUpdateReasoningLevel,
             )
 
             // Text field
@@ -990,19 +924,6 @@ private fun ChatInputBar(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AiReasoningLevel.label(): String {
-    return when (this) {
-        AiReasoningLevel.OFF -> stringResource(R.string.ai_thinking_off)
-        AiReasoningLevel.AUTO -> stringResource(R.string.ai_thinking_auto)
-        AiReasoningLevel.LOW -> stringResource(R.string.ai_reasoning_level_low)
-        AiReasoningLevel.MEDIUM -> stringResource(R.string.ai_reasoning_level_medium)
-        AiReasoningLevel.HIGH -> stringResource(R.string.ai_reasoning_level_high)
-        AiReasoningLevel.XHIGH -> stringResource(R.string.ai_reasoning_level_xhigh)
-        AiReasoningLevel.MAX -> stringResource(R.string.ai_reasoning_level_max)
     }
 }
 
