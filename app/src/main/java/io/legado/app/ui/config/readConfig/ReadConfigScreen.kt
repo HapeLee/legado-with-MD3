@@ -305,6 +305,20 @@ fun ReadConfigScreen(
                     }
                 )
 
+                SliderSettingItem(
+                    title = stringResource(R.string.no_toc_split_length_title),
+                    description = stringResource(
+                        R.string.no_toc_split_length_summary,
+                        settings.maxLengthWithNoToc
+                    ),
+                    value = settings.maxLengthWithNoToc.toFloat(),
+                    defaultValue = 3000f,
+                    valueRange = 3000f..100000f,
+                    onValueChange = {
+                        onIntent(ReadConfigIntent.MaxLengthWithNoTocChanged(it.toInt()))
+                    }
+                )
+
                 SwitchSettingItem(
                     title = stringResource(R.string.enable_select_vibrator),
                     checked = settings.selectVibrator,

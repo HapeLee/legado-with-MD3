@@ -130,6 +130,9 @@ private fun ReadConfigIntent.toSettingsTransform(): (ReadSettings) -> ReadSettin
     is ReadConfigIntent.PageTouchSlopChanged -> { settings -> settings.copy(pageTouchSlop = value) }
     is ReadConfigIntent.SliderVibratorChanged -> { settings -> settings.copy(sliderVibrator = value) }
     is ReadConfigIntent.UseNewTocSheetChanged -> { settings -> settings.copy(useNewTocSheet = value) }
+    is ReadConfigIntent.MaxLengthWithNoTocChanged -> {
+        settings -> settings.copy(maxLengthWithNoToc = value.coerceIn(3000, 100000))
+    }
     is ReadConfigIntent.SelectVibratorChanged -> { settings -> settings.copy(selectVibrator = value) }
     is ReadConfigIntent.AutoChangeSourceChanged -> { settings -> settings.copy(autoChangeSource = value) }
     is ReadConfigIntent.AutoSuggestDayNightChanged -> { settings -> settings.copy(autoSuggestDayNight = value) }
@@ -198,6 +201,7 @@ private fun ReadSettings.toUiState(
         pageTouchSlop = pageTouchSlop,
         sliderVibrator = sliderVibrator,
         useNewTocSheet = useNewTocSheet,
+        maxLengthWithNoToc = maxLengthWithNoToc,
         selectVibrator = selectVibrator,
         autoChangeSource = autoChangeSource,
         autoSuggestDayNight = autoSuggestDayNight,

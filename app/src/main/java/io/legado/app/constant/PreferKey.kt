@@ -393,6 +393,7 @@ object PreferKey {
     const val bookshelfIntroMaxLines = "bookshelfIntroMaxLines"
     const val sliderVibrator = "sliderVibrator"
     const val useNewTocSheet = "useNewTocSheet"
+    const val maxLengthWithNoToc = "maxLengthWithNoToc"
     const val selectVibrator = "selectVibrator"
     const val audioCacheCleanTime = "audioCacheCleanTime"
     const val audioPreDownloadNum = "audioPreDownloadNum"
