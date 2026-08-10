@@ -68,6 +68,7 @@ import io.legado.app.data.repository.LocalPasswordRepository
 import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.OtherConfigSystemRepository
 import io.legado.app.data.repository.OtherSettingsRepository
+import io.legado.app.data.repository.MangaReaderSessionRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadAloudVoiceRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
@@ -243,7 +244,7 @@ import io.legado.app.ui.book.knowledge.BookEventListViewModel
 import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
 import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
 import io.legado.app.ui.book.manage.BookshelfManageScreenViewModel
-import io.legado.app.ui.book.manga.ReadMangaViewModel
+import io.legado.app.ui.book.manga.MangaReaderViewModel
 import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
@@ -393,6 +394,7 @@ val appModule = module {
     singleOf(::ReadStyleConfigStore)
     singleOf(::ReadBookStyleConfigRepository)
     single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
+    singleOf(::MangaReaderSessionRepository)
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
     singleOf(::SaveSearchBooksUseCase)
@@ -680,7 +682,7 @@ val appModule = module {
             bookKnowledgeGateway = get(),
         )
     }
-    viewModelOf(::ReadMangaViewModel)
+    viewModelOf(::MangaReaderViewModel)
     viewModel {
         ReadBookViewModel(
             application = get(),
