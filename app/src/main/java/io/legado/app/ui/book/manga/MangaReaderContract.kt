@@ -2,6 +2,7 @@ package io.legado.app.ui.book.manga
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
@@ -28,7 +29,8 @@ data class MangaReaderUiState(
     val chapterIndex: Int = 0,
     val chapterCount: Int = 0,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null,
+    val errorMessage: MangaReaderText? = null,
+    val pendingMessages: ImmutableList<MangaReaderMessage> = persistentListOf(),
     val menuVisible: Boolean = false,
     val autoReadEnabled: Boolean = false,
     val activeSheet: MangaReaderSheet? = null,
@@ -102,8 +104,20 @@ data class MangaReaderSettings(
 data class MangaScrollRequest(val id: Long, val itemIndex: Int, val animated: Boolean)
 
 @Immutable
-@JvmInline
-value class MangaBookSnapshot(val json: String)
+data class MangaReaderMessage(
+    val id: Long,
+    val content: MangaReaderText,
+)
+
+@Immutable
+sealed interface MangaReaderText {
+    data class Resource(
+        @StringRes val resId: Int,
+        val args: ImmutableList<String> = persistentListOf(),
+    ) : MangaReaderText
+
+    data class Dynamic(val value: String) : MangaReaderText
+}
 
 sealed interface MangaReaderIntent {
     data class Initialize(
@@ -162,6 +176,7 @@ sealed interface MangaReaderIntent {
     data class SeekToPage(val pageIndex: Int) : MangaReaderIntent
     data class VisibleItemChanged(val itemIndex: Int) : MangaReaderIntent
     data class LongPressPage(val imageUrl: String) : MangaReaderIntent
+    data class MessageShown(val id: Long) : MangaReaderIntent
 }
 
 sealed interface MangaReaderSheet {
@@ -222,7 +237,6 @@ sealed interface MangaReaderEffect {
     data class OpenChapterUrl(val externalBrowser: Boolean) : MangaReaderEffect
     data class OpenSourceLogin(val sourceUrl: String) : MangaReaderEffect
     data class OpenSourceEdit(val sourceUrl: String) : MangaReaderEffect
-    data class ShowMessage(val message: String) : MangaReaderEffect
     data class OpenPaymentUrl(
         val url: String,
         val sourceOrigin: String?,

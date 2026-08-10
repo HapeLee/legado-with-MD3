@@ -19,7 +19,6 @@ import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -88,7 +87,6 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
             MangaReaderEffect.OpenCatalog -> openCatalog()
             MangaReaderEffect.OpenBookInfo -> openBookInfoActivity()
             is MangaReaderEffect.OpenChapterUrl -> openCurrentChapterUrl(effect.externalBrowser)
-            is MangaReaderEffect.ShowMessage -> toastOnUi(effect.message)
             is MangaReaderEffect.OpenSourceLogin -> startActivity(
                 MainActivity.createSourceLoginIntent(
                     this,

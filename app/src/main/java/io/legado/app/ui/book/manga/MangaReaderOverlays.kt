@@ -217,12 +217,19 @@ internal fun BoxScope.ReaderStatusOverlay(
         }
     }
     state.errorMessage?.let { message ->
+        val errorText = when (message) {
+            is MangaReaderText.Dynamic -> message.value
+            is MangaReaderText.Resource -> stringResource(
+                message.resId,
+                *message.args.toTypedArray(),
+            )
+        }
         Surface(modifier = Modifier.fillMaxSize(), color = LegadoTheme.colorScheme.surface) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(message, modifier = Modifier.padding(24.dp))
+                Text(errorText, modifier = Modifier.padding(24.dp))
                 Button(onClick = { onIntent(MangaReaderIntent.Retry) }) { Text(stringResource(R.string.retry)) }
             }
         }

@@ -50,6 +50,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
+import android.widget.Toast
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.layout.onSizeChanged
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -58,12 +62,9 @@ import coil3.request.crossfade
 import coil3.request.transformations
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.R
-import io.legado.app.data.entities.Book
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.koinInject
@@ -103,6 +104,19 @@ fun MangaReaderScreen(
     }
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val pendingMessage = state.pendingMessages.firstOrNull()
+    LaunchedEffect(pendingMessage?.id, context, lifecycleOwner) {
+        val message = pendingMessage ?: return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            Toast.makeText(
+                context,
+                message.content.resolve(context),
+                Toast.LENGTH_SHORT,
+            ).show()
+            onIntent(MangaReaderIntent.MessageShown(message.id))
+        }
+    }
     LaunchedEffect(state.currentItemIndex, state.settings.preDownloadCount, state.pages) {
         val preloadCount = state.settings.preDownloadCount.coerceAtLeast(0)
         val start = (state.currentItemIndex - preloadCount).coerceAtLeast(0)
@@ -144,8 +158,7 @@ fun MangaReaderScreen(
     }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {
         val oldBook = remember(state.changeSourceBook) {
-            state.changeSourceBook
-                ?.let { GSON.fromJsonObject<Book>(it.json).getOrNull() }
+            state.changeSourceBook?.toBook()
         }
         oldBook?.let {
             ChangeSourceSheet(
@@ -200,6 +213,11 @@ fun MangaReaderScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(MangaReaderIntent.DismissDialog) },
     )
+}
+
+private fun MangaReaderText.resolve(context: android.content.Context): String = when (this) {
+    is MangaReaderText.Dynamic -> value
+    is MangaReaderText.Resource -> context.getString(resId, *args.toTypedArray())
 }
 
 @Composable

@@ -18,7 +18,6 @@ import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.openUrl
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import kotlinx.coroutines.flow.collectLatest
 
@@ -85,7 +84,6 @@ fun MangaReaderRouteScreen(
                         currentState.sourceType,
                     )
                 }
-                is MangaReaderEffect.ShowMessage -> activity.toastOnUi(effect.message)
                 is MangaReaderEffect.OpenSourceLogin -> onOpenSourceLogin(effect.sourceUrl)
                 is MangaReaderEffect.OpenSourceEdit -> onOpenSourceEdit(effect.sourceUrl)
                 is MangaReaderEffect.OpenPaymentUrl -> onOpenWebView(

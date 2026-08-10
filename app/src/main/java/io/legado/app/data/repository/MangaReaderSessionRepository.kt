@@ -45,7 +45,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.withContext
@@ -69,13 +71,26 @@ sealed interface MangaPaymentResult {
 }
 
 sealed interface MangaReaderSessionEvent {
-    data object ContentUpdated : MangaReaderSessionEvent
     data class LoadFailed(val message: String) : MangaReaderSessionEvent
     data class ConfirmProgress(val progress: BookProgress) : MangaReaderSessionEvent
     data object Loading : MangaReaderSessionEvent
     data object LoadStarted : MangaReaderSessionEvent
     data class Message(val message: String) : MangaReaderSessionEvent
 }
+
+data class MangaReaderSessionState(
+    val content: MangaContent,
+    val bookName: String,
+    val bookAuthor: String,
+    val bookUrl: String,
+    val chapterName: String,
+    val chapterUrl: String?,
+    val sourceName: String,
+    val sourceUrl: String?,
+    val sourceType: Int?,
+    val chapterIndex: Int,
+    val chapterCount: Int,
+)
 
 /** Data/session boundary around the legacy ReadManga engine. */
 class MangaReaderSessionRepository(
@@ -90,10 +105,12 @@ class MangaReaderSessionRepository(
 ) {
     private val _events = MutableSharedFlow<MangaReaderSessionEvent>(extraBufferCapacity = 16)
     val events = _events.asSharedFlow()
+    private val _sessionState = MutableStateFlow<MangaReaderSessionState?>(null)
+    val sessionState = _sessionState.asStateFlow()
 
     private val engineCallback = object : ReadManga.Callback {
         override fun upContent() {
-            _events.tryEmit(MangaReaderSessionEvent.ContentUpdated)
+            publishSessionState()
         }
 
         override fun loadFail(msg: String) {
@@ -117,31 +134,29 @@ class MangaReaderSessionRepository(
 
     fun closeSession() = ReadManga.unregister(engineCallback)
 
-    fun content(): MangaContent = ReadManga.mangaContents
+    fun currentSessionState(): MangaReaderSessionState = MangaReaderSessionState(
+        content = ReadManga.mangaContents.copy(items = ReadManga.mangaContents.items.toList()),
+        bookName = ReadManga.book?.name.orEmpty(),
+        bookAuthor = ReadManga.book?.author.orEmpty(),
+        bookUrl = ReadManga.book?.bookUrl.orEmpty(),
+        chapterName = ReadManga.book?.durChapterTitle.orEmpty(),
+        chapterUrl = ReadManga.curMangaChapter?.chapter?.url,
+        sourceName = ReadManga.bookSource?.bookSourceName.orEmpty(),
+        sourceUrl = ReadManga.bookSource?.bookSourceUrl,
+        sourceType = ReadManga.bookSource?.getSourceType(),
+        chapterIndex = ReadManga.durChapterIndex,
+        chapterCount = ReadManga.simulatedChapterSize,
+    )
 
-    fun currentBookName(): String = ReadManga.book?.name.orEmpty()
-
-    fun currentBookAuthor(): String = ReadManga.book?.author.orEmpty()
-
-    fun currentBookUrl(): String = ReadManga.book?.bookUrl.orEmpty()
+    private fun publishSessionState() {
+        _sessionState.value = currentSessionState()
+    }
 
     fun currentBook(): Book? = ReadManga.book
 
-    fun currentChapterName(): String = ReadManga.book?.durChapterTitle.orEmpty()
-
-    fun currentSourceName(): String = ReadManga.bookSource?.bookSourceName.orEmpty()
-
     fun currentSourceOrigin(): String? = ReadManga.book?.origin
 
-    fun currentSourceUrl(): String? = ReadManga.bookSource?.bookSourceUrl
-
-    fun currentSourceType(): Int? = ReadManga.bookSource?.getSourceType()
-
-    fun currentChapterUrl(): String? = ReadManga.curMangaChapter?.chapter?.url
-
     fun currentChapterIndex(): Int = ReadManga.durChapterIndex
-
-    fun chapterCount(): Int = ReadManga.simulatedChapterSize
 
     fun inBookshelf(): Boolean = ReadManga.inBookshelf
 

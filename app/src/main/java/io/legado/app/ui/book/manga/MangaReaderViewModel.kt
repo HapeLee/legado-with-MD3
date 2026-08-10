@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.manga
 
-import android.app.Application
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
@@ -10,6 +9,7 @@ import io.legado.app.data.repository.MangaReaderSessionRepository
 import io.legado.app.data.repository.MangaReaderLaunchRequest
 import io.legado.app.data.repository.MangaPaymentResult
 import io.legado.app.data.repository.MangaReaderSessionEvent
+import io.legado.app.data.repository.MangaReaderSessionState
 import io.legado.app.model.manga.MangaPage
 import io.legado.app.model.manga.ReaderLoading
 import io.legado.app.data.model.MangaFooterConfig
@@ -20,6 +20,7 @@ import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,7 +36,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class MangaReaderViewModel(
-    private val application: Application,
     private val mangaSettingsGateway: MangaSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val readSettingsGateway: ReadSettingsGateway,
@@ -57,7 +57,6 @@ class MangaReaderViewModel(
         viewModelScope.launch {
             sessionRepository.events.collect { event ->
                 when (event) {
-                    MangaReaderSessionEvent.ContentUpdated -> refreshContent()
                     is MangaReaderSessionEvent.LoadFailed -> showError(event.message)
                     is MangaReaderSessionEvent.ConfirmProgress -> _uiState.update {
                         it.copy(activeDialog = MangaReaderDialog.ConfirmProgress(event.progress))
@@ -65,10 +64,13 @@ class MangaReaderViewModel(
                     MangaReaderSessionEvent.Loading,
                     MangaReaderSessionEvent.LoadStarted -> showLoading()
                     is MangaReaderSessionEvent.Message -> {
-                        _effects.tryEmit(MangaReaderEffect.ShowMessage(event.message))
+                        enqueueMessage(text = event.message)
                     }
                 }
             }
+        }
+        viewModelScope.launch {
+            sessionRepository.sessionState.collect(::refreshContent)
         }
         viewModelScope.launch {
             mangaSettingsGateway.settings.collect { settings ->
@@ -106,7 +108,7 @@ class MangaReaderViewModel(
                 sessionRepository.changeSource(intent.book, intent.toc)
             }
             is MangaReaderIntent.AddExternalBookToShelf -> launchAction(
-                successMessage = application.getString(R.string.manga_reader_added_to_shelf),
+                successMessageRes = R.string.manga_reader_added_to_shelf,
             ) { sessionRepository.addToShelf(intent.book, intent.toc) }
             MangaReaderIntent.AddCurrentBookToShelf -> launchAction {
                 _uiState.update { it.copy(activeDialog = null) }
@@ -180,7 +182,7 @@ class MangaReaderViewModel(
                     it.copy(
                         activeSheet = MangaReaderSheet.ChangeSource,
                         changeSourceBook = sessionRepository.currentBook()?.let {
-                            MangaBookSnapshot(GSON.toJson(it))
+                            MangaBookSnapshot.from(it)
                         },
                     )
                 }
@@ -214,6 +216,13 @@ class MangaReaderViewModel(
                     saveImage(intent.imageUrl)
                 }
             }
+            is MangaReaderIntent.MessageShown -> _uiState.update { state ->
+                state.copy(
+                    pendingMessages = state.pendingMessages
+                        .filterNot { it.id == intent.id }
+                        .toImmutableList()
+                )
+            }
         }
     }
 
@@ -237,7 +246,10 @@ class MangaReaderViewModel(
                 }
                 refreshContent()
             }.onFailure { error ->
-                showError(application.getString(R.string.manga_reader_init_failed, error.localizedMessage))
+                showError(
+                    error.localizedMessage ?: "",
+                    fallbackRes = R.string.manga_reader_init_failed,
+                )
             }
         }
     }
@@ -259,36 +271,41 @@ class MangaReaderViewModel(
     }
 
     private fun saveImage(url: String) {
-        launchAction(successMessage = application.getString(R.string.manga_reader_image_saved)) {
+        launchAction(
+            successMessageRes = R.string.manga_reader_image_saved,
+            failureMessageRes = R.string.manga_reader_save_failed,
+        ) {
             check(sessionRepository.saveImage(url)) {
-                application.getString(R.string.manga_reader_save_failed)
+                ""
             }
         }
     }
 
     private fun launchAction(
-        successMessage: String? = null,
+        @androidx.annotation.StringRes successMessageRes: Int? = null,
+        @androidx.annotation.StringRes failureMessageRes: Int = R.string.manga_reader_action_failed,
         action: suspend () -> Unit,
     ) {
         viewModelScope.launch {
             runCatching { action() }
-                .onSuccess { successMessage?.let { message ->
-                    _effects.tryEmit(MangaReaderEffect.ShowMessage(message))
+                .onSuccess { successMessageRes?.let { resId ->
+                    enqueueMessage(resId = resId)
                 } }
                 .onFailure { error ->
-                    _effects.tryEmit(
-                        MangaReaderEffect.ShowMessage(
-                            error.localizedMessage ?: application.getString(R.string.manga_reader_action_failed)
-                        )
-                    )
+                    val message = error.localizedMessage?.takeIf(String::isNotBlank)
+                    if (message != null) enqueueMessage(text = message)
+                    else enqueueMessage(resId = failureMessageRes)
                 }
         }
     }
 
-    fun refreshContent() {
+    fun refreshContent() = refreshContent(sessionRepository.currentSessionState())
+
+    private fun refreshContent(session: MangaReaderSessionState?) {
+        if (session == null) return
         refreshContentJob?.cancel()
         refreshContentJob = viewModelScope.launch {
-            val content = withContext(Dispatchers.IO) { sessionRepository.content() }
+            val content = session.content
             val items = content.items.mapIndexedNotNull { index, item ->
                 when (item) {
                     is MangaPage -> MangaReaderItemUi.Page(
@@ -308,26 +325,26 @@ class MangaReaderViewModel(
                 }
             }.toImmutableList()
             val safePosition = content.position.coerceIn(0, (items.size - 1).coerceAtLeast(0))
-            val bookName = sessionRepository.currentBookName()
+            val bookName = session.bookName
             val oldState = _uiState.value
             val shouldPosition = oldState.pages.isEmpty() || oldState.isLoading ||
                     oldState.bookName != bookName
             _uiState.update { old ->
                 old.copy(
                     bookName = bookName,
-                    bookAuthor = sessionRepository.currentBookAuthor(),
-                    bookUrl = sessionRepository.currentBookUrl(),
-                    chapterName = sessionRepository.currentChapterName(),
-                    chapterUrl = sessionRepository.currentChapterUrl(),
-                    sourceName = sessionRepository.currentSourceName(),
-                    sourceUrl = sessionRepository.currentSourceUrl(),
-                    sourceType = sessionRepository.currentSourceType(),
+                    bookAuthor = session.bookAuthor,
+                    bookUrl = session.bookUrl,
+                    chapterName = session.chapterName,
+                    chapterUrl = session.chapterUrl,
+                    sourceName = session.sourceName,
+                    sourceUrl = session.sourceUrl,
+                    sourceType = session.sourceType,
                     pages = items,
                     currentItemIndex = if (shouldPosition) safePosition else {
                         old.currentItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
                     },
-                    chapterIndex = sessionRepository.currentChapterIndex(),
-                    chapterCount = sessionRepository.chapterCount(),
+                    chapterIndex = session.chapterIndex,
+                    chapterCount = session.chapterCount,
                     isLoading = false,
                     errorMessage = null,
                     settings = readSettings(latestMangaSettings),
@@ -349,7 +366,45 @@ class MangaReaderViewModel(
     }
 
     fun showError(message: String) {
-        _uiState.update { it.copy(isLoading = false, errorMessage = message) }
+        _uiState.update {
+            it.copy(isLoading = false, errorMessage = MangaReaderText.Dynamic(message))
+        }
+    }
+
+    private fun showError(message: String, @androidx.annotation.StringRes fallbackRes: Int) {
+        if (message.isNotBlank()) showError(message)
+        else {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    errorMessage = MangaReaderText.Resource(
+                        fallbackRes,
+                        persistentListOf(""),
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun enqueueMessage(
+        @androidx.annotation.StringRes resId: Int? = null,
+        text: String? = null,
+        args: kotlinx.collections.immutable.ImmutableList<String> = persistentListOf(),
+    ) {
+        _uiState.update { state ->
+            state.copy(
+                pendingMessages = (state.pendingMessages +
+                    MangaReaderMessage(
+                        id = System.nanoTime(),
+                        content = if (resId != null) {
+                            MangaReaderText.Resource(resId, args)
+                        } else {
+                            MangaReaderText.Dynamic(requireNotNull(text))
+                        },
+                    )
+                ).toImmutableList()
+            )
+        }
     }
 
     override fun onCleared() {
