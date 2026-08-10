@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.manga.entities
+package io.legado.app.model.manga
 
 interface BaseMangaPage {
     val chapterIndex: Int

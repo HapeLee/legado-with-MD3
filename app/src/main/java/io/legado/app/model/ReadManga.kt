@@ -23,11 +23,11 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.webBook.WebBook
-import io.legado.app.ui.book.manga.entities.BaseMangaPage
-import io.legado.app.ui.book.manga.entities.MangaChapter
-import io.legado.app.ui.book.manga.entities.MangaContent
-import io.legado.app.ui.book.manga.entities.MangaPage
-import io.legado.app.ui.book.manga.entities.ReaderLoading
+import io.legado.app.model.manga.BaseMangaPage
+import io.legado.app.model.manga.MangaChapter
+import io.legado.app.model.manga.MangaContent
+import io.legado.app.model.manga.MangaPage
+import io.legado.app.model.manga.ReaderLoading
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.mapIndexed
@@ -715,9 +715,9 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 MangaPage(
                     chapterIndex = chapter.index,
                     chapterSize = chapterSize,
-                    mImageUrl = src,
+                    imageUrl = src,
                     index = index,
-                    mChapterName = chapter.title
+                    chapterName = chapter.title
                 )
             }.toList()
 
