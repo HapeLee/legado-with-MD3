@@ -59,7 +59,7 @@ import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppSlider
+import io.legado.app.ui.widget.components.reader.ReaderMenuSlider as BaseReaderMenuSlider
 import kotlin.math.roundToInt
 
 @Composable
@@ -97,7 +97,7 @@ internal fun ReadMenuSlider(
 
     val commitAction = onValueChangeFinished ?: onValueCommit?.let { commit -> { commit(value) } }
 
-    AppSlider(
+    BaseReaderMenuSlider(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.padding(horizontal = 5.dp),

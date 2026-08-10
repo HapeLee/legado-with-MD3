@@ -94,7 +94,8 @@ object MainNavigator {
             MainRouteImportRemote,
             is MainRouteCache,
             MainRouteBookCacheManage,
-            is MainRouteReadBook -> {
+            is MainRouteReadBook,
+            is MainRouteReadManga -> {
                 if (
                     currentRoute == MainRouteHome ||
                     currentRoute is MainRouteBookInfo
@@ -131,7 +132,8 @@ object MainNavigator {
                     currentRoute == MainRouteHome ||
                     currentRoute is MainRouteSearch ||
                     currentRoute is MainRouteExploreShow ||
-                    currentRoute is MainRouteBookInfo
+                    currentRoute is MainRouteBookInfo ||
+                    currentRoute is MainRouteReadManga
                 ) {
                     backStack.add(route)
                 } else {
@@ -163,7 +165,8 @@ object MainNavigator {
                     currentRoute is MainRouteBookKnowledgeDetail ||
                     currentRoute is MainRouteBookEventList ||
                     currentRoute is MainRouteBookEventDetail ||
-                    currentRoute is MainRouteReadBook
+                    currentRoute is MainRouteReadBook ||
+                    currentRoute is MainRouteReadManga
                 ) {
                     backStack.add(route)
                 } else {
@@ -403,6 +406,14 @@ object MainNavigator {
                 chapterChanged = intent?.getBooleanExtra(
                     MainIntent.EXTRA_CHAPTER_CHANGED,
                     false
+                ) == true,
+            )
+            MainRouteConst.ROUTE_READ_MANGA -> MainRouteReadManga(
+                bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
+                inBookshelf = intent?.getBooleanExtra(MainIntent.EXTRA_IN_BOOKSHELF, true) != false,
+                chapterChanged = intent?.getBooleanExtra(
+                    MainIntent.EXTRA_CHAPTER_CHANGED,
+                    false,
                 ) == true,
             )
             MainRouteConst.ROUTE_SEARCH -> MainRouteSearch(
