@@ -1,9 +1,10 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
-import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import kotlinx.collections.immutable.ImmutableList
@@ -19,7 +20,7 @@ data class MangaReaderUiState(
     val sourceName: String = "",
     val sourceUrl: String? = null,
     val sourceType: Int? = null,
-    val changeSourceBook: Book? = null,
+    val changeSourceBook: MangaBookSnapshot? = null,
     val pages: ImmutableList<MangaReaderItemUi> = persistentListOf(),
     val currentItemIndex: Int = 0,
     val currentPage: Int = 0,
@@ -100,6 +101,10 @@ data class MangaReaderSettings(
 @Stable
 data class MangaScrollRequest(val id: Long, val itemIndex: Int, val animated: Boolean)
 
+@Immutable
+@JvmInline
+value class MangaBookSnapshot(val json: String)
+
 sealed interface MangaReaderIntent {
     data class Initialize(
         val bookUrl: String?,
@@ -113,8 +118,14 @@ sealed interface MangaReaderIntent {
     data object ReloadContent : MangaReaderIntent
     data class ApplyReadingProgress(val progress: BookProgress) : MangaReaderIntent
     data class OpenChapter(val chapterIndex: Int, val pageIndex: Int) : MangaReaderIntent
-    data class ChangeSourceBook(val book: Book, val toc: List<BookChapter>) : MangaReaderIntent
-    data class AddExternalBookToShelf(val book: Book, val toc: List<BookChapter>) : MangaReaderIntent
+    data class ChangeSourceBook(
+        val book: Book,
+        val toc: List<BookChapter>,
+    ) : MangaReaderIntent
+    data class AddExternalBookToShelf(
+        val book: Book,
+        val toc: List<BookChapter>,
+    ) : MangaReaderIntent
     data object AddCurrentBookToShelf : MangaReaderIntent
     data object DiscardCurrentBookAndExit : MangaReaderIntent
     data object DismissDialog : MangaReaderIntent

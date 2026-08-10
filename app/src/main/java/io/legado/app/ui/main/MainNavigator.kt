@@ -24,6 +24,17 @@ object MainNavigator {
         val currentRoute = backStack.lastOrNull()
         if (currentRoute == route) return
 
+        if (route is MainRouteReadManga) {
+            val existingReaderIndex = backStack.indexOfLast { it is MainRouteReadManga }
+            if (existingReaderIndex >= 0) {
+                while (backStack.lastIndex > existingReaderIndex) {
+                    backStack.removeAt(backStack.lastIndex)
+                }
+                backStack[existingReaderIndex] = route
+                return
+            }
+        }
+
         // 导航动画和阅读页组合要花几百毫秒, 这段时间足够把正文读出来并排版好
         if (route is MainRouteReadBook && !route.chapterChanged) {
             route.bookUrl?.let { ReadBook.prefetchForOpen(it) }

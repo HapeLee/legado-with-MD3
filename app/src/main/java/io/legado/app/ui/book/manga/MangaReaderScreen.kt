@@ -58,9 +58,12 @@ import coil3.request.crossfade
 import coil3.request.transformations
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.R
+import io.legado.app.data.entities.Book
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.koinInject
@@ -140,10 +143,14 @@ fun MangaReaderScreen(
         MangaReaderSettingsSheet(sheet, state, onIntent)
     }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {
-        state.changeSourceBook?.let { oldBook ->
+        val oldBook = remember(state.changeSourceBook) {
+            state.changeSourceBook
+                ?.let { GSON.fromJsonObject<Book>(it.json).getOrNull() }
+        }
+        oldBook?.let {
             ChangeSourceSheet(
                 show = true,
-                oldBook = oldBook,
+                oldBook = it,
                 fromReadBookActivity = true,
                 allowAddAsNew = true,
                 dismissOnReplaceStart = true,

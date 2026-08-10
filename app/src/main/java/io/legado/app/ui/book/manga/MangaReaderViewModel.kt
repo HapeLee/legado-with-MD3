@@ -179,7 +179,9 @@ class MangaReaderViewModel(
                 _uiState.update {
                     it.copy(
                         activeSheet = MangaReaderSheet.ChangeSource,
-                        changeSourceBook = sessionRepository.currentBook(),
+                        changeSourceBook = sessionRepository.currentBook()?.let {
+                            MangaBookSnapshot(GSON.toJson(it))
+                        },
                     )
                 }
             }
