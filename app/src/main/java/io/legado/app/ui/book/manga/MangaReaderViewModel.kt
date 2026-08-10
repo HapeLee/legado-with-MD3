@@ -305,6 +305,17 @@ class MangaReaderViewModel(
         refreshContentJob?.cancel()
         refreshContentJob = viewModelScope.launch {
             val content = session.content
+            if (!shouldExposeMangaPages(content.currentFinished)) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = true,
+                        pages = persistentListOf(),
+                        currentItemIndex = 0,
+                        scrollRequest = null,
+                    )
+                }
+                return@launch
+            }
             val items = content.items.mapIndexedNotNull { index, item ->
                 when (item) {
                     is MangaPage -> MangaReaderItemUi.Page(
@@ -361,7 +372,15 @@ class MangaReaderViewModel(
     }
 
     fun showLoading() {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                errorMessage = null,
+                pages = persistentListOf(),
+                currentItemIndex = 0,
+                scrollRequest = null,
+            )
+        }
     }
 
     fun showError(message: String) {
@@ -659,6 +678,7 @@ class MangaReaderViewModel(
 
     private fun updateVisibleItem(itemIndex: Int) {
         val state = _uiState.value
+        if (state.isLoading) return
         val item = state.pages.getOrNull(itemIndex) as? MangaReaderItemUi.Page ?: return
         sessionRepository.setVisiblePage(item.chapterIndex, item.pageIndex)
         _uiState.update {

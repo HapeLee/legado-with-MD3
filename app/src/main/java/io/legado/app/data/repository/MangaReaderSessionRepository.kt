@@ -362,9 +362,10 @@ class MangaReaderSessionRepository(
         val currentBook = ReadManga.book ?: return@withContext
         database.bookDao.getBook(currentBook.bookUrl)?.let(ReadManga::upData)
         if (index !in 0 until ReadManga.simulatedChapterSize) return@withContext
-        ReadManga.showLoading()
         ReadManga.durChapterIndex = index
         ReadManga.durChapterPos = pageIndex.coerceAtLeast(0)
+        ReadManga.clearMangaChapter()
+        ReadManga.showLoading()
         ReadManga.loadContent()
         ReadManga.saveRead(pageChanged = true)
     }

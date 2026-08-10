@@ -27,3 +27,6 @@ internal fun mangaPageStepTarget(
     val target = (currentIndex + direction).coerceIn(0, itemCount - 1)
     return target.takeIf { it != currentIndex }
 }
+
+internal fun shouldExposeMangaPages(currentChapterFinished: Boolean): Boolean =
+    currentChapterFinished

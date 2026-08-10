@@ -2,6 +2,8 @@ package io.legado.app.ui.book.manga
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MangaReaderInteractionTest {
@@ -52,5 +54,11 @@ class MangaReaderInteractionTest {
         assertNull(mangaPageStepTarget(currentIndex = 0, itemCount = 8, direction = -1))
         assertNull(mangaPageStepTarget(currentIndex = 7, itemCount = 8, direction = 1))
         assertNull(mangaPageStepTarget(currentIndex = 0, itemCount = 0, direction = 1))
+    }
+
+    @Test
+    fun `adjacent chapter callbacks stay hidden until target chapter finishes`() {
+        assertFalse(shouldExposeMangaPages(currentChapterFinished = false))
+        assertTrue(shouldExposeMangaPages(currentChapterFinished = true))
     }
 }
