@@ -13,7 +13,8 @@ import io.legado.app.base.BaseComposeActivity
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.info.READER_RESULT_DELETED
-import io.legado.app.ui.book.toc.TocActivityResult
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
@@ -45,12 +46,6 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
             }
         }
 
-    private val tocActivity = registerForActivityResult(TocActivityResult()) {
-        it?.let { (chapterIndex, pageIndex) ->
-            readerViewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, pageIndex))
-        }
-    }
-
     private val bookInfoActivity =
         registerForActivityResult(StartActivityContract(BookInfoActivity::class.java)) {
             if (it.resultCode == RESULT_OK) {
@@ -76,6 +71,22 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
             readerViewModel.effects.collectLatest(::handleEffect)
         }
         MangaReaderScreen(state = state, onIntent = readerViewModel::onIntent)
+        if (state.activeSheet == MangaReaderSheet.Catalog && state.bookUrl.isNotEmpty()) {
+            ReaderBookSheetRoute(
+                show = true,
+                bookUrl = state.bookUrl,
+                initialTab = ReaderBookSheetTab.Toc,
+                onDismissRequest = { readerViewModel.onIntent(MangaReaderIntent.DismissSheet) },
+                onChapterClick = { chapterIndex, pageIndex ->
+                    readerViewModel.onIntent(MangaReaderIntent.DismissSheet)
+                    readerViewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, pageIndex))
+                },
+                onOpenFullBookInfo = {
+                    readerViewModel.onIntent(MangaReaderIntent.DismissSheet)
+                    openBookInfoActivity()
+                },
+            )
+        }
     }
 
     private fun handleEffect(effect: MangaReaderEffect) {
@@ -84,7 +95,6 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
                 if (effect.bookshelfChanged) setResult(RESULT_OK)
                 finishReader()
             }
-            MangaReaderEffect.OpenCatalog -> openCatalog()
             MangaReaderEffect.OpenBookInfo -> openBookInfoActivity()
             is MangaReaderEffect.OpenChapterUrl -> openCurrentChapterUrl(effect.externalBrowser)
             is MangaReaderEffect.OpenSourceLogin -> startActivity(
@@ -152,10 +162,6 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
     private fun finishReader() {
         if (readerViewModel.uiState.value.inBookshelf && !isRestoredFromSavedState) supportFinishAfterTransition()
         else finish()
-    }
-
-    private fun openCatalog() {
-        readerViewModel.uiState.value.bookUrl.takeIf(String::isNotEmpty)?.let(tocActivity::launch)
     }
 
     private fun openBookInfoActivity() {

@@ -153,7 +153,9 @@ fun MangaReaderScreen(
             ReaderStatusOverlay(state, onIntent)
         }
     }
-    state.activeSheet?.takeIf { it != MangaReaderSheet.ChangeSource }?.let { sheet ->
+    state.activeSheet?.takeIf {
+        it != MangaReaderSheet.ChangeSource && it != MangaReaderSheet.Catalog
+    }?.let { sheet ->
         MangaReaderSettingsSheet(sheet, state, onIntent)
     }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {

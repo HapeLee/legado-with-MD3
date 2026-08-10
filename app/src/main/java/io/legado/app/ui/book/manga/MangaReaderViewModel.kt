@@ -99,10 +99,9 @@ class MangaReaderViewModel(
             }
             MangaReaderIntent.ReloadContent -> sessionRepository.reloadOrUpdateContent()
             is MangaReaderIntent.ApplyReadingProgress -> sessionRepository.applyProgress(intent.progress)
-            is MangaReaderIntent.OpenChapter -> sessionRepository.openChapter(
-                intent.chapterIndex,
-                intent.pageIndex,
-            )
+            is MangaReaderIntent.OpenChapter -> launchAction {
+                sessionRepository.openChapter(intent.chapterIndex, intent.pageIndex)
+            }
             is MangaReaderIntent.ChangeSourceBook -> launchAction {
                 showLoading()
                 sessionRepository.changeSource(intent.book, intent.toc)
@@ -171,7 +170,7 @@ class MangaReaderViewModel(
             }
             MangaReaderIntent.PreviousChapter -> sessionRepository.moveToPreviousChapter(true)
             MangaReaderIntent.NextChapter -> sessionRepository.moveToNextChapter(true)
-            MangaReaderIntent.OpenCatalog -> emitAndHide(MangaReaderEffect.OpenCatalog)
+            MangaReaderIntent.OpenCatalog -> showSheet(MangaReaderSheet.Catalog)
             MangaReaderIntent.OpenBookInfo -> emitAndHide(MangaReaderEffect.OpenBookInfo)
             MangaReaderIntent.OpenChapterUrl -> emitAndHide(
                 MangaReaderEffect.OpenChapterUrl(readSettingsGateway.currentSettings.readUrlInBrowser)

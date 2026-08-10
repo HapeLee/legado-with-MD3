@@ -358,13 +358,15 @@ class MangaReaderSessionRepository(
         postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
     }
 
-    fun openChapter(index: Int, pageIndex: Int = 0) {
-        if (index >= ReadManga.chapterSize) return
+    suspend fun openChapter(index: Int, pageIndex: Int = 0) = withContext(Dispatchers.IO) {
+        val currentBook = ReadManga.book ?: return@withContext
+        database.bookDao.getBook(currentBook.bookUrl)?.let(ReadManga::upData)
+        if (index !in 0 until ReadManga.simulatedChapterSize) return@withContext
         ReadManga.showLoading()
         ReadManga.durChapterIndex = index
-        ReadManga.durChapterPos = pageIndex
-        ReadManga.saveRead()
+        ReadManga.durChapterPos = pageIndex.coerceAtLeast(0)
         ReadManga.loadContent()
+        ReadManga.saveRead(pageChanged = true)
     }
 
     suspend fun removeCurrentTemporaryBook() = withContext(Dispatchers.IO) {

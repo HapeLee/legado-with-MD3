@@ -180,6 +180,7 @@ sealed interface MangaReaderIntent {
 }
 
 sealed interface MangaReaderSheet {
+    data object Catalog : MangaReaderSheet
     data object Reader : MangaReaderSheet
     data object AutoRead : MangaReaderSheet
     data object ColorFilter : MangaReaderSheet
@@ -232,7 +233,6 @@ enum class MangaReaderSettingKey {
 
 sealed interface MangaReaderEffect {
     data class Finish(val bookshelfChanged: Boolean = false) : MangaReaderEffect
-    data object OpenCatalog : MangaReaderEffect
     data object OpenBookInfo : MangaReaderEffect
     data class OpenChapterUrl(val externalBrowser: Boolean) : MangaReaderEffect
     data class OpenSourceLogin(val sourceUrl: String) : MangaReaderEffect

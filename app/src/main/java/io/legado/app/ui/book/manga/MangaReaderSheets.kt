@@ -9,15 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,6 +19,11 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.card.SettingCard
+import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import kotlin.math.roundToInt
 
 @Composable
@@ -38,6 +37,7 @@ internal fun MangaReaderSettingsSheet(
         show = true,
         onDismissRequest = { onIntent(MangaReaderIntent.DismissSheet) },
         title = when (sheet) {
+            MangaReaderSheet.Catalog -> stringResource(R.string.chapter_list)
             MangaReaderSheet.Reader -> stringResource(R.string.manga_setting)
             MangaReaderSheet.AutoRead -> stringResource(R.string.manga_reader_auto_read)
             MangaReaderSheet.ColorFilter -> stringResource(R.string.manga_reader_display_filter)
@@ -52,20 +52,39 @@ internal fun MangaReaderSettingsSheet(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            SettingCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 16.dp,
+            ) {
             when (sheet) {
+                MangaReaderSheet.Catalog -> Unit
                 MangaReaderSheet.Reader -> {
-                    Text(stringResource(R.string.read_type), style = MaterialTheme.typography.titleMedium)
-                    listOf(
-                        MangaScrollMode.WEBTOON to stringResource(R.string.webtoon),
-                        MangaScrollMode.WEBTOON_WITH_GAP to stringResource(R.string.manga_reader_webtoon_gap),
-                        MangaScrollMode.PAGE_LEFT_TO_RIGHT to stringResource(R.string.manga_reader_left_to_right),
-                        MangaScrollMode.PAGE_RIGHT_TO_LEFT to stringResource(R.string.manga_reader_right_to_left),
-                        MangaScrollMode.PAGE_TOP_TO_BOTTOM to stringResource(R.string.manga_reader_top_to_bottom),
-                    ).forEach { (mode, label) ->
-                        TextButton(onClick = {
-                            onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.SCROLL_MODE, mode))
-                        }) { Text(if (settings.scrollMode == mode) "✓ $label" else label) }
-                    }
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.read_type),
+                        selectedValue = settings.scrollMode.toString(),
+                        displayEntries = arrayOf(
+                            stringResource(R.string.webtoon),
+                            stringResource(R.string.manga_reader_webtoon_gap),
+                            stringResource(R.string.manga_reader_left_to_right),
+                            stringResource(R.string.manga_reader_right_to_left),
+                            stringResource(R.string.manga_reader_top_to_bottom),
+                        ),
+                        entryValues = arrayOf(
+                            MangaScrollMode.WEBTOON,
+                            MangaScrollMode.WEBTOON_WITH_GAP,
+                            MangaScrollMode.PAGE_LEFT_TO_RIGHT,
+                            MangaScrollMode.PAGE_RIGHT_TO_LEFT,
+                            MangaScrollMode.PAGE_TOP_TO_BOTTOM,
+                        ).map(Int::toString).toTypedArray(),
+                        onValueChange = {
+                            onIntent(
+                                MangaReaderIntent.UpdateSetting(
+                                    MangaReaderSettingKey.SCROLL_MODE,
+                                    it.toInt(),
+                                )
+                            )
+                        },
+                    )
                     SettingSlider(stringResource(R.string.manga_reader_side_padding), settings.sidePaddingPercent, 0..45) {
                         onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.SIDE_PADDING, it))
                     }
@@ -115,15 +134,18 @@ internal fun MangaReaderSettingsSheet(
                     SettingSwitch(stringResource(R.string.manga_reader_hide_chapter_label), settings.hideChapterLabel) { updateBoolean(onIntent, MangaReaderSettingKey.HIDE_CHAPTER_LABEL, it) }
                     SettingSwitch(stringResource(R.string.manga_reader_hide_total_progress), settings.hideProgress) { updateBoolean(onIntent, MangaReaderSettingKey.HIDE_PROGRESS, it) }
                     SettingSwitch(stringResource(R.string.manga_reader_hide_progress_label), settings.hideProgressLabel) { updateBoolean(onIntent, MangaReaderSettingKey.HIDE_PROGRESS_LABEL, it) }
-                    Text(stringResource(R.string.manga_reader_footer_alignment), style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { updateInt(onIntent, MangaReaderSettingKey.FOOTER_ALIGNMENT, 0) }) {
-                        val label = stringResource(R.string.manga_reader_left_align)
-                        Text(if (settings.footerAlignment == 0) "✓ $label" else label)
-                    }
-                    TextButton(onClick = { updateInt(onIntent, MangaReaderSettingKey.FOOTER_ALIGNMENT, 1) }) {
-                        val label = stringResource(R.string.manga_reader_center_align)
-                        Text(if (settings.footerAlignment == 1) "✓ $label" else label)
-                    }
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.manga_reader_footer_alignment),
+                        selectedValue = settings.footerAlignment.toString(),
+                        displayEntries = arrayOf(
+                            stringResource(R.string.manga_reader_left_align),
+                            stringResource(R.string.manga_reader_center_align),
+                        ),
+                        entryValues = arrayOf("0", "1"),
+                        onValueChange = {
+                            updateInt(onIntent, MangaReaderSettingKey.FOOTER_ALIGNMENT, it.toInt())
+                        },
+                    )
                 }
                 MangaReaderSheet.AutoRead -> {
                     SettingSwitch(stringResource(R.string.manga_reader_enable_auto_read), state.autoReadEnabled) {
@@ -173,14 +195,27 @@ internal fun MangaReaderSettingsSheet(
                 }
                 MangaReaderSheet.ChangeSource -> Unit
                 MangaReaderSheet.SourceActions -> {
-                    TextButton(onClick = { onIntent(MangaReaderIntent.OpenSourceLogin) }) { Text(stringResource(R.string.login)) }
-                    TextButton(onClick = { onIntent(MangaReaderIntent.RequestPayCurrentChapter) }) { Text(stringResource(R.string.manga_reader_buy_chapter)) }
-                    TextButton(onClick = { onIntent(MangaReaderIntent.OpenSourceEdit) }) { Text(stringResource(R.string.edit_source)) }
-                    TextButton(onClick = {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.login),
+                        onClick = { onIntent(MangaReaderIntent.OpenSourceLogin) },
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.manga_reader_buy_chapter),
+                        onClick = { onIntent(MangaReaderIntent.RequestPayCurrentChapter) },
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.edit_source),
+                        onClick = { onIntent(MangaReaderIntent.OpenSourceEdit) },
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.disable_source),
+                        onClick = {
                         onIntent(MangaReaderIntent.DisableCurrentSource)
                         onIntent(MangaReaderIntent.DismissSheet)
-                    }) { Text(stringResource(R.string.disable_source)) }
+                        },
+                    )
                 }
+            }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -203,26 +238,21 @@ private fun updateInt(
 
 @Composable
 private fun SettingSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
+    SwitchSettingItem(
+        title = label,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+    )
 }
 
 @Composable
 private fun SettingSlider(label: String, value: Int, range: IntRange, onValueChange: (Int) -> Unit) {
-    var pending by remember(value) { mutableFloatStateOf(value.toFloat()) }
-    Column {
-        Text("$label: ${pending.toInt()}")
-        Slider(
-            value = pending.coerceIn(range.first.toFloat(), range.last.toFloat()),
-            onValueChange = { pending = it },
-            onValueChangeFinished = { onValueChange(pending.toInt()) },
-            valueRange = range.first.toFloat()..range.last.toFloat(),
-        )
-    }
+    SliderSettingItem(
+        title = label,
+        value = value.toFloat(),
+        defaultValue = range.first.toFloat(),
+        valueRange = range.first.toFloat()..range.last.toFloat(),
+        valueLabel = { it.toInt().toString() },
+        onValueChange = { onValueChange(it.toInt()) },
+    )
 }

@@ -2,7 +2,6 @@ package io.legado.app.ui.book.manga
 
 import android.view.KeyEvent
 import android.view.WindowManager
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -14,7 +13,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.receiver.NetworkChangedListener
-import io.legado.app.ui.book.toc.TocActivityResult
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
+import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.openUrl
@@ -44,11 +44,6 @@ fun MangaReaderRouteScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val networkChangedListener = remember(activity) { NetworkChangedListener(activity) }
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (chapterIndex, pageIndex) ->
-            viewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, pageIndex))
-        }
-    }
 
     LaunchedEffect(viewModel, bookUrl, inBookshelf, chapterChanged) {
         viewModel.onIntent(
@@ -61,9 +56,6 @@ fun MangaReaderRouteScreen(
             val currentState = viewModel.uiState.value
             when (effect) {
                 is MangaReaderEffect.Finish -> onFinish(effect.bookshelfChanged)
-                MangaReaderEffect.OpenCatalog -> currentState.bookUrl
-                    .takeIf(String::isNotEmpty)
-                    ?.let(tocLauncher::launch)
                 MangaReaderEffect.OpenBookInfo -> {
                     if (currentState.bookUrl.isNotEmpty()) {
                         onOpenBookInfo(
@@ -169,4 +161,20 @@ fun MangaReaderRouteScreen(
     }
 
     MangaReaderScreen(state = state, onIntent = viewModel::onIntent)
+    if (state.activeSheet == MangaReaderSheet.Catalog && state.bookUrl.isNotEmpty()) {
+        ReaderBookSheetRoute(
+            show = true,
+            bookUrl = state.bookUrl,
+            initialTab = ReaderBookSheetTab.Toc,
+            onDismissRequest = { viewModel.onIntent(MangaReaderIntent.DismissSheet) },
+            onChapterClick = { chapterIndex, pageIndex ->
+                viewModel.onIntent(MangaReaderIntent.DismissSheet)
+                viewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, pageIndex))
+            },
+            onOpenFullBookInfo = {
+                viewModel.onIntent(MangaReaderIntent.DismissSheet)
+                onOpenBookInfo(state.bookName, state.bookAuthor, state.bookUrl)
+            },
+        )
+    }
 }
