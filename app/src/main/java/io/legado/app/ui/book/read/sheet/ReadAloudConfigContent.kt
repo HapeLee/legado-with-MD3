@@ -155,6 +155,14 @@ fun ReadAloudConfigContent(
                         },
                     )
                     TinySwitchSettingItem(
+                        title = stringResource(R.string.read_aloud_android_media_control),
+                        description = stringResource(R.string.read_aloud_android_media_control_summary),
+                        checked = state.readAloudAndroidMediaControl,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetReadAloudAndroidMediaControl(it))
+                        },
+                    )
+                    TinySwitchSettingItem(
                         title = stringResource(R.string.system_media_control_compatibility_change),
                         description = stringResource(R.string.system_media_control_compatibility_change_summary),
                         checked = state.readAloudSystemMediaCompat,

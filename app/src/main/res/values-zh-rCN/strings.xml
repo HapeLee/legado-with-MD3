@@ -1636,6 +1636,8 @@
     <string name="firebase_enable_summary">允许应用使用Google Firebase进行崩溃和性能统计</string>
     <string name="locate_current">定位至当前</string>
     <string name="padding_display_cutouts">填充刘海区域</string>
+    <string name="read_aloud_android_media_control">安卓媒体控制</string>
+    <string name="read_aloud_android_media_control_summary">在保留原朗读通知的同时显示系统媒体控制</string>
     <string name="system_media_control_compatibility_change">使用媒体通道</string>
     <string name="system_media_control_compatibility_change_summary">使用OEM厂商提供的媒体通道，可能解决一些通知无法显示的问题</string>
     <string name="read_aloud_pause_resume">朗读暂停/继续</string>

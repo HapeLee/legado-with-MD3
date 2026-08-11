@@ -1320,6 +1320,8 @@ class ReadBookViewModel(
             is ReadBookIntent.SetReadAloudByPage -> readAloudDelegate.setByPage(intent.value)
             is ReadBookIntent.SetReadAloudSystemMediaCompat ->
                 readAloudDelegate.setSystemMediaCompat(intent.value)
+            is ReadBookIntent.SetReadAloudAndroidMediaControl ->
+                readAloudDelegate.setAndroidMediaControl(intent.value)
             is ReadBookIntent.SetReadAloudStreamAudio ->
                 readAloudDelegate.setStreamAudio(intent.value)
             is ReadBookIntent.ReadAloudPrevParagraph -> readAloudDelegate.prevParagraph()

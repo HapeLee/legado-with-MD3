@@ -116,6 +116,14 @@ abstract class BaseReadAloudService : BaseService(),
 
         private const val TAG = "BaseReadAloudService"
 
+        private const val READ_ALOUD_MEDIA_SESSION_ACTIONS =
+            (PlaybackStateCompat.ACTION_PLAY
+                    or PlaybackStateCompat.ACTION_PAUSE
+                    or PlaybackStateCompat.ACTION_PLAY_PAUSE
+                    or PlaybackStateCompat.ACTION_STOP
+                    or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                    or PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+
     }
 
     private val sessionStore: ReadAloudSessionStore by lazy {
@@ -158,7 +166,12 @@ abstract class BaseReadAloudService : BaseService(),
     private var needResumeOnCallStateIdle = false
     private var registeredPhoneStateListener = false
     private var dsJob: Job? = null
-    private var upNotificationJob: Coroutine<*>? = null
+    private var upNotificationJob: Job? = null
+    @Volatile
+    private var systemMediaCompatibilityEnabled =
+        ReadConfig.systemMediaControlCompatibilityChange
+    @Volatile
+    private var androidMediaControlEnabled = ReadConfig.androidMediaControlEnabled
     private var prepareReadAloudJob: Coroutine<*>? = null
     private var prepareReadAloudGeneration = 0L
     private var cover: Bitmap =
@@ -187,6 +200,7 @@ abstract class BaseReadAloudService : BaseService(),
         pause = false
         observeLiveBus()
         initMediaSession()
+        observeMediaControlSettings()
         initBroadcastReceiver()
         initPhoneStateListener()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
@@ -243,7 +257,11 @@ abstract class BaseReadAloudService : BaseService(),
         unregisterReceiver(broadcastReceiver)
         postEvent(EventBus.ALOUD_STATE, Status.STOP)
         notificationManager.cancel(NotificationId.ReadAloudService)
+        notificationManager.cancel(NotificationId.ReadAloudMediaControl)
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_STOPPED)
+        systemMediaCompatibilityEnabled = false
+        androidMediaControlEnabled = false
+        mediaSessionCompat.isActive = false
         mediaSessionCompat.release()
         ReadBook.uploadProgress()
         unregisterPhoneStateListener(phoneStateListener)
@@ -253,6 +271,7 @@ abstract class BaseReadAloudService : BaseService(),
         }
         upNotificationJob?.invokeOnCompletion {
             notificationManager.cancel(NotificationId.ReadAloudService)
+            notificationManager.cancel(NotificationId.ReadAloudMediaControl)
         }
     }
 
@@ -403,6 +422,7 @@ abstract class BaseReadAloudService : BaseService(),
         pause = false
         needResumeOnAudioFocusGain = false
         needResumeOnCallStateIdle = false
+        upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         upReadAloudNotification()
         sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
@@ -704,18 +724,11 @@ abstract class BaseReadAloudService : BaseService(),
      * 更新媒体状态
      */
     private fun upMediaSessionPlaybackState(state: Int) {
+        val playbackSpeed = if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f
         mediaSessionCompat.setPlaybackState(
             PlaybackStateCompat.Builder()
-                .setActions(MediaHelp.MEDIA_SESSION_ACTIONS)
-                .setState(state, nowSpeak.toLong(), 1f)
-                // 为系统媒体控件添加定时按钮
-//                .addCustomAction(
-//                    PlaybackStateCompat.CustomAction.Builder(
-//                        "ACTION_ADD_TIMER",
-//                        getString(R.string.set_timer),
-//                        R.drawable.ic_time_add_24dp
-//                    ).build()
-//                )
+                .setActions(READ_ALOUD_MEDIA_SESSION_ACTIONS)
+                .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, playbackSpeed)
                 .build()
         )
     }
@@ -748,55 +761,102 @@ abstract class BaseReadAloudService : BaseService(),
      */
     @SuppressLint("UnspecifiedImmutableFlag")
     private fun initMediaSession() {
-        if (ReadConfig.systemMediaControlCompatibilityChange) {
-            mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    resumeReadAloud()
-                }
+        mediaSessionCompat.setSessionActivity(readAloudActivityPendingIntent())
+        mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
+            override fun onPlay() {
+                resumeReadAloud()
+            }
 
-                override fun onPause() {
-                    pauseReadAloud()
-                }
+            override fun onPause() {
+                pauseReadAloud()
+            }
 
-                override fun onSkipToNext() {
-                    if (ReadConfig.mediaButtonPerNext) {
-                        nextChapter()
-                    } else {
-                        nextP()
-                    }
+            override fun onSkipToNext() {
+                if (ReadConfig.mediaButtonPerNext) {
+                    nextChapter()
+                } else {
+                    nextP()
                 }
+            }
 
-                override fun onSkipToPrevious() {
-                    if (ReadConfig.mediaButtonPerNext) {
-                        prevChapter()
-                    } else {
-                        prevP()
-                    }
+            override fun onSkipToPrevious() {
+                if (ReadConfig.mediaButtonPerNext) {
+                    prevChapter()
+                } else {
+                    prevP()
                 }
+            }
 
-                override fun onStop() {
-                    stopSelf()
-                }
+            override fun onStop() {
+                stopSelf()
+            }
 
-                override fun onCustomAction(action: String, extras: Bundle?) {
-                    if (action == "ACTION_ADD_TIMER") addTimer()
-                }
+            override fun onCustomAction(action: String, extras: Bundle?) {
+                if (action == "ACTION_ADD_TIMER") addTimer()
+            }
 
-                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
-                    return MediaButtonReceiver.handleIntent(
-                        this@BaseReadAloudService, mediaButtonEvent
-                    )
-                }
-            })
-        } else {
-            mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
-                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
-                    return MediaButtonReceiver.handleIntent(
-                        this@BaseReadAloudService, mediaButtonEvent
-                    )
-                }
-            })
+            override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                return MediaButtonReceiver.handleIntent(
+                    this@BaseReadAloudService, mediaButtonEvent
+                )
+            }
+        })
+        updateMediaSessionActivation()
+    }
+
+    private fun observeMediaControlSettings() {
+        lifecycleScope.launch {
+            AppConfigStore.observeBoolean(PreferKey.readAloudAndroidMediaControl).collect {
+                setAndroidMediaControlEnabled(it == true)
+            }
         }
+        lifecycleScope.launch {
+            AppConfigStore.observeBoolean(
+                PreferKey.systemMediaControlCompatibilityChange
+            ).collect {
+                setSystemMediaCompatibilityEnabled(it ?: true)
+            }
+        }
+        lifecycleScope.launch {
+            AppConfigStore.observeBoolean(PreferKey.mediaButtonPerNext)
+                .drop(1)
+                .collect { upAndroidMediaControlNotification() }
+        }
+    }
+
+    private fun setAndroidMediaControlEnabled(enabled: Boolean) {
+        val changed = androidMediaControlEnabled != enabled
+        androidMediaControlEnabled = enabled
+        updateMediaSessionActivation()
+        if (enabled) {
+            upMediaMetadata()
+            upMediaSessionPlaybackState(
+                if (pause) PlaybackStateCompat.STATE_PAUSED
+                else PlaybackStateCompat.STATE_PLAYING
+            )
+        } else {
+            notificationManager.cancel(NotificationId.ReadAloudMediaControl)
+        }
+        if (changed) {
+            upReadAloudNotification()
+        } else if (enabled) {
+            upAndroidMediaControlNotification()
+        }
+    }
+
+    private fun setSystemMediaCompatibilityEnabled(enabled: Boolean) {
+        if (systemMediaCompatibilityEnabled == enabled) {
+            updateMediaSessionActivation()
+            return
+        }
+        systemMediaCompatibilityEnabled = enabled
+        updateMediaSessionActivation()
+        upReadAloudNotification()
+    }
+
+    private fun updateMediaSessionActivation() {
+        mediaSessionCompat.isActive =
+            systemMediaCompatibilityEnabled || androidMediaControlEnabled
     }
 
     /**
@@ -846,7 +906,8 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun upReadAloudNotification() {
-        upNotificationJob = execute {
+        upAndroidMediaControlNotification()
+        upNotificationJob = lifecycleScope.launch(Main.immediate) {
             try {
                 val notification = createNotification()
                 notificationManager.notify(NotificationId.ReadAloudService, notification.build())
@@ -859,8 +920,7 @@ abstract class BaseReadAloudService : BaseService(),
     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
             .setShowActionsInCompactView(1, 2, 4)
-        if (ReadConfig.systemMediaControlCompatibilityChange) {
-            //fix #4090 android 14 can not show play control in lock screen
+        if (systemMediaCompatibilityEnabled && !androidMediaControlEnabled) {
             mediaStyle.setMediaSession(mediaSessionCompat.sessionToken)
         }
         return mediaStyle
@@ -891,12 +951,7 @@ abstract class BaseReadAloudService : BaseService(),
             .setOnlyAlertOnce(true)
             .setContentTitle(nTitle)
             .setContentText(nSubtitle)
-            .setContentIntent(
-                activityPendingIntent(
-                    MainActivity.createReadBookIntent(this, readAloud = true),
-                    "activity"
-                )
-            )
+            .setContentIntent(readAloudActivityPendingIntent())
             .setVibrate(null)
             .setSound(null)
             .setLights(0, 0, 0)
@@ -938,6 +993,76 @@ abstract class BaseReadAloudService : BaseService(),
         builder.setStyle(choiceMediaStyle())
         return builder
     }
+
+    private fun upAndroidMediaControlNotification() {
+        lifecycleScope.launch(Main.immediate) {
+            if (!androidMediaControlEnabled) return@launch
+            notificationManager.notify(
+                NotificationId.ReadAloudMediaControl,
+                createAndroidMediaControlNotification().build(),
+            )
+        }
+    }
+
+    private fun createAndroidMediaControlNotification(): NotificationCompat.Builder {
+        val navigateByChapter = ReadConfig.mediaButtonPerNext
+        val previousAction = if (navigateByChapter) {
+            IntentAction.prev
+        } else {
+            IntentAction.prevParagraph
+        }
+        val nextAction = if (navigateByChapter) IntentAction.next else IntentAction.nextParagraph
+        val previousLabel = getString(
+            if (navigateByChapter) R.string.previous_chapter else R.string.prev_sentence
+        )
+        val nextLabel = getString(
+            if (navigateByChapter) R.string.next_chapter else R.string.next_sentence
+        )
+        val chapterTitle = ReadBook.curTextChapter?.title
+            ?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.read_aloud_s)
+        return NotificationCompat.Builder(this, AppConst.channelIdReadAloud)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setSmallIcon(R.drawable.ic_volume_up)
+            .setSubText(ReadBook.book?.author ?: getString(R.string.read_aloud))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentTitle(ReadBook.book?.name ?: getString(R.string.read_aloud))
+            .setContentText(chapterTitle)
+            .setContentIntent(readAloudActivityPendingIntent())
+            .setLargeIcon(cover)
+            .setVibrate(null)
+            .setSound(null)
+            .setLights(0, 0, 0)
+            .addAction(
+                R.drawable.ic_skip_previous,
+                previousLabel,
+                aloudServicePendingIntent(previousAction),
+            )
+            .addAction(
+                if (pause) R.drawable.ic_play else R.drawable.ic_pause,
+                getString(if (pause) R.string.resume else R.string.pause),
+                aloudServicePendingIntent(
+                    if (pause) IntentAction.resume else IntentAction.pause
+                ),
+            )
+            .addAction(
+                R.drawable.ic_skip_next,
+                nextLabel,
+                aloudServicePendingIntent(nextAction),
+            )
+            .setStyle(
+                androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSessionCompat.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
+    }
+
+    private fun readAloudActivityPendingIntent(): PendingIntent? = activityPendingIntent(
+        MainActivity.createReadBookIntent(this, readAloud = true),
+        "activity",
+    )
 
     /**
      * 更新通知

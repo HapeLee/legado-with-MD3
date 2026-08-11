@@ -86,7 +86,9 @@ class ReadAloudDelegate(
                         readAloudCapsuleOffsetY = prefs.capsuleOffsetY,
                         readAloudMediaButtonPerNext = prefs.mediaButtonPerNext,
                         readAloudByPage = prefs.readAloudByPage,
-                        readAloudSystemMediaCompat = prefs.systemMediaControlCompatibilityChange,
+                        readAloudSystemMediaCompat =
+                            prefs.systemMediaControlCompatibilityChange,
+                        readAloudAndroidMediaControl = prefs.androidMediaControlEnabled,
                         readAloudStreamAudio = prefs.streamReadAloudAudio,
                         readAloudTtsFollowSys = prefs.ttsFollowSys,
                         readAloudTtsSpeechRate = prefs.ttsSpeechRate,
@@ -323,6 +325,9 @@ class ReadAloudDelegate(
 
     fun setSystemMediaCompat(value: Boolean) =
         updateSettings { it.copy(systemMediaControlCompatibilityChange = value) }
+
+    fun setAndroidMediaControl(value: Boolean) =
+        updateSettings { it.copy(androidMediaControlEnabled = value) }
 
     fun setByPage(value: Boolean) {
         updateSettings { it.copy(readAloudByPage = value) }

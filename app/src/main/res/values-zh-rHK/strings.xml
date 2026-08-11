@@ -2210,6 +2210,8 @@
     <string name="system_contrast">系統對比度</string>
     <string name="system_contrast_value">系統對比度：%1$s</string>
     <string name="system_engine">系統引擎</string>
+    <string name="read_aloud_android_media_control">Android 媒體控制</string>
+    <string name="read_aloud_android_media_control_summary">保留原有朗讀通知，並同時顯示系統媒體控制</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">若鎖定螢幕缺少系統媒體控制項時啟用（例如 OneUI 7.0、OriginOS）</string>
     <string name="tabletInterface">平板介面</string>

@@ -15,6 +15,7 @@ data class ReadAloudSettings(
     val capsuleOffsetY: Float = 0f,
     val mediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
+    val androidMediaControlEnabled: Boolean = false,
     val systemMediaControlCompatibilityChange: Boolean = true,
     val streamReadAloudAudio: Boolean = false,
     val ttsTimer: Int = 0,

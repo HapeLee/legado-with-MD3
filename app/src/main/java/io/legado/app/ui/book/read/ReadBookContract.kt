@@ -283,6 +283,7 @@ data class ReadBookUiState(
     val readAloudMediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
     val readAloudSystemMediaCompat: Boolean = true,
+    val readAloudAndroidMediaControl: Boolean = false,
     val readAloudStreamAudio: Boolean = false,
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
@@ -765,6 +766,7 @@ sealed interface ReadBookIntent {
     data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
     data class SetReadAloudByPage(val value: Boolean) : ReadBookIntent
     data class SetReadAloudSystemMediaCompat(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudAndroidMediaControl(val value: Boolean) : ReadBookIntent
     data class SetReadAloudStreamAudio(val value: Boolean) : ReadBookIntent
     data object ReadAloudPrevParagraph : ReadBookIntent
     data object ReadAloudTogglePause : ReadBookIntent

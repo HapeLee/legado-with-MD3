@@ -57,6 +57,7 @@ internal fun Preferences.toReadAloudSettings(): ReadAloudSettings = ReadAloudSet
     capsuleOffsetY = compatDsValue(ReadAloudKeys.CapsuleOffsetY, 0f),
     mediaButtonPerNext = compatDsValue(ReadAloudKeys.MediaButtonPerNext, false),
     readAloudByPage = compatDsValue(ReadAloudKeys.ReadAloudByPage, false),
+    androidMediaControlEnabled = compatDsValue(ReadAloudKeys.AndroidMediaControlEnabled, false),
     systemMediaControlCompatibilityChange =
         compatDsValue(ReadAloudKeys.SystemMediaControlCompatibilityChange, true),
     streamReadAloudAudio = compatDsValue(ReadAloudKeys.StreamReadAloudAudio, false),
@@ -87,8 +88,9 @@ internal fun ReadAloudSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.capsuleAutoCollapse to capsuleAutoCollapse,
     ReadAloudKeys.CapsuleOffsetX.name to capsuleOffsetX,
     ReadAloudKeys.CapsuleOffsetY.name to capsuleOffsetY,
-    MEDIA_BUTTON_PER_NEXT to mediaButtonPerNext,
+    PreferKey.mediaButtonPerNext to mediaButtonPerNext,
     PreferKey.readAloudByPage to readAloudByPage,
+    PreferKey.readAloudAndroidMediaControl to androidMediaControlEnabled,
     PreferKey.systemMediaControlCompatibilityChange to systemMediaControlCompatibilityChange,
     PreferKey.streamReadAloudAudio to streamReadAloudAudio,
     PreferKey.ttsTimer to ttsTimer,
@@ -101,8 +103,6 @@ internal fun ReadAloudSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.audioPreDownloadNum to audioPreDownloadNum,
     PreferKey.ttsPreSynthesisConcurrency to ttsPreSynthesisConcurrency,
 )
-
-private const val MEDIA_BUTTON_PER_NEXT = "mediaButtonPerNext"
 
 private object ReadAloudKeys {
     val TtsParagraphInterval = intPreferencesKey(PreferKey.ttsParagraphInterval)
@@ -117,8 +117,10 @@ private object ReadAloudKeys {
     val CapsuleAutoCollapse = booleanPreferencesKey(PreferKey.capsuleAutoCollapse)
     val CapsuleOffsetX = floatPreferencesKey("read_aloud_capsule_offset_x")
     val CapsuleOffsetY = floatPreferencesKey("read_aloud_capsule_offset_y")
-    val MediaButtonPerNext = booleanPreferencesKey(MEDIA_BUTTON_PER_NEXT)
+    val MediaButtonPerNext = booleanPreferencesKey(PreferKey.mediaButtonPerNext)
     val ReadAloudByPage = booleanPreferencesKey(PreferKey.readAloudByPage)
+    val AndroidMediaControlEnabled =
+        booleanPreferencesKey(PreferKey.readAloudAndroidMediaControl)
     val SystemMediaControlCompatibilityChange =
         booleanPreferencesKey(PreferKey.systemMediaControlCompatibilityChange)
     val StreamReadAloudAudio = booleanPreferencesKey(PreferKey.streamReadAloudAudio)
