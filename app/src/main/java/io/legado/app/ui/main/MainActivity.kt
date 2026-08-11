@@ -171,6 +171,18 @@ open class MainActivity : BaseComposeActivity() {
             chapterChanged = chapterChanged,
         )
 
+        fun createReadMangaIntent(
+            context: Context,
+            bookUrl: String? = null,
+            inBookshelf: Boolean = true,
+            chapterChanged: Boolean = false,
+        ): Intent = MainIntent.createReadMangaIntent(
+            context = context,
+            bookUrl = bookUrl,
+            inBookshelf = inBookshelf,
+            chapterChanged = chapterChanged,
+        )
+
         fun createSearchIntent(
             context: Context,
             key: String? = null,
@@ -243,6 +255,7 @@ open class MainActivity : BaseComposeActivity() {
     private var latestBackStack: List<NavKey> = emptyList()
     internal var activeReadBookInputHandler: ReadBookInputHandler? = null
     internal var activeReadBookRoute: MainRouteReadBook? = null
+    internal var activeMangaKeyHandler: ((Int) -> Boolean)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -602,6 +615,7 @@ open class MainActivity : BaseComposeActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (activeMangaKeyHandler?.invoke(keyCode) == true) return true
         if (activeReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
         return super.onKeyDown(keyCode, event)
     }
