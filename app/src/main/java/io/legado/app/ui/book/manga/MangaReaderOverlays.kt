@@ -1,5 +1,11 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,20 +15,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.FormatAlignJustify
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
@@ -148,56 +152,105 @@ internal fun BoxScope.MangaReaderMenu(
         visible = state.menuVisible,
     ) {
         DefaultReaderMenuBottomSurface {
-            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                if (state.pageCount > 1) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        ReaderMenuIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.previous_chapter)) {
-                            onIntent(MangaReaderIntent.PreviousChapter)
+            AnimatedContent(
+                targetState = state.settingsCategory != null,
+                transitionSpec = {
+                    (expandVertically(expandFrom = Alignment.Bottom) + fadeIn())
+                        .togetherWith(shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut())
+                },
+                label = "mangaMenuExpand",
+            ) { isSettings ->
+                if (isSettings) {
+                    MangaSettingsPanel(state, onIntent)
+                } else {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        if (state.pageCount > 1) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                ReaderMenuIconButton(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    stringResource(R.string.previous_chapter)
+                                ) {
+                                    onIntent(MangaReaderIntent.PreviousChapter)
+                                }
+                                ReaderMenuSlider(
+                                    value = state.currentPage.toFloat()
+                                        .coerceIn(0f, (state.pageCount - 1).toFloat()),
+                                    onValueChange = { onIntent(MangaReaderIntent.SeekToPage(it.toInt())) },
+                                    valueRange = 0f..(state.pageCount - 1).toFloat(),
+                                    steps = (state.pageCount - 2).coerceAtLeast(0),
+                                    accessibilityLabel = readingPageDescription,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                ReaderMenuIconButton(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    stringResource(R.string.next_chapter)
+                                ) {
+                                    onIntent(MangaReaderIntent.NextChapter)
+                                }
+                            }
                         }
-                        ReaderMenuSlider(
-                            value = state.currentPage.toFloat().coerceIn(0f, (state.pageCount - 1).toFloat()),
-                            onValueChange = { onIntent(MangaReaderIntent.SeekToPage(it.toInt())) },
-                            valueRange = 0f..(state.pageCount - 1).toFloat(),
-                            steps = (state.pageCount - 2).coerceAtLeast(0),
-                            accessibilityLabel = readingPageDescription,
-                            modifier = Modifier.weight(1f),
+                        Spacer(Modifier.height(12.dp))
+                        ReaderMenuToolRow(
+                            listOf(
+                                ReaderMenuAction(
+                                    Icons.AutoMirrored.Filled.MenuBook,
+                                    stringResource(R.string.chapter_list)
+                                ) {
+                                    onIntent(MangaReaderIntent.OpenCatalog)
+                                },
+                                ReaderMenuAction(
+                                    icon = Icons.Filled.AutoMode,
+                                    description = if (state.autoReadEnabled) stringResource(R.string.stop) else stringResource(
+                                        R.string.manga_reader_auto_short
+                                    ),
+                                    onClick = { onIntent(MangaReaderIntent.ToggleAutoRead) },
+                                    onLongClick = {
+                                        onIntent(
+                                            MangaReaderIntent.OpenSettings(
+                                                MangaReaderSettingsCategory.AUTO_READ
+                                            )
+                                        )
+                                    },
+                                ),
+                                ReaderMenuAction(
+                                    Icons.Filled.Tune,
+                                    stringResource(R.string.manga_reader_page_settings)
+                                ) {
+                                    onIntent(
+                                        MangaReaderIntent.OpenSettings(
+                                            MangaReaderSettingsCategory.READER
+                                        )
+                                    )
+                                },
+                                ReaderMenuAction(
+                                    Icons.Filled.FilterAlt,
+                                    stringResource(R.string.manga_reader_filter_short)
+                                ) {
+                                    onIntent(
+                                        MangaReaderIntent.OpenSettings(
+                                            MangaReaderSettingsCategory.FILTER
+                                        )
+                                    )
+                                },
+                                ReaderMenuAction(
+                                    Icons.Filled.TouchApp,
+                                    stringResource(R.string.manga_reader_click_area_short)
+                                ) {
+                                    onIntent(
+                                        MangaReaderIntent.OpenSettings(
+                                            MangaReaderSettingsCategory.CLICK_ACTIONS
+                                        )
+                                    )
+                                },
+                            )
                         )
-                        ReaderMenuIconButton(Icons.AutoMirrored.Filled.ArrowForward, stringResource(R.string.next_chapter)) {
-                            onIntent(MangaReaderIntent.NextChapter)
-                        }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                ReaderMenuToolRow(listOf(
-                    ReaderMenuAction(Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.chapter_list)) {
-                        onIntent(MangaReaderIntent.OpenCatalog)
-                    },
-                    ReaderMenuAction(Icons.Filled.AutoMode, if (state.autoReadEnabled) stringResource(R.string.stop) else stringResource(R.string.manga_reader_auto_short)) {
-                        onIntent(MangaReaderIntent.ToggleAutoRead)
-                    },
-                    ReaderMenuAction(Icons.Filled.Tune, stringResource(R.string.manga_reader_page_settings)) {
-                        onIntent(MangaReaderIntent.OpenAutoReadSettings)
-                    },
-                    ReaderMenuAction(Icons.Filled.FormatAlignJustify, stringResource(R.string.footer)) {
-                        onIntent(MangaReaderIntent.OpenReaderSettings)
-                    },
-                    ReaderMenuAction(Icons.Filled.FilterAlt, stringResource(R.string.manga_reader_filter_short)) {
-                        onIntent(MangaReaderIntent.OpenColorFilter)
-                    },
-                ))
-                Spacer(Modifier.height(12.dp))
-                ReaderMenuToolRow(listOf(
-                    ReaderMenuAction(Icons.Filled.TouchApp, stringResource(R.string.manga_reader_click_area_short)) {
-                        onIntent(MangaReaderIntent.OpenClickSettings)
-                    },
-                    ReaderMenuAction(Icons.Filled.Settings, stringResource(R.string.manga_reader_preload_short)) {
-                        onIntent(MangaReaderIntent.OpenPreDownloadSettings)
-                    },
-                ))
             }
         }
     }

@@ -5,35 +5,33 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.data.repository.MangaReaderSessionRepository
-import io.legado.app.data.repository.MangaReaderLaunchRequest
-import io.legado.app.data.repository.MangaPaymentResult
-import io.legado.app.data.repository.MangaReaderSessionEvent
-import io.legado.app.data.repository.MangaReaderSessionState
-import io.legado.app.model.manga.MangaPage
-import io.legado.app.model.manga.ReaderLoading
 import io.legado.app.data.model.MangaFooterConfig
+import io.legado.app.data.repository.MangaPaymentResult
+import io.legado.app.data.repository.MangaReaderLaunchRequest
+import io.legado.app.data.repository.MangaReaderSessionEvent
+import io.legado.app.data.repository.MangaReaderSessionRepository
+import io.legado.app.data.repository.MangaReaderSessionState
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
+import io.legado.app.model.manga.MangaPage
+import io.legado.app.model.manga.ReaderLoading
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 class MangaReaderViewModel(
     private val mangaSettingsGateway: MangaSettingsGateway,
@@ -151,6 +149,7 @@ class MangaReaderViewModel(
                     _uiState.value.activeSheet != null -> {
                         _uiState.update { it.copy(activeSheet = null) }
                     }
+                    _uiState.value.settingsCategory != null -> closeSettings()
                     _uiState.value.menuVisible -> setMenuVisible(false)
                     sessionRepository.hasBook() && !sessionRepository.inBookshelf() &&
                             _uiState.value.confirmAddToShelf -> {
@@ -193,23 +192,23 @@ class MangaReaderViewModel(
                     sessionRepository.refreshCurrentChapter()
                 }
             }
-            MangaReaderIntent.OpenReaderSettings,
-            MangaReaderIntent.OpenPreDownloadSettings -> showSheet(MangaReaderSheet.Reader)
-            MangaReaderIntent.OpenAutoReadSettings -> showSheet(MangaReaderSheet.AutoRead)
-            MangaReaderIntent.OpenColorFilter -> showSheet(MangaReaderSheet.ColorFilter)
-            MangaReaderIntent.OpenClickSettings -> showSheet(MangaReaderSheet.ClickActions)
+            is MangaReaderIntent.OpenSettings -> openSettings(intent.category)
+            MangaReaderIntent.CloseSettings -> closeSettings()
             MangaReaderIntent.OpenSourceActions -> showSheet(MangaReaderSheet.SourceActions)
             MangaReaderIntent.ToggleAutoRead -> _uiState.update {
                 it.copy(autoReadEnabled = !it.autoReadEnabled, menuVisible = false)
             }
             MangaReaderIntent.DismissSheet -> _uiState.update {
-                it.copy(activeSheet = null, changeSourceBook = null)
+                it.copy(activeSheet = null, changeSourceBook = null, settingsCategory = null)
             }
             is MangaReaderIntent.UpdateSetting -> updateSetting(intent.key, intent.value)
             is MangaReaderIntent.UpdateClickAction -> updateClickAction(intent.index, intent.action)
             is MangaReaderIntent.PageStep -> requestPageStep(intent.direction)
             is MangaReaderIntent.SeekToPage -> seekToPage(intent.pageIndex)
-            is MangaReaderIntent.VisibleItemChanged -> updateVisibleItem(intent.itemIndex)
+            is MangaReaderIntent.VisibleItemChanged -> updateVisibleItem(
+                intent.itemIndex,
+                intent.currentChapterVisible,
+            )
             is MangaReaderIntent.LongPressPage -> {
                 if (_uiState.value.settings.longPressEnabled) {
                     saveImage(intent.imageUrl)
@@ -367,7 +366,7 @@ class MangaReaderViewModel(
                     } else old.scrollRequest,
                 )
             }
-            if (shouldPosition) updateVisibleItem(safePosition)
+            if (shouldPosition) updateVisibleItem(safePosition, currentChapterVisible = true)
         }
     }
 
@@ -431,8 +430,22 @@ class MangaReaderViewModel(
     }
 
     private fun setMenuVisible(visible: Boolean) {
-        _uiState.update { it.copy(menuVisible = visible) }
+        _uiState.update {
+            it.copy(
+                menuVisible = visible,
+                settingsCategory = if (visible) it.settingsCategory else null,
+            )
+        }
         _effects.tryEmit(MangaReaderEffect.SetSystemBarsVisible(visible))
+    }
+
+    private fun openSettings(category: MangaReaderSettingsCategory) {
+        setMenuVisible(true)
+        _uiState.update { it.copy(settingsCategory = category, activeSheet = null) }
+    }
+
+    private fun closeSettings() {
+        _uiState.update { it.copy(settingsCategory = null) }
     }
 
     private fun emitAndHide(effect: MangaReaderEffect) {
@@ -676,19 +689,25 @@ class MangaReaderViewModel(
         }
     }
 
-    private fun updateVisibleItem(itemIndex: Int) {
+    private fun updateVisibleItem(itemIndex: Int, currentChapterVisible: Boolean) {
         val state = _uiState.value
         if (state.isLoading) return
         val item = state.pages.getOrNull(itemIndex) as? MangaReaderItemUi.Page ?: return
+        when (mangaChapterSwitchDecision(
+            currentChapterIndex = sessionRepository.currentChapterIndex(),
+            visibleChapterIndex = item.chapterIndex,
+            currentChapterVisible = currentChapterVisible,
+        )) {
+            MangaChapterSwitch.NEXT -> sessionRepository.moveToNextChapter()
+            MangaChapterSwitch.PREVIOUS -> sessionRepository.moveToPreviousChapter()
+            MangaChapterSwitch.NONE -> Unit
+        }
         sessionRepository.setVisiblePage(item.chapterIndex, item.pageIndex)
         _uiState.update {
             it.copy(
                 currentItemIndex = itemIndex,
                 currentPage = item.pageIndex,
                 pageCount = item.pageCount,
-                chapterIndex = item.chapterIndex,
-                chapterCount = item.chapterCount,
-                chapterName = item.chapterName,
             )
         }
     }

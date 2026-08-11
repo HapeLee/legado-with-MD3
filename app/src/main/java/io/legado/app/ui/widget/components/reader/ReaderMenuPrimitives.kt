@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +28,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
@@ -107,6 +111,7 @@ fun DefaultReaderMenuBottomSurface(content: @Composable () -> Unit) {
 data class ReaderMenuAction(
     val icon: ImageVector,
     val description: String,
+    val onLongClick: (() -> Unit)? = null,
     val onClick: () -> Unit,
 )
 
@@ -125,6 +130,7 @@ fun ReaderMenuToolRow(
                 icon = action.icon,
                 description = action.description,
                 onClick = action.onClick,
+                onLongClick = action.onLongClick,
             )
         }
         repeat((columns - actions.size).coerceAtLeast(0)) {
@@ -138,15 +144,37 @@ fun ReaderMenuIconButton(
     icon: ImageVector,
     description: String,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = modifier.size(48.dp)) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = LegadoTheme.colorScheme.onSurface,
-            modifier = Modifier.size(22.dp),
-        )
+    if (onLongClick == null) {
+        IconButton(onClick = onClick, modifier = modifier.size(48.dp)) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = LegadoTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    } else {
+        Box(
+            modifier = modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    role = Role.Button,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = LegadoTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 

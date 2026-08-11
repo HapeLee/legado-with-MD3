@@ -1,8 +1,10 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntSize
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,5 +62,128 @@ class MangaReaderInteractionTest {
     fun `adjacent chapter callbacks stay hidden until target chapter finishes`() {
         assertFalse(shouldExposeMangaPages(currentChapterFinished = false))
         assertTrue(shouldExposeMangaPages(currentChapterFinished = true))
+    }
+
+    @Test
+    fun `chapter switch stays put while current chapter is still visible`() {
+        assertEquals(
+            MangaChapterSwitch.NONE,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 6,
+                currentChapterVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaChapterSwitch.NONE,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 4,
+                currentChapterVisible = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `chapter switch fires only when current chapter fully off-screen`() {
+        assertEquals(
+            MangaChapterSwitch.NEXT,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 6,
+                currentChapterVisible = false,
+            ),
+        )
+        assertEquals(
+            MangaChapterSwitch.PREVIOUS,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 4,
+                currentChapterVisible = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `same chapter never switches regardless of visibility`() {
+        assertEquals(
+            MangaChapterSwitch.NONE,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 5,
+                currentChapterVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaChapterSwitch.NONE,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 5,
+                currentChapterVisible = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `zoom pan clamps within zoomed content bounds`() {
+        val viewport = IntSize(500, 800)
+        // zoom 2、item 宽 500：maxX = (500*2-500)/2 = 250；内容高 2000：maxY = 2000*2-800 = 3200
+        assertEquals(
+            Offset(250f, -3200f),
+            clampZoomPan(
+                Offset(9999f, -9999f),
+                zoom = 2f,
+                itemWidth = 500f,
+                contentHeight = 2000f,
+                viewport = viewport
+            ),
+        )
+        assertEquals(
+            Offset(-250f, 0f),
+            clampZoomPan(
+                Offset(-9999f, 9999f),
+                zoom = 2f,
+                itemWidth = 500f,
+                contentHeight = 2000f,
+                viewport = viewport
+            ),
+        )
+        assertEquals(
+            Offset(100f, -500f),
+            clampZoomPan(
+                Offset(100f, -500f),
+                zoom = 2f,
+                itemWidth = 500f,
+                contentHeight = 2000f,
+                viewport = viewport
+            ),
+        )
+    }
+
+    @Test
+    fun `zoom pan keeps content when item narrower than viewport`() {
+        val viewport = IntSize(500, 800)
+        // item 200 宽，放大 2 倍仍只有 400 < 500：不允许横向平移
+        assertEquals(
+            Offset(0f, -500f),
+            clampZoomPan(
+                Offset(9999f, -500f),
+                zoom = 2f,
+                itemWidth = 200f,
+                contentHeight = 2000f,
+                viewport = viewport
+            ),
+        )
+        // 内容高度未知时不允许平移
+        assertEquals(
+            Offset.Zero,
+            clampZoomPan(
+                Offset(100f, -100f),
+                zoom = 2f,
+                itemWidth = 500f,
+                contentHeight = 0f,
+                viewport = viewport
+            ),
+        )
     }
 }

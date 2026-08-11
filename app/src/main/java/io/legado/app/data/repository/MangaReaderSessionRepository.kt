@@ -15,11 +15,11 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
-import io.legado.app.exception.NoStackTraceException
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
@@ -28,11 +28,11 @@ import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.source.getSourceType
 import io.legado.app.help.storage.Backup
 import io.legado.app.model.ReadManga
-import io.legado.app.model.manga.MangaContent
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.manga.MangaContent
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.isAbsUrl
@@ -41,13 +41,12 @@ import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.withContext
@@ -139,7 +138,8 @@ class MangaReaderSessionRepository(
         bookName = ReadManga.book?.name.orEmpty(),
         bookAuthor = ReadManga.book?.author.orEmpty(),
         bookUrl = ReadManga.book?.bookUrl.orEmpty(),
-        chapterName = ReadManga.book?.durChapterTitle.orEmpty(),
+        chapterName = ReadManga.curMangaChapter?.chapter?.title
+            ?: ReadManga.book?.durChapterTitle.orEmpty(),
         chapterUrl = ReadManga.curMangaChapter?.chapter?.url,
         sourceName = ReadManga.bookSource?.bookSourceName.orEmpty(),
         sourceUrl = ReadManga.bookSource?.bookSourceUrl,
@@ -173,12 +173,10 @@ class MangaReaderSessionRepository(
     fun applyProgress(progress: BookProgress) = ReadManga.setProgress(progress)
 
     fun setVisiblePage(chapterIndex: Int, pageIndex: Int) {
-        when {
-            ReadManga.durChapterIndex < chapterIndex -> ReadManga.moveToNextChapter()
-            ReadManga.durChapterIndex > chapterIndex -> ReadManga.moveToPrevChapter()
+        if (ReadManga.durChapterIndex == chapterIndex) {
+            ReadManga.durChapterPos = pageIndex
+            ReadManga.curPageChanged()
         }
-        ReadManga.durChapterPos = pageIndex
-        ReadManga.curPageChanged()
     }
 
     fun effectiveScrollMode(defaultValue: Int): Int =

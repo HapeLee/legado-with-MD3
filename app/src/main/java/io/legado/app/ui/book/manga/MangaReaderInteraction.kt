@@ -30,3 +30,23 @@ internal fun mangaPageStepTarget(
 
 internal fun shouldExposeMangaPages(currentChapterFinished: Boolean): Boolean =
     currentChapterFinished
+
+enum class MangaChapterSwitch { NONE, NEXT, PREVIOUS }
+
+/**
+ * 决定可见页是否触发章节切换：只有当前章节已完全滑出视口时，
+ * 才允许沿可见页的章节方向自动切章；否则只是停留在当前章记录进度。
+ */
+internal fun mangaChapterSwitchDecision(
+    currentChapterIndex: Int,
+    visibleChapterIndex: Int,
+    currentChapterVisible: Boolean,
+): MangaChapterSwitch = when {
+    currentChapterIndex < visibleChapterIndex ->
+        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.NEXT
+
+    currentChapterIndex > visibleChapterIndex ->
+        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.PREVIOUS
+
+    else -> MangaChapterSwitch.NONE
+}

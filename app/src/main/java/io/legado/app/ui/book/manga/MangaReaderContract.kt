@@ -1,12 +1,12 @@
 package io.legado.app.ui.book.manga
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookProgress
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -35,6 +35,7 @@ data class MangaReaderUiState(
     val autoReadEnabled: Boolean = false,
     val activeSheet: MangaReaderSheet? = null,
     val activeDialog: MangaReaderDialog? = null,
+    val settingsCategory: MangaReaderSettingsCategory? = null,
     val inBookshelf: Boolean = true,
     val confirmAddToShelf: Boolean = true,
     val scrollRequest: MangaScrollRequest? = null,
@@ -159,11 +160,8 @@ sealed interface MangaReaderIntent {
     data object OpenChapterUrl : MangaReaderIntent
     data object ChangeSource : MangaReaderIntent
     data object RefreshChapter : MangaReaderIntent
-    data object OpenReaderSettings : MangaReaderIntent
-    data object OpenAutoReadSettings : MangaReaderIntent
-    data object OpenColorFilter : MangaReaderIntent
-    data object OpenClickSettings : MangaReaderIntent
-    data object OpenPreDownloadSettings : MangaReaderIntent
+    data class OpenSettings(val category: MangaReaderSettingsCategory) : MangaReaderIntent
+    data object CloseSettings : MangaReaderIntent
     data object OpenSourceActions : MangaReaderIntent
     data object ToggleAutoRead : MangaReaderIntent
     data object DismissSheet : MangaReaderIntent
@@ -174,20 +172,21 @@ sealed interface MangaReaderIntent {
     data class UpdateClickAction(val index: Int, val action: Int) : MangaReaderIntent
     data class PageStep(val direction: Int) : MangaReaderIntent
     data class SeekToPage(val pageIndex: Int) : MangaReaderIntent
-    data class VisibleItemChanged(val itemIndex: Int) : MangaReaderIntent
+    data class VisibleItemChanged(
+        val itemIndex: Int,
+        val currentChapterVisible: Boolean,
+    ) : MangaReaderIntent
     data class LongPressPage(val imageUrl: String) : MangaReaderIntent
     data class MessageShown(val id: Long) : MangaReaderIntent
 }
 
 sealed interface MangaReaderSheet {
     data object Catalog : MangaReaderSheet
-    data object Reader : MangaReaderSheet
-    data object AutoRead : MangaReaderSheet
-    data object ColorFilter : MangaReaderSheet
-    data object ClickActions : MangaReaderSheet
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet
 }
+
+enum class MangaReaderSettingsCategory { READER, FOOTER, FILTER, CLICK_ACTIONS, AUTO_READ }
 
 sealed interface MangaReaderDialog {
     data object AddToShelf : MangaReaderDialog
