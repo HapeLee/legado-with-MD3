@@ -6,6 +6,7 @@ import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -69,7 +70,8 @@ class ReadAloudPlayerCoordinator(
     val state: Flow<ReadAloudPlayerSourceState> = combine(
         sessionStore.state,
         bookWithChapters,
-    ) { session, (book, chapters) ->
+        readAloudSettingsGateway.settings,
+    ) { session, (book, chapters), settings ->
         val playback = session.playback
         ReadAloudPlayerSourceState(
             bookUrl = book.bookUrl,
@@ -90,6 +92,7 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = ReadConfig.ttsSpeechRate,
             timerMinutes = session.timerMinutes,
+            finishCurrentChapterAfterTimer = settings.finishCurrentChapterAfterTimer,
         )
     }
 
@@ -116,6 +119,8 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = ReadConfig.ttsSpeechRate,
             timerMinutes = session.timerMinutes,
+            finishCurrentChapterAfterTimer =
+                readAloudSettingsGateway.currentSettings.finishCurrentChapterAfterTimer,
         )
     }
 
@@ -163,7 +168,15 @@ class ReadAloudPlayerCoordinator(
         ReadAloud.upTtsSpeechRate(application)
     }
 
-    fun setTimer(minutes: Int) = ReadAloud.setTimer(application, minutes)
+    suspend fun setTimer(minutes: Int) {
+        val timer = PlaybackTimer.normalize(minutes)
+        readAloudSettingsGateway.update { it.copy(ttsTimer = timer) }
+        ReadAloud.setTimer(application, timer)
+    }
+
+    suspend fun setFinishCurrentChapterAfterTimer(value: Boolean) {
+        readAloudSettingsGateway.update { it.copy(finishCurrentChapterAfterTimer = value) }
+    }
 
     fun seekTo(chapterPosition: Int, chapterLength: Int) {
         val chapter = ReadBook.curTextChapter ?: return
@@ -222,4 +235,5 @@ data class ReadAloudPlayerSourceState(
     val isPaused: Boolean,
     val speed: Int,
     val timerMinutes: Int,
+    val finishCurrentChapterAfterTimer: Boolean,
 )

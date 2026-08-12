@@ -93,6 +93,8 @@ class ReadAloudDelegate(
                         readAloudTtsFollowSys = prefs.ttsFollowSys,
                         readAloudTtsSpeechRate = prefs.ttsSpeechRate,
                         readAloudTtsTimer = prefs.ttsTimer,
+                        readAloudFinishCurrentChapterAfterTimer =
+                            prefs.finishCurrentChapterAfterTimer,
                         speechAnalysisMode = prefs.speechAnalysisMode,
                         useMultiSpeaker = prefs.useMultiSpeaker,
                         defaultReadAloudInterface = prefs.defaultInterface,
@@ -359,6 +361,11 @@ class ReadAloudDelegate(
         ReadAloud.setTimer(context, timer)
         updateSettings { it.copy(ttsTimer = timer) }
         host.updateState { it.copy(readAloudTtsTimer = timer) }
+    }
+
+    fun setFinishCurrentChapterAfterTimer(value: Boolean) {
+        updateSettings { it.copy(finishCurrentChapterAfterTimer = value) }
+        host.updateState { it.copy(readAloudFinishCurrentChapterAfterTimer = value) }
     }
 
     fun setTtsSpeechRate(value: Int) {

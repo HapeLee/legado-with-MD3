@@ -40,6 +40,7 @@ data class ReadAloudPlayerUiState(
     val isPaused: Boolean = false,
     val speed: Int = 10,
     val timerMinutes: Int = 0,
+    val finishCurrentChapterAfterTimer: Boolean = false,
     val bgMode: Int = 0,
 )
 
@@ -57,6 +58,7 @@ sealed interface ReadAloudPlayerIntent {
     data class SetBgMode(val value: Int) : ReadAloudPlayerIntent
     data class SetSpeed(val value: Int) : ReadAloudPlayerIntent
     data class SetTimer(val minutes: Int) : ReadAloudPlayerIntent
+    data class SetFinishCurrentChapterAfterTimer(val value: Boolean) : ReadAloudPlayerIntent
     data class SeekTo(val chapterPosition: Int) : ReadAloudPlayerIntent
 }
 

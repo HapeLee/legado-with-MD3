@@ -327,6 +327,7 @@ object PreferKey {
     const val mediaButtonPerNext = "mediaButtonPerNext"
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
     const val readAloudAndroidMediaControl = "readAloudAndroidMediaControl"
+    const val finishCurrentChapterAfterTimer = "finishCurrentChapterAfterTimer"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
     const val readRecordDisplayMode = "readRecordDisplayMode"
     const val replaceSortMode = "desc"

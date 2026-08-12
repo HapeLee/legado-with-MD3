@@ -1331,6 +1331,8 @@ class ReadBookViewModel(
             is ReadBookIntent.ReadAloudPrevChapter -> readAloudDelegate.prevChapter()
             is ReadBookIntent.ReadAloudNextChapter -> readAloudDelegate.nextChapter()
             is ReadBookIntent.SetReadAloudTtsTimer -> readAloudDelegate.setTtsTimer(intent.value)
+            is ReadBookIntent.SetFinishCurrentChapterAfterTimer ->
+                readAloudDelegate.setFinishCurrentChapterAfterTimer(intent.value)
             is ReadBookIntent.SetReadAloudTtsFollowSys ->
                 readAloudDelegate.setTtsFollowSys(intent.value)
             is ReadBookIntent.SetReadAloudTtsSpeechRate ->

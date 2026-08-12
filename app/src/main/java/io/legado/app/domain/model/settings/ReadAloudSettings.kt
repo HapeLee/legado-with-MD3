@@ -19,6 +19,7 @@ data class ReadAloudSettings(
     val systemMediaControlCompatibilityChange: Boolean = true,
     val streamReadAloudAudio: Boolean = false,
     val ttsTimer: Int = 0,
+    val finishCurrentChapterAfterTimer: Boolean = false,
     val ttsFollowSys: Boolean = true,
     val ttsSpeechRate: Int = 5,
     val speechAnalysisMode: String = "rule",

@@ -8,14 +8,14 @@ import org.junit.Test
 class ReadAloudSettingsMappingTest {
 
     @Test
-    fun `朗读设置 26 键写映射逐字段对应`() {
+    fun `朗读设置 27 键写映射逐字段对应`() {
         readAloudMappingSamples().forEach { settings ->
             assertEquals(settings.expectedPrefMap(), settings.toPrefMap())
         }
     }
 
     @Test
-    fun `朗读设置 26 键读映射逐字段对应`() {
+    fun `朗读设置 27 键读映射逐字段对应`() {
         readAloudMappingSamples().forEach { expected ->
             assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toReadAloudSettings())
         }
@@ -52,6 +52,13 @@ class ReadAloudSettingsMappingTest {
 
         assertEquals(false, settings.androidMediaControlEnabled)
     }
+
+    @Test
+    fun `定时到点后读完本章默认关闭`() {
+        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+
+        assertEquals(false, settings.finishCurrentChapterAfterTimer)
+    }
 }
 
 private const val CAPSULE_OFFSET_X = "read_aloud_capsule_offset_x"
@@ -87,6 +94,7 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         base.copy(androidMediaControlEnabled = true),
         base.copy(systemMediaControlCompatibilityChange = false),
         base.copy(streamReadAloudAudio = true),
+        base.copy(finishCurrentChapterAfterTimer = true),
         base.copy(ttsFollowSys = false),
         base.copy(useMultiSpeaker = false),
     )
@@ -111,6 +119,7 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.systemMediaControlCompatibilityChange to systemMediaControlCompatibilityChange,
     PreferKey.streamReadAloudAudio to streamReadAloudAudio,
     PreferKey.ttsTimer to ttsTimer,
+    PreferKey.finishCurrentChapterAfterTimer to finishCurrentChapterAfterTimer,
     PreferKey.ttsFollowSys to ttsFollowSys,
     PreferKey.ttsSpeechRate to ttsSpeechRate,
     PreferKey.speechAnalysisMode to speechAnalysisMode,

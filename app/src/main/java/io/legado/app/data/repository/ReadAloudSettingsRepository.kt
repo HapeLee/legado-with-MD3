@@ -62,6 +62,8 @@ internal fun Preferences.toReadAloudSettings(): ReadAloudSettings = ReadAloudSet
         compatDsValue(ReadAloudKeys.SystemMediaControlCompatibilityChange, true),
     streamReadAloudAudio = compatDsValue(ReadAloudKeys.StreamReadAloudAudio, false),
     ttsTimer = PlaybackTimer.normalize(compatDsValue(ReadAloudKeys.TtsTimer, 0)),
+    finishCurrentChapterAfterTimer =
+        compatDsValue(ReadAloudKeys.FinishCurrentChapterAfterTimer, false),
     ttsFollowSys = compatDsValue(ReadAloudKeys.TtsFollowSys, true),
     ttsSpeechRate = compatDsValue(ReadAloudKeys.TtsSpeechRate, 5),
     speechAnalysisMode = compatDsValue(ReadAloudKeys.SpeechAnalysisMode, "rule"),
@@ -94,6 +96,7 @@ internal fun ReadAloudSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.systemMediaControlCompatibilityChange to systemMediaControlCompatibilityChange,
     PreferKey.streamReadAloudAudio to streamReadAloudAudio,
     PreferKey.ttsTimer to ttsTimer,
+    PreferKey.finishCurrentChapterAfterTimer to finishCurrentChapterAfterTimer,
     PreferKey.ttsFollowSys to ttsFollowSys,
     PreferKey.ttsSpeechRate to ttsSpeechRate,
     PreferKey.speechAnalysisMode to speechAnalysisMode,
@@ -125,6 +128,8 @@ private object ReadAloudKeys {
         booleanPreferencesKey(PreferKey.systemMediaControlCompatibilityChange)
     val StreamReadAloudAudio = booleanPreferencesKey(PreferKey.streamReadAloudAudio)
     val TtsTimer = intPreferencesKey(PreferKey.ttsTimer)
+    val FinishCurrentChapterAfterTimer =
+        booleanPreferencesKey(PreferKey.finishCurrentChapterAfterTimer)
     val TtsFollowSys = booleanPreferencesKey(PreferKey.ttsFollowSys)
     val TtsSpeechRate = intPreferencesKey(PreferKey.ttsSpeechRate)
     val SpeechAnalysisMode = stringPreferencesKey(PreferKey.speechAnalysisMode)
