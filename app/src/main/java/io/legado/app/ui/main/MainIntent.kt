@@ -213,6 +213,19 @@ object MainIntent {
         }
     }
 
+    fun createReadMangaIntent(
+        context: Context,
+        bookUrl: String? = null,
+        inBookshelf: Boolean = true,
+        chapterChanged: Boolean = false,
+    ): Intent = createLauncherIntent(context).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_READ_MANGA)
+        bookUrl?.let { putExtra(EXTRA_BOOK_URL, it) }
+        putExtra(EXTRA_IN_BOOKSHELF, inBookshelf)
+        putExtra(EXTRA_CHAPTER_CHANGED, chapterChanged)
+    }
+
     fun createSearchIntent(
         context: Context,
         key: String? = null,

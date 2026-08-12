@@ -47,7 +47,6 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.book.audio.AudioPlayActivity
-import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.runBlocking
@@ -72,7 +71,7 @@ fun Context.startActivityForBook(
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
         !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
-            Intent(this, ReadMangaActivity::class.java)
+            MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
@@ -91,7 +90,7 @@ fun Context.startActivityForBook(
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
         !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
-            Intent(this, ReadMangaActivity::class.java)
+            MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
