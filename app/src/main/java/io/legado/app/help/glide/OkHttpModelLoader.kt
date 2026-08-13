@@ -11,6 +11,7 @@ object OkHttpModelLoader : ModelLoader<GlideUrl?, InputStream?> {
     val loadOnlyWifiOption = Option.memory("loadOnlyWifi", false)
     val sourceOriginOption = Option.memory<String>("sourceOrigin")
     val mangaOption = Option.memory<Boolean>("manga",false)
+    val mangaBookUrlOption = Option.memory<String>("mangaBookUrl")
 
     override fun buildLoadData(
         model: GlideUrl,

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -23,28 +25,34 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.manga.config.MangaScrollMode
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
-import io.legado.app.ui.widget.components.reader.ReaderMenuIconButton
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val MangaSettingsPanelContentMaxHeight = 380.dp
@@ -53,6 +61,7 @@ private val MangaSettingsPanelContentMaxHeight = 380.dp
 private val MangaSettingsTabs = listOf(
     MangaReaderSettingsCategory.READER,
     MangaReaderSettingsCategory.FOOTER,
+    MangaReaderSettingsCategory.MENU,
     MangaReaderSettingsCategory.FILTER,
     MangaReaderSettingsCategory.CLICK_ACTIONS,
 )
@@ -61,12 +70,13 @@ private val MangaReaderSettingsCategory.titleRes: Int
     get() = when (this) {
         MangaReaderSettingsCategory.READER -> R.string.general
         MangaReaderSettingsCategory.FOOTER -> R.string.footer
+        MangaReaderSettingsCategory.MENU -> R.string.manga_reader_menu_layout
         MangaReaderSettingsCategory.FILTER -> R.string.manga_reader_filter_short
         MangaReaderSettingsCategory.CLICK_ACTIONS -> R.string.manga_reader_click_area_short
         MangaReaderSettingsCategory.AUTO_READ -> R.string.manga_reader_auto_read
     }
 
-private enum class MangaColorPickerTarget { BACKGROUND, FILTER }
+private enum class MangaColorPickerTarget { BACKGROUND, FILTER, MENU_SEED }
 
 /**
  * 漫画阅读设置的底部栏面板：顶部分类 tab（[CardTabRow]），内容区用
@@ -77,13 +87,19 @@ internal fun MangaSettingsPanel(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
-    val categories = MangaReaderSettingsCategory.entries
     val current = state.settingsCategory ?: MangaReaderSettingsCategory.READER
+    if (current == MangaReaderSettingsCategory.AUTO_READ) {
+        AutoReadSettingsPage(state, onIntent)
+        return
+    }
+    val scope = rememberCoroutineScope()
+    val tabIndex = MangaSettingsTabs.indexOf(current).coerceAtLeast(0)
     val pagerState = rememberPagerState(
-        initialPage = current.ordinal,
-        pageCount = { categories.size },
+        initialPage = tabIndex,
+        pageCount = { MangaSettingsTabs.size },
     )
-    var selectedTab by remember { mutableIntStateOf(current.ordinal) }
+    var selectedTab by remember { mutableIntStateOf(tabIndex) }
+    var clickScrollCount by remember { mutableIntStateOf(0) }
     var colorPickerTarget by remember { mutableStateOf<MangaColorPickerTarget?>(null) }
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
@@ -91,32 +107,52 @@ internal fun MangaSettingsPanel(
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
             .distinctUntilChanged()
-            .collect { selectedTab = it }
+            .collect { page ->
+                if (clickScrollCount == 0) selectedTab = page
+            }
     }
-    LaunchedEffect(current) {
-        if (pagerState.currentPage != current.ordinal) {
-            pagerState.scrollToPage(current.ordinal)
+    LaunchedEffect(tabIndex) {
+        if (pagerState.currentPage != tabIndex) {
+            pagerState.scrollToPage(tabIndex)
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ReaderMenuIconButton(
-                icon = AppIcons.Back,
-                description = stringResource(R.string.back),
+            MediumTonalButton(
                 onClick = { onIntent(MangaReaderIntent.CloseSettings) },
+                icon = AppIcons.Back,
+                contentDescription = stringResource(R.string.back),
             )
             CardTabRow(
                 tabTitles = MangaSettingsTabs.map { stringResource(it.titleRes) },
-                selectedTabIndex = MangaSettingsTabs.indexOf(categories[selectedTab]),
+                selectedTabIndex = selectedTab,
                 onTabSelected = { index ->
-                    onIntent(MangaReaderIntent.OpenSettings(MangaSettingsTabs[index]))
+                    selectedTab = index
+                    clickScrollCount++
+                    scope.launch {
+                        try {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        } finally {
+                            clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
+                        }
+                    }
                 },
                 modifier = Modifier.weight(1f),
             )
@@ -124,9 +160,12 @@ internal fun MangaSettingsPanel(
         Spacer(Modifier.height(8.dp))
         HorizontalPager(
             state = pagerState,
+            // 顶部对齐 + 裁剪，对齐阅读正文 SystemMenuPage：切换不同高度页面时内容顶部不动、只收放底部
+            verticalAlignment = Alignment.Top,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = MangaSettingsPanelContentMaxHeight)
+                .clipToBounds()
                 .pagerHeight(animatedHeight),
         ) { page ->
             Box(
@@ -137,9 +176,10 @@ internal fun MangaSettingsPanel(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    when (categories[page]) {
+                    when (MangaSettingsTabs[page]) {
                         MangaReaderSettingsCategory.READER -> ReaderSettingsContent(
                             state.settings,
                             onIntent
@@ -148,6 +188,12 @@ internal fun MangaSettingsPanel(
                         MangaReaderSettingsCategory.FOOTER -> FooterSettingsContent(
                             state.settings,
                             onIntent
+                        )
+
+                        MangaReaderSettingsCategory.MENU -> MenuSettingsContent(
+                            settings = state.settings,
+                            onPickSeedColor = { colorPickerTarget = MangaColorPickerTarget.MENU_SEED },
+                            onIntent = onIntent,
                         )
 
                         MangaReaderSettingsCategory.FILTER -> FilterSettingsContent(
@@ -164,10 +210,8 @@ internal fun MangaSettingsPanel(
                             onIntent
                         )
 
-                        MangaReaderSettingsCategory.AUTO_READ -> AutoReadSettingsContent(
-                            state,
-                            onIntent
-                        )
+                        // 自动阅读不走 pager，已在 MangaSettingsPanel 入口单独处理
+                        MangaReaderSettingsCategory.AUTO_READ -> Unit
                     }
                 }
             }
@@ -184,6 +228,7 @@ internal fun MangaSettingsPanel(
                     green = 255 - state.settings.filterGreen,
                     blue = 255 - state.settings.filterBlue,
                 ).toArgb()
+                MangaColorPickerTarget.MENU_SEED -> state.settings.menuSeedColor.toArgb()
             },
             onDismissRequest = { colorPickerTarget = null },
             onColorSelected = { argb ->
@@ -234,10 +279,54 @@ internal fun MangaSettingsPanel(
                             )
                         )
                     }
+
+                    MangaColorPickerTarget.MENU_SEED -> onIntent(
+                        MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.MENU_SEED_COLOR, argb)
+                    )
                 }
                 colorPickerTarget = null
             },
         )
+    }
+}
+
+/** 自动阅读配置页：返回 + 标题头，不显示分类 tab（对齐阅读正文 [io.legado.app.ui.book.read.ReadBookMenuBar] 的配置页头）。 */
+@Composable
+private fun AutoReadSettingsPage(
+    state: MangaReaderUiState,
+    onIntent: (MangaReaderIntent) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MediumTonalButton(
+                onClick = { onIntent(MangaReaderIntent.CloseSettings) },
+                icon = AppIcons.Back,
+                contentDescription = stringResource(R.string.back),
+            )
+            Text(
+                text = stringResource(MangaReaderSettingsCategory.AUTO_READ.titleRes),
+                style = LegadoTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        ) {
+            AutoReadSettingsContent(state, onIntent)
+        }
     }
 }
 
@@ -246,6 +335,10 @@ private fun ReaderSettingsContent(
     settings: MangaReaderSettings,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    val isWebtoon = settings.scrollMode == MangaScrollMode.WEBTOON ||
+        settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP
+    val isHorizontalPaged = settings.scrollMode == MangaScrollMode.PAGE_LEFT_TO_RIGHT ||
+        settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
     TinyDropdownSettingItem(
         title = stringResource(R.string.read_type),
         selectedValue = settings.scrollMode.toString(),
@@ -267,12 +360,67 @@ private fun ReaderSettingsContent(
             onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.SCROLL_MODE, it.toInt()))
         },
     )
-    SettingSlider(
-        stringResource(R.string.manga_reader_side_padding),
-        settings.sidePaddingPercent,
-        0..45
-    ) {
-        onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.SIDE_PADDING, it))
+    if (isWebtoon) {
+        SettingSlider(
+            stringResource(R.string.manga_reader_side_padding),
+            settings.sidePaddingPercent,
+            0..45
+        ) {
+            onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.SIDE_PADDING, it))
+        }
+    } else {
+        SettingDropdown(
+            stringResource(R.string.manga_reader_scale_type),
+            settings.pageScaleType,
+            arrayOf(
+                R.string.manga_reader_scale_fit_screen,
+                R.string.manga_reader_scale_stretch,
+                R.string.manga_reader_scale_fit_width,
+                R.string.manga_reader_scale_fit_height,
+                R.string.manga_reader_scale_original,
+                R.string.manga_reader_scale_smart,
+            ),
+            MangaReaderSettingKey.PAGE_SCALE_TYPE,
+            onIntent,
+        )
+        if (isHorizontalPaged) {
+            SettingDropdown(
+                stringResource(R.string.manga_reader_zoom_start),
+                settings.zoomStartPosition,
+                arrayOf(
+                    R.string.manga_reader_position_automatic,
+                    R.string.manga_reader_position_left,
+                    R.string.manga_reader_position_right,
+                    R.string.manga_reader_position_center,
+                ),
+                MangaReaderSettingKey.ZOOM_START_POSITION,
+                onIntent,
+            )
+        }
+        SettingDropdown(
+            stringResource(R.string.manga_reader_wide_page),
+            settings.widePageMode,
+            arrayOf(
+                R.string.manga_reader_wide_normal,
+                R.string.manga_reader_wide_fit_width,
+                R.string.manga_reader_wide_rotate,
+            ),
+            MangaReaderSettingKey.WIDE_PAGE_MODE,
+            onIntent,
+        )
+        if (isHorizontalPaged) {
+            SettingDropdown(
+                stringResource(R.string.manga_reader_double_page),
+                settings.doublePageMode,
+                arrayOf(
+                    R.string.manga_reader_mode_off,
+                    R.string.manga_reader_mode_landscape,
+                    R.string.manga_reader_mode_always,
+                ),
+                MangaReaderSettingKey.DOUBLE_PAGE_MODE,
+                onIntent,
+            )
+        }
     }
     SettingSlider(
         stringResource(R.string.manga_reader_preload_pages),
@@ -403,12 +551,91 @@ private fun FooterSettingsContent(
 }
 
 @Composable
+private fun MenuSettingsContent(
+    settings: MangaReaderSettings,
+    onPickSeedColor: () -> Unit,
+    onIntent: (MangaReaderIntent) -> Unit,
+) {
+    SettingDropdown(
+        label = stringResource(R.string.read_menu_color_source),
+        value = settings.menuColorSource,
+        entryLabels = arrayOf(
+            R.string.manga_reader_menu_color_background,
+            R.string.manga_reader_menu_color_page,
+            R.string.manga_reader_menu_color_system,
+            R.string.manga_reader_menu_color_custom,
+        ),
+        key = MangaReaderSettingKey.MENU_COLOR_SOURCE,
+        onIntent = onIntent,
+    )
+    if (settings.menuColorSource == 3) {
+        TinyColorSettingItem(
+            title = stringResource(R.string.seed_color),
+            colorValue = settings.menuSeedColor.toArgb(),
+            onClick = onPickSeedColor,
+        )
+    }
+    val paletteEntries = stringArrayResource(R.array.paletteStyle)
+    val paletteValues = stringArrayResource(R.array.paletteStyle_value)
+    TinyDropdownSettingItem(
+        title = stringResource(R.string.palette_style),
+        selectedValue = settings.menuPaletteStyle,
+        displayEntries = paletteEntries,
+        entryValues = paletteValues,
+        onValueChange = { onIntent(MangaReaderIntent.UpdateMenuPaletteStyle(it)) },
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.manga_reader_menu_top_bar_liquid_glass),
+        description = stringResource(R.string.manga_reader_menu_top_bar_liquid_glass_summary),
+        checked = settings.menuTopBarLiquidGlass,
+        onCheckedChange = {
+            updateBoolean(onIntent, MangaReaderSettingKey.MENU_TOP_BAR_LIQUID_GLASS, it)
+        },
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.manga_reader_menu_bottom_bar_liquid_glass),
+        description = stringResource(R.string.manga_reader_menu_bottom_bar_liquid_glass_summary),
+        checked = settings.menuBottomBarLiquidGlass,
+        onCheckedChange = {
+            updateBoolean(onIntent, MangaReaderSettingKey.MENU_BOTTOM_BAR_LIQUID_GLASS, it)
+        },
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.manga_reader_menu_bottom_bar_floating),
+        checked = settings.menuBottomBarFloating,
+        onCheckedChange = {
+            updateBoolean(onIntent, MangaReaderSettingKey.MENU_BOTTOM_BAR_FLOATING, it)
+        },
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.manga_reader_menu_bottom_bar_blur),
+        description = stringResource(R.string.manga_reader_menu_bottom_bar_blur_summary),
+        checked = settings.menuBottomBarBlur,
+        onCheckedChange = {
+            updateBoolean(onIntent, MangaReaderSettingKey.MENU_BOTTOM_BAR_BLUR, it)
+        },
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.manga_reader_menu_top_bar_compact),
+        description = stringResource(R.string.manga_reader_menu_top_bar_compact_summary),
+        checked = settings.menuTopBarCompact,
+        onCheckedChange = {
+            updateBoolean(onIntent, MangaReaderSettingKey.MENU_TOP_BAR_COMPACT, it)
+        },
+    )
+}
+
+@Composable
 private fun FilterSettingsContent(
     settings: MangaReaderSettings,
     onPickBackground: () -> Unit,
     onPickFilter: () -> Unit,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    SettingSwitch(
+        stringResource(R.string.manga_reader_auto_background),
+        settings.autoBackground,
+    ) { updateBoolean(onIntent, MangaReaderSettingKey.AUTO_BACKGROUND, it) }
     SettingSwitch(
         stringResource(R.string.manga_reader_grayscale),
         settings.enableGray
@@ -427,11 +654,13 @@ private fun FilterSettingsContent(
     ) {
         onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.EINK_THRESHOLD, it))
     }
-    TinyColorSettingItem(
-        title = stringResource(R.string.background_color),
-        colorValue = settings.backgroundColor.toArgb(),
-        onClick = onPickBackground,
-    )
+    if (!settings.autoBackground) {
+        TinyColorSettingItem(
+            title = stringResource(R.string.background_color),
+            colorValue = settings.backgroundColor.toArgb(),
+            onClick = onPickBackground,
+        )
+    }
     TinyColorSettingItem(
         title = stringResource(R.string.manga_reader_display_filter),
         colorValue = Color(
@@ -484,10 +713,12 @@ private fun ClickActionsSettingsContent(
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
     val labels = mapOf(
-        -1 to stringResource(R.string.previous_chapter),
+        -1 to stringResource(R.string.non_action),
         0 to stringResource(R.string.manga_reader_menu),
         1 to stringResource(R.string.manga_reader_next_page),
         2 to stringResource(R.string.manga_reader_previous_page),
+        3 to stringResource(R.string.next_chapter),
+        4 to stringResource(R.string.previous_chapter),
     )
     repeat(3) { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -520,6 +751,23 @@ private fun updateInt(
     key: MangaReaderSettingKey,
     value: Int,
 ) = onIntent(MangaReaderIntent.UpdateSetting(key, value))
+
+@Composable
+private fun SettingDropdown(
+    label: String,
+    value: Int,
+    entryLabels: Array<Int>,
+    key: MangaReaderSettingKey,
+    onIntent: (MangaReaderIntent) -> Unit,
+) {
+    TinyDropdownSettingItem(
+        title = label,
+        selectedValue = value.toString(),
+        displayEntries = entryLabels.map { stringResource(it) }.toTypedArray(),
+        entryValues = entryLabels.indices.map(Int::toString).toTypedArray(),
+        onValueChange = { updateInt(onIntent, key, it.toInt()) },
+    )
+}
 
 @Composable
 private fun SettingSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {

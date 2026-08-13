@@ -8,9 +8,10 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
-import io.legado.app.model.ReadManga
+import io.legado.app.data.appDb
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.isWifiConnect
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
@@ -52,6 +53,10 @@ class CoverFetcher(
             failCache[url] = System.currentTimeMillis()
         }
 
+        fun clearFailure(url: String) {
+            failCache.remove(url)
+        }
+
         fun clearFailCache() {
             failCache.clear()
         }
@@ -60,6 +65,8 @@ class CoverFetcher(
     override suspend fun fetch(): FetchResult {
         val source = options.extras[CoverExtras.Source]
         val isManga = options.extras[CoverExtras.Manga] == true
+        val mangaBook = options.extras[CoverExtras.MangaBookUrl]
+            ?.let { bookUrl -> withContext(Dispatchers.IO) { appDb.bookDao.getBook(bookUrl) } }
 
         if (url.startsWith("data:", true)) {
             val base64Data = url.substringAfter("base64,", "")
@@ -89,6 +96,7 @@ class CoverFetcher(
         val requestHeaders = options.extras[CoverExtras.Headers]
         val cacheRequest = Request.Builder()
             .url(url)
+            .tag(io.legado.app.data.entities.BaseSource::class.java, source)
             .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
             .cacheControl(CacheControl.FORCE_CACHE)
             .build()
@@ -105,6 +113,7 @@ class CoverFetcher(
                     // Cache miss, fetch from network
                     val networkRequest = Request.Builder()
                         .url(url)
+                        .tag(io.legado.app.data.entities.BaseSource::class.java, source)
                         .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
                         .tag(COVER_REQUEST_TAG)
                         .cacheControl(
@@ -122,6 +131,8 @@ class CoverFetcher(
                     body.use { it.bytes() }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             markFailed(url)
             throw e
@@ -133,13 +144,14 @@ class CoverFetcher(
         } else {
             withContext(Dispatchers.IO) {
                 if (isManga) {
-                    ImageUtils.decode(url, rawBytes, false, source, ReadManga.book)
+                    ImageUtils.decode(url, rawBytes, false, source, mangaBook)
                 } else {
                     ImageUtils.decode(url, rawBytes, true, source)
                 }
             } ?: throw IOException("图片解密失败")
         }
 
+        clearFailure(url)
         return SourceFetchResult(
             source = ImageSource(
                 source = Buffer().write(decodedBytes),

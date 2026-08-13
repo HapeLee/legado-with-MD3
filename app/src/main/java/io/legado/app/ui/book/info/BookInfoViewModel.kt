@@ -57,7 +57,6 @@ import io.legado.app.lib.webdav.ObjectNotFoundException
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadBook
-import io.legado.app.model.ReadManga
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
@@ -621,9 +620,6 @@ class BookInfoViewModel(
                 clearBookCacheUseCase.execute(book.bookUrl)
                 if (ReadBook.book?.bookUrl == book.bookUrl) {
                     ReadBook.clearTextChapter()
-                }
-                if (ReadManga.book?.bookUrl == book.bookUrl) {
-                    ReadManga.clearMangaChapter()
                 }
             }.onSuccess {
                 showMessage(R.string.clear_cache_success)

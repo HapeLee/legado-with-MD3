@@ -13,42 +13,54 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -58,54 +70,71 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.ImageLoader
-import coil3.compose.AsyncImage
+import coil3.toBitmap
 import coil3.request.ImageRequest
+import coil3.request.CachePolicy
+import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.help.coil.CoverExtras
+import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.ui.book.manga.config.MangaScrollMode
+import io.legado.app.ui.book.manga.config.MangaDoublePageMode
+import io.legado.app.ui.book.manga.config.MangaPageScaleType
+import io.legado.app.ui.book.manga.config.MangaWidePageMode
+import io.legado.app.ui.book.manga.config.MangaZoomStartPosition
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import me.saket.telephoto.zoomable.EnabledZoomGestures
+import me.saket.telephoto.zoomable.DoubleClickToZoomListener
+import me.saket.telephoto.zoomable.ZoomSpec
+import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.rememberZoomableImageState
+import me.saket.telephoto.zoomable.rememberZoomableState
+import me.saket.telephoto.zoomable.zoomable
 import org.koin.compose.koinInject
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private val LocalReaderViewportSize = staticCompositionLocalOf { IntSize.Zero }
+private val LocalReaderViewportOrigin = staticCompositionLocalOf { Offset.Zero }
 private val LocalMangaAspectRatios = staticCompositionLocalOf<MutableMap<String, Float>> {
+    mutableMapOf()
+}
+internal data class MangaPageEdgeColors(
+    val top: Color,
+    val bottom: Color,
+)
+
+private val LocalMangaBackgroundColors = staticCompositionLocalOf<MutableMap<String, MangaPageEdgeColors>> {
     mutableMapOf()
 }
 
 private const val MIN_WEBTOON_ZOOM = 0.5f
 private const val MAX_WEBTOON_ZOOM = 3f
 private const val WEBTOON_DOUBLE_TAP_ZOOM = 2.5f
-private const val MIN_PAGE_ZOOM = 0.5f
+private const val MIN_PAGE_ZOOM = 1f
 private const val MAX_PAGE_ZOOM = 3f
-
-/**
- * 条漫内容缩放：把布局尺寸按 zoom 缩放（渲染缩放由 [Modifier.graphicsLayer] 完成），
- * 使 LazyColumn 的滚动范围随缩放变化，缩小后仍能滚动到全部图片；放大时横向超出部分被裁剪。
- */
-private fun Modifier.zoomStripItem(zoom: Float): Modifier = this.layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val width = (placeable.width * zoom).roundToInt()
-        .coerceIn(constraints.minWidth, constraints.maxWidth)
-        .coerceAtLeast(1)
-    val height = (placeable.height * zoom).roundToInt()
-        .coerceIn(constraints.minHeight, constraints.maxHeight)
-        .coerceAtLeast(1)
-    layout(width, height) {
-        placeable.placeRelative(0, 0)
-    }
-}
 
 /**
  * 放大后的平移边界：横向限制在单页宽度溢出的范围内，纵向限制在放大后的内容高度内。
@@ -134,10 +163,16 @@ fun MangaReaderScreen(
     onIntent: (MangaReaderIntent) -> Unit,
     modifier: Modifier = Modifier,
     imageLoader: ImageLoader = koinInject(),
+    hazeState: HazeState? = null,
 ) {
     BackHandler { onIntent(MangaReaderIntent.BackPressed) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    var viewportOrigin by remember { mutableStateOf(Offset.Zero) }
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
+    val automaticBackgrounds = remember { mutableStateMapOf<String, MangaPageEdgeColors>() }
+    val currentPageKey = state.pages.getOrNull(state.currentItemIndex)?.key
+    val readerBackground = state.settings.backgroundColor.copy(alpha = 1f)
+    val currentPageColor = automaticBackgrounds[currentPageKey]?.top
 
     LaunchedEffect(
         state.autoReadEnabled,
@@ -173,39 +208,82 @@ fun MangaReaderScreen(
             onIntent(MangaReaderIntent.MessageShown(message.id))
         }
     }
-    LaunchedEffect(state.currentItemIndex, state.settings.preDownloadCount, state.pages) {
-        val preloadCount = state.settings.preDownloadCount.coerceAtLeast(0)
-        val start = (state.currentItemIndex - preloadCount).coerceAtLeast(0)
-        val end = (state.currentItemIndex + preloadCount + 1)
-            .coerceAtMost(state.pages.size)
-        state.pages.subList(start.coerceAtMost(end), end)
+    DisposableEffect(
+        state.currentItemIndex,
+        state.pages,
+        state.settings.preDownloadCount,
+        state.settings.sourceOrigin,
+        state.settings.enableEInk,
+        state.settings.enableGray,
+    ) {
+        val ahead = state.settings.preDownloadCount.coerceIn(0, 10)
+        val start = (state.currentItemIndex - 2).coerceAtLeast(0)
+        val end = (state.currentItemIndex + ahead + 1).coerceAtMost(state.pages.size)
+        val requests = if (ahead == 0) emptyList() else state.pages.subList(start, end)
             .filterIsInstance<MangaReaderItemUi.Page>()
-            .forEach { page ->
-                imageLoader.enqueue(page.imageRequest(state.settings, context) { ratio ->
-                    aspectRatios[page.key] = ratio
-                })
+            .map { page ->
+                imageLoader.enqueue(
+                    page.imageRequest(
+                        settings = state.settings,
+                        context = context,
+                        onAspectRatio = { aspectRatios[page.key] = it },
+                    ).newBuilder()
+                        // Keep prefetched pages available to the reader request. Disabling this
+                        // caused a slider jump to decode the same image again from scratch.
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                )
             }
+        onDispose { requests.forEach { it.dispose() } }
     }
-
     CompositionLocalProvider(
         LocalReaderViewportSize provides viewportSize,
+        LocalReaderViewportOrigin provides viewportOrigin,
         LocalMangaAspectRatios provides aspectRatios,
+        LocalMangaBackgroundColors provides automaticBackgrounds,
     ) {
+        val menuBackdrop = rememberLayerBackdrop()
         Box(
             modifier = modifier
                 .fillMaxSize()
                 .onSizeChanged { viewportSize = it }
-                .background(state.settings.backgroundColor)
+                .onGloballyPositioned { viewportOrigin = it.positionInRoot() }
+                .background(readerBackground)
         ) {
-            when (state.settings.scrollMode) {
-                MangaScrollMode.PAGE_LEFT_TO_RIGHT,
-                MangaScrollMode.PAGE_RIGHT_TO_LEFT -> HorizontalMangaPager(state, onIntent, imageLoader)
-                MangaScrollMode.PAGE_TOP_TO_BOTTOM -> VerticalMangaPager(state, onIntent, imageLoader)
-                else -> WebtoonMangaList(state, onIntent, imageLoader)
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (hazeState != null) {
+                            Modifier.hazeSource(hazeState)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .layerBackdrop(menuBackdrop)
+                    .background(readerBackground)
+            ) {
+                when (state.settings.scrollMode) {
+                    MangaScrollMode.PAGE_LEFT_TO_RIGHT,
+                    MangaScrollMode.PAGE_RIGHT_TO_LEFT -> HorizontalMangaPager(state, onIntent, imageLoader)
+                    MangaScrollMode.PAGE_TOP_TO_BOTTOM -> VerticalMangaPager(state, onIntent, imageLoader)
+                    else -> WebtoonMangaList(state, onIntent, imageLoader)
+                }
             }
 
             MangaFooter(state)
-            MangaReaderMenu(state, onIntent)
+            MangaReaderMenu(
+                state = state,
+                onIntent = onIntent,
+                backdrop = menuBackdrop,
+                hazeState = hazeState,
+                menuSeedColor = when (state.settings.menuColorSource) {
+                    1 -> currentPageColor ?: readerBackground
+                    2 -> null
+                    3 -> state.settings.menuSeedColor
+                    else -> readerBackground
+                },
+            )
             ReaderStatusOverlay(state, onIntent)
         }
     }
@@ -283,6 +361,10 @@ private fun WebtoonMangaList(
     imageLoader: ImageLoader,
 ) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = state.currentItemIndex)
+    val coroutineScope = rememberCoroutineScope()
+    var pendingWebtoonTap by remember { mutableStateOf<Job?>(null) }
+    var lastWebtoonTapAt by remember { mutableStateOf(0L) }
+    var lastWebtoonTapPosition by remember { mutableStateOf(Offset.Unspecified) }
     val viewportSize = LocalReaderViewportSize.current
     val aspectRatios = LocalMangaAspectRatios.current
     var zoom by remember { mutableFloatStateOf(1f) }
@@ -303,7 +385,8 @@ private fun WebtoonMangaList(
                 if (ratio != null && ratio > 0f) itemWidthPx / ratio else fallbackPageHeightPx
             }
 
-            is MangaReaderItemUi.ChapterEdge -> edgeHeightPx
+            is MangaReaderItemUi.ChapterEdge,
+            is MangaReaderItemUi.ChapterTransition -> edgeHeightPx
         }
         acc + itemHeight + if (hasGap) gapPx else 0f
     }
@@ -321,14 +404,10 @@ private fun WebtoonMangaList(
         }
     }
 
-    // 内容缩放模型：graphicsLayer 只负责平移，缩放由每一项的 zoomStripItem 完成，
-    // 这样视口固定、滚动范围随缩放变化，缩小后仍能滚到全部图片。
+    // 列表使用真实的缩放后宽度测量，避免 LazyColumn 先按未缩放宽度裁掉图片两侧。
+    // 外层 viewport 保持固定，负责九宫格命中和横向平移。
     // 手势：多点触控一律吞掉（双指可朝任意方向平移 + 捏合缩放），单指交给 LazyColumn 滚动。
-    val zoomModifier = if (state.settings.disableScale) Modifier else Modifier
-        .graphicsLayer(
-            translationX = pan.x,
-            translationY = pan.y,
-        )
+    val gestureModifier = if (state.settings.disableScale) Modifier else Modifier
         .pointerInput(Unit) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
@@ -354,15 +433,16 @@ private fun WebtoonMangaList(
                         }
                         if (newZoom <= 1f) {
                             pan = Offset.Zero
-                        } else if (panChange != Offset.Zero) {
-                            handled = true
+                        } else {
+                            if (panChange != Offset.Zero) handled = true
                             pan = clampZoomPan(
-                                target = pan + panChange,
+                                target = Offset(pan.x + panChange.x, 0f),
                                 zoom = newZoom,
                                 itemWidth = latestItemWidthPx,
                                 contentHeight = latestNaturalContentHeight,
                                 viewport = latestViewportSize,
                             )
+                            if (panChange.y != 0f) listState.dispatchRawDelta(-panChange.y)
                         }
                         if (handled) pressed.forEach { it.consume() }
                         zoom = newZoom
@@ -373,21 +453,27 @@ private fun WebtoonMangaList(
             }
         }
 
-    LaunchedEffect(listState, state.pages) {
+    LaunchedEffect(listState, state.pages, state.navigationId) {
         snapshotFlow {
             val visibleItems = listState.layoutInfo.visibleItemsInfo
             val currentChapterVisible = visibleItems.any { item ->
                 (state.pages.getOrNull(item.index) as? MangaReaderItemUi.Page)?.chapterIndex == state.chapterIndex
             }
-            val firstPageIndex = visibleItems.firstOrNull { item ->
-                state.pages.getOrNull(item.index) is MangaReaderItemUi.Page
-            }?.index
-            if (firstPageIndex == null) null else firstPageIndex to currentChapterVisible
+            val firstItemIndex = visibleItems.firstOrNull()?.index
+            if (firstItemIndex == null) null else firstItemIndex to currentChapterVisible
         }
             .distinctUntilChanged()
             .collect { entry ->
                 entry?.let { (index, stillVisible) ->
-                    onIntent(MangaReaderIntent.VisibleItemChanged(index, stillVisible))
+                    when (val item = state.pages.getOrNull(index)) {
+                        is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
+                            itemIndex = index,
+                            currentChapterVisible = stillVisible,
+                            navigationId = state.navigationId,
+                        ))
+                        is MangaReaderItemUi.ChapterTransition -> Unit
+                        is MangaReaderItemUi.ChapterEdge, null -> Unit
+                    }
                 }
             }
     }
@@ -420,35 +506,127 @@ private fun WebtoonMangaList(
             }
         }
     }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize().then(zoomModifier),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = if (state.settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP) {
-            Arrangement.spacedBy(8.dp)
-        } else Arrangement.Top,
+    val scaledListWidth = with(density) {
+        (viewportSize.width.coerceAtLeast(1) * zoom).toDp()
+    }
+
+    fun performWebtoonTap(tap: Offset) {
+        val action = mangaClickActionAt(
+            clickActions = state.settings.clickActions,
+            x = tap.x,
+            y = tap.y,
+            width = viewportSize.width,
+            height = viewportSize.height,
+        )
+        when (action) {
+            1, 2 -> if (!state.settings.disableClickScroll) {
+                val direction = if (action == 1) 1 else -1
+                coroutineScope.launch {
+                    val distance = viewportSize.height * direction.toFloat()
+                    val consumed = if (state.settings.disableScrollAnimation) {
+                        listState.scrollBy(distance)
+                    } else {
+                        listState.animateScrollBy(distance)
+                    }
+                    if (kotlin.math.abs(consumed) < 1f) {
+                        onIntent(
+                            if (direction > 0) MangaReaderIntent.NextChapter
+                            else MangaReaderIntent.PreviousChapter
+                        )
+                    }
+                }
+            }
+
+            else -> performMangaClickAction(action, onIntent)
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Navigation belongs to the viewport, not to an individual transformed strip item.
+            // This keeps the nine-grid stable while the list scrolls, zooms, or pans.
+            .pointerInput(state.settings, viewportSize, state.pages) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val start = down.position
+                    var latest = start
+                    var pointerCount = 1
+                    var upAt = down.uptimeMillis
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                        pointerCount = maxOf(pointerCount, event.changes.count { it.pressed })
+                        event.changes.firstOrNull()?.let {
+                            latest = it.position
+                            upAt = it.uptimeMillis
+                        }
+                    } while (event.changes.any { it.pressed })
+
+                    val moved = (latest - start).getDistance() > viewConfiguration.touchSlop
+                    if (pointerCount > 1 || moved) return@awaitEachGesture
+                    val heldFor = upAt - down.uptimeMillis
+                    if (heldFor >= viewConfiguration.longPressTimeoutMillis &&
+                        state.settings.longPressEnabled
+                    ) {
+                        pendingWebtoonTap?.cancel()
+                        val visibleItem = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                            latest.y >= info.offset && latest.y < info.offset + info.size
+                        }
+                        val page = visibleItem?.let { state.pages.getOrNull(it.index) }
+                            as? MangaReaderItemUi.Page
+                        page?.let { onIntent(MangaReaderIntent.LongPressPage(it.imageUrl)) }
+                        return@awaitEachGesture
+                    }
+
+                    val isDoubleTap = !state.settings.disableScale &&
+                        upAt - lastWebtoonTapAt <= viewConfiguration.doubleTapTimeoutMillis &&
+                        lastWebtoonTapPosition.isSpecified &&
+                        (latest - lastWebtoonTapPosition).getDistance() <= viewConfiguration.touchSlop * 2
+                    if (isDoubleTap) {
+                        pendingWebtoonTap?.cancel()
+                        pendingWebtoonTap = null
+                        lastWebtoonTapAt = 0L
+                        lastWebtoonTapPosition = Offset.Unspecified
+                        toggleWebtoonZoom()
+                    } else {
+                        lastWebtoonTapAt = upAt
+                        lastWebtoonTapPosition = latest
+                        pendingWebtoonTap?.cancel()
+                        pendingWebtoonTap = coroutineScope.launch {
+                            delay(viewConfiguration.doubleTapTimeoutMillis)
+                            performWebtoonTap(latest)
+                            pendingWebtoonTap = null
+                        }
+                    }
+                }
+            }
+            .then(gestureModifier),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        items(
-            count = state.pages.size,
-            key = { state.pages[it].key },
-            contentType = { state.pages[it]::class },
-        ) { index ->
-            MangaReaderItem(
-                item = state.pages[index],
-                settings = state.settings,
-                onIntent = onIntent,
-                imageLoader = imageLoader,
-                modifier = Modifier
-                    .fillMaxWidth(fraction)
-                    .zoomStripItem(zoom)
-                    .graphicsLayer(scaleX = zoom, scaleY = zoom),
-                paged = false,
-                onDoubleTap = if (state.settings.disableScale) {
-                    null
-                } else {
-                    { toggleWebtoonZoom() }
-                },
-            )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .requiredWidth(scaledListWidth)
+                .fillMaxHeight()
+                .graphicsLayer(translationX = pan.x),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = if (state.settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP) {
+                Arrangement.spacedBy(8.dp)
+            } else Arrangement.Top,
+        ) {
+            items(
+                count = state.pages.size,
+                key = { state.pages[it].key },
+                contentType = { state.pages[it]::class },
+            ) { index ->
+                MangaReaderItem(
+                    item = state.pages[index],
+                    settings = state.settings,
+                    onIntent = onIntent,
+                    imageLoader = imageLoader,
+                    modifier = Modifier.fillMaxWidth(fraction),
+                    paged = false,
+                )
+            }
         }
     }
 }
@@ -459,32 +637,245 @@ private fun HorizontalMangaPager(
     onIntent: (MangaReaderIntent) -> Unit,
     imageLoader: ImageLoader,
 ) {
+    val viewport = LocalReaderViewportSize.current
+    val coroutineScope = rememberCoroutineScope()
+    var pendingTap by remember { mutableStateOf<Job?>(null) }
+    var lastTapAt by remember { mutableStateOf(0L) }
+    var lastTapPosition by remember { mutableStateOf(Offset.Unspecified) }
+    val aspectRatios = LocalMangaAspectRatios.current
+    val useDoublePage = isDoublePageActive(state.settings.doublePageMode, viewport)
+    val aspectRatioSnapshot = aspectRatios.toMap()
+    val spreads = remember(state.pages, useDoublePage, aspectRatioSnapshot) {
+        buildMangaSpreads(state.pages, useDoublePage, aspectRatioSnapshot)
+    }
+    val initialSpread = spreads.indexOfFirst { state.currentItemIndex in it }.coerceAtLeast(0)
     val pagerState = rememberPagerState(
-        initialPage = state.currentItemIndex,
-        pageCount = { state.pages.size.coerceAtLeast(1) },
+        initialPage = initialSpread,
+        pageCount = { spreads.size.coerceAtLeast(1) },
     )
-    LaunchedEffect(pagerState, state.pages) {
+    var spreadLayoutReady by remember { mutableStateOf(false) }
+    LaunchedEffect(spreads, state.currentItemIndex) {
+        spreadLayoutReady = false
+        val target = spreads.indexOfFirst { state.currentItemIndex in it }
+        if (target >= 0 && target != pagerState.currentPage) pagerState.scrollToPage(target)
+        spreadLayoutReady = true
+    }
+    LaunchedEffect(pagerState, spreads, state.pages, state.navigationId) {
         snapshotFlow {
-            val page = state.pages.getOrNull(pagerState.currentPage) as? MangaReaderItemUi.Page
-            pagerState.currentPage to (page?.chapterIndex == state.chapterIndex)
+            val spread = spreads.getOrNull(pagerState.currentPage)
+            val indices = spread?.itemIndices.orEmpty()
+            val itemIndex = state.scrollRequest?.itemIndex?.takeIf { it in indices }
+                ?: indices.firstOrNull()
+            val page = itemIndex?.let(state.pages::getOrNull) as? MangaReaderItemUi.Page
+            if (!spreadLayoutReady) null else Triple(indices, itemIndex, page?.chapterIndex == state.chapterIndex)
         }.distinctUntilChanged()
-            .collect { (page, stillVisible) ->
-                onIntent(MangaReaderIntent.VisibleItemChanged(page, stillVisible))
+            .collect { entry ->
+                val (indices, itemIndex, stillVisible) = entry ?: return@collect
+                itemIndex?.let { index ->
+                    when (val item = state.pages.getOrNull(index)) {
+                        is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
+                            itemIndex = index,
+                            firstItemIndex = indices.first(),
+                            lastItemIndex = indices.last(),
+                            currentChapterVisible = stillVisible,
+                            navigationId = state.navigationId,
+                        ))
+                        is MangaReaderItemUi.ChapterTransition -> Unit
+                        is MangaReaderItemUi.ChapterEdge, null -> Unit
+                    }
+                }
             }
     }
-    LaunchedEffect(state.scrollRequest?.id) {
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress }
+            .distinctUntilChanged()
+            .collect { onIntent(MangaReaderIntent.PagerScrollChanged(it)) }
+    }
+    LaunchedEffect(state.scrollRequest?.id, spreads) {
         state.scrollRequest?.let {
-            if (it.animated) pagerState.animateScrollToPage(it.itemIndex)
-            else pagerState.scrollToPage(it.itemIndex)
+            val spreadIndex = spreads.indexOfFirst { spread -> it.itemIndex in spread }
+            if (spreadIndex >= 0) {
+                if (it.animated) pagerState.animateScrollToPage(spreadIndex)
+                else pagerState.scrollToPage(spreadIndex)
+            }
         }
     }
     HorizontalPager(
         state = pagerState,
+        key = { spreads.getOrNull(it)?.key ?: "empty:$it" },
         reverseLayout = state.settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(state.settings, viewport) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val start = down.position
+                    var latest = start
+                    var pointerCount = 1
+                    var upAt = down.uptimeMillis
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                        pointerCount = maxOf(pointerCount, event.changes.count { it.pressed })
+                        event.changes.firstOrNull()?.let {
+                            latest = it.position
+                            upAt = it.uptimeMillis
+                        }
+                    } while (event.changes.any { it.pressed })
+                    val moved = (latest - start).getDistance() > viewConfiguration.touchSlop
+                    val heldFor = upAt - down.uptimeMillis
+                    if (pointerCount > 1 || moved ||
+                        heldFor >= viewConfiguration.longPressTimeoutMillis
+                    ) return@awaitEachGesture
+
+                    val isDoubleTap = !state.settings.disableScale &&
+                        upAt - lastTapAt <= viewConfiguration.doubleTapTimeoutMillis &&
+                        lastTapPosition.isSpecified &&
+                        (latest - lastTapPosition).getDistance() <= viewConfiguration.touchSlop * 2
+                    if (isDoubleTap) {
+                        pendingTap?.cancel()
+                        pendingTap = null
+                        lastTapAt = 0L
+                        lastTapPosition = Offset.Unspecified
+                    } else {
+                        lastTapAt = upAt
+                        lastTapPosition = latest
+                        pendingTap?.cancel()
+                        pendingTap = coroutineScope.launch {
+                            delay(viewConfiguration.doubleTapTimeoutMillis)
+                            clickAction(
+                                settings = state.settings,
+                                onIntent = onIntent,
+                                offset = latest,
+                                width = viewport.width,
+                                height = viewport.height,
+                            )
+                            pendingTap = null
+                        }
+                    }
+                }
+            },
     ) { page ->
-        state.pages.getOrNull(page)?.let {
-            MangaReaderItem(it, state.settings, onIntent, imageLoader, Modifier.fillMaxSize(), true)
+        val indices = spreads.getOrNull(page)?.itemIndices.orEmpty()
+        val displayIndices = if (
+            indices.size == 2 && state.settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
+        ) indices.reversed() else indices
+        MangaHorizontalSpread(
+            indices = displayIndices,
+            state = state,
+            onIntent = onIntent,
+            imageLoader = imageLoader,
+            viewportHandlesClicks = true,
+        )
+    }
+}
+
+@Composable
+private fun MangaHorizontalSpread(
+    indices: List<Int>,
+    state: MangaReaderUiState,
+    onIntent: (MangaReaderIntent) -> Unit,
+    imageLoader: ImageLoader,
+    viewportHandlesClicks: Boolean,
+) {
+    val viewport = LocalReaderViewportSize.current
+    if (indices.size < 2) {
+        state.pages.getOrNull(indices.firstOrNull() ?: -1)?.let {
+            MangaReaderItem(
+                it,
+                state.settings,
+                onIntent,
+                imageLoader,
+                Modifier.fillMaxSize(),
+                paged = true,
+                viewportHandlesClicks = viewportHandlesClicks,
+            )
+        }
+        return
+    }
+    val zoomableState = rememberZoomableState(
+        ZoomSpec(
+            maxZoomFactor = MAX_PAGE_ZOOM,
+            minZoomFactor = MIN_PAGE_ZOOM,
+        )
+    )
+    val spreadSize = remember { mutableStateOf(IntSize.Zero) }
+    val doubleClickToZoom = remember(state.settings.zoomStartPosition, state.settings.scrollMode, spreadSize.value) {
+        DoubleClickToZoomListener { zoomState, tappedPosition ->
+            if ((zoomState.zoomFraction ?: 0f) > 0.05f) {
+                zoomState.resetZoom()
+            } else {
+                val focalX = when (state.settings.zoomStartPosition) {
+                    MangaZoomStartPosition.LEFT -> 0f
+                    MangaZoomStartPosition.RIGHT -> spreadSize.value.width.toFloat()
+                    MangaZoomStartPosition.AUTOMATIC -> if (
+                        state.settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
+                    ) spreadSize.value.width.toFloat() else 0f
+                    else -> tappedPosition.x
+                }
+                zoomState.zoomTo(WEBTOON_DOUBLE_TAP_ZOOM, Offset(focalX, tappedPosition.y))
+            }
+        }
+    }
+    Row(
+        Modifier
+            .fillMaxSize()
+            .onSizeChanged { spreadSize.value = it }
+            .zoomable(
+                state = zoomableState,
+                gestures = if (state.settings.disableScale) {
+                    EnabledZoomGestures.None
+                } else EnabledZoomGestures.ZoomAndPan,
+                onClick = if (viewportHandlesClicks) null else { tap ->
+                    clickAction(
+                        settings = state.settings,
+                        onIntent = onIntent,
+                        offset = tap,
+                        width = viewport.width,
+                        height = viewport.height,
+                    )
+                },
+                onLongClick = if (state.settings.longPressEnabled) { tap ->
+                    val slot = if (tap.x < spreadSize.value.width / 2f) 0 else 1
+                    val page = indices.getOrNull(slot)?.let(state.pages::getOrNull)
+                        as? MangaReaderItemUi.Page
+                    page?.let { onIntent(MangaReaderIntent.LongPressPage(it.imageUrl)) }
+                } else null,
+                onDoubleClick = doubleClickToZoom,
+            ),
+    ) {
+            indices.forEach { itemIndex ->
+                state.pages.getOrNull(itemIndex)?.let {
+                    MangaReaderItem(
+                        it,
+                        state.settings,
+                        onIntent,
+                        imageLoader,
+                        Modifier.weight(1f).fillMaxHeight(),
+                        paged = true,
+                        pageInteractions = false,
+                    )
+                }
+            }
+    }
+}
+
+private fun Modifier.rotateWidePage(enabled: Boolean): Modifier = if (!enabled) this else {
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(
+            Constraints(
+                minWidth = constraints.minHeight,
+                maxWidth = constraints.maxHeight,
+                minHeight = constraints.minWidth,
+                maxHeight = constraints.maxWidth,
+            ),
+        )
+        val width = constraints.constrainWidth(placeable.height)
+        val height = constraints.constrainHeight(placeable.width)
+        layout(width, height) {
+            placeable.placeWithLayer(
+                x = (width - placeable.width) / 2,
+                y = (height - placeable.height) / 2,
+            ) { rotationZ = 90f }
         }
     }
 }
@@ -499,14 +890,27 @@ private fun VerticalMangaPager(
         initialPage = state.currentItemIndex,
         pageCount = { state.pages.size.coerceAtLeast(1) },
     )
-    LaunchedEffect(pagerState, state.pages) {
+    LaunchedEffect(pagerState, state.pages, state.navigationId) {
         snapshotFlow {
-            val page = state.pages.getOrNull(pagerState.currentPage) as? MangaReaderItemUi.Page
-            pagerState.currentPage to (page?.chapterIndex == state.chapterIndex)
+            val item = state.pages.getOrNull(pagerState.currentPage)
+            Triple(pagerState.currentPage, item, (item as? MangaReaderItemUi.Page)?.chapterIndex == state.chapterIndex)
         }.distinctUntilChanged()
-            .collect { (page, stillVisible) ->
-                onIntent(MangaReaderIntent.VisibleItemChanged(page, stillVisible))
+            .collect { (page, item, stillVisible) ->
+                when (item) {
+                    is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
+                        itemIndex = page,
+                        currentChapterVisible = stillVisible,
+                        navigationId = state.navigationId,
+                    ))
+                    is MangaReaderItemUi.ChapterTransition -> Unit
+                    is MangaReaderItemUi.ChapterEdge, null -> Unit
+                }
             }
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress }
+            .distinctUntilChanged()
+            .collect { onIntent(MangaReaderIntent.PagerScrollChanged(it)) }
     }
     LaunchedEffect(state.scrollRequest?.id) {
         state.scrollRequest?.let {
@@ -529,7 +933,8 @@ private fun MangaReaderItem(
     imageLoader: ImageLoader,
     modifier: Modifier,
     paged: Boolean,
-    onDoubleTap: (() -> Unit)? = null,
+    pageInteractions: Boolean = true,
+    viewportHandlesClicks: Boolean = false,
 ) {
     when (item) {
         is MangaReaderItemUi.Page -> MangaPageImage(
@@ -539,12 +944,112 @@ private fun MangaReaderItem(
             imageLoader = imageLoader,
             modifier = modifier,
             paged = paged,
-            onDoubleTap = onDoubleTap,
+            interactionsEnabled = pageInteractions,
+            viewportHandlesClicks = viewportHandlesClicks,
         )
         is MangaReaderItemUi.ChapterEdge -> Box(
-            modifier = modifier.then(if (paged) Modifier.fillMaxHeight() else Modifier.height(96.dp)),
+            modifier = modifier
+                .then(if (paged) Modifier.fillMaxHeight() else Modifier.height(96.dp)),
             contentAlignment = Alignment.Center,
-        ) { Text(item.message, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (item.loading) CircularProgressIndicator()
+                Text(item.message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                item.retryChapterIndex?.let { chapterIndex ->
+                    MediumOutlinedButton(
+                        onClick = { onIntent(MangaReaderIntent.RetryChapter(chapterIndex)) },
+                        text = stringResource(R.string.retry),
+                    )
+                }
+            }
+        }
+        is MangaReaderItemUi.ChapterTransition -> Box(
+            modifier = modifier
+                .then(if (paged) Modifier.fillMaxHeight() else Modifier.heightIn(min = 160.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 460.dp)
+                    .padding(horizontal = 32.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val topLabel = if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                    stringResource(R.string.manga_reader_transition_previous)
+                } else {
+                    stringResource(R.string.manga_reader_transition_current)
+                }
+                val bottomLabel = if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                    stringResource(R.string.manga_reader_transition_current)
+                } else {
+                    stringResource(R.string.manga_reader_transition_next)
+                }
+                val topChapter = if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                    item.targetChapterName
+                } else {
+                    item.currentChapterName
+                }
+                val bottomChapter = if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                    item.currentChapterName
+                } else {
+                    item.targetChapterName
+                }
+                Text(
+                    "$topLabel：",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    topChapter ?: stringResource(
+                        if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                            R.string.manga_reader_no_previous_chapter
+                        } else {
+                            R.string.manga_reader_no_next_chapter
+                        }
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 5,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "$bottomLabel：",
+                    modifier = Modifier.padding(top = 18.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    bottomChapter ?: stringResource(
+                        if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
+                            R.string.manga_reader_no_previous_chapter
+                        } else {
+                            R.string.manga_reader_no_next_chapter
+                        }
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 5,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (item.targetStatus == MangaChapterTransitionStatus.LOADING) {
+                    CircularProgressIndicator()
+                }
+                item.statusMessage?.let { message ->
+                    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                item.retryChapterIndex?.let { chapterIndex ->
+                    MediumOutlinedButton(
+                        onClick = { onIntent(MangaReaderIntent.RetryChapter(chapterIndex)) },
+                        text = stringResource(R.string.retry),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -556,107 +1061,232 @@ private fun MangaPageImage(
     imageLoader: ImageLoader,
     modifier: Modifier,
     paged: Boolean,
-    onDoubleTap: (() -> Unit)? = null,
+    interactionsEnabled: Boolean,
+    viewportHandlesClicks: Boolean = false,
 ) {
-    var scale by remember(page.key) { mutableFloatStateOf(1f) }
-    var offset by remember(page.key) { mutableStateOf(Offset.Zero) }
-    var imageSize by remember(page.key) { mutableStateOf(IntSize.Zero) }
     var positionInRoot by remember(page.key) { mutableStateOf(Offset.Zero) }
+    var imageViewportSize by remember(page.key) { mutableStateOf(IntSize.Zero) }
+    var retryToken by remember(page.key) { mutableStateOf(0) }
+    var loadFailed by remember(page.key) { mutableStateOf(false) }
     val viewportSize = LocalReaderViewportSize.current
+    val viewportOrigin = LocalReaderViewportOrigin.current
     val aspectRatios = LocalMangaAspectRatios.current
+    val automaticBackgrounds = LocalMangaBackgroundColors.current
     val context = LocalContext.current
     val fallbackHeight = LocalConfiguration.current.screenHeightDp.dp
-    val transformState = rememberTransformableState { centroid, zoomChange, panChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(MIN_PAGE_ZOOM, MAX_PAGE_ZOOM)
-        if (newScale <= 1f) {
-            offset = Offset.Zero
-        } else {
-            val maxX = imageSize.width * (newScale - 1f) / 2f
-            val maxY = imageSize.height * (newScale - 1f) / 2f
-            val center = Offset(imageSize.width / 2f, imageSize.height / 2f)
-            val effectiveCentroid = centroid.takeIf { it.isSpecified } ?: center
-            val transformedOffset = offset * zoomChange +
-                    (effectiveCentroid - center) * (1f - zoomChange) + panChange
-            offset = Offset(
-                x = transformedOffset.x.coerceIn(-maxX, maxX),
-                y = transformedOffset.y.coerceIn(-maxY, maxY),
-            )
-        }
-        scale = newScale
-    }
-    // 翻页模式单页缩放；条漫模式由 WebtoonMangaList 整体缩放，不在此处理单张图
-    val transformModifier = if (paged && !settings.disableScale) Modifier
-        .clipToBounds()
-        .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
-        .transformable(
-            state = transformState,
-            canPan = { scale > 1f },
-            lockRotationOnZoomPan = true,
-        )
-    else Modifier
-
     val webtoonSizeModifier = if (paged) Modifier else {
         aspectRatios[page.key]?.takeIf { it > 0f }?.let { Modifier.aspectRatio(it) }
             ?: Modifier.height(fallbackHeight)
     }
-    val request = remember(page.key, settings) {
-        page.imageRequest(settings, context = context) { ratio ->
-            aspectRatios[page.key] = ratio
+    val imagePipelineKey = remember(
+        page.key,
+        settings.sourceOrigin,
+        settings.enableEInk,
+        settings.eInkThreshold,
+        settings.enableGray,
+        settings.disableCrossFade,
+        retryToken,
+    ) {
+        listOf(
+            page.key,
+            settings.sourceOrigin,
+            settings.enableEInk,
+            settings.eInkThreshold,
+            settings.enableGray,
+            settings.disableCrossFade,
+            retryToken,
+        )
+    }
+    val request = remember(imagePipelineKey) {
+        page.imageRequest(
+            settings = settings,
+            context = context,
+            onAspectRatio = { ratio -> aspectRatios[page.key] = ratio },
+            onError = { loadFailed = true },
+        )
+    }
+    val imageRatio = aspectRatios[page.key]
+    val isHorizontalPager = settings.scrollMode == MangaScrollMode.PAGE_LEFT_TO_RIGHT ||
+        settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
+    DisposableEffect(
+        page.key,
+        settings.autoBackground,
+        settings.menuColorSource,
+        settings.sourceOrigin,
+        isHorizontalPager,
+        imageRatio,
+    ) {
+        if (!isHorizontalPager || imageRatio == null ||
+            (!settings.autoBackground && settings.menuColorSource != 1) ||
+            automaticBackgrounds.containsKey(page.key)
+        ) {
+            onDispose { }
+        } else {
+            val disposable = imageLoader.enqueue(
+                page.backgroundColorRequest(
+                    context = context,
+                    sourceOrigin = settings.sourceOrigin,
+                    fallbackColor = settings.backgroundColor,
+                    aspectRatio = imageRatio,
+                ) { colors ->
+                    automaticBackgrounds[page.key] = colors
+                },
+            )
+            onDispose(disposable::dispose)
         }
     }
 
-    AsyncImage(
-        model = request,
-        imageLoader = imageLoader,
-        contentDescription = stringResource(
-            R.string.manga_reader_page_description,
-            page.chapterName,
-            page.pageIndex + 1,
-        ),
-        contentScale = if (paged) ContentScale.Fit else ContentScale.FillWidth,
-        colorFilter = mangaColorFilter(settings),
-        modifier = modifier
-            .then(webtoonSizeModifier)
-            .onSizeChanged { imageSize = it }
-            .onGloballyPositioned { positionInRoot = it.positionInRoot() }
-            .then(transformModifier)
-            .pointerInput(page.key, settings) {
-                detectTapGestures(
-                    onTap = { tap ->
-                        clickAction(
-                            settings = settings,
-                            onIntent = onIntent,
-                            offset = positionInRoot + tap,
-                            width = viewportSize.width,
-                            height = viewportSize.height,
-                        )
-                    },
-                    onDoubleTap = if (settings.disableScale) null else { _ ->
-                        if (onDoubleTap != null) {
-                            onDoubleTap()
-                        } else {
-                            scale = if (scale > 1f) 1f else 2.5f
-                            if (scale == 1f) offset = Offset.Zero
-                        }
-                    },
-                    onLongPress = if (settings.longPressEnabled) { _ ->
-                        onIntent(MangaReaderIntent.LongPressPage(page.imageUrl))
-                    } else null,
-                )
-            },
+    val isWidePage = imageRatio != null && imageRatio > 1f
+    val contentScale = when {
+        isWidePage && settings.widePageMode == MangaWidePageMode.FIT_WIDTH -> ContentScale.FillWidth
+        settings.pageScaleType == MangaPageScaleType.STRETCH -> ContentScale.FillBounds
+        settings.pageScaleType == MangaPageScaleType.FIT_WIDTH -> ContentScale.FillWidth
+        settings.pageScaleType == MangaPageScaleType.FIT_HEIGHT -> ContentScale.FillHeight
+        settings.pageScaleType == MangaPageScaleType.ORIGINAL -> ContentScale.None
+        settings.pageScaleType == MangaPageScaleType.SMART_FIT && isWidePage -> ContentScale.FillWidth
+        else -> ContentScale.Fit
+    }
+    val rotateWidePage = paged && isWidePage &&
+        settings.widePageMode == MangaWidePageMode.ROTATE_TO_FIT
+    val pageBackground = if (isHorizontalPager && settings.autoBackground) {
+        automaticBackgrounds[page.key]?.let { colors ->
+            Brush.verticalGradient(colors = listOf(colors.top, colors.bottom))
+        }
+    } else null
+
+    val contentDescription = stringResource(
+        R.string.manga_reader_page_description,
+        page.chapterName,
+        page.pageIndex + 1,
     )
+    val imageModifier = modifier
+        .then(webtoonSizeModifier)
+        .rotateWidePage(rotateWidePage)
+        .then(pageBackground?.let { Modifier.background(it) } ?: Modifier)
+        .onSizeChanged { imageViewportSize = it }
+        .onGloballyPositioned { positionInRoot = it.positionInRoot() }
+
+    val zoomableImageState = rememberZoomableImageState(
+        rememberZoomableState(
+            ZoomSpec(
+                maxZoomFactor = MAX_PAGE_ZOOM,
+                minZoomFactor = MIN_PAGE_ZOOM,
+            )
+        ),
+    )
+    if (paged) {
+        val doubleClickToZoom = remember(settings.zoomStartPosition, settings.scrollMode, imageViewportSize) {
+            DoubleClickToZoomListener { zoomableState, tappedPosition ->
+                if ((zoomableState.zoomFraction ?: 0f) > 0.05f) {
+                    zoomableState.resetZoom()
+                } else {
+                    val focalX = when (settings.zoomStartPosition) {
+                        MangaZoomStartPosition.LEFT -> 0f
+                        MangaZoomStartPosition.RIGHT -> imageViewportSize.width.toFloat()
+                        MangaZoomStartPosition.AUTOMATIC -> if (
+                            settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
+                        ) imageViewportSize.width.toFloat() else 0f
+                        else -> tappedPosition.x
+                    }
+                    zoomableState.zoomTo(
+                        zoomFactor = WEBTOON_DOUBLE_TAP_ZOOM,
+                        centroid = Offset(focalX, tappedPosition.y),
+                    )
+                }
+            }
+        }
+        Box(imageModifier) {
+            ZoomableAsyncImage(
+                model = request,
+                imageLoader = imageLoader,
+                contentDescription = contentDescription,
+                state = zoomableImageState,
+                gestures = if (settings.disableScale || !interactionsEnabled) {
+                    EnabledZoomGestures.None
+                } else {
+                    EnabledZoomGestures.ZoomAndPan
+                },
+                contentScale = contentScale,
+                colorFilter = mangaColorFilter(settings),
+                onDoubleClick = doubleClickToZoom,
+                onClick = if (interactionsEnabled && !viewportHandlesClicks) { tap ->
+                    clickAction(
+                        settings = settings,
+                        onIntent = onIntent,
+                        offset = positionInRoot + tap - viewportOrigin,
+                        width = viewportSize.width,
+                        height = viewportSize.height,
+                    )
+                } else null,
+                onLongClick = if (interactionsEnabled && settings.longPressEnabled) { _ ->
+                    onIntent(MangaReaderIntent.LongPressPage(page.imageUrl))
+                } else null,
+                modifier = Modifier.fillMaxSize(),
+            )
+            MangaImageRetryOverlay(loadFailed) {
+                loadFailed = false
+                CoverFetcher.clearFailure(page.imageUrl)
+                retryToken++
+            }
+        }
+        return
+    }
+
+    Box(imageModifier) {
+        ZoomableAsyncImage(
+            model = request,
+            imageLoader = imageLoader,
+            contentDescription = contentDescription,
+            state = zoomableImageState,
+            gestures = EnabledZoomGestures.None,
+            contentScale = ContentScale.FillWidth,
+            colorFilter = mangaColorFilter(settings),
+            modifier = Modifier.fillMaxSize(),
+        )
+        MangaImageRetryOverlay(loadFailed) {
+            loadFailed = false
+            CoverFetcher.clearFailure(page.imageUrl)
+            retryToken++
+        }
+    }
+}
+
+@Composable
+private fun MangaImageRetryOverlay(failed: Boolean, onRetry: () -> Unit) {
+    if (!failed) return
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        MediumOutlinedButton(
+            onClick = onRetry,
+            text = stringResource(R.string.retry),
+        )
+    }
 }
 
 private fun MangaReaderItemUi.Page.imageRequest(
     settings: MangaReaderSettings,
     context: android.content.Context,
     onAspectRatio: (Float) -> Unit = {},
+    onError: () -> Unit = {},
 ): ImageRequest {
+    val memoryCacheKey = "manga-page:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
+        "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}"
     return ImageRequest.Builder(context)
         .data(imageUrl)
+        .allowHardware(true)
+        // The preload request has no view-size resolver while the displayed request does. A
+        // shared key lets the displayed request reuse it immediately, then crossfade only if a
+        // better-sized decode is needed.
+        .memoryCacheKey(memoryCacheKey)
+        .placeholderMemoryCacheKey(memoryCacheKey)
         .apply {
             extras[CoverExtras.Manga] = true
             extras[CoverExtras.SourceOrigin] = settings.sourceOrigin
+            extras[CoverExtras.MangaBookUrl] = bookUrl
         }
         .apply {
             when {
@@ -665,13 +1295,169 @@ private fun MangaReaderItemUi.Page.imageRequest(
             }
             crossfade(!settings.disableCrossFade)
         }
-        .listener(onSuccess = { _, result ->
+        .listener(onError = { _, _ -> onError() }, onSuccess = { _, result ->
             val image = result.image
             if (image.width > 0 && image.height > 0) {
                 onAspectRatio(image.width.toFloat() / image.height)
             }
         })
         .build()
+}
+
+private fun MangaReaderItemUi.Page.backgroundColorRequest(
+    context: android.content.Context,
+    sourceOrigin: String?,
+    fallbackColor: Color,
+    aspectRatio: Float,
+    onColors: (MangaPageEdgeColors) -> Unit,
+): ImageRequest = ImageRequest.Builder(context)
+    .data(imageUrl)
+    .let { builder ->
+        backgroundDecodeSize(aspectRatio).let { size ->
+            builder.size(size.width, size.height)
+        }
+    }
+    .allowHardware(false)
+    .apply {
+        extras[CoverExtras.Manga] = true
+        extras[CoverExtras.SourceOrigin] = sourceOrigin
+        extras[CoverExtras.MangaBookUrl] = bookUrl
+    }
+    .listener(onSuccess = { _, result ->
+        onColors(extractMangaEdgeColors(result.image.toBitmap(), fallbackColor))
+    })
+    .build()
+
+private fun backgroundDecodeSize(aspectRatio: Float): IntSize {
+    val shortEdge = 256
+    val longEdge = 1024
+    val ratio = aspectRatio.coerceIn(0.05f, 20f)
+    return if (ratio <= 1f) {
+        IntSize(shortEdge, (shortEdge / ratio).roundToInt().coerceAtMost(longEdge))
+    } else {
+        IntSize((shortEdge * ratio).roundToInt().coerceAtMost(longEdge), shortEdge)
+    }
+}
+
+/**
+ * Extracts the two page-edge colors from a small decode of the page.
+ *
+ * Sampling several inset rows avoids a one-pixel scan line or a page border deciding the result.
+ * The most common quantized color bucket preserves a large color block while rejecting sparse
+ * line art and text. Four vertical edge tracks are also scanned in 25 segments, following the
+ * Komikku approach, to recognize a reliably white or dark page edge.
+ */
+internal fun extractMangaEdgeColors(
+    bitmap: android.graphics.Bitmap,
+    fallbackColor: Color = Color.Black,
+): MangaPageEdgeColors {
+    fun edgeColor(top: Boolean): Color {
+        if (bitmap.width == 0 || bitmap.height == 0) return fallbackColor
+
+        val horizontalInset = (bitmap.width * 0.0275f).toInt().coerceAtMost(bitmap.width / 3)
+        val verticalInset = (bitmap.height * 0.0125f).toInt()
+        val stripHeight = (bitmap.height * 0.06f).toInt().coerceIn(2, 16)
+        val startY = if (top) {
+            verticalInset
+        } else {
+            (bitmap.height - verticalInset - stripHeight).coerceAtLeast(0)
+        }
+        val endY = (startY + stripHeight).coerceAtMost(bitmap.height)
+        val startX = horizontalInset
+        val endX = (bitmap.width - horizontalInset).coerceAtLeast(startX + 1)
+        val stepX = ((endX - startX) / 96).coerceAtLeast(1)
+        val stepY = ((endY - startY) / 8).coerceAtLeast(1)
+        val buckets = mutableMapOf<Int, MutableList<Int>>()
+
+        for (y in startY until endY step stepY) {
+            for (x in startX until endX step stepX) {
+                val pixel = bitmap.getPixel(x, y)
+                if (android.graphics.Color.alpha(pixel) < 128) continue
+                val bucket =
+                    (android.graphics.Color.red(pixel) / 24 shl 8) or
+                        (android.graphics.Color.green(pixel) / 24 shl 4) or
+                        (android.graphics.Color.blue(pixel) / 24)
+                buckets.getOrPut(bucket) { mutableListOf() }.add(pixel)
+            }
+        }
+
+        val dominant = buckets.maxByOrNull { it.value.size }?.value ?: return fallbackColor
+        val dominantColor = Color(
+            red = dominant.sumOf(android.graphics.Color::red) / dominant.size,
+            green = dominant.sumOf(android.graphics.Color::green) / dominant.size,
+            blue = dominant.sumOf(android.graphics.Color::blue) / dominant.size,
+        )
+        val edgeRun = mangaEdgeRun(bitmap, top)
+        return when {
+            edgeRun.white >= 6 -> Color.White
+            edgeRun.dark >= 6 -> dominantColor.takeIf { it.isMangaDark() } ?: Color.Black
+            else -> dominantColor
+        }
+    }
+
+    return MangaPageEdgeColors(
+        top = edgeColor(top = true),
+        bottom = edgeColor(top = false),
+    )
+}
+
+private data class MangaEdgeRun(val white: Int, val dark: Int)
+
+private fun mangaEdgeRun(bitmap: android.graphics.Bitmap, top: Boolean): MangaEdgeRun {
+    val left = (bitmap.width * 0.0275f).toInt().coerceIn(0, bitmap.width - 1)
+    val right = (bitmap.width - left - 1).coerceAtLeast(left)
+    val offset = (bitmap.width * 0.01f).toInt().coerceAtLeast(1)
+    val tracks = intArrayOf(
+        left,
+        right,
+        (left + offset).coerceAtMost(bitmap.width - 1),
+        (right - offset).coerceAtLeast(0),
+    )
+    val classes = (0 until 25).map { index ->
+        val y = if (top) {
+            index * (bitmap.height - 1) / 24
+        } else {
+            (24 - index) * (bitmap.height - 1) / 24
+        }
+        val pixels = tracks.map { x -> bitmap.getPixel(x, y) }
+        when {
+            pixels.count { it.isMangaWhite() } >= 3 -> 1
+            pixels.count { it.isMangaDark() } >= 3 -> -1
+            else -> 0
+        }
+    }
+    return MangaEdgeRun(
+        white = classes.takeWhile { it == 1 }.size,
+        dark = classes.takeWhile { it == -1 }.size,
+    )
+}
+
+private fun Int.isMangaDark(): Boolean =
+    android.graphics.Color.red(this) < 40 &&
+        android.graphics.Color.green(this) < 40 &&
+        android.graphics.Color.blue(this) < 40 &&
+        android.graphics.Color.alpha(this) > 200
+
+private fun Int.isMangaWhite(): Boolean =
+    android.graphics.Color.red(this) + android.graphics.Color.green(this) +
+        android.graphics.Color.blue(this) > 740 && android.graphics.Color.alpha(this) > 200
+
+private fun Color.isMangaDark(): Boolean =
+    red * 255f < 40f && green * 255f < 40f && blue * 255f < 40f
+
+internal fun zoomStartOffset(
+    position: Int,
+    size: IntSize,
+    scale: Float,
+    rightToLeft: Boolean,
+): Offset {
+    val maxX = size.width * (scale - 1f) / 2f
+    return when (position) {
+        MangaZoomStartPosition.LEFT -> Offset(maxX, 0f)
+        MangaZoomStartPosition.RIGHT -> Offset(-maxX, 0f)
+        MangaZoomStartPosition.AUTOMATIC -> Offset(if (rightToLeft) -maxX else maxX, 0f)
+        else -> Offset.Zero
+    }
 }
 
 private fun mangaColorFilter(settings: MangaReaderSettings): ColorFilter? {
@@ -693,14 +1479,26 @@ private fun clickAction(
     width: Int,
     height: Int,
 ) {
-    val regionIndex = mangaClickRegionIndex(offset.x, offset.y, width, height)
-    when (settings.clickActions.getOrNull(regionIndex) ?: 0) {
+    val action = mangaClickActionAt(settings.clickActions, offset.x, offset.y, width, height)
+    if ((action == 1 || action == 2) && settings.disableClickScroll) return
+    performMangaClickAction(action, onIntent)
+}
+
+private fun performMangaClickAction(
+    action: Int,
+    onIntent: (MangaReaderIntent) -> Unit,
+) {
+    when (action) {
         -1 -> Unit
         0 -> onIntent(MangaReaderIntent.ToggleMenu)
-        1 -> if (!settings.disableClickScroll) onIntent(MangaReaderIntent.PageStep(1))
-        2 -> if (!settings.disableClickScroll) onIntent(MangaReaderIntent.PageStep(-1))
+        1 -> onIntent(MangaReaderIntent.PageStep(1))
+        2 -> onIntent(MangaReaderIntent.PageStep(-1))
         3 -> onIntent(MangaReaderIntent.NextChapter)
         4 -> onIntent(MangaReaderIntent.PreviousChapter)
     }
 }
+
+internal fun isDoublePageActive(mode: Int, viewport: IntSize): Boolean =
+    mode == MangaDoublePageMode.ALWAYS ||
+        mode == MangaDoublePageMode.LANDSCAPE && viewport.width > viewport.height
 

@@ -66,6 +66,7 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
 import io.legado.app.ui.widget.components.text.AppText
 
 private data class MoreActionSpec(
@@ -199,7 +200,7 @@ private fun ActionSquareHost(
     var expanded by remember(action.id) { mutableStateOf(false) }
     val hasMore = action.id == "change_source" || action.id == "refresh"
     Box(modifier = modifier) {
-        SquareAction(
+        ReaderMenuActionSquare(
             icon = action.icon,
             text = action.label,
             selected = action.selected,
@@ -255,72 +256,6 @@ private fun ActionSquareHost(
                 onDismissRequest = { expanded = false },
                 onIntent = onIntent,
             )
-        }
-    }
-}
-
-@Composable
-private fun SquareAction(
-    icon: ImageVector,
-    text: String,
-    selected: Boolean,
-    hasMore: Boolean,
-    onClick: () -> Unit,
-    onMoreClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (selected) LegadoTheme.colorScheme.secondaryContainer
-                else LegadoTheme.colorScheme.surfaceContainerLow
-            ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .clickable(onClick = onClick),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            AppIcon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-
-            val space = if (hasMore) 6.dp else 8.dp
-            Spacer(
-                modifier = Modifier.height(space)
-            )
-
-            AppText(
-                text = text,
-                style = LegadoTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
-        }
-        if (hasMore) {
-            HorizontalDivider(color = LegadoTheme.colorScheme.surfaceContainer)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .clickable(onClick = onMoreClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ExpandMore,
-                    contentDescription = stringResource(R.string.more_actions),
-                    modifier = Modifier.size(12.dp),
-                )
-            }
         }
     }
 }

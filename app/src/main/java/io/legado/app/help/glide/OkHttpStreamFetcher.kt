@@ -17,7 +17,7 @@ import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.help.source.SourceHelp
-import io.legado.app.model.ReadManga
+import io.legado.app.data.appDb
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.isWifiConnect
@@ -43,6 +43,7 @@ class OkHttpStreamFetcher(
     private var responseBody: ResponseBody? = null
     private var callback: DataFetcher.DataCallback<in InputStream>? = null
     private var source: BaseSource? = null
+    private var mangaBook: Book? = null
     private val manga = options.get(OkHttpModelLoader.mangaOption) == true
     private val coroutineContext = SupervisorJob()
     private val coroutineScope = CoroutineScope(coroutineContext)
@@ -70,11 +71,13 @@ class OkHttpStreamFetcher(
         options.get(OkHttpModelLoader.sourceOriginOption)?.let { sourceUrl ->
             source = SourceHelp.getSource(sourceUrl)
         }
+        mangaBook = options.get(OkHttpModelLoader.mangaBookUrlOption)
+            ?.let(appDb.bookDao::getBook)
 
         this.callback = callback
 
         if (manga) {
-            ReadManga.book?.let { book ->
+            mangaBook?.let { book ->
                 val src = url.toString()
                 if (BookHelp.isImageExist(book, src)) {
                     Coroutine.async(coroutineScope, executeContext = IO) {
@@ -91,7 +94,9 @@ class OkHttpStreamFetcher(
             coroutineContext = coroutineContext
         ).getGlideUrl()
 
-        val requestBuilder = Request.Builder().url(analyzedUrl.toStringUrl())
+        val requestBuilder = Request.Builder()
+            .url(analyzedUrl.toStringUrl())
+            .tag(BaseSource::class.java, source)
         requestBuilder.addHeaders(analyzedUrl.headers)
         val request: Request = requestBuilder.build()
         dataSource = DataSource.REMOTE
@@ -173,7 +178,7 @@ class OkHttpStreamFetcher(
                         responseBody!!.bytes(),
                         isCover = false,
                         source,
-                        ReadManga.book
+                        mangaBook
                     )?.inputStream()
                 } else {
                     ImageUtils.decode(

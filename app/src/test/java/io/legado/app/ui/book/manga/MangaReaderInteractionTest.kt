@@ -2,6 +2,8 @@ package io.legado.app.ui.book.manga
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
+import io.legado.app.ui.book.manga.config.MangaDoublePageMode
+import io.legado.app.ui.book.manga.config.MangaZoomStartPosition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -9,6 +11,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MangaReaderInteractionTest {
+
+    private fun page(index: Int, chapter: Int = 0) = MangaReaderItemUi.Page(
+        key = "p$index",
+        imageUrl = "url$index",
+        bookUrl = "book",
+        chapterIndex = chapter,
+        chapterCount = 2,
+        pageIndex = index,
+        pageCount = 10,
+        chapterName = "chapter",
+    )
 
     @Test
     fun `nine grid maps every cell to its configured index`() {
@@ -38,11 +51,22 @@ class MangaReaderInteractionTest {
     }
 
     @Test
+    fun `nine grid resolves the configured action using viewport coordinates`() {
+        val actions = listOf(-1, 0, 3, 2, 0, 1, 4, 1, 2)
+
+        assertEquals(3, mangaClickActionAt(actions, 750f, 300f, 900, 1800))
+        assertEquals(2, mangaClickActionAt(actions, 150f, 900f, 900, 1800))
+        assertEquals(4, mangaClickActionAt(actions, 150f, 1500f, 900, 1800))
+    }
+
+    @Test
     fun `click action cycles through chapter menu and page actions`() {
         assertEquals(0, nextMangaClickAction(-1))
         assertEquals(1, nextMangaClickAction(0))
         assertEquals(2, nextMangaClickAction(1))
-        assertEquals(-1, nextMangaClickAction(2))
+        assertEquals(3, nextMangaClickAction(2))
+        assertEquals(4, nextMangaClickAction(3))
+        assertEquals(-1, nextMangaClickAction(4))
     }
 
     @Test
@@ -185,5 +209,92 @@ class MangaReaderInteractionTest {
                 viewport = viewport
             ),
         )
+    }
+
+    @Test
+    fun `explicit chapter navigation overrides the retained previous page anchor`() {
+        assertTrue(
+            shouldForceMangaChapterPosition(
+                hasPages = true,
+                isLoading = false,
+                currentBookUrl = "book",
+                targetBookUrl = "book",
+                pendingExplicitChapterIndex = 15,
+                targetChapterIndex = 15,
+            )
+        )
+        assertFalse(
+            shouldForceMangaChapterPosition(
+                hasPages = true,
+                isLoading = false,
+                currentBookUrl = "book",
+                targetBookUrl = "book",
+                pendingExplicitChapterIndex = null,
+                targetChapterIndex = 15,
+            )
+        )
+    }
+
+    @Test
+    fun `double page spreads never pair across chapter boundaries`() {
+        val items = listOf(page(0), page(1), page(2), page(0, 1), page(1, 1))
+        assertEquals(
+            listOf(listOf(0, 1), listOf(2), listOf(3, 4)),
+            buildMangaSpreads(items, doublePage = true).map { it.itemIndices },
+        )
+    }
+
+    @Test
+    fun `chapter edge stays on its own spread`() {
+        val items = listOf(
+            page(0),
+            MangaReaderItemUi.ChapterEdge("edge", "next"),
+            page(1),
+        )
+        assertEquals(
+            listOf(listOf(0), listOf(1), listOf(2)),
+            buildMangaSpreads(items, true).map { it.itemIndices },
+        )
+    }
+
+    @Test
+    fun `wide pages stay on their own double page spread`() {
+        val items = listOf(page(0), page(1), page(2), page(3))
+        assertEquals(
+            listOf(listOf(0), listOf(1, 2), listOf(3)),
+            buildMangaSpreads(
+                items = items,
+                doublePage = true,
+                aspectRatios = mapOf("p0" to 1.5f, "p3" to 2f),
+            ).map { it.itemIndices },
+        )
+    }
+
+    @Test
+    fun `spread identity follows its page composition`() {
+        val items = listOf(page(0), page(1))
+        val paired = buildMangaSpreads(items, doublePage = true).single()
+        val separated = buildMangaSpreads(
+            items,
+            doublePage = true,
+            aspectRatios = mapOf("p0" to 2f),
+        )
+        assertEquals(listOf(0, 1), paired.itemIndices)
+        assertEquals(listOf(listOf(0), listOf(1)), separated.map { it.itemIndices })
+        assertTrue(paired.key.contains("p0"))
+        assertTrue(paired.key.contains("p1"))
+    }
+
+    @Test
+    fun `automatic zoom starts on reading direction side`() {
+        val size = IntSize(100, 200)
+        assertEquals(Offset(50f, 0f), zoomStartOffset(MangaZoomStartPosition.AUTOMATIC, size, 2f, false))
+        assertEquals(Offset(-50f, 0f), zoomStartOffset(MangaZoomStartPosition.AUTOMATIC, size, 2f, true))
+    }
+
+    @Test
+    fun `landscape double page only activates for wide viewport`() {
+        assertTrue(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(1000, 600)))
+        assertFalse(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(600, 1000)))
     }
 }

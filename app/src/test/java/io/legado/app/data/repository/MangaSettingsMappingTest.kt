@@ -22,14 +22,14 @@ import kotlin.concurrent.thread
 class MangaSettingsMappingTest {
 
     @Test
-    fun `漫画设置 28 键写映射逐字段对应`() {
+    fun `漫画设置 38 键写映射逐字段对应`() {
         mangaMappingSamples().forEach { settings ->
             assertEquals(settings.expectedPrefMap(), settings.toPrefMap())
         }
     }
 
     @Test
-    fun `漫画设置 28 键读映射逐字段对应`() {
+    fun `漫画设置 38 键读映射逐字段对应`() {
         mangaMappingSamples().forEach { expected ->
             assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toMangaSettings())
         }
@@ -179,6 +179,11 @@ private fun mangaMappingSamples(): List<MangaSettings> {
         autoPageSpeed = 33,
         footerConfig = "manga-footer",
         background = 0xFF123456.toInt(),
+        autoBackground = true,
+        pageScaleType = 5,
+        zoomStartPosition = 3,
+        widePageMode = 2,
+        doublePageMode = 2,
         colorFilter = "manga-filter",
         eInkThreshold = 44,
         webtoonSidePaddingDp = 55,
@@ -205,6 +210,11 @@ private fun mangaMappingSamples(): List<MangaSettings> {
         base.copy(enableGray = true),
         base.copy(volumeKeyPage = true),
         base.copy(reverseVolumeKeyPage = true),
+        base.copy(menuTopBarLiquidGlass = true),
+        base.copy(menuBottomBarLiquidGlass = true),
+        base.copy(menuBottomBarFloating = false),
+        base.copy(menuBottomBarBlur = true),
+        base.copy(menuTopBarCompact = true),
     )
 }
 
@@ -220,6 +230,11 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.disableClickScroll to disableClickScroll,
     PreferKey.mangaLongClick to longClick,
     PreferKey.mangaBackground to background,
+    PreferKey.mangaAutoBackground to autoBackground,
+    PreferKey.mangaPageScaleType to pageScaleType,
+    PreferKey.mangaZoomStartPosition to zoomStartPosition,
+    PreferKey.mangaWidePageMode to widePageMode,
+    PreferKey.mangaDoublePageMode to doublePageMode,
     PreferKey.mangaColorFilter to colorFilter,
     PreferKey.hideMangaTitle to hideTitle,
     PreferKey.enableMangaEInk to enableEInk,
@@ -228,6 +243,11 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.webtoonSidePaddingDp to webtoonSidePaddingDp,
     PreferKey.mangaVolumeKeyPage to volumeKeyPage,
     PreferKey.reverseVolumeKeyPage to reverseVolumeKeyPage,
+    PreferKey.mangaMenuTopBarLiquidGlass to menuTopBarLiquidGlass,
+    PreferKey.mangaMenuBottomBarLiquidGlass to menuBottomBarLiquidGlass,
+    PreferKey.mangaMenuBottomBarFloating to menuBottomBarFloating,
+    PreferKey.mangaMenuBottomBarBlur to menuBottomBarBlur,
+    PreferKey.mangaMenuTopBarCompact to menuTopBarCompact,
     PreferKey.mangaClickActionTL to clickActionTL,
     PreferKey.mangaClickActionTC to clickActionTC,
     PreferKey.mangaClickActionTR to clickActionTR,

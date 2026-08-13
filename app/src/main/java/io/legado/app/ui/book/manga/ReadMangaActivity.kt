@@ -76,6 +76,7 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
                 show = true,
                 bookUrl = state.bookUrl,
                 initialTab = ReaderBookSheetTab.Toc,
+                currentChapterIndex = state.pendingChapterIndex ?: state.chapterIndex,
                 onDismissRequest = { readerViewModel.onIntent(MangaReaderIntent.DismissSheet) },
                 onChapterClick = { chapterIndex, pageIndex ->
                     readerViewModel.onIntent(MangaReaderIntent.DismissSheet)

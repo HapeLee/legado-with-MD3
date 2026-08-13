@@ -117,7 +117,11 @@
       "Bash(git revert *)",
       "Bash(xargs grep -l \"ImeLazyListAutoScroller\")",
       "Bash(xargs grep -l \"MarkdownBlock\")",
-      "Bash(./gradlew.bat assembleAppDebug)"
+      "Bash(./gradlew.bat assembleAppDebug)",
+      "Bash(./gradlew.bat test *)",
+      "Bash(./gradlew.bat :app:testAppDebugUnitTest --tests \"io.legado.app.data.repository.MangaSettingsMappingTest\" --tests \"io.legado.app.ui.book.manga.MangaReaderInteractionTest\")",
+      "Bash(./gradlew.bat :app:compileAppDebugKotlin -q)",
+      "Bash(./gradlew.bat :app:testDebugUnitTest --tests \"io.legado.app.data.repository.MangaSettingsMappingTest\" --tests \"io.legado.app.ui.book.manga.*\" -q)"
     ]
   }
 }

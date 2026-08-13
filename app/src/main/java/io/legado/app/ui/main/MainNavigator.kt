@@ -17,7 +17,9 @@ object MainNavigator {
 
     var backNavigationInProgress = false
         private set
-    private val navigationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val navigationScope by lazy(LazyThreadSafetyMode.NONE) {
+        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    }
     private var backNavigationResetJob: Job? = null
 
     fun navigateToRoute(backStack: MutableList<NavKey>, route: NavKey) {

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +130,7 @@ fun ReaderBookSheetRoute(
     initialTab: ReaderBookSheetTab,
     onDismissRequest: () -> Unit,
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    currentChapterIndex: Int? = null,
     onOpenFullBookInfo: () -> Unit,
     /** 书签页跳转：携带完整书签供跳转前校验。 */
     onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
@@ -194,6 +196,7 @@ fun ReaderBookSheetRoute(
         },
         onIntent = viewModel::onIntent,
         onChapterClick = { index -> onChapterClick(index, 0) },
+        currentChapterIndex = currentChapterIndex,
         onBookmarkNavigate = onBookmarkNavigate,
         onMarkingNavigate = onMarkingNavigate,
         onMarkingEdit = onMarkingEdit,
@@ -243,6 +246,7 @@ private fun ReaderBookSheet(
     onDismissRequest: () -> Unit,
     onIntent: (TocIntent) -> Unit,
     onChapterClick: (Int) -> Unit,
+    currentChapterIndex: Int?,
     onBookmarkNavigate: (Bookmark) -> Unit,
     onMarkingNavigate: (TocMarkingItemUi) -> Unit,
     onMarkingEdit: (String) -> Unit,
@@ -334,6 +338,7 @@ private fun ReaderBookSheet(
                         state = state,
                         onIntent = onIntent,
                         onChapterClick = onChapterClick,
+                        currentChapterIndex = currentChapterIndex,
                         onEditLocalTocRule = onEditLocalTocRule,
                     )
 
@@ -473,6 +478,38 @@ internal fun ReaderBookHeader(
             }
         }
     }
+}
+
+@Stable
+data class ReaderBookHeaderState(
+    val bookUrl: String,
+    val sourceUrl: String,
+    val sourceName: String,
+    val title: String,
+    val author: String,
+    val coverUrl: String? = null,
+    val customCoverUrl: String? = null,
+    val chapterTitle: String,
+    val chapterIndex: Int,
+    val chapterCount: Int,
+)
+
+@Composable
+internal fun ReaderBookHeader(state: ReaderBookHeaderState) {
+    ReaderBookHeader(
+        book = Book(
+            bookUrl = state.bookUrl,
+            origin = state.sourceUrl,
+            originName = state.sourceName,
+            name = state.title,
+            author = state.author,
+            coverUrl = state.coverUrl,
+            customCoverUrl = state.customCoverUrl,
+            durChapterTitle = state.chapterTitle,
+            durChapterIndex = state.chapterIndex,
+            totalChapterNum = state.chapterCount,
+        ),
+    )
 }
 
 @Composable
@@ -668,6 +705,7 @@ private fun ReaderBookTocPage(
     state: TocUiState,
     onIntent: (TocIntent) -> Unit,
     onChapterClick: (Int) -> Unit,
+    currentChapterIndex: Int?,
     onEditLocalTocRule: (String?) -> Unit,
 ) {
     val action = state.action
@@ -714,8 +752,15 @@ private fun ReaderBookTocPage(
     LaunchedEffect(selected) {
         fabExpanded = false
     }
-    LaunchedEffect(state.book?.totalChapterNum, state.isReverse, action.items.isNotEmpty()) {
-        val currentIndex = action.items.indexOfFirst { it.isDur }
+    LaunchedEffect(
+        state.book?.totalChapterNum,
+        state.isReverse,
+        action.items.isNotEmpty(),
+        currentChapterIndex,
+    ) {
+        val currentIndex = action.items.indexOfFirst {
+            it.id == (currentChapterIndex ?: state.book?.durChapterIndex)
+        }
         if (currentIndex >= 0) listState.scrollToItem(currentIndex)
     }
 
@@ -771,6 +816,7 @@ private fun ReaderBookTocPage(
                 listState = listState,
                 onIntent = onIntent,
                 onChapterClick = onChapterClick,
+                currentChapterIndex = currentChapterIndex,
             )
             AppFloatingActionButtonMenu(
                 expanded = fabExpanded,
@@ -793,6 +839,7 @@ private fun ReaderSheetChapterList(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onIntent: (TocIntent) -> Unit,
     onChapterClick: (Int) -> Unit,
+    currentChapterIndex: Int?,
 ) {
     FastScrollLazyColumn(
         state = listState,
@@ -814,7 +861,9 @@ private fun ReaderSheetChapterList(
                 )
             } else {
                 ReaderSheetChapterItem(
-                    item = item,
+                    item = item.copy(
+                        isDur = item.id == (currentChapterIndex ?: state.book?.durChapterIndex),
+                    ),
                     showWordCount = state.action.showWordCount,
                     selectionMode = state.action.selectedIds.isNotEmpty(),
                     onClick = {

@@ -68,7 +68,11 @@ import io.legado.app.data.repository.LocalPasswordRepository
 import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.OtherConfigSystemRepository
 import io.legado.app.data.repository.OtherSettingsRepository
-import io.legado.app.data.repository.MangaReaderSessionRepository
+import io.legado.app.data.repository.manga.DefaultMangaReaderSession
+import io.legado.app.data.repository.manga.MangaReaderActionRepository
+import io.legado.app.data.repository.manga.MangaReaderDataRepository
+import io.legado.app.domain.gateway.MangaReaderDataGateway
+import io.legado.app.domain.gateway.MangaReaderSessionFactory
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadAloudVoiceRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
@@ -312,6 +316,7 @@ import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
+import kotlinx.coroutines.Dispatchers
 import java.time.Clock
 
 val appModule = module {
@@ -395,7 +400,18 @@ val appModule = module {
     singleOf(::ReadStyleConfigStore)
     singleOf(::ReadBookStyleConfigRepository)
     single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
-    factoryOf(::MangaReaderSessionRepository)
+    factoryOf(::MangaReaderDataRepository)
+    factoryOf(::MangaReaderActionRepository)
+    factory<MangaReaderDataGateway> { get<MangaReaderDataRepository>() }
+    factory<MangaReaderSessionFactory> {
+        MangaReaderSessionFactory {
+            DefaultMangaReaderSession(
+                dataGateway = get<MangaReaderDataGateway>(),
+                stateDispatcher = Dispatchers.Default,
+                ioDispatcher = Dispatchers.IO,
+            )
+        }
+    }
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
     singleOf(::SaveSearchBooksUseCase)

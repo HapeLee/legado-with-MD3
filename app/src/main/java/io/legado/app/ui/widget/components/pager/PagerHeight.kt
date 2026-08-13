@@ -1,7 +1,9 @@
 package io.legado.app.ui.widget.components.pager
 
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -63,15 +65,20 @@ fun rememberPagerAnimatedHeight(
             }
         }
     }
-    if (heightAnimationSpec == null) {
+    if (targetHeight.value == Dp.Unspecified) {
         return targetHeight
     }
-    return if (targetHeight.value == Dp.Unspecified) {
-        targetHeight
-    } else {
-        animateDpAsState(
-            targetValue = targetHeight.value,
-            animationSpec = heightAnimationSpec,
+    // 快速滑过不同高度页面（如 高-低-高）时线性插值目标会剧烈跳动；
+    // 默认用弹簧让高度平滑跟随、阻尼振荡，传入 heightAnimationSpec 可覆盖。
+    val smoothSpec = remember(heightAnimationSpec) {
+        heightAnimationSpec ?: spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium,
         )
     }
+    return animateDpAsState(
+        targetValue = targetHeight.value,
+        animationSpec = smoothSpec,
+        label = "PagerAnimatedHeight",
+    )
 }

@@ -24,6 +24,7 @@ fun MediumTonalButton(
         enabled = enabled,
         selected = selected,
         onLongClick = onLongClick,
+        enforceMinimumInteractiveSize = false,
         size = if (text == null) MediumSeriesIconButtonSize else null,
         style = SeriesIconButtonStyle.Tonal
     ) { contentColor ->

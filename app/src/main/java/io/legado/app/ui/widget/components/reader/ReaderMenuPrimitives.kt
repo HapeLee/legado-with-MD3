@@ -6,31 +6,21 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
@@ -114,69 +104,6 @@ data class ReaderMenuAction(
     val onLongClick: (() -> Unit)? = null,
     val onClick: () -> Unit,
 )
-
-@Composable
-fun ReaderMenuToolRow(
-    actions: List<ReaderMenuAction>,
-    modifier: Modifier = Modifier,
-    columns: Int = 5,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        actions.take(columns).forEach { action ->
-            ReaderMenuIconButton(
-                icon = action.icon,
-                description = action.description,
-                onClick = action.onClick,
-                onLongClick = action.onLongClick,
-            )
-        }
-        repeat((columns - actions.size).coerceAtLeast(0)) {
-            Spacer(Modifier.size(48.dp))
-        }
-    }
-}
-
-@Composable
-fun ReaderMenuIconButton(
-    icon: ImageVector,
-    description: String,
-    modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
-    onClick: () -> Unit,
-) {
-    if (onLongClick == null) {
-        IconButton(onClick = onClick, modifier = modifier.size(48.dp)) {
-            Icon(
-                imageVector = icon,
-                contentDescription = description,
-                tint = LegadoTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    } else {
-        Box(
-            modifier = modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    role = Role.Button,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = description,
-                tint = LegadoTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
 
 @Composable
 fun ReaderMenuSlider(

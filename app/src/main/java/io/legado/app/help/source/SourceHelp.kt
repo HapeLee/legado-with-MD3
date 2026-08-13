@@ -11,7 +11,6 @@ import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
-import io.legado.app.model.ReadManga
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
@@ -37,8 +36,6 @@ object SourceHelp {
             return ReadBook.bookSource
         } else if (AudioPlay.bookSource?.bookSourceUrl == key) {
             return AudioPlay.bookSource
-        } else if (ReadManga.bookSource?.bookSourceUrl == key) {
-            return ReadManga.bookSource
         }
         return appDb.bookSourceDao.getBookSource(key)
             ?: appDb.rssSourceDao.getByKey(key)

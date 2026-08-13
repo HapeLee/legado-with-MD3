@@ -90,6 +90,7 @@ biometricKtx = "1.1.0"
 reorderable = "3.1.0"
 haze = "1.7.2"
 timber = "5.0.1"
+telephoto = "0.19.0"
 miuix = "0.9.3"
 backdrop = "2.0.0"
 capsule = "2.1.3"
@@ -147,6 +148,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCo
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coilCompose" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coilCompose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
+telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version = "3.7.0" }
@@ -227,6 +229,7 @@ intellij-markdown = { module = "org.jetbrains:markdown-jvm", version.ref = "inte
 junit = { module = "junit:junit", version = "4.13.2" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 

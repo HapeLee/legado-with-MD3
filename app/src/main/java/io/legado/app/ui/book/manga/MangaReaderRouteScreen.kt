@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import dev.chrisbanes.haze.HazeState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -160,12 +161,22 @@ fun MangaReaderRouteScreen(
         }
     }
 
-    MangaReaderScreen(state = state, onIntent = viewModel::onIntent)
+    val menuHazeState = remember { HazeState() }
+    val useMenuHaze = state.settings.menuBottomBarBlur ||
+            (!state.settings.menuBottomBarFloating &&
+                    state.settings.menuBottomBarLiquidGlass &&
+                    state.settingsCategory != null)
+    MangaReaderScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        hazeState = if (useMenuHaze) menuHazeState else null,
+    )
     if (state.activeSheet == MangaReaderSheet.Catalog && state.bookUrl.isNotEmpty()) {
         ReaderBookSheetRoute(
             show = true,
             bookUrl = state.bookUrl,
             initialTab = ReaderBookSheetTab.Toc,
+            currentChapterIndex = state.pendingChapterIndex ?: state.chapterIndex,
             onDismissRequest = { viewModel.onIntent(MangaReaderIntent.DismissSheet) },
             onChapterClick = { chapterIndex, pageIndex ->
                 viewModel.onIntent(MangaReaderIntent.DismissSheet)

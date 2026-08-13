@@ -6,7 +6,8 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.progress.ProgressManager.LISTENER
 import io.legado.app.help.glide.progress.ProgressResponseBody
 import io.legado.app.help.http.CookieManager.cookieJarHeader
-import io.legado.app.model.ReadManga
+import io.legado.app.data.entities.BaseSource
+import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.utils.NetworkUtils
 import okhttp3.Cache
 import okhttp3.ConnectionSpec
@@ -156,7 +157,7 @@ val okHttpClientManga by lazy {
                 .build()
         }
         interceptors.add(1) { chain ->
-            ReadManga.rateLimiter.withLimitBlocking {
+            ConcurrentRateLimiter(chain.request().tag(BaseSource::class.java)).withLimitBlocking {
                 chain.proceed(chain.request())
             }
         }
