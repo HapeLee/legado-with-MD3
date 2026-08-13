@@ -16,8 +16,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -83,6 +81,9 @@ import io.legado.app.ui.book.read.sheet.TypographySection
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.reader.ReaderMenuEffect
+import io.legado.app.ui.widget.components.reader.ReaderMenuAnimatedBottom
+import io.legado.app.ui.widget.components.reader.ReaderMenuAnimatedTop
+import io.legado.app.ui.widget.components.reader.ReaderMenuDismissLayer
 import io.legado.app.ui.widget.components.reader.ReaderMenuPlacement
 import io.legado.app.ui.widget.components.reader.ReaderMenuTintStyle
 import io.legado.app.ui.widget.components.reader.ReaderMenuVisualState
@@ -131,33 +132,19 @@ fun ReadBookMenuBar(
 
     CompositionLocalProvider(LocalSliderDragState provides sliderDragState) {
     Box(Modifier.fillMaxSize()) {
-        AnimatedVisibility(
+        ReaderMenuDismissLayer(
             visible = state.menuVisible || searchMenuVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                    ) {
-                        if (searchMenuVisible) {
-                            onIntent(ReadBookIntent.HideSearchMenu)
-                        } else {
-                            onIntent(ReadBookIntent.HideMenu)
-                        }
-                    }
-            )
-        }
+            onDismiss = {
+                if (searchMenuVisible) {
+                    onIntent(ReadBookIntent.HideSearchMenu)
+                } else {
+                    onIntent(ReadBookIntent.HideMenu)
+                }
+            },
+        )
 
-        // Top title bar + floating icon row (top positions)
-        AnimatedVisibility(
+        ReaderMenuAnimatedTop(
             visible = state.menuVisible && !hideTopBar,
-            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter),
         ) {
             Column {
                 MenuTitleBar(
@@ -274,12 +261,7 @@ fun ReadBookMenuBar(
         }
 
         // Bottom menu + floating icon row (bottom positions)
-        AnimatedVisibility(
-            visible = state.menuVisible || searchMenuVisible,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
+        ReaderMenuAnimatedBottom(visible = state.menuVisible || searchMenuVisible) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (state.menuVisible &&
                     state.menuConfig.showTitleBarIcons &&

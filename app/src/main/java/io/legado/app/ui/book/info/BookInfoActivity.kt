@@ -51,6 +51,16 @@ class BookInfoActivity : BaseComposeActivity() {
                     )
                 )
             },
+            onOpenMangaReader = { bookUrl, inBookshelf, chapterChanged ->
+                startActivity(
+                    MainActivity.createReadMangaIntent(
+                        context = this,
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
+                        chapterChanged = chapterChanged,
+                    )
+                )
+            },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
                 startActivity<BookInfoActivity> {
                     putExtra("bookUrl", bookUrl)
