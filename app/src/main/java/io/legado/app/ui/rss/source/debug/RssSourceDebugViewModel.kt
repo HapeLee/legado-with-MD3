@@ -56,7 +56,7 @@ class RssSourceDebugViewModel(
             runCatching { loaded.sortUrls() }.getOrNull()?.filter { it.second.isNotBlank() }?.forEach {
                 add(RssSourceDebugExampleUi(it.first, RssSourceDebugTarget.Sort, it.second))
             }
-        }.toImmutableList()
+        }.distinctBy { it.target to it.value }.toImmutableList()
         _uiState.update { it.copy(sourceName = loaded.sourceName, query = "我的", examples = examples, status = BookSourceDebugStatus.Idle) }
     }
 

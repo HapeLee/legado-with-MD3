@@ -65,7 +65,7 @@ class BookSourceDebugViewModel(
             kinds.filter { !it.url.isNullOrBlank() }.forEach { kind ->
                 add(BookSourceDebugExampleUi(kind.title, BookSourceDebugTarget.Explore, kind.url.orEmpty()))
             }
-        }.toImmutableList()
+        }.distinctBy { it.target to it.value }.toImmutableList()
         _uiState.update {
             it.copy(
                 sourceName = loaded.bookSourceName,
