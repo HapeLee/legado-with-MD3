@@ -11,6 +11,7 @@ import io.legado.app.domain.model.BookshelfAutoGroupPlanBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
 import io.legado.app.domain.model.BookshelfAutoGroupErrorReason
 import io.legado.app.domain.model.BookshelfAutoGroupException
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -99,7 +100,7 @@ class BookshelfAutoGroupRepositoryTest {
             )
         )
 
-        val result = repository.applyPlan(plan)
+        val result = repository.applyPlan(plan, fullOptions)
 
         assertEquals(1, result.createdGroupCount)
         assertEquals(1, result.reusedGroupCount)
@@ -116,7 +117,7 @@ class BookshelfAutoGroupRepositoryTest {
             groups = listOf(group("missing", "Missing", listOf(planBook("deleted"))))
         )
 
-        val result = repository.applyPlan(plan)
+        val result = repository.applyPlan(plan, fullOptions)
 
         assertEquals(0, result.createdGroupCount)
         assertEquals(1, result.ignoredBookCount)
@@ -135,7 +136,8 @@ class BookshelfAutoGroupRepositoryTest {
         repository.applyPlan(
             BookshelfAutoGroupPlan(
                 groups = listOf(group("new", "New public", listOf(planBook("book-1"))))
-            )
+            ),
+            fullOptions,
         )
 
         assertEquals(6L, database.bookDao.getBook("book-1")?.group)
@@ -157,7 +159,7 @@ class BookshelfAutoGroupRepositoryTest {
             groups = listOf(group("new", "New", listOf(planBook("book-1"))))
         )
 
-        val result = runCatching { repository.applyPlan(plan) }
+        val result = runCatching { repository.applyPlan(plan, fullOptions) }
 
         assertTrue(result.isFailure)
         assertTrue(database.bookGroupDao.all.isEmpty())
@@ -176,7 +178,8 @@ class BookshelfAutoGroupRepositoryTest {
             repository.applyPlan(
                 BookshelfAutoGroupPlan(
                     groups = listOf(group("new", "New", listOf(planBook("book-1"))))
-                )
+                ),
+                fullOptions,
             )
         }.exceptionOrNull()
 
@@ -189,10 +192,31 @@ class BookshelfAutoGroupRepositoryTest {
         assertEquals(1L, database.bookDao.getBook("book-1")?.group)
     }
 
+    @Test
+    fun `incremental apply skips a book grouped after analysis`() = runBlocking {
+        database.bookGroupDao.insert(BookGroup(groupId = 1L, groupName = "Manually grouped"))
+        database.bookDao.insert(book("book-1").copy(group = 1L))
+
+        val result = repository.applyPlan(
+            BookshelfAutoGroupPlan(
+                groups = listOf(group("new", "New", listOf(planBook("book-1"))))
+            ),
+            BookshelfAutoGroupOptions(incrementalOnly = true),
+        )
+
+        assertEquals(0, result.createdGroupCount)
+        assertEquals(0, result.updatedBookCount)
+        assertEquals(1, result.ignoredBookCount)
+        assertEquals(1L, database.bookDao.getBook("book-1")?.group)
+        assertTrue(database.bookGroupDao.all.none { it.groupName == "New" })
+    }
+
     private fun book(url: String) = Book(bookUrl = url, name = url, author = "Author")
 
     private fun planBook(url: String) = BookshelfAutoGroupPlanBook(url, url, "", emptyList(), "")
 
     private fun group(key: String, name: String, books: List<BookshelfAutoGroupPlanBook>) =
         BookshelfAutoGroupPlanGroup(key, name, "", false, books)
+
+    private val fullOptions = BookshelfAutoGroupOptions(incrementalOnly = false)
 }

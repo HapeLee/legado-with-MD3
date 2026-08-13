@@ -3015,11 +3015,15 @@
     <string name="ai_auto_group_applying">Applying groups</string>
     <string name="ai_auto_group_confirm_title">Apply grouping plan?</string>
     <string name="ai_auto_group_confirm_message">This will create %1$d groups, adjust %2$d books, and skip %3$d books. Existing public memberships will be replaced; private groups remain unchanged.</string>
+    <string name="ai_auto_group_confirm_message_incremental">This will create %1$d groups, group %2$d previously ungrouped books, and skip %3$d books. Already grouped books and private groups remain unchanged.</string>
     <string name="ai_auto_group_execute">Apply</string>
     <string name="ai_auto_group_will_analyze">Analyze %1$d books</string>
     <string name="ai_auto_group_preflight_description">Book titles, authors, categories, and current public groups will be sent to the configured AI. Introductions are sent only when enabled below. Books in private groups are excluded. AI creates a proposal and will not change the bookshelf until you confirm.</string>
+    <string name="ai_auto_group_preflight_description_incremental">Only titles, authors, and categories of ungrouped books will be sent to the configured AI. Existing public group names are included for reuse, but data from already grouped or private books is excluded. Introductions are sent only when enabled below.</string>
     <string name="ai_auto_group_existing_summary">%1$d existing groups; %2$d books are already grouped.</string>
     <string name="ai_auto_group_batch_estimate">The bookshelf will be processed in approximately %1$d sequential AI requests.</string>
+    <string name="ai_auto_group_incremental">Incremental grouping</string>
+    <string name="ai_auto_group_incremental_desc">Analyze only books that are not yet in a public group, leaving existing assignments unchanged.</string>
     <string name="ai_auto_group_include_intro">Reference book introductions</string>
     <string name="ai_auto_group_include_intro_desc">When enabled, introductions are used as grouping context and significantly increase Token consumption.</string>
     <string name="ai_auto_group_deep_thinking">Enable deep thinking</string>
@@ -3050,6 +3054,7 @@
     <string name="ai_auto_group_message_no_plan">There is no grouping plan to apply</string>
     <string name="ai_auto_group_message_cancelled">Cancelled</string>
     <string name="ai_auto_group_message_group_name_required">Group name cannot be empty</string>
+    <string name="ai_auto_group_no_ungrouped_books">There are no ungrouped books to analyze. Turn off incremental grouping to analyze the full bookshelf.</string>
     <string name="ai_auto_group_error_empty_shelf">There are no books on the bookshelf to analyze.</string>
     <string name="ai_auto_group_error_missing_model">Configure a default AI model first.</string>
     <string name="ai_auto_group_error_capacity">The selected model or task input capacity is too small for this bookshelf.</string>

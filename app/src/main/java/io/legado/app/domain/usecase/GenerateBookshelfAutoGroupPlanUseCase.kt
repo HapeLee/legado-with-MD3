@@ -42,14 +42,23 @@ class GenerateBookshelfAutoGroupPlanUseCase(
         options: BookshelfAutoGroupOptions = BookshelfAutoGroupOptions(),
     ): BookshelfAutoGroupPreflight {
         validateSource(source)
+        val analysisSource = source.forAnalysis(options)
+        if (analysisSource.books.isEmpty()) {
+            return BookshelfAutoGroupPreflight(
+                analyzedBookCount = 0,
+                effectiveInputCharLimit = 0,
+                estimatedRequestCount = 0,
+            )
+        }
         val promptText = promptGateway.getPromptText()
         val preset = resolvePreset()
         val systemPrompt = resolveSystemPrompt(preset, promptText)
         val inputBudget = effectiveInputBudget(preset)
-        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
-            buildGeneratePrompt(source, books, groupingInstruction, emptyList(), options, promptText)
+        val batches = createBatches(analysisSource, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildGeneratePrompt(analysisSource, books, groupingInstruction, emptyList(), options, promptText)
         }
         return BookshelfAutoGroupPreflight(
+            analyzedBookCount = analysisSource.bookCount,
             effectiveInputCharLimit = inputBudget.effectiveCharLimit,
             estimatedRequestCount = batches.size,
         )
@@ -62,12 +71,14 @@ class GenerateBookshelfAutoGroupPlanUseCase(
         onProgress: (BookshelfAutoGroupProgress) -> Unit = {},
     ): BookshelfAutoGroupPlan {
         validateSource(source)
+        val analysisSource = source.forAnalysis(options)
+        if (analysisSource.books.isEmpty()) return BookshelfAutoGroupPlan(emptyList())
         val promptText = promptGateway.getPromptText()
         val preset = resolvePreset()
         val systemPrompt = resolveSystemPrompt(preset, promptText)
         val inputBudget = effectiveInputBudget(preset)
-        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
-            buildGeneratePrompt(source, books, groupingInstruction, emptyList(), options, promptText)
+        val batches = createBatches(analysisSource, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildGeneratePrompt(analysisSource, books, groupingInstruction, emptyList(), options, promptText)
         }
         val plans = mutableListOf<BookshelfAutoGroupPlan>()
         val proposedGroupNames = linkedSetOf<String>()
@@ -78,13 +89,13 @@ class GenerateBookshelfAutoGroupPlanUseCase(
                 inputBudget = inputBudget,
                 systemPrompt = systemPrompt,
             ) { names ->
-                buildGeneratePrompt(source, batch, groupingInstruction, names, options, promptText)
+                buildGeneratePrompt(analysisSource, batch, groupingInstruction, names, options, promptText)
             }
             val plan = generateBatch(
                 preset = preset,
                 systemPrompt = systemPrompt,
                 prompt = buildGeneratePrompt(
-                    source,
+                    analysisSource,
                     batch,
                     groupingInstruction,
                     sharedGroupNames,
@@ -92,13 +103,13 @@ class GenerateBookshelfAutoGroupPlanUseCase(
                     promptText,
                 ),
                 books = batch,
-                existingGroupNames = source.existingGroupNames.toSet(),
+                existingGroupNames = analysisSource.existingGroupNames.toSet(),
                 options = options,
             )
             plans += plan
             plan.groups.mapTo(proposedGroupNames, BookshelfAutoGroupPlanGroup::name)
         }
-        return mergePlans(plans, source)
+        return mergePlans(plans, analysisSource)
     }
 
     suspend fun revise(
@@ -110,12 +121,14 @@ class GenerateBookshelfAutoGroupPlanUseCase(
     ): BookshelfAutoGroupPlan {
         require(instruction.isNotBlank()) { "Revision instruction is required" }
         validateSource(source)
+        val analysisSource = source.forAnalysis(options)
+        if (analysisSource.books.isEmpty()) return BookshelfAutoGroupPlan(emptyList())
         val promptText = promptGateway.getPromptText()
         val preset = resolvePreset()
         val systemPrompt = resolveSystemPrompt(preset, promptText)
         val inputBudget = effectiveInputBudget(preset)
-        val batches = createBatches(source, batchInputBudget(inputBudget), systemPrompt) { books ->
-            buildRevisePrompt(source, currentPlan, books, instruction, emptyList(), options, promptText)
+        val batches = createBatches(analysisSource, batchInputBudget(inputBudget), systemPrompt) { books ->
+            buildRevisePrompt(analysisSource, currentPlan, books, instruction, emptyList(), options, promptText)
         }
         val plans = mutableListOf<BookshelfAutoGroupPlan>()
         val proposedGroupNames = currentPlan.groups
@@ -127,13 +140,13 @@ class GenerateBookshelfAutoGroupPlanUseCase(
                 inputBudget = inputBudget,
                 systemPrompt = systemPrompt,
             ) { names ->
-                buildRevisePrompt(source, currentPlan, batch, instruction, names, options, promptText)
+                buildRevisePrompt(analysisSource, currentPlan, batch, instruction, names, options, promptText)
             }
             val plan = generateBatch(
                 preset = preset,
                 systemPrompt = systemPrompt,
                 prompt = buildRevisePrompt(
-                    source,
+                    analysisSource,
                     currentPlan,
                     batch,
                     instruction,
@@ -142,13 +155,13 @@ class GenerateBookshelfAutoGroupPlanUseCase(
                     promptText,
                 ),
                 books = batch,
-                existingGroupNames = source.existingGroupNames.toSet(),
+                existingGroupNames = analysisSource.existingGroupNames.toSet(),
                 options = options,
             )
             plans += plan
             plan.groups.mapTo(proposedGroupNames, BookshelfAutoGroupPlanGroup::name)
         }
-        return mergePlans(plans, source)
+        return mergePlans(plans, analysisSource)
     }
 
     private suspend fun generateBatch(
@@ -203,6 +216,14 @@ class GenerateBookshelfAutoGroupPlanUseCase(
         if (source.books.isEmpty()) {
             throw BookshelfAutoGroupException(BookshelfAutoGroupErrorReason.EmptyBookshelf)
         }
+    }
+
+    private fun BookshelfAutoGroupSource.forAnalysis(
+        options: BookshelfAutoGroupOptions,
+    ): BookshelfAutoGroupSource {
+        if (!options.incrementalOnly) return this
+        // Keep existing group names for reuse while removing grouped book metadata from AI input.
+        return copy(books = books.filter { it.currentGroupNames.isEmpty() })
     }
 
     private fun effectiveInputBudget(preset: AiTaskPresetConfig): InputBudget {

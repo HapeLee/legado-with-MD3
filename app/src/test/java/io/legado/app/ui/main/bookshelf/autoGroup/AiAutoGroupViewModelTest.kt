@@ -19,6 +19,7 @@ import io.legado.app.domain.model.AiTaskRuntimeOptions
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.BookshelfAutoGroupApplyResult
 import io.legado.app.domain.model.BookshelfAutoGroupBook
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupPromptText
 import io.legado.app.domain.model.BookshelfAutoGroupSource
@@ -54,6 +55,46 @@ class AiAutoGroupViewModelTest {
     }
 
     @Test
+    fun `incremental mode updates the preflight count and can switch to full mode`() {
+        val viewModel = viewModel(source(count = 2, groupedCount = 1), mutableListOf())
+
+        viewModel.onIntent(AiAutoGroupIntent.StartSession(1L))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(viewModel.uiState.value.incrementalOnly)
+        assertEquals(1, viewModel.uiState.value.bookCount)
+
+        viewModel.onIntent(AiAutoGroupIntent.SetIncrementalOnly(false))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(viewModel.uiState.value.incrementalOnly)
+        assertEquals(2, viewModel.uiState.value.bookCount)
+    }
+
+    @Test
+    fun `all grouped bookshelf remains in preflight with zero incremental candidates`() {
+        val viewModel = viewModel(source(count = 2, groupedCount = 2), mutableListOf())
+
+        viewModel.onIntent(AiAutoGroupIntent.StartSession(1L))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(AiAutoGroupPhase.Preflight, viewModel.uiState.value.phase)
+        assertEquals(0, viewModel.uiState.value.bookCount)
+        assertEquals(null, viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `empty bookshelf still reports the terminal empty source error`() {
+        val viewModel = viewModel(source(count = 0), mutableListOf())
+
+        viewModel.onIntent(AiAutoGroupIntent.StartSession(1L))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(AiAutoGroupPhase.Error, viewModel.uiState.value.phase)
+        assertEquals(AiAutoGroupErrorUi.EmptyBookshelf, viewModel.uiState.value.error)
+    }
+
+    @Test
     fun `analysis options default off and survive restart within the session`() {
         val viewModel = viewModel(source(1), mutableListOf())
         viewModel.onIntent(AiAutoGroupIntent.StartSession(1L))
@@ -61,7 +102,9 @@ class AiAutoGroupViewModelTest {
 
         assertFalse(viewModel.uiState.value.includeBookIntro)
         assertFalse(viewModel.uiState.value.enableDeepThinking)
+        assertTrue(viewModel.uiState.value.incrementalOnly)
 
+        viewModel.onIntent(AiAutoGroupIntent.SetIncrementalOnly(false))
         viewModel.onIntent(AiAutoGroupIntent.SetIncludeBookIntro(true))
         viewModel.onIntent(AiAutoGroupIntent.SetDeepThinkingEnabled(true))
         viewModel.onIntent(AiAutoGroupIntent.Restart)
@@ -69,10 +112,12 @@ class AiAutoGroupViewModelTest {
 
         assertTrue(viewModel.uiState.value.includeBookIntro)
         assertTrue(viewModel.uiState.value.enableDeepThinking)
+        assertFalse(viewModel.uiState.value.incrementalOnly)
 
         viewModel.onIntent(AiAutoGroupIntent.CloseSession)
         assertFalse(viewModel.uiState.value.includeBookIntro)
         assertFalse(viewModel.uiState.value.enableDeepThinking)
+        assertTrue(viewModel.uiState.value.incrementalOnly)
     }
 
     @Test
@@ -133,7 +178,7 @@ class AiAutoGroupViewModelTest {
         outputSchema = "{\"groups\":[],\"ignoredBooks\":[]}",
     )
 
-    private fun source(count: Int) = BookshelfAutoGroupSource(
+    private fun source(count: Int, groupedCount: Int = 0) = BookshelfAutoGroupSource(
         books = (1..count).map { index ->
             BookshelfAutoGroupBook(
                 bookUrl = "url-$index",
@@ -141,10 +186,10 @@ class AiAutoGroupViewModelTest {
                 author = "Author",
                 intro = "Intro",
                 kind = "Kind",
-                currentGroupNames = emptyList(),
+                currentGroupNames = if (index <= groupedCount) listOf("Existing") else emptyList(),
             )
         },
-        existingGroupNames = emptyList(),
+        existingGroupNames = if (groupedCount > 0) listOf("Existing") else emptyList(),
     )
 
     private fun preset(): AiTaskPresetConfig {
@@ -189,7 +234,10 @@ class AiAutoGroupViewModelTest {
         private val source: BookshelfAutoGroupSource,
     ) : BookshelfAutoGroupGateway {
         override suspend fun loadSource() = source
-        override suspend fun applyPlan(plan: BookshelfAutoGroupPlan) =
+        override suspend fun applyPlan(
+            plan: BookshelfAutoGroupPlan,
+            options: BookshelfAutoGroupOptions,
+        ) =
             BookshelfAutoGroupApplyResult(0, 0, 0, 0)
     }
 

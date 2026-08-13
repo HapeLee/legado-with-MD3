@@ -2,6 +2,7 @@ package io.legado.app.domain.usecase
 
 import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
 import io.legado.app.domain.model.BookshelfAutoGroupApplyResult
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
 
@@ -9,10 +10,13 @@ class ApplyBookshelfAutoGroupPlanUseCase(
     private val gateway: BookshelfAutoGroupGateway,
 ) {
 
-    suspend fun execute(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupApplyResult {
+    suspend fun execute(
+        plan: BookshelfAutoGroupPlan,
+        options: BookshelfAutoGroupOptions,
+    ): BookshelfAutoGroupApplyResult {
         val normalizedPlan = normalize(plan)
         require(normalizedPlan.groups.isNotEmpty()) { "No applicable grouping plan" }
-        return gateway.applyPlan(normalizedPlan)
+        return gateway.applyPlan(normalizedPlan, options)
     }
 
     internal fun normalize(

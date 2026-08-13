@@ -211,6 +211,72 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
     }
 
     @Test
+    fun `incremental mode excludes grouped books but keeps existing group names`() = runBlocking {
+        val source = BookshelfAutoGroupSource(
+            books = listOf(
+                book(1, name = "Ungrouped book"),
+                book(2, name = "Already grouped").copy(currentGroupNames = listOf("Existing")),
+            ),
+            existingGroupNames = listOf("Existing"),
+        )
+        val aiGateway = RecordingAiTextGateway(
+            mutableListOf(responseForIds(listOf("b1")))
+        )
+        val useCase = useCase(source, aiGateway, maxInputChars = 10_000)
+
+        val preflight = useCase.preflight(source)
+        useCase.generate(source, "")
+
+        val prompt = aiGateway.requests.single().messages.last().content
+        assertEquals(1, preflight.analyzedBookCount)
+        assertTrue(prompt.contains("Ungrouped book"))
+        assertFalse(prompt.contains("Already grouped"))
+        assertTrue(prompt.contains("Existing groups: Existing"))
+    }
+
+    @Test
+    fun `full mode includes books that already have public groups`() = runBlocking {
+        val source = BookshelfAutoGroupSource(
+            books = listOf(
+                book(1, name = "Ungrouped book"),
+                book(2, name = "Already grouped").copy(currentGroupNames = listOf("Existing")),
+            ),
+            existingGroupNames = listOf("Existing"),
+        )
+        val aiGateway = RecordingAiTextGateway(
+            mutableListOf(responseForIds(listOf("b1", "b2")))
+        )
+        val useCase = useCase(source, aiGateway, maxInputChars = 10_000)
+        val options = BookshelfAutoGroupOptions(incrementalOnly = false)
+
+        val preflight = useCase.preflight(source, options = options)
+        useCase.generate(source, "", options)
+
+        val prompt = aiGateway.requests.single().messages.last().content
+        assertEquals(2, preflight.analyzedBookCount)
+        assertTrue(prompt.contains("Already grouped"))
+        assertTrue(prompt.contains("\"currentGroups\":[\"Existing\"]"))
+    }
+
+    @Test
+    fun `incremental preflight returns zero when every book is already grouped`() = runBlocking {
+        val source = BookshelfAutoGroupSource(
+            books = listOf(
+                book(1, name = "Already grouped").copy(currentGroupNames = listOf("Existing"))
+            ),
+            existingGroupNames = listOf("Existing"),
+        )
+        val aiGateway = RecordingAiTextGateway(mutableListOf())
+        val useCase = useCase(source, aiGateway, maxInputChars = 10_000)
+
+        val preflight = useCase.preflight(source)
+
+        assertEquals(0, preflight.analyzedBookCount)
+        assertEquals(0, preflight.estimatedRequestCount)
+        assertTrue(aiGateway.requests.isEmpty())
+    }
+
+    @Test
     fun `localized prompt is used end to end and raw kind remains unchanged`() = runBlocking {
         val rawKind = "0.0分,都市,连载中,15小时前"
         val source = BookshelfAutoGroupSource(
@@ -248,7 +314,10 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
     ) = GenerateBookshelfAutoGroupPlanUseCase(
         gateway = object : BookshelfAutoGroupGateway {
             override suspend fun loadSource() = source
-            override suspend fun applyPlan(plan: BookshelfAutoGroupPlan) =
+            override suspend fun applyPlan(
+                plan: BookshelfAutoGroupPlan,
+                options: BookshelfAutoGroupOptions,
+            ) =
                 BookshelfAutoGroupApplyResult(0, 0, 0, 0)
         },
         promptGateway = object : BookshelfAutoGroupPromptGateway {

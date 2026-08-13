@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -123,6 +126,9 @@ fun AiAutoGroupSheet(
                 onGroupingInstructionChange = {
                     viewModel.onIntent(AiAutoGroupIntent.UpdateGroupingInstruction(it))
                 },
+                onIncrementalOnlyChange = {
+                    viewModel.onIntent(AiAutoGroupIntent.SetIncrementalOnly(it))
+                },
                 onIncludeBookIntroChange = {
                     viewModel.onIntent(AiAutoGroupIntent.SetIncludeBookIntro(it))
                 },
@@ -171,7 +177,11 @@ fun AiAutoGroupSheet(
         onDismissRequest = { viewModel.onIntent(AiAutoGroupIntent.DismissApplyConfirm) },
         title = stringResource(R.string.ai_auto_group_confirm_title),
         text = stringResource(
-            R.string.ai_auto_group_confirm_message,
+            if (state.incrementalOnly) {
+                R.string.ai_auto_group_confirm_message_incremental
+            } else {
+                R.string.ai_auto_group_confirm_message
+            },
             state.newGroupCount,
             state.assignedBookCount,
             state.ignoredBooks.size,
@@ -189,10 +199,17 @@ private fun AutoGroupPreflightContent(
     onDismiss: () -> Unit,
     onAnalyze: () -> Unit,
     onGroupingInstructionChange: (String) -> Unit,
+    onIncrementalOnlyChange: (Boolean) -> Unit,
     onIncludeBookIntroChange: (Boolean) -> Unit,
     onDeepThinkingChange: (Boolean) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         GlassCard(containerColor = LegadoTheme.colorScheme.onSheetContent) {
             Column(
                 modifier = Modifier
@@ -206,7 +223,13 @@ private fun AutoGroupPreflightContent(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = stringResource(R.string.ai_auto_group_preflight_description),
+                    text = stringResource(
+                        if (state.incrementalOnly) {
+                            R.string.ai_auto_group_preflight_description_incremental
+                        } else {
+                            R.string.ai_auto_group_preflight_description
+                        }
+                    ),
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
@@ -233,6 +256,12 @@ private fun AutoGroupPreflightContent(
         }
 
         SplicedColumnGroup(modifier = Modifier.fillMaxWidth()) {
+            SwitchSettingItem(
+                title = stringResource(R.string.ai_auto_group_incremental),
+                description = stringResource(R.string.ai_auto_group_incremental_desc),
+                checked = state.incrementalOnly,
+                onCheckedChange = onIncrementalOnlyChange,
+            )
             SwitchSettingItem(
                 title = stringResource(R.string.ai_auto_group_include_intro),
                 description = stringResource(R.string.ai_auto_group_include_intro_desc),
@@ -269,6 +298,14 @@ private fun AutoGroupPreflightContent(
                 text = error.localizedText(LocalContext.current),
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.error,
+            )
+        }
+
+        if (state.incrementalOnly && state.bookCount == 0 && state.error == null) {
+            Text(
+                text = stringResource(R.string.ai_auto_group_no_ungrouped_books),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.primary,
             )
         }
 

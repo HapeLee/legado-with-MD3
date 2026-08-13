@@ -18,11 +18,13 @@ data class BookshelfAutoGroupSource(
 }
 
 data class BookshelfAutoGroupPreflight(
+    val analyzedBookCount: Int,
     val effectiveInputCharLimit: Int,
     val estimatedRequestCount: Int,
 )
 
 data class BookshelfAutoGroupOptions(
+    val incrementalOnly: Boolean = true,
     val includeBookIntro: Boolean = false,
     val enableDeepThinking: Boolean = false,
 )
