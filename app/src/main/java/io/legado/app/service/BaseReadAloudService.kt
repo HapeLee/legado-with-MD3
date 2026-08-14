@@ -117,7 +117,6 @@ abstract class BaseReadAloudService : BaseService(),
         private const val TAG = "BaseReadAloudService"
         private const val ACTION_ADD_TIMER = "io.legado.app.action.ADD_READ_ALOUD_TIMER"
         private const val MEDIA_PROGRESS_DURATION_MS = 100_000L
-        private const val NO_FINISH_CHAPTER = -1
 
         private const val READ_ALOUD_MEDIA_SESSION_ACTIONS =
             (PlaybackStateCompat.ACTION_PLAY
@@ -262,7 +261,6 @@ abstract class BaseReadAloudService : BaseService(),
         unregisterReceiver(broadcastReceiver)
         postEvent(EventBus.ALOUD_STATE, Status.STOP)
         notificationManager.cancel(NotificationId.ReadAloudService)
-        notificationManager.cancel(NotificationId.ReadAloudMediaControl)
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_STOPPED)
         systemMediaCompatibilityEnabled = false
         androidMediaControlEnabled = false
@@ -276,7 +274,6 @@ abstract class BaseReadAloudService : BaseService(),
         }
         upNotificationJob?.invokeOnCompletion {
             notificationManager.cancel(NotificationId.ReadAloudService)
-            notificationManager.cancel(NotificationId.ReadAloudMediaControl)
         }
     }
 
@@ -748,9 +745,20 @@ abstract class BaseReadAloudService : BaseService(),
      */
     private fun upMediaSessionPlaybackState(state: Int) {
         val playbackState = PlaybackStateCompat.Builder()
-            .setActions(READ_ALOUD_MEDIA_SESSION_ACTIONS)
+            .setActions(
+                if (androidMediaControlEnabled) {
+                    READ_ALOUD_MEDIA_SESSION_ACTIONS
+                } else {
+                    // 老的"使用媒体通道"路径保持原有行为，避免锁屏媒体控件功能变化。
+                    MediaHelp.MEDIA_SESSION_ACTIONS
+                }
+            )
             // This is a normalized chapter-percentage scale, not a real time axis.
-            .setState(state, mediaProgressPositionMs(), 0f)
+            .setState(
+                state,
+                mediaProgressPositionMs(),
+                if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f,
+            )
         if (androidMediaControlEnabled) {
             playbackState.addCustomAction(
                 PlaybackStateCompat.CustomAction.Builder(
@@ -878,7 +886,6 @@ abstract class BaseReadAloudService : BaseService(),
         val changed = androidMediaControlEnabled != enabled
         androidMediaControlEnabled = enabled
         updateMediaSessionActivation()
-        notificationManager.cancel(NotificationId.ReadAloudMediaControl)
         if (enabled) {
             upMediaMetadata()
         }
@@ -953,7 +960,6 @@ abstract class BaseReadAloudService : BaseService(),
     private fun upReadAloudNotification() {
         upNotificationJob = lifecycleScope.launch(Main.immediate) {
             try {
-                notificationManager.cancel(NotificationId.ReadAloudMediaControl)
                 val notification = createForegroundNotification()
                 notificationManager.notify(NotificationId.ReadAloudService, notification.build())
             } catch (e: Exception) {
@@ -1117,7 +1123,6 @@ abstract class BaseReadAloudService : BaseService(),
      */
     override fun startForegroundNotification() {
         try {
-            notificationManager.cancel(NotificationId.ReadAloudMediaControl)
             val notification = createForegroundNotification()
             startForeground(NotificationId.ReadAloudService, notification.build())
         } catch (e: Exception) {
@@ -1151,33 +1156,27 @@ abstract class BaseReadAloudService : BaseService(),
     protected fun completeCurrentChapter() {
         synchronized(finishChapterTimerLock) {
             val chapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
-            if (ReadBook.durChapterIndex != chapterIndex) {
-                if (finishChapterAtIndex == chapterIndex) {
-                    finishChapterAtIndex = NO_FINISH_CHAPTER
-                }
-                return
+            val decision = decideChapterCompletion(
+                durChapterIndex = ReadBook.durChapterIndex,
+                finishedChapterIndex = chapterIndex,
+                finishChapterAtIndex = finishChapterAtIndex,
+                finishChapterSettingEnabled = ReadConfig.finishCurrentChapterAfterTimer,
+            )
+            if (decision.clearTimer) {
+                finishChapterAtIndex = NO_FINISH_CHAPTER
             }
-            val shouldStop = when {
-                finishChapterAtIndex == NO_FINISH_CHAPTER -> false
-                finishChapterAtIndex != chapterIndex -> {
-                    finishChapterAtIndex = NO_FINISH_CHAPTER
-                    false
+            when (decision.action) {
+                ChapterCompletionAction.STOP -> {
+                    pause = true
+                    stopSelf()
                 }
-                !ReadConfig.finishCurrentChapterAfterTimer -> {
-                    finishChapterAtIndex = NO_FINISH_CHAPTER
-                    false
+
+                ChapterCompletionAction.ADVANCE -> {
+                    // synchronized is reentrant, so nextChapter() may clear the same state safely.
+                    nextChapter()
                 }
-                else -> {
-                    finishChapterAtIndex = NO_FINISH_CHAPTER
-                    true
-                }
-            }
-            if (shouldStop) {
-                pause = true
-                stopSelf()
-            } else {
-                // synchronized is reentrant, so nextChapter() may clear the same state safely.
-                nextChapter()
+
+                ChapterCompletionAction.SKIP -> Unit
             }
         }
     }
@@ -1285,6 +1284,50 @@ internal fun normalizedMediaProgressMs(
     if (chapterLength <= 0 || durationMs <= 0) return 0L
     val position = chapterPosition.coerceIn(0, chapterLength)
     return position.toLong() * durationMs / chapterLength
+}
+
+/** Sentinel for "finish current chapter" timer not being armed. */
+internal const val NO_FINISH_CHAPTER = -1
+
+internal enum class ChapterCompletionAction {
+    /** Timer expired during this chapter — stop read-aloud now. */
+    STOP,
+    /** No finish-chapter intent — continue to the next chapter. */
+    ADVANCE,
+    /** The chapter already advanced concurrently — do nothing. */
+    SKIP,
+}
+
+internal data class ChapterCompletionDecision(
+    val action: ChapterCompletionAction,
+    val clearTimer: Boolean,
+)
+
+/**
+ * Decides what a natural chapter boundary should do against the "finish current
+ * chapter after timer" state. Pure and thread-free so it can be unit tested.
+ */
+internal fun decideChapterCompletion(
+    durChapterIndex: Int,
+    finishedChapterIndex: Int,
+    finishChapterAtIndex: Int,
+    finishChapterSettingEnabled: Boolean,
+): ChapterCompletionDecision {
+    if (durChapterIndex != finishedChapterIndex) {
+        // The chapter already advanced (race) — only clear a stale arm for the finished chapter.
+        return ChapterCompletionDecision(
+            action = ChapterCompletionAction.SKIP,
+            clearTimer = finishChapterAtIndex == finishedChapterIndex,
+        )
+    }
+    return when {
+        finishChapterAtIndex == NO_FINISH_CHAPTER ->
+            ChapterCompletionDecision(ChapterCompletionAction.ADVANCE, clearTimer = false)
+        finishChapterAtIndex != finishedChapterIndex || !finishChapterSettingEnabled ->
+            ChapterCompletionDecision(ChapterCompletionAction.ADVANCE, clearTimer = true)
+        else ->
+            ChapterCompletionDecision(ChapterCompletionAction.STOP, clearTimer = true)
+    }
 }
 
 internal inline fun findReadAloudPageIndex(
