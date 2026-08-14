@@ -394,7 +394,7 @@ fun ReadAloudPlayerScreenContent(
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Speed) {
                         PlayerAdjustmentSlider(
                             title = stringResource(R.string.read_aloud_adjust_speed),
-                            value = speedPreview.coerceIn(5f, 20f),
+                            value = speedPreview.coerceIn(0f, 80f),
                             valueLabel = (speedPreview / 10f).let {
                                 if (it == it.roundToInt().toFloat()) {
                                     "${it.roundToInt()}.0"
@@ -408,8 +408,8 @@ fun ReadAloudPlayerScreenContent(
                             onValueChangeFinished = {
                                 onIntent(ReadAloudPlayerIntent.SetSpeed(speedPreview.roundToInt()))
                             },
-                            valueRange = 5f..20f,
-                            steps = 14,
+                            valueRange = 0f..80f,
+                            steps = 79,
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Timer) {
