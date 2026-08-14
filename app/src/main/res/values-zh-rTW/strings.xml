@@ -1777,6 +1777,10 @@
     <string name="firebase_enable_title">匿名統計</string>
     <string name="firebase_enable_summary">允許應用使用 Google Firebase 進行崩潰和效能報告</string>
     <string name="locate_current">定位目前位置</string>
+    <string name="read_aloud_android_media_control">Android 媒體控制</string>
+    <string name="read_aloud_android_media_control_summary">啟用後，以 Android 系統媒體控制取代預設朗讀通知</string>
+    <string name="finish_current_chapter_after_timer">定時到點後讀完本章</string>
+    <string name="finish_current_chapter_after_timer_summary">定時結束後繼續朗讀，讀完目前章節再停止</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">如果鎖定畫面上缺少系統媒體控制項，請啟用此選項（例如 OneUI 7.0、OriginOS）</string>
     <string name="read_aloud_pause_resume">暫停/繼續朗讀</string>

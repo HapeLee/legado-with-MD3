@@ -1691,6 +1691,10 @@
     <string name="firebase_enable_summary">Allow the app to use Google Firebase for crash and performance reports</string>
     <string name="locate_current">Locate Current</string>
     <string name="padding_display_cutouts">Fill Display Cutout</string>
+    <string name="read_aloud_android_media_control">Android media controls</string>
+    <string name="read_aloud_android_media_control_summary">Replace the default read-aloud notification with Android system media controls when enabled</string>
+    <string name="finish_current_chapter_after_timer">Finish current chapter after timer</string>
+    <string name="finish_current_chapter_after_timer_summary">When the timer expires, continue reading until the current chapter finishes</string>
     <string name="system_media_control_compatibility_change">System Media Control Compatibility</string>
     <string name="system_media_control_compatibility_change_summary">Enable if system media controls are missing on lock screen (e.g. OneUI 7.0, OriginOS)</string>
     <string name="read_aloud_pause_resume">Pause/Resume Reading Aloud</string>

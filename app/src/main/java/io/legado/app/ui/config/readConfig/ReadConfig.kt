@@ -86,12 +86,14 @@ object ReadConfig {
     val ttsFollowSys get() = aloud.ttsFollowSys
     val ttsSpeechRate get() = aloud.ttsSpeechRate
     val ttsTimer get() = aloud.ttsTimer
+    val finishCurrentChapterAfterTimer get() = aloud.finishCurrentChapterAfterTimer
     val ttsParagraphInterval get() = aloud.ttsParagraphInterval
     val ignoreAudioFocus get() = aloud.ignoreAudioFocus
     val pauseReadAloudWhilePhoneCalls get() = aloud.pauseReadAloudWhilePhoneCalls
     val readAloudWakeLock get() = aloud.readAloudWakeLock
     val mediaButtonPerNext get() = aloud.mediaButtonPerNext
     val readAloudByPage get() = aloud.readAloudByPage
+    val androidMediaControlEnabled get() = aloud.androidMediaControlEnabled
     val systemMediaControlCompatibilityChange get() = aloud.systemMediaControlCompatibilityChange
     val streamReadAloudAudio get() = aloud.streamReadAloudAudio
     val contentSelectSpeakMod get() = aloud.contentSelectSpeakMode

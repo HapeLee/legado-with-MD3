@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.KeyEvent
 import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.config.AppConfig
@@ -48,7 +49,7 @@ class MediaButtonReceiver : BroadcastReceiver() {
                     LogUtils.d(TAG, "Receive mediaButton event, keycode:$keycode")
                     when (keycode) {
                         KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
-                            if (context.getPrefBoolean("mediaButtonPerNext", false)) {
+                            if (context.getPrefBoolean(PreferKey.mediaButtonPerNext, false)) {
                                 ReadBook.moveToPrevChapter(true)
                             } else {
                                 ReadAloud.prevParagraph(context)
@@ -56,7 +57,7 @@ class MediaButtonReceiver : BroadcastReceiver() {
                         }
 
                         KeyEvent.KEYCODE_MEDIA_NEXT -> {
-                            if (context.getPrefBoolean("mediaButtonPerNext", false)) {
+                            if (context.getPrefBoolean(PreferKey.mediaButtonPerNext, false)) {
                                 ReadBook.moveToNextChapter(true)
                             } else {
                                 ReadAloud.nextParagraph(context)

@@ -2210,6 +2210,10 @@
     <string name="system_contrast">系統對比度</string>
     <string name="system_contrast_value">系統對比度：%1$s</string>
     <string name="system_engine">系統引擎</string>
+    <string name="read_aloud_android_media_control">Android 媒體控制</string>
+    <string name="read_aloud_android_media_control_summary">啟用後，以 Android 系統媒體控制取代預設朗讀通知</string>
+    <string name="finish_current_chapter_after_timer">定時到點後讀完本章</string>
+    <string name="finish_current_chapter_after_timer_summary">定時結束後繼續朗讀，讀完目前章節再停止</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">若鎖定螢幕缺少系統媒體控制項時啟用（例如 OneUI 7.0、OriginOS）</string>
     <string name="tabletInterface">平板介面</string>

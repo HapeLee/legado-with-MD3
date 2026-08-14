@@ -204,10 +204,14 @@ class HttpReadAloudService : BaseReadAloudService(),
         preDownloadJob?.cancel()
     }
 
-    private fun updateNextPos() {
+    private fun updateNextPos(naturalCompletion: Boolean = false) {
         if (!playbackQueue.isEmpty) {
             val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
-            playbackQueue.next(current)?.let(::moveToPlaybackCursor) ?: nextChapter()
+            playbackQueue.next(current)?.let(::moveToPlaybackCursor) ?: if (naturalCompletion) {
+                completeCurrentChapter()
+            } else {
+                nextChapter()
+            }
             return
         }
         readAloudNumber += contentList[nowSpeak].length + 1 - paragraphStartPos
@@ -215,7 +219,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (nowSpeak < contentList.lastIndex) {
             nowSpeak++
         } else {
-            nextChapter()
+            if (naturalCompletion) completeCurrentChapter() else nextChapter()
         }
     }
 
@@ -1120,7 +1124,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val interval = readAloudSettings.ttsParagraphInterval.toLong()
                 if (interval > 0) {
                     val isLastParagraph = nowSpeak >= contentList.lastIndex
-                    updateNextPos()
+                    updateNextPos(naturalCompletion = true)
                     exoPlayer.stop()
                     exoPlayer.clearMediaItems()
                     if (!pause && !isLastParagraph) {
@@ -1138,7 +1142,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         }
                     }
                 } else {
-                    updateNextPos()
+                    updateNextPos(naturalCompletion = true)
                     exoPlayer.stop()
                     exoPlayer.clearMediaItems()
                 }
@@ -1163,7 +1167,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
             playErrorNo = 0
         }
-        updateNextPos()
+        updateNextPos(naturalCompletion = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }
@@ -1183,7 +1187,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 exoPlayer.prepare()
             } else {
                 exoPlayer.clearMediaItems()
-                updateNextPos()
+                updateNextPos(naturalCompletion = true)
             }
         }
     }

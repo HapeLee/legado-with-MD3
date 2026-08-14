@@ -51,7 +51,13 @@ class ReadAloudPlayerViewModel(
             is ReadAloudPlayerIntent.SetSpeed -> viewModelScope.launch {
                 coordinator.setSpeed(intent.value)
             }
-            is ReadAloudPlayerIntent.SetTimer -> coordinator.setTimer(intent.minutes)
+            is ReadAloudPlayerIntent.SetTimer -> viewModelScope.launch {
+                coordinator.setTimer(intent.minutes)
+            }
+            is ReadAloudPlayerIntent.SetFinishCurrentChapterAfterTimer ->
+                viewModelScope.launch {
+                    coordinator.setFinishCurrentChapterAfterTimer(intent.value)
+                }
             is ReadAloudPlayerIntent.SeekTo -> coordinator.seekTo(
                 chapterPosition = intent.chapterPosition,
                 chapterLength = uiState.value.chapterLength,
@@ -105,6 +111,7 @@ class ReadAloudPlayerViewModel(
             isPaused = source.isPaused,
             speed = source.speed,
             timerMinutes = source.timerMinutes,
+            finishCurrentChapterAfterTimer = source.finishCurrentChapterAfterTimer,
             bgMode = bgMode,
         )
     }

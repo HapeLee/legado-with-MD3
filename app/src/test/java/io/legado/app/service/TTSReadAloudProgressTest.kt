@@ -87,4 +87,12 @@ class TTSReadAloudProgressTest {
         )
     }
 
+    @Test
+    fun mediaProgressUsesTheSameChapterPercentageAsThePlayer() {
+        assertEquals(25_000L, normalizedMediaProgressMs(670, 2_680, 100_000L))
+        assertEquals(0L, normalizedMediaProgressMs(-10, 2_680, 100_000L))
+        assertEquals(100_000L, normalizedMediaProgressMs(3_000, 2_680, 100_000L))
+        assertEquals(0L, normalizedMediaProgressMs(10, 0, 100_000L))
+    }
+
 }

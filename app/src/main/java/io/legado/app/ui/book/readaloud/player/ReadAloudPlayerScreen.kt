@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,6 +113,7 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -168,8 +170,13 @@ fun ReadAloudPlayerScreenContent(
     }
     val pageContentPadding = PaddingValues(
         top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 88.dp,
-        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                if (activeAdjustment == null) 216.dp else 264.dp,
+        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + when (
+            activeAdjustment
+        ) {
+            null -> 216.dp
+            PlayerAdjustment.Speed -> 264.dp
+            PlayerAdjustment.Timer -> 344.dp
+        },
     )
     val overlayHazeStyle = HazeLegado.ultraThinPlus(
         containerColor = LegadoTheme.colorScheme.surface,
@@ -195,6 +202,7 @@ fun ReadAloudPlayerScreenContent(
                     .fillMaxWidth()
                     .clip(RectangleShape)
                     .then(hazeModifier)
+                    .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .windowInsetsPadding(WindowInsets.statusBars),
             ) {
                 Row(
@@ -256,6 +264,7 @@ fun ReadAloudPlayerScreenContent(
                         .fillMaxWidth()
                         .clip(RectangleShape)
                         .then(hazeModifier)
+                        .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -413,23 +422,41 @@ fun ReadAloudPlayerScreenContent(
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Timer) {
-                        PlayerAdjustmentSlider(
-                            title = stringResource(R.string.set_timer),
-                            value = timerPreview.coerceIn(0f, 180f),
-                            valueLabel = if (timerPreview == 0f) {
-                                stringResource(R.string.close)
-                            } else {
-                                stringResource(R.string.timer_m, timerPreview.roundToInt())
-                            },
-                            startLabel = stringResource(R.string.close),
-                            endLabel = stringResource(R.string.timer_m, 180),
-                            onValueChange = { timerPreview = (it / 10f).roundToInt() * 10f },
-                            onValueChangeFinished = {
-                                onIntent(ReadAloudPlayerIntent.SetTimer(timerPreview.roundToInt()))
-                            },
-                            valueRange = 0f..180f,
-                            steps = 17,
-                        )
+                        Column {
+                            PlayerAdjustmentSlider(
+                                title = stringResource(R.string.set_timer),
+                                value = timerPreview.coerceIn(0f, 180f),
+                                valueLabel = if (timerPreview == 0f) {
+                                    stringResource(R.string.close)
+                                } else {
+                                    stringResource(R.string.timer_m, timerPreview.roundToInt())
+                                },
+                                startLabel = stringResource(R.string.close),
+                                endLabel = stringResource(R.string.timer_m, 180),
+                                onValueChange = { timerPreview = (it / 10f).roundToInt() * 10f },
+                                onValueChangeFinished = {
+                                    onIntent(ReadAloudPlayerIntent.SetTimer(timerPreview.roundToInt()))
+                                },
+                                valueRange = 0f..180f,
+                                steps = 17,
+                            )
+                            TinySwitchSettingItem(
+                                title = stringResource(
+                                    R.string.finish_current_chapter_after_timer
+                                ),
+                                description = stringResource(
+                                    R.string.finish_current_chapter_after_timer_summary
+                                ),
+                                checked = state.finishCurrentChapterAfterTimer,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                                onCheckedChange = {
+                                    onIntent(
+                                        ReadAloudPlayerIntent.SetFinishCurrentChapterAfterTimer(it)
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }

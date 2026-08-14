@@ -86,11 +86,15 @@ class ReadAloudDelegate(
                         readAloudCapsuleOffsetY = prefs.capsuleOffsetY,
                         readAloudMediaButtonPerNext = prefs.mediaButtonPerNext,
                         readAloudByPage = prefs.readAloudByPage,
-                        readAloudSystemMediaCompat = prefs.systemMediaControlCompatibilityChange,
+                        readAloudSystemMediaCompat =
+                            prefs.systemMediaControlCompatibilityChange,
+                        readAloudAndroidMediaControl = prefs.androidMediaControlEnabled,
                         readAloudStreamAudio = prefs.streamReadAloudAudio,
                         readAloudTtsFollowSys = prefs.ttsFollowSys,
                         readAloudTtsSpeechRate = prefs.ttsSpeechRate,
                         readAloudTtsTimer = prefs.ttsTimer,
+                        readAloudFinishCurrentChapterAfterTimer =
+                            prefs.finishCurrentChapterAfterTimer,
                         speechAnalysisMode = prefs.speechAnalysisMode,
                         useMultiSpeaker = prefs.useMultiSpeaker,
                         defaultReadAloudInterface = prefs.defaultInterface,
@@ -324,6 +328,9 @@ class ReadAloudDelegate(
     fun setSystemMediaCompat(value: Boolean) =
         updateSettings { it.copy(systemMediaControlCompatibilityChange = value) }
 
+    fun setAndroidMediaControl(value: Boolean) =
+        updateSettings { it.copy(androidMediaControlEnabled = value) }
+
     fun setByPage(value: Boolean) {
         updateSettings { it.copy(readAloudByPage = value) }
         if (value) postEvent(EventBus.MEDIA_BUTTON, false)
@@ -354,6 +361,11 @@ class ReadAloudDelegate(
         ReadAloud.setTimer(context, timer)
         updateSettings { it.copy(ttsTimer = timer) }
         host.updateState { it.copy(readAloudTtsTimer = timer) }
+    }
+
+    fun setFinishCurrentChapterAfterTimer(value: Boolean) {
+        updateSettings { it.copy(finishCurrentChapterAfterTimer = value) }
+        host.updateState { it.copy(readAloudFinishCurrentChapterAfterTimer = value) }
     }
 
     fun setTtsSpeechRate(value: Int) {

@@ -1320,6 +1320,8 @@ class ReadBookViewModel(
             is ReadBookIntent.SetReadAloudByPage -> readAloudDelegate.setByPage(intent.value)
             is ReadBookIntent.SetReadAloudSystemMediaCompat ->
                 readAloudDelegate.setSystemMediaCompat(intent.value)
+            is ReadBookIntent.SetReadAloudAndroidMediaControl ->
+                readAloudDelegate.setAndroidMediaControl(intent.value)
             is ReadBookIntent.SetReadAloudStreamAudio ->
                 readAloudDelegate.setStreamAudio(intent.value)
             is ReadBookIntent.ReadAloudPrevParagraph -> readAloudDelegate.prevParagraph()
@@ -1329,6 +1331,8 @@ class ReadBookViewModel(
             is ReadBookIntent.ReadAloudPrevChapter -> readAloudDelegate.prevChapter()
             is ReadBookIntent.ReadAloudNextChapter -> readAloudDelegate.nextChapter()
             is ReadBookIntent.SetReadAloudTtsTimer -> readAloudDelegate.setTtsTimer(intent.value)
+            is ReadBookIntent.SetFinishCurrentChapterAfterTimer ->
+                readAloudDelegate.setFinishCurrentChapterAfterTimer(intent.value)
             is ReadBookIntent.SetReadAloudTtsFollowSys ->
                 readAloudDelegate.setTtsFollowSys(intent.value)
             is ReadBookIntent.SetReadAloudTtsSpeechRate ->
