@@ -1,7 +1,9 @@
 package io.legado.app.ui.book.source.manage
 
 import android.app.Application
+import android.net.Uri
 import android.text.TextUtils
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonParser
@@ -31,9 +33,11 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.inputStream
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
+import io.legado.app.utils.isUri
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -107,37 +111,58 @@ class BookSourceViewModel(
         }
     }
 
-    private val listState = combine(
+    private val sourceFilter = combine(searchKey, filter) { query, activeFilter ->
+        SourceFilter(query, activeFilter)
+    }
+
+    private val sourceSort = combine(sort, sortAscending, groupByDomain) {
+            activeSort,
+            ascending,
+            byDomain,
+        ->
+        SourceSort(activeSort, ascending, byDomain)
+    }
+
+    private val importedOrFilteredItems = combine(
         repository.flowAll(),
-        repository.flowGroups(),
-        searchKey,
-        isSearchMode,
-        filter,
-        selectedIds,
-        sort,
-        sortAscending,
-        groupByDomain,
         localItems,
-        enabledOverrides,
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
-        val sourceItems = (values[0] as List<BookSourcePart>)
-        val groups = values[1] as List<String>
-        val query = values[2] as String
-        val searchMode = values[3] as Boolean
-        val activeFilter = values[4] as String?
-        val selected = values[5] as Set<String>
-        val activeSort = values[6] as BookSourceSort
-        val ascending = values[7] as Boolean
-        val byDomain = values[8] as Boolean
-        val local = values[9] as List<BookSourcePart>?
-        val pendingEnabled = values[10] as Map<String, Boolean>
-        val visible = if (local == null) {
-            sourceItems.filterFor(activeFilter, query).sortFor(activeSort, ascending, byDomain)
+        sourceFilter,
+    ) { sourceItems, local, activeFilter ->
+        if (local == null) {
+            sourceItems.filterFor(activeFilter.name, activeFilter.query)
         } else {
             val latestById = sourceItems.associateBy { it.bookSourceUrl }
             local.mapNotNull { latestById[it.bookSourceUrl] }
         }
+    }
+
+    private val visibleItems = combine(importedOrFilteredItems, localItems, sourceSort) {
+            items,
+            local,
+            activeSort,
+        ->
+        if (local == null) {
+            items.sortFor(activeSort.sort, activeSort.ascending, activeSort.groupByDomain)
+        } else {
+            items
+        }
+    }
+
+    private val listConfiguration = combine(
+        sourceFilter,
+        isSearchMode,
+        selectedIds,
+        sourceSort,
+        enabledOverrides,
+    ) { activeFilter, searchMode, selected, activeSort, pendingEnabled ->
+        ListConfiguration(activeFilter, searchMode, selected, activeSort, pendingEnabled)
+    }
+
+    private val listState = combine(
+        visibleItems,
+        repository.flowGroups(),
+        listConfiguration,
+    ) { visible, groups, configuration ->
         BookSourceUiState(
             items = visible.map { source ->
                 BookSourceItemUi(
@@ -145,26 +170,47 @@ class BookSourceViewModel(
                     domain = NetworkUtils.getSubDomainOrNull(source.bookSourceUrl) ?: "#",
                     name = source.bookSourceName,
                     group = source.bookSourceGroup,
-                    enabled = pendingEnabled[source.bookSourceUrl] ?: source.enabled,
+                    enabled = configuration.enabledOverrides[source.bookSourceUrl] ?: source.enabled,
                     enabledExplore = source.enabledExplore,
                     hasLoginUrl = source.hasLoginUrl,
                     hasExploreUrl = source.hasExploreUrl,
                     customOrder = source.customOrder,
                 )
             }.toImmutableList(),
-            selectedIds = selected.intersect(visible.map { it.bookSourceUrl }.toSet())
+            selectedIds = configuration.selectedIds.intersect(visible.map { it.bookSourceUrl }.toSet())
                 .toImmutableSet(),
-            searchKey = query,
-            groupFilterName = activeFilter?.displayName(application),
-            activeFilter = activeFilter,
+            searchKey = configuration.filter.query,
+            groupFilterName = configuration.filter.name?.displayName(application),
+            activeFilter = configuration.filter.name,
             groups = groups.toImmutableList(),
-            sort = activeSort,
-            sortAscending = ascending,
-            groupByDomain = byDomain,
-            interaction = io.legado.app.ui.widget.components.list.InteractionState(isSearchMode = searchMode),
+            sort = configuration.sort.sort,
+            sortAscending = configuration.sort.ascending,
+            groupByDomain = configuration.sort.groupByDomain,
+            interaction = io.legado.app.ui.widget.components.list.InteractionState(
+                isSearchMode = configuration.isSearchMode,
+            ),
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookSourceUiState())
+
+    private data class SourceFilter(
+        val query: String,
+        val name: String?,
+    )
+
+    private data class SourceSort(
+        val sort: BookSourceSort,
+        val ascending: Boolean,
+        val groupByDomain: Boolean,
+    )
+
+    private data class ListConfiguration(
+        val filter: SourceFilter,
+        val isSearchMode: Boolean,
+        val selectedIds: Set<String>,
+        val sort: SourceSort,
+        val enabledOverrides: Map<String, Boolean>,
+    )
 
     val uiState = combine(
         listState,
@@ -401,6 +447,10 @@ class BookSourceViewModel(
                             )
                         } else url(input)
                     }.decompressed().text("utf-8")
+                } else if (input.isUri()) {
+                    input.toUri().inputStream(application).getOrThrow()
+                        .bufferedReader()
+                        .use { it.readText() }
                 } else input
                 val sources = parseImportSources(text)
                 val settings = otherSettingsGateway.currentSettings
@@ -523,7 +573,7 @@ class BookSourceViewModel(
         }
     }
 
-    private fun exportSources(uri: android.net.Uri, ids: Set<String>) = launch {
+    private fun exportSources(uri: Uri, ids: Set<String>) = launch {
         runCatching {
             val selected = repository.getAll().filter { ids.isEmpty() || it.bookSourceUrl in ids }
             application.contentResolver.openOutputStream(uri)?.bufferedWriter()
