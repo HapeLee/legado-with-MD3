@@ -14,11 +14,11 @@ import kotlin.reflect.full.primaryConstructor
 class ReadSettingsMappingTest {
 
     @Test
-    fun `gateway 持久化映射覆盖 ReadSettings 全部 108 个字段`() {
+    fun `gateway 持久化映射覆盖 ReadSettings 全部 109 个字段`() {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(108, actualKeys.size)
+        assertEquals(109, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 

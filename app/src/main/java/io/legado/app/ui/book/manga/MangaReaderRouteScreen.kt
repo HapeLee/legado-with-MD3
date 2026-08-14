@@ -2,12 +2,12 @@ package io.legado.app.ui.book.manga
 
 import android.view.KeyEvent
 import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import dev.chrisbanes.haze.HazeState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -41,7 +41,7 @@ fun MangaReaderRouteScreen(
         sourceType: Int?,
     ) -> Unit,
 ) {
-    val activity = LocalContext.current as MainActivity
+    val activity = LocalActivity.current as MainActivity
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val networkChangedListener = remember(activity) { NetworkChangedListener(activity) }

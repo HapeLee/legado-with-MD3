@@ -149,6 +149,8 @@ class ConfigUpdateActionsInvariantTest {
             "AutoReadSpeed",
             // 只决定点击目录时开新 Sheet 还是旧 Activity，取用时读设置，无渲染副作用
             "UseNewTocSheet",
+            // 只影响下次目录解析时的无规则章节切分长度，取用时读设置，无渲染副作用
+            "MaxLengthWithNoToc",
         )
     }
 }

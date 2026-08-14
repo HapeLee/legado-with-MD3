@@ -132,16 +132,21 @@ class ReadBookDomainSplitBoundaryTest {
      *   只有 VM 能管，摘不成 delegate。意图入口与 Host 实现与书签域同款，只能在 VM。
      * - `caafbfdde`（优化一些AI功能）：AI 域三个 reasoning level 意图分支转发给
      *   `aiDelegate`——意图入口只能在 VM，每档两行（分支 + 转发）。
+     *
+     * 2664 → 2668：朗读域新增两个意图分支（安卓媒体控制 / 定时到点后读完本章），
+     * 合并自 PR #2024。朗读域早已是 `ReadAloudDelegate`——留在 VM 的只有两条 `when`
+     * 分支转发，各两行（分支 + 转发），与上方 `SetReadAloudSystemMediaCompat` 等兄弟
+     * 分支同款，逐行都摘不掉：意图入口只能在 VM。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2664 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2668 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2664。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2668。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2664,
+            lineCount <= 2668,
         )
     }
 
