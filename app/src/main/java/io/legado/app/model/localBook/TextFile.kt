@@ -9,6 +9,7 @@ import io.legado.app.exception.EmptyFileException
 import io.legado.app.help.DefaultData
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.upKind
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
@@ -59,9 +60,6 @@ class TextFile(private var book: Book) {
 
     //默认从文件中获取数据的长度
     private val bufferSize = 512000
-
-    //没有标题的时候，每个章节的最大长度
-    private val maxLengthWithNoToc = 10 * 1024
 
     //使用正则划分目录，每个章节的最大允许长度
     private val maxLengthWithToc = 102400
@@ -364,6 +362,9 @@ class TextFile(private var book: Book) {
     ): Pair<ArrayList<BookChapter>, Int> {
         val toc = arrayListOf<BookChapter>()
         var bookWordCount = 0
+        val maxByteLengthWithNoToc = maxLengthWithNoTocBytes(
+            charset, ReadConfig.maxLengthWithNoToc
+        )
         LocalBook.getBookInputStream(book).use { bis ->
             //block的个数
             var blockPos = 0
@@ -404,10 +405,10 @@ class TextFile(private var book: Book) {
                 while (strLength > 0) {
                     chapterPos++
                     //是否长度超过一章
-                    if (strLength > maxLengthWithNoToc) { //在buffer中一章的终止点
+                    if (strLength > maxByteLengthWithNoToc) { //在buffer中一章的终止点
                         var end = length
                         //寻找换行符作为终止点
-                        for (i in chapterOffset + maxLengthWithNoToc until length) {
+                        for (i in chapterOffset + maxByteLengthWithNoToc until length) {
                             if (buffer[i] == blank) {
                                 end = i
                                 break
@@ -455,6 +456,22 @@ class TextFile(private var book: Book) {
             }
         }
         return toc to bookWordCount
+    }
+
+    /**
+     * 把无目录时章节的"字数"上限换算成 buffer 的字节长度上限。
+     * 不同编码单个汉字占用的字节数不同：UTF-8 为 3 字节、GBK/GB18030 为 2 字节、
+     * UTF-16 基本平面为 2 字节（代理对按 2 字节估算），其余单字节编码按 1 字节处理。
+     */
+    private fun maxLengthWithNoTocBytes(charset: Charset, chars: Int): Int {
+        val name = charset.name().uppercase()
+        val bytesPerChar = when {
+            name.contains("UTF-8") -> 3
+            name.startsWith("GB") -> 2
+            name.contains("UTF-16") -> 2
+            else -> 1
+        }
+        return chars * bytesPerChar
     }
 
     /**

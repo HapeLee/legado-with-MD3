@@ -78,6 +78,7 @@ object ReadConfig {
     val bookmarkBadgeSize get() = read.bookmarkBadgeSize
     val sliderVibrator get() = read.sliderVibrator
     val useNewTocSheet get() = read.useNewTocSheet
+    val maxLengthWithNoToc get() = read.maxLengthWithNoToc
     val selectVibrator get() = read.selectVibrator
 
     val speechRatePlay get() = if (aloud.ttsFollowSys) 5 else aloud.ttsSpeechRate

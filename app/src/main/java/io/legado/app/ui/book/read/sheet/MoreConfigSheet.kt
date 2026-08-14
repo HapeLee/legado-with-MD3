@@ -129,6 +129,9 @@ fun MoreConfigSheet(
                 onUseNewTocSheetChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseNewTocSheet(it)))
                 },
+                onMaxLengthWithNoTocChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MaxLengthWithNoToc(it)))
+                },
                 onSelectVibratorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SelectVibrator(it)))
                 },
@@ -325,6 +328,7 @@ private fun OtherSettings(
     preferences: ReadPreferences,
     onSliderVibratorChange: (Boolean) -> Unit,
     onUseNewTocSheetChange: (Boolean) -> Unit,
+    onMaxLengthWithNoTocChange: (Int) -> Unit,
     onSelectVibratorChange: (Boolean) -> Unit,
     onAutoChangeSourceChange: (Boolean) -> Unit,
     onDefaultSourceChangeAllChange: (Boolean) -> Unit,
@@ -353,6 +357,19 @@ private fun OtherSettings(
         title = stringResource(R.string.use_new_toc_sheet),
         checked = preferences.useNewTocSheet,
         onCheckedChange = onUseNewTocSheetChange,
+    )
+
+    TinySliderSettingItem(
+        title = stringResource(R.string.no_toc_split_length_title),
+        description = stringResource(
+            R.string.no_toc_split_length_summary,
+            preferences.maxLengthWithNoToc
+        ),
+        value = preferences.maxLengthWithNoToc.toFloat(),
+        valueRange = 3000f..100000f,
+        stepSize = 100f,
+        valueFormat = { it.roundToInt().toString() },
+        onValueChange = { onMaxLengthWithNoTocChange(it.roundToInt()) },
     )
 
     TinySwitchSettingItem(

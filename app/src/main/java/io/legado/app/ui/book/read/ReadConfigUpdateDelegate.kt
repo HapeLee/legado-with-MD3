@@ -658,6 +658,11 @@ class ReadConfigUpdateDelegate(
                     readSettingsRepository.setUseNewTocSheet(update.value)
                 }
             }
+            is ConfigUpdate.MaxLengthWithNoToc -> {
+                scope.launch {
+                    readSettingsRepository.setMaxLengthWithNoToc(update.value)
+                }
+            }
             is ConfigUpdate.SelectVibrator -> {
                 scope.launch {
                     readSettingsRepository.setSelectVibrator(update.value)

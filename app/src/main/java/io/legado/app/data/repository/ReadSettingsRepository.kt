@@ -125,6 +125,9 @@ class ReadSettingsRepository(
     suspend fun setUseNewTocSheet(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.useNewTocSheet, value)
 
+    suspend fun setMaxLengthWithNoToc(value: Int) =
+        settingsRepository.putInt(PreferKey.maxLengthWithNoToc, value)
+
     suspend fun setSelectVibrator(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.selectVibrator, value)
 
@@ -368,6 +371,7 @@ class ReadSettingsRepository(
             pageTouchSlop = compatDsValue(Keys.PageTouchSlop, 0),
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
+            maxLengthWithNoToc = compatDsValue(Keys.MaxLengthWithNoToc, 3000),
             selectVibrator = compatDsValue(Keys.SelectVibrator, false),
             autoChangeSource = compatDsValue(Keys.AutoChangeSource, true),
             autoSuggestDayNight = compatDsValue(Keys.AutoSuggestDayNight, false),
@@ -486,6 +490,7 @@ class ReadSettingsRepository(
         val PageTouchSlop = intPreferencesKey(PreferKey.pageTouchSlop)
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val UseNewTocSheet = booleanPreferencesKey(PreferKey.useNewTocSheet)
+        val MaxLengthWithNoToc = intPreferencesKey(PreferKey.maxLengthWithNoToc)
         val SelectVibrator = booleanPreferencesKey(PreferKey.selectVibrator)
         val AutoChangeSource = booleanPreferencesKey(PreferKey.autoChangeSource)
         val AutoSuggestDayNight = booleanPreferencesKey(PreferKey.autoSuggestDayNight)
@@ -614,6 +619,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.pageTouchSlop to pageTouchSlop,
     PreferKey.sliderVibrator to sliderVibrator,
     PreferKey.useNewTocSheet to useNewTocSheet,
+    PreferKey.maxLengthWithNoToc to maxLengthWithNoToc,
     PreferKey.selectVibrator to selectVibrator,
     PreferKey.autoChangeSource to autoChangeSource,
     PreferKey.autoSuggestDayNight to autoSuggestDayNight,

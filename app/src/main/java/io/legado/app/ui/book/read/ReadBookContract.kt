@@ -1572,6 +1572,9 @@ sealed interface ConfigUpdate {
     data class UseNewTocSheet(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
+    data class MaxLengthWithNoToc(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class SelectVibrator(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
