@@ -26,6 +26,7 @@ data class AiAutoGroupUiState(
     val currentBatch: Int = 0,
     val totalBatches: Int = 0,
     val groupingInstruction: String = "",
+    val incrementalOnly: Boolean = true,
     val includeBookIntro: Boolean = false,
     val enableDeepThinking: Boolean = false,
     val groups: ImmutableList<AiAutoGroupGroupUi> = persistentListOf(),
@@ -104,6 +105,7 @@ sealed interface AiAutoGroupIntent {
     data class IgnoreBook(val bookUrl: String) : AiAutoGroupIntent
     data class AddGroup(val name: String) : AiAutoGroupIntent
     data class UpdateGroupingInstruction(val instruction: String) : AiAutoGroupIntent
+    data class SetIncrementalOnly(val enabled: Boolean) : AiAutoGroupIntent
     data class SetIncludeBookIntro(val enabled: Boolean) : AiAutoGroupIntent
     data class SetDeepThinkingEnabled(val enabled: Boolean) : AiAutoGroupIntent
     data class UpdateRevisionInstruction(val instruction: String) : AiAutoGroupIntent

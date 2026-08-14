@@ -2771,11 +2771,15 @@
     <string name="ai_auto_group_applying">正在套用分組</string>
     <string name="ai_auto_group_confirm_title">確認執行分組方案</string>
     <string name="ai_auto_group_confirm_message">將建立 %1$d 個分組，調整 %2$d 本書，略過 %3$d 本書。現有公開分組歸屬會被取代，私密分組保持不變。</string>
+    <string name="ai_auto_group_confirm_message_incremental">將建立 %1$d 個分組，為 %2$d 本未分組書籍設定分組，略過 %3$d 本書。已分組書籍和私密分組保持不變。</string>
     <string name="ai_auto_group_execute">執行</string>
     <string name="ai_auto_group_will_analyze">將分析 %1$d 本書</string>
     <string name="ai_auto_group_preflight_description">會將書名、作者、分類和目前公開分組傳送給已設定的 AI；簡介只會在開啟下方選項時傳送，私密分組中的書籍不會傳送。AI 只會產生方案，確認前不會修改書架。</string>
+    <string name="ai_auto_group_preflight_description_incremental">只會將未分組書籍的書名、作者和分類傳送給已設定的 AI；現有公開分組名稱會用於沿用，但不會傳送已分組或私密分組書籍的資料。簡介只會在開啟下方選項時傳送。</string>
     <string name="ai_auto_group_existing_summary">已有 %1$d 個用戶分組，%2$d 本書已有分組。</string>
     <string name="ai_auto_group_batch_estimate">預計分為 %1$d 次 AI 請求依序處理。</string>
+    <string name="ai_auto_group_incremental">增量分組</string>
+    <string name="ai_auto_group_incremental_desc">只分析尚未加入公開分組的書籍，並保持現有分組歸屬不變。</string>
     <string name="ai_auto_group_include_intro">參考書籍簡介</string>
     <string name="ai_auto_group_include_intro_desc">開啟後會將書籍簡介作為分組參考，並顯著增加 Token 消耗。</string>
     <string name="ai_auto_group_deep_thinking">啟用深度思考</string>
@@ -2806,6 +2810,7 @@
     <string name="ai_auto_group_message_no_plan">沒有可執行的分組方案</string>
     <string name="ai_auto_group_message_cancelled">已取消</string>
     <string name="ai_auto_group_message_group_name_required">分組名稱不能為空</string>
+    <string name="ai_auto_group_no_ungrouped_books">沒有未分組書籍可供分析，可關閉增量分組以分析整個書架。</string>
     <string name="ai_auto_group_error_empty_shelf">書架沒有可分析的書籍。</string>
     <string name="ai_auto_group_error_missing_model">請先設定預設 AI 模型。</string>
     <string name="ai_auto_group_error_capacity">目前模型或任務的輸入容量不足，無法處理此書架。</string>

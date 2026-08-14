@@ -3012,11 +3012,15 @@
     <string name="ai_auto_group_applying">正在应用分组</string>
     <string name="ai_auto_group_confirm_title">确认执行分组方案</string>
     <string name="ai_auto_group_confirm_message">将创建 %1$d 个分组，调整 %2$d 本书，跳过 %3$d 本书。现有公开分组归属会被替换，私密分组保持不变。</string>
+    <string name="ai_auto_group_confirm_message_incremental">将创建 %1$d 个分组，为 %2$d 本未分组书籍设置分组，跳过 %3$d 本书。已分组书籍和私密分组保持不变。</string>
     <string name="ai_auto_group_execute">执行</string>
     <string name="ai_auto_group_will_analyze">将分析 %1$d 本书</string>
     <string name="ai_auto_group_preflight_description">会将书名、作者、分类和当前公开分组发送给已配置的 AI；简介仅在开启下方选项时发送，私密分组中的书籍不会发送。AI 只生成方案，确认前不会修改书架。</string>
+    <string name="ai_auto_group_preflight_description_incremental">仅将未分组书籍的书名、作者和分类发送给已配置的 AI；现有公开分组名称会用于复用，但不会发送已分组或私密分组书籍的数据。简介仅在开启下方选项时发送。</string>
     <string name="ai_auto_group_existing_summary">已有 %1$d 个用户分组，%2$d 本书已有分组。</string>
     <string name="ai_auto_group_batch_estimate">预计将分为 %1$d 次 AI 请求顺序处理。</string>
+    <string name="ai_auto_group_incremental">增量分组</string>
+    <string name="ai_auto_group_incremental_desc">仅分析尚未加入公开分组的书籍，并保持现有分组归属不变。</string>
     <string name="ai_auto_group_include_intro">参考书籍简介</string>
     <string name="ai_auto_group_include_intro_desc">开启后会将书籍简介作为分组参考，并显著增加 Token 消耗。</string>
     <string name="ai_auto_group_deep_thinking">启用深度思考</string>
@@ -3047,6 +3051,7 @@
     <string name="ai_auto_group_message_no_plan">没有可执行的分组方案</string>
     <string name="ai_auto_group_message_cancelled">已取消</string>
     <string name="ai_auto_group_message_group_name_required">分组名称不能为空</string>
+    <string name="ai_auto_group_no_ungrouped_books">没有未分组书籍可分析，可关闭增量分组以分析整个书架。</string>
     <string name="ai_auto_group_error_empty_shelf">书架没有可分析的书籍。</string>
     <string name="ai_auto_group_error_missing_model">请先配置默认 AI 模型。</string>
     <string name="ai_auto_group_error_capacity">当前模型或任务的输入容量不足，无法处理该书架。</string>

@@ -9,6 +9,7 @@ import io.legado.app.domain.model.BookshelfAutoGroupApplyResult
 import io.legado.app.domain.model.BookshelfAutoGroupBook
 import io.legado.app.domain.model.BookshelfAutoGroupErrorReason
 import io.legado.app.domain.model.BookshelfAutoGroupException
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupSource
 import io.legado.app.help.book.isNotShelf
@@ -51,6 +52,7 @@ class BookshelfAutoGroupRepository(
 
     override suspend fun applyPlan(
         plan: BookshelfAutoGroupPlan,
+        options: BookshelfAutoGroupOptions,
     ): BookshelfAutoGroupApplyResult = withContext(Dispatchers.IO) {
         database.withTransaction {
             val groupDao = database.bookGroupDao
@@ -60,19 +62,31 @@ class BookshelfAutoGroupRepository(
                 .asSequence()
                 .filter { it.isUserGroup() && it.isPrivate }
                 .fold(0L) { mask, group -> mask or group.groupId }
+            val publicGroupMask = allGroups
+                .asSequence()
+                .filter { it.isUserGroup() && !it.isPrivate }
+                .fold(0L) { mask, group -> mask or group.groupId }
             val existingGroups = allGroups
                 .filter { it.isUserGroup() && !it.isPrivate }
                 .associateBy(BookGroup::groupName)
                 .toMutableMap()
             var createdGroupCount = 0
             var reusedGroupCount = 0
-            var missingBookCount = 0
+            var skippedBookCount = 0
 
             // Resolve current rows before creating groups so stale plans cannot create empty groups.
             val applicableGroups = plan.groups.mapNotNull { group ->
                 val books = group.books.mapNotNull { plannedBook ->
-                    bookDao.getBook(plannedBook.bookUrl).also { entity ->
-                        if (entity == null) missingBookCount++
+                    val entity = bookDao.getBook(plannedBook.bookUrl)
+                    // Re-check membership because the user may have grouped the book after analysis.
+                    val shouldSkip = entity == null || (
+                        options.incrementalOnly && entity.group and publicGroupMask != 0L
+                    )
+                    if (shouldSkip) {
+                        skippedBookCount++
+                        null
+                    } else {
+                        entity
                     }
                 }
                 group.takeIf { books.isNotEmpty() }?.let { it to books }
@@ -140,7 +154,7 @@ class BookshelfAutoGroupRepository(
                 createdGroupCount = createdGroupCount,
                 reusedGroupCount = reusedGroupCount,
                 updatedBookCount = updates.size,
-                ignoredBookCount = plan.ignoredBooks.size + missingBookCount,
+                ignoredBookCount = plan.ignoredBooks.size + skippedBookCount,
             )
         }
     }

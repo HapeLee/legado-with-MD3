@@ -3,6 +3,7 @@ package io.legado.app.domain.usecase
 import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
 import io.legado.app.domain.model.BookshelfAutoGroupApplyResult
 import io.legado.app.domain.model.BookshelfAutoGroupIgnoredBook
+import io.legado.app.domain.model.BookshelfAutoGroupOptions
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupPlanBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
@@ -32,7 +33,8 @@ class ApplyBookshelfAutoGroupPlanUseCaseTest {
                     ignored("url-3"),
                     ignored("url-3"),
                 ),
-            )
+            ),
+            BookshelfAutoGroupOptions(incrementalOnly = true),
         )
 
         val applied = gateway.appliedPlan!!
@@ -40,15 +42,21 @@ class ApplyBookshelfAutoGroupPlanUseCaseTest {
         assertEquals("Fantasy", applied.groups.single().name)
         assertEquals(listOf("url-1", "url-2"), applied.groups.single().books.map { it.bookUrl })
         assertEquals(listOf("url-3"), applied.ignoredBooks.map { it.bookUrl })
+        assertEquals(true, gateway.appliedOptions?.incrementalOnly)
     }
 
     private class RecordingGateway : BookshelfAutoGroupGateway {
         var appliedPlan: BookshelfAutoGroupPlan? = null
+        var appliedOptions: BookshelfAutoGroupOptions? = null
 
         override suspend fun loadSource() = BookshelfAutoGroupSource(emptyList(), emptyList())
 
-        override suspend fun applyPlan(plan: BookshelfAutoGroupPlan): BookshelfAutoGroupApplyResult {
+        override suspend fun applyPlan(
+            plan: BookshelfAutoGroupPlan,
+            options: BookshelfAutoGroupOptions,
+        ): BookshelfAutoGroupApplyResult {
             appliedPlan = plan
+            appliedOptions = options
             return BookshelfAutoGroupApplyResult(0, 0, 0, plan.ignoredBooks.size)
         }
     }

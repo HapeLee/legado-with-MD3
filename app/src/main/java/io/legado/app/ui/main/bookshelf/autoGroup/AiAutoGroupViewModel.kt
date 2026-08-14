@@ -60,6 +60,7 @@ class AiAutoGroupViewModel(
             is AiAutoGroupIntent.IgnoreBook -> ignoreBook(intent.bookUrl)
             is AiAutoGroupIntent.AddGroup -> addGroup(intent.name)
             is AiAutoGroupIntent.UpdateGroupingInstruction -> updateGroupingInstruction(intent.instruction)
+            is AiAutoGroupIntent.SetIncrementalOnly -> updateIncrementalOption(intent.enabled)
             is AiAutoGroupIntent.SetIncludeBookIntro -> updateBookIntroOption(intent.enabled)
             is AiAutoGroupIntent.SetDeepThinkingEnabled -> updateDeepThinkingOption(intent.enabled)
             is AiAutoGroupIntent.UpdateRevisionInstruction -> {
@@ -107,6 +108,7 @@ class AiAutoGroupViewModel(
         _uiState.value = AiAutoGroupUiState(
             phase = AiAutoGroupPhase.LoadingSource,
             groupingInstruction = groupingInstruction,
+            incrementalOnly = options.incrementalOnly,
             includeBookIntro = options.includeBookIntro,
             enableDeepThinking = options.enableDeepThinking,
         )
@@ -128,7 +130,7 @@ class AiAutoGroupViewModel(
                 _uiState.update {
                     it.copy(
                         phase = AiAutoGroupPhase.Preflight,
-                        bookCount = loaded.bookCount,
+                        bookCount = preflight.analyzedBookCount,
                         groupedBookCount = loaded.groupedBookCount,
                         existingGroupCount = loaded.existingGroupNames.size,
                         effectiveInputCharLimit = preflight.effectiveInputCharLimit,
@@ -151,16 +153,22 @@ class AiAutoGroupViewModel(
         schedulePreflight()
     }
 
+    private fun updateIncrementalOption(enabled: Boolean) {
+        _uiState.update { it.copy(incrementalOnly = enabled) }
+        // Mode changes affect both the visible book count and request estimate, so refresh immediately.
+        schedulePreflight(debounce = false)
+    }
+
     private fun updateDeepThinkingOption(enabled: Boolean) {
         _uiState.update { it.copy(enableDeepThinking = enabled) }
     }
 
-    private fun schedulePreflight() {
+    private fun schedulePreflight(debounce: Boolean = true) {
         val loaded = source ?: return
         val state = _uiState.value
         preflightJob?.cancel()
         preflightJob = viewModelScope.launch {
-            delay(PREFLIGHT_DEBOUNCE_MILLIS)
+            if (debounce) delay(PREFLIGHT_DEBOUNCE_MILLIS)
             runCatching {
                 generatePlanUseCase.preflight(
                     source = loaded,
@@ -179,6 +187,7 @@ class AiAutoGroupViewModel(
     private fun updatePreflight(preflight: BookshelfAutoGroupPreflight) {
         _uiState.update {
             it.copy(
+                bookCount = preflight.analyzedBookCount,
                 effectiveInputCharLimit = preflight.effectiveInputCharLimit,
                 estimatedRequestCount = preflight.estimatedRequestCount,
                 error = null,
@@ -294,13 +303,15 @@ class AiAutoGroupViewModel(
     }
 
     private fun apply() {
-        val plan = _uiState.value.toDomainPlan()
+        val state = _uiState.value
+        val plan = state.toDomainPlan()
+        val options = state.toDomainOptions()
         runningJob?.cancel()
         runningJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(phase = AiAutoGroupPhase.Applying, showApplyConfirm = false, error = null)
             }
-            runCatching { applyPlanUseCase.execute(plan) }
+            runCatching { applyPlanUseCase.execute(plan, options) }
                 .onSuccess { result ->
                     _uiState.update {
                         it.copy(phase = AiAutoGroupPhase.Result, applyResult = result.toUi())
@@ -473,6 +484,7 @@ class AiAutoGroupViewModel(
     )
 
     private fun AiAutoGroupUiState.toDomainOptions() = BookshelfAutoGroupOptions(
+        incrementalOnly = incrementalOnly,
         includeBookIntro = includeBookIntro,
         enableDeepThinking = enableDeepThinking,
     )
