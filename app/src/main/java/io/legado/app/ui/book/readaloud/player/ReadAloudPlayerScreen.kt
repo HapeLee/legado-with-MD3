@@ -403,22 +403,19 @@ fun ReadAloudPlayerScreenContent(
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Speed) {
                         PlayerAdjustmentSlider(
                             title = stringResource(R.string.read_aloud_adjust_speed),
-                            value = speedPreview.coerceIn(5f, 20f),
-                            valueLabel = (speedPreview / 10f).let {
-                                if (it == it.roundToInt().toFloat()) {
-                                    "${it.roundToInt()}.0"
-                                } else {
-                                    String.format("%.1f", it)
-                                }
-                            },
+                            value = speedPreview.coerceIn(
+                                READ_ALOUD_SPEED_MIN.toFloat(),
+                                READ_ALOUD_SPEED_MAX.toFloat(),
+                            ),
+                            valueLabel = formatReadAloudSpeedLabel(speedPreview.roundToInt()),
                             startLabel = stringResource(R.string.fast_rewind),
                             endLabel = stringResource(R.string.fast_forward),
                             onValueChange = { speedPreview = it },
                             onValueChangeFinished = {
                                 onIntent(ReadAloudPlayerIntent.SetSpeed(speedPreview.roundToInt()))
                             },
-                            valueRange = 5f..20f,
-                            steps = 14,
+                            valueRange = READ_ALOUD_SPEED_MIN.toFloat()..READ_ALOUD_SPEED_MAX.toFloat(),
+                            steps = READ_ALOUD_SPEED_MAX - READ_ALOUD_SPEED_MIN - 1,
                         )
                     }
                     AnimatedVisibility(activeAdjustment == PlayerAdjustment.Timer) {
