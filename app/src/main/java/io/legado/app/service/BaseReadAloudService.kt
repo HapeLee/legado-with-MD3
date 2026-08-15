@@ -14,6 +14,7 @@ import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -174,6 +175,9 @@ abstract class BaseReadAloudService : BaseService(),
     private var dsJob: Job? = null
     private var upNotificationJob: Job? = null
     private var upMediaProgressJob: Job? = null
+    private var lastMediaSessionState = PlaybackStateCompat.STATE_NONE
+    private var lastMediaSessionPositionMs = -1L
+    private var lastMediaSessionUpdateElapsedMs = 0L
     @Volatile
     private var systemMediaCompatibilityEnabled =
         ReadConfig.systemMediaControlCompatibilityChange
@@ -516,7 +520,12 @@ abstract class BaseReadAloudService : BaseService(),
 
     protected fun updateReadAloudProgressSnapshot(progress: Int) {
         currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
-        currentProgress = progress.coerceAtLeast(0)
+        val newProgress = progress.coerceAtLeast(0)
+        if (newProgress < currentProgress) {
+            // 进度回退(上一段/上一章等), 重置媒体进度锚点, 允许进度条跟随回退
+            lastMediaSessionPositionMs = -1L
+        }
+        currentProgress = newProgress
     }
 
     protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
@@ -756,6 +765,21 @@ abstract class BaseReadAloudService : BaseService(),
      * 更新媒体状态
      */
     private fun upMediaSessionPlaybackState(state: Int) {
+        val now = SystemClock.elapsedRealtime()
+        val position = nextMediaSessionPositionMs(
+            state = state,
+            lastState = lastMediaSessionState,
+            estimate = mediaProgressPositionMs(),
+            lastPosition = lastMediaSessionPositionMs,
+            nowElapsedRealtime = now,
+            lastUpdateElapsedRealtime = lastMediaSessionUpdateElapsedMs,
+        )
+        if (state == lastMediaSessionState && position == lastMediaSessionPositionMs) {
+            return
+        }
+        lastMediaSessionState = state
+        lastMediaSessionPositionMs = position
+        lastMediaSessionUpdateElapsedMs = now
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
                 if (androidMediaControlEnabled) {
@@ -768,7 +792,7 @@ abstract class BaseReadAloudService : BaseService(),
             // TTS 没有真实时间轴, 位置按字符进度与语速估算为毫秒时间
             .setState(
                 state,
-                mediaProgressPositionMs(),
+                position,
                 if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f,
             )
         if (androidMediaControlEnabled) {
@@ -933,6 +957,8 @@ abstract class BaseReadAloudService : BaseService(),
         if (enabled) {
             upMediaMetadata()
         }
+        // 强制重新推送, 让新的媒体按键集合生效
+        lastMediaSessionState = PlaybackStateCompat.STATE_NONE
         refreshMediaSessionPlaybackState()
         if (changed || enabled) {
             upReadAloudNotification()
@@ -1329,6 +1355,40 @@ internal fun estimatedReadAloudTimeMs(
 ): Long {
     if (chars <= 0 || charsPerSecond <= 0f) return 0L
     return (chars * 1000.0 / charsPerSecond).toLong()
+}
+
+/**
+ * 计算推送给系统媒体播放器的进度位置。
+ * 播放中保持单调不后退: 字符估算值领先时跟随估算值, 落后时按墙钟推进,
+ * 避免每秒重复推送同一估算值导致进度条来回跳变;
+ * 暂停时冻结在系统插值的显示位置, 恢复时从冻结位置继续, 不跳变。
+ */
+internal fun nextMediaSessionPositionMs(
+    state: Int,
+    lastState: Int,
+    estimate: Long,
+    lastPosition: Long,
+    nowElapsedRealtime: Long,
+    lastUpdateElapsedRealtime: Long,
+): Long {
+    val playing = PlaybackStateCompat.STATE_PLAYING
+    val paused = PlaybackStateCompat.STATE_PAUSED
+    return when {
+        state == paused && lastState == playing ->
+            if (lastPosition < 0) estimate
+            else lastPosition + (nowElapsedRealtime - lastUpdateElapsedRealtime)
+
+        state == paused -> lastPosition.coerceAtLeast(0)
+
+        state == playing && lastState == paused ->
+            if (lastPosition < 0) estimate else lastPosition
+
+        state == playing ->
+            if (lastPosition < 0) estimate
+            else maxOf(estimate, lastPosition + (nowElapsedRealtime - lastUpdateElapsedRealtime))
+
+        else -> estimate
+    }
 }
 
 /** Sentinel for "finish current chapter" timer not being armed. */
