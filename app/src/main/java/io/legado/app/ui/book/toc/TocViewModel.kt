@@ -670,6 +670,7 @@ class TocViewModel(
                         }
                         bookRepository.deleteChaptersByBook(oldBook.bookUrl)
                         bookRepository.insertChapters(*cList.toTypedArray())
+                        ReadBook.onChapterListUpdated(book)
                     }.onFailure {
                         AppLog.put("LoadTocError:${it.localizedMessage}", it)
                         _effects.tryEmit(TocEffect.ShowMessage(it.localizedMessage ?: "Error"))
