@@ -32,11 +32,11 @@ import io.legado.app.utils.isUri
 import io.legado.app.utils.list
 import io.legado.app.utils.mapParallel
 import io.legado.app.utils.takePersistablePermissionSafely
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.delay
@@ -85,6 +85,7 @@ sealed interface ImportBookIntent {
     data class SearchQueryChange(val query: String) : ImportBookIntent
     data class SortChange(val sort: Int) : ImportBookIntent
     data object ScanFolder : ImportBookIntent
+    data object ImportCurrentFolderAsManga : ImportBookIntent
     data object NavigateBack : ImportBookIntent
     data class NavigateToLevel(val level: Int) : ImportBookIntent
     data object SelectAll : ImportBookIntent
@@ -164,6 +165,7 @@ class ImportBookViewModel(
             is ImportBookIntent.SearchQueryChange -> setSearchKey(intent.query)
             is ImportBookIntent.SortChange -> setSort(intent.sort)
             ImportBookIntent.ScanFolder -> scanCurrentDoc()
+            ImportBookIntent.ImportCurrentFolderAsManga -> importCurrentFolderAsManga()
             ImportBookIntent.NavigateBack -> navigateBack()
             is ImportBookIntent.NavigateToLevel -> navigateToLevel(intent.level)
             ImportBookIntent.SelectAll -> selectAllCheckable()
@@ -247,6 +249,20 @@ class ImportBookViewModel(
         )
 
     fun hasRootDoc(): Boolean = _state.value.rootDoc != null
+
+    private fun importCurrentFolderAsManga() {
+        val state = _state.value
+        val directory = state.subDocs.lastOrNull() ?: state.rootDoc ?: return
+        execute { LocalBook.importMangaDirectory(directory) }
+            .onSuccess { _effects.tryEmit(ImportBookEffect.ShowToast("漫画目录已加入书架")) }
+            .onError {
+                _effects.tryEmit(
+                    ImportBookEffect.ShowToast(
+                        it.localizedMessage ?: "导入漫画目录失败"
+                    )
+                )
+            }
+    }
 
     private fun initialize() {
         val defaultPath = otherSettingsGateway.currentSettings.defaultBookTreeUri?.takeIf { it.isUri() }

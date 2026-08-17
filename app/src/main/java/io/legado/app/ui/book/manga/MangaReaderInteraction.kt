@@ -1,5 +1,17 @@
 package io.legado.app.ui.book.manga
 
+internal fun mangaChapterLoadingItem(
+    chapterIndex: Int,
+    message: String,
+    failed: Boolean,
+) = MangaReaderItemUi.ChapterEdge(
+    key = "chapter-placeholder:$chapterIndex:${if (failed) "failed" else "loading"}",
+    message = message,
+    loading = !failed,
+    retryChapterIndex = chapterIndex.takeIf { failed },
+    fullScreen = true,
+)
+
 internal fun mangaClickRegionIndex(
     x: Float,
     y: Float,

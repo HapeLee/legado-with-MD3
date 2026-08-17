@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoMode
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -453,10 +454,13 @@ private fun MangaMenuBottomBar(
                 if (isSettings) {
                     MangaSettingsPanel(state, onIntent)
                 } else {
-                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                    Column(Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)) {
                         if (state.pageCount > 1) {
                             Row(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -492,13 +496,21 @@ private fun MangaMenuBottomBar(
                         }
                         Spacer(Modifier.height(12.dp))
                         MangaMenuToolRow(
-                            listOf(
+                            buildList {
+                                add(
                                 ReaderMenuAction(
                                     Icons.AutoMirrored.Filled.MenuBook,
                                     stringResource(R.string.chapter_list)
                                 ) {
                                     onIntent(MangaReaderIntent.OpenCatalog)
-                                },
+                                })
+                                if (state.cacheAvailable) add(
+                                    ReaderMenuAction(
+                                        Icons.Filled.CloudDownload,
+                                        stringResource(R.string.offline_cache),
+                                    ) { onIntent(MangaReaderIntent.OpenCacheActions) }
+                                )
+                                add(
                                 ReaderMenuAction(
                                     icon = Icons.Filled.AutoMode,
                                     description = if (state.autoReadEnabled) {
@@ -514,7 +526,9 @@ private fun MangaMenuBottomBar(
                                             )
                                         )
                                     },
-                                ),
+                                )
+                                )
+                                add(
                                 ReaderMenuAction(
                                     Icons.Filled.Tune,
                                     stringResource(R.string.manga_reader_page_settings)
@@ -524,7 +538,8 @@ private fun MangaMenuBottomBar(
                                             MangaReaderSettingsCategory.READER
                                         )
                                     )
-                                },
+                                })
+                                add(
                                 ReaderMenuAction(
                                     Icons.Filled.FilterAlt,
                                     stringResource(R.string.manga_reader_filter_short)
@@ -534,7 +549,8 @@ private fun MangaMenuBottomBar(
                                             MangaReaderSettingsCategory.FILTER
                                         )
                                     )
-                                },
+                                })
+                                add(
                                 ReaderMenuAction(
                                     Icons.Filled.TouchApp,
                                     stringResource(R.string.manga_reader_click_area_short)
@@ -544,8 +560,8 @@ private fun MangaMenuBottomBar(
                                             MangaReaderSettingsCategory.CLICK_ACTIONS
                                         )
                                     )
-                                },
-                            ),
+                                })
+                            },
                             glassEnabled = glassOnControls,
                             backdrop = backdrop,
                         )

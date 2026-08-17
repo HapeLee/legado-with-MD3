@@ -1,8 +1,8 @@
 package io.legado.app.data.repository.manga
 
 import io.legado.app.domain.gateway.MangaReaderDataGateway
-import io.legado.app.domain.model.manga.MangaBookState
 import io.legado.app.domain.model.manga.MangaBookPresentation
+import io.legado.app.domain.model.manga.MangaBookState
 import io.legado.app.domain.model.manga.MangaChapterContent
 import io.legado.app.domain.model.manga.MangaChapterState
 import io.legado.app.domain.model.manga.MangaPageContent
@@ -11,10 +11,10 @@ import io.legado.app.domain.model.manga.MangaSessionCommand
 import io.legado.app.domain.model.manga.OpenedMangaBook
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -82,6 +82,7 @@ class DefaultMangaReaderSessionTest {
 
         assertEquals(Triple("book-a", 0, 7), gateway.persisted.single())
         assertEquals(listOf("book-a"), gateway.paused)
+        assertTrue(gateway.resourcesReleased)
     }
 
     @Test
@@ -94,7 +95,7 @@ class DefaultMangaReaderSessionTest {
         session.execute(MangaSessionCommand.Open("book-a", true, false))
         advanceUntilIdle()
 
-        assertEquals(listOf("book-a" to 2, "book-a" to 3), gateway.prefetched)
+        assertEquals(listOf("book-a" to 1, "book-a" to 2), gateway.prefetched)
         session.close()
     }
 
@@ -143,6 +144,7 @@ class DefaultMangaReaderSessionTest {
         assertEquals(1, (state.currentChapter as MangaChapterState.Ready).chapter.chapterIndex)
         // 只加载新的远端章节（chapter 2）
         assertEquals("book-a" to 2, gateway.loadedRequests.lastOrNull())
+        assertEquals("book-a" to setOf(0, 1, 2), gateway.retainedWindows.last())
         session.close()
     }
 
@@ -200,6 +202,8 @@ class DefaultMangaReaderSessionTest {
         val paused = mutableListOf<String>()
         val prefetched = mutableListOf<Pair<String, Int>>()
         val loadedRequests = mutableListOf<Pair<String, Int>>()
+        val retainedWindows = mutableListOf<Pair<String, Set<Int>>>()
+        var resourcesReleased = false
 
         override fun observeBookPresentation(bookUrl: String) = presentation
 
@@ -220,6 +224,7 @@ class DefaultMangaReaderSessionTest {
                 inBookshelf = inBookshelf,
                 scrollMode = null,
                 sidePaddingDp = null,
+                isLocal = false,
                 chapterTitles = List(5) { "Chapter ${it + 1}" },
             ),
             chapterIndex = 0,
@@ -234,6 +239,14 @@ class DefaultMangaReaderSessionTest {
 
         override suspend fun prefetchChapter(bookUrl: String, chapterIndex: Int) {
             prefetched += bookUrl to chapterIndex
+        }
+
+        override suspend fun retainChapterResources(bookUrl: String, chapterIndexes: Set<Int>) {
+            retainedWindows += bookUrl to chapterIndexes
+        }
+
+        override suspend fun releaseAllChapterResources() {
+            resourcesReleased = true
         }
 
         fun complete(bookUrl: String, chapterIndex: Int) {

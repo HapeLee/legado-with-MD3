@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.manga
 
+import android.content.ClipData
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
@@ -7,9 +8,11 @@ import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.constant.AppConst
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.info.READER_RESULT_DELETED
@@ -20,9 +23,11 @@ import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.openUrl
+import io.legado.app.utils.share
 import io.legado.app.utils.toggleSystemBar
-import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import java.io.File
 
 /**
  * Android compatibility host for the Compose manga reader.
@@ -123,6 +128,13 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
                 else updateWindowBrightness(effect.brightness)
             }
             is MangaReaderEffect.SetSystemBarsVisible -> toggleSystemBar(effect.visible)
+            is MangaReaderEffect.ShareImage -> share(File(effect.filePath), "image/jpeg")
+            is MangaReaderEffect.CopyImage -> {
+                val uri =
+                    FileProvider.getUriForFile(this, AppConst.authority, File(effect.filePath))
+                getSystemService(android.content.ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newUri(contentResolver, "manga", uri))
+            }
         }
     }
 

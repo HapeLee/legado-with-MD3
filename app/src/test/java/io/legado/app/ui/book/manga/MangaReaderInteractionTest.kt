@@ -12,6 +12,18 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
 
+    @Test
+    fun `explicit chapter placeholder stays at target and exposes retry after failure`() {
+        val loading = mangaChapterLoadingItem(12, "loading", failed = false)
+        val failed = mangaChapterLoadingItem(12, "failed", failed = true)
+
+        assertTrue(loading.loading)
+        assertEquals(null, loading.retryChapterIndex)
+        assertFalse(failed.loading)
+        assertEquals(12, failed.retryChapterIndex)
+        assertTrue(failed.key.contains("12"))
+    }
+
     private fun page(index: Int, chapter: Int = 0) = MangaReaderItemUi.Page(
         key = "p$index",
         imageUrl = "url$index",
@@ -283,6 +295,51 @@ class MangaReaderInteractionTest {
         assertEquals(listOf(listOf(0), listOf(1)), separated.map { it.itemIndices })
         assertTrue(paired.key.contains("p0"))
         assertTrue(paired.key.contains("p1"))
+    }
+
+    @Test
+    fun `chapter cover can stay on a single spread`() {
+        val items = listOf(page(0), page(1), page(2), page(3))
+        assertEquals(
+            listOf(listOf(0), listOf(1, 2), listOf(3)),
+            buildMangaSpreads(items, doublePage = true, coverSingle = true)
+                .map { it.itemIndices },
+        )
+    }
+
+    @Test
+    fun `shift pairing leaves first page of every chapter single`() {
+        val items = listOf(page(0), page(1), page(2), page(0, 1), page(1, 1))
+        assertEquals(
+            listOf(listOf(0), listOf(1, 2), listOf(3), listOf(4)),
+            buildMangaSpreads(items, doublePage = true, shiftPairing = true)
+                .map { it.itemIndices },
+        )
+    }
+
+    @Test
+    fun `wide page split follows reading direction`() {
+        val items = listOf(page(0))
+        val ratios = mapOf("p0" to 2f)
+        val leftToRight = buildMangaSpreads(
+            items,
+            doublePage = true,
+            aspectRatios = ratios,
+            splitWidePages = true,
+        )
+        val rightToLeft = buildMangaSpreads(
+            items,
+            doublePage = true,
+            aspectRatios = ratios,
+            splitWidePages = true,
+            splitRightToLeft = true,
+        )
+        assertEquals(
+            listOf(MangaPageSlice.LEFT, MangaPageSlice.RIGHT),
+            leftToRight.map { it.slots.single().slice })
+        assertEquals(
+            listOf(MangaPageSlice.RIGHT, MangaPageSlice.LEFT),
+            rightToLeft.map { it.slots.single().slice })
     }
 
     @Test

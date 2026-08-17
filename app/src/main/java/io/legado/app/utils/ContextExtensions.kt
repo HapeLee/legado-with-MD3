@@ -39,14 +39,13 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.help.IntentHelp
-import io.legado.app.help.config.AppConfigStore
-import io.legado.app.help.config.SettingsWriter
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
-import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.SettingsWriter
 import io.legado.app.ui.book.audio.AudioPlayActivity
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.runBlocking
@@ -70,13 +69,13 @@ fun Context.startActivityForBook(
 ) {
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
-        !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
+        book.isImage && ReadMangaConfig.showMangaUi ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (!book.isLocal && book.isImage && ReadMangaConfig.showMangaUi)) {
+    if (book.isAudio || (book.isImage && ReadMangaConfig.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)
@@ -89,13 +88,13 @@ fun Context.startActivityForBook(
 ) {
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
-        !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
+        book.isImage && ReadMangaConfig.showMangaUi ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (!book.isLocal && book.isImage && ReadMangaConfig.showMangaUi)) {
+    if (book.isAudio || (book.isImage && ReadMangaConfig.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)

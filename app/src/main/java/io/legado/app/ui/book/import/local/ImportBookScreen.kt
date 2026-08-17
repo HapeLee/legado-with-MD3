@@ -87,6 +87,7 @@ private fun ImportBookContent(
     onSelectFolder: () -> Unit,
     onSelectBookFiles: () -> Unit,
     onScanFolder: () -> Unit,
+    onImportCurrentFolderAsManga: () -> Unit,
     onImportFileName: () -> Unit,
     onSortChange: (Int) -> Unit,
     onNavigateBack: () -> Unit,
@@ -116,6 +117,13 @@ private fun ImportBookContent(
             )
         },
         dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.import_current_folder_as_manga),
+                onClick = {
+                    onImportCurrentFolderAsManga()
+                    dismiss()
+                },
+            )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.sort_by_name),
                 onClick = {
@@ -406,6 +414,9 @@ fun ImportBookScreen(
         onSelectFolder = { onShowFolderPickerChange(true) },
         onSelectBookFiles = onSelectBookFiles,
         onScanFolder = { onIntent(ImportBookIntent.ScanFolder) },
+        onImportCurrentFolderAsManga = {
+            onIntent(ImportBookIntent.ImportCurrentFolderAsManga)
+        },
         onImportFileName = {
             onFileNameJsChange(state.fileNameRule)
             onShowImportFileNameDialogChange(true)

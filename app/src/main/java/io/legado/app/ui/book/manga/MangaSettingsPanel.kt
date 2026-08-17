@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +13,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -34,11 +34,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.book.manga.config.MangaDoublePageMode
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -396,6 +397,41 @@ private fun ReaderSettingsContent(
                 MangaReaderSettingKey.ZOOM_START_POSITION,
                 onIntent,
             )
+            if (settings.doublePageMode != MangaDoublePageMode.OFF) {
+                SettingSwitch(
+                    stringResource(R.string.manga_reader_double_page_cover_single),
+                    settings.doublePageCoverSingle,
+                ) {
+                    onIntent(
+                        MangaReaderIntent.UpdateSetting(
+                            MangaReaderSettingKey.DOUBLE_PAGE_COVER_SINGLE,
+                            it.intValue,
+                        )
+                    )
+                }
+                SettingSwitch(
+                    stringResource(R.string.manga_reader_double_page_invert),
+                    settings.doublePageInvert,
+                ) {
+                    onIntent(
+                        MangaReaderIntent.UpdateSetting(
+                            MangaReaderSettingKey.DOUBLE_PAGE_INVERT,
+                            it.intValue,
+                        )
+                    )
+                }
+                SettingSwitch(
+                    stringResource(R.string.manga_reader_double_page_shift),
+                    settings.doublePageShift,
+                ) {
+                    onIntent(
+                        MangaReaderIntent.UpdateSetting(
+                            MangaReaderSettingKey.DOUBLE_PAGE_SHIFT,
+                            it.intValue,
+                        )
+                    )
+                }
+            }
         }
         SettingDropdown(
             stringResource(R.string.manga_reader_wide_page),
@@ -404,6 +440,7 @@ private fun ReaderSettingsContent(
                 R.string.manga_reader_wide_normal,
                 R.string.manga_reader_wide_fit_width,
                 R.string.manga_reader_wide_rotate,
+                R.string.manga_reader_wide_split,
             ),
             MangaReaderSettingKey.WIDE_PAGE_MODE,
             onIntent,
@@ -425,9 +462,16 @@ private fun ReaderSettingsContent(
     SettingSlider(
         stringResource(R.string.manga_reader_preload_pages),
         settings.preDownloadCount,
-        0..30
+        0..10
     ) {
         onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.PRE_DOWNLOAD, it))
+    }
+    SettingSlider(
+        stringResource(R.string.manga_reader_prefetch_chapters),
+        settings.chapterPrefetchCount,
+        0..3,
+    ) {
+        onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.CHAPTER_PREFETCH, it))
     }
     SettingSwitch(stringResource(R.string.manga_reader_pinch_zoom), !settings.disableScale) {
         onIntent(

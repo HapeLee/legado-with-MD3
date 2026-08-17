@@ -1,8 +1,8 @@
 package io.legado.app.data.repository
 
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
@@ -176,6 +176,7 @@ private fun mangaMappingSamples(): List<MangaSettings> {
     val base = MangaSettings(
         scrollMode = 11,
         preDownloadNum = 22,
+        chapterPrefetchCount = 2,
         autoPageSpeed = 33,
         footerConfig = "manga-footer",
         background = 0xFF123456.toInt(),
@@ -215,6 +216,9 @@ private fun mangaMappingSamples(): List<MangaSettings> {
         base.copy(menuBottomBarFloating = false),
         base.copy(menuBottomBarBlur = true),
         base.copy(menuTopBarCompact = true),
+        base.copy(doublePageCoverSingle = false),
+        base.copy(doublePageInvert = true),
+        base.copy(doublePageShift = true),
     )
 }
 
@@ -225,6 +229,7 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.disableMangaCrossFade to disableMangaCrossFade,
     PreferKey.mangaScrollMode to scrollMode,
     PreferKey.mangaPreDownloadNum to preDownloadNum,
+    PreferKey.mangaChapterPrefetchCount to chapterPrefetchCount,
     PreferKey.mangaAutoPageSpeed to autoPageSpeed,
     PreferKey.mangaFooterConfig to footerConfig,
     PreferKey.disableClickScroll to disableClickScroll,
@@ -235,6 +240,9 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mangaZoomStartPosition to zoomStartPosition,
     PreferKey.mangaWidePageMode to widePageMode,
     PreferKey.mangaDoublePageMode to doublePageMode,
+    PreferKey.mangaDoublePageCoverSingle to doublePageCoverSingle,
+    PreferKey.mangaDoublePageInvert to doublePageInvert,
+    PreferKey.mangaDoublePageShift to doublePageShift,
     PreferKey.mangaColorFilter to colorFilter,
     PreferKey.hideMangaTitle to hideTitle,
     PreferKey.enableMangaEInk to enableEInk,

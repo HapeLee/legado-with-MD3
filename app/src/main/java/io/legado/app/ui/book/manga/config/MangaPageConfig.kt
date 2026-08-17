@@ -20,6 +20,7 @@ object MangaWidePageMode {
     const val NORMAL = 0
     const val FIT_WIDTH = 1
     const val ROTATE_TO_FIT = 2
+    const val SPLIT = 3
 }
 
 object MangaDoublePageMode {

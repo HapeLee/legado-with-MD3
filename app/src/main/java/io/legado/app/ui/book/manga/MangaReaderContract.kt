@@ -30,6 +30,7 @@ data class MangaReaderUiState(
     val pageCount: Int = 0,
     val chapterIndex: Int = 0,
     val chapterCount: Int = 0,
+    val cacheAvailable: Boolean = false,
     val isLoading: Boolean = true,
     val isChapterLoading: Boolean = false,
     val pendingChapterIndex: Int? = null,
@@ -61,6 +62,8 @@ sealed interface MangaReaderItemUi {
         val pageIndex: Int,
         val pageCount: Int,
         val chapterName: String,
+        val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
+        val retryRevision: Int = 0,
     ) : MangaReaderItemUi
 
     @Stable
@@ -69,6 +72,7 @@ sealed interface MangaReaderItemUi {
         val message: String,
         val loading: Boolean = false,
         val retryChapterIndex: Int? = null,
+        val fullScreen: Boolean = false,
     ) : MangaReaderItemUi
 
     /** A deliberate boundary between chapters; it is never a page from another chapter. */
@@ -83,6 +87,14 @@ sealed interface MangaReaderItemUi {
         val statusMessage: String? = null,
         val retryChapterIndex: Int? = null,
     ) : MangaReaderItemUi
+}
+
+@Stable
+sealed interface MangaPageLoadState {
+    data object Queued : MangaPageLoadState
+    data object Loading : MangaPageLoadState
+    data object Ready : MangaPageLoadState
+    data class Failed(val message: String?) : MangaPageLoadState
 }
 
 @Stable
@@ -101,12 +113,16 @@ data class MangaReaderSettings(
     val zoomStartPosition: Int = 0,
     val widePageMode: Int = 0,
     val doublePageMode: Int = 0,
+    val doublePageCoverSingle: Boolean = true,
+    val doublePageInvert: Boolean = false,
+    val doublePageShift: Boolean = false,
     val disableScale: Boolean = true,
     val disableScrollAnimation: Boolean = false,
     val disableCrossFade: Boolean = false,
     val disableClickScroll: Boolean = false,
     val longPressEnabled: Boolean = true,
     val preDownloadCount: Int = 10,
+    val chapterPrefetchCount: Int = 1,
     val autoReadSpeed: Int = 3,
     val volumeKeyPage: Boolean = false,
     val reverseVolumeKeyPage: Boolean = false,
@@ -203,6 +219,8 @@ sealed interface MangaReaderIntent {
     data class OpenSettings(val category: MangaReaderSettingsCategory) : MangaReaderIntent
     data object CloseSettings : MangaReaderIntent
     data object OpenSourceActions : MangaReaderIntent
+    data object OpenCacheActions : MangaReaderIntent
+    data class CacheChapters(val selection: MangaCacheSelection) : MangaReaderIntent
     data object ToggleAutoRead : MangaReaderIntent
     data object DismissSheet : MangaReaderIntent
     data class UpdateSetting(
@@ -212,6 +230,11 @@ sealed interface MangaReaderIntent {
     data class UpdateMenuPaletteStyle(val value: String) : MangaReaderIntent
     data class UpdateClickAction(val index: Int, val action: Int) : MangaReaderIntent
     data class RetryChapter(val chapterIndex: Int) : MangaReaderIntent
+    data class PageLoadStarted(val key: String) : MangaReaderIntent
+    data class PageLoadSucceeded(val key: String) : MangaReaderIntent
+    data class PageLoadFailed(val key: String, val message: String?) : MangaReaderIntent
+    data class RetryPage(val key: String) : MangaReaderIntent
+    data class RetryFailedPagesInChapter(val chapterIndex: Int) : MangaReaderIntent
     data class PageStep(val direction: Int) : MangaReaderIntent
     data class SeekToPage(val pageIndex: Int) : MangaReaderIntent
     data class VisibleItemChanged(
@@ -222,7 +245,13 @@ sealed interface MangaReaderIntent {
         val navigationId: Long,
     ) : MangaReaderIntent
     data class PagerScrollChanged(val inProgress: Boolean) : MangaReaderIntent
-    data class LongPressPage(val imageUrl: String) : MangaReaderIntent
+    data class LongPressPage(
+        val pageKey: String,
+        val companionPageKey: String? = null,
+        val companionBeforePage: Boolean = false,
+    ) : MangaReaderIntent
+
+    data class ExecutePageAction(val action: MangaPageAction) : MangaReaderIntent
     data class MessageShown(val id: Long) : MangaReaderIntent
 }
 
@@ -230,7 +259,17 @@ sealed interface MangaReaderSheet {
     data object Catalog : MangaReaderSheet
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet
+    data object CacheActions : MangaReaderSheet
+    data class PageActions(
+        val pageKey: String,
+        val companionPageKey: String? = null,
+        val companionBeforePage: Boolean = false,
+    ) : MangaReaderSheet
 }
+
+enum class MangaPageAction { SAVE, SAVE_SPREAD, SHARE, SHARE_SPREAD, COPY, COPY_SPREAD, SET_COVER }
+
+enum class MangaCacheSelection { CURRENT, FOLLOWING, ALL }
 
 enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, CLICK_ACTIONS, AUTO_READ }
 
@@ -251,12 +290,16 @@ enum class MangaReaderSettingKey {
     ZOOM_START_POSITION,
     WIDE_PAGE_MODE,
     DOUBLE_PAGE_MODE,
+    DOUBLE_PAGE_COVER_SINGLE,
+    DOUBLE_PAGE_INVERT,
+    DOUBLE_PAGE_SHIFT,
     DISABLE_SCALE,
     DISABLE_SCROLL_ANIMATION,
     DISABLE_CROSS_FADE,
     DISABLE_CLICK_SCROLL,
     LONG_PRESS,
     PRE_DOWNLOAD,
+    CHAPTER_PREFETCH,
     AUTO_READ_SPEED,
     VOLUME_KEY_PAGE,
     REVERSE_VOLUME_KEY_PAGE,
@@ -302,4 +345,6 @@ sealed interface MangaReaderEffect {
     ) : MangaReaderEffect
     data class SetWindowBrightness(val auto: Boolean, val brightness: Int) : MangaReaderEffect
     data class SetSystemBarsVisible(val visible: Boolean) : MangaReaderEffect
+    data class ShareImage(val filePath: String) : MangaReaderEffect
+    data class CopyImage(val filePath: String) : MangaReaderEffect
 }

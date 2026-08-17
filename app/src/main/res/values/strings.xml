@@ -3131,6 +3131,7 @@
     <string name="manga_reader_click_cycle_hint">Tap an area to cycle its action</string>
     <string name="manga_reader_loading_prev">Loading previous chapter…</string>
     <string name="manga_reader_loading_next">Loading next chapter…</string>
+    <string name="manga_reader_loading_selected_chapter">Loading “%1$s”…</string>
     <string name="manga_reader_no_previous_chapter">No previous chapter</string>
     <string name="manga_reader_no_next_chapter">No next chapter</string>
     <string name="manga_reader_adjacent_failed">%1$s\nTap to retry</string>
@@ -3177,8 +3178,24 @@
     <string name="manga_reader_wide_normal">Fit normally</string>
     <string name="manga_reader_wide_fit_width">Fit width</string>
     <string name="manga_reader_wide_rotate">Rotate to fit</string>
+    <string name="manga_reader_wide_split">Split into left and right pages</string>
     <string name="manga_reader_double_page">Dual page mode</string>
+    <string name="manga_reader_double_page_cover_single">Keep chapter cover single</string>
+    <string name="manga_reader_double_page_invert">Invert dual-page order</string>
+    <string name="manga_reader_double_page_shift">Shift pairing by one page</string>
     <string name="manga_reader_mode_off">Off</string>
     <string name="manga_reader_mode_landscape">Landscape only</string>
     <string name="manga_reader_mode_always">Always</string>
+    <string name="manga_reader_set_cover">Set as cover</string>
+    <string name="manga_reader_save_spread">Save spread</string>
+    <string name="manga_reader_share_spread">Share spread</string>
+    <string name="manga_reader_copy_spread">Copy spread</string>
+    <string name="manga_reader_cover_set">Cover updated</string>
+    <string name="manga_reader_retry_failed_chapter">Retry failed pages in chapter</string>
+    <string name="manga_reader_prefetch_chapters">Preload chapters</string>
+    <string name="import_current_folder_as_manga">Import current folder as comic</string>
+    <string name="manga_reader_cache_current">Cache chapter</string>
+    <string name="manga_reader_cache_following">Cache following</string>
+    <string name="manga_reader_cache_all">Cache entire comic</string>
+    <string name="manga_reader_cache_enqueued">Added to offline cache queue</string>
 </resources>

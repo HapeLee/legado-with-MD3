@@ -8,17 +8,18 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import dev.chrisbanes.haze.HazeState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.chrisbanes.haze.HazeState
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.openUrl
+import io.legado.app.utils.share
 import io.legado.app.utils.toggleSystemBar
 import kotlinx.coroutines.flow.collectLatest
 
@@ -96,6 +97,21 @@ fun MangaReaderRouteScreen(
                     }
                 }
                 is MangaReaderEffect.SetSystemBarsVisible -> activity.toggleSystemBar(effect.visible)
+                is MangaReaderEffect.ShareImage -> activity.share(
+                    java.io.File(effect.filePath),
+                    "image/jpeg"
+                )
+
+                is MangaReaderEffect.CopyImage -> {
+                    val file = java.io.File(effect.filePath)
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        activity, io.legado.app.constant.AppConst.authority, file,
+                    )
+                    activity.getSystemService(android.content.ClipboardManager::class.java)
+                        .setPrimaryClip(
+                            android.content.ClipData.newUri(activity.contentResolver, "manga", uri)
+                        )
+                }
             }
         }
     }

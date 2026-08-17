@@ -4,7 +4,6 @@ import io.legado.app.R
 import io.legado.app.domain.gateway.MangaReaderDataGateway
 import io.legado.app.domain.gateway.MangaReaderSession
 import io.legado.app.domain.model.manga.MangaChapterState
-import io.legado.app.domain.model.manga.MangaLoadToken
 import io.legado.app.domain.model.manga.MangaSessionCommand
 import io.legado.app.domain.model.manga.MangaSessionEvent
 import io.legado.app.domain.model.manga.MangaSessionId
@@ -202,6 +201,7 @@ class DefaultMangaReaderSession(
     }
 
     private fun loadWindow(chapterIndex: Int) {
+        retainChapterResources(chapterIndex)
         loadChapter(chapterIndex)
         prefetch(chapterIndex)
     }
@@ -229,17 +229,18 @@ class DefaultMangaReaderSession(
         )
         if (movingForward) loadChapter(command.chapterIndex + 1)
         else loadChapter(command.chapterIndex - 1)
+        retainChapterResources(command.chapterIndex)
         prefetch(command.chapterIndex)
     }
 
     private fun prefetch(chapterIndex: Int) {
         val state = _state.value
         val book = state.book ?: return
-        val indexes = (chapterIndex + 2..chapterIndex + 1 + prefetchCount)
+        val indexes = (chapterIndex + 1..chapterIndex + prefetchCount)
             .filter { it in 0 until state.chapterCount }
-        indexes.forEach { index ->
-            val token = state.tokenFor(index) ?: return@forEach
-            loadScope.launch {
+        loadScope.launch {
+            indexes.forEach { index ->
+                val token = state.tokenFor(index) ?: return@forEach
                 if (_state.value.accepts(token)) {
                     runCatching { dataGateway.prefetchChapter(book.bookUrl, index) }
                 }
@@ -371,6 +372,17 @@ class DefaultMangaReaderSession(
         loadScope = CoroutineScope(loadJob + ioDispatcher)
     }
 
+    private fun retainChapterResources(chapterIndex: Int) {
+        val state = _state.value
+        val bookUrl = state.book?.bookUrl ?: return
+        val retained = (chapterIndex - 1..chapterIndex + 1)
+            .filter { it in 0 until state.chapterCount }
+            .toSet()
+        loadScope.launch {
+            dataGateway.retainChapterResources(bookUrl, retained)
+        }
+    }
+
     private suspend fun syncProgress() {
         val book = _state.value.book ?: return
         withContext(ioDispatcher) { dataGateway.syncProgress(book.bookUrl) }?.let {
@@ -398,6 +410,7 @@ class DefaultMangaReaderSession(
         _state.value.book?.let {
             withContext(ioDispatcher) { dataGateway.pause(it.bookUrl, it.inBookshelf) }
         }
+        withContext(ioDispatcher) { dataGateway.releaseAllChapterResources() }
         commands.close()
         sessionScope.cancel()
     }

@@ -21,6 +21,7 @@ data class MangaBookState(
     val inBookshelf: Boolean,
     val scrollMode: Int?,
     val sidePaddingDp: Int?,
+    val isLocal: Boolean,
     /** TOC titles are retained so a chapter transition stays informative before pages load. */
     val chapterTitles: List<String>,
 )

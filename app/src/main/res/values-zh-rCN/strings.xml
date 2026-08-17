@@ -3126,6 +3126,7 @@
     <string name="manga_reader_click_cycle_hint">点击每个区域可循环切换动作</string>
     <string name="manga_reader_loading_prev">上一章加载中…</string>
     <string name="manga_reader_loading_next">下一章加载中…</string>
+    <string name="manga_reader_loading_selected_chapter">正在加载“%1$s”…</string>
     <string name="manga_reader_no_previous_chapter">没有上一章</string>
     <string name="manga_reader_no_next_chapter">没有下一章</string>
     <string name="manga_reader_adjacent_failed">%1$s\n点击重试</string>
@@ -3172,8 +3173,24 @@
     <string name="manga_reader_wide_normal">普通适应</string>
     <string name="manga_reader_wide_fit_width">适应宽度</string>
     <string name="manga_reader_wide_rotate">旋转后适应</string>
+    <string name="manga_reader_wide_split">拆分为左右半页</string>
     <string name="manga_reader_double_page">双页模式</string>
+    <string name="manga_reader_double_page_cover_single">章节封面保持单页</string>
+    <string name="manga_reader_double_page_invert">反转双页顺序</string>
+    <string name="manga_reader_double_page_shift">双页错位一页</string>
     <string name="manga_reader_mode_off">关闭</string>
     <string name="manga_reader_mode_landscape">仅横屏</string>
     <string name="manga_reader_mode_always">始终</string>
+    <string name="manga_reader_set_cover">设为封面</string>
+    <string name="manga_reader_save_spread">保存双页</string>
+    <string name="manga_reader_share_spread">分享双页</string>
+    <string name="manga_reader_copy_spread">复制双页</string>
+    <string name="manga_reader_cover_set">封面已更新</string>
+    <string name="manga_reader_retry_failed_chapter">重试本章失败页面</string>
+    <string name="manga_reader_prefetch_chapters">预加载章节</string>
+    <string name="import_current_folder_as_manga">将当前目录作为漫画导入</string>
+    <string name="manga_reader_cache_current">缓存本章</string>
+    <string name="manga_reader_cache_following">缓存后续章节</string>
+    <string name="manga_reader_cache_all">缓存整部漫画</string>
+    <string name="manga_reader_cache_enqueued">已加入离线缓存队列</string>
 </resources>

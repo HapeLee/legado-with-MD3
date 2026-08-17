@@ -1,7 +1,7 @@
 package io.legado.app.domain.gateway
 
-import io.legado.app.domain.model.manga.MangaChapterContent
 import io.legado.app.domain.model.manga.MangaBookPresentation
+import io.legado.app.domain.model.manga.MangaChapterContent
 import io.legado.app.domain.model.manga.MangaProgressState
 import io.legado.app.domain.model.manga.OpenedMangaBook
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +18,11 @@ interface MangaReaderDataGateway {
     suspend fun loadChapter(bookUrl: String, chapterIndex: Int): MangaChapterContent
 
     suspend fun prefetchChapter(bookUrl: String, chapterIndex: Int)
+
+    /** Releases chapter-scoped resources outside the active reader window. */
+    suspend fun retainChapterResources(bookUrl: String, chapterIndexes: Set<Int>) = Unit
+
+    suspend fun releaseAllChapterResources() = Unit
 
     suspend fun persistProgress(
         bookUrl: String,
