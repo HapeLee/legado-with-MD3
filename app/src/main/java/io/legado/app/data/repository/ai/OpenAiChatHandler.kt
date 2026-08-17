@@ -9,6 +9,7 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.newCallResponse
@@ -60,6 +61,7 @@ class OpenAiChatHandler : AiProtocolHandler {
                 body["reasoning_effort"] = it
             }
         }
+        body.applyZhipuThinking(provider, request.model.modelId, params.reasoningLevel)
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
             val response = aiOkHttpClient.newCallStrResponse {
@@ -76,8 +78,12 @@ class OpenAiChatHandler : AiProtocolHandler {
                 throw Exception("HTTP ${response.code()}: ${response.message()}")
             }
             val json = GSON.fromJson(response.body, OpenAiChatResponse::class.java)
-            val text = json?.choices?.firstOrNull()?.message?.content
+            val message = json?.choices?.firstOrNull()?.message
+            val text = message?.content
             if (text.isNullOrBlank()) {
+                if (!message?.reasoningContent.isNullOrBlank()) {
+                    throw Exception("AI response contains only reasoning content; disable thinking for this model")
+                }
                 throw Exception("Empty AI response")
             } else {
                 AiGenerateResponse(text = text, rawBody = response.body)
@@ -109,6 +115,7 @@ class OpenAiChatHandler : AiProtocolHandler {
                 body["reasoning_effort"] = it
             }
         }
+        body.applyZhipuThinking(provider, request.model.modelId, params.reasoningLevel)
 
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
@@ -187,6 +194,26 @@ class OpenAiChatHandler : AiProtocolHandler {
             val json = GSON.fromJson(response.body, OpenAiModelsResponse::class.java)
             json?.data.toAvailableModels()
         }
+    }
+}
+
+/**
+ * GLM models on Zhipu's Chat Completions API enable thinking by default.
+ * Send the documented object form even when the model was added manually and
+ * therefore has no reasoning capability metadata.
+ */
+internal fun MutableMap<String, Any?>.applyZhipuThinking(
+    provider: AiProviderConfig,
+    modelId: String,
+    reasoningLevel: AiReasoningLevel
+) {
+    val identity = "${provider.id} ${provider.name} ${provider.baseUrl}".lowercase()
+    val isZhipuProvider = "zhipu" in identity || "bigmodel" in identity
+    val isGlmModel = modelId.lowercase().startsWith("glm-")
+    if (isZhipuProvider || isGlmModel) {
+        this["thinking"] = mapOf(
+            "type" to if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "enabled"
+        )
     }
 }
 
@@ -273,8 +300,13 @@ internal data class OpenAiChatChoice(
 
 @Keep
 internal data class OpenAiChatMessage(
-    val content: String?
-)
+    val content: String?,
+    val reasoning_content: String?,
+    val reasoning: String?
+) {
+    val reasoningContent: String?
+        get() = reasoning_content ?: reasoning
+}
 
 @Keep
 internal data class OpenAiModelsResponse(
