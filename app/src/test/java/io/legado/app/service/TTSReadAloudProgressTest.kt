@@ -88,11 +88,56 @@ class TTSReadAloudProgressTest {
     }
 
     @Test
-    fun mediaProgressUsesTheSameChapterPercentageAsThePlayer() {
-        assertEquals(25_000L, normalizedMediaProgressMs(670, 2_680, 100_000L))
-        assertEquals(0L, normalizedMediaProgressMs(-10, 2_680, 100_000L))
-        assertEquals(100_000L, normalizedMediaProgressMs(3_000, 2_680, 100_000L))
-        assertEquals(0L, normalizedMediaProgressMs(10, 0, 100_000L))
+    fun mediaProgressEstimatesTimeFromCharactersAndSpeechRate() {
+        assertEquals(1_000L, estimatedReadAloudTimeMs(4, 4f))
+        assertEquals(2_000L, estimatedReadAloudTimeMs(8, 4f))
+        assertEquals(2_000L, estimatedReadAloudTimeMs(4, 2f))
+        assertEquals(0L, estimatedReadAloudTimeMs(0, 4f))
+        assertEquals(0L, estimatedReadAloudTimeMs(10, 0f))
+        assertEquals(0L, estimatedReadAloudTimeMs(-5, 4f))
+    }
+
+    @Test
+    fun mediaProgressStaysMonotonicWhilePlayingAndFreezesOnPause() {
+        // PlaybackStateCompat: STATE_PLAYING = 3, STATE_PAUSED = 2, STATE_STOPPED = 1
+        val playing = 3
+        val paused = 2
+        val stopped = 1
+        // 估算值落后时按墙钟推进, 不回退
+        assertEquals(
+            11_000L,
+            nextMediaSessionPositionMs(playing, playing, 9_000, 10_000, 61_000, 60_000)
+        )
+        // 估算值领先时跟随估算值
+        assertEquals(
+            12_000L,
+            nextMediaSessionPositionMs(playing, playing, 12_000, 10_000, 61_000, 60_000)
+        )
+        // 播放转暂停: 冻结在系统插值的显示位置
+        assertEquals(
+            11_500L,
+            nextMediaSessionPositionMs(paused, playing, 9_000, 10_000, 61_500, 60_000)
+        )
+        // 已暂停保持不变
+        assertEquals(
+            11_500L,
+            nextMediaSessionPositionMs(paused, paused, 9_000, 11_500, 70_000, 61_500)
+        )
+        // 暂停转播放: 从冻结位置继续, 不包含暂停时长
+        assertEquals(
+            11_500L,
+            nextMediaSessionPositionMs(playing, paused, 9_000, 11_500, 70_000, 61_500)
+        )
+        // 停止等其他状态用估算值
+        assertEquals(
+            9_000L,
+            nextMediaSessionPositionMs(stopped, playing, 9_000, 10_000, 61_000, 60_000)
+        )
+        // 进度回退后锚点失效, 直接用估算值
+        assertEquals(
+            2_000L,
+            nextMediaSessionPositionMs(playing, playing, 2_000, -1, 61_000, 60_000)
+        )
     }
 
 }

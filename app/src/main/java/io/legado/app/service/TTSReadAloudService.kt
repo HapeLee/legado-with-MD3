@@ -40,6 +40,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
 
     override val useSpeechPlaybackQueue: Boolean = true
 
+    protected override val currentSpeechRate: Float
+        get() = if (ReadConfig.ttsFollowSys) 1f else (speechRateSetting + 5) / 10f
+
     private val readAloudSettingsGateway: ReadAloudSettingsGateway by inject()
     @Volatile
     private var speechRateSetting: Int = 5
@@ -304,6 +307,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         } else {
             val speechRate = (speechRateSetting + 5) / 10f
             textToSpeech?.setSpeechRate(speechRate)
+            upMediaMetadata()
             if (reset && !pause) {
                 play()
             }

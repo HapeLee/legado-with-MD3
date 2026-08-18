@@ -102,6 +102,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     Player.Listener {
     override val useSpeechPlaybackQueue: Boolean = true
 
+    protected override val currentSpeechRate: Float
+        get() = (speechRatePlay + 5) / 10f
+
     private val readAloudSettingsGateway = GlobalContext.get().get<ReadAloudSettingsGateway>()
     private val readSettingsGateway = GlobalContext.get().get<ReadSettingsGateway>()
     private val otherSettingsGateway = GlobalContext.get().get<OtherSettingsGateway>()
@@ -1093,6 +1096,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         preDownloadJob?.cancel()
         exoPlayer.stop()
         speechRate = speechRatePlay + 5
+        upMediaMetadata()
         if (readAloudSettings.streamReadAloudAudio) {
             downloadAndPlayAudiosStream()
         } else {

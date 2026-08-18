@@ -14,6 +14,7 @@ import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -116,7 +117,11 @@ abstract class BaseReadAloudService : BaseService(),
 
         private const val TAG = "BaseReadAloudService"
         private const val ACTION_ADD_TIMER = "io.legado.app.action.ADD_READ_ALOUD_TIMER"
-        private const val MEDIA_PROGRESS_DURATION_MS = 100_000L
+
+        /**
+         * 语速 1.0x 时的每秒朗读字数估算值, 用于把字符进度换算成媒体播放器时间轴
+         */
+        private const val ESTIMATED_CHARS_PER_SECOND = 4f
 
         private const val READ_ALOUD_MEDIA_SESSION_ACTIONS =
             (PlaybackStateCompat.ACTION_PLAY
@@ -169,6 +174,10 @@ abstract class BaseReadAloudService : BaseService(),
     private var registeredPhoneStateListener = false
     private var dsJob: Job? = null
     private var upNotificationJob: Job? = null
+    private var upMediaProgressJob: Job? = null
+    private var lastMediaSessionState = PlaybackStateCompat.STATE_NONE
+    private var lastMediaSessionPositionMs = -1L
+    private var lastMediaSessionUpdateElapsedMs = 0L
     @Volatile
     private var systemMediaCompatibilityEnabled =
         ReadConfig.systemMediaControlCompatibilityChange
@@ -188,6 +197,10 @@ abstract class BaseReadAloudService : BaseService(),
     protected open val useSpeechPlaybackQueue: Boolean = false
     protected val hasSpeechPlaybackQueue: Boolean
         get() = useSpeechPlaybackQueue && !playbackQueue.isEmpty
+
+    /** 当前朗读倍速, 用于把字符进度估算成媒体播放器时间轴 */
+    protected open val currentSpeechRate: Float
+        get() = 1f
 
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -426,6 +439,7 @@ abstract class BaseReadAloudService : BaseService(),
         needResumeOnAudioFocusGain = false
         needResumeOnCallStateIdle = false
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+        upMediaProgress()
         upReadAloudNotification()
         sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
@@ -447,6 +461,7 @@ abstract class BaseReadAloudService : BaseService(),
         if (abandonFocus) {
             abandonFocus()
         }
+        upMediaProgressJob?.cancel()
         upReadAloudNotification()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PAUSED)
         sessionStore.setStatus(ReadAloudSessionStatus.Paused)
@@ -471,6 +486,7 @@ abstract class BaseReadAloudService : BaseService(),
         needResumeOnCallStateIdle = false
         upReadAloudNotification()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+        upMediaProgress()
         sessionStore.setStatus(ReadAloudSessionStatus.Playing)
         postEvent(EventBus.ALOUD_STATE, Status.PLAY)
         if (!ReadBook.isAutoSaveSessionRunning) {
@@ -504,7 +520,12 @@ abstract class BaseReadAloudService : BaseService(),
 
     protected fun updateReadAloudProgressSnapshot(progress: Int) {
         currentChapterIndex = textChapter?.chapter?.index ?: currentChapterIndex
-        currentProgress = progress.coerceAtLeast(0)
+        val newProgress = progress.coerceAtLeast(0)
+        if (newProgress < currentProgress) {
+            // 进度回退(上一段/上一章等), 重置媒体进度锚点, 允许进度条跟随回退
+            lastMediaSessionPositionMs = -1L
+        }
+        currentProgress = newProgress
     }
 
     protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
@@ -744,6 +765,21 @@ abstract class BaseReadAloudService : BaseService(),
      * 更新媒体状态
      */
     private fun upMediaSessionPlaybackState(state: Int) {
+        val now = SystemClock.elapsedRealtime()
+        val position = nextMediaSessionPositionMs(
+            state = state,
+            lastState = lastMediaSessionState,
+            estimate = mediaProgressPositionMs(),
+            lastPosition = lastMediaSessionPositionMs,
+            nowElapsedRealtime = now,
+            lastUpdateElapsedRealtime = lastMediaSessionUpdateElapsedMs,
+        )
+        if (state == lastMediaSessionState && position == lastMediaSessionPositionMs) {
+            return
+        }
+        lastMediaSessionState = state
+        lastMediaSessionPositionMs = position
+        lastMediaSessionUpdateElapsedMs = now
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
                 if (androidMediaControlEnabled) {
@@ -753,10 +789,10 @@ abstract class BaseReadAloudService : BaseService(),
                     MediaHelp.MEDIA_SESSION_ACTIONS
                 }
             )
-            // This is a normalized chapter-percentage scale, not a real time axis.
+            // TTS 没有真实时间轴, 位置按字符进度与语速估算为毫秒时间
             .setState(
                 state,
-                mediaProgressPositionMs(),
+                position,
                 if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f,
             )
         if (androidMediaControlEnabled) {
@@ -777,14 +813,46 @@ abstract class BaseReadAloudService : BaseService(),
         )
     }
 
+    /**
+     * 播放时每秒推送一次媒体进度, 系统媒体播放器进度条随朗读推进
+     */
+    private fun upMediaProgress() {
+        upMediaProgressJob?.cancel()
+        upMediaProgressJob = lifecycleScope.launch {
+            while (isActive) {
+                refreshMediaSessionPlaybackState()
+                delay(1000)
+            }
+        }
+    }
+
     private fun mediaProgressPositionMs(): Long {
-        val playback = sessionStore.state.value.playback
-        return normalizedMediaProgressMs(
-            chapterPosition = playback.chapterPosition,
-            chapterLength = playback.chapterLength,
-            durationMs = MEDIA_PROGRESS_DURATION_MS,
+        val chapterLength = currentChapterLength()
+        val charsPerSecond = currentCharsPerSecond()
+        if (chapterLength <= 0 || charsPerSecond <= 0f) return 0L
+        return estimatedReadAloudTimeMs(
+            currentProgress.coerceIn(0, chapterLength),
+            charsPerSecond,
         )
     }
+
+    /**
+     * 当前章节按语速估算的朗读总时长, TTS 没有真实时间轴
+     */
+    private fun mediaProgressDurationMs(): Long {
+        val chapterLength = currentChapterLength()
+        val charsPerSecond = currentCharsPerSecond()
+        if (chapterLength <= 0 || charsPerSecond <= 0f) return 0L
+        return estimatedReadAloudTimeMs(chapterLength, charsPerSecond)
+    }
+
+    private fun currentChapterLength(): Int =
+        textChapter?.paragraphs?.lastOrNull()?.let { paragraph ->
+            paragraph.chapterPosition + paragraph.text.length
+        } ?: 0
+
+    private fun currentCharsPerSecond(): Float =
+        (ESTIMATED_CHARS_PER_SECOND * currentSpeechRate).coerceAtLeast(0.1f)
 
     /**
      * 更新媒体元数据, 用于车机蓝牙显示
@@ -802,7 +870,7 @@ abstract class BaseReadAloudService : BaseService(),
             .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, textChapter?.title ?: "")
             .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, ReadBook.book?.author ?: "")
             .putText(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, currentContent ?: "")
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, MEDIA_PROGRESS_DURATION_MS)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaProgressDurationMs())
             .build()
         mediaSessionCompat.setMetadata(metadata)
     }
@@ -889,6 +957,8 @@ abstract class BaseReadAloudService : BaseService(),
         if (enabled) {
             upMediaMetadata()
         }
+        // 强制重新推送, 让新的媒体按键集合生效
+        lastMediaSessionState = PlaybackStateCompat.STATE_NONE
         refreshMediaSessionPlaybackState()
         if (changed || enabled) {
             upReadAloudNotification()
@@ -1276,14 +1346,49 @@ abstract class BaseReadAloudService : BaseService(),
 
 }
 
-internal fun normalizedMediaProgressMs(
-    chapterPosition: Int,
-    chapterLength: Int,
-    durationMs: Long,
+/**
+ * 把已朗读字符数按每秒朗读字数估算为媒体播放器时间轴毫秒值
+ */
+internal fun estimatedReadAloudTimeMs(
+    chars: Int,
+    charsPerSecond: Float,
 ): Long {
-    if (chapterLength <= 0 || durationMs <= 0) return 0L
-    val position = chapterPosition.coerceIn(0, chapterLength)
-    return position.toLong() * durationMs / chapterLength
+    if (chars <= 0 || charsPerSecond <= 0f) return 0L
+    return (chars * 1000.0 / charsPerSecond).toLong()
+}
+
+/**
+ * 计算推送给系统媒体播放器的进度位置。
+ * 播放中保持单调不后退: 字符估算值领先时跟随估算值, 落后时按墙钟推进,
+ * 避免每秒重复推送同一估算值导致进度条来回跳变;
+ * 暂停时冻结在系统插值的显示位置, 恢复时从冻结位置继续, 不跳变。
+ */
+internal fun nextMediaSessionPositionMs(
+    state: Int,
+    lastState: Int,
+    estimate: Long,
+    lastPosition: Long,
+    nowElapsedRealtime: Long,
+    lastUpdateElapsedRealtime: Long,
+): Long {
+    val playing = PlaybackStateCompat.STATE_PLAYING
+    val paused = PlaybackStateCompat.STATE_PAUSED
+    return when {
+        state == paused && lastState == playing ->
+            if (lastPosition < 0) estimate
+            else lastPosition + (nowElapsedRealtime - lastUpdateElapsedRealtime)
+
+        state == paused -> lastPosition.coerceAtLeast(0)
+
+        state == playing && lastState == paused ->
+            if (lastPosition < 0) estimate else lastPosition
+
+        state == playing ->
+            if (lastPosition < 0) estimate
+            else maxOf(estimate, lastPosition + (nowElapsedRealtime - lastUpdateElapsedRealtime))
+
+        else -> estimate
+    }
 }
 
 /** Sentinel for "finish current chapter" timer not being armed. */
