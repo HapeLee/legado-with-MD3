@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.service.BookSourceCheckService
+import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -218,6 +219,10 @@ fun BookSourceScreen(
                     onIntent(BookSourceIntent.Import(reader.readText()))
                 }
             }
+        }
+    val qrCodeImport =
+        rememberLauncherForActivityResult(QrCodeResult()) { result ->
+            result?.let { onIntent(BookSourceIntent.Import(it)) }
         }
     val exportDocument =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -524,6 +529,9 @@ fun BookSourceScreen(
                     )
                 )
                 })
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.import_by_qr_code),
+                onClick = { dismiss(); qrCodeImport.launch(null) })
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_on_line),
                 onClick = { dismiss(); showOnlineImport = true })
