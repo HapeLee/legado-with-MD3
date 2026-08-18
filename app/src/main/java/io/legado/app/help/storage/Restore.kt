@@ -286,6 +286,9 @@ object Restore : KoinComponent {
                 }
             }
             reconcileReadRecordAliases()
+            // 会话导入按身份去重（幂等），汇总/明细取较大值后按会话重算，
+            // 避免同一备份重复导入导致阅读时长翻倍。
+            get<ReadRecordRepository>().reconcileReadRecordTotalsFromSessions()
         }
         if (BackupConfig.dbIsNotIgnored("server")) {
             File(path, "servers.json").takeIf {
@@ -412,7 +415,7 @@ object Restore : KoinComponent {
         }
     }
 
-    /** 导入汇总记录时统一到本地分区，并与已有记录合并阅读时长和最后阅读时间。 */
+    /** 导入汇总记录时统一到本地分区，取已有与导入两者中的较大时长，保证重复导入幂等。 */
     private suspend fun restoreReadRecord(readRecord: ReadRecord) {
         val localRecord = readRecord.copy(
             deviceId = LOCAL_READ_RECORD_DEVICE_ID,
@@ -426,13 +429,13 @@ object Restore : KoinComponent {
         )
         appDb.readRecordDao.insert(
             existing?.copy(
-                readTime = existing.readTime + localRecord.readTime,
+                readTime = maxOf(existing.readTime, localRecord.readTime),
                 lastRead = maxOf(existing.lastRead, localRecord.lastRead)
             ) ?: localRecord
         )
     }
 
-    /** 导入每日详情时统一到本地分区，并合并同书同日的统计数据。 */
+    /** 导入每日详情时统一到本地分区，取已有与导入两者中的较大统计值，保证重复导入幂等。 */
     private suspend fun restoreReadRecordDetail(detail: ReadRecordDetail) {
         val localDetail = detail.copy(
             deviceId = LOCAL_READ_RECORD_DEVICE_ID,
@@ -447,8 +450,8 @@ object Restore : KoinComponent {
         )
         appDb.readRecordDao.insertDetail(
             existing?.copy(
-                readTime = existing.readTime + localDetail.readTime,
-                readWords = existing.readWords + localDetail.readWords,
+                readTime = maxOf(existing.readTime, localDetail.readTime),
+                readWords = maxOf(existing.readWords, localDetail.readWords),
                 firstReadTime = minPositive(existing.firstReadTime, localDetail.firstReadTime),
                 lastReadTime = maxOf(existing.lastReadTime, localDetail.lastReadTime)
             ) ?: localDetail

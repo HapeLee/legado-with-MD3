@@ -487,7 +487,6 @@ fun ReadRecordScreen(
             text = stringResource(
                 R.string.read_record_repair_message,
                 report.mergedCount,
-                report.skippedCount,
                 report.exceptionCount,
                 report.duplicateSessionCount,
             ),

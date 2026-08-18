@@ -6,6 +6,8 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.readRecord.ReadRecord
+import io.legado.app.data.entities.readRecord.ReadRecordAliasAction
+import io.legado.app.data.entities.readRecord.ReadRecordAliasDecision
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
@@ -155,7 +157,10 @@ class ReadRecordRepository(
         database.withTransaction {
             // 旧版记录可能没有作者；打开同一本有作者的书后，将未知作者记录并入当前记录，
             // 避免第一次阅读时重新创建一条独立的阅读统计。
-            if (normalizedSession.bookAuthor.isNotBlank()) {
+            // 用户曾明确选择「保留独立记录」时尊重该决定，不自动合并。
+            if (normalizedSession.bookAuthor.isNotBlank() &&
+                !hasKeepAliasDecision(normalizedSession.bookName, normalizedSession.bookAuthor)
+            ) {
                 val unknownAuthorRecord = dao.getReadRecord(
                     normalizedSession.deviceId,
                     normalizedSession.bookName,
@@ -189,6 +194,17 @@ class ReadRecordRepository(
             updateReadRecordDetail(normalizedSession, segmentDuration, normalizedSession.words, dateString)
             updateReadRecord(normalizedSession, segmentDuration)
         }
+    }
+
+    /** 用户是否曾为当前书籍明确选择「保留独立记录」。 */
+    private suspend fun hasKeepAliasDecision(bookName: String, bookAuthor: String): Boolean {
+        val key = ReadRecordIdentity.key(bookName, bookAuthor)
+        return localPreferencesRepository
+            .getString(LocalPreferencesKeys.READ_RECORD_ALIAS_DECISIONS.name)
+            .first()
+            .split('\n')
+            .mapNotNull { ReadRecordAliasDecision.decode(it, key) }
+            .firstOrNull() == ReadRecordAliasAction.KEEP
     }
 
     private suspend fun updateReadRecord(session: ReadRecordSession, durationDelta: Long) {
@@ -586,6 +602,41 @@ class ReadRecordRepository(
             mergedCount = duplicateRecords + duplicateDetails,
             normalizedRecordCount = normalized,
         )
+    }
+
+    /**
+     * 以阅读时段记录为权威重建汇总与每日明细，并保留未被会话覆盖的历史时长。
+     *
+     * 备份恢复后调用：会话按身份去重导入（幂等），汇总/明细导入取已有与导入两者中的较大值，
+     * 再按会话重算，可避免同一备份重复导入导致时长翻倍，同时正确合并跨设备的会话时长。
+     */
+    suspend fun reconcileReadRecordTotalsFromSessions() {
+        database.withTransaction {
+            dao.all.forEach { record ->
+                val sessions = dao.getSessionsByBook(record.deviceId, record.bookName, record.bookAuthor)
+                if (sessions.isEmpty()) return@forEach
+                dao.update(record.copy(
+                    readTime = maxOf(record.readTime, sessions.sumOf { it.endTime - it.startTime }),
+                    lastRead = maxOf(record.lastRead, sessions.maxOf { it.endTime }),
+                ))
+            }
+            dao.allDetail.forEach { detail ->
+                val sessions = dao.getSessionsByBook(detail.deviceId, detail.bookName, detail.bookAuthor)
+                    .filter {
+                        DateUtil.format(Date(it.startTime), DatePattern.NORM_DATE_PATTERN) == detail.date
+                    }
+                if (sessions.isEmpty()) return@forEach
+                dao.insertDetail(detail.copy(
+                    readTime = maxOf(detail.readTime, sessions.sumOf { it.endTime - it.startTime }),
+                    readWords = maxOf(detail.readWords, sessions.sumOf { it.words }),
+                    firstReadTime = minPositive(
+                        detail.firstReadTime,
+                        sessions.map { it.startTime }.filter { it > 0L }.minOrNull() ?: 0L,
+                    ),
+                    lastReadTime = maxOf(detail.lastReadTime, sessions.maxOf { it.endTime }),
+                ))
+            }
+        }
     }
 
 }

@@ -2615,7 +2615,7 @@
     <string name="read_record_alias_remember">记住我的选择</string>
     <string name="read_record_alias_revoke">撤销已记住决定</string>
     <string name="read_record_repair_title">阅读记录修复结果</string>
-    <string name="read_record_repair_message">合并：%1$d，跳过：%2$d，异常：%3$d，字段完全相同的阅读时段记录：%4$d</string>
+    <string name="read_record_repair_message">合并：%1$d，异常：%2$d，字段完全相同的阅读时段记录：%3$d</string>
     <string name="read_record_scan_issues">扫描阅读记录问题</string>
     <string name="read_record_scan_issues_summary">检查重复汇总记录、每日详情和字段完全相同的阅读时段记录</string>
     <string name="read_record_repair">修复阅读记录</string>

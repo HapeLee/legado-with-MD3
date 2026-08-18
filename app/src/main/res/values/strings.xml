@@ -2620,7 +2620,7 @@
     <string name="read_record_alias_remember">Remember my choice</string>
     <string name="read_record_alias_revoke">Revoke remembered decisions</string>
     <string name="read_record_repair_title">Reading record repair result</string>
-    <string name="read_record_repair_message">Merged: %1$d, skipped: %2$d, errors: %3$d, records with identical fields: %4$d</string>
+    <string name="read_record_repair_message">Merged: %1$d, errors: %2$d, records with identical fields: %3$d</string>
     <string name="read_record_scan_issues">Scan reading record issues</string>
     <string name="read_record_scan_issues_summary">Check duplicate records, daily details, and reading-period records with identical fields</string>
     <string name="read_record_repair">Repair reading records</string>

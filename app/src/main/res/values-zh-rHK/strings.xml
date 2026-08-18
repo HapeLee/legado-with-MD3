@@ -2484,7 +2484,7 @@
     <string name="read_record_alias_remember">記住我的選擇</string>
     <string name="read_record_alias_revoke">撤銷已記住決定</string>
     <string name="read_record_repair_title">閱讀記錄修復結果</string>
-    <string name="read_record_repair_message">合併：%1$d，跳過：%2$d，異常：%3$d，欄位完全相同的閱讀時段記錄：%4$d</string>
+    <string name="read_record_repair_message">合併：%1$d，異常：%2$d，欄位完全相同的閱讀時段記錄：%3$d</string>
     <string name="read_record_scan_issues">掃描閱讀記錄問題</string>
     <string name="read_record_scan_issues_summary">檢查重複彙總記錄、每日詳情和欄位完全相同的閱讀時段記錄</string>
     <string name="read_record_repair">修復閱讀記錄</string>
