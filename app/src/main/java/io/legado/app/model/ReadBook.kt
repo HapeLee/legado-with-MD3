@@ -983,7 +983,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         upContent: Boolean = true,
         success: (() -> Unit)? = null
     ) {
-        if (index < chapterSize) {
+        // 实时读取章节数而不是依赖缓存 chapterSize：更新目录后 chapterSize 若未同步，
+        // 新增章节的 index 会超出旧值而被下方守卫静默吞掉，表现为「点击新章节无法跳转」。
+        val chapterCount = book?.bookUrl?.let { appDb.bookChapterDao.getChapterCount(it) }
+            ?: chapterSize
+        if (index < chapterCount) {
             clearTextChapter()
             if (upContent) renderCallBack?.upContent()
             durChapterIndex = index
