@@ -264,6 +264,12 @@ class ReadBookDomainSplitBoundaryTest {
                 ),
             ),
             DomainSplit(
+                name = "阅读记录归属",
+                delegateFile = "io/legado/app/ui/book/read/ReadRecordAliasDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf("getUnknownAuthorRecords", "ReadRecordAliasDecision."),
+            ),
+            DomainSplit(
                 name = "书签",
                 delegateFile = "io/legado/app/ui/book/read/ReadBookmarkDelegate.kt",
                 stateFields = emptySet(),

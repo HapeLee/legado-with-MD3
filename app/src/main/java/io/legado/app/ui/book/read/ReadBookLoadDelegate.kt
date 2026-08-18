@@ -87,6 +87,8 @@ class ReadBookLoadDelegate(
         suspend fun syncReadPreferencesSnapshot()
 
         fun openChapter(index: Int, durChapterPos: Int)
+
+        suspend fun checkReadRecordAlias(book: Book)
     }
 
     private var changeSourceCoroutine: Coroutine<*>? = null
@@ -153,6 +155,7 @@ class ReadBookLoadDelegate(
             return
         }
         ReadBook.upMsg(null)
+        host.checkReadRecordAlias(book)
 
         if (!isSameBook) {
             ReadBook.loadContent(resetPageOffset = true) {

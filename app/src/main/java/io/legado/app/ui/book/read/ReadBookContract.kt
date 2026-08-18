@@ -544,6 +544,9 @@ sealed interface ReadBookIntent {
     data object DismissSheet : ReadBookIntent
     data class SetActiveSheet(val sheet: ReadBookSheet?) : ReadBookIntent
     data class ShowDialog(val dialog: ReadBookDialog) : ReadBookIntent
+    data class ResolveReadRecordAlias(val merge: Boolean, val rememberChoice: Boolean = false) : ReadBookIntent
+    /** 清除所有持久化的未知作者决定，使冲突可以再次由用户确认。 */
+    data object ClearReadRecordAliasDecisions : ReadBookIntent
     data object DismissDialog : ReadBookIntent
 
     // Source actions
@@ -1013,6 +1016,11 @@ sealed interface ReadBookSheet {
 
 @Immutable
 sealed interface ReadBookDialog {
+    data class ReadRecordAliasConflict(
+        val bookName: String,
+        val author: String,
+        val readTime: Long,
+    ) : ReadBookDialog
     data class ConfirmRestoreProgress(val progress: BookProgress) : ReadBookDialog
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object RestoreLastBookProgress : ReadBookDialog

@@ -20,4 +20,9 @@ data class ReadRecordSession(
 
     // 本次阅读的字数
     val words: Long = 0
-)
+) {
+    /** 跨设备稳定身份，不依赖 Room 自动生成的数据库行 ID。 */
+    val stableFingerprint: String
+        get() = listOf(deviceId, bookName, bookAuthor, startTime, endTime, words)
+            .joinToString("\u0001")
+}
