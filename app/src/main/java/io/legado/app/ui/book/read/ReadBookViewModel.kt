@@ -16,6 +16,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.HighlightRuleRepository
@@ -146,17 +147,15 @@ class ReadBookViewModel(
     private val bookSourceRepository: BookSourceRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val bookRepository: BookRepository,
+    private val readRecordRepository: ReadRecordRepository,
     private val readerSession: ReaderSession,
 ) : BaseViewModel(application) {
-
     // --- MVI State ---
 
     private val _uiState = MutableStateFlow(ReadBookUiState())
     val uiState = _uiState.asStateFlow()
-
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
-
     private val _readAloudProgress = MutableStateFlow(
         activeReadAloudProgress(
             isPlaying = BaseReadAloudService.isPlay(),
@@ -164,12 +163,10 @@ class ReadBookViewModel(
         )
     )
     val readAloudProgress = _readAloudProgress.asStateFlow()
-
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
         _effects.emit(effect)
     }
-
     /**
      * 书籍信息/目录有两种呈现：`useNewTocSheet` 开着时在阅读页内开 Sheet，
      * 否则按老路子发 Effect 开新页。两个入口的判断完全一致，合在一处，
@@ -187,11 +184,9 @@ class ReadBookViewModel(
             _effects.tryEmit(fallbackEffect(book))
         }
     }
-
     private fun closeReadMenu() {
         _uiState.update { it.copy(menuState = ReadBookMenuState()) }
     }
-
     /**
      * 直接打开书籍详情（跳过阅读信息 Sheet，长按标题胶囊时使用）。
      */
@@ -200,7 +195,6 @@ class ReadBookViewModel(
         closeReadMenu()
         _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
     }
-
     // --- 正文处理域 ---
 
     private val contentProcessDelegate = ReadContentProcessDelegate(
@@ -215,7 +209,6 @@ class ReadBookViewModel(
     )
 
     val contentProcessState = contentProcessDelegate.uiState
-
     // --- 划线/高亮笔记域：一次「选中 → 配置样式/备注 → 保存」的临时会话 ---
 
     private val markingDelegate = MarkingDelegate(
@@ -239,7 +232,6 @@ class ReadBookViewModel(
     )
 
     val markingState = markingDelegate.uiState
-
     /**
      * 划线笔记编辑可能从目录 Sheet 进入：保存/删除/取消后应回到原 sheet（目录），
      * 而不是被丢回阅读页。从划词菜单新建时无原 sheet，回 null。
@@ -320,7 +312,6 @@ class ReadBookViewModel(
     )
 
     val aiState = aiDelegate.uiState
-
     // --- 高亮规则域 ---
 
     private val highlightRuleDelegate = ReadHighlightRuleDelegate(
@@ -414,6 +405,12 @@ class ReadBookViewModel(
         bookKey = _uiState.map { it.book?.let { book -> book.name to book.author } },
     )
 
+    private val readRecordAliasDelegate = ReadRecordAliasDelegate(
+        viewModelScope, localPreferencesRepository, readRecordRepository,
+        { _uiState.value.activeDialog != null },
+        { book, time -> _uiState.update { it.copy(activeDialog = ReadBookDialog.ReadRecordAliasConflict(book.name, book.author, time)) } },
+        { _uiState.update { it.copy(activeDialog = null) } },
+    )
     // --- 开书 / 目录 / 换源 / 进度同步域（无自持状态，isInitFinish 仍在 UiState）---
 
     private val loadDelegate: ReadBookLoadDelegate = ReadBookLoadDelegate(
@@ -449,6 +446,12 @@ class ReadBookViewModel(
             override fun openChapter(index: Int, durChapterPos: Int) {
                 this@ReadBookViewModel.openChapter(index, durChapterPos)
             }
+
+            /**
+             * 打开书籍时检查旧版作者为空的阅读记录。
+             * 已有持久化决定时自动处理，否则暂存候选记录并弹出确认框。
+             */
+            override suspend fun checkReadRecordAlias(book: Book) = readRecordAliasDelegate.check(book)
         },
         bookRepository = bookRepository,
         bookSourceRepository = bookSourceRepository,
@@ -1007,6 +1010,9 @@ class ReadBookViewModel(
                 it.copy(activeSheet = intent.sheet)
             }
             is ReadBookIntent.ShowDialog -> _uiState.update { it.copy(activeDialog = intent.dialog) }
+            is ReadBookIntent.ResolveReadRecordAlias ->
+                readRecordAliasDelegate.resolve(intent.merge, intent.rememberChoice)
+            is ReadBookIntent.ClearReadRecordAliasDecisions -> readRecordAliasDelegate.clearDecisions()
             is ReadBookIntent.DismissDialog -> _uiState.update { it.copy(activeDialog = null) }
             is ReadBookIntent.ShowLogin -> {
                 ReadBook.bookSource?.bookSourceUrl?.let { sourceUrl ->
@@ -2464,9 +2470,7 @@ class ReadBookViewModel(
                 ?: return@launch
             val url = chapter.getAbsoluteURL()
             if (url.isBlank()) return@launch
-            val useBrowser = localPreferencesRepository
-                .getPreference(LocalPreferencesKeys.READ_URL_IN_BROWSER, false)
-                .first()
+            val useBrowser = readSettingsRepository.currentSettings.readUrlInBrowser
             if (useBrowser) {
                 context.openUrl(url.substringBefore(",{"))
             } else {
@@ -2506,13 +2510,9 @@ class ReadBookViewModel(
 
     private fun toggleReadUrlInBrowser() {
         viewModelScope.launch {
-            val current = localPreferencesRepository
-                .getPreference(LocalPreferencesKeys.READ_URL_IN_BROWSER, false)
-                .first()
+            val current = readSettingsRepository.currentSettings.readUrlInBrowser
             val newValue = !current
-            localPreferencesRepository.updatePreference(
-                LocalPreferencesKeys.READ_URL_IN_BROWSER, newValue
-            )
+            readSettingsRepository.update { it.copy(readUrlInBrowser = newValue) }
             _effects.tryEmit(
                 ReadBookEffect.ShowToast(
                     context.getString(

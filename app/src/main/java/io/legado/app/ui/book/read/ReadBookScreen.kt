@@ -1,6 +1,10 @@
 package io.legado.app.ui.book.read
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +61,7 @@ import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.koinInject
@@ -98,6 +103,38 @@ fun ReadBookScreen(
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
     val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
+    val readRecordAliasDialog = state.activeDialog as? ReadBookDialog.ReadRecordAliasConflict
+    var rememberAliasChoice by remember(readRecordAliasDialog) { mutableStateOf(false) }
+
+    AppAlertDialog(
+        show = readRecordAliasDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.ResolveReadRecordAlias(false, rememberAliasChoice)) },
+        title = stringResource(R.string.read_record_alias_title),
+        text = readRecordAliasDialog?.let {
+            stringResource(R.string.read_record_alias_message, it.bookName, it.readTime / 60000, it.author)
+        }.orEmpty(),
+        confirmText = stringResource(R.string.read_record_alias_merge),
+        onConfirm = { onIntent(ReadBookIntent.ResolveReadRecordAlias(true, rememberAliasChoice)) },
+        dismissText = stringResource(R.string.read_record_alias_keep_separate),
+        onDismiss = { onIntent(ReadBookIntent.ResolveReadRecordAlias(false, rememberAliasChoice)) },
+        content = {
+            Row(
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = rememberAliasChoice,
+                    onCheckedChange = { rememberAliasChoice = it },
+                )
+                AppText(stringResource(R.string.read_record_alias_remember))
+                TextButton(onClick = {
+                    onIntent(ReadBookIntent.ClearReadRecordAliasDecisions)
+                }) {
+                    AppText(stringResource(R.string.read_record_alias_revoke))
+                }
+            }
+        },
+    )
 
     AppAlertDialog(
         show = restoreDialog != null,
