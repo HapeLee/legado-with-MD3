@@ -427,9 +427,8 @@ class ExportBookService : BaseService(), KoinComponent {
             //txt导出图片文件 - only for original source
             val srcList = arrayListOf<SrcData>()
             content?.split("\n")?.forEachIndexed { index, text ->
-                val matcher = AppPattern.imgPattern.matcher(text)
-                while (matcher.find()) {
-                    matcher.group(1)?.let {
+                for (m in AppPattern.imgPattern.findAll(text)) {
+                    m.groupValues[1].takeIf { it.isNotEmpty() }?.let {
                         val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
                         srcList.add(SrcData(chapter.title, index, src))
                     }
@@ -727,9 +726,8 @@ class ExportBookService : BaseService(), KoinComponent {
         val resources = arrayListOf<Resource>()
         content.split("\n").forEach { text ->
             var text1 = text
-            val matcher = AppPattern.imgPattern.matcher(text)
-            while (matcher.find()) {
-                matcher.group(1)?.let { rawSrc ->
+            for (m in AppPattern.imgPattern.findAll(text)) {
+                m.groupValues[1].takeIf { it.isNotEmpty() }?.let { rawSrc ->
                     val src = NetworkUtils.getAbsoluteURL(chapter.url, rawSrc)
                     val originalHref =
                         "${MD5Utils.md5Encode16(src)}.${BookHelp.getImageSuffix(src)}"

@@ -13,7 +13,6 @@ import io.legado.app.exception.NoStackTraceException
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import splitties.init.appCtx
-import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
 @Parcelize
@@ -92,7 +91,7 @@ data class ReplaceRule(
         //判断正则表达式是否正确
         if (isRegex) {
             try {
-                Pattern.compile(pattern)
+                Regex(pattern)
             } catch (ex: PatternSyntaxException) {
                 AppLog.put("正则语法错误或不支持：${ex.localizedMessage}", ex)
                 return false

@@ -17,14 +17,13 @@ import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.utils.*
 import splitties.init.appCtx
 import java.io.File
-import java.util.regex.Pattern
 
 object ImportOldData {
 
     @Suppress("RegExpRedundantEscape")
-    private val headerPattern = Pattern.compile("@Header:\\{.+?\\}", Pattern.CASE_INSENSITIVE)
+    private val headerPattern = Regex("@Header:\\{.+?\\}", RegexOption.IGNORE_CASE)
     @Suppress("RegExpRedundantEscape")
-    private val jsPattern = Pattern.compile("\\{\\{.+?\\}\\}", Pattern.CASE_INSENSITIVE)
+    private val jsPattern = Regex("\\{\\{.+?\\}\\}", RegexOption.IGNORE_CASE)
 
     fun importUri(context: Context, uri: Uri) {
         if (uri.isContentScheme()) {
@@ -324,9 +323,8 @@ object ImportOldData {
             return url
         }
         val map = HashMap<String, String>()
-        var mather = headerPattern.matcher(url)
-        if (mather.find()) {
-            val header = mather.group()
+        headerPattern.find(url)?.let { match ->
+            val header = match.value
             url = url.replace(header, "")
             map["headers"] = header.substring(8)
         }
@@ -335,10 +333,9 @@ object ImportOldData {
         if (urlList.size > 1) {
             map["charset"] = urlList[1].split("=")[1]
         }
-        mather = jsPattern.matcher(url)
         val jsList = arrayListOf<String>()
-        while (mather.find()) {
-            jsList.add(mather.group())
+        for (match in jsPattern.findAll(url)) {
+            jsList.add(match.value)
             url = url.replace(jsList.last(), "$${jsList.size - 1}")
         }
         url = url.replace("{", "<").replace("}", ">")

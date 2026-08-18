@@ -9,7 +9,7 @@ import android.graphics.RectF
 import android.net.Uri
 import androidx.core.net.toUri
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.Uuid
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -60,7 +60,7 @@ fun saveCharacterAvatar(
     )
 
     val dir = File(context.filesDir, "character_avatars").apply { mkdirs() }
-    val file = File(dir, "${UUID.randomUUID()}.jpg")
+    val file = File(dir, "${Uuid.random()}.jpg")
     file.outputStream().use { stream ->
         output.compress(Bitmap.CompressFormat.JPEG, 92, stream)
     }

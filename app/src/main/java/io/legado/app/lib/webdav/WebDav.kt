@@ -2,7 +2,6 @@ package io.legado.app.lib.webdav
 
 import android.annotation.SuppressLint
 import android.net.Uri
-import cn.hutool.core.net.URLDecoder
 import io.legado.app.constant.AppLog
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.newCallResponse
@@ -31,6 +30,7 @@ import org.jsoup.parser.Parser
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.ByteArrayOutputStream
 import java.net.MalformedURLException
 import java.net.URL
 import java.net.URLEncoder
@@ -123,6 +123,55 @@ open class WebDav(
             }
         }
 
+    private fun decodeForPath(str: String): String {
+        if (str.isEmpty()) return ""
+        val result = StringBuilder(str.length / 3)
+        var begin = 0
+        var i = 0
+        while (i < str.length) {
+            val c = str[i]
+            if (c == '%' || c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F') {
+                i++
+                continue
+            }
+            if (i > begin) result.append(decodeSub(str, begin, i))
+            result.append(c)
+            begin = i + 1
+            i++
+        }
+        if (begin < str.length) result.append(decodeSub(str, begin, str.length))
+        return result.toString()
+    }
+
+    private fun decodeSub(str: String, begin: Int, end: Int): String =
+        String(decodePercent(str.substring(begin, end).toByteArray(Charsets.ISO_8859_1)), Charsets.UTF_8)
+
+    private fun decodePercent(bytes: ByteArray): ByteArray {
+        val buffer = ByteArrayOutputStream(bytes.size)
+        var i = 0
+        while (i < bytes.size) {
+            val b = bytes[i].toInt() and 0xFF
+            if (b == '%'.code) {
+                if (i + 1 < bytes.size) {
+                    val u = Character.digit((bytes[i + 1].toInt() and 0xFF).toChar(), 16)
+                    if (u >= 0 && i + 2 < bytes.size) {
+                        val l = Character.digit((bytes[i + 2].toInt() and 0xFF).toChar(), 16)
+                        if (l >= 0) {
+                            buffer.write((u shl 4) + l)
+                            i += 3
+                            continue
+                        }
+                    }
+                }
+                buffer.write(b)
+            } else {
+                buffer.write(b)
+            }
+            i++
+        }
+        return buffer.toByteArray()
+    }
+
     /**
      * 获取当前url文件信息
      */
@@ -194,7 +243,7 @@ open class WebDav(
         for (element in elements) {
             //依然是优化支持 caddy 自建的 WebDav ，其目录后缀都为“/”, 所以删除“/”的判定，不然无法获取该目录项
             val href = element.findNS("href", ns)[0].text()
-            val hrefDecode = URLDecoder.decodeForPath(href, Charsets.UTF_8)
+            val hrefDecode = decodeForPath(href)
             val fileName = hrefDecode.removeSuffix("/").substringAfterLast("/")
             val webDavFile: WebDav
             try {
@@ -204,7 +253,7 @@ open class WebDav(
                 val displayName = element
                     .findNS("displayname", ns)
                     .firstOrNull()?.text()?.takeIf { it.isNotEmpty() }
-                    ?.let { URLDecoder.decodeForPath(it, Charsets.UTF_8) } ?: fileName
+                    ?.let { decodeForPath(it) } ?: fileName
                 val contentType = element
                     .findNS("getcontenttype", ns)
                     .firstOrNull()?.text().orEmpty()

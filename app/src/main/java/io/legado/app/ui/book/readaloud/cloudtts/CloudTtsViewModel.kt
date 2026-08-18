@@ -58,7 +58,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class CloudTtsViewModel(
     private val application: Application,
@@ -507,7 +507,7 @@ class CloudTtsViewModel(
         val old = editor.editingEngineId?.let { id -> engines.firstOrNull { it.id == id } }
         val now = System.currentTimeMillis()
         return CloudTtsEngine(
-            id = old?.id ?: UUID.randomUUID().toString(),
+            id = old?.id ?: Uuid.random().toString(),
             name = editor.name.trim(),
             provider = provider,
             baseUrl = editor.baseUrl.trim(),

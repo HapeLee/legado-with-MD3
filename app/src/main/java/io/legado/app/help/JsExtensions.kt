@@ -4,8 +4,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import androidx.annotation.Keep
 import androidx.core.net.toUri
-import cn.hutool.core.codec.Base64
-import cn.hutool.core.util.HexUtil
 import com.script.rhino.rhinoContext
 import com.script.rhino.rhinoContextOrNull
 import io.legado.app.constant.AppConst
@@ -18,6 +16,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.crypto.base64ToByteArray
+import io.legado.app.help.crypto.digest
+import io.legado.app.help.crypto.hexToByteArray
+import io.legado.app.help.crypto.toHexString
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
@@ -68,16 +70,15 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.Charset
-import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.SimpleTimeZone
-import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.uuid.Uuid
 
 /**
  * js扩展类, 在js中通过java变量调用
@@ -484,7 +485,7 @@ interface JsExtensions : JsEncodeUtils {
         )
         val file = File(path)
         file.createFileReplace()
-        HexUtil.decodeHex(content).let {
+        content.hexToByteArray().let {
             if (it.isNotEmpty()) {
                 file.writeBytes(it)
             }
@@ -599,12 +600,12 @@ interface JsExtensions : JsEncodeUtils {
      */
     @JavascriptInterface
     fun base64Decode(str: String?): String {
-        return Base64.decodeStr(str)
+        return str?.let { String(it.base64ToByteArray(), Charsets.UTF_8) } ?: ""
     }
 
     @JavascriptInterface
     fun base64Decode(str: String?, charset: String): String {
-        return Base64.decodeStr(str, charset(charset))
+        return str?.let { String(it.base64ToByteArray(), charset(charset)) } ?: ""
     }
 
     @JavascriptInterface
@@ -638,19 +639,19 @@ interface JsExtensions : JsEncodeUtils {
 
     /* HexString 解码为字节数组 */
     fun hexDecodeToByteArray(hex: String): ByteArray? {
-        return HexUtil.decodeHex(hex)
+        return hex.hexToByteArray()
     }
 
     /* hexString 解码为utf8String*/
     @JavascriptInterface
     fun hexDecodeToString(hex: String): String? {
-        return HexUtil.decodeHexStr(hex)
+        return String(hex.hexToByteArray(), Charsets.UTF_8)
     }
 
     /* utf8 编码为hexString */
     @JavascriptInterface
     fun hexEncodeToString(utf8: String): String? {
-        return HexUtil.encodeHexStr(utf8)
+        return utf8.toByteArray().toHexString()
     }
 
     /**
@@ -904,7 +905,7 @@ interface JsExtensions : JsEncodeUtils {
         val bytes = if (url.isAbsUrl()) {
             AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
         } else {
-            HexUtil.decodeHex(url)
+            url.hexToByteArray()
         }
         val bos = ByteArrayOutputStream()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
@@ -932,7 +933,7 @@ interface JsExtensions : JsEncodeUtils {
         val bytes = if (url.isAbsUrl()) {
             AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
         } else {
-            HexUtil.decodeHex(url)
+            url.hexToByteArray()
         }
 
         return ByteArrayInputStream(bytes).use {
@@ -950,7 +951,7 @@ interface JsExtensions : JsEncodeUtils {
         val bytes = if (url.isAbsUrl()) {
             AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
         } else {
-            HexUtil.decodeHex(url)
+            url.hexToByteArray()
         }
 
         return ByteArrayInputStream(bytes).use {
@@ -978,7 +979,6 @@ interface JsExtensions : JsEncodeUtils {
      * @param data 支持url,本地文件,base64,ByteArray,自动判断,自动缓存
      * @param useCache 可选开关缓存,不传入该值默认开启缓存
      */
-    @OptIn(ExperimentalStdlibApi::class)
     fun queryTTF(data: Any?, useCache: Boolean): QueryTTF? {
         try {
             var key: String? = null
@@ -986,8 +986,7 @@ interface JsExtensions : JsEncodeUtils {
             when (data) {
                 is String -> {
                     if (useCache) {
-                        key = MessageDigest.getInstance("SHA-256").digest(data.toByteArray())
-                            .toHexString()
+                        key = digest("SHA-256", data.toByteArray()).toHexString()
                         qTTF = AppCacheManager.getQueryTTF(key)
                         if (qTTF != null) return qTTF
                     }
@@ -1006,7 +1005,7 @@ interface JsExtensions : JsEncodeUtils {
 
                 is ByteArray -> {
                     if (useCache) {
-                        key = MessageDigest.getInstance("SHA-256").digest(data).toHexString()
+                        key = digest("SHA-256", data).toHexString()
                         qTTF = AppCacheManager.getQueryTTF(key)
                         if (qTTF != null) return qTTF
                     }
@@ -1085,10 +1084,10 @@ interface JsExtensions : JsEncodeUtils {
     @JavascriptInterface
     fun toNumChapter(s: String?): String? {
         s ?: return null
-        val matcher = AppPattern.titleNumPattern.matcher(s)
-        if (matcher.find()) {
-            val intStr = StringUtils.stringToInt(matcher.group(2))
-            return "${matcher.group(1)}${intStr}${matcher.group(3)}"
+        val match = AppPattern.titleNumPattern.find(s)
+        if (match != null) {
+            val intStr = StringUtils.stringToInt(match.groupValues[2])
+            return "${match.groupValues[1]}${intStr}${match.groupValues[3]}"
         }
         return s
     }
@@ -1146,7 +1145,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     @JavascriptInterface
     fun randomUUID(): String {
-        return UUID.randomUUID().toString()
+        return Uuid.random().toString()
     }
 
     @JavascriptInterface

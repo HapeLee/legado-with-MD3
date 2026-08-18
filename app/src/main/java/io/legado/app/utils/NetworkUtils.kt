@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
-import cn.hutool.core.lang.Validator
 import io.legado.app.constant.AppLog
 import okhttp3.internal.publicsuffix.PublicSuffixDatabase
 import splitties.systemservices.connectivityManager
@@ -17,6 +16,13 @@ import java.util.Enumeration
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object NetworkUtils {
+
+    private val ipv4Pattern =
+        Regex("^(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)\\.(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)\\.(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)\\.(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)$")
+    private val ipv6Pattern = Regex(
+        "(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))"
+    )
+
 
     /**
      * 判断是否联网
@@ -278,14 +284,14 @@ object NetworkUtils {
         return input != null && input.isNotEmpty()
                 && input[0] in '1'..'9'
                 && input.count { it == '.' } == 3
-                && Validator.isIpv4(input)
+                && ipv4Pattern.matches(input)
     }
 
     /**
      * Check if valid IPV6 address.
      */
     fun isIPv6Address(input: String?): Boolean {
-        return input != null && input.contains(":") && Validator.isIpv6(input)
+        return input != null && input.contains(":") && ipv6Pattern.matches(input)
     }
 
     /**

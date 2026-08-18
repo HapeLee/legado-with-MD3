@@ -1,6 +1,5 @@
 package io.legado.app.help.book
 
-import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min
 
@@ -480,18 +479,17 @@ object ContentHelp {
     private fun makeDict(str: String): List<String> {
 
         // 引号中间不包含任何标点
-        val patten = Pattern.compile(
+        val patten = Regex(
             """
           (?<=["'”“])([^
           \p{P}]{1,$WORD_MAX_LENGTH})(?=["'”“])
           """.trimIndent()
         )
         //Pattern patten = Pattern.compile("(?<=[\"'”“])([^\n\"'”“]{1,16})(?=[\"'”“])");
-        val matcher = patten.matcher(str)
         val cache: MutableList<String> = ArrayList()
         val dict: MutableList<String> = ArrayList()
-        while (matcher.find()) {
-            val word = matcher.group()
+        for (m in patten.findAll(str)) {
+            val word = m.value
             if (cache.contains(word)) {
                 if (!dict.contains(word)) dict.add(word)
             } else cache.add(word)

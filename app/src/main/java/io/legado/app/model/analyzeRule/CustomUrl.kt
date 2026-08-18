@@ -10,13 +10,13 @@ class CustomUrl(url: String) {
     private val attribute = hashMapOf<String, Any>()
 
     init {
-        val urlMatcher = AnalyzeUrl.paramPattern.matcher(url)
-        mUrl = if (urlMatcher.find()) {
-            val attr = url.substring(urlMatcher.end())
+        val urlMatch = AnalyzeUrl.paramPattern.find(url)
+        mUrl = if (urlMatch != null) {
+            val attr = url.substring(urlMatch.range.last + 1)
             GSON.fromJsonObject<Map<String, Any>>(attr).getOrNull()?.let {
                 attribute.putAll(it)
             }
-            url.substring(0, urlMatcher.start())
+            url.substring(0, urlMatch.range.first)
         } else {
             url
         }

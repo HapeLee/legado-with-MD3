@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class BookEventDetailViewModel(
     bookUrl: String,
@@ -119,7 +119,7 @@ class BookEventDetailViewModel(
                         ?: withContext(Dispatchers.IO) {
                             val now = System.currentTimeMillis()
                             val profile = io.legado.app.data.entities.BookCharacterProfile(
-                                id = UUID.randomUUID().toString(),
+                                id = Uuid.random().toString(),
                                 bookUrl = state.bookUrl,
                                 name = charName,
                                 source = io.legado.app.data.entities.BookCharacterProfile.SOURCE_USER,
@@ -134,7 +134,7 @@ class BookEventDetailViewModel(
                 val now = System.currentTimeMillis()
                 val existing = currentEvent
                 val event = BookCharacterEvent(
-                    id = existing?.id ?: state.eventId ?: UUID.randomUUID().toString(),
+                    id = existing?.id ?: state.eventId ?: Uuid.random().toString(),
                     bookUrl = state.bookUrl,
                     characterId = character?.id.orEmpty(),
                     chapterTitle = state.chapterTitle.trim(),

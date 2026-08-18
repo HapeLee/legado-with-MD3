@@ -147,13 +147,13 @@ data class BookChapter(
     fun getAbsoluteURL(): String {
         //二级目录解析的卷链接为空 返回目录页的链接
         if (url.startsWith(title) && isVolume) return baseUrl
-        val urlMatcher = AnalyzeUrl.paramPattern.matcher(url)
-        val urlBefore = if (urlMatcher.find()) url.substring(0, urlMatcher.start()) else url
+        val urlMatch = AnalyzeUrl.paramPattern.find(url)
+        val urlBefore = if (urlMatch != null) url.substring(0, urlMatch.range.first) else url
         val urlAbsoluteBefore = NetworkUtils.getAbsoluteURL(baseUrl, urlBefore)
-        return if (urlBefore.length == url.length) {
+        return if (urlMatch == null) {
             urlAbsoluteBefore
         } else {
-            "$urlAbsoluteBefore," + url.substring(urlMatcher.end())
+            "$urlAbsoluteBefore," + url.substring(urlMatch.range.last + 1)
         }
     }
 

@@ -54,7 +54,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
-import java.util.regex.Pattern
 import java.util.zip.ZipFile
 import kotlin.math.abs
 import kotlin.math.max
@@ -147,15 +146,14 @@ object BookHelp {
         val imgNames = hashSetOf<String>()
         //获取需要保留章节的图片信息
         chapterList.forEach {
-            val content = getContent(book, it)
-            if (content != null) {
-                val matcher = AppPattern.imgPattern.matcher(content)
-                while (matcher.find()) {
-                    val src = matcher.group(1) ?: continue
-                    val mSrc = NetworkUtils.getAbsoluteURL(it.url, src)
-                    imgNames.add("${MD5Utils.md5Encode16(mSrc)}.${getImageSuffix(mSrc)}")
+                val content = getContent(book, it)
+                if (content != null) {
+                    for (m in AppPattern.imgPattern.findAll(content)) {
+                        val src = m.groupValues[1].takeIf { it.isNotEmpty() } ?: continue
+                        val mSrc = NetworkUtils.getAbsoluteURL(it.url, src)
+                        imgNames.add("${MD5Utils.md5Encode16(mSrc)}.${getImageSuffix(mSrc)}")
+                    }
                 }
-            }
         }
         downloadDir.getFile(
             cacheFolderName,
@@ -280,9 +278,8 @@ object BookHelp {
 
     fun flowImages(bookChapter: BookChapter, content: String): Flow<String> {
         return flow {
-            val matcher = AppPattern.imgPattern.matcher(content)
-            while (matcher.find()) {
-                val src = matcher.group(1) ?: continue
+            for (m in AppPattern.imgPattern.findAll(content)) {
+                val src = m.groupValues[1].takeIf { it.isNotEmpty() } ?: continue
                 val mSrc = NetworkUtils.getAbsoluteURL(bookChapter.url, src)
                 emit(mSrc)
             }
@@ -291,9 +288,8 @@ object BookHelp {
 
     fun countImagesInContent(bookChapter: BookChapter, content: String): Int {
         var count = 0
-        val matcher = AppPattern.imgPattern.matcher(content)
-        while (matcher.find()) {
-            if (matcher.group(1) != null) count++
+        for (m in AppPattern.imgPattern.findAll(content)) {
+            if (m.groupValues[1].isNotEmpty()) count++
         }
         return count
     }
@@ -612,9 +608,8 @@ object BookHelp {
             return
         }
         getContent(book, bookChapter)?.let { content ->
-            val matcher = AppPattern.imgPattern.matcher(content)
-            while (matcher.find()) {
-                val src = matcher.group(1) ?: continue
+            for (m in AppPattern.imgPattern.findAll(content)) {
+                val src = m.groupValues[1].takeIf { it.isNotEmpty() } ?: continue
                 action(NetworkUtils.getAbsoluteURL(bookChapter.url, src))
             }
         }
@@ -639,11 +634,11 @@ object BookHelp {
         buffer: StringBuilder,
         action: (String) -> Unit
     ) {
-        val matcher = AppPattern.imgPattern.matcher(buffer)
         var lastEnd = 0
-        while (matcher.find()) {
-            action(matcher.group(1) ?: continue)
-            lastEnd = matcher.end()
+        for (m in AppPattern.imgPattern.findAll(buffer)) {
+            val src = m.groupValues[1].takeIf { it.isNotEmpty() } ?: continue
+            action(src)
+            lastEnd = m.range.last + 1
         }
         if (lastEnd > 0) {
             buffer.delete(0, lastEnd)
@@ -894,14 +889,14 @@ object BookHelp {
     }
 
     private val chapterNamePattern1 by lazy {
-        Pattern.compile(
+        Regex(
             ".*?第([\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+)[章节篇回集话]"
         )
     }
 
     @Suppress("RegExpSimplifiable")
     private val chapterNamePattern2 by lazy {
-        Pattern.compile(
+        Regex(
             "^(?:[\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+[,:、])*([\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+)(?:[,:、]|\\.[^\\d])"
         )
     }
@@ -915,10 +910,9 @@ object BookHelp {
         val chapterName1 = StringUtils.fullToHalf(chapterName).replace(regexA, "")
         return StringUtils.stringToInt(
             (
-                    chapterNamePattern1.matcher(chapterName1).takeIf { it.find() }
-                        ?: chapterNamePattern2.matcher(chapterName1).takeIf { it.find() }
-                    )?.group(1)
-                ?: "-1"
+                    chapterNamePattern1.find(chapterName1)?.groups?.get(1)?.value
+                        ?: chapterNamePattern2.find(chapterName1)?.groups?.get(1)?.value
+                    ) ?: "-1"
         )
     }
 

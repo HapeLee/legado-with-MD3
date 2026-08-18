@@ -45,7 +45,6 @@ import org.mozilla.javascript.Scriptable
 import java.lang.ref.WeakReference
 import java.net.URL
 import java.util.Locale
-import java.util.regex.Pattern
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -453,10 +452,9 @@ class AnalyzeRule(
      */
     private fun splitPutRule(ruleStr: String, putMap: HashMap<String, String>): String {
         var vRuleStr = ruleStr
-        val putMatcher = putPattern.matcher(vRuleStr)
-        while (putMatcher.find()) {
-            vRuleStr = vRuleStr.replace(putMatcher.group(), "")
-            val putJsonStr = putMatcher.group(1)
+        for (putMatch in putPattern.findAll(vRuleStr)) {
+            vRuleStr = vRuleStr.replace(putMatch.value, "")
+            val putJsonStr = putMatch.groupValues[1]
             val putJson = GSONStrict.fromJsonObject<Map<String, String>>(putJsonStr)
                 .getOrNull()
             if (putJson != null) {
@@ -487,10 +485,9 @@ class AnalyzeRule(
         if (rule.replaceFirst) {
             /* ##match##replace### 获取第一个匹配到的结果并进行替换 */
             if (regex != null) kotlin.runCatching {
-                val pattern = regex.toPattern()
-                val matcher = pattern.matcher(result)
-                return if (matcher.find()) {
-                    matcher.group(0)!!.replaceFirst(regex, replacement)
+                val match = regex.find(result)
+                return if (match != null) {
+                    match.value.replaceFirst(regex, replacement)
                 } else {
                     ""
                 }
@@ -542,28 +539,26 @@ class AnalyzeRule(
             mMode = Mode.Regex
         }
         var tmp: String
-        val jsMatcher = JS_PATTERN.matcher(ruleStr)
-        while (jsMatcher.find()) {
-            if (jsMatcher.start() > start) {
-                tmp = ruleStr.substring(start, jsMatcher.start()).trim { it <= ' ' }
+        for (jsMatch in JS_PATTERN.findAll(ruleStr)) {
+            if (jsMatch.range.first > start) {
+                tmp = ruleStr.substring(start, jsMatch.range.first).trim { it <= ' ' }
                 if (tmp.isNotEmpty()) {
                     ruleList.add(SourceRule(tmp, mMode))
                 }
             }
-            ruleList.add(SourceRule(jsMatcher.group(2) ?: jsMatcher.group(1), Mode.Js))
-            start = jsMatcher.end()
+            ruleList.add(SourceRule(jsMatch.groupValues[2].ifEmpty { jsMatch.groupValues[1] }, Mode.Js))
+            start = jsMatch.range.last + 1
         }
 
-        val webJsMatcher = WebJS_PATTERN.matcher(ruleStr)
-        while (webJsMatcher.find()) {
-            if (webJsMatcher.start() > start) {
-                tmp = ruleStr.substring(start, webJsMatcher.start()).trim { it <= ' ' }
+        for (webJsMatch in WebJS_PATTERN.findAll(ruleStr)) {
+            if (webJsMatch.range.first > start) {
+                tmp = ruleStr.substring(start, webJsMatch.range.first).trim { it <= ' ' }
                 if (tmp.isNotEmpty()) {
                     ruleList.add(SourceRule(tmp, mMode))
                 }
             }
-            ruleList.add(SourceRule(webJsMatcher.group(1) ?: "", Mode.WebJs))
-            start = webJsMatcher.end()
+            ruleList.add(SourceRule(webJsMatch.groupValues[1], Mode.WebJs))
+            start = webJsMatch.range.last + 1
         }
 
         if (ruleStr.length > start) {
@@ -640,38 +635,37 @@ class AnalyzeRule(
             //@get,{{ }}, 拆分
             var start = 0
             var tmp: String
-            val evalMatcher = evalPattern.matcher(rule)
-
-            if (evalMatcher.find()) {
-                tmp = rule.substring(start, evalMatcher.start())
+            val firstMatch = evalPattern.find(rule)
+            if (firstMatch != null) {
+                tmp = rule.substring(start, firstMatch.range.first)
                 if (mode != Mode.Js && mode != Mode.Regex &&
-                    (evalMatcher.start() == 0 || !tmp.contains("##"))
+                    (firstMatch.range.first == 0 || !tmp.contains("##"))
                 ) {
                     mode = Mode.Regex
                 }
-                do {
-                    if (evalMatcher.start() > start) {
-                        tmp = rule.substring(start, evalMatcher.start())
+            }
+            for (evalMatch in evalPattern.findAll(rule)) {
+                if (evalMatch.range.first > start) {
+                    tmp = rule.substring(start, evalMatch.range.first)
+                    splitRegex(tmp)
+                }
+                tmp = evalMatch.value
+                when {
+                    tmp.startsWith("@get:", true) -> {
+                        ruleType.add(getRuleType)
+                        ruleParam.add(tmp.substring(6, tmp.lastIndex))
+                    }
+
+                    tmp.startsWith("{{") -> {
+                        ruleType.add(jsRuleType)
+                        ruleParam.add(tmp.substring(2, tmp.length - 2))
+                    }
+
+                    else -> {
                         splitRegex(tmp)
                     }
-                    tmp = evalMatcher.group()
-                    when {
-                        tmp.startsWith("@get:", true) -> {
-                            ruleType.add(getRuleType)
-                            ruleParam.add(tmp.substring(6, tmp.lastIndex))
-                        }
-
-                        tmp.startsWith("{{") -> {
-                            ruleType.add(jsRuleType)
-                            ruleParam.add(tmp.substring(2, tmp.length - 2))
-                        }
-
-                        else -> {
-                            splitRegex(tmp)
-                        }
-                    }
-                    start = evalMatcher.end()
-                } while (evalMatcher.find())
+                }
+                start = evalMatch.range.last + 1
             }
             if (rule.length > start) {
                 tmp = rule.substring(start)
@@ -686,23 +680,21 @@ class AnalyzeRule(
             var start = 0
             var tmp: String
             val ruleStrArray = ruleStr.split("##")
-            val regexMatcher = regexPattern.matcher(ruleStrArray[0])
-
-            if (regexMatcher.find()) {
+            if (regexPattern.find(ruleStrArray[0]) != null) {
                 if (mode != Mode.Js && mode != Mode.Regex) {
                     mode = Mode.Regex
                 }
-                do {
-                    if (regexMatcher.start() > start) {
-                        tmp = ruleStr.substring(start, regexMatcher.start())
-                        ruleType.add(defaultRuleType)
-                        ruleParam.add(tmp)
-                    }
-                    tmp = regexMatcher.group()
-                    ruleType.add(tmp.substring(1).toInt())
+            }
+            for (regexMatch in regexPattern.findAll(ruleStrArray[0])) {
+                if (regexMatch.range.first > start) {
+                    tmp = ruleStr.substring(start, regexMatch.range.first)
+                    ruleType.add(defaultRuleType)
                     ruleParam.add(tmp)
-                    start = regexMatcher.end()
-                } while (regexMatcher.find())
+                }
+                tmp = regexMatch.value
+                ruleType.add(tmp.substring(1).toInt())
+                ruleParam.add(tmp)
+                start = regexMatch.range.last + 1
             }
             if (ruleStr.length > start) {
                 tmp = ruleStr.substring(start)
@@ -949,10 +941,10 @@ class AnalyzeRule(
     }
 
     companion object {
-        private val putPattern = Pattern.compile("@put:(\\{[^}]+?\\})", Pattern.CASE_INSENSITIVE)
+        private val putPattern = Regex("@put:(\\{[^}]+?\\})", RegexOption.IGNORE_CASE)
         private val evalPattern =
-            Pattern.compile("@get:\\{[^}]+?\\}|\\{\\{[\\w\\W]*?\\}\\}", Pattern.CASE_INSENSITIVE)
-        private val regexPattern = Pattern.compile("\\$\\d{1,2}")
+            Regex("@get:\\{[^}]+?\\}|\\{\\{[\\w\\W]*?\\}\\}", RegexOption.IGNORE_CASE)
+        private val regexPattern = Regex("\\$\\d{1,2}")
 
         fun AnalyzeRule.setCoroutineContext(context: CoroutineContext): AnalyzeRule {
             coroutineContext = context.minusKey(ContinuationInterceptor)

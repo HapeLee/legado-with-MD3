@@ -13,8 +13,6 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.Locale
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import kotlin.math.abs
@@ -29,6 +27,9 @@ object StringUtils {
     private val wordCountFormatter by lazy {
         DecimalFormat("#.#")
     }
+    private val numberRegex = Regex("[0-9]+")
+    private val numericRegex = Regex("-?[0-9]+")
+    private val unicodeRegex = Regex("\\\\u(\\p{XDigit}{4})")
 
     private val chnMap: HashMap<Char, Int>
         get() {
@@ -249,18 +250,14 @@ object StringUtils {
      * 是否包含数字
      */
     fun isContainNumber(company: String): Boolean {
-        val p = Pattern.compile("[0-9]+")
-        val m = p.matcher(company)
-        return m.find()
+        return numberRegex.containsMatchIn(company)
     }
 
     /**
      * 是否数字
      */
     fun isNumeric(str: String): Boolean {
-        val pattern = Pattern.compile("-?[0-9]+")
-        val isNum = pattern.matcher(str)
-        return isNum.matches()
+        return numericRegex.matches(str)
     }
 
     fun wordCountFormat(words: Int): String {
@@ -329,15 +326,9 @@ object StringUtils {
      */
     fun removeUTFCharacters(data: String?): String? {
         if (data == null) return null
-        val p = Pattern.compile("\\\\u(\\p{XDigit}{4})")
-        val m = p.matcher(data)
-        val buf = StringBuffer(data.length)
-        while (m.find()) {
-            val ch = Integer.parseInt(m.group(1)!!, 16).toChar().toString()
-            m.appendReplacement(buf, Matcher.quoteReplacement(ch))
+        return unicodeRegex.replace(data) { m ->
+            Integer.parseInt(m.groupValues[1], 16).toChar().toString()
         }
-        m.appendTail(buf)
-        return buf.toString()
     }
 
     /**

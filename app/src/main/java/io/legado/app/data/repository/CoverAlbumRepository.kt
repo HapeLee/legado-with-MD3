@@ -31,7 +31,7 @@ import java.io.FileOutputStream
 import java.nio.file.StandardCopyOption
 import java.security.DigestInputStream
 import java.security.MessageDigest
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class CoverAlbumRepository(
     private val context: Context,
@@ -98,7 +98,7 @@ class CoverAlbumRepository(
     override suspend fun createAlbum(name: String): String = withContext(Dispatchers.IO) {
         operationMutex.withLock {
             val album = CoverAlbum(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 name = name.trim(),
                 lightImages = emptyList(),
                 darkImages = emptyList(),
@@ -114,7 +114,7 @@ class CoverAlbumRepository(
         darkImages: List<CoverAlbumImageInput>,
     ): String = withContext(Dispatchers.IO) {
         operationMutex.withLock {
-            val albumId = UUID.randomUUID().toString()
+            val albumId = Uuid.random().toString()
             val importedLightImages = copyImages(albumId, lightImages)
             val importedDarkImages = copyImages(albumId, darkImages)
             val album = CoverAlbum(
@@ -313,7 +313,7 @@ class CoverAlbumRepository(
                     .lowercase()
                     .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
                     ?: "img"
-                val tempFile = File(albumDir, ".${UUID.randomUUID()}.tmp")
+                val tempFile = File(albumDir, ".${Uuid.random()}.tmp")
                 val digest = MessageDigest.getInstance("SHA-256")
                 input.openStream().use { source ->
                     DigestInputStream(source, digest).use { digestInput ->

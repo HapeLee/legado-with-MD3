@@ -9,7 +9,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class SaveBookContentProcessUseCase(
     private val bookContentProcessGateway: BookContentProcessGateway,
@@ -49,7 +49,7 @@ class SaveBookContentProcessUseCase(
             }
             val now = System.currentTimeMillis()
             val process = BookContentProcess(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 bookUrl = bookUrl,
                 chapterIndex = chapterIndex,
                 kind = kind,

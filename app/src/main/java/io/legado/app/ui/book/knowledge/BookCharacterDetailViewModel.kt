@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class BookCharacterDetailViewModel(
     bookUrl: String,
@@ -168,7 +168,7 @@ class BookCharacterDetailViewModel(
                 val now = System.currentTimeMillis()
                 val existing = currentProfile
                 val profile = BookCharacterProfile(
-                    id = existing?.id ?: state.characterId ?: UUID.randomUUID().toString(),
+                    id = existing?.id ?: state.characterId ?: Uuid.random().toString(),
                     bookUrl = state.bookUrl,
                     name = name,
                     aliasesJson = state.aliasesText.toAliasesJson(),

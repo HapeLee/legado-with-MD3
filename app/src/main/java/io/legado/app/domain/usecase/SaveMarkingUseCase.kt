@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 用户划线/高亮笔记的落库（book_marks 表）。与书签、AI 正文处理完全独立：
@@ -93,7 +93,7 @@ class SaveMarkingUseCase(
                 return@withContext updated
             }
             val mark = BookMarking(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 bookUrl = bookUrl,
                 bookName = bookName,
                 bookAuthor = bookAuthor,

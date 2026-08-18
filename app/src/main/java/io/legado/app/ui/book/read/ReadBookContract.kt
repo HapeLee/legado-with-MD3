@@ -28,11 +28,11 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 @Stable
 data class ReminderUiState(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = Uuid.random().toString(),
     val message: String,
     val actionText: String? = null,
     val actionIntent: ReadBookIntent? = null,

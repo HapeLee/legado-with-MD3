@@ -9,7 +9,7 @@ import io.legado.app.domain.model.AiMessagePartJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class AiChatRepository(
     private val aiChatDao: AiChatDao
@@ -131,5 +131,5 @@ class AiChatRepository(
         aiChatDao.deleteConversation(conversationId)
     }
 
-    private fun newId(prefix: String): String = "${prefix}_${UUID.randomUUID().toString().replace("-", "")}"
+    private fun newId(prefix: String): String = "${prefix}_${Uuid.random().toString().replace("-", "")}"
 }

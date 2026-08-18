@@ -21,11 +21,12 @@ import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
+import io.legado.app.utils.nameUuidFromBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class AiProfileRepository(
     private val aiProfileDao: AiProfileDao
@@ -425,10 +426,10 @@ class AiProfileRepository(
         const val DEFAULT_SUMMARY_PRESET_ID = "default_summarize_chapter"
         const val DEFAULT_CHAT_PRESET_ID = "default_chat"
 
-        fun newId(prefix: String): String = "${prefix}_${UUID.randomUUID().toString().replace("-", "")}"
+        fun newId(prefix: String): String = "${prefix}_${Uuid.random().toString().replace("-", "")}"
 
         fun stableModelId(providerId: String, modelId: String): String {
-            val uuid = UUID.nameUUIDFromBytes("$providerId:$modelId".toByteArray())
+            val uuid = nameUuidFromBytes("$providerId:$modelId".toByteArray())
                 .toString()
                 .replace("-", "")
             return "model_$uuid"

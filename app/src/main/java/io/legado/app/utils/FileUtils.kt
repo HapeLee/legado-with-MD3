@@ -8,7 +8,6 @@ import java.io.*
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.regex.Pattern
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object FileUtils {
@@ -254,7 +253,7 @@ object FileUtils {
     @JvmOverloads
     fun listFiles(
         startDirPath: String,
-        filterPattern: Pattern? = null, @SortType sortType: Int = BY_NAME_ASC
+        filterPattern: Regex? = null, @SortType sortType: Int = BY_NAME_ASC
     ): Array<File> {
         val fileList = ArrayList<File>()
         val f = File(startDirPath)
@@ -269,7 +268,7 @@ object FileUtils {
                 return@FileFilter false
             }
 
-            filterPattern?.matcher(file.name)?.find() ?: true
+            filterPattern?.containsMatchIn(file.name) ?: true
         })
             ?: return arrayOf()
         for (file in files) {

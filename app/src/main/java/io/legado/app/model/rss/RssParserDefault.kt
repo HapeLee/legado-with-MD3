@@ -122,14 +122,14 @@ object RssParserDefault {
     private fun getImageUrl(input: String): String? {
 
         var url: String? = null
-        val patternImg = "(<img [^>]*>)".toPattern()
-        val matcherImg = patternImg.matcher(input)
-        if (matcherImg.find()) {
-            val imgTag = matcherImg.group(1)
-            val patternLink = "src\\s*=\\s*\"([^\"]+)\"".toPattern()
-            val matcherLink = patternLink.matcher(imgTag!!)
-            if (matcherLink.find()) {
-                url = matcherLink.group(1)!!.trim()
+        val regexImg = Regex("<img [^>]*>")
+        val matchImg = regexImg.find(input)
+        if (matchImg != null) {
+            val imgTag = matchImg.value
+            val regexLink = Regex("src\\s*=\\s*\"([^\"]+)\"")
+            val matchLink = regexLink.find(imgTag)
+            if (matchLink != null) {
+                url = matchLink.groupValues[1].trim()
             }
         }
         return url

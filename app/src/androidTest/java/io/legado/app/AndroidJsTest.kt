@@ -1,6 +1,5 @@
 package io.legado.app
 
-import cn.hutool.core.lang.JarClassLoader
 import com.script.ScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import dalvik.system.DexClassLoader
@@ -54,7 +53,6 @@ class AndroidJsTest {
     fun testPackages1() {
         URLClassLoader.getSystemClassLoader()
         DefiningClassLoader.getSystemClassLoader()
-        JarClassLoader.getSystemClassLoader()
         DexClassLoader.getSystemClassLoader()
         @Language("js")
         val js = """

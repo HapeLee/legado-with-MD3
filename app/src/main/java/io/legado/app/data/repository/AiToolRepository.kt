@@ -26,7 +26,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class AiToolRepository(
     private val bookDao: BookDao,
@@ -536,7 +536,7 @@ class AiToolRepository(
         if (content.isBlank()) return """{"error":"content is required"}"""
         val now = System.currentTimeMillis()
         val event = BookCharacterEvent(
-            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: Uuid.random()
                 .toString(),
             bookUrl = book.bookUrl,
             characterId = character.id,
@@ -614,7 +614,7 @@ class AiToolRepository(
         if (content.isBlank()) return """{"error":"content is required"}"""
         val now = System.currentTimeMillis()
         val entry = BookKnowledgeEntry(
-            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: Uuid.random()
                 .toString(),
             bookUrl = book.bookUrl,
             type = type,
@@ -650,7 +650,7 @@ class AiToolRepository(
         if (summary.isBlank()) return """{"error":"summary is required"}"""
         val now = System.currentTimeMillis()
         val node = BookOutlineNode(
-            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: UUID.randomUUID()
+            id = args.string("id")?.trim()?.takeIf { it.isNotBlank() } ?: Uuid.random()
                 .toString(),
             bookUrl = book.bookUrl,
             parentId = args.string("parentId")?.trim()?.takeIf { it.isNotBlank() },

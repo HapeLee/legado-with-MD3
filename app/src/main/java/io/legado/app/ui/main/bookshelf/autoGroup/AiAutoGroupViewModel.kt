@@ -14,7 +14,7 @@ import io.legado.app.domain.model.BookshelfAutoGroupPreflight
 import io.legado.app.domain.model.BookshelfAutoGroupSource
 import io.legado.app.domain.usecase.ApplyBookshelfAutoGroupPlanUseCase
 import io.legado.app.domain.usecase.GenerateBookshelfAutoGroupPlanUseCase
-import java.util.UUID
+import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -405,7 +405,7 @@ class AiAutoGroupViewModel(
         _uiState.update { state ->
             state.copy(
                 groups = (state.groups + AiAutoGroupGroupUi(
-                    key = UUID.randomUUID().toString(),
+                    key = Uuid.random().toString(),
                     name = finalName,
                     description = "",
                     reuseExisting = finalName in existingNames,

@@ -1,11 +1,11 @@
 package io.legado.app.domain.model.manga
 
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 @JvmInline
 value class MangaSessionId(val value: String) {
     companion object {
-        fun create(): MangaSessionId = MangaSessionId(UUID.randomUUID().toString())
+        fun create(): MangaSessionId = MangaSessionId(Uuid.random().toString())
     }
 }
 

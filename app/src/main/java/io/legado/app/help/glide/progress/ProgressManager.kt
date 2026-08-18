@@ -51,9 +51,9 @@ object ProgressManager {
     }
 
     private fun getUrlNoOption(url: String): String {
-        val urlMatcher = AnalyzeUrl.paramPattern.matcher(url)
-        return if (urlMatcher.find()) {
-            url.take(urlMatcher.start())
+        val urlMatch = AnalyzeUrl.paramPattern.find(url)
+        return if (urlMatch != null) {
+            url.take(urlMatch.range.first)
         } else {
             url
         }

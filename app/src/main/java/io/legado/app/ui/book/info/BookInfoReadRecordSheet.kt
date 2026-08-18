@@ -23,7 +23,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import cn.hutool.core.date.DateUtil
 import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
@@ -34,7 +33,9 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.formatReadDuration
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun BookReadRecordSheet(
@@ -142,7 +143,9 @@ private fun TimelineSessionRow(session: ReadRecordSession) {
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
             AppText(
-                text = DateUtil.format(Date(session.endTime), "HH:mm"),
+                text = Instant.ofEpochMilli(session.endTime)
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("HH:mm")),
                 style = LegadoTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )

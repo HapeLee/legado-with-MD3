@@ -22,7 +22,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJsonObject
 import java.lang.ref.WeakReference
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 @Suppress("unused")
 class WebJsExtensions(
@@ -282,10 +282,10 @@ class WebJsExtensions(
         }
 
         val uuid by lazy {
-            UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
+            Uuid.random().toString().replace('-', getRandomLetter()).chunked(6)
         }
         val uuid2 by lazy {
-            UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
+            Uuid.random().toString().replace('-', getRandomLetter()).chunked(6)
         }
         val nameUrl by lazy { "https://" + uuid[0] + ".com/" + uuid2[0] + ".js" }
         val nameJava by lazy { getRandomLetter() + uuid[1] + uuid2[1] }

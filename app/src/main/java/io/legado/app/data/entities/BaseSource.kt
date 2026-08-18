@@ -1,7 +1,6 @@
 package io.legado.app.data.entities
 
 import android.webkit.JavascriptInterface
-import cn.hutool.crypto.symmetric.AES
 import com.script.ScriptBindings
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
@@ -170,7 +169,7 @@ interface BaseSource : JsExtensions {
         try {
             val key = AppConst.androidId.encodeToByteArray(0, 16)
             val cache = CacheManager.get("userInfo_${getKey()}") ?: return null
-            return AES(key).decryptStr(cache)
+            return SymmetricCryptoAndroid("AES", key).decryptStr(cache)
         } catch (e: Exception) {
             AppLog.put("获取登陆信息出错", e)
             return null

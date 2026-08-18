@@ -3,7 +3,6 @@ package io.legado.app.ui.book.readRecord
 import androidx.lifecycle.ViewModel
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
-import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -30,9 +29,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 
 @Stable
 data class ReadRecordUiState(
@@ -116,7 +116,7 @@ class ReadRecordViewModel(
             .mapValues { it.value.size }
 
         val dailyTimes = data.sessions
-            .groupBy { DateUtil.format(Date(it.startTime), "yyyy-MM-dd") }
+            .groupBy { it.startTime.toDateString() }
             .mapKeys { LocalDate.parse(it.key, DateTimeFormatter.ISO_LOCAL_DATE) }
             .mapValues { (_, sessions) ->
                 sessions.sumOf { (it.endTime - it.startTime).coerceAtLeast(0L) }
@@ -129,13 +129,13 @@ class ReadRecordViewModel(
         val timelineMap = data.sessions
             .asSequence()
             .filter { session ->
-                val sDate = DateUtil.format(Date(session.startTime), "yyyy-MM-dd")
+                val sDate = session.startTime.toDateString()
                 (dateStr == null || sDate == dateStr) &&
                         (searchKey.isEmpty() ||
                                 session.bookName.contains(searchKey, ignoreCase = true) ||
                                 session.bookAuthor.contains(searchKey, ignoreCase = true))
             }
-            .groupBy { DateUtil.format(Date(it.startTime), "yyyy-MM-dd") }
+            .groupBy { it.startTime.toDateString() }
             .mapValues { (_, sessions) ->
                 mergeContinuousSessions(sessions).reversed()
             }
@@ -291,6 +291,9 @@ class ReadRecordViewModel(
         val latestRecords: List<ReadRecord>,
         val sessions: List<ReadRecordSession>
     )
+
+    private fun Long.toDateString(): String =
+        Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate().toString()
 }
 
 sealed interface ReadRecordIntent {

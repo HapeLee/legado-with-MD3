@@ -25,7 +25,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URLEncoder
-import java.util.UUID
+import kotlin.uuid.Uuid
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -111,7 +111,7 @@ class ThemePackageManager(
 
     suspend fun importPackage(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         runSuspendCatching {
-            val tempRoot = File(context.cacheDir, "theme_import/${UUID.randomUUID()}")
+            val tempRoot = File(context.cacheDir, "theme_import/${Uuid.random()}")
             val importedAlbumIds = mutableListOf<String>()
             val copiedAssets = mutableListOf<File>()
             try {
@@ -355,7 +355,7 @@ class ThemePackageManager(
     ): SavedTheme {
         savedThemesRoot.mkdirs()
         val targetRoot = savedThemeDir(name)
-        val tempRoot = File(savedThemesRoot, "${targetRoot.name}_${UUID.randomUUID()}.tmp")
+        val tempRoot = File(savedThemesRoot, "${targetRoot.name}_${Uuid.random()}.tmp")
         tempRoot.mkdirs()
         try {
             val assetEntries = copyAssetsToFolder(tempRoot, data)
@@ -767,7 +767,7 @@ class ThemePackageManager(
             }.apply { mkdirs() }
             val target = File(
                 targetDir,
-                "theme_${key.substringAfterLast('.')}_${UUID.randomUUID()}.$extension",
+                "theme_${key.substringAfterLast('.')}_${Uuid.random()}.$extension",
             )
             source.copyTo(target)
             copiedFiles += target

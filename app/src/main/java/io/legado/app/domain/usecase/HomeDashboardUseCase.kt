@@ -12,9 +12,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import java.time.Clock
-import java.time.Duration
-import java.time.ZonedDateTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 
 class HomeDashboardUseCase(
     private val gateway: HomeDashboardGateway,
@@ -68,14 +71,14 @@ class HomeDashboardUseCase(
 
     private fun currentDate(): Flow<String> = flow {
         while (true) {
-            val now = ZonedDateTime.now(clock)
-            emit(now.toLocalDate().toString())
-            val nextDay = now.toLocalDate()
-                .plusDays(1)
-                .atStartOfDay(clock.zone)
+            val now = clock.now()
+            val zone = TimeZone.currentSystemDefault()
+            emit(now.toLocalDateTime(zone).date.toString())
+            val nextDay = now.toLocalDateTime(zone).date
+                .plus(DatePeriod(days = 1))
+                .atStartOfDayIn(zone)
             delay(
-                Duration.between(now, nextDay)
-                    .toMillis()
+                (nextDay - now).inWholeMilliseconds
                     .coerceAtLeast(MIN_DATE_REFRESH_DELAY_MILLIS)
             )
         }

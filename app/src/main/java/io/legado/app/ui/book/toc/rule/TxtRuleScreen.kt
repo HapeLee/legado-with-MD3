@@ -56,7 +56,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.util.regex.Pattern
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -305,16 +304,14 @@ fun TxtRuleScreen(
         },
         showTestButton = true,
         onTest = { rule, example ->
-            val pattern = Pattern.compile(rule, Pattern.MULTILINE)
+            val regex = Regex(rule, RegexOption.MULTILINE)
             withContext(Dispatchers.Default) {
                 val normalized = example.replace("\r\n", "\n").replace("\r", "\n")
                 val lines = normalized.lines()
                 val fullText = "\n$normalized"
-                val matcher = pattern.matcher(fullText)
-                val matchRanges = mutableListOf<IntRange>()
-                while (matcher.find()) {
-                    matchRanges.add(matcher.start()..matcher.end())
-                }
+                val matchRanges = regex.findAll(fullText)
+                    .map { it.range.first..it.range.last + 1 }
+                    .toMutableList()
                 var offset = 1
                 lines.map { line ->
                     val lineStart = offset

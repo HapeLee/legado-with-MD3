@@ -9,7 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.Uuid
 import kotlin.coroutines.resume
 
 /** Serializes Android TTS file synthesis and reuses the active engine between adjacent cues. */
@@ -37,7 +37,7 @@ class SystemTtsFileSynthesizer(
         }
         output.parentFile?.mkdirs()
         if (output.exists()) output.delete()
-        val utteranceId = "legado-file-${UUID.randomUUID()}"
+        val utteranceId = "legado-file-${Uuid.random()}"
         suspendCancellableCoroutine { continuation ->
             instance.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) = Unit

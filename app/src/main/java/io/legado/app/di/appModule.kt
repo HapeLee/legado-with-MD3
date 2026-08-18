@@ -317,7 +317,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import kotlinx.coroutines.Dispatchers
-import java.time.Clock
+import kotlinx.datetime.Clock
 
 val appModule = module {
 
@@ -430,7 +430,7 @@ val appModule = module {
     singleOf(::CoverAlbumUseCase)
     singleOf(::DeleteBooksUseCase)
     singleOf(::GetReadingProgressUseCase)
-    single { HomeDashboardUseCase(get(), Clock.systemDefaultZone()) }
+    single { HomeDashboardUseCase(get(), Clock.System) }
     singleOf(::RemoveBookGroupAssignmentUseCase)
     singleOf(::UpdateBooksGroupUseCase)
     singleOf(::UploadReadingProgressUseCase)

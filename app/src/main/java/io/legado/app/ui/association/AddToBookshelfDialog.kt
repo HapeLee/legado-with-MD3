@@ -112,10 +112,10 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
                 }
                 val baseUrl = NetworkUtils.getBaseUrl(bookUrl)
                     ?: throw NoStackTraceException("书籍地址格式不对")
-                val urlMatcher = AnalyzeUrl.paramPattern.matcher(bookUrl)
-                if (urlMatcher.find()) {
+                val urlMatch = AnalyzeUrl.paramPattern.find(bookUrl)
+                if (urlMatch != null) {
                     val origin = GSON.fromJsonObject<AnalyzeUrl.UrlOption>(
-                        bookUrl.substring(urlMatcher.end())
+                        bookUrl.substring(urlMatch.range.last + 1)
                     ).getOrNull()?.getOrigin()
                     origin?.let {
                         val source = appDb.bookSourceDao.getBookSource(it)

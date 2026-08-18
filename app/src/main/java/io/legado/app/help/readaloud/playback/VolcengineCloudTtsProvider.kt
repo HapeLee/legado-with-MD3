@@ -10,7 +10,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 internal class VolcengineCloudTtsProvider : CloudTtsProvider {
     override val type = CloudTtsProviderType.Volcengine
@@ -49,7 +49,7 @@ internal class VolcengineCloudTtsProvider : CloudTtsProvider {
                 .put("pitch_ratio", request.pitch)
                 .apply { if (request.style.isNotBlank()) put("emotion", request.style) })
             put("request", JSONObject()
-                .put("reqid", UUID.randomUUID().toString())
+                .put("reqid", Uuid.random().toString())
                 .put("text", request.text)
                 .put("text_type", "plain")
                 .put("operation", "query"))

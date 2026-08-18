@@ -1,17 +1,15 @@
 package io.legado.app.constant
 
-import java.util.regex.Pattern
-
 @Suppress("RegExpRedundantEscape", "unused")
 object AppPattern {
-    val JS_PATTERN: Pattern =
-        Pattern.compile("<js>([\\w\\W]*?)</js>|@js:([\\w\\W]*)", Pattern.CASE_INSENSITIVE)
-    val WebJS_PATTERN: Pattern =
-        Pattern.compile("@webjs:([\\w\\W]{5,})", Pattern.CASE_INSENSITIVE)
-    val EXP_PATTERN: Pattern = Pattern.compile("\\{\\{([\\w\\W]*?)\\}\\}")
+    val JS_PATTERN: Regex =
+        Regex("<js>([\\w\\W]*?)</js>|@js:([\\w\\W]*)", RegexOption.IGNORE_CASE)
+    val WebJS_PATTERN: Regex =
+        Regex("@webjs:([\\w\\W]{5,})", RegexOption.IGNORE_CASE)
+    val EXP_PATTERN: Regex = Regex("\\{\\{([\\w\\W]*?)\\}\\}")
 
     //匹配格式化后的图片格式
-    val imgPattern: Pattern = Pattern.compile("<img[^>]*src=\"([^\"]*(?:\"[^>]+\\})?)\"[^>]*>")
+    val imgPattern: Regex = Regex("<img[^>]*src=\"([^\"]*(?:\"[^>]+\\})?)\"[^>]*>")
 
     //匹配自定义html格式字符串
     val useHtmlRegex = Regex("<usehtml>.*?</usehtml>", RegexOption.DOT_MATCHES_ALL) //.包含换行
@@ -39,7 +37,7 @@ object AppPattern {
     val fileNameRegex = Regex("[\\\\/:*?\"<>|.]")
     val fileNameRegex2 = Regex("[\\\\/:*?\"<>|]")
     val splitGroupRegex = Regex("[,;，；]")
-    val titleNumPattern: Pattern = Pattern.compile("(第)(.+?)(章)")
+    val titleNumPattern: Regex = Regex("(第)(.+?)(章)")
 
     //书源调试信息中的各种符号
     val debugMessageSymbolRegex = Regex("[⇒◇┌└≡]")

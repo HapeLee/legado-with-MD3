@@ -75,17 +75,6 @@
 -keep class io.legado.app.data.repository.OpenAIResponse{*;}
 -keep class io.legado.app.data.repository.OpenAIChoice{*;}
 -keep class io.legado.app.data.repository.OpenAIMessage{*;}
-# hutool-core hutool-crypto
--keep class
-!cn.hutool.core.util.RuntimeUtil,
-!cn.hutool.core.util.ClassLoaderUtil,
-!cn.hutool.core.util.ReflectUtil,
-!cn.hutool.core.util.SerializeUtil,
-!cn.hutool.core.util.ClassUtil,
-cn.hutool.core.codec.**,
-cn.hutool.core.util.**{*;}
--keep class cn.hutool.crypto.**{*;}
--dontwarn cn.hutool.**
 # 缓存 Cookie
 -keep class **.help.http.CookieStore{*;}
 -keep class **.help.CacheManager{*;}

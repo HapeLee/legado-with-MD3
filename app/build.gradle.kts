@@ -255,7 +255,6 @@ dependencies {
     implementation(libs.markwon.ext.tables)
     implementation(libs.markwon.html)
     implementation(libs.quick.chinese.transfer.core)
-    implementation(libs.hutool.crypto)
     //noinspection GradleDependency
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
@@ -278,6 +277,7 @@ dependencies {
     implementation(libs.telephoto.zoomable.image.coil3)
     implementation(libs.accompanist.webview)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.compose.animation)

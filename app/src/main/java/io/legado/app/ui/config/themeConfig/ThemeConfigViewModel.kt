@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
-import java.util.UUID
+import kotlin.uuid.Uuid
 import kotlin.coroutines.cancellation.CancellationException
 
 class ThemeConfigViewModel(
@@ -551,7 +551,7 @@ class ThemeConfigViewModel(
                 .takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
                 ?: "ttf"
             val fontDir = appFontDir()
-            val temp = File(fontDir, "app_font_${UUID.randomUUID()}.tmp")
+            val temp = File(fontDir, "app_font_${Uuid.random()}.tmp")
             val target = try {
                 fileDoc.openInputStream().getOrThrow().use { input ->
                     FileOutputStream(temp).use(input::copyTo)

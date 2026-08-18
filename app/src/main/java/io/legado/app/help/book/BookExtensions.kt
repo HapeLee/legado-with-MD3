@@ -37,9 +37,12 @@ import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.todayIn
 import kotlin.math.max
 import kotlin.math.min
 
@@ -691,11 +694,12 @@ fun Book.getExportFileName(
 // 根据当前日期计算章节总数
 fun Book.simulatedTotalChapterNum(): Int {
     return if (readSimulating()) {
-        val currentDate = LocalDate.now()
-        val daysPassed = if (config.startDate != null) {
+        val currentDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val startDateStr = config.startDate
+        val daysPassed = if (startDateStr != null) {
             try {
-                val startDate = LocalDate.parse(config.startDate)
-                ChronoUnit.DAYS.between(startDate, currentDate).toInt() + 1
+                val startDate = LocalDate.parse(startDateStr)
+                startDate.daysUntil(currentDate) + 1
             } catch (e: Exception) {
                 println("解析起始日期失败: ${config.startDate}, 错误: ${e.message}")
                 1 // 解析失败时返回默认值1

@@ -588,9 +588,9 @@ class ReadBookController(
     }
 
     override fun oldClickImg(src: String): Boolean {
-        val urlMatcher = paramPattern.matcher(src)
-        if (urlMatcher.find()) {
-            val urlOptionStr = src.substring(urlMatcher.end())
+        val urlMatch = paramPattern.find(src)
+        if (urlMatch != null) {
+            val urlOptionStr = src.substring(urlMatch.range.last + 1)
             val urlOptionMap = GSON.fromJsonObject<Map<String, String>>(urlOptionStr).getOrNull()
             val click = urlOptionMap?.get("click")
             if (click != null) {
@@ -626,7 +626,7 @@ class ReadBookController(
                         book.bookUrl,
                         ReadBook.durChapterIndex
                     ) ?: throw Exception("no find chapter")
-                    val urlNoOption = src.take(urlMatcher.start())
+                    val urlNoOption = src.take(urlMatch.range.first)
                     AnalyzeRule(book, source).apply {
                         setCoroutineContext(coroutineContext)
                         setBaseUrl(chapter.url)

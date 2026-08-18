@@ -3,7 +3,6 @@ package io.legado.app.utils
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import org.jsoup.Jsoup
 import java.net.URL
-import java.util.regex.Pattern
 
 @Suppress("RegExpRedundantEscape")
 object HtmlFormatter {
@@ -14,9 +13,9 @@ object HtmlFormatter {
     private val commentRegex = "<!--[^>]*-->".toRegex() //注释
     private val notImgHtmlRegex = "</?(?!img)[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
     private val otherHtmlRegex = "</?[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
-    private val formatImagePattern = Pattern.compile(
+    private val formatImagePattern = Regex(
         "<img[^>]*\\ssrc\\s*=\\s*['\"]([^'\"{>]*\\{(?:[^{}]|\\{[^}>]+\\})+\\})['\"][^>]*>|<img[^>]*\\s(?:data-src|src)\\s*=\\s*['\"]([^'\">]+)['\"][^>]*>|<img[^>]*\\sdata-[^=>]*=\\s*['\"]([^'\">]*)['\"][^>]*>",
-        Pattern.CASE_INSENSITIVE
+        RegexOption.IGNORE_CASE
     )
     private val indent1Regex = "\\s*\\n+\\s*".toRegex()
     private val indent2Regex = "^[\\n\\s]+".toRegex()
@@ -116,26 +115,25 @@ object HtmlFormatter {
         val keepImgHtml = format(html, notImgHtmlRegex)
 
         //正则的“|”处于顶端而不处于（）中时，具有类似||的熔断效果，故以此机制简化原来的代码
-        val matcher = formatImagePattern.matcher(keepImgHtml)
         var appendPos = 0
         val sb = StringBuilder()
-        while (matcher.find()) {
+        for (m in formatImagePattern.findAll(keepImgHtml)) {
             var param = ""
             sb.append(
-                keepImgHtml.substring(appendPos, matcher.start()), "<img src=\"${
+                keepImgHtml.substring(appendPos, m.range.first), "<img src=\"${
                     NetworkUtils.getAbsoluteURL(
                         redirectUrl,
-                        matcher.group(1)?.let {
-                            val urlMatcher = AnalyzeUrl.paramPattern.matcher(it)
-                            if (urlMatcher.find()) {
-                                param = ',' + it.substring(urlMatcher.end())
-                                it.substring(0, urlMatcher.start())
+                        m.groups[1]?.value?.let {
+                            val urlMatch = AnalyzeUrl.paramPattern.find(it)
+                            if (urlMatch != null) {
+                                param = ',' + it.substring(urlMatch.range.last + 1)
+                                it.substring(0, urlMatch.range.first)
                             } else it
-                        } ?: matcher.group(2) ?: matcher.group(3)!!
+                        } ?: m.groups[2]?.value ?: m.groups[3]!!.value
                     ) + param
                 }\">"
             )
-            appendPos = matcher.end()
+            appendPos = m.range.last + 1
         }
         if (appendPos < keepImgHtml.length) sb.append(
             keepImgHtml.substring(

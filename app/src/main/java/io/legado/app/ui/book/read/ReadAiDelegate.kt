@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 阅读页 AI 域：章节摘要、划词净化、划词重写、重写预设配置。
@@ -1009,7 +1009,7 @@ class ReadAiDelegate(
         val editingId = config.editingPresetId
         val savedPresets = if (editingId == null) {
             config.presets + AiRewritePresetUi(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 name = name,
                 instruction = instruction,
             )

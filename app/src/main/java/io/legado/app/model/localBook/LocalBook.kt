@@ -65,7 +65,6 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.util.regex.Pattern
 
 /**
  * 书籍文件导入 目录正文解析
@@ -74,10 +73,10 @@ import java.util.regex.Pattern
 object LocalBook {
 
     private val nameAuthorPatterns = arrayOf(
-        Pattern.compile("(.*?)《([^《》]+)》.*?作者：(.*)"),
-        Pattern.compile("(.*?)《([^《》]+)》(.*)"),
-        Pattern.compile("(^)(.+) 作者：(.+)$"),
-        Pattern.compile("(^)(.+) by (.+)$")
+        Regex("(.*?)《([^《》]+)》.*?作者：(.*)"),
+        Regex("(.*?)《([^《》]+)》(.*)"),
+        Regex("(^)(.+) 作者：(.+)$"),
+        Regex("(^)(.+) by (.+)$")
     )
 
     @Throws(FileNotFoundException::class, SecurityException::class)
@@ -407,10 +406,10 @@ object LocalBook {
         }
         if (name.isBlank()) {
             for (pattern in nameAuthorPatterns) {
-                pattern.matcher(tempFileName).takeIf { it.find() }?.run {
-                    name = group(2)!!
-                    val group1 = group(1) ?: ""
-                    val group3 = group(3) ?: ""
+                pattern.find(tempFileName)?.let { m ->
+                    name = m.groupValues[2]
+                    val group1 = m.groupValues[1]
+                    val group3 = m.groupValues[3]
                     author = BookHelp.formatBookAuthor(group1 + group3)
                     return Pair(name, author)
                 }

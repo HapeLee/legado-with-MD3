@@ -27,7 +27,6 @@ import kotlinx.coroutines.CancellationException
 import splitties.init.appCtx
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.regex.Pattern
 
 class ContentProcessor private constructor(
     private val bookName: String,
@@ -113,25 +112,25 @@ class ContentProcessor private constructor(
             //去除重复标题
             val fileName = chapter.getFileName("nr")
             if (!removeSameTitleCache.contains(fileName)) try {
-                val name = Pattern.quote(book.name)
+                val name = Regex.escape(book.name)
                 var title = chapter.title.escapeRegex().replace(spaceRegex, "\\\\s*")
-                var matcher = Pattern.compile("^(\\s|\\p{P}|${name})*${title}(\\s)*")
-                    .matcher(mContent)
-                if (matcher.find()) {
-                    mContent = mContent.substring(matcher.end())
+                var match = Regex("^(\\s|\\p{P}|${name})*${title}(\\s)*")
+                    .find(mContent)
+                if (match != null) {
+                    mContent = mContent.substring(match.range.last + 1)
                     sameTitleRemoved = true
                 } else if (useReplace && book.getUseReplaceRule(AppConfig.replaceEnableDefault)) {
-                    title = Pattern.quote(
+                    title = Regex.escape(
                         chapter.getDisplayTitle(
                             contentReplaceRules,
                             chineseConvert = false,
                             chineseConverterType = AppConfig.chineseConverterType,
                         )
                     )
-                    matcher = Pattern.compile("^(\\s|\\p{P}|${name})*${title}(\\s)*")
-                        .matcher(mContent)
-                    if (matcher.find()) {
-                        mContent = mContent.substring(matcher.end())
+                    match = Regex("^(\\s|\\p{P}|${name})*${title}(\\s)*")
+                        .find(mContent)
+                    if (match != null) {
+                        mContent = mContent.substring(match.range.last + 1)
                         sameTitleRemoved = true
                     }
                 }

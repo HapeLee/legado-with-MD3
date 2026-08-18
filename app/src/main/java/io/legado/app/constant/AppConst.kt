@@ -4,8 +4,9 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.annotation.Keep
-import cn.hutool.crypto.digest.DigestUtil
 import io.legado.app.BuildConfig
+import io.legado.app.help.crypto.digest
+import io.legado.app.help.crypto.toHexString
 import io.legado.app.help.update.AppVariant
 import org.apache.commons.lang3.time.FastDateFormat
 import splitties.init.appCtx
@@ -81,7 +82,7 @@ object AppConst {
     private val sha256Signature: String by lazy {
         val packageInfo =
             appCtx.packageManager.getPackageInfo(appCtx.packageName, PackageManager.GET_SIGNATURES)
-        DigestUtil.sha256Hex(packageInfo.signatures!![0].toByteArray()).uppercase()
+        digest("SHA-256", packageInfo.signatures!![0].toByteArray()).toHexString().uppercase()
     }
 
     private val isOfficial = sha256Signature == OFFICIAL_SIGNATURE

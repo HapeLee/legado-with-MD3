@@ -18,7 +18,7 @@ import io.legado.app.utils.fromJsonArray
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class IdentifyBookCharactersUseCase(
     private val aiProfileGateway: AiProfileGateway,
@@ -194,7 +194,7 @@ class IdentifyBookCharactersUseCase(
             val existing = bookKnowledgeGateway.getCharacterProfile(bookUrl, candidate.name)
             bookKnowledgeGateway.upsertCharacterProfile(
                 BookCharacterProfile(
-                    id = existing?.id ?: UUID.randomUUID().toString(),
+                    id = existing?.id ?: Uuid.random().toString(),
                     bookUrl = bookUrl,
                     name = candidate.name,
                     aliasesJson = GSON.toJson(

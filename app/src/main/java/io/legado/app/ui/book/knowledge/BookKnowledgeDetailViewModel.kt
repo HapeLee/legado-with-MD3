@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class BookKnowledgeDetailViewModel(
     bookUrl: String,
@@ -137,7 +137,7 @@ class BookKnowledgeDetailViewModel(
                 val now = System.currentTimeMillis()
                 val existing = currentEntry
                 val entry = BookKnowledgeEntry(
-                    id = existing?.id ?: state.entryId ?: UUID.randomUUID().toString(),
+                    id = existing?.id ?: state.entryId ?: Uuid.random().toString(),
                     bookUrl = state.bookUrl,
                     type = state.type,
                     title = title,

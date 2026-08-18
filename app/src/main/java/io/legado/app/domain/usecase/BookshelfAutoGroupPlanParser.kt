@@ -10,7 +10,7 @@ import io.legado.app.domain.model.BookshelfAutoGroupIgnoredBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupPlanBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 internal class BookshelfAutoGroupPlanParser {
 
@@ -47,7 +47,7 @@ internal class BookshelfAutoGroupPlanParser {
                 .orEmpty()
             if (books.isNotEmpty()) {
                 groups += BookshelfAutoGroupPlanGroup(
-                    key = UUID.randomUUID().toString(),
+                    key = Uuid.random().toString(),
                     name = name,
                     description = groupObject.stringOrNull("description")?.trim().orEmpty()
                         .take(MAX_DESCRIPTION_CHARS),

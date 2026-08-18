@@ -8,7 +8,6 @@ import android.icu.util.ULocale
 import android.net.Uri
 import android.text.Editable
 import androidx.core.net.toUri
-import cn.hutool.core.net.URLEncodeUtil
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.dataUriRegex
 import java.io.File
@@ -16,7 +15,6 @@ import java.lang.Character.codePointCount
 import java.lang.Character.offsetByCodePoints
 import java.net.InetAddress
 import java.util.Locale
-import java.util.regex.Pattern
 
 
 fun String?.safeTrim() = if (this.isNullOrBlank()) null else this.trim()
@@ -117,10 +115,10 @@ fun String?.memorySize(): Int {
  * 是否中文
  */
 fun String.isChinese(): Boolean {
-    val p = Pattern.compile("[\u4e00-\u9fa5]")
-    val m = p.matcher(this)
-    return m.find()
+    return chineseCharRegex.containsMatchIn(this)
 }
+
+private val chineseCharRegex = Regex("[\u4e00-\u9fa5]")
 
 /**
  * 将字符串拆分为单个字符,包含emoji
@@ -142,7 +140,31 @@ fun String.escapeRegex(): String {
     return replace(AppPattern.regexCharRegex, "\\\\$0")
 }
 
-fun String.encodeURI(): String = URLEncodeUtil.encodeQuery(this)
+fun String.encodeURI(): String {
+    val builder = StringBuilder(length)
+    for (c in this) {
+        if (c.code < 128 && encodeQuerySafeChars[c.code]) {
+            builder.append(c)
+        } else {
+            val bytes = c.toString().toByteArray(Charsets.UTF_8)
+            for (b in bytes) {
+                val v = b.toInt() and 0xFF
+                builder.append('%')
+                builder.append(ENCODE_HEX_UPPER[v ushr 4])
+                builder.append(ENCODE_HEX_UPPER[v and 0x0F])
+            }
+        }
+    }
+    return builder.toString()
+}
+
+private const val ENCODE_HEX_UPPER = "0123456789ABCDEF"
+
+private val encodeQuerySafeChars: BooleanArray = BooleanArray(128).apply {
+    for (c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-~!$&'()*+,;=:@/?") {
+        this[c.code] = true
+    }
+}
 
 fun String.normalizeFileName(): String {
     return replace(AppPattern.fileNameRegex2, "_")

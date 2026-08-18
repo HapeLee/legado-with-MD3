@@ -201,7 +201,7 @@ cache.delete(java.md5Encode16(url))  // 使缓存失效
 ### 3.5 加解密 ([JsEncodeUtils](https://github.com/HapeLee/legado-with-MD3/blob/master/app/src/main/java/io/legado/app/help/JsEncodeUtils.kt))
 
 提供在 JavaScript 环境中快捷调用 crypto
-算法的函数，由 [hutool-crypto](https://www.hutool.cn/docs/#/crypto/概述) 实现（当前版本 5.8.22）。
+算法的函数，由 Android/JDK 原生 API（`javax.crypto`/`java.security`）实现。
 
 ::: warning 输入类型
 如果输入参数不是 Utf8String，可先调用 `java.hexDecodeToByteArray` 或 `java.base64DecodeToByteArray`

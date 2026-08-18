@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class BookCharacterNetworkViewModel(
     bookUrl: String,
@@ -156,7 +156,7 @@ class BookCharacterNetworkViewModel(
                 val toProfile = findOrCreateProfile(toName)
                 val now = System.currentTimeMillis()
                 val relation = BookCharacterRelation(
-                    id = UUID.randomUUID().toString(),
+                    id = Uuid.random().toString(),
                     bookUrl = state.bookUrl,
                     fromCharacterId = fromProfile.id,
                     toCharacterId = toProfile.id,
@@ -259,7 +259,7 @@ class BookCharacterNetworkViewModel(
         }
         val now = System.currentTimeMillis()
         val profile = BookCharacterProfile(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             bookUrl = bookUrl,
             name = name,
             source = BookCharacterProfile.SOURCE_USER,
