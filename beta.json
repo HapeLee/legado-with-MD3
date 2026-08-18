@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.17",
-  "name": "Pre-release 3.26.16-beta.17",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* fix: 统一听书播放器语速调节范围与经典朗读控制一致 (#2033)\n* feat: 书源外部导入问题",
+  "tag_name": "3.26.16-beta.18",
+  "name": "Pre-release 3.26.16-beta.18",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 恢复扫码导入书源入口 (#2078)\n* refactor: 移除 Hutool 依赖,改用 JCA 与纯 Kotlin 实现\n* fix(read-record): 修复备份导入重复记录并完善未知作者归属 (#2076)\n* fix: 目录更新后新增章节点击无法跳转 (Closes #2043) (#2077)\n* fix: 听书系统媒体播放器进度条随朗读推进 (#2042)\n* fix: 底栏填充样式着色层半透明,修复模糊被完全遮住 (Closes #2044) (#2075)\n* feat: 智谱AI相关\n* feat: 优化漫画阅读\n* fix: 同步刷新后的在线目录阅读状态",
   "prerelease": true,
-  "created_at": "2026-08-14T08:29:55Z",
+  "created_at": "2026-08-18T16:51:28Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.17/legado-3.26.16-beta.17-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.18/legado-3.26.16-beta.18-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-14T08:45:15Z",
+      "created_at": "2026-08-18T17:19:26Z",
       "download_count": 0,
-      "id": 514171809,
-      "name": "legado-3.26.16-beta.17-arm64-v8a.apk",
+      "id": 519748462,
+      "name": "legado-3.26.16-beta.18-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/514171809"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/519748462"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.17/legado-3.26.16-beta.17-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.18/legado-3.26.16-beta.18-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-14T08:45:15Z",
+      "created_at": "2026-08-18T17:19:25Z",
       "download_count": 0,
-      "id": 514171810,
-      "name": "legado-3.26.16-beta.17-armeabi-v7a.apk",
+      "id": 519748459,
+      "name": "legado-3.26.16-beta.18-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/514171810"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/519748459"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.17/legado-3.26.16-beta.17.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.18/legado-3.26.16-beta.18.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-08-14T08:45:15Z",
+      "created_at": "2026-08-18T17:19:25Z",
       "download_count": 0,
-      "id": 514171808,
-      "name": "legado-3.26.16-beta.17.apk",
+      "id": 519748460,
+      "name": "legado-3.26.16-beta.18.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/514171808"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/519748460"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.17/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.18/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-08-14T08:45:15Z",
+      "created_at": "2026-08-18T17:19:25Z",
       "download_count": 0,
-      "id": 514171811,
+      "id": 519748461,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/514171811"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/519748461"
     }
   ]
 }
