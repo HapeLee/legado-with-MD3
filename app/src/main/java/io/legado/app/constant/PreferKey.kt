@@ -167,6 +167,7 @@ object PreferKey {
     const val capsuleAutoCollapse = "capsuleAutoCollapse"
     const val defaultReadAloudInterface = "defaultReadAloudInterface"
     const val readAloudPlayerBgMode = "readAloudPlayerBgMode"
+    const val audioPlayBgMode = "audioPlayBgMode"
     const val showLastUpdateTime = "showLastUpdateTime"
     const val showWaitUpCount = "showWaitUpCount"
     const val clearWebViewData = "clearWebViewData"

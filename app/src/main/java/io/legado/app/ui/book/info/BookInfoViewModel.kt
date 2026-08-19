@@ -433,19 +433,6 @@ class BookInfoViewModel(
         }
     }
 
-    fun onReaderResult(resultCode: Int) {
-        when (resultCode) {
-            RESULT_OK -> {
-                inBookshelf = true
-                syncUiState()
-            }
-
-            READER_RESULT_DELETED -> {
-                emitEffect(BookInfoEffect.Finish(resultCode = RESULT_OK))
-            }
-        }
-    }
-
     fun refreshShelfState() {
         val bookUrl = currentBook?.bookUrl ?: return
         execute {

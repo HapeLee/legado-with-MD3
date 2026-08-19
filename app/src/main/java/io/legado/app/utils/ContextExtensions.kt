@@ -44,7 +44,6 @@ import io.legado.app.help.book.isImage
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.SettingsWriter
-import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.bookshelf.BookShelfItem
@@ -68,7 +67,7 @@ fun Context.startActivityForBook(
     configIntent: Intent.() -> Unit = {},
 ) {
     val intent = when {
-        book.isAudio -> Intent(this, AudioPlayActivity::class.java)
+        book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
         book.isImage && ReadMangaConfig.showMangaUi ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
@@ -87,7 +86,7 @@ fun Context.startActivityForBook(
     configIntent: Intent.() -> Unit = {},
 ) {
     val intent = when {
-        book.isAudio -> Intent(this, AudioPlayActivity::class.java)
+        book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
         book.isImage && ReadMangaConfig.showMangaUi ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 

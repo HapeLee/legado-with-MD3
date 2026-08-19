@@ -6,6 +6,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadAloudBgMode
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsInt
+import io.legado.app.ui.widget.components.player.PlayerChapterUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -83,7 +84,7 @@ class ReadAloudPlayerViewModel(
             it.chapterPosition <= source.chapterPosition
         }
         val chapters = source.chapters.map { chapter ->
-            ReadAloudChapterUi(
+            PlayerChapterUi(
                 index = chapter.index,
                 title = chapter.title,
                 isVolume = chapter.isVolume,

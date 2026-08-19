@@ -4,19 +4,16 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,14 +25,12 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -71,20 +66,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,18 +89,17 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.effect.BgEffectBackground
-import io.legado.app.ui.widget.components.effect.BgEffectConfig
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
-import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
+import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
+import io.legado.app.ui.widget.components.player.PlayerBackground
+import io.legado.app.ui.widget.components.player.PlayerProgressSlider
+import io.legado.app.ui.widget.components.player.PlayerTocPage
+import io.legado.app.ui.widget.components.player.playerBgModeLabel
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
@@ -121,7 +108,6 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
 import top.yukonga.miuix.kmp.blur.BlurColors
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import kotlin.math.abs
@@ -381,7 +367,7 @@ fun ReadAloudPlayerScreenContent(
                         SmallPlainButton(
                             onClick = { onIntent(ReadAloudPlayerIntent.CycleBgMode) },
                             icon = Icons.Default.WbTwilight,
-                            contentDescription = bgModeLabel(state.bgMode)
+                            contentDescription = playerBgModeLabel(state.bgMode)
                         )
                         SmallPlainButton(
                             onClick = {
@@ -463,8 +449,12 @@ fun ReadAloudPlayerScreenContent(
             .fillMaxSize()
             .then(if (hazeEnabled) Modifier.hazeSource(pagerHazeState) else Modifier)
         ) {
-            ReadAloudBackground(
-                state = state,
+            PlayerBackground(
+                name = state.bookName,
+                author = state.author,
+                path = state.coverPath,
+                sourceOrigin = state.sourceOrigin,
+                bgMode = state.bgMode,
                 modifier = if (flowingLightActive && textBackdrop != null) {
                     Modifier.layerBackdrop(textBackdrop)
                 } else {
@@ -486,10 +476,14 @@ fun ReadAloudPlayerScreenContent(
                         if (verticalPage == 0) {
                             CoverPage(state, pageContentPadding, flowingTextModifier)
                         } else {
-                            ChapterTocPage(
-                                state = state,
+                            PlayerTocPage(
+                                chapters = state.chapters,
+                                currentIndex = state.chapterIndex,
+                                isPaused = state.isPaused,
+                                onSelect = {
+                                    onIntent(ReadAloudPlayerIntent.SelectChapter(it))
+                                },
                                 contentPadding = pageContentPadding,
-                                onIntent = onIntent,
                             )
                         }
                     }
@@ -507,269 +501,8 @@ fun ReadAloudPlayerScreenContent(
     }
 }
 
-@Composable
-private fun PlayerAdjustmentSlider(
-    title: String,
-    value: Float,
-    valueLabel: String,
-    startLabel: String,
-    endLabel: String,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int,
-) {
-    NormalCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        cornerRadius = 28.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AppText(
-                    modifier = Modifier.weight(1f),
-                    text = title,
-                    style = LegadoTheme.typography.labelMediumEmphasized,
-                )
-                TextCard(
-                    text = valueLabel,
-                )
-            }
 
-            AppSlider(
-                value = value,
-                onValueChange = onValueChange,
-                onValueChangeFinished = onValueChangeFinished,
-                valueRange = valueRange,
-                steps = steps,
-                modifier = Modifier.fillMaxWidth(),
-            )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                AppText(
-                    text = startLabel,
-                    style = LegadoTheme.typography.labelSmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-                AppText(
-                    text = endLabel,
-                    style = LegadoTheme.typography.labelSmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChapterTocPage(
-    state: ReadAloudPlayerUiState,
-    contentPadding: PaddingValues,
-    onIntent: (ReadAloudPlayerIntent) -> Unit,
-) {
-    val listState = rememberLazyListState()
-    LaunchedEffect(state.chapterIndex, state.chapters) {
-        val currentItem = state.chapters.indexOfFirst {
-            !it.isVolume && it.index == state.chapterIndex
-        }
-        if (currentItem >= 0) {
-            listState.scrollToItem((currentItem - 2).coerceAtLeast(0))
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = contentPadding.calculateTopPadding() + 12.dp,
-            end = 16.dp,
-            bottom = contentPadding.calculateBottomPadding() + 12.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(
-            items = state.chapters,
-            key = { chapter ->
-                if (chapter.isVolume) "player-volume-${chapter.index}"
-                else "player-chapter-${chapter.index}"
-            },
-            contentType = { chapter -> if (chapter.isVolume) "volume" else "chapter" },
-        ) { chapter ->
-            if (chapter.isVolume) {
-                AppText(
-                    text = chapter.title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = (chapter.tocLevel.coerceIn(0, 6) * 10).dp,
-                            top = 12.dp,
-                            bottom = 4.dp,
-                        ),
-                    style = LegadoTheme.typography.titleSmallEmphasized,
-                    color = LegadoTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                val isCurrent = chapter.index == state.chapterIndex
-                NormalCard(
-                    onClick = { onIntent(ReadAloudPlayerIntent.SelectChapter(chapter.index)) },
-                    cornerRadius = 12.dp,
-                    containerColor = if (isCurrent) {
-                        LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    } else {
-                        LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0f)
-                    },
-                    contentColor = if (isCurrent) {
-                        LegadoTheme.colorScheme.onSurface
-                    } else {
-                        LegadoTheme.colorScheme.onSurface
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = (chapter.tocLevel.coerceIn(0, 6) * 10).dp),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isCurrent) {
-                            AppIcon(
-                                imageVector = if (state.isPaused) {
-                                    Icons.Default.PlayArrow
-                                } else {
-                                    Icons.Default.Pause
-                                },
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .size(16.dp),
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            AppText(
-                                text = chapter.title,
-                                style = if (isCurrent) {
-                                    LegadoTheme.typography.bodyMediumEmphasized
-                                } else {
-                                    LegadoTheme.typography.bodyMedium
-                                },
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerProgressSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    modifier: Modifier = Modifier
-) {
-    val rangeLength = (valueRange.endInclusive - valueRange.start).coerceAtLeast(1f)
-    var isDragging by remember { mutableStateOf(false) }
-    var widthPx by remember { mutableFloatStateOf(1f) }
-    var previewFraction by remember(valueRange) {
-        mutableFloatStateOf(((value - valueRange.start) / rangeLength).coerceIn(0f, 1f))
-    }
-    LaunchedEffect(value, valueRange) {
-        if (!isDragging) {
-            previewFraction = ((value - valueRange.start) / rangeLength).coerceIn(0f, 1f)
-        }
-    }
-    val trackScale by animateFloatAsState(
-        targetValue = if (isDragging) 1.35f else 1f,
-        animationSpec = tween(durationMillis = 200),
-        label = "progress_track_scale",
-    )
-    val activeColor = LegadoTheme.colorScheme.onSurface
-    val inactiveColor = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(18.dp)
-            .graphicsLayer { scaleY = trackScale }
-            .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
-            .pointerInput(valueRange, widthPx) {
-                fun updatePreview(x: Float) {
-                    previewFraction = (x / widthPx).coerceIn(0f, 1f)
-                }
-                detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        updatePreview(offset.x)
-                    },
-                    onDragEnd = {
-                        isDragging = false
-                        onValueChange(valueRange.start + previewFraction * rangeLength)
-                    },
-                    onDragCancel = { isDragging = false },
-                    onHorizontalDrag = { change, _ ->
-                        change.consume()
-                        updatePreview(change.position.x)
-                    },
-                )
-            },
-    ) {
-        val centerY = size.height / 2f
-        val progressX = size.width * previewFraction
-        val trackHeight = 2.dp.toPx()
-        val trackRadius = trackHeight / 2f
-        val trackClip = Path().apply {
-            addRoundRect(
-                RoundRect(
-                    left = 0f,
-                    top = centerY - trackRadius,
-                    right = size.width,
-                    bottom = centerY + trackRadius,
-                    cornerRadius = CornerRadius(trackRadius),
-                )
-            )
-        }
-        val tickSpacing = 4.dp.toPx()
-        val tickHeight = 2.dp.toPx()
-        clipPath(trackClip) {
-            var tickX = 0f
-            while (tickX <= size.width) {
-                drawLine(
-                    color = inactiveColor,
-                    start = Offset(tickX, centerY - tickHeight / 2f),
-                    end = Offset(tickX, centerY + tickHeight / 2f),
-                    strokeWidth = 1.5.dp.toPx(),
-                    cap = StrokeCap.Round,
-                )
-                tickX += tickSpacing
-            }
-            if (progressX > 0f) {
-                drawLine(
-                    color = activeColor,
-                    start = Offset(0f, centerY),
-                    end = Offset(progressX, centerY),
-                    strokeWidth = trackHeight,
-                    cap = StrokeCap.Butt,
-                )
-            }
-        }
-    }
-}
 @Composable
 private fun CoverPage(
     state: ReadAloudPlayerUiState,
@@ -1010,131 +743,6 @@ private fun PlayerAdjustment?.toggle(value: PlayerAdjustment): PlayerAdjustment?
     if (this == value) null else value
 
 @Composable
-private fun ReadAloudBackground(
-    state: ReadAloudPlayerUiState,
-    modifier: Modifier = Modifier,
-) {
-    when (state.bgMode) {
-        ReadAloudBgMode.Blur -> {
-            CoverBlurBackdrop(
-                state.bookName, state.author, state.coverPath, state.sourceOrigin,
-                modifier = modifier,
-            )
-        }
-
-        ReadAloudBgMode.FlowingLight -> {
-            val shaderSupported = remember { isRuntimeShaderSupported() }
-            if (shaderSupported) {
-                val coverPreset = rememberCoverDerivedPreset()
-                Box(modifier.fillMaxSize()) {
-                    CoverBlurBackdrop(
-                        state.bookName, state.author, state.coverPath, state.sourceOrigin,
-                        blurRadius = 64.dp,
-                    )
-                    BgEffectBackground(
-                        dynamicBackground = true,
-                        isOs3Effect = true,
-                        isFullSize = true,
-                        drawSurface = false,
-                        customPreset = coverPreset,
-                        modifier = Modifier.fillMaxSize(),
-                        alpha = { 0.5f },
-                    ) {
-                        Box(Modifier.fillMaxSize())
-                    }
-                }
-            } else {
-                CoverBlurBackdrop(
-                    state.bookName, state.author, state.coverPath, state.sourceOrigin,
-                    modifier = modifier,
-                )
-            }
-        }
-
-        ReadAloudBgMode.Transparent -> {
-            Box(modifier = modifier.fillMaxSize())
-        }
-
-        ReadAloudBgMode.Solid -> {
-            Box(
-                modifier = modifier
-                    .fillMaxSize()
-                    .background(LegadoTheme.colorScheme.surface),
-            )
-        }
-
-        else -> {
-            Box(
-                modifier = modifier
-                    .fillMaxSize()
-                    .background(LegadoTheme.colorScheme.surface),
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberCoverDerivedPreset(): BgEffectConfig.Config {
-    val primary = LegadoTheme.colorScheme.primary
-    val surface = LegadoTheme.colorScheme.secondaryContainer
-    val tertiary = LegadoTheme.colorScheme.secondary
-    val isDark = LegadoTheme.isDark
-
-    return remember(primary, surface, tertiary, isDark) {
-        val darken = if (isDark) 0.68f else 0.88f
-        val p = primary.copy(
-            red = primary.red * darken,
-            green = primary.green * darken,
-            blue = primary.blue * darken,
-        ).toShaderColor()
-        val s = surface.copy(
-            red = surface.red * darken,
-            green = surface.green * darken,
-            blue = surface.blue * darken,
-        ).toShaderColor()
-        val t = tertiary.copy(
-            red = tertiary.red * darken,
-            green = tertiary.green * darken,
-            blue = tertiary.blue * darken,
-        ).toShaderColor()
-
-        val m = floatArrayOf(
-            (p[0] + t[0]) / 2f,
-            (p[1] + t[1]) / 2f,
-            (p[2] + t[2]) / 2f,
-            1.0f,
-        )
-
-        fun stage(a: FloatArray, b: FloatArray, c: FloatArray, d: FloatArray): FloatArray =
-            floatArrayOf(
-                a[0], a[1], a[2], a[3],
-                b[0], b[1], b[2], b[3],
-                c[0], c[1], c[2], c[3],
-                d[0], d[1], d[2], d[3],
-            )
-
-        BgEffectConfig.Config(
-            points = floatArrayOf(
-                0.8f, 0.2f, 1.0f,
-                0.8f, 0.9f, 1.0f,
-                0.2f, 0.9f, 1.0f,
-                0.2f, 0.2f, 1.0f,
-            ),
-            colors1 = stage(p, t, s, m),
-            colors2 = stage(t, s, m, p),
-            colors3 = stage(s, m, p, t),
-            colorInterpPeriod = 96.0f,
-            lightOffset = if (isDark) 0.0f else 0.1f,
-            saturateOffset = if (isDark) 0.17f else 0.2f,
-            pointOffset = if (isDark) 0.4f else 0.2f,
-        )
-    }
-}
-
-private fun Color.toShaderColor(): FloatArray =
-    floatArrayOf(red, green, blue, alpha)
-
-@Composable
 private fun flowingTextBlend(): List<BlendColorEntry> {
     val isDark = LegadoTheme.isDark
     return remember(isDark) {
@@ -1154,11 +762,6 @@ private fun flowingTextBlend(): List<BlendColorEntry> {
     }
 }
 
-@Composable
-private fun bgModeLabel(mode: Int): String = when (mode) {
-    ReadAloudBgMode.Solid -> stringResource(R.string.read_aloud_bg_solid)
-    ReadAloudBgMode.Blur -> stringResource(R.string.read_aloud_bg_blur)
-    ReadAloudBgMode.FlowingLight -> stringResource(R.string.read_aloud_bg_flowing_light)
-    ReadAloudBgMode.Transparent -> stringResource(R.string.read_aloud_bg_transparent)
-    else -> stringResource(R.string.read_aloud_bg_blur)
-}
+
+
+

@@ -38,6 +38,9 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -47,9 +50,12 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
 import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.model.AudioPlay
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
+import io.legado.app.ui.book.audio.AudioPlayViewModel
+import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
 import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.ReadBookRouteHost
 import io.legado.app.ui.book.read.page.entities.PageDirection
@@ -74,7 +80,11 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * 主界面
  */
-open class MainActivity : BaseComposeActivity() {
+open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack,
+    ChangeBookSourceDialog.CallBack {
+
+    /** 当前激活的有声书播放器 ViewModel（由有声书路由在生命周期内设置/清理） */
+    internal var activeAudioPlayViewModel: AudioPlayViewModel? = null
 
     companion object {
         private const val KEY_RESTORE_READ_ROUTE = "restoreReadRoute"
@@ -86,6 +96,9 @@ open class MainActivity : BaseComposeActivity() {
 
         @Volatile
         var hasActiveReadBookRoute: Boolean = false
+
+        @Volatile
+        var hasActiveAudioPlayRoute: Boolean = false
 
         fun createLauncherIntent(context: Context): Intent =
             MainIntent.createLauncherIntent(context)
@@ -181,6 +194,16 @@ open class MainActivity : BaseComposeActivity() {
             bookUrl = bookUrl,
             inBookshelf = inBookshelf,
             chapterChanged = chapterChanged,
+        )
+
+        fun createAudioPlayIntent(
+            context: Context,
+            bookUrl: String? = null,
+            inBookshelf: Boolean = true,
+        ): Intent = MainIntent.createAudioPlayIntent(
+            context = context,
+            bookUrl = bookUrl,
+            inBookshelf = inBookshelf,
         )
 
         fun createSearchIntent(
@@ -644,6 +667,32 @@ open class MainActivity : BaseComposeActivity() {
         }
     }
 
+    // ===== AudioPlay.CallBack（有声书播放器路由注册，转发加载状态给当前播放器）=====
+
+    override fun upLoading(loading: Boolean) {
+        activeAudioPlayViewModel?.onLoadingChanged(loading)
+    }
+
+    override fun upLyric(lyric: String?) {
+        // 歌词暂不在界面展示
+    }
+
+    override fun upLyricP(position: Int) {
+        // 歌词暂不在界面展示
+    }
+
+    // ===== ChangeBookSourceDialog.CallBack（有声书换源对话框，转发给当前播放器）=====
+
+    override val oldBook: Book?
+        get() = AudioPlay.book
+
+    override fun changeTo(source: BookSource, book: Book, toc: List<BookChapter>) {
+        activeAudioPlayViewModel?.changeTo(source, book, toc)
+    }
+
+    override fun addToBookshelf(book: Book, toc: List<BookChapter>) {
+        activeAudioPlayViewModel?.addToBookshelf(book, toc)
+    }
 
 }
 
