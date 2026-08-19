@@ -40,11 +40,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -536,28 +534,6 @@ private fun MangaMenuBottomBar(
                                     onIntent(
                                         MangaReaderIntent.OpenSettings(
                                             MangaReaderSettingsCategory.READER
-                                        )
-                                    )
-                                })
-                                add(
-                                ReaderMenuAction(
-                                    Icons.Filled.FilterAlt,
-                                    stringResource(R.string.manga_reader_filter_short)
-                                ) {
-                                    onIntent(
-                                        MangaReaderIntent.OpenSettings(
-                                            MangaReaderSettingsCategory.FILTER
-                                        )
-                                    )
-                                })
-                                add(
-                                ReaderMenuAction(
-                                    Icons.Filled.TouchApp,
-                                    stringResource(R.string.manga_reader_click_area_short)
-                                ) {
-                                    onIntent(
-                                        MangaReaderIntent.OpenSettings(
-                                            MangaReaderSettingsCategory.CLICK_ACTIONS
                                         )
                                     )
                                 })

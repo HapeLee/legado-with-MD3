@@ -262,7 +262,6 @@ class MangaReaderViewModel(
                 intent.itemIndex,
                 intent.firstItemIndex,
                 intent.lastItemIndex,
-                intent.currentChapterVisible,
                 intent.navigationId,
             )
             is MangaReaderIntent.PagerScrollChanged -> {
@@ -381,6 +380,9 @@ class MangaReaderViewModel(
         val current = session.currentChapter
         if (current !is MangaChapterState.Ready) {
             if (pendingExplicitChapterIndex == session.chapterIndex) {
+                // 显式跳章失败后立即放开门闩：否则目标页一直不可见时，
+                // 之后对该章的目录/上一章点击会被 openChapter 静默吞掉。
+                if (current is MangaChapterState.Failed) pendingExplicitChapterIndex = null
                 showExplicitChapterPlaceholder(
                     chapterIndex = session.chapterIndex,
                     pageIndex = session.pageIndex,
@@ -500,21 +502,29 @@ class MangaReaderViewModel(
             )
             }
         }
-        fun makePreviousItems(chapter: MangaChapterState): List<MangaReaderItemUi> = when (chapter) {
-            is MangaChapterState.Ready -> chapterItems(chapter.chapter) + chapterTransition(
+        // 「隐藏章节首尾提示」开启时不再插入 ChapterTransition 过渡页：相邻章节已就绪则
+        // 无缝衔接，未就绪则列表自然终止，待其加载完成后再补齐。
+        val hideEdgePrompts = latestMangaSettings.hideTitle
+        fun makePreviousItems(chapter: MangaChapterState): List<MangaReaderItemUi> {
+            val prevItems = if (chapter is MangaChapterState.Ready) {
+                chapterItems(chapter.chapter)
+            } else emptyList()
+            val transition = if (hideEdgePrompts) emptyList() else chapterTransition(
                 chapter, "prev", session.chapterIndex - 1,
                 appCtx.getString(R.string.manga_reader_loading_prev),
             )
-            else -> chapterTransition(
-                chapter, "prev", session.chapterIndex - 1,
-                appCtx.getString(R.string.manga_reader_loading_prev),
-            )
+            return prevItems + transition
         }
-        fun makeNextItems(chapter: MangaChapterState): List<MangaReaderItemUi> =
-            chapterTransition(
+
+        fun makeNextItems(chapter: MangaChapterState): List<MangaReaderItemUi> {
+            val transition = if (hideEdgePrompts) emptyList() else chapterTransition(
                 chapter, "next", session.chapterIndex + 1,
                 appCtx.getString(R.string.manga_reader_loading_next),
-            ) + if (chapter is MangaChapterState.Ready) chapterItems(chapter.chapter) else emptyList()
+            )
+            return transition + if (chapter is MangaChapterState.Ready) {
+                chapterItems(chapter.chapter)
+            } else emptyList()
+        }
 
         refreshContentJob?.cancel()
         refreshContentJob = viewModelScope.launch {
@@ -532,6 +542,25 @@ class MangaReaderViewModel(
                 pendingExplicitChapterIndex = pendingExplicitChapterIndex,
                 targetChapterIndex = session.chapterIndex,
             )
+            // 锚点按 (章节, 页码) 定位，不依赖含图片 URL 的 item key：URL/页数变化导致 key
+            // 失效后不再回退到旧裸索引（否则会把阅读器滚到错章并触发连环误切），而是按
+            // 会话当前页码重算安全位置并主动复位。
+            val oldCurrentItem = oldState.pages.getOrNull(oldState.currentItemIndex)
+            val anchoredIndex = if (shouldPosition) null else oldCurrentItem?.let { anchor ->
+                if (anchor is MangaReaderItemUi.Page) {
+                    items.indexOfFirst {
+                        it is MangaReaderItemUi.Page &&
+                                it.chapterIndex == anchor.chapterIndex &&
+                                it.pageIndex == anchor.pageIndex
+                    }.takeIf { it >= 0 }
+                } else null
+            }
+            // 旧 key 仍存在于新列表时 LazyColumn/Pager 能按 key 保住滚动位置；key 失效
+            // （如图片 URL 变化）时必须主动复位到锚点，否则列表停在旧偏移上会串到邻章。
+            val keyPreserved =
+                oldCurrentItem?.let { old -> items.any { it.key == old.key } } == true
+            val targetIndex = anchoredIndex ?: safePosition
+            val positionChanged = shouldPosition || anchoredIndex == null || !keyPreserved
             _uiState.update { old ->
                 old.copy(
                     bookName = book.name,
@@ -546,14 +575,9 @@ class MangaReaderViewModel(
                     sourceType = book.sourceType,
                     inBookshelf = book.inBookshelf,
                     pages = items,
-                    currentItemIndex = if (shouldPosition) safePosition else {
-                        val anchorKey = old.pages.getOrNull(old.currentItemIndex)?.key
-                        anchorKey?.let { key ->
-                            items.indexOfFirst { it.key == key }.takeIf { it >= 0 }
-                        } ?: old.currentItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
-                    },
-                    currentPage = if (shouldPosition) session.pageIndex else old.currentPage,
-                    pageCount = if (shouldPosition) current.chapter.pages.size else old.pageCount,
+                    currentItemIndex = targetIndex,
+                    currentPage = if (positionChanged) session.pageIndex else old.currentPage,
+                    pageCount = if (positionChanged) current.chapter.pages.size else old.pageCount,
                     chapterIndex = session.chapterIndex,
                     chapterCount = session.chapterCount,
                     cacheAvailable = !book.isLocal,
@@ -562,20 +586,19 @@ class MangaReaderViewModel(
                     pendingChapterIndex = null,
                     errorMessage = null,
                     settings = readSettings(latestMangaSettings),
-                    scrollRequest = if (shouldPosition) {
+                    scrollRequest = if (positionChanged) {
                         MangaScrollRequest(
                             id = System.nanoTime(),
-                            itemIndex = safePosition,
+                            itemIndex = targetIndex,
                             animated = false,
                         )
                     } else old.scrollRequest,
                 )
             }
-            if (shouldPosition && pendingExplicitChapterIndex != session.chapterIndex) updateVisibleItem(
-                itemIndex = safePosition,
-                firstItemIndex = safePosition,
-                lastItemIndex = safePosition,
-                currentChapterVisible = true,
+            if (positionChanged && pendingExplicitChapterIndex != session.chapterIndex) updateVisibleItem(
+                itemIndex = targetIndex,
+                firstItemIndex = targetIndex,
+                lastItemIndex = targetIndex,
                 navigationId = _uiState.value.navigationId,
             )
         }
@@ -764,10 +787,14 @@ class MangaReaderViewModel(
                 it.copy(reverseVolumeKeyPage = enabled)
             }
             MangaReaderSettingKey.HIDE_MANGA_TITLE -> {
-                updateMangaPreference { it.copy(hideTitle = enabled) }
-                executeSession(
-                    MangaSessionCommand.RetryChapter(readerSession.state.value.chapterIndex)
-                )
+                // atomicUpdate 同步更新 overlay，写后 currentSettings 即为新值；显式同步
+                // latestMangaSettings 再重排，避免 settings 流收集器与 refreshContent 竞态
+                // 导致过渡页开关不生效。
+                viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    mangaSettingsGateway.update { it.copy(hideTitle = enabled) }
+                    latestMangaSettings = mangaSettingsGateway.currentSettings
+                    refreshContent()
+                }
             }
             MangaReaderSettingKey.ENABLE_GRAY -> {
                 updateMangaPreference {
@@ -1032,9 +1059,9 @@ class MangaReaderViewModel(
         val state = _uiState.value
         val range = visibleItemRange?.takeIf { state.currentItemIndex in it }
             ?: (state.currentItemIndex..state.currentItemIndex)
-        val target = mangaPageStepTarget(
+        val target = nextPageItemIndex(
+            items = state.pages,
             currentIndex = if (direction > 0) range.last else range.first,
-            itemCount = state.pages.size,
             direction = direction,
         )
         if (target == null) {
@@ -1063,13 +1090,22 @@ class MangaReaderViewModel(
         itemIndex: Int,
         firstItemIndex: Int,
         lastItemIndex: Int,
-        currentChapterVisible: Boolean,
         navigationId: Long,
     ) {
         val state = _uiState.value
         if (navigationId != state.navigationId) return
         if (state.isLoading) return
-        val item = state.pages.getOrNull(itemIndex) as? MangaReaderItemUi.Page ?: return
+        val item = state.pages.getOrNull(itemIndex)
+        if (item !is MangaReaderItemUi.Page) {
+            // 过渡页/边缘项：只维护可见区间并清掉指向它的 scrollRequest（防御性兜底，
+            // PageStep 已保证目标为真实页；此处保证 seek/遗留请求落在过渡页时不卡死）。
+            visibleItemRange = firstItemIndex.coerceAtMost(lastItemIndex)..
+                    lastItemIndex.coerceAtLeast(firstItemIndex)
+            if (state.scrollRequest?.itemIndex == itemIndex) {
+                _uiState.update { it.copy(scrollRequest = null) }
+            }
+            return
+        }
         val requestedItem = state.scrollRequest?.itemIndex
             ?.let(state.pages::getOrNull) as? MangaReaderItemUi.Page
         if (requestedItem != null && item.chapterIndex != requestedItem.chapterIndex) return
@@ -1081,7 +1117,6 @@ class MangaReaderViewModel(
         when (mangaChapterSwitchDecision(
             currentChapterIndex = readerSession.state.value.chapterIndex,
             visibleChapterIndex = item.chapterIndex,
-            currentChapterVisible = currentChapterVisible,
         )) {
             MangaChapterSwitch.NEXT,
             MangaChapterSwitch.PREVIOUS -> executeSession(
@@ -1112,6 +1147,9 @@ class MangaReaderViewModel(
             val index = state.pages.indexOfFirst { it.key == key }
             val page =
                 state.pages.getOrNull(index) as? MangaReaderItemUi.Page ?: return@update state
+            // 已就绪的页不被重新入队/预取触发 onStart 而降级回 Loading，避免已显示的图被
+            // 遮罩/转圈闪一下；重试走 retryPage 显式置回 Queued，不受此限制。
+            if (page.loadState == MangaPageLoadState.Ready) return@update state
             if (page.loadState == loadState) return@update state
             state.copy(
                 pages = state.pages.mapIndexed { itemIndex, item ->
