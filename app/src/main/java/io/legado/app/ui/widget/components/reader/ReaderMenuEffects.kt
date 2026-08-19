@@ -26,7 +26,7 @@ fun Modifier.readerMenuHazeEffect(
     val style = HazeLegado.custom(
         containerColor = resolvedColor.copy(alpha = surfaceAlpha.coerceIn(0, 100) / 100f),
         blurRadius = blurRadius,
-        blurAlpha = menuTintAlpha(surfaceAlpha),
+        blurAlpha = surfaceAlpha,
     )
 
     return hazeEffect(state = state, style = style) {
@@ -40,15 +40,3 @@ fun Modifier.readerMenuHazeEffect(
         }
     }
 }
-
-/**
- * 着色层(tint)的不透明度上限。
- *
- * HazeStyle 的 tint 绘制在模糊内容之上，其 alpha 由「菜单不透明度」readMenuBlurAlpha 决定
- * （默认 100 → 1.0 完全不透明）。若填充样式（progressive = null）直接使用该值，tint 会
- * 完全遮住底层模糊，表现为「填充无模糊、渐变才有模糊」。封顶到半透明可保证模糊始终可见。
- */
-internal const val MAX_MENU_TINT_ALPHA = 60
-
-internal fun menuTintAlpha(blurAlpha: Int): Int =
-    blurAlpha.coerceIn(0, MAX_MENU_TINT_ALPHA)
