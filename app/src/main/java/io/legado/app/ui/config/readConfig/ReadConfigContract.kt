@@ -11,7 +11,7 @@ data class ReadConfigUiState(
     val hideNavigationBar: Boolean = false,
     val paddingDisplayCutouts: Boolean = false,
     val titleBarMode: String = "1",
-    val readMenuBlurAlpha: Int = 100,
+    val readMenuBlurAlpha: Int = 85,
     val readBodyToLh: Boolean = true,
     val defaultSourceChangeAll: Boolean = true,
     val textFullJustify: Boolean = true,
