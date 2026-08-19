@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +62,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,12 +93,12 @@ import io.legado.app.ui.widget.components.text.AnimatedText
 import io.legado.app.ui.widget.components.text.AppText
 
 private val MangaMenuSurfaceColor: Color
-    @androidx.compose.runtime.Composable
-    @androidx.compose.runtime.ReadOnlyComposable
+    @Composable
+    @ReadOnlyComposable
     get() = LegadoTheme.colorScheme.surfaceContainerHigh
 private val MangaMenuButtonColor: Color
-    @androidx.compose.runtime.Composable
-    @androidx.compose.runtime.ReadOnlyComposable
+    @Composable
+    @ReadOnlyComposable
     get() = LegadoTheme.colorScheme.surfaceContainerLow
 
 // 保留液态玻璃的模糊取样，同时用较高表面覆盖避免高对比度漫画页清晰穿透。
@@ -234,29 +237,22 @@ private fun MangaMenuTopBar(
                 onClick = { onIntent(MangaReaderIntent.BackPressed) },
             )
             MangaTitleCapsule(state, onIntent, glassEnabled = topBarGlass, backdrop = backdrop)
-            if (!compact) {
+            if (compact) {
                 MangaMenuIconButton(
-                    Icons.Filled.SwapHoriz,
-                    stringResource(R.string.change_origin),
+                    Icons.Filled.MoreVert,
+                    stringResource(R.string.more_actions),
                     glassEnabled = topBarGlass,
                     backdrop = backdrop,
-                ) { onIntent(MangaReaderIntent.ChangeSource) }
-            }
-            if (!compact) {
-                MangaMenuIconButton(
-                    Icons.Filled.Refresh,
-                    stringResource(R.string.refresh),
+                ) {
+                    onIntent(MangaReaderIntent.OpenSourceActions)
+                }
+            } else {
+                // 未精简时把换源/刷新/更多合并为胶囊，对齐阅读界面「合并顶栏按钮」的样式
+                MangaMenuMergedActions(
+                    onIntent = onIntent,
                     glassEnabled = topBarGlass,
                     backdrop = backdrop,
-                ) { onIntent(MangaReaderIntent.RefreshChapter) }
-            }
-            MangaMenuIconButton(
-                Icons.Filled.MoreVert,
-                stringResource(R.string.more_actions),
-                glassEnabled = topBarGlass,
-                backdrop = backdrop,
-            ) {
-                onIntent(MangaReaderIntent.OpenSourceActions)
+                )
             }
         }
     }
@@ -322,6 +318,103 @@ private fun RowScope.MangaTitleCapsule(
             }
         }
     }
+}
+
+// ========== Merged Top Bar Actions ==========
+// 未精简顶栏时把换源/刷新/更多合并为一个胶囊，参考阅读界面「合并顶栏按钮」的样式。
+
+@Composable
+private fun MangaMenuMergedActions(
+    onIntent: (MangaReaderIntent) -> Unit,
+    glassEnabled: Boolean,
+    backdrop: Backdrop?,
+) {
+    val pillShape = RoundedCornerShape(50)
+    val tint = LegadoTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier = Modifier
+            .height(40.dp)
+            .then(
+                if (glassEnabled) {
+                    Modifier.readerMenuLiquidGlass(
+                        backdrop = backdrop,
+                        shape = pillShape,
+                        surfaceBrush = readerMenuSurfaceBrush(
+                            style = ReaderMenuTintStyle.Fill,
+                            placement = ReaderMenuPlacement.Top,
+                            color = MangaMenuSurfaceColor,
+                            alpha = MangaMenuGlassAlpha,
+                        ),
+                        blurRadius = 32.dp,
+                        lensRadius = 24.dp,
+                        useLens = true,
+                        interactive = true,
+                    )
+                } else {
+                    Modifier
+                        .clip(pillShape)
+                        .background(MangaMenuButtonColor, pillShape)
+                }
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MergedMangaIconButton(
+            Icons.Filled.SwapHoriz,
+            tint,
+            stringResource(R.string.change_origin),
+        ) { onIntent(MangaReaderIntent.ChangeSource) }
+        MergedMangaDivider(tint)
+        MergedMangaIconButton(
+            Icons.Filled.Refresh,
+            tint,
+            stringResource(R.string.refresh),
+        ) { onIntent(MangaReaderIntent.RefreshChapter) }
+        MergedMangaDivider(tint)
+        MergedMangaIconButton(
+            Icons.Filled.MoreVert,
+            tint,
+            stringResource(R.string.more_actions),
+        ) { onIntent(MangaReaderIntent.OpenSourceActions) }
+    }
+}
+
+@Composable
+private fun MergedMangaIconButton(
+    icon: ImageVector,
+    tint: Color,
+    contentDescription: String?,
+    onClick: () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .semantics { contentDescription?.let { this.contentDescription = it } },
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun MergedMangaDivider(tint: Color) {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(20.dp)
+            .background(tint.copy(alpha = 0.15f))
+            .clearAndSetSemantics { }
+    )
 }
 
 // ========== Bottom Bar ==========
@@ -454,14 +547,15 @@ private fun MangaMenuBottomBar(
                 } else {
                     Column(Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)) {
+                        .padding(vertical = 16.dp)
+                    ) {
                         if (state.pageCount > 1) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 MangaMenuIconButton(
                                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -570,9 +664,6 @@ private fun MangaMenuToolRow(
                 onLongClick = action.onLongClick,
             )
         }
-        repeat((5 - actions.size).coerceAtLeast(0)) {
-            Spacer(Modifier.size(40.dp))
-        }
     }
 }
 
@@ -645,7 +736,7 @@ private fun MangaMenuIconButton(
 }
 
 @Composable
-internal fun BoxScope.ReaderStatusOverlay(
+internal fun ReaderStatusOverlay(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
