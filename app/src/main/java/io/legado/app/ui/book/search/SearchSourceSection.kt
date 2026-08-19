@@ -46,6 +46,7 @@ fun SearchSourceSection(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sourceSectionIndex: Int = 0,
+    qualityMaskForBook: (SearchBook) -> Boolean = { false },
 ) {
     if (items.isEmpty()) return
 
@@ -98,15 +99,17 @@ fun SearchSourceSection(
                     item.book.bookUrl,
                     "search_source:$sourceSectionIndex:$index"
                 )
+                val qualityMasked = qualityMaskForBook(item.book)
                 SearchBookGridItem(
                     book = item.book,
                     shelfState = item.shelfState,
-                    onClick = { onClickBook(item.book, sharedCoverKey) },
+                    onClick = { if (!qualityMasked) onClickBook(item.book, sharedCoverKey) },
                     onLongClick = onLongClickBook,
                     modifier = Modifier.width(100.dp),
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     sharedCoverKey = sharedCoverKey,
+                    qualityMasked = qualityMasked,
                 )
             }
         }
