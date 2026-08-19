@@ -30,6 +30,7 @@ object ReplaceRuleController {
                 rule.order = appDb.replaceRuleDao.maxOrder + 1
             }
             appDb.replaceRuleDao.insert(rule)
+            returnData.setData(rule)
         }
         return returnData
     }
@@ -43,6 +44,7 @@ object ReplaceRuleController {
             returnData.setErrorMsg("格式不对")
         } else {
             appDb.replaceRuleDao.delete(rule)
+            returnData.setData(rule)
         }
         return returnData
     }
