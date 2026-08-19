@@ -237,6 +237,7 @@ data class ReadBookUiState(
     // Seek bar
     val seekProgress: Int = 0,
     val seekMax: Int = 0,
+    val readingAnchorAvailable: Boolean = false,
     // Replace rules
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,

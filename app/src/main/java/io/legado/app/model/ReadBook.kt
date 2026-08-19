@@ -165,6 +165,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
+    private var readingAnchorJumpCount = 0
 
     /* web端阅读进度记录 */
     var webBookProgress: BookProgress? = null
@@ -273,6 +274,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         renderCallBack?.upPageAnim()
         upWebBook(book)
         lastBookProgress = null
+        readingAnchorJumpCount = 0
         webBookProgress = null
         TextFile.clear()
         requestWholeBookPageEstimate()
@@ -604,11 +606,24 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         lastBookProgress = book?.let { BookProgress(it) }
     }
 
+    fun saveReadingAnchorBeforeChapterJump(targetChapterIndex: Int, targetChapterPos: Int = 0) {
+        if (targetChapterIndex == durChapterIndex && targetChapterPos == durChapterPos) return
+        saveCurrentBookProgress()
+        if (lastBookProgress != null) readingAnchorJumpCount++
+    }
+
+    fun hasReadingAnchor(): Boolean = lastBookProgress != null && readingAnchorJumpCount >= 2
+
+    fun discardReadingAnchor() {
+        lastBookProgress = null
+        readingAnchorJumpCount = 0
+    }
+
     //恢复跳转前进度
     fun restoreLastBookProgress() {
         lastBookProgress?.let {
             setProgress(it)
-            lastBookProgress = null
+            discardReadingAnchor()
         }
     }
 
