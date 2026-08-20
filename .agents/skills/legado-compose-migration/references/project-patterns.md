@@ -4,7 +4,10 @@
 
 - App module: `app`.
 - Main source root: `app/src/main/java/io/legado/app`.
-- UI package: `ui/...`, usually grouped by feature.
+- Legacy UI package: `ui/...`; it remains a migration zone, not the destination for new
+  Compose-first Feature ownership.
+- Canonical new Feature package: `feature/<name>` as defined by
+  `docs/dev/feature-first-structure.md`.
 - Data package: `data/dao`, `data/entities`, `data/repository`.
 - Domain package: `domain/gateway`, `domain/model`, `domain/repository`, `domain/usecase`.
 - DI: `di/appModule.kt`, using Koin `singleOf`, `viewModelOf`, and parameterized `viewModel { ... }`.
@@ -36,16 +39,25 @@ Inspect these as local examples, not as APIs to copy blindly:
 For a migrated feature, prefer colocated files:
 
 ```text
-ui/<area>/<feature>/
+feature/<feature>/
   FeatureActivity.kt       # only for legacy Intent compatibility or full-screen migration host
   FeatureContract.kt
   FeatureViewModel.kt
+  FeatureRoute.kt          # only when route/host wiring is substantial
   FeatureScreen.kt
-  FeatureSheets.kt        # only if sheets are substantial
-  FeatureDialogs.kt       # only if dialogs are substantial
+  components/              # Feature-private UI only
+  sheet/                   # only if sheets are substantial
+  dialog/                  # only if dialogs are substantial
+  model/                   # presentation-only UI models
+  legacy/                  # temporary compatibility bridge with removal condition
 ```
 
 Use the smallest set of files. Do not split files just to match this shape.
+
+The directory is `feature/book-info`, the Gradle path is `:feature:book-info`, and the Kotlin
+package is `io.legado.app.feature.bookinfo`. Start with this shape inside `:app`; promote it to a
+Gradle module only after the boundary has real callers and verification. Do not create `api/impl` by
+default.
 
 ## MVI and UDF Rules
 

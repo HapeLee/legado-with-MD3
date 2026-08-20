@@ -24,6 +24,8 @@ Before editing, inspect the target View implementation if one exists, `MainActiv
    - For new screens, read `MainActivity`, nearby route screens, the relevant ViewModel/usecase/repository patterns, and shared UI components.
    - List UI state, user intents, one-shot effects, and external side effects.
    - Identify reusable Compose components under `ui/widget/components` before creating new components.
+   - Read `docs/dev/feature-first-structure.md`, identify the canonical Feature owner, and avoid
+     adding a second presentation package under legacy `ui/...`.
 
 3. Choose the minimal migration shape.
    - For new Compose-first screens, add a `MainActivity` navigation destination instead of creating a standalone Activity.
@@ -37,6 +39,9 @@ Before editing, inspect the target View implementation if one exists, `MainActiv
    - Use existing repositories/usecases when they already fit; introduce new domain/usecase classes when a new screen needs clean business boundaries or when a migration would otherwise duplicate or entangle business logic.
 
 4. Implement by layers.
+    - Place new Compose-first artifacts under `io.legado.app.feature.<name>` using the repository
+      feature-first convention. Keep an old `ui/...` Activity only as an explicit compatibility
+      bridge when required.
    - Create or update `FeatureContract.kt` first for `UiState`, `Intent`, `Effect`, dialog/sheet models, and menu action enums.
    - Update `FeatureViewModel.kt` to expose `uiState: StateFlow<UiState>` and `effects: SharedFlow<Effect>`, with a single `onIntent(...)` entry point unless the existing feature has a simpler established pattern.
    - Create `FeatureScreen.kt` as a stateless route-level composable: `state`, callbacks, and `onIntent`.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legado KMP Migration"
+  short_description: "Plan and review Legado KMP/CMP migration slices"
+  default_prompt: "Use $legado-kmp-migration to plan a reviewable KMP/CMP migration slice with explicit gates."

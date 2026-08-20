@@ -7,6 +7,7 @@ For a feature review, inspect the smallest complete slice:
 - `FeatureScreen.kt` and any `FeatureSheets.kt` / `FeatureDialogs.kt`.
 - `FeatureViewModel.kt`.
 - `FeatureContract.kt` if present.
+- Canonical owner under `feature/<name>` or the documented reason it remains in legacy `ui/...`.
 - Host route in `MainActivity.kt` or retained `FeatureActivity.kt`.
 - Koin registration in `di/appModule.kt`.
 - Repositories/usecases used by the feature.
@@ -32,6 +33,9 @@ Flag issues when:
 - MVI `FeatureIntent` user actions are confused with Android `Intent` launch/extras.
 - Domain/usecase boundaries are bypassed in new screens when a meaningful business action exists.
 - A migration introduces new domain abstractions for a single trivial UI action without reducing real complexity.
+- New Compose-first files extend a legacy `ui/...` package after the Feature has a canonical
+  `feature/<name>` owner, or the same Feature is split across both roots without an explicit
+  compatibility boundary.
 
 ## UDF and State Checks
 
