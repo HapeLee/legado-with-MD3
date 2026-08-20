@@ -29,6 +29,10 @@ android {
     flavorDimensions += listOf("mode")
     productFlavors {
         create("app") { dimension = "mode" }
+        create("appB") { dimension = "mode" }
+        create("appC") { dimension = "mode" }
+        create("appD") { dimension = "mode" }
+        create("appE") { dimension = "mode" }
     }
 }
 

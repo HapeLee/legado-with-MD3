@@ -20,10 +20,11 @@ object FirebaseManager {
 
     private fun applyState(context: Context, enabled: Boolean) {
         if (enabled) {
-            if (FirebaseApp.getApps(context).isEmpty()) {
-                FirebaseApp.initializeApp(context)
+            val firebaseApp = FirebaseApp.getApps(context).firstOrNull()
+                ?: FirebaseApp.initializeApp(context)
+            firebaseApp?.let {
+                FirebaseAnalytics.getInstance(context).setAnalyticsCollectionEnabled(true)
             }
-            FirebaseAnalytics.getInstance(context).setAnalyticsCollectionEnabled(true)
         } else {
             try {
                 if (FirebaseApp.getApps(context).isNotEmpty()) {

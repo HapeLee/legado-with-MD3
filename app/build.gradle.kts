@@ -12,6 +12,12 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
+googleServices {
+    // Flavors without their own Firebase registration should still be buildable.
+    missingGoogleServicesStrategy =
+        com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.IGNORE
+}
+
 apply(from = "download.gradle")
 
 
@@ -132,7 +138,29 @@ android {
     productFlavors {
         create("app") {
             dimension = "mode"
-            manifestPlaceholders["APP_CHANNEL_VALUE"] = "app"
+            // Keep the existing Firebase-registered application id for flavor A.
+            applicationId = "io.legato.kazusa"
+            manifestPlaceholders["APP_CHANNEL_VALUE"] = "a"
+        }
+        create("appB") {
+            dimension = "mode"
+            applicationId = "io.legato.kazusa.b"
+            manifestPlaceholders["APP_CHANNEL_VALUE"] = "b"
+        }
+        create("appC") {
+            dimension = "mode"
+            applicationId = "io.legato.kazusa.c"
+            manifestPlaceholders["APP_CHANNEL_VALUE"] = "c"
+        }
+        create("appD") {
+            dimension = "mode"
+            applicationId = "io.legato.kazusa.d"
+            manifestPlaceholders["APP_CHANNEL_VALUE"] = "d"
+        }
+        create("appE") {
+            dimension = "mode"
+            applicationId = "io.legato.kazusa.e"
+            manifestPlaceholders["APP_CHANNEL_VALUE"] = "e"
         }
     }
 
