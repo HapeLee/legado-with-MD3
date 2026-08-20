@@ -14,15 +14,14 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
-import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.repository.BookRepository
-import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.SettingsRepository
@@ -1773,13 +1772,6 @@ class ReadBookViewModel(
                 ) {
                     _readAloudProgress.value = null
                     _effects.tryEmit(ReadBookEffect.UpAloudState)
-                }
-                if (previousStatus != ReadAloudSessionStatus.Paused &&
-                    status == ReadAloudSessionStatus.Paused
-                ) {
-                    _effects.tryEmit(
-                        ReadBookEffect.ShowToast(context.getString(R.string.read_aloud_pause))
-                    )
                 }
                 previousStatus = status
             }

@@ -42,8 +42,6 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -66,6 +64,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -95,6 +94,7 @@ import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
+import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
 import io.legado.app.ui.widget.components.player.PlayerBackground
 import io.legado.app.ui.widget.components.player.PlayerProgressSlider
@@ -284,7 +284,7 @@ fun ReadAloudPlayerScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
+                            .padding(top = 16.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -299,13 +299,12 @@ fun ReadAloudPlayerScreenContent(
                             contentDescription = stringResource(R.string.previous_chapter),
                             modifier = Modifier.size(48.dp),
                         )
-                        MediumTonalButton(
+                        AnimatedPlayPauseButton(
+                            isPlaying = !state.isPaused,
                             onClick = { onIntent(ReadAloudPlayerIntent.TogglePause) },
-                            icon = if (state.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                             contentDescription = stringResource(
                                 if (state.isPaused) R.string.resume else R.string.pause
                             ),
-                            modifier = Modifier.size(64.dp),
                         )
                         MediumTonalButton(
                             onClick = { onIntent(ReadAloudPlayerIntent.NextChapter) },
@@ -528,6 +527,9 @@ private fun CoverPage(
                 modifier = Modifier
                     .fillMaxWidth(0.52f)
                     .aspectRatio(5f / 7f)
+                    .shadow(
+                        elevation = 16.dp
+                    )
                     .clip(RoundedCornerShape(8.dp))
             )
         }

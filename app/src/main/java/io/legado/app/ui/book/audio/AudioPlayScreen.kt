@@ -12,12 +12,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.VerticalPager
@@ -34,8 +32,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
@@ -46,7 +42,6 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WbTwilight
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -57,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,7 +76,6 @@ import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallAnimatedButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
@@ -90,6 +85,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
+import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
 import io.legado.app.ui.widget.components.player.PlayerBackground
 import io.legado.app.ui.widget.components.player.PlayerProgressSlider
@@ -169,14 +165,14 @@ fun AudioPlayScreenContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    MediumTonalButton(
+                    MediumPlainButton(
                         onClick = onBack,
                         icon = AppIcons.Back,
                         contentDescription = stringResource(R.string.back),
                     )
 
                     Box {
-                        MediumTonalButton(
+                        MediumPlainButton(
                             onClick = { menuExpanded = true },
                             icon = AppIcons.MoreVert,
                             contentDescription = stringResource(R.string.more),
@@ -334,7 +330,7 @@ fun AudioPlayScreenContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
+                        .padding(top = 16.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -344,24 +340,15 @@ fun AudioPlayScreenContent(
                         icon = Icons.Default.SkipPrevious,
                         contentDescription = stringResource(R.string.previous_chapter),
                     )
-                    Box(contentAlignment = Alignment.Center) {
-                        MediumTonalButton(
-                            onClick = { onIntent(AudioPlayIntent.TogglePlay) },
-                            onLongClick = { onIntent(AudioPlayIntent.Stop) },
-                            icon = if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = stringResource(
-                                if (state.isPlaying) R.string.pause else R.string.audio_play
-                            ),
-                            modifier = Modifier.size(72.dp),
-                        )
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(56.dp),
-                                strokeWidth = 3.dp,
-                                color = LegadoTheme.colorScheme.onSecondaryContainer,
-                            )
-                        }
-                    }
+                    AnimatedPlayPauseButton(
+                        isPlaying = state.isPlaying,
+                        isLoading = state.isLoading,
+                        contentDescription = stringResource(
+                            if (state.isPlaying) R.string.pause else R.string.audio_play
+                        ),
+                        onClick = { onIntent(AudioPlayIntent.TogglePlay) },
+                        onLongClick = { onIntent(AudioPlayIntent.Stop) },
+                    )
                     MediumPlainButton(
                         onClick = { onIntent(AudioPlayIntent.NextChapter) },
                         enabled = state.canNext,
@@ -634,7 +621,6 @@ private fun formatGain(gainMb: Int): String {
 private const val AUDIO_SPEED_MIN = 0.5f
 private const val AUDIO_SPEED_MAX = 5.0f
 
-
 @Composable
 private fun AudioCoverPage(
     state: AudioPlayUiState,
@@ -657,8 +643,10 @@ private fun AudioCoverPage(
                 path = state.coverPath,
                 sourceOrigin = state.sourceOrigin,
                 modifier = Modifier
-                    .fillMaxWidth(0.64f)
-                    .aspectRatio(5f / 7f)
+                    .fillMaxSize(0.64f)
+                    .shadow(
+                        elevation = 16.dp
+                    )
                     .clip(RoundedCornerShape(8.dp))
             )
         }
@@ -678,7 +666,6 @@ private fun AudioCoverPage(
             )
             AppText(
                 text = state.chapterTitle,
-                modifier = Modifier.padding(top = 16.dp),
                 style = LegadoTheme.typography.titleMediumEmphasized,
                 color = LegadoTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
