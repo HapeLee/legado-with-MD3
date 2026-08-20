@@ -262,7 +262,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/association/AddToBookshelfDialog.kt" to 5,
             "io/legado/app/ui/association/ImportReplaceRuleDialog.kt" to 1,
             "io/legado/app/ui/association/ImportRssSourceDialog.kt" to 1,
-            "io/legado/app/ui/book/audio/AudioPlayActivity.kt" to 1,
             "io/legado/app/ui/book/bookmark/BookmarkDialog.kt" to 2,
             "io/legado/app/ui/book/changesource/ChangeBookSourceDialog.kt" to 1,
             "io/legado/app/ui/book/group/GroupManageDialog.kt" to 2,

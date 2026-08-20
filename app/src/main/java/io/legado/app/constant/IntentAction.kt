@@ -19,6 +19,7 @@ object IntentAction {
     const val upTtsProgress = "upTtsProgress"
     const val adjustProgress = "adjustProgress"
     const val adjustSpeed = "adjustSpeed"
+    const val adjustGain = "adjustGain"
     const val prev = "prev"
     const val next = "next"
     const val moveTo = "moveTo"

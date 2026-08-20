@@ -224,12 +224,7 @@
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize|stateHidden" />
-        <!-- 音频播放界面 -->
-        <activity
-            android:name="io.legado.app.ui.book.audio.AudioPlayActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask" />
+        <!-- 音频播放界面（nav3 路由，见 MainRouteAudioPlay） -->
         <!-- 授权界面 -->
         <activity
             android:name="io.legado.app.lib.permission.PermissionActivity"

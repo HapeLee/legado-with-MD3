@@ -18,7 +18,6 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
-import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 
@@ -55,7 +54,7 @@ fun Fragment.startActivityForBook(
     configIntent: Intent.() -> Unit = {},
 ) {
     val intent = when {
-        book.isAudio -> Intent(requireActivity(), AudioPlayActivity::class.java)
+        book.isAudio -> MainActivity.createAudioPlayIntent(requireActivity(), book.bookUrl)
         !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
             MainActivity.createReadMangaIntent(requireActivity(), book.bookUrl)
 

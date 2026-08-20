@@ -1,7 +1,9 @@
 package io.legado.app.ui.main
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -28,15 +30,27 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import coil3.ImageLoader
 import io.legado.app.R
+import io.legado.app.constant.BookType
+import io.legado.app.constant.Status
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.help.coil.CoverExtras
+import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
+import io.legado.app.model.SourceCallBack
+import io.legado.app.service.AudioPlayService
 import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
+import io.legado.app.ui.book.audio.AudioPlayEffect
+import io.legado.app.ui.book.audio.AudioPlayIntent
+import io.legado.app.ui.book.audio.AudioPlayScreenContent
+import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
+import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
 import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowViewModel
@@ -124,7 +138,12 @@ import io.legado.app.ui.rss.source.edit.RssSourceEditRoute
 import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceRouteScreen
 import io.legado.app.ui.rss.subscription.RuleSubRouteScreen
+import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.rememberImageSeedColor
+import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.utils.openUrl
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
@@ -134,6 +153,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -709,6 +729,128 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    entry<MainRouteAudioPlay> { route ->
+        val audioPlayViewModel = koinViewModel<AudioPlayViewModel>(
+            key = "AudioPlay:${route.bookUrl}",
+        )
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val uiState by audioPlayViewModel.uiState.collectAsStateWithLifecycle()
+        val imageLoader: ImageLoader = koinInject()
+        val sourceEditResult = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                audioPlayViewModel.onIntent(AudioPlayIntent.SourceEdited)
+            }
+        }
+
+        fun copyAudioPlayUrl() {
+            AudioPlay.book?.let {
+                SourceCallBack.callBackBtn(
+                    this@mainEntryProvider,
+                    SourceCallBack.CLICK_COPY_PLAY_URL,
+                    AudioPlay.bookSource,
+                    it,
+                    AudioPlay.durChapter,
+                    BookType.audio,
+                ) {
+                    sendToClip(AudioPlayService.url)
+                }
+            }
+        }
+
+        fun finishAudioPlay() {
+            if (AudioPlay.inBookshelf) {
+                SourceCallBack.callBackBook(
+                    SourceCallBack.END_READ,
+                    AudioPlay.bookSource,
+                    AudioPlay.book,
+                    AudioPlay.durChapter
+                )
+            }
+            onNavigateBack()
+        }
+
+        LaunchedEffect(route, audioPlayViewModel) {
+            audioPlayViewModel.onIntent(
+                AudioPlayIntent.Init(route.bookUrl.orEmpty(), route.inBookshelf)
+            )
+        }
+        DisposableEffect(audioPlayViewModel, lifecycleOwner) {
+            MainActivity.hasActiveAudioPlayRoute = true
+            this@mainEntryProvider.activeAudioPlayViewModel = audioPlayViewModel
+            AudioPlay.register(this@mainEntryProvider)
+            onDispose {
+                if (AudioPlay.status != Status.PLAY) {
+                    AudioPlay.stop()
+                }
+                AudioPlay.unregister(this@mainEntryProvider)
+                if (this@mainEntryProvider.activeAudioPlayViewModel === audioPlayViewModel) {
+                    this@mainEntryProvider.activeAudioPlayViewModel = null
+                }
+                MainActivity.hasActiveAudioPlayRoute = false
+            }
+        }
+        LaunchedEffect(audioPlayViewModel) {
+            audioPlayViewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    is AudioPlayEffect.OpenChangeSource -> showDialogFragment(
+                        ChangeBookSourceDialog(effect.bookName, effect.author)
+                    )
+
+                    is AudioPlayEffect.OpenLogin -> startActivity(
+                        MainActivity.createSourceLoginIntent(
+                            this@mainEntryProvider,
+                            SourceLoginType.BookSource,
+                            effect.sourceUrl
+                        )
+                    )
+
+                    AudioPlayEffect.CopyPlayUrl -> copyAudioPlayUrl()
+                    is AudioPlayEffect.OpenEditSource -> sourceEditResult.launch(
+                        MainActivity.createBookSourceEditIntent(
+                            this@mainEntryProvider,
+                            effect.sourceUrl
+                        )
+                    )
+
+                    is AudioPlayEffect.ShowToast -> toastOnUi(effect.message)
+                    is AudioPlayEffect.OpenBookReader -> {
+                        startActivity(
+                            MainActivity.createReadBookIntent(
+                                this@mainEntryProvider,
+                                effect.bookUrl
+                            )
+                        )
+                        onNavigateBack()
+                    }
+
+                    AudioPlayEffect.Finish -> finishAudioPlay()
+                }
+            }
+        }
+        BackHandler {
+            audioPlayViewModel.onIntent(AudioPlayIntent.BackPressed)
+        }
+
+        // 封面动态取色：从封面提取主色作为本界面主题
+        val seedColor = rememberImageSeedColor(
+            imageLoader = imageLoader,
+            data = uiState.coverPath,
+            requestKey = listOf(uiState.coverPath, uiState.sourceOrigin),
+        ) {
+            extras[CoverExtras.SourceOrigin] = uiState.sourceOrigin
+        }
+        val themeOverride = rememberThemeOverride(seedColor)
+        ProvideThemeOverride(themeOverride) {
+            AudioPlayScreenContent(
+                state = uiState,
+                onIntent = audioPlayViewModel::onIntent,
+                onBack = { audioPlayViewModel.onIntent(AudioPlayIntent.BackPressed) },
+            )
+        }
+    }
+
     entry<MainRouteSearchContent> { route ->
         val viewModel = koinViewModel<SearchContentViewModel>(
             key = "SearchContent:${route.bookUrl}",
@@ -953,6 +1095,14 @@ fun MainActivity.mainEntryProvider(
                         bookUrl = bookUrl,
                         inBookshelf = inBookshelf,
                         chapterChanged = chapterChanged,
+                    )
+                )
+            },
+            onOpenAudioPlay = { bookUrl, inBookshelf ->
+                onNavigateToRoute(
+                    MainRouteAudioPlay(
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
                     )
                 )
             },

@@ -362,7 +362,7 @@ data class ReadMenuConfig(
     val readMenuBorderColorNight: Int = 0,
     val readMenuTextColor: Int = 0,
     val readMenuTextColorNight: Int = 0,
-    val readMenuBlurAlpha: Int = 100,
+    val readMenuBlurAlpha: Int = 85,
     val readMenuBlurColor: Int = 0,
     val readMenuBlurColorNight: Int = 0,
     val readMenuPaletteStyle: String = "",

@@ -97,7 +97,7 @@ data class ReadSettings(
     val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuBlurRadius: Int = 24,
-    val readMenuBlurAlpha: Int = 100,
+    val readMenuBlurAlpha: Int = 85,
     val readMenuBlurColor: Int = 0,
     val readMenuBlurColorNight: Int = 0,
     val readMenuPaletteStyle: String = "",

@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readaloud.player
 
 import androidx.compose.runtime.Stable
+import io.legado.app.ui.widget.components.player.PlayerChapterUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -8,14 +9,6 @@ import kotlinx.collections.immutable.persistentListOf
 data class ReadAloudTextLineUi(
     val text: String,
     val chapterPosition: Int,
-)
-
-@Stable
-data class ReadAloudChapterUi(
-    val index: Int,
-    val title: String,
-    val isVolume: Boolean,
-    val tocLevel: Int,
 )
 
 @Stable
@@ -27,7 +20,7 @@ data class ReadAloudPlayerUiState(
     val sourceOrigin: String? = null,
     val chapterIndex: Int = -1,
     val chapterTitle: String = "",
-    val chapters: ImmutableList<ReadAloudChapterUi> = persistentListOf(),
+    val chapters: ImmutableList<PlayerChapterUi> = persistentListOf(),
     val chapterText: String = "",
     val textLines: ImmutableList<ReadAloudTextLineUi> = persistentListOf(),
     val activeTextLine: Int = -1,

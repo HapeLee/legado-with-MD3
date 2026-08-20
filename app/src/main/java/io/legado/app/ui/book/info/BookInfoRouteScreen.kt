@@ -3,7 +3,6 @@ package io.legado.app.ui.book.info
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -24,7 +23,6 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.SourceCallBack
-import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.file.HandleFileContract
@@ -51,6 +49,7 @@ fun BookInfoRouteScreen(
     onOpenSourceLogin: (String) -> Unit,
     onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onOpenMangaReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
+    onOpenAudioPlay: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
     onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
@@ -82,11 +81,6 @@ fun BookInfoRouteScreen(
         if (it.resultCode == Activity.RESULT_OK) {
             viewModel.onInfoEdited()
         }
-    }
-    val readBookResult = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        viewModel.onReaderResult(it.resultCode)
     }
 
     LaunchedEffect(bookUrl, name, author, origin, coverPath, viewModel) {
@@ -128,13 +122,11 @@ fun BookInfoRouteScreen(
 
                 is BookInfoEffect.OpenReader -> {
                     when {
-                        effect.book.isAudio -> readBookResult.launch(
-                            Intent(activity, AudioPlayActivity::class.java).apply {
-                                putExtra("bookUrl", effect.book.bookUrl)
-                                putExtra("inBookshelf", effect.inBookshelf)
-                                putExtra("chapterChanged", effect.chapterChanged)
-                            }
+                        effect.book.isAudio -> onOpenAudioPlay(
+                            effect.book.bookUrl,
+                            effect.inBookshelf
                         )
+
                         !effect.book.isLocal && effect.book.isImage && showMangaUi -> {
                             onOpenMangaReader(
                                 effect.book.bookUrl,

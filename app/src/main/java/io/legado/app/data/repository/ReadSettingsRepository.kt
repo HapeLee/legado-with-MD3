@@ -439,7 +439,7 @@ class ReadSettingsRepository(
             ),
             readMenuBottomBarBlurStyle = compatDsValue(Keys.ReadMenuBottomBarBlurStyle, ReadMenuBlurStyle.Solid),
             readMenuBlurRadius = compatDsValue(Keys.ReadMenuBlurRadius, 24),
-            readMenuBlurAlpha = compatDsValue(Keys.ReadMenuBlurAlpha, 100),
+            readMenuBlurAlpha = compatDsValue(Keys.ReadMenuBlurAlpha, 85),
             readMenuBlurColor = compatDsValue(Keys.ReadMenuBlurColor, 0),
             readMenuBlurColorNight = compatDsValue(Keys.ReadMenuBlurColorNight, 0),
             readMenuPaletteStyle = compatDsValue(Keys.ReadMenuPaletteStyle, ""),

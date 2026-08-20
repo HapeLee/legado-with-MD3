@@ -1,6 +1,10 @@
 package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,7 +67,13 @@ internal fun AnimatedActionButtonCore(
             contentColor
         )
 
-        AnimatedVisibility(visible = showText) {
+        // 用尺寸动画而非默认的整体缩放：文字消失/出现时宽度连续变化，避免
+        // 内容移除瞬间按钮宽度突变导致的布局顿挫
+        AnimatedVisibility(
+            visible = showText,
+            enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+            exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut(),
+        ) {
             text(
                 if (lastCheckedState) activeText else inactiveText,
                 Modifier.padding(start = textStartPadding),

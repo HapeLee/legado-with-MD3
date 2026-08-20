@@ -237,11 +237,7 @@ internal fun SeriesAnimatedButtonContent(
     val hasText = text != null
     Row(
         modifier = Modifier.padding(if (hasText) padding else PaddingValues(0.dp)),
-        horizontalArrangement = Arrangement.spacedBy(
-            if (hasText) spacing else 0.dp,
-            Alignment.CenterHorizontally
-        ),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         AppIcon(
             imageVector = icon,
@@ -256,7 +252,10 @@ internal fun SeriesAnimatedButtonContent(
                     style = textStyle,
                     color = contentColor,
                     maxLines = 1,
-                    softWrap = false
+                    softWrap = false,
+                    // 间距并入动画内容，随文字一起伸缩；Row 级 spacedBy 间距不参与
+                    // 动画，会在文字移除瞬间突变造成顿挫
+                    modifier = Modifier.padding(start = spacing)
                 )
             }
         }

@@ -241,7 +241,6 @@ sealed interface MangaReaderIntent {
         val itemIndex: Int,
         val firstItemIndex: Int = itemIndex,
         val lastItemIndex: Int = itemIndex,
-        val currentChapterVisible: Boolean,
         val navigationId: Long,
     ) : MangaReaderIntent
     data class PagerScrollChanged(val inProgress: Boolean) : MangaReaderIntent

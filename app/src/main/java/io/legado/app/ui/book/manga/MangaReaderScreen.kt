@@ -472,19 +472,19 @@ private fun WebtoonMangaList(
     LaunchedEffect(listState, state.pages, state.navigationId) {
         snapshotFlow {
             val visibleItems = listState.layoutInfo.visibleItemsInfo
-            val currentChapterVisible = visibleItems.any { item ->
-                (state.pages.getOrNull(item.index) as? MangaReaderItemUi.Page)?.chapterIndex == state.chapterIndex
-            }
             val firstItemIndex = visibleItems.firstOrNull()?.index
-            if (firstItemIndex == null) null else firstItemIndex to currentChapterVisible
+            val focusedItemIndex = visibleItems.lastOrNull()?.index
+            if (firstItemIndex == null || focusedItemIndex == null) null
+            else focusedItemIndex to firstItemIndex
         }
             .distinctUntilChanged()
             .collect { entry ->
-                entry?.let { (index, stillVisible) ->
-                    when (val item = state.pages.getOrNull(index)) {
+                entry?.let { (focusedIndex, firstIndex) ->
+                    when (val item = state.pages.getOrNull(focusedIndex)) {
                         is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
-                            itemIndex = index,
-                            currentChapterVisible = stillVisible,
+                            itemIndex = focusedIndex,
+                            firstItemIndex = firstIndex,
+                            lastItemIndex = focusedIndex,
                             navigationId = state.navigationId,
                         ))
                         is MangaReaderItemUi.ChapterTransition -> Unit
@@ -693,18 +693,20 @@ private fun HorizontalMangaPager(
             val indices = spread?.itemIndices.orEmpty()
             val itemIndex = state.scrollRequest?.itemIndex?.takeIf { it in indices }
                 ?: indices.firstOrNull()
-            val page = itemIndex?.let(state.pages::getOrNull) as? MangaReaderItemUi.Page
-            if (!spreadLayoutReady) null else Triple(indices, itemIndex, page?.chapterIndex == state.chapterIndex)
+            if (!spreadLayoutReady) null
+            // 滚动中不切章：随 fling 越过章节边界时延迟到落定再上报，避免窗口重建期误切。
+            // 把 isScrollInProgress 并入快照，滚动结束会产生新值从而重发聚焦页。
+            else Triple(pagerState.isScrollInProgress, indices, itemIndex)
         }.distinctUntilChanged()
             .collect { entry ->
-                val (indices, itemIndex, stillVisible) = entry ?: return@collect
+                val (isScrolling, indices, itemIndex) = entry ?: return@collect
+                if (isScrolling) return@collect
                 itemIndex?.let { index ->
                     when (val item = state.pages.getOrNull(index)) {
                         is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
                             itemIndex = index,
                             firstItemIndex = indices.first(),
                             lastItemIndex = indices.last(),
-                            currentChapterVisible = stillVisible,
                             navigationId = state.navigationId,
                         ))
                         is MangaReaderItemUi.ChapterTransition -> Unit
@@ -951,13 +953,14 @@ private fun VerticalMangaPager(
     LaunchedEffect(pagerState, state.pages, state.navigationId) {
         snapshotFlow {
             val item = state.pages.getOrNull(pagerState.currentPage)
-            Triple(pagerState.currentPage, item, (item as? MangaReaderItemUi.Page)?.chapterIndex == state.chapterIndex)
+            // 滚动中不切章：把 isScrollInProgress 并入快照，滚动结束产生新值从而重发聚焦页。
+            Triple(pagerState.isScrollInProgress, pagerState.currentPage, item)
         }.distinctUntilChanged()
-            .collect { (page, item, stillVisible) ->
+            .collect { (isScrolling, page, item) ->
+                if (isScrolling) return@collect
                 when (item) {
                     is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
                         itemIndex = page,
-                        currentChapterVisible = stillVisible,
                         navigationId = state.navigationId,
                     ))
                     is MangaReaderItemUi.ChapterTransition -> Unit
@@ -1323,13 +1326,15 @@ private fun MangaImageLoadOverlay(
     onRetryChapter: () -> Unit,
 ) {
     if (loadState is MangaPageLoadState.Ready) return
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (loadState is MangaPageLoadState.Failed) {
+    if (loadState is MangaPageLoadState.Failed) {
+        // 失败态保留深色底便于重试按钮可读；加载/排队态不再整页压黑罩，
+        // 避免已解码淡入的图被一层「阴影」盖住（#2082）。
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.Center,
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 MediumOutlinedButton(onClick = onRetry, text = stringResource(R.string.retry))
                 MediumOutlinedButton(
@@ -1337,7 +1342,12 @@ private fun MangaImageLoadOverlay(
                     text = stringResource(R.string.manga_reader_retry_failed_chapter),
                 )
             }
-        } else {
+        }
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
             androidx.compose.material3.CircularProgressIndicator()
         }
     }

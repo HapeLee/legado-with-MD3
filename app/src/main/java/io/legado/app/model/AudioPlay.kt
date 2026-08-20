@@ -34,14 +34,16 @@ import splitties.init.appCtx
 @Suppress("unused")
 object AudioPlay : CoroutineScope by MainScope() {
 
-    enum class PlayMode(val iconRes: Int) {
-        LIST_END_STOP(R.drawable.ic_play_mode_list_end_stop),
-        RANDOM(R.drawable.ic_exchange),
-        LIST_LOOP(R.drawable.ic_play_mode_list_loop);
+    enum class PlayMode {
+        LIST_END_STOP,
+        SINGLE_LOOP,
+        RANDOM,
+        LIST_LOOP;
 
         fun next(): PlayMode {
             return when (this) {
-                LIST_END_STOP -> RANDOM
+                LIST_END_STOP -> SINGLE_LOOP
+                SINGLE_LOOP -> RANDOM
                 RANDOM -> LIST_LOOP
                 LIST_LOOP -> LIST_END_STOP
             }
@@ -49,6 +51,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     var playMode = PlayMode.LIST_END_STOP
+    var speed = 1f  // 播放倍速（进程内记忆，AUDIO_SPEED 事件回写）
     var status = Status.STOP
     private var activityContext: Context? = null
     private var serviceContext: Context? = null
@@ -69,6 +72,8 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun changePlayMode() {
         playMode = playMode.next()
+        book?.setPlayMode(playMode.ordinal)
+        saveRead()
         postEvent(EventBus.PLAY_MODE_CHANGED, playMode)
     }
 
@@ -104,6 +109,11 @@ object AudioPlay : CoroutineScope by MainScope() {
         durChapterPos = book.durChapterPos
         durPlayUrl = ""
         durAudioSize = 0
+        // 恢复本书记忆的播放模式
+        PlayMode.entries.getOrNull(book.getPlayMode())?.let {
+            playMode = it
+            postEvent(EventBus.PLAY_MODE_CHANGED, it)
+        }
         upDurChapter()
         SourceCallBack.callBackBook(SourceCallBack.START_READ, bookSource, book, durChapter)
         postEvent(EventBus.AUDIO_BUFFER_PROGRESS, 0)
@@ -268,6 +278,20 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    fun adjustGain(gain: Int) {
+        book?.let {
+            it.setAudioGain(gain)
+            // 增益需随书持久化，否则重启/重新拉取书籍后丢失
+            Coroutine.async { it.save() }
+        }
+        if (AudioPlayService.isRun) {
+            context.startService<AudioPlayService> {
+                action = IntentAction.adjustGain
+                putExtra("gain", gain)
+            }
+        }
+    }
+
     fun adjustProgress(position: Int) {
         durChapterPos = position
         saveRead()
@@ -316,6 +340,13 @@ object AudioPlay : CoroutineScope by MainScope() {
                     saveRead()
                     loadPlayUrl()
                 }
+            }
+
+            PlayMode.SINGLE_LOOP -> {
+                durChapterPos = 0
+                durPlayUrl = ""
+                saveRead()
+                loadPlayUrl()
             }
 
             PlayMode.RANDOM -> {

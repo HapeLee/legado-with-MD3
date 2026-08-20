@@ -40,14 +40,23 @@ internal fun nextMangaClickAction(action: Int): Int = when (action) {
     else -> -1
 }
 
-internal fun mangaPageStepTarget(
+/**
+ * 找 [direction] 方向上的下一个「真实页」：跳过 ChapterTransition/ChapterEdge 等非页项。
+ *
+ * 直接以相邻下标做 PageStep 时，目标落在过渡页上既无法推进，scrollRequest 也因过渡页非
+ * Page 而永远不清除（Pager 卡在章节边界）。保证步进永远落在实际页面。
+ */
+internal fun nextPageItemIndex(
+    items: List<MangaReaderItemUi>,
     currentIndex: Int,
-    itemCount: Int,
     direction: Int,
 ): Int? {
-    if (itemCount <= 0) return null
-    val target = (currentIndex + direction).coerceIn(0, itemCount - 1)
-    return target.takeIf { it != currentIndex }
+    var index = currentIndex + direction
+    while (index in items.indices) {
+        if (items[index] is MangaReaderItemUi.Page) return index
+        index += direction
+    }
+    return null
 }
 
 internal fun shouldExposeMangaPages(currentChapterFinished: Boolean): Boolean =
@@ -56,20 +65,17 @@ internal fun shouldExposeMangaPages(currentChapterFinished: Boolean): Boolean =
 enum class MangaChapterSwitch { NONE, NEXT, PREVIOUS }
 
 /**
- * 决定可见页是否触发章节切换：只有当前章节已完全滑出视口时，
- * 才允许沿可见页的章节方向自动切章；否则只是停留在当前章记录进度。
+ * 决定聚焦页是否触发章节切换：只认「用户当前聚焦的那一页」所在章节。
+ *
+ * 焦点页由阅读器上报（Webtoon 为视口底部页、Pager 为当前页/跨页），因此不依赖
+ * 「本章是否仍可见」这类在窗口重建/定位期间会闪断的启发式，避免误切。
  */
 internal fun mangaChapterSwitchDecision(
     currentChapterIndex: Int,
     visibleChapterIndex: Int,
-    currentChapterVisible: Boolean,
 ): MangaChapterSwitch = when {
-    currentChapterIndex < visibleChapterIndex ->
-        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.NEXT
-
-    currentChapterIndex > visibleChapterIndex ->
-        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.PREVIOUS
-
+    currentChapterIndex < visibleChapterIndex -> MangaChapterSwitch.NEXT
+    currentChapterIndex > visibleChapterIndex -> MangaChapterSwitch.PREVIOUS
     else -> MangaChapterSwitch.NONE
 }
 

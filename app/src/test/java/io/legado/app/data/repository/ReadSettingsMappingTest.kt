@@ -95,7 +95,7 @@ class ReadSettingsMappingTest {
         assertFalse(settings.readMenuIconShowText)
         assertTrue(settings.readMenuFloatingBottomBar)
         assertEquals(ReadMenuBlurStyle.Solid, settings.readMenuTopBarBlurStyle)
-        assertEquals(100, settings.readMenuBlurAlpha)
+        assertEquals(85, settings.readMenuBlurAlpha)
         assertEquals(1, settings.readMenuBorderWidth)
         assertEquals(3, settings.titleBarIconPosition)
         assertFalse(settings.showTitleBarIcons)
