@@ -125,6 +125,38 @@ class ReadRecordRepositoryTest {
         assertNull(database.readRecordDao.getDetail(sourceDevice, targetName, author, date))
     }
 
+    @Test
+    fun `deleting the last aggregate detail removes session-backed total`() = runBlocking {
+        val date = "1970-01-01"
+        val record = ReadRecord(deviceId, targetName, author, 200, 1_200)
+        val session = ReadRecordSession(deviceId, targetName, author, 1_000, 1_200, 10)
+        database.readRecordDao.insert(record)
+        database.readRecordDao.insertSession(session)
+        database.readRecordDao.insertDetail(ReadRecordDetail(deviceId, targetName, author, date, 200, 10, 1_000, 1_200))
+
+        repository.deleteDetail(database.readRecordDao.getDetail(deviceId, targetName, author, date)!!)
+
+        assertNull(database.readRecordDao.getReadRecord(deviceId, targetName, author))
+        assertNull(database.readRecordDao.getDetail(deviceId, targetName, author, date))
+        assertEquals(0, database.readRecordDao.getSessionsByBook(deviceId, targetName, author).size)
+    }
+
+    @Test
+    fun `deleting the last session preserves legacy total only`() = runBlocking {
+        val date = "1970-01-01"
+        val record = ReadRecord(deviceId, targetName, author, 300, 1_200)
+        val session = ReadRecordSession(deviceId, targetName, author, 1_000, 1_200, 10)
+        database.readRecordDao.insert(record)
+        database.readRecordDao.insertSession(session)
+        database.readRecordDao.insertDetail(ReadRecordDetail(deviceId, targetName, author, date, 200, 10, 1_000, 1_200))
+
+        repository.deleteSession(session)
+
+        assertEquals(100L, database.readRecordDao.getReadRecord(deviceId, targetName, author)?.readTime)
+        assertNull(database.readRecordDao.getDetail(deviceId, targetName, author, date))
+        assertEquals(0, database.readRecordDao.getSessionsByBook(deviceId, targetName, author).size)
+    }
+
     private suspend fun mergeAndAssert(targetSessionDuration: Long = 0, sourceSessionDuration: Long = 0, targetLegacyTime: Long = 0, sourceLegacyTime: Long = 0) {
         val source = insertRecord(sourceName, sourceSessionDuration + sourceLegacyTime, sourceSessionDuration)
         insertRecord(targetName, targetSessionDuration + targetLegacyTime, targetSessionDuration)
