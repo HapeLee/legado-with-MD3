@@ -3217,7 +3217,8 @@
     <string name="manga_reader_copy_spread">Copy spread</string>
     <string name="manga_reader_cover_set">Cover updated</string>
     <string name="manga_reader_retry_failed_chapter">Retry failed pages in chapter</string>
-    <string name="manga_reader_prefetch_chapters">Preload chapters</string>
+    <string name="manga_reader_auto_offline_cache">Automatically cache chapters offline</string>
+    <string name="manga_reader_auto_cache_following_chapters">Automatically cache following chapters</string>
     <string name="import_current_folder_as_manga">Import current folder as comic</string>
     <string name="manga_reader_cache_current">Cache chapter</string>
     <string name="manga_reader_cache_following">Cache following</string>

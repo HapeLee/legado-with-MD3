@@ -73,9 +73,14 @@ enum class MangaChapterSwitch { NONE, NEXT, PREVIOUS }
 internal fun mangaChapterSwitchDecision(
     currentChapterIndex: Int,
     visibleChapterIndex: Int,
+    currentChapterVisible: Boolean,
 ): MangaChapterSwitch = when {
-    currentChapterIndex < visibleChapterIndex -> MangaChapterSwitch.NEXT
-    currentChapterIndex > visibleChapterIndex -> MangaChapterSwitch.PREVIOUS
+    currentChapterIndex < visibleChapterIndex ->
+        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.NEXT
+
+    currentChapterIndex > visibleChapterIndex ->
+        if (currentChapterVisible) MangaChapterSwitch.NONE else MangaChapterSwitch.PREVIOUS
+
     else -> MangaChapterSwitch.NONE
 }
 

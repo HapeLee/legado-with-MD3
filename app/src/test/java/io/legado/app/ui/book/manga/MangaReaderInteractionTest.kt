@@ -145,6 +145,7 @@ class MangaReaderInteractionTest {
             mangaChapterSwitchDecision(
                 currentChapterIndex = 5,
                 visibleChapterIndex = 6,
+                currentChapterVisible = false,
             ),
         )
     }
@@ -156,6 +157,7 @@ class MangaReaderInteractionTest {
             mangaChapterSwitchDecision(
                 currentChapterIndex = 5,
                 visibleChapterIndex = 4,
+                currentChapterVisible = false,
             ),
         )
     }
@@ -167,6 +169,19 @@ class MangaReaderInteractionTest {
             mangaChapterSwitchDecision(
                 currentChapterIndex = 5,
                 visibleChapterIndex = 5,
+                currentChapterVisible = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `adjacent prefetched chapter cannot replace the chapter still on screen`() {
+        assertEquals(
+            MangaChapterSwitch.NONE,
+            mangaChapterSwitchDecision(
+                currentChapterIndex = 5,
+                visibleChapterIndex = 6,
+                currentChapterVisible = true,
             ),
         )
     }

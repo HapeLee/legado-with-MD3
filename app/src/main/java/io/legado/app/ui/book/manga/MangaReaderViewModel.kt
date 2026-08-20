@@ -83,7 +83,11 @@ class MangaReaderViewModel(
         viewModelScope.launch {
             mangaSettingsGateway.settings.collect { settings ->
                 latestMangaSettings = settings
-                readerSession.execute(MangaSessionCommand.PrefetchCountChanged(settings.chapterPrefetchCount))
+                readerSession.execute(
+                    MangaSessionCommand.PrefetchCountChanged(
+                        if (settings.autoOfflineCache) settings.chapterPrefetchCount else 0,
+                    )
+                )
                 _uiState.update { state ->
                     state.copy(settings = readSettings(settings))
                 }
@@ -262,6 +266,7 @@ class MangaReaderViewModel(
                 intent.itemIndex,
                 intent.firstItemIndex,
                 intent.lastItemIndex,
+                intent.currentChapterVisible,
                 intent.navigationId,
             )
             is MangaReaderIntent.PagerScrollChanged -> {
@@ -599,6 +604,7 @@ class MangaReaderViewModel(
                 itemIndex = targetIndex,
                 firstItemIndex = targetIndex,
                 lastItemIndex = targetIndex,
+                currentChapterVisible = true,
                 navigationId = _uiState.value.navigationId,
             )
         }
@@ -780,6 +786,9 @@ class MangaReaderViewModel(
             MangaReaderSettingKey.PRE_DOWNLOAD -> updateMangaPreference { it.copy(preDownloadNum = value) }
             MangaReaderSettingKey.CHAPTER_PREFETCH -> updateMangaPreference {
                 it.copy(chapterPrefetchCount = value)
+            }
+            MangaReaderSettingKey.AUTO_OFFLINE_CACHE -> updateMangaPreference {
+                it.copy(autoOfflineCache = enabled)
             }
             MangaReaderSettingKey.AUTO_READ_SPEED -> updateMangaPreference { it.copy(autoPageSpeed = value) }
             MangaReaderSettingKey.VOLUME_KEY_PAGE -> updateMangaPreference { it.copy(volumeKeyPage = enabled) }
@@ -1090,6 +1099,7 @@ class MangaReaderViewModel(
         itemIndex: Int,
         firstItemIndex: Int,
         lastItemIndex: Int,
+        currentChapterVisible: Boolean,
         navigationId: Long,
     ) {
         val state = _uiState.value
@@ -1117,6 +1127,7 @@ class MangaReaderViewModel(
         when (mangaChapterSwitchDecision(
             currentChapterIndex = readerSession.state.value.chapterIndex,
             visibleChapterIndex = item.chapterIndex,
+            currentChapterVisible = currentChapterVisible,
         )) {
             MangaChapterSwitch.NEXT,
             MangaChapterSwitch.PREVIOUS -> executeSession(
@@ -1218,10 +1229,11 @@ class MangaReaderViewModel(
         disableScrollAnimation = settings.disableMangaScrollAnimation,
         disableCrossFade = settings.disableMangaCrossFade,
         disableClickScroll = settings.disableClickScroll,
-        longPressEnabled = settings.longClick,
-        preDownloadCount = settings.preDownloadNum,
+            longPressEnabled = settings.longClick,
+            preDownloadCount = settings.preDownloadNum,
             chapterPrefetchCount = settings.chapterPrefetchCount,
-        autoReadSpeed = settings.autoPageSpeed,
+            autoOfflineCache = settings.autoOfflineCache,
+            autoReadSpeed = settings.autoPageSpeed,
         volumeKeyPage = settings.volumeKeyPage,
         reverseVolumeKeyPage = settings.reverseVolumeKeyPage,
         hideMangaTitle = settings.hideTitle,

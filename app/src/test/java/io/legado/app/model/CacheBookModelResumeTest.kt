@@ -4,6 +4,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.model.cache.CacheDownloadRequest
+import io.legado.app.model.cache.CacheDownloadSource
 import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
 import org.junit.Assert.assertEquals
@@ -91,6 +92,29 @@ class CacheBookModelResumeTest {
         assertTrue(model.pausedIndices().contains(10))
         assertFalse(model.pausedIndices().contains(16))
         assertEquals(1, model.diagnostics().waitingChapterCount)
+    }
+
+    @Test
+    fun readerPreloadWhileBookPaused_keepsTheBookPaused() {
+        val model = newModel()
+        model.addRequest(
+            CacheDownloadRequest(
+                bookUrl = BOOK_URL,
+                selection = ChapterSelection.Range(0, 5),
+            )
+        )
+        assertTrue(model.pause())
+
+        model.addRequest(
+            CacheDownloadRequest(
+                bookUrl = BOOK_URL,
+                selection = ChapterSelection.Single(6),
+                source = CacheDownloadSource.ReadPreload,
+            )
+        )
+
+        assertTrue(model.isPaused())
+        assertFalse(model.hasLaunchableChapters())
     }
 
     @Test

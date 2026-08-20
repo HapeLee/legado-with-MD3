@@ -38,6 +38,7 @@ internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mangaScrollMode to scrollMode,
     PreferKey.mangaPreDownloadNum to preDownloadNum,
     PreferKey.mangaChapterPrefetchCount to chapterPrefetchCount,
+    PreferKey.mangaAutoOfflineCache to autoOfflineCache,
     PreferKey.mangaAutoPageSpeed to autoPageSpeed,
     PreferKey.mangaFooterConfig to footerConfig,
     PreferKey.disableClickScroll to disableClickScroll,
@@ -85,7 +86,9 @@ internal fun Preferences.toMangaSettings(): MangaSettings = MangaSettings(
     disableMangaCrossFade = compatDsBoolean(PreferKey.disableMangaCrossFade) ?: false,
     scrollMode = compatDsInt(PreferKey.mangaScrollMode) ?: 4,
     preDownloadNum = compatDsInt(PreferKey.mangaPreDownloadNum) ?: 10,
-    chapterPrefetchCount = compatDsInt(PreferKey.mangaChapterPrefetchCount) ?: 1,
+    // Chapter prefetch queues the offline cache downloader, so it must be opt-in.
+    chapterPrefetchCount = compatDsInt(PreferKey.mangaChapterPrefetchCount) ?: 0,
+    autoOfflineCache = compatDsBoolean(PreferKey.mangaAutoOfflineCache) ?: false,
     autoPageSpeed = compatDsInt(PreferKey.mangaAutoPageSpeed) ?: 3,
     footerConfig = compatDsString(PreferKey.mangaFooterConfig).orEmpty(),
     disableClickScroll = compatDsBoolean(PreferKey.disableClickScroll) ?: false,

@@ -159,6 +159,10 @@ fun WebViewRouteScreen(
                     modifier = Modifier.fillMaxSize(),
                     onCreated = { createdWebView ->
                         createdWebView.apply {
+                            // Keep the verification page in an opaque WebView layer. A transparent WebView is
+                            // appropriate for RSS text, but Chromium repeatedly composites it during challenge
+                            // animations and causes the unstable flashing reported for manga sources.
+                            setBackgroundColor(android.graphics.Color.WHITE)
                             settings.apply {
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 domStorageEnabled = true

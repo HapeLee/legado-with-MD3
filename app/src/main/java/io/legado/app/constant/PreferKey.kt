@@ -123,6 +123,7 @@ object PreferKey {
     const val preDownloadNum = "preDownloadNum"
     const val mangaPreDownloadNum = "mangaPreDownloadNum"
     const val mangaChapterPrefetchCount = "mangaChapterPrefetchCount"
+    const val mangaAutoOfflineCache = "mangaAutoOfflineCache"
     const val mangaAutoPageSpeed = "mangaAutoPageSpeed"
     const val mangaFooterConfig = "mangaFooterConfig"
     const val disableClickScroll = "disableClickScroll"

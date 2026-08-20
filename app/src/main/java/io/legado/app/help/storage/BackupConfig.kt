@@ -348,6 +348,8 @@ object BackupConfig {
         PreferKey.mangaScrollMode,
         PreferKey.webtoonSidePaddingDp,
         PreferKey.mangaPreDownloadNum,
+        PreferKey.mangaChapterPrefetchCount,
+        PreferKey.mangaAutoOfflineCache,
         PreferKey.mangaAutoPageSpeed,
         PreferKey.mangaFooterConfig,
         PreferKey.disableClickScroll,

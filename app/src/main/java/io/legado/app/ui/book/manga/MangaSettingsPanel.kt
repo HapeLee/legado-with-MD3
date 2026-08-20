@@ -466,12 +466,25 @@ private fun ReaderSettingsContent(
     ) {
         onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.PRE_DOWNLOAD, it))
     }
-    SettingSlider(
-        stringResource(R.string.manga_reader_prefetch_chapters),
-        settings.chapterPrefetchCount,
-        0..3,
+    SettingSwitch(
+        stringResource(R.string.manga_reader_auto_offline_cache),
+        settings.autoOfflineCache,
     ) {
-        onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.CHAPTER_PREFETCH, it))
+        onIntent(
+            MangaReaderIntent.UpdateSetting(
+                MangaReaderSettingKey.AUTO_OFFLINE_CACHE,
+                it.intValue,
+            )
+        )
+    }
+    if (settings.autoOfflineCache) {
+        SettingSlider(
+            stringResource(R.string.manga_reader_auto_cache_following_chapters),
+            settings.chapterPrefetchCount,
+            0..3,
+        ) {
+            onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.CHAPTER_PREFETCH, it))
+        }
     }
     SettingSwitch(stringResource(R.string.manga_reader_pinch_zoom), !settings.disableScale) {
         onIntent(

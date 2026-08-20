@@ -3212,7 +3212,8 @@
     <string name="manga_reader_copy_spread">复制双页</string>
     <string name="manga_reader_cover_set">封面已更新</string>
     <string name="manga_reader_retry_failed_chapter">重试本章失败页面</string>
-    <string name="manga_reader_prefetch_chapters">预加载章节</string>
+    <string name="manga_reader_auto_offline_cache">自动离线缓存</string>
+    <string name="manga_reader_auto_cache_following_chapters">自动缓存后续章节数</string>
     <string name="import_current_folder_as_manga">将当前目录作为漫画导入</string>
     <string name="manga_reader_cache_current">缓存本章</string>
     <string name="manga_reader_cache_following">缓存后续章节</string>

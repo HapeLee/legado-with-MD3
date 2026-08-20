@@ -4,18 +4,17 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
-import io.legado.app.help.book.isImage
 import io.legado.app.exception.ConcurrentException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.cache.CacheChapterProgress
+import io.legado.app.model.cache.CacheChapterProgressPhase
 import io.legado.app.model.cache.CacheDownloadCandidate
 import io.legado.app.model.cache.CacheDownloadQueue
 import io.legado.app.model.cache.CacheDownloadRepository
 import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadSource
-import io.legado.app.model.cache.CacheChapterProgress
-import io.legado.app.model.cache.CacheChapterProgressPhase
 import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
 import kotlinx.coroutines.CancellationException
@@ -297,11 +296,12 @@ class CacheBookModel(
         synchronized(this) {
             isStopped = false
             val selected = selectionIndices(request.selection)
-            // 整书暂停时再入队：只解冻本次请求的章节，其余等待章转为单章暂停
-            if (isPaused) {
+            // An explicit request resumes only its selected chapters. Reader preloads must not
+            // override a user's pause for this book or the global download queue.
+            if (isPaused && request.source != CacheDownloadSource.ReadPreload) {
                 releaseBookPauseKeepingOnly(selected)
+                isPaused = false
             }
-            isPaused = false
             when (val selection = request.selection) {
                 is ChapterSelection.Range -> {
                     canceledDownloadSet.removeAll { it in selection.start..selection.end }

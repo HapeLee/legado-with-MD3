@@ -122,7 +122,8 @@ data class MangaReaderSettings(
     val disableClickScroll: Boolean = false,
     val longPressEnabled: Boolean = true,
     val preDownloadCount: Int = 10,
-    val chapterPrefetchCount: Int = 1,
+    val chapterPrefetchCount: Int = 0,
+    val autoOfflineCache: Boolean = false,
     val autoReadSpeed: Int = 3,
     val volumeKeyPage: Boolean = false,
     val reverseVolumeKeyPage: Boolean = false,
@@ -241,6 +242,8 @@ sealed interface MangaReaderIntent {
         val itemIndex: Int,
         val firstItemIndex: Int = itemIndex,
         val lastItemIndex: Int = itemIndex,
+        /** Adjacent chapters may be precomposed; only promote after the current chapter leaves view. */
+        val currentChapterVisible: Boolean,
         val navigationId: Long,
     ) : MangaReaderIntent
     data class PagerScrollChanged(val inProgress: Boolean) : MangaReaderIntent
@@ -299,6 +302,7 @@ enum class MangaReaderSettingKey {
     LONG_PRESS,
     PRE_DOWNLOAD,
     CHAPTER_PREFETCH,
+    AUTO_OFFLINE_CACHE,
     AUTO_READ_SPEED,
     VOLUME_KEY_PAGE,
     REVERSE_VOLUME_KEY_PAGE,
