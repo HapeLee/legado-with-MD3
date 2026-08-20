@@ -288,7 +288,7 @@ object Restore : KoinComponent {
             reconcileReadRecordAliases()
             // 会话导入按身份去重（幂等），汇总/明细取较大值后按会话重算，
             // 避免同一备份重复导入导致阅读时长翻倍。
-            get<ReadRecordRepository>().reconcileReadRecordTotalsFromSessions()
+            get<ReadRecordRepository>().reconcileRestoredReadRecordTotals()
         }
         if (BackupConfig.dbIsNotIgnored("server")) {
             File(path, "servers.json").takeIf {
@@ -491,7 +491,7 @@ object Restore : KoinComponent {
                     .distinct()
                     .toList()
                 val author = authors.singleOrNull() ?: return@forEach
-                repository.mergeReadRecordInto(
+                repository.mergeIndependentReadRecordsInto(
                     targetRecord = ReadRecord(
                         deviceId = source.deviceId,
                         bookName = source.bookName,

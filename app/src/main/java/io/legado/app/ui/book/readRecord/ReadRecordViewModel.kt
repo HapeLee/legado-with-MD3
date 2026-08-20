@@ -281,7 +281,7 @@ class ReadRecordViewModel(
     fun mergeReadRecords(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
         if (sourceRecords.isEmpty()) return
         viewModelScope.launch {
-            repository.mergeReadRecordInto(targetRecord, sourceRecords)
+            repository.mergeIndependentReadRecordsInto(targetRecord, sourceRecords)
         }
     }
 

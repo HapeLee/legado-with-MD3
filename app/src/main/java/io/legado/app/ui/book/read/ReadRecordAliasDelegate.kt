@@ -90,7 +90,7 @@ class ReadRecordAliasDelegate(
 
     private suspend fun merge(book: Book, sources: List<ReadRecord>) {
         sources.groupBy { it.deviceId }.forEach { (deviceId, records) ->
-            readRecordRepository.mergeReadRecordInto(
+            readRecordRepository.mergeIndependentReadRecordsInto(
                 ReadRecord(deviceId, book.name, book.author),
                 records,
             )
