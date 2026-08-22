@@ -228,6 +228,8 @@ data class ReadBookUiState(
     // Read aloud / auto page
     val isReadAloudRunning: Boolean = false,
     val isReadAloudPaused: Boolean = false,
+    /** 朗读位置是否跟随当前显示页；手动翻页/跳章后为 false（显示"回到朗读位置"悬浮条）。 */
+    val readAloudFollow: Boolean = true,
     val readAloudEngineName: String = "",
     val readAloudCharacterName: String = "",
     val readAloudRoleType: SpeechRoleType = SpeechRoleType.Narrator,
@@ -237,6 +239,7 @@ data class ReadBookUiState(
     // Seek bar
     val seekProgress: Int = 0,
     val seekMax: Int = 0,
+    val readingAnchorAvailable: Boolean = false,
     // Replace rules
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
@@ -778,6 +781,10 @@ sealed interface ReadBookIntent {
     data object ReadAloudNextParagraph : ReadBookIntent
     data object ReadAloudPrevChapter : ReadBookIntent
     data object ReadAloudNextChapter : ReadBookIntent
+    /** 页面脱离朗读位置后，跳回朗读所在位置并恢复跟随。 */
+    data object BackToSpeakingPosition : ReadBookIntent
+    /** 页面脱离朗读位置后，从当前显示页重新开始朗读。 */
+    data object ReadAloudFromHere : ReadBookIntent
     data class SetReadAloudTtsTimer(val value: Int) : ReadBookIntent
     data class SetFinishCurrentChapterAfterTimer(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
@@ -1594,6 +1601,9 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class AutoSuggestDayNight(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class ReadingAnchorEnabled(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SelectText(val value: Boolean) : ConfigUpdate {

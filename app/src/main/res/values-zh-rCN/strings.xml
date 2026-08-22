@@ -189,6 +189,8 @@
     <string name="read_aloud">朗读</string>
     <string name="read_aloud_t">正在朗读</string>
     <string name="read_aloud_s">点击打开阅读界面</string>
+    <string name="back_to_speaking_position">回到朗读位置</string>
+    <string name="read_aloud_from_here">从此处朗读</string>
     <string name="audio_play">播放</string>
     <string name="audio_play_t">正在播放</string>
     <string name="audio_play_s">点击打开播放界面</string>
@@ -1331,6 +1333,8 @@
     <string name="source_edit_text_max_line">源编辑框最大行数</string>
     <string name="source_edit_max_line_summary">%s，设置行数小于屏幕可显示的最大行数可以更方便的滑动到其他的字段进行编辑</string>
     <string name="restore_last_book_process">是否恢复到跳转前的阅读进度？</string>
+    <string name="return_reading_position">返回原阅读位置</string>
+    <string name="dismiss_reading_anchor">关闭</string>
     <string name="confirm_skip_to_chapter">是否跳转到该章节？</string>
     <string name="restore_progress">恢复进度</string>
     <string name="sync_progress">同步进度</string>
@@ -1906,6 +1910,23 @@
     <string name="search_book_source_count">%1$d</string>
     <string name="search_layout_list">列表布局</string>
     <string name="search_layout_source_grouped">来源分组</string>
+    <string name="content_quality_detection">内容质量检测</string>
+    <string name="content_quality_detection_summary">过滤章节内容异常或与目标书籍无关的书源</string>
+    <string name="content_quality_chapters">指定检测章节</string>
+    <string name="content_quality_chapters_summary">例如：1,3,5 或 1-5；若书源章节数不足（少于指定的最大章节号），该书源将被自动排除</string>
+    <string name="content_quality_keywords">主角名或关键词</string>
+    <string name="content_quality_keywords_summary">多个关键词可用逗号或空格分隔</string>
+    <string name="content_quality_skip_chars">跳过章节头部字数</string>
+    <string name="content_quality_skip_chars_summary">忽略广告、版权声明等头部内容</string>
+    <string name="content_quality_pipeline">章节数量 → 内容清洗 → 多关键词匹配 → 自动排除</string>
+    <string name="content_quality_start">开始检测</string>
+    <string name="content_quality_progress">已检测 %1$d/%2$d：%3$s</string>
+    <string name="content_quality_result">已检测 %1$d 本，排除 %2$d 个书源</string>
+    <string name="content_quality_excluded">内容质量检测已排除</string>
+    <string name="content_quality_stage_chapter_count">章节数</string>
+    <string name="content_quality_stage_cleaning">清洗</string>
+    <string name="content_quality_stage_matching">匹配</string>
+    <string name="content_quality_stage_excluding">排除</string>
     <string name="download_cache_config">下载与缓存</string>
     <string name="http_cache">HTTP缓存</string>
     <string name="cover_cache">封面缓存</string>
@@ -2514,8 +2535,12 @@
     <!-- 日夜间/深浅色主题切换提醒 -->
     <string name="auto_switch_theme_reminder_title">主题模式切换提醒</string>
     <string name="auto_switch_theme_reminder_desc">根据环境光提醒切换浅色/深色模式</string>
+    <string name="reading_anchor">阅读锚点</string>
+    <string name="reading_anchor_summary">跳转章节两次及以上后，显示返回原阅读位置的悬浮按钮</string>
     <string name="switch_to_dark_mode_tip">当前环境光较暗，是否切换至深色模式？</string>
     <string name="switch_to_light_mode_tip">当前环境光较亮，是否切换至浅色模式？</string>
+    <string name="switch_to_dark_mode_action">切换到深色模式</string>
+    <string name="switch_to_light_mode_action">切换到浅色模式</string>
     <string name="switch_action">切换</string>
     <string name="cover_albums">封面图集</string>
     <string name="manage_cover_albums">管理封面图集</string>

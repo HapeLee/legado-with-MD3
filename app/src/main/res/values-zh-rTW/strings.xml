@@ -146,6 +146,8 @@
     <string name="read_aloud">朗讀</string>
     <string name="read_aloud_t">正在朗讀</string>
     <string name="read_aloud_s">點擊打開閱讀介面</string>
+    <string name="back_to_speaking_position">回到朗讀位置</string>
+    <string name="read_aloud_from_here">從此處朗讀</string>
     <string name="audio_play">播放</string>
     <string name="audio_play_t">正在播放</string>
     <string name="audio_play_s">點擊打開播放介面</string>
@@ -1163,6 +1165,25 @@
     <string name="source_edit_text_max_line">源編輯框最大行數</string>
     <string name="source_edit_max_line_summary">%s，設定行數小於螢幕可顯示的最大行數可以更方便的滑動到其他的欄位進行編輯</string>
     <string name="restore_last_book_process">是否復原到跳轉前的閱讀進度？</string>
+    <string name="return_reading_position">返回原閱讀位置</string>
+    <string name="dismiss_reading_anchor">關閉</string>
+    <string name="content_quality_detection">內容品質檢測</string>
+    <string name="content_quality_detection_summary">過濾章節內容異常或與目標書籍無關的書源</string>
+    <string name="content_quality_chapters">指定檢測章節</string>
+    <string name="content_quality_chapters_summary">例如：1,3,5 或 1-5；若書源章節數不足（少於指定的最大章節號），該書源將被自動排除</string>
+    <string name="content_quality_keywords">主角名或關鍵詞</string>
+    <string name="content_quality_keywords_summary">多個關鍵詞可用逗號或空格分隔</string>
+    <string name="content_quality_skip_chars">跳過章節頭部字數</string>
+    <string name="content_quality_skip_chars_summary">忽略廣告、版權聲明等頭部內容</string>
+    <string name="content_quality_pipeline">章節數量 → 內容清洗 → 多關鍵詞匹配 → 自動排除</string>
+    <string name="content_quality_start">開始檢測</string>
+    <string name="content_quality_progress">已檢測 %1$d/%2$d：%3$s</string>
+    <string name="content_quality_result">已檢測 %1$d 本，排除 %2$d 個書源</string>
+    <string name="content_quality_excluded">內容品質檢測已排除</string>
+    <string name="content_quality_stage_chapter_count">章節數</string>
+    <string name="content_quality_stage_cleaning">清洗</string>
+    <string name="content_quality_stage_matching">匹配</string>
+    <string name="content_quality_stage_excluding">排除</string>
     <string name="search_scope">搜尋範圍</string>
     <string name="toggle_search_scope">切換</string>
     <string name="sure_clear_search_history">是否確認清除所有搜尋歷史記錄</string>
@@ -2402,8 +2423,12 @@
     <!-- 日夜間/深淺色主題切換提醒 -->
     <string name="auto_switch_theme_reminder_title">主題模式切換提醒</string>
     <string name="auto_switch_theme_reminder_desc">根據環境光提醒切換淺色/深色模式</string>
+    <string name="reading_anchor">閱讀錨點</string>
+    <string name="reading_anchor_summary">跳轉章節兩次或以上後，顯示返回原閱讀位置的懸浮按鈕</string>
     <string name="switch_to_dark_mode_tip">目前環境光較暗，是否切換至深色模式？</string>
     <string name="switch_to_light_mode_tip">目前環境光較亮，是否切換至淺色模式？</string>
+    <string name="switch_to_dark_mode_action">切換至深色模式</string>
+    <string name="switch_to_light_mode_action">切換至淺色模式</string>
     <string name="switch_action">切換</string>
     <string name="cover_albums">封面圖集</string>
     <string name="manage_cover_albums">管理封面圖集</string>

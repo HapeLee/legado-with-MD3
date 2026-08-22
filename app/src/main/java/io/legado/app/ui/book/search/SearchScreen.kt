@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -58,6 +59,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.model.ContentQualityStage
 import io.legado.app.domain.model.MatchMode
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
@@ -82,6 +84,7 @@ import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -505,6 +508,9 @@ fun SearchScreen(
                                                     sharedTransitionScope = sharedTransitionScope,
                                                     animatedVisibilityScope = animatedVisibilityScope,
                                                     sourceSectionIndex = groupIndex,
+                                                    qualityMaskForBook = { book ->
+                                                        state.contentQuality.results[qualityKey(book)]?.excluded == true
+                                                    },
                                                 )
                                             }
                                         }
@@ -537,16 +543,22 @@ fun SearchScreen(
                                                 item.book.bookUrl,
                                                 "search:${item.book.origin}"
                                             )
+                                            val qualityMasked =
+                                                state.contentQuality.results[qualityKey(item.book)]?.excluded == true
                                             SearchBookListItem(
                                                 book = item.book,
                                                 shelfState = item.shelfState,
-                                                onClick = {
-                                                    onIntent(
-                                                        SearchIntent.OpenSearchBook(
-                                                            item.book,
-                                                            sharedCoverKey
+                                                onClick = if (qualityMasked) {
+                                                    null
+                                                } else {
+                                                    {
+                                                        onIntent(
+                                                            SearchIntent.OpenSearchBook(
+                                                                item.book,
+                                                                sharedCoverKey
+                                                            )
                                                         )
-                                                    )
+                                                    }
                                                 },
                                                 onLongClick = { book, coverKey ->
                                                     previewBook = book
@@ -556,6 +568,7 @@ fun SearchScreen(
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 sharedCoverKey = sharedCoverKey,
                                                 sourceCount = item.book.origins.size,
+                                                qualityMasked = qualityMasked,
                                             )
                                         }
 
@@ -691,6 +704,13 @@ fun SearchScreen(
                 }
             )
 
+            CompactClickableSettingItem(
+                title = stringResource(R.string.content_quality_detection),
+                description = stringResource(R.string.content_quality_detection_summary),
+                imageVector = Icons.Default.Book,
+                onClick = { onIntent(SearchIntent.OpenContentQuality) },
+            )
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -743,6 +763,12 @@ fun SearchScreen(
         }
     }
 
+    ContentQualitySheet(
+        state = state.contentQuality,
+        resultCount = state.results.size,
+        onIntent = onIntent,
+    )
+
     val resultsByBookUrl = remember(state.results) {
         state.results.associateBy { it.book.bookUrl }
     }
@@ -785,6 +811,125 @@ fun SearchScreen(
             previewSharedCoverKey = coverKey
         },
     )
+}
+
+private fun qualityKey(book: SearchBook): String = "${book.origin}:${book.bookUrl}"
+
+@Composable
+private fun ContentQualitySheet(
+    state: ContentQualityUiState,
+    resultCount: Int,
+    onIntent: (SearchIntent) -> Unit,
+) {
+    AppModalBottomSheet(
+        show = state.showSheet,
+        onDismissRequest = { onIntent(SearchIntent.CloseContentQuality) },
+        title = stringResource(R.string.content_quality_detection),
+        endAction = {
+            SmallPlainButton(
+                onClick = { onIntent(SearchIntent.StartContentQuality) },
+                enabled = !state.isRunning && resultCount > 0,
+                icon = AppIcons.Check,
+                text = stringResource(R.string.content_quality_start),
+                contentDescription = stringResource(R.string.content_quality_start),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TextField(
+                value = state.chapterSpec,
+                onValueChange = { onIntent(SearchIntent.UpdateContentQualityChapterSpec(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.content_quality_chapters)) },
+                supportingText = { Text(stringResource(R.string.content_quality_chapters_summary)) },
+                singleLine = true,
+            )
+            TextField(
+                value = state.keywords,
+                onValueChange = { onIntent(SearchIntent.UpdateContentQualityKeywords(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.content_quality_keywords)) },
+                supportingText = { Text(stringResource(R.string.content_quality_keywords_summary)) },
+                singleLine = true,
+            )
+            TextField(
+                value = state.skipHeadChars,
+                onValueChange = { onIntent(SearchIntent.UpdateContentQualitySkipHeadChars(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.content_quality_skip_chars)) },
+                supportingText = { Text(stringResource(R.string.content_quality_skip_chars_summary)) },
+                singleLine = true,
+            )
+
+            AppText(
+                text = stringResource(R.string.content_quality_pipeline),
+                style = LegadoTheme.typography.labelMediumEmphasized,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+            )
+            ContentQualityPipeline(stage = state.stage)
+
+            if (state.isRunning) {
+                val progress = if (state.totalBooks == 0) null else {
+                    state.processedBooks.toFloat() / state.totalBooks
+                }
+                AppCircularProgressIndicator(progress = progress)
+                AppText(
+                    text = stringResource(
+                        R.string.content_quality_progress,
+                        state.processedBooks,
+                        state.totalBooks,
+                        state.currentBookName,
+                    ),
+                    style = LegadoTheme.typography.bodySmall,
+                )
+            } else if (state.results.isNotEmpty()) {
+                val excludedCount = state.results.values.count { it.excluded }
+                AppText(
+                    text = stringResource(
+                        R.string.content_quality_result,
+                        state.results.size,
+                        excludedCount,
+                    ),
+                    style = LegadoTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContentQualityPipeline(stage: ContentQualityStage?) {
+    val stages = listOf(
+        ContentQualityStage.ChapterCount to R.string.content_quality_stage_chapter_count,
+        ContentQualityStage.ContentCleaning to R.string.content_quality_stage_cleaning,
+        ContentQualityStage.KeywordMatching to R.string.content_quality_stage_matching,
+        ContentQualityStage.Excluding to R.string.content_quality_stage_excluding,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        stages.forEachIndexed { index, (itemStage, labelRes) ->
+            val color = when {
+                stage == ContentQualityStage.Completed || stage == itemStage -> LegadoTheme.colorScheme.primary
+                stage != null && stage.ordinal > itemStage.ordinal -> LegadoTheme.colorScheme.secondary
+                else -> LegadoTheme.colorScheme.onSurfaceVariant
+            }
+            AppText(
+                text = stringResource(labelRes),
+                color = color,
+                style = LegadoTheme.typography.labelSmall,
+                maxLines = 1,
+            )
+            if (index < stages.lastIndex) {
+                AppText(text = "→", color = LegadoTheme.colorScheme.outline)
+            }
+        }
+    }
 }
 
 private data class SearchFloatingSummary(

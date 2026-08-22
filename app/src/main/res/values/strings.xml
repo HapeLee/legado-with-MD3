@@ -219,6 +219,8 @@
     <string name="read_aloud">Speech</string>
     <string name="read_aloud_t">Speaking</string>
     <string name="read_aloud_s">Click to open the Reading</string>
+    <string name="back_to_speaking_position">Back to speaking position</string>
+    <string name="read_aloud_from_here">Read aloud from here</string>
     <string name="audio_play">Play</string>
     <string name="audio_play_t">Playing</string>
     <string name="audio_play_s">Click to open the Playing</string>
@@ -1388,6 +1390,8 @@
     <string name="source_edit_text_max_line">Maximum Number of Rows in the Source Edit Box</string>
     <string name="source_edit_max_line_summary">%s,Setting the number of rows less than the maximum number of rows that can be displayed on the screen makes it easier to slide to other fields for editing.</string>
     <string name="restore_last_book_process">Whether to return to the reading progress before the jump？</string>
+    <string name="return_reading_position">Return to reading position</string>
+    <string name="dismiss_reading_anchor">Dismiss</string>
     <string name="confirm_skip_to_chapter">Skip to this chapter?</string>
     <string name="restore_progress">Restore Progress</string>
     <string name="sync_progress">Sync Progress</string>
@@ -1965,6 +1969,23 @@
     <string name="search_book_source_count">%1$d</string>
     <string name="search_layout_list">List layout</string>
     <string name="search_layout_source_grouped">Source grouped</string>
+    <string name="content_quality_detection">Content quality detection</string>
+    <string name="content_quality_detection_summary">Filter sources with suspicious or unrelated chapter content</string>
+    <string name="content_quality_chapters">Chapters to sample</string>
+    <string name="content_quality_chapters_summary">Examples: 1,3,5 or 1-5; sources with fewer chapters than the largest specified number are excluded</string>
+    <string name="content_quality_keywords">Protagonist or keywords</string>
+    <string name="content_quality_keywords_summary">Separate multiple keywords with commas or spaces</string>
+    <string name="content_quality_skip_chars">Characters to skip at chapter head</string>
+    <string name="content_quality_skip_chars_summary">Ignore boilerplate and ads before matching</string>
+    <string name="content_quality_pipeline">Chapter count → content cleaning → keyword matching → auto exclude</string>
+    <string name="content_quality_start">Run detection</string>
+    <string name="content_quality_progress">Checked %1$d/%2$d: %3$s</string>
+    <string name="content_quality_result">Checked %1$d books, excluded %2$d sources</string>
+    <string name="content_quality_excluded">Excluded by quality check</string>
+    <string name="content_quality_stage_chapter_count">Chapters</string>
+    <string name="content_quality_stage_cleaning">Clean</string>
+    <string name="content_quality_stage_matching">Match</string>
+    <string name="content_quality_stage_excluding">Exclude</string>
     <string name="download_cache_config">Download &amp; Cache</string>
     <string name="http_cache">HTTP Cache</string>
     <string name="cover_cache">Cover Cache</string>
@@ -2519,8 +2540,12 @@
     <!-- Day/Night Theme Switch Reminder -->
     <string name="auto_switch_theme_reminder_title">Theme Mode Switch Reminder</string>
     <string name="auto_switch_theme_reminder_desc">Remind to switch light/dark mode based on ambient light</string>
+    <string name="reading_anchor">Reading anchor</string>
+    <string name="reading_anchor_summary">Show a floating button to return to the original reading position after jumping chapters twice or more</string>
     <string name="switch_to_dark_mode_tip">Ambient light is low. Switch to dark mode?</string>
     <string name="switch_to_light_mode_tip">Ambient light is bright. Switch to light mode?</string>
+    <string name="switch_to_dark_mode_action">Switch to dark mode</string>
+    <string name="switch_to_light_mode_action">Switch to light mode</string>
     <string name="switch_action">Switch</string>
     <string name="cover_albums">Cover albums</string>
     <string name="manage_cover_albums">Manage cover albums</string>

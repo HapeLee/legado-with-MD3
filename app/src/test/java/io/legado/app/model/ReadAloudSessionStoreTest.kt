@@ -4,6 +4,8 @@ import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
 import io.legado.app.domain.model.readaloud.ReadAloudSessionState
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReadAloudSessionStoreTest {
@@ -41,5 +43,18 @@ class ReadAloudSessionStoreTest {
         store.stop()
 
         assertEquals(ReadAloudSessionState(), store.state.value)
+    }
+
+    @Test
+    fun `detach and restore read aloud follow`() {
+        val store = ReadAloudSessionStore()
+
+        assertTrue(store.state.value.followReadAloudPosition)
+
+        store.detachReadAloudFollow()
+        assertFalse(store.state.value.followReadAloudPosition)
+
+        store.restoreReadAloudFollow()
+        assertTrue(store.state.value.followReadAloudPosition)
     }
 }

@@ -186,6 +186,7 @@ import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.GenerateBookshelfAutoGroupPlanUseCase
 import io.legado.app.domain.usecase.GenerateChapterSummaryUseCase
 import io.legado.app.domain.usecase.GetChapterContentUseCase
+import io.legado.app.domain.usecase.CheckBookContentQualityUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.HomeDashboardUseCase
 import io.legado.app.domain.usecase.IdentifyBookCharactersUseCase
@@ -494,6 +495,7 @@ val appModule = module {
     singleOf(::SearchBooksUseCase)
     singleOf(::ChangeSourceSearchUseCase)
     singleOf(::GetChapterContentUseCase)
+    singleOf(::CheckBookContentQualityUseCase)
     singleOf(::AiToolAwareGenerationUseCase)
     singleOf(::AiTaskManager)
     singleOf(::IdentifyBookCharactersUseCase)

@@ -345,6 +345,15 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.reading_anchor),
+                    description = stringResource(R.string.reading_anchor_summary),
+                    checked = settings.readingAnchorEnabled,
+                    onCheckedChange = {
+                        onIntent(ReadConfigIntent.ReadingAnchorChanged(it))
+                    }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.selectText),
                     checked = settings.selectText,
                     onCheckedChange = {
