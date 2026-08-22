@@ -709,10 +709,4 @@ fun ReadBookScreen(
         // Sheets using AppModalBottomSheet are composed unconditionally above
         else -> {}
     }
-
-    ActionReminder(
-        reminder = if (state.menuVisible) null else state.activeReminder,
-        onAction = { reminder -> reminder.actionIntent?.let { onIntent(it) } },
-        onDismiss = { onIntent(ReadBookIntent.DismissReminder) },
-    )
 }

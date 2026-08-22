@@ -137,6 +137,9 @@ class ReadSettingsRepository(
     suspend fun setAutoSuggestDayNight(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.autoSuggestDayNight, value)
 
+    suspend fun setReadingAnchorEnabled(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readingAnchorEnabled, value)
+
     suspend fun setSelectText(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.selectText, value)
 

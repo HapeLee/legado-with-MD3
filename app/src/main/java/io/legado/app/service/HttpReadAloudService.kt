@@ -1076,12 +1076,12 @@ class HttpReadAloudService : BaseReadAloudService(),
             }
             val sleep = exoPlayer.duration / speakTextLength
             val start = speakTextLength * exoPlayer.currentPosition / exoPlayer.duration
-            upTtsProgress(readAloudNumber + start.toInt() + 1)
-            for (i in start..contentList[nowSpeak].length) {
+            upTtsProgress(readAloudNumber + start.toInt())
+            for (i in start until contentList[nowSpeak].length) {
                 val chapterPosition = readAloudNumber + i.toInt()
-                updateReadAloudProgressSnapshot(chapterPosition + 1)
+                updateReadAloudProgressSnapshot(chapterPosition)
                 if (moveToReadAloudPage(chapterPosition)) {
-                    upTtsProgress(chapterPosition + 1)
+                    upTtsProgress(chapterPosition)
                 }
                 delay(sleep)
             }

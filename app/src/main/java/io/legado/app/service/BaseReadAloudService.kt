@@ -111,6 +111,27 @@ abstract class BaseReadAloudService : BaseService(),
         var currentProgress: Int = 0
             private set
 
+        /**
+         * 朗读服务自身驱动页面移动（按页朗读、进度翻页、换章）时为 true；
+         * 供 [io.legado.app.model.ReadBook] 区分「朗读驱动翻页」与「用户手动导航」，
+         * 避免朗读推进被误判为手动脱离。
+         */
+        @JvmStatic
+        @Volatile
+        var speechDrivingNavigation: Boolean = false
+            private set
+
+        /** 在朗读驱动的页面移动/同步外侧调用，期间 [speechDrivingNavigation] 为 true。 */
+        @JvmStatic
+        fun <T> withSpeechNavigation(block: () -> T): T {
+            speechDrivingNavigation = true
+            return try {
+                block()
+            } finally {
+                speechDrivingNavigation = false
+            }
+        }
+
         fun isPlay(): Boolean {
             return isRun && !pause
         }
@@ -215,6 +236,8 @@ abstract class BaseReadAloudService : BaseService(),
         super.onCreate()
         isRun = true
         pause = false
+        // 新朗读会话默认跟随当前显示页（用户手动翻页脱离后由阅读界面负责恢复）
+        sessionStore.restoreReadAloudFollow()
         observeLiveBus()
         initMediaSession()
         observeMediaControlSettings()
@@ -314,6 +337,8 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun newReadAloud(play: Boolean, pageIndex: Int, startPos: Int) {
+        // 每次"从指定位置开始朗读"都是新会话：恢复页面跟随朗读（手动脱离后点"从此处朗读"等）
+        sessionStore.restoreReadAloudFollow()
         clearFinishChapterTimerIfChapterChanged(ReadBook.durChapterIndex)
         val generation = ++prepareReadAloudGeneration
         prepareReadAloudJob?.cancel()
@@ -537,9 +562,13 @@ abstract class BaseReadAloudService : BaseService(),
             pageStart = chapter::getReadLength,
         )
         if (targetPageIndex == pageIndex) return false
+        // 页面脱离朗读位置（用户手动翻页）后不再驱动可见页面，仅推进朗读内部页游标
+        val follow = sessionStore.state.value.followReadAloudPosition
         repeat(targetPageIndex - pageIndex) {
             pageIndex++
-            ReadBook.moveToNextPage()
+            if (follow) {
+                withSpeechNavigation { ReadBook.moveToNextPage() }
+            }
         }
         return true
     }
@@ -556,10 +585,12 @@ abstract class BaseReadAloudService : BaseService(),
         if (latestPageIndex < 0) return
         textChapter = latestChapter
         pageIndex = latestPageIndex
-        ReadBook.syncReadAloudPage(
-            chapterIndex = latestChapter.chapter.index,
-            chapterPos = latestChapter.getReadLength(latestPageIndex),
-        )
+        if (sessionStore.state.value.followReadAloudPosition) {
+            ReadBook.syncReadAloudPage(
+                chapterIndex = latestChapter.chapter.index,
+                chapterPos = latestChapter.getReadLength(latestPageIndex),
+            )
+        }
         upTtsProgress(currentProgress)
     }
 
@@ -573,7 +604,7 @@ abstract class BaseReadAloudService : BaseService(),
                 play()
             } ?: run {
                 toLast = true
-                ReadBook.moveToPrevChapter(true)
+                withSpeechNavigation { ReadBook.moveToPrevChapter(true) }
             }
             return
         }
@@ -589,7 +620,7 @@ abstract class BaseReadAloudService : BaseService(),
             } while (!foundPreviousReadableParagraph && nowSpeak > 0)
             if (!foundPreviousReadableParagraph) {
                 toLast = true
-                ReadBook.moveToPrevChapter(true)
+                withSpeechNavigation { ReadBook.moveToPrevChapter(true) }
                 return
             }
             textChapter?.let {
@@ -599,7 +630,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
                 if (readAloudNumber < it.getReadLength(pageIndex)) {
                     pageIndex--
-                    ReadBook.moveToPrevPage()
+                    withSpeechNavigation { ReadBook.moveToPrevPage() }
                 }
             }
             upTtsProgress(readAloudNumber + 1)
@@ -607,7 +638,7 @@ abstract class BaseReadAloudService : BaseService(),
             play()
         } else {
             toLast = true
-            ReadBook.moveToPrevChapter(true)
+            withSpeechNavigation { ReadBook.moveToPrevChapter(true) }
         }
     }
 
@@ -635,7 +666,7 @@ abstract class BaseReadAloudService : BaseService(),
                     && readAloudNumber >= it.getReadLength(pageIndex + 1)
                 ) {
                     pageIndex++
-                    ReadBook.moveToNextPage()
+                    withSpeechNavigation { ReadBook.moveToNextPage() }
                 }
             }
             upTtsProgress(readAloudNumber + 1)
@@ -658,11 +689,11 @@ abstract class BaseReadAloudService : BaseService(),
             val targetPage = chapter.getPageIndexByCharIndex(targetPosition)
             while (pageIndex < targetPage) {
                 pageIndex++
-                ReadBook.moveToNextPage()
+                withSpeechNavigation { ReadBook.moveToNextPage() }
             }
             while (pageIndex > targetPage) {
                 pageIndex--
-                ReadBook.moveToPrevPage()
+                withSpeechNavigation { ReadBook.moveToPrevPage() }
             }
             upTtsProgress(targetPosition + 1)
         }
@@ -1209,7 +1240,7 @@ abstract class BaseReadAloudService : BaseService(),
         ReadBook.upReadTime()
         toLast = false
         resumeReadAloudInternal()
-        ReadBook.moveToPrevChapter(true, toLast = false)
+        withSpeechNavigation { ReadBook.moveToPrevChapter(true, toLast = false) }
     }
 
     open fun nextChapter() {
@@ -1217,7 +1248,7 @@ abstract class BaseReadAloudService : BaseService(),
         ReadBook.upReadTime()
         AppLog.putDebug("${ReadBook.curTextChapter?.chapter?.title} 朗读结束跳转下一章并朗读")
         resumeReadAloudInternal()
-        if (!ReadBook.moveToNextChapter(true)) {
+        if (!withSpeechNavigation { ReadBook.moveToNextChapter(true) }) {
             stopSelf()
         }
     }

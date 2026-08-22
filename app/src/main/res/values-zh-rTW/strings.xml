@@ -146,6 +146,8 @@
     <string name="read_aloud">朗讀</string>
     <string name="read_aloud_t">正在朗讀</string>
     <string name="read_aloud_s">點擊打開閱讀介面</string>
+    <string name="back_to_speaking_position">回到朗讀位置</string>
+    <string name="read_aloud_from_here">從此處朗讀</string>
     <string name="audio_play">播放</string>
     <string name="audio_play_t">正在播放</string>
     <string name="audio_play_s">點擊打開播放介面</string>
@@ -2413,6 +2415,8 @@
     <string name="reading_anchor_summary">跳轉章節兩次或以上後，顯示返回原閱讀位置的懸浮按鈕</string>
     <string name="switch_to_dark_mode_tip">目前環境光較暗，是否切換至深色模式？</string>
     <string name="switch_to_light_mode_tip">目前環境光較亮，是否切換至淺色模式？</string>
+    <string name="switch_to_dark_mode_action">切換至深色模式</string>
+    <string name="switch_to_light_mode_action">切換至淺色模式</string>
     <string name="switch_action">切換</string>
     <string name="cover_albums">封面圖集</string>
     <string name="manage_cover_albums">管理封面圖集</string>

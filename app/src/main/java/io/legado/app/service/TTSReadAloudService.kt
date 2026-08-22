@@ -374,13 +374,14 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             super.onRangeStart(utteranceId, start, end, frame)
             if (!isCurrentUtterance(utteranceId)) return
             paragraphStartPos = utteranceStartPos + start
-            readAloudNumber = currentRangePosition(utteranceStartReadAloudNumber, start)
-            updateReadAloudProgressSnapshot(readAloudNumber + 1)
+            // 正在朗读的精确章内位置（段起点 + 段内偏移），保持 readAloudNumber 的"段起点"语义不被污染
+            val position = currentRangePosition(utteranceStartReadAloudNumber, start)
+            updateReadAloudProgressSnapshot(position)
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
             LogUtils.d(TAG, msg)
-            if (moveToReadAloudPage(readAloudNumber)) {
-                upTtsProgress(readAloudNumber + 1)
+            if (moveToReadAloudPage(position)) {
+                upTtsProgress(position)
             }
         }
 

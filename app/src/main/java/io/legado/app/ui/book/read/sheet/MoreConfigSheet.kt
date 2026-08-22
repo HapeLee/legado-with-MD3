@@ -144,6 +144,9 @@ fun MoreConfigSheet(
                 onAutoSuggestDayNightChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.AutoSuggestDayNight(it)))
                 },
+                onReadingAnchorEnabledChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ReadingAnchorEnabled(it)))
+                },
                 onSelectTextChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SelectText(it)))
                 },
@@ -333,6 +336,7 @@ private fun OtherSettings(
     onAutoChangeSourceChange: (Boolean) -> Unit,
     onDefaultSourceChangeAllChange: (Boolean) -> Unit,
     onAutoSuggestDayNightChange: (Boolean) -> Unit,
+    onReadingAnchorEnabledChange: (Boolean) -> Unit,
     onSelectTextChange: (Boolean) -> Unit,
     onNoAnimScrollPageChange: (Boolean) -> Unit,
     onOptimizeRenderChange: (Boolean) -> Unit,
@@ -393,6 +397,12 @@ private fun OtherSettings(
         description = stringResource(R.string.auto_switch_theme_reminder_desc),
         checked = preferences.autoSuggestDayNight,
         onCheckedChange = onAutoSuggestDayNightChange,
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.reading_anchor),
+        description = stringResource(R.string.reading_anchor_summary),
+        checked = preferences.readingAnchorEnabled,
+        onCheckedChange = onReadingAnchorEnabledChange,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.selectText),

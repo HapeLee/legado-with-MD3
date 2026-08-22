@@ -219,6 +219,8 @@
     <string name="read_aloud">Speech</string>
     <string name="read_aloud_t">Speaking</string>
     <string name="read_aloud_s">Click to open the Reading</string>
+    <string name="back_to_speaking_position">Back to speaking position</string>
+    <string name="read_aloud_from_here">Read aloud from here</string>
     <string name="audio_play">Play</string>
     <string name="audio_play_t">Playing</string>
     <string name="audio_play_s">Click to open the Playing</string>
@@ -2530,6 +2532,8 @@
     <string name="reading_anchor_summary">Show a floating button to return to the original reading position after jumping chapters twice or more</string>
     <string name="switch_to_dark_mode_tip">Ambient light is low. Switch to dark mode?</string>
     <string name="switch_to_light_mode_tip">Ambient light is bright. Switch to light mode?</string>
+    <string name="switch_to_dark_mode_action">Switch to dark mode</string>
+    <string name="switch_to_light_mode_action">Switch to light mode</string>
     <string name="switch_action">Switch</string>
     <string name="cover_albums">Cover albums</string>
     <string name="manage_cover_albums">Manage cover albums</string>

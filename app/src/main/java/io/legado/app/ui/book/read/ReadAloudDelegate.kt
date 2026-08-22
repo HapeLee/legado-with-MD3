@@ -166,9 +166,14 @@ class ReadAloudDelegate(
 
     fun nextParagraph() = ReadAloud.nextParagraph(context)
 
-    fun prevChapter() = ReadBook.moveToPrevChapter(upContent = true, toLast = false)
+    /** 朗读面板换章：朗读驱动的章节移动，页面跟随朗读，不视为手动脱离。 */
+    fun prevChapter() = BaseReadAloudService.withSpeechNavigation {
+        ReadBook.moveToPrevChapter(upContent = true, toLast = false)
+    }
 
-    fun nextChapter() = ReadBook.moveToNextChapter(true)
+    fun nextChapter() = BaseReadAloudService.withSpeechNavigation {
+        ReadBook.moveToNextChapter(true)
+    }
 
     // --- 界面入口 ---
 
