@@ -2526,6 +2526,8 @@
     <!-- Day/Night Theme Switch Reminder -->
     <string name="auto_switch_theme_reminder_title">Theme Mode Switch Reminder</string>
     <string name="auto_switch_theme_reminder_desc">Remind to switch light/dark mode based on ambient light</string>
+    <string name="reading_anchor">Reading anchor</string>
+    <string name="reading_anchor_summary">Show a floating button to return to the original reading position after jumping chapters twice or more</string>
     <string name="switch_to_dark_mode_tip">Ambient light is low. Switch to dark mode?</string>
     <string name="switch_to_light_mode_tip">Ambient light is bright. Switch to light mode?</string>
     <string name="switch_action">Switch</string>

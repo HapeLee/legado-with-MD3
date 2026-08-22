@@ -2521,6 +2521,8 @@
     <!-- 日夜间/深浅色主题切换提醒 -->
     <string name="auto_switch_theme_reminder_title">主题模式切换提醒</string>
     <string name="auto_switch_theme_reminder_desc">根据环境光提醒切换浅色/深色模式</string>
+    <string name="reading_anchor">阅读锚点</string>
+    <string name="reading_anchor_summary">跳转章节两次及以上后，显示返回原阅读位置的悬浮按钮</string>
     <string name="switch_to_dark_mode_tip">当前环境光较暗，是否切换至深色模式？</string>
     <string name="switch_to_light_mode_tip">当前环境光较亮，是否切换至浅色模式？</string>
     <string name="switch_action">切换</string>

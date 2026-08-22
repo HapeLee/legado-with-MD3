@@ -607,12 +607,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun saveReadingAnchorBeforeChapterJump(targetChapterIndex: Int, targetChapterPos: Int = 0) {
+        if (!ReadBookConfig.readingAnchorEnabled) return
         if (targetChapterIndex == durChapterIndex && targetChapterPos == durChapterPos) return
         saveCurrentBookProgress()
         if (lastBookProgress != null) readingAnchorJumpCount++
     }
 
-    fun hasReadingAnchor(): Boolean = lastBookProgress != null && readingAnchorJumpCount >= 2
+    fun hasReadingAnchor(): Boolean =
+        ReadBookConfig.readingAnchorEnabled && lastBookProgress != null && readingAnchorJumpCount >= 2
 
     fun discardReadingAnchor() {
         lastBookProgress = null
