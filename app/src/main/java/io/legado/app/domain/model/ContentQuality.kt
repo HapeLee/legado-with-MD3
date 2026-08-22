@@ -10,9 +10,6 @@ enum class ContentQualityStage {
     ChapterCount,
     ContentCleaning,
     KeywordMatching,
-    HitRate,
-    Anomaly,
-    Scoring,
     Excluding,
     Completed,
 }
@@ -30,8 +27,6 @@ data class ContentQualityResult(
     val sampledChapterCount: Int,
     val matchedChapterCount: Int,
     val keywordHits: Int,
-    val hitRate: Float,
-    val score: Int,
     val excluded: Boolean,
     val errorMessage: String? = null,
 )

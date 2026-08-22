@@ -1377,6 +1377,7 @@
     <string name="source_edit_max_line_summary">%s,Setting the number of rows less than the maximum number of rows that can be displayed on the screen makes it easier to slide to other fields for editing.</string>
     <string name="restore_last_book_process">Whether to return to the reading progress before the jump？</string>
     <string name="return_reading_position">Return to reading position</string>
+    <string name="dismiss_reading_anchor">Dismiss</string>
     <string name="confirm_skip_to_chapter">Skip to this chapter?</string>
     <string name="restore_progress">Restore Progress</string>
     <string name="sync_progress">Sync Progress</string>
@@ -1957,12 +1958,12 @@
     <string name="content_quality_detection">Content quality detection</string>
     <string name="content_quality_detection_summary">Filter sources with suspicious or unrelated chapter content</string>
     <string name="content_quality_chapters">Chapters to sample</string>
-    <string name="content_quality_chapters_summary">Examples: 1,3,5 or 1-5; chapters beyond the TOC are ignored</string>
+    <string name="content_quality_chapters_summary">Examples: 1,3,5 or 1-5; sources with fewer chapters than the largest specified number are excluded</string>
     <string name="content_quality_keywords">Protagonist or keywords</string>
     <string name="content_quality_keywords_summary">Separate multiple keywords with commas or spaces</string>
     <string name="content_quality_skip_chars">Characters to skip at chapter head</string>
     <string name="content_quality_skip_chars_summary">Ignore boilerplate and ads before matching</string>
-    <string name="content_quality_pipeline">Chapter count → content cleaning → keyword matching → continuous hit rate → anomaly detection → score → auto exclude</string>
+    <string name="content_quality_pipeline">Chapter count → content cleaning → keyword matching → auto exclude</string>
     <string name="content_quality_start">Run detection</string>
     <string name="content_quality_progress">Checked %1$d/%2$d: %3$s</string>
     <string name="content_quality_result">Checked %1$d books, excluded %2$d sources</string>
@@ -1970,9 +1971,6 @@
     <string name="content_quality_stage_chapter_count">Chapters</string>
     <string name="content_quality_stage_cleaning">Clean</string>
     <string name="content_quality_stage_matching">Match</string>
-    <string name="content_quality_stage_hit_rate">Hit rate</string>
-    <string name="content_quality_stage_anomaly">Anomaly</string>
-    <string name="content_quality_stage_score">Score</string>
     <string name="content_quality_stage_excluding">Exclude</string>
     <string name="download_cache_config">Download &amp; Cache</string>
     <string name="http_cache">HTTP Cache</string>

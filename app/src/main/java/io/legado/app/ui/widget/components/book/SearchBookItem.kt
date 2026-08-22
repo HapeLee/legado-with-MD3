@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -100,6 +101,10 @@ fun SearchBookListItem(
                         text = stringResource(R.string.content_quality_excluded),
                         color = LegadoTheme.colorScheme.onSurface,
                         style = LegadoTheme.typography.labelSmallEmphasized,
+                        modifier = Modifier.padding(horizontal = 2.dp),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -262,6 +267,10 @@ fun SearchBookGridItem(
                         text = stringResource(R.string.content_quality_excluded),
                         color = LegadoTheme.colorScheme.onSurface,
                         style = LegadoTheme.typography.labelSmallEmphasized,
+                        modifier = Modifier.padding(horizontal = 2.dp),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

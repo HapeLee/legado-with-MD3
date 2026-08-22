@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
@@ -46,7 +48,7 @@ fun ReadBookReadingAnchorBar(
                 shadowElevation = 6.dp,
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -56,6 +58,11 @@ fun ReadBookReadingAnchorBar(
                         modifier = Modifier.size(20.dp),
                     )
                     AppText(text = stringResource(R.string.return_reading_position))
+                    SmallPlainButton(
+                        onClick = { onIntent(ReadBookIntent.KeepCurrentBookProgress) },
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.dismiss_reading_anchor),
+                    )
                 }
             }
         }

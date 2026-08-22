@@ -721,7 +721,7 @@ class SearchViewModel(
                 )
             )
         }
-        contentQualityJob = viewModelScope.launch {
+        contentQualityJob = viewModelScope.launch(Dispatchers.Default) {
             val config = ContentQualityConfig(
                 chapterSpec = configState.chapterSpec,
                 keywords = keywords,
@@ -740,8 +740,6 @@ class SearchViewModel(
                         sampledChapterCount = result.sampledChapterCount,
                         matchedChapterCount = result.matchedChapterCount,
                         keywordHits = result.keywordHits,
-                        hitRate = result.hitRate,
-                        score = result.score,
                         excluded = result.excluded,
                         errorMessage = result.errorMessage,
                     )

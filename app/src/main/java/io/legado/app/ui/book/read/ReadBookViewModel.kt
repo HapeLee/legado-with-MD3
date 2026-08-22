@@ -863,7 +863,9 @@ class ReadBookViewModel(
 
             is ReadBookIntent.KeepCurrentBookProgress -> {
                 ReadBook.discardReadingAnchor()
-                _uiState.update { it.copy(activeDialog = null) }
+                _uiState.update {
+                    syncFromReadBook(it).copy(activeDialog = null)
+                }
             }
 
             is ReadBookIntent.ToggleReadAloud -> {

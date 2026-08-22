@@ -1320,6 +1320,7 @@
     <string name="source_edit_max_line_summary">%s，设置行数小于屏幕可显示的最大行数可以更方便的滑动到其他的字段进行编辑</string>
     <string name="restore_last_book_process">是否恢复到跳转前的阅读进度？</string>
     <string name="return_reading_position">返回原阅读位置</string>
+    <string name="dismiss_reading_anchor">关闭</string>
     <string name="confirm_skip_to_chapter">是否跳转到该章节？</string>
     <string name="restore_progress">恢复进度</string>
     <string name="sync_progress">同步进度</string>
@@ -1898,12 +1899,12 @@
     <string name="content_quality_detection">内容质量检测</string>
     <string name="content_quality_detection_summary">过滤章节内容异常或与目标书籍无关的书源</string>
     <string name="content_quality_chapters">指定检测章节</string>
-    <string name="content_quality_chapters_summary">例如：1,3,5 或 1-5，超过目录范围的章节会自动忽略</string>
+    <string name="content_quality_chapters_summary">例如：1,3,5 或 1-5；若书源章节数不足（少于指定的最大章节号），该书源将被自动排除</string>
     <string name="content_quality_keywords">主角名或关键词</string>
     <string name="content_quality_keywords_summary">多个关键词可用逗号或空格分隔</string>
     <string name="content_quality_skip_chars">跳过章节头部字数</string>
     <string name="content_quality_skip_chars_summary">忽略广告、版权声明等头部内容</string>
-    <string name="content_quality_pipeline">章节数量 → 内容清洗 → 多关键词匹配 → 连续章节命中率 → 异常断点检测 → 综合评分 → 自动排除</string>
+    <string name="content_quality_pipeline">章节数量 → 内容清洗 → 多关键词匹配 → 自动排除</string>
     <string name="content_quality_start">开始检测</string>
     <string name="content_quality_progress">已检测 %1$d/%2$d：%3$s</string>
     <string name="content_quality_result">已检测 %1$d 本，排除 %2$d 个书源</string>
@@ -1911,9 +1912,6 @@
     <string name="content_quality_stage_chapter_count">章节数</string>
     <string name="content_quality_stage_cleaning">清洗</string>
     <string name="content_quality_stage_matching">匹配</string>
-    <string name="content_quality_stage_hit_rate">命中率</string>
-    <string name="content_quality_stage_anomaly">异常</string>
-    <string name="content_quality_stage_score">评分</string>
     <string name="content_quality_stage_excluding">排除</string>
     <string name="download_cache_config">下载与缓存</string>
     <string name="http_cache">HTTP缓存</string>

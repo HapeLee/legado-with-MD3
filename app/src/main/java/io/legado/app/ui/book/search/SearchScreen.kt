@@ -906,9 +906,6 @@ private fun ContentQualityPipeline(stage: ContentQualityStage?) {
         ContentQualityStage.ChapterCount to R.string.content_quality_stage_chapter_count,
         ContentQualityStage.ContentCleaning to R.string.content_quality_stage_cleaning,
         ContentQualityStage.KeywordMatching to R.string.content_quality_stage_matching,
-        ContentQualityStage.HitRate to R.string.content_quality_stage_hit_rate,
-        ContentQualityStage.Anomaly to R.string.content_quality_stage_anomaly,
-        ContentQualityStage.Scoring to R.string.content_quality_stage_score,
         ContentQualityStage.Excluding to R.string.content_quality_stage_excluding,
     )
     Row(

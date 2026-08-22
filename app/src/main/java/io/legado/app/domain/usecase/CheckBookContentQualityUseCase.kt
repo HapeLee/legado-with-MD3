@@ -7,7 +7,6 @@ import io.legado.app.domain.model.ContentQualityResult
 import io.legado.app.domain.model.ContentQualityStage
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
-import kotlin.math.roundToInt
 
 class CheckBookContentQualityUseCase(
     private val chapterContentUseCase: GetChapterContentUseCase,
@@ -63,8 +62,6 @@ class CheckBookContentQualityUseCase(
                     sampledChapterCount = 0,
                     matchedChapterCount = 0,
                     keywordHits = 0,
-                    hitRate = 0f,
-                    score = 0,
                     excluded = true,
                     errorMessage = "章节数不足",
                 )
@@ -77,18 +74,15 @@ class CheckBookContentQualityUseCase(
                     sampledChapterCount = 0,
                     matchedChapterCount = 0,
                     keywordHits = 0,
-                    hitRate = 0f,
-                    score = 0,
                     excluded = true,
                     errorMessage = "没有可检测的章节",
                 )
             }
 
+            var sampledChapterCount = 0
             var matchedChapterCount = 0
             var keywordHits = 0
-            var longestHitRun = 0
-            var currentHitRun = 0
-            chapterIndices.forEachIndexed { chapterPosition, chapterIndex ->
+            chapterIndices.forEachIndexed { _, chapterIndex ->
                 coroutineContext.ensureActive()
                 onProgress(
                     ContentQualityProgress(
@@ -100,11 +94,15 @@ class CheckBookContentQualityUseCase(
                 )
                 val chapter = toc[chapterIndex - 1]
                 val nextChapterUrl = toc.getOrNull(chapterIndex)?.url
-                val content = chapterContentUseCase.getContent(
-                    book = book.toBook(),
-                    chapter = chapter,
-                    nextChapterUrl = nextChapterUrl,
-                )
+                // 单章获取失败（网络抖动等瞬时错误）只跳过该章，不把整个书源判为排除
+                val content = runCatching {
+                    chapterContentUseCase.getContent(
+                        book = book.toBook(),
+                        chapter = chapter,
+                        nextChapterUrl = nextChapterUrl,
+                    )
+                }.getOrNull() ?: return@forEachIndexed
+                sampledChapterCount++
                 val cleaned = cleanContent(content, config.skipHeadChars)
                 onProgress(
                     ContentQualityProgress(
@@ -120,33 +118,10 @@ class CheckBookContentQualityUseCase(
                 keywordHits += chapterHits
                 if (chapterHits > 0) {
                     matchedChapterCount++
-                    currentHitRun++
-                    longestHitRun = maxOf(longestHitRun, currentHitRun)
-                } else {
-                    currentHitRun = 0
-                }
-                if (chapterPosition == chapterIndices.lastIndex) {
-                    onProgress(
-                        ContentQualityProgress(
-                            stage = ContentQualityStage.HitRate,
-                            processedBooks = processedBooks,
-                            totalBooks = totalBooks,
-                            currentBookName = book.name,
-                        )
-                    )
                 }
             }
 
-            val sampledChapterCount = chapterIndices.size
-            val hitRate = matchedChapterCount.toFloat() / sampledChapterCount
-            val continuityRate = longestHitRun.toFloat() / sampledChapterCount
-            val frequencyScore = (keywordHits.toFloat() / sampledChapterCount).coerceAtMost(1f)
-            onProgress(ContentQualityProgress(ContentQualityStage.Anomaly, processedBooks, totalBooks, book.name))
-            val score = (
-                hitRate * 50f + continuityRate * 30f + frequencyScore * 20f
-                ).roundToInt().coerceIn(0, 100)
-            onProgress(ContentQualityProgress(ContentQualityStage.Scoring, processedBooks, totalBooks, book.name))
-            val excluded = keywordHits == 0
+            val excluded = sampledChapterCount > 0 && keywordHits == 0
             onProgress(ContentQualityProgress(ContentQualityStage.Excluding, processedBooks, totalBooks, book.name))
             ContentQualityResult(
                 bookKey = bookKey,
@@ -154,20 +129,17 @@ class CheckBookContentQualityUseCase(
                 sampledChapterCount = sampledChapterCount,
                 matchedChapterCount = matchedChapterCount,
                 keywordHits = keywordHits,
-                hitRate = hitRate,
-                score = score,
                 excluded = excluded,
             )
         }.getOrElse { error ->
+            // 整本检测失败（如目录拉取异常）：不算“排除”，只记录原因，避免瞬时错误误杀书源
             ContentQualityResult(
                 bookKey = bookKey,
                 sourceName = sourceName,
                 sampledChapterCount = 0,
                 matchedChapterCount = 0,
                 keywordHits = 0,
-                hitRate = 0f,
-                score = 0,
-                excluded = true,
+                excluded = false,
                 errorMessage = error.localizedMessage?.takeIf { it.isNotBlank() }
                     ?: error.javaClass.simpleName,
             )
@@ -190,14 +162,15 @@ class CheckBookContentQualityUseCase(
                 .toList()
         }
 
-        private fun cleanContent(content: String, skipHeadChars: Int): String {
+        internal fun cleanContent(content: String, skipHeadChars: Int): String {
             return content
                 .replace(Regex("<[^>]*>"), " ")
                 .replace(Regex("\\s+"), " ")
+                .trim()
                 .drop(skipHeadChars.coerceAtLeast(0))
         }
 
-        private fun countOccurrences(content: String, keyword: String): Int {
+        internal fun countOccurrences(content: String, keyword: String): Int {
             if (keyword.isBlank()) return 0
             var count = 0
             var start = 0
