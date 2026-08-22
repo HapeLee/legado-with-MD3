@@ -184,6 +184,19 @@ interface ReadRecordDao {
         bookAuthor: String
     ): List<ReadRecord>
 
+    /** 聚合列表项没有真实设备 ID，跨设备查询可供合并的其他记录。 */
+    @Query(
+        """
+        SELECT * FROM readRecord
+        WHERE NOT (bookName = :bookName AND bookAuthor = :bookAuthor)
+        ORDER BY CASE WHEN bookName = :bookName THEN 0 ELSE 1 END, lastRead DESC
+        """
+    )
+    suspend fun getMergeCandidatesAcrossDevices(
+        bookName: String,
+        bookAuthor: String,
+    ): List<ReadRecord>
+
     /**
      * 获取某一天某一本书的所有阅读时段记录
      */
@@ -254,17 +267,31 @@ interface ReadRecordDao {
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getSessionsByBook(deviceId: String, bookName: String, bookAuthor: String): List<ReadRecordSession>
 
-    /** 清理同步产生的、字段完全相同的阅读时段记录，只保留最早写入的一行。 */
+    /** 清理跨设备同步产生的重复阅读时段（忽略 deviceId），只保留最早写入的一行。 */
     @Query(
         """
         DELETE FROM readRecordSession
         WHERE id NOT IN (
             SELECT MIN(id) FROM readRecordSession
-            GROUP BY deviceId, bookName, bookAuthor, startTime, endTime, words
+            GROUP BY bookName, bookAuthor, startTime, endTime, words
         )
         """
     )
     suspend fun deleteDuplicateSessions()
+
+    /** 阅读记录合并后，仅清理目标设备下该书的重复时段。 */
+    @Query(
+        """
+        DELETE FROM readRecordSession
+        WHERE id NOT IN (
+            SELECT MIN(id) FROM readRecordSession
+            WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor
+            GROUP BY bookName, bookAuthor, startTime, endTime, words
+        )
+        AND deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor
+        """
+    )
+    suspend fun deleteDuplicateSessionsByBook(deviceId: String, bookName: String, bookAuthor: String)
 
     @Query(
         """

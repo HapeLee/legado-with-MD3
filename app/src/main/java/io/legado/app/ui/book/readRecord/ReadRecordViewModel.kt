@@ -279,9 +279,15 @@ class ReadRecordViewModel(
     }
 
     fun mergeReadRecords(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
-        if (sourceRecords.isEmpty()) return
+        if (sourceRecords.isEmpty()) {
+            _effects.tryEmit(ReadRecordEffect.ShowError(""))
+            return
+        }
         viewModelScope.launch {
-            repository.mergeReadRecordInto(targetRecord, sourceRecords)
+            val merged = repository.mergeIndependentReadRecordsInto(targetRecord, sourceRecords)
+            if (!merged) {
+                _effects.tryEmit(ReadRecordEffect.ShowError(""))
+            }
         }
     }
 
