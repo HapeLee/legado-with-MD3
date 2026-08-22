@@ -6,6 +6,7 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.help.config.AppConfigStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,6 +26,9 @@ class ReadRecordRepositoryTest {
 
     @Before
     fun setUp() {
+        // ReadRecordRepository 构造即求值 readRecordEnabled，会访问 AppConfigStore；
+        // 生产环境由 App.onCreate 首行 init() 完成，测试里在 Robolectric 应用上下文中补上。
+        AppConfigStore.init(RuntimeEnvironment.getApplication())
         database = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), AppDatabase::class.java)
             .allowMainThreadQueries().build()
         repository = ReadRecordRepository(database.readRecordDao, database, SettingsRepository())
@@ -126,10 +130,47 @@ class ReadRecordRepositoryTest {
     }
 
     @Test
+    fun `repair duplicate sessions keeps legacy duration on orphaned device`() = runBlocking {
+        val targetDevice = "target-device"
+        val sourceDevice = "source-device"
+        val date = "1970-01-01"
+        val session = ReadRecordSession(
+            deviceId = targetDevice,
+            bookName = targetName,
+            bookAuthor = author,
+            startTime = 3_000,
+            endTime = 3_200,
+            words = 10,
+        )
+        // sourceDevice 的汇总时长 = 副本 session 200 + 旧版历史 legacy 100，
+        // 修复去重后 session 副本被保留在 targetDevice，sourceDevice 应只剩 legacy。
+        database.readRecordDao.insert(ReadRecord(targetDevice, targetName, author, 200, 2_000))
+        database.readRecordDao.insert(ReadRecord(sourceDevice, targetName, author, 300, 2_000))
+        database.readRecordDao.insertSession(session)
+        database.readRecordDao.insertSession(session.copy(deviceId = sourceDevice))
+        database.readRecordDao.insertDetail(ReadRecordDetail(targetDevice, targetName, author, date, 200, 10, 3_000, 3_200))
+        database.readRecordDao.insertDetail(ReadRecordDetail(sourceDevice, targetName, author, date, 300, 10, 3_000, 3_200))
+
+        assertEquals(1, repository.repairDuplicateSessions())
+
+        assertEquals(200L, database.readRecordDao.getReadRecord(targetDevice, targetName, author)?.readTime)
+        assertEquals(100L, database.readRecordDao.getReadRecord(sourceDevice, targetName, author)?.readTime)
+        assertEquals(200L, database.readRecordDao.getDetail(targetDevice, targetName, author, date)?.readTime)
+        assertEquals(100L, database.readRecordDao.getDetail(sourceDevice, targetName, author, date)?.readTime)
+    }
+
+    @Test
     fun `deleting the last aggregate detail removes session-backed total`() = runBlocking {
         val date = "1970-01-01"
         val record = ReadRecord(deviceId, targetName, author, 200, 1_200)
-        val session = ReadRecordSession(deviceId, targetName, author, 1_000, 1_200, 10)
+        val session = ReadRecordSession(
+            deviceId = deviceId,
+            bookName = targetName,
+            bookAuthor = author,
+            startTime = 1_000,
+            endTime = 1_200,
+            words = 10,
+        )
         database.readRecordDao.insert(record)
         database.readRecordDao.insertSession(session)
         database.readRecordDao.insertDetail(ReadRecordDetail(deviceId, targetName, author, date, 200, 10, 1_000, 1_200))
@@ -145,7 +186,14 @@ class ReadRecordRepositoryTest {
     fun `deleting the last session preserves legacy total only`() = runBlocking {
         val date = "1970-01-01"
         val record = ReadRecord(deviceId, targetName, author, 300, 1_200)
-        val session = ReadRecordSession(deviceId, targetName, author, 1_000, 1_200, 10)
+        val session = ReadRecordSession(
+            deviceId = deviceId,
+            bookName = targetName,
+            bookAuthor = author,
+            startTime = 1_000,
+            endTime = 1_200,
+            words = 10,
+        )
         database.readRecordDao.insert(record)
         database.readRecordDao.insertSession(session)
         database.readRecordDao.insertDetail(ReadRecordDetail(deviceId, targetName, author, date, 200, 10, 1_000, 1_200))

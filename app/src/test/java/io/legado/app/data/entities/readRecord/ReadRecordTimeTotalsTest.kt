@@ -1,7 +1,7 @@
 package io.legado.app.data.entities.readRecord
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class ReadRecordTimeTotalsTest {
     @Test
