@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -621,18 +620,7 @@ fun ReadRecordScreen(
                         GlassCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .toggleable(
-                                    value = isChecked,
-                                    role = Role.Checkbox,
-                                    onValueChange = { checked ->
-                                        selectedMergeKeys = if (checked) {
-                                            selectedMergeKeys + candidateKey
-                                        } else {
-                                            selectedMergeKeys - candidateKey
-                                        }
-                                    }
-                                )
+                                .padding(vertical = 4.dp),
                         ) {
                             Box(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(end = 48.dp)) {
@@ -650,8 +638,13 @@ fun ReadRecordScreen(
                                 }
                                 AppCheckbox(
                                     checked = isChecked,
-                                    onCheckedChange = null,
-                                    includeStateSemantics = false,
+                                    onCheckedChange = { checked ->
+                                        selectedMergeKeys = if (checked) {
+                                            selectedMergeKeys + candidateKey
+                                        } else {
+                                            selectedMergeKeys - candidateKey
+                                        }
+                                    },
                                     modifier = Modifier.align(Alignment.CenterEnd),
                                 )
                             }

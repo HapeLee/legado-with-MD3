@@ -463,9 +463,9 @@ class ReadRecordRepository(
         }
     }
 
-    /** 用户主动合并独立阅读记录，累加有效时长并保留旧版历史时长。 */
-    suspend fun mergeIndependentReadRecordsInto(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
-        database.withTransaction {
+    /** 用户主动合并独立阅读记录，累加有效时长并保留旧版历史时长。返回是否实际发生了合并。 */
+    suspend fun mergeIndependentReadRecordsInto(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>): Boolean {
+        return database.withTransaction {
             mergeIndependentReadRecords(targetRecord, sourceRecords)
         }
     }
@@ -473,19 +473,19 @@ class ReadRecordRepository(
     private suspend fun mergeSingleReadRecordInto(targetRecord: ReadRecord, sourceRecord: ReadRecord) =
         mergeIndependentReadRecords(targetRecord, listOf(sourceRecord))
 
-    private suspend fun mergeIndependentReadRecords(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
+    private suspend fun mergeIndependentReadRecords(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>): Boolean {
         val resolvedTarget = if (targetRecord.deviceId.isBlank()) {
             dao.getReadRecordsByName(targetRecord.bookName, targetRecord.bookAuthor).maxByOrNull { it.lastRead }
         } else {
             dao.getReadRecord(targetRecord.deviceId, targetRecord.bookName, targetRecord.bookAuthor)
         }
-        val targetDeviceId = resolvedTarget?.deviceId ?: targetRecord.deviceId.ifBlank { sourceRecords.firstOrNull()?.deviceId ?: return }
+        val targetDeviceId = resolvedTarget?.deviceId ?: targetRecord.deviceId.ifBlank { sourceRecords.firstOrNull()?.deviceId ?: return false }
         val target = resolvedTarget ?: targetRecord.copy(deviceId = targetDeviceId, readTime = 0L)
         val sources = sourceRecords.mapNotNull { source ->
             dao.getReadRecord(source.deviceId, source.bookName, source.bookAuthor)
         }.distinctBy { Triple(it.deviceId, it.bookName, it.bookAuthor) }
             .filterNot { it.deviceId == targetDeviceId && it.bookName == target.bookName && it.bookAuthor == target.bookAuthor }
-        if (sources.isEmpty()) return
+        if (sources.isEmpty()) return false
 
         val targetSessions = dao.getSessionsByBook(targetDeviceId, target.bookName, target.bookAuthor)
         val targetDetails = dao.getDetailsByBook(targetDeviceId, target.bookName, target.bookAuthor)
@@ -506,6 +506,7 @@ class ReadRecordRepository(
         dao.deleteDuplicateSessionsByBook(targetDeviceId, target.bookName, target.bookAuthor)
         dao.insert(target.copy(lastRead = maxOf(target.lastRead, sources.maxOf { it.lastRead })))
         updateReadRecordTotal(targetDeviceId, target.bookName, target.bookAuthor, targetLegacy + sourceLegacy)
+        return true
     }
 
     private suspend fun rebuildMergedDetails(
