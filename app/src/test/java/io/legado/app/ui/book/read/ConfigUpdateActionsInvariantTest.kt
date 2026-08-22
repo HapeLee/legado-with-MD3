@@ -151,6 +151,8 @@ class ConfigUpdateActionsInvariantTest {
             "UseNewTocSheet",
             // 只影响下次目录解析时的无规则章节切分长度，取用时读设置，无渲染副作用
             "MaxLengthWithNoToc",
+            // 只写 DataStore 的 readingAnchorEnabled，锚点栏可见性由 readPreferences 反应式驱动
+            "ReadingAnchorEnabled",
         )
     }
 }

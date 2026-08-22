@@ -21,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media.AudioFocusRequestCompat
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import io.legado.app.R
 import io.legado.app.base.BaseService
@@ -57,6 +58,7 @@ import splitties.systemservices.audioManager
 import splitties.systemservices.notificationManager
 import splitties.systemservices.powerManager
 import splitties.systemservices.wifiManager
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 音频播放服务
@@ -457,7 +459,7 @@ class AudioPlayService : BaseService(),
                         AudioPlay.next()
                     }
                 }
-                delay(1000)
+                delay(1000.milliseconds)
             }
         }
     }
@@ -465,6 +467,7 @@ class AudioPlayService : BaseService(),
     /**
      * 应用音频增益（LoudnessEnhancer，单位 mB，范围 -6000..6000）
      */
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun applyGain(gain: Int) {
         try {
             if (gain == 0) {

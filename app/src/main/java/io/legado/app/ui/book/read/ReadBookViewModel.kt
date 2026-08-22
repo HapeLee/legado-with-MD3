@@ -1345,7 +1345,7 @@ class ReadBookViewModel(
             is ReadBookIntent.ReadAloudNextParagraph -> readAloudDelegate.nextParagraph()
             is ReadBookIntent.ReadAloudPrevChapter -> readAloudDelegate.prevChapter()
             is ReadBookIntent.ReadAloudNextChapter -> readAloudDelegate.nextChapter()
-            ReadBookIntent.BackToSpeakingPosition -> backToSpeakingPosition()
+            ReadBookIntent.BackToSpeakingPosition -> readAloudDelegate.backToSpeakingPosition()
             ReadBookIntent.ReadAloudFromHere -> ReadBook.readAloud()
             is ReadBookIntent.SetReadAloudTtsTimer -> readAloudDelegate.setTtsTimer(intent.value)
             is ReadBookIntent.SetFinishCurrentChapterAfterTimer ->
@@ -2135,29 +2135,6 @@ class ReadBookViewModel(
     private suspend fun currentChapter(): BookChapter? {
         val book = ReadBook.book ?: return null
         return bookRepository.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-    }
-
-    /**
-     * 回到朗读位置：恢复页面跟随朗读，并跳到朗读所在章节/字符位置。全程不打断当前朗读。
-     */
-    private fun backToSpeakingPosition() {
-        readAloudSessionStore.restoreReadAloudFollow()
-        val speakingChapterIndex = BaseReadAloudService.currentChapterIndex
-        val speakingChapterStart = BaseReadAloudService.currentProgress
-        if (speakingChapterIndex < 0) return
-        // currentProgress 为正在朗读的精确章内位置（onRangeStart 段内偏移上报），整段高亮落在当前段
-        val chapterStart = speakingChapterStart.coerceAtLeast(0)
-        if (speakingChapterIndex != ReadBook.durChapterIndex) {
-            // 跳到朗读位置属于朗读相关的页面移动，不能触发手动脱离
-            BaseReadAloudService.withSpeechNavigation {
-                ReadBook.openChapter(speakingChapterIndex, chapterStart) {
-                    ReadBook.upTextChapterAloudSpan(chapterStart)
-                }
-            }
-        } else {
-            ReadBook.syncReadAloudPage(speakingChapterIndex, chapterStart)
-            ReadBook.upTextChapterAloudSpan(chapterStart)
-        }
     }
 
     // 开书 / 目录 / 换源 / 进度同步已迁入 [ReadBookLoadDelegate]，这里只留外部入口的转发。

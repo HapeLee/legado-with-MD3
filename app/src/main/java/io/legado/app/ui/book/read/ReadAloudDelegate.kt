@@ -11,10 +11,10 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
-import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
+import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -173,6 +173,27 @@ class ReadAloudDelegate(
 
     fun nextChapter() = BaseReadAloudService.withSpeechNavigation {
         ReadBook.moveToNextChapter(true)
+    }
+
+    /** 回到朗读位置：恢复页面跟随朗读，并跳到朗读所在章节/字符位置。全程不打断当前朗读。 */
+    fun backToSpeakingPosition() {
+        readAloudSessionStore.restoreReadAloudFollow()
+        val speakingChapterIndex = BaseReadAloudService.currentChapterIndex
+        val speakingChapterStart = BaseReadAloudService.currentProgress
+        if (speakingChapterIndex < 0) return
+        // currentProgress 为正在朗读的精确章内位置（onRangeStart 段内偏移上报），整段高亮落在当前段
+        val chapterStart = speakingChapterStart.coerceAtLeast(0)
+        if (speakingChapterIndex != ReadBook.durChapterIndex) {
+            // 跳到朗读位置属于朗读相关的页面移动，不能触发手动脱离
+            BaseReadAloudService.withSpeechNavigation {
+                ReadBook.openChapter(speakingChapterIndex, chapterStart) {
+                    ReadBook.upTextChapterAloudSpan(chapterStart)
+                }
+            }
+        } else {
+            ReadBook.syncReadAloudPage(speakingChapterIndex, chapterStart)
+            ReadBook.upTextChapterAloudSpan(chapterStart)
+        }
     }
 
     // --- 界面入口 ---
