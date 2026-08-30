@@ -214,7 +214,7 @@ fun ChangeSourceSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.book_source),
+        title = stringResource(R.string.change_origin),
         startAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box {

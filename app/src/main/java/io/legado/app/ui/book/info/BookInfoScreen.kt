@@ -1172,7 +1172,7 @@ private fun BookInfoActions(
         BookInfoActionCard(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Code,
-            label = stringResource(R.string.book_source),
+            label = stringResource(R.string.change_origin),
             onClick = onSourceClick
         )
         BookInfoActionCard(
