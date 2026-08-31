@@ -89,7 +89,7 @@ koin-bom = "4.2.2"
 biometricKtx = "1.1.0"
 
 reorderable = "3.1.0"
-haze = "1.7.2"
+haze = "1.7.3"
 timber = "5.0.1"
 telephoto = "0.19.0"
 miuix = "0.9.3"
