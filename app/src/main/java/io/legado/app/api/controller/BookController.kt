@@ -3,7 +3,11 @@ package io.legado.app.api.controller
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toBitmap
-import com.bumptech.glide.Glide
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.size.Scale
+import coil3.toBitmap
 import io.legado.app.api.ReturnData
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -15,7 +19,6 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
-import io.legado.app.help.glide.ImageLoader
 import io.legado.app.model.BookCover
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
@@ -28,15 +31,17 @@ import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import splitties.init.appCtx
 import org.koin.core.context.GlobalContext
 import java.io.File
 import java.util.WeakHashMap
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 object BookController {
 
     private val bookshelfGateway by lazy { GlobalContext.get().get<BookshelfSettingsGateway>() }
+    private val imageLoader by lazy { GlobalContext.get().get<ImageLoader>() }
 
     private lateinit var book: Book
     private var bookSource: BookSource? = null
@@ -72,27 +77,27 @@ object BookController {
     fun getCover(parameters: Map<String, List<String>>): ReturnData {
         val returnData = ReturnData()
         val coverPath = parameters["path"]?.firstOrNull()
-        val ftBitmap = ImageLoader.loadBitmap(appCtx, coverPath)
-            .override(84, 112)
-            .centerCrop()
-            .submit()
         return try {
-            returnData.setData(ftBitmap.get(3, TimeUnit.SECONDS))
-        } catch (e: Exception) {
-            try {
+            val request = ImageRequest.Builder(appCtx)
+                .data(coverPath)
+                .size(84, 112)
+                .scale(Scale.FILL)
+                .build()
+            val bitmap = runBlocking {
+                withTimeout(3.seconds) {
+                    (imageLoader.execute(request) as? SuccessResult)?.image?.toBitmap()
+                }
+            }
+            if (bitmap != null) {
+                returnData.setData(bitmap)
+            } else {
                 val defaultBitmap = defaultCoverCache.getOrPut(BookCover.defaultDrawable) {
-                    Glide.with(appCtx)
-                        .asBitmap()
-                        .load(BookCover.defaultDrawable.toBitmap())
-                        .override(84, 112)
-                        .centerCrop()
-                        .submit()
-                        .get()
+                    BookCover.defaultDrawable.toBitmap(84, 112)
                 }
                 returnData.setData(defaultBitmap)
-            } catch (e: Exception) {
-                returnData.setErrorMsg(e.localizedMessage ?: "getCover error")
             }
+        } catch (e: Exception) {
+            returnData.setErrorMsg(e.localizedMessage ?: "getCover error")
         }
     }
 

@@ -16,6 +16,7 @@ import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.feature.reader.core.navigation.ReaderChapterPaginationSnapshot
+import io.legado.app.feature.reader.core.navigation.ReaderSessionSnapshot
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginationResult
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginator
@@ -53,15 +54,15 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.book.read.ConfigUpdateAction
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
-import io.legado.app.ui.book.read.pageestimate.ChapterContentHasher
-import io.legado.app.ui.book.read.pageestimate.ChapterLengthInfo
-import io.legado.app.ui.book.read.pageestimate.LocalPageEstimateCalibrationStore
-import io.legado.app.ui.book.read.pageestimate.LocalPageEstimateMetrics
-import io.legado.app.ui.book.read.pageestimate.PageEstimateConfig
-import io.legado.app.ui.book.read.pageestimate.PageEstimateMetrics
-import io.legado.app.ui.book.read.pageestimate.RoomExactChapterPageCountStore
-import io.legado.app.ui.book.read.pageestimate.WholeBookPageCoordinator
-import io.legado.app.ui.book.read.pageestimate.WholeBookPageState
+import io.legado.app.data.reader.pageestimate.LocalPageEstimateCalibrationStore
+import io.legado.app.data.reader.pageestimate.RoomExactChapterPageCountStore
+import io.legado.app.feature.reader.core.pageestimate.ChapterContentHasher
+import io.legado.app.feature.reader.core.pageestimate.ChapterLengthInfo
+import io.legado.app.feature.reader.core.pageestimate.LocalPageEstimateMetrics
+import io.legado.app.feature.reader.core.pageestimate.PageEstimateConfig
+import io.legado.app.feature.reader.core.pageestimate.PageEstimateMetrics
+import io.legado.app.feature.reader.core.pageestimate.WholeBookPageCoordinator
+import io.legado.app.feature.reader.core.pageestimate.WholeBookPageState
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.postEvent
@@ -101,15 +102,7 @@ import kotlin.math.min
  * （独立服务，ReadBook 变更不会触发其重发），后者只有 `msg`/`loadingChapters` 间接信号；
  * 塞进来会得到静默陈旧字段。需要时应让其来源方参与发布，另行引入。
  */
-data class LegacyReaderSnapshot(
-    val bookUrl: String? = null,
-    val bookName: String? = null,
-    val chapterIndex: Int = 0,
-    val chapterPos: Int = 0,
-    val chapterCount: Int = 0,
-    val simulatedChapterCount: Int = 0,
-    val isLocalBook: Boolean = true,
-)
+typealias LegacyReaderSnapshot = ReaderSessionSnapshot
 
 data class ReaderPaginationEnvironment(
     val widthPx: Int,
@@ -201,6 +194,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     private val wholeBookPageCoordinator = WholeBookPageCoordinator(
         scope = this,
+        ioDispatcher = IO,
         calibrationStore = LocalPageEstimateCalibrationStore,
         exactPageCountStore = RoomExactChapterPageCountStore,
         metrics = PageEstimateMetrics { metric ->

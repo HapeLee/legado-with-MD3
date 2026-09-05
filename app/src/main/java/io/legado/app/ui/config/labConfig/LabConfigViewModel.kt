@@ -3,7 +3,7 @@ package io.legado.app.ui.config.labConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.LabSettingsGateway
-import io.legado.app.ui.book.read.pageestimate.LocalPageEstimateMetrics
+import io.legado.app.feature.reader.core.pageestimate.LocalPageEstimateMetrics
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow

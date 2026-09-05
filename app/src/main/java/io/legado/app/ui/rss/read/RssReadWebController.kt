@@ -62,6 +62,7 @@ internal data class RssReadWebControllerCallbacks(
     val onPageTitleResolved: (String) -> Unit,
     val onShowCustomView: (View?, WebChromeClient.CustomViewCallback?) -> Unit,
     val onHideCustomView: () -> Unit,
+    val onShowPhoto: (src: String, sourceOrigin: String?) -> Unit,
     val navigateToArticles: (sortUrl: String?, origin: String?) -> Unit,
     val onAskRedirect: (String?, String, (Boolean) -> Unit) -> Unit,
     val onCloseRequested: () -> Unit,
@@ -531,7 +532,8 @@ internal fun injectRssReadJsInterfaces(
         source,
         appCompatActivity,
         webView,
-        callback = callbacks
+        callback = callbacks,
+        onShowPhoto = callbacks.onShowPhoto,
     )
     webView.addJavascriptInterface(webJsExtensions, WebJsExtensions.nameJava)
     webView.addJavascriptInterface(source, WebJsExtensions.nameSource)

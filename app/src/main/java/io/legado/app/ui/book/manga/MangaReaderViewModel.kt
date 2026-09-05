@@ -447,7 +447,8 @@ class MangaReaderViewModel(
                 MangaChapterTransitionDirection.NEXT
             }
             val targetExists = targetChapterIndex in 0 until session.chapterCount
-            val targetName = session.book.chapterTitles.getOrNull(targetChapterIndex)
+            val book = session.book
+            val targetName = book?.chapterTitles?.getOrNull(targetChapterIndex)
                 ?: appCtx.getString(
                     R.string.manga_reader_transition_chapter_number,
                     targetChapterIndex + 1,

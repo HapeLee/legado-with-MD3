@@ -46,18 +46,19 @@ import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
 import io.legado.app.domain.model.readaloud.resolveReadAloudStartPosition
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
+import io.legado.app.feature.reader.core.readaloud.canonicalSpeechParagraphs
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.BookCover
 import io.legado.app.receiver.MediaButtonReceiver
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.LogUtils
@@ -264,12 +265,9 @@ abstract class BaseReadAloudService : BaseService(),
             toastOnUi("朗读定时 $timeMinute 分钟")
         }
         execute {
-            ImageLoader
-                .loadBitmap(this@BaseReadAloudService, ReadBook.book?.getDisplayCover())
-                .submit()
-                .get()
+            BookCover.loadCoverBitmap(this@BaseReadAloudService, ReadBook.book?.getDisplayCover())
         }.onSuccess {
-            if (it.width > 16 && it.height > 16) {
+            if (it != null && it.width > 16 && it.height > 16) {
                 cover = it
                 upMediaMetadata()
                 upReadAloudNotification()

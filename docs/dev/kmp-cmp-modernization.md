@@ -2,6 +2,10 @@
 
 > 状态：提案 / 渐进执行基线（2026-08-20）。本文区分“当前事实”“目标结构”和“计划门禁”；未创建的模块与
 > Gradle task 都不是现有 API。
+>
+> **2026-09-05 补充**：本文 §2 的盘点数字已过期，实测更新见
+> [`kmp-cmp-migration-plan.md`](kmp-cmp-migration-plan.md) §1.2。那份文档是基于 `shutiao/legado`
+> 参照样本的**可执行迁移规划**（阶段、门禁、风险、Backlog），本文继续承担**方向图与门禁定义**职责。
 
 ## 1. 目标与非目标
 
@@ -32,20 +36,34 @@ Android 的模块数量。
   与支持矩阵必须在每个实施切片中重新核对 [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html)、[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/)
   和 Android 官方文档，本文不冻结易过期的版本结论。
 
-2026-08-20 盘点快照：
+盘点快照（**2026-09-05 回填**，原始 2026-08-20 数字已过期；详细包/依赖表见
+[`kmp-cmp-migration-plan.md`](kmp-cmp-migration-plan.md) §1.2）：
 
-- 现有 Gradle 模块为 `:app`、`:modules:book`、`:modules:rhino`、`:baselineprofile`；`modules/web` 独立构建。
-- `app/src/main/java/io/legado/app` 约有 803 个 UI Kotlin 文件，UI、领域、数据、平台服务仍集中在 `:app`。
-- `domain/` 中仍存在 Android import、`File`、`InputStream`、`java.time`、JCA 等 JVM 类型，不满足直接搬入
-  `commonMain` 的条件。
-- 已有 147 个本地测试文件，以及 `verifyConfigArchitecture`、lint、unit test、debug assemble 的 CI 门禁。
+- 现有 Gradle 模块：`:app`、`:modules:book`、`:modules:rhino`、`:baselineprofile`、
+  `:smoke:kmp-probe`、`:feature:reader:core`；`build-logic/` 为独立 included build（convention plugin）；
+  `modules/web` 独立构建。新增的 KMP 模块用 `legado.kmp.library` convention（Kotlin 2.4.10 + AGP 9.2.1）。
+- `app/src/main` 共 **1555** 个 Kotlin 文件；UI、领域、数据、平台服务仍集中在 `:app`（`ui/` 706、`data/` 203、
+  `domain/` 170、`help/` 124、`utils/` 107 等，详见 §1.2 表）。UI 已大面积 Compose 化（`androidx.compose.*` 474 文件）。
+- `domain/`（170 文件）仅 **11** 个沾 Android import；`constant/`（14）仅 6 个沾 Android；
+  `utils/`/`help/` 泄漏面较大（78/64 沾 Android）。`java.io.File`/`InputStream`/`OutputStream` 共 **122** 文件，
+  是最主要的 JVM 泄漏面。`domain/` 不满足“直接整批搬入 commonMain”，但纯值对象子集可先行。
+- 关键依赖：Koin 170 文件（已深度使用，不能推翻）、Room 2.8.4 共 91 文件（39 DAO + 66 entities）、
+  coil3 3.5.0 已是 KMP 就绪库（39 文件）、Rhino 27 文件（`modules/rhino` 31 kt）、jsoup 1.16.2 被 AGENTS.md 锁版本。
+- 已有 **172** 个本地测试文件，以及 `verifyConfigArchitecture`、lint、unit test、debug assemble 的 CI 门禁。
 - `:modules:book` 的解析职责相对独立，但源码以 Java/JDK API 为主且含少量 Android
   API，适合作为早期依赖审计与边界试点，不能直接视为 `commonMain`；`:modules:rhino` 依赖 Rhino、OkHttp 和
   JVM 生态，应先作为平台实现保留。
 - `docs/dev/mad-modernization-plan.md` 已确立“行为优先、基线棘轮、阅读器渲染岛”的纪律，本路线不能推翻它。
+  （注：`mad-modernization-plan.md` 中“保留 ReadView 作渲染核心”已失效——`ReadView` 已删除，渲染为 Compose 单栈，
+  详见 `track-f-reader-kmp-migration-plan.md` §2.3。）
 - 当前单体内部的 Feature-first 目录、文件归属和模块晋级门槛见 `docs/dev/feature-first-structure.md`
   ，现有目录到 canonical owner 的初始映射见 `docs/dev/feature-catalog.md`；它们是本路线进入真实 Gradle
   模块前的过渡规范。
+
+已落地的 P0 门禁（2026-09-05）：`build-logic` convention plugin、`:smoke:kmp-probe`、`:feature:reader:core`
+（54 commonMain + 62 commonTest，双 target 各 300 测试过）、`checkSharedPurity`（G2，blocking）、
+`checkModuleDependencies`（G1，blocking），均已接入 `verify.yml`。`kmp-cmp-migration-plan.md` 的 P0–P7 阶段表
+是本文方向图的可执行落地版。
 
 盘点数字会变化。实施前重新运行 inventory，不把数字写进自动门禁。
 
@@ -130,7 +148,7 @@ modules/{book,rhino,web}/            # 现有能力渐进演进
 - 只定义需要的模块类型：KMP/CMP library、Android app/library、JVM library、Feature API/impl。
 - 在 smoke module 中评估当前 AGP/Kotlin 组合下的 KMP Android library plugin，通过后再固化到
   convention plugin。
-- 生成/校验模块依赖图；禁止 core→feature、feature impl→feature impl 等逆向依赖。
+- 生成/校验模块依赖图；禁止 core→feature、feature impl→feature impl 等逆向依赖。**`checkModuleDependencies` 已实现（2026-09-05）。**
 - 保留 `verifyConfigArchitecture` 作为 Android 遗留棘轮；新增规则逐步拆成职责明确的 task 或静态分析。
 - convention plugin 只放跨模块稳定默认值；native 打包、版本改写和单平台发布流程拆到独立插件或脚本。
 
@@ -191,8 +209,8 @@ modules/{book,rhino,web}/            # 现有能力渐进演进
 | 级别             | 适用范围                      | 必须通过                                                                        | 状态           |
 |----------------|---------------------------|-----------------------------------------------------------------------------|--------------|
 | G0 Android 基线  | 所有 PR                     | unit test、lint、`verifyConfigArchitecture`、debug assemble、`git diff --check` | 已存在          |
-| G1 模块边界        | 新/改 Gradle 模块             | convention plugin、依赖图规则、无循环、无禁止方向                                           | 计划           |
-| G2 Common 纯度   | `commonMain` 变化           | 禁止平台 API、`commonTest`、metadata + 非 Android target compile、公共 API 检查         | 随首个 KMP 模块启用 |
+| G1 模块边界        | 新/改 Gradle 模块             | convention plugin、`checkModuleDependencies`、无循环、无禁止方向                                           | ✅ 已实现（2026-09-05）|
+| G2 Common 纯度   | `commonMain` 变化           | `checkSharedPurity`、`commonTest`、metadata + 非 Android target compile、公共 API 检查         | ✅ 已实现（2026-09-05）|
 | G3 数据/平台适配     | Gateway/Repository/actual | contract tests、取消/线程/错误/事务语义、序列化和迁移兼容                                       | 按切片启用        |
 | G4 CMP Feature | shared UI                 | Android UI/行为验证、目标平台 smoke、导航/effect parity、accessibility/insets            | 按 Feature 启用 |
 | G5 高风险能力       | reader/rules/services     | 真机 parity、性能基线、脚本兼容、release/noR8 或专项验证                                      | 强制人工审批       |

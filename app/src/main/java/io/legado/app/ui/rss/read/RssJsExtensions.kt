@@ -13,7 +13,6 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.ui.association.AddToBookshelfDialog
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
@@ -26,7 +25,11 @@ import java.lang.ref.WeakReference
 
 
 @Suppress("unused")
-open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : JsExtensions {
+open class RssJsExtensions(
+    activity: AppCompatActivity?,
+    source: BaseSource?,
+    private val onShowPhoto: ((src: String, sourceOrigin: String?) -> Unit)? = null,
+) : JsExtensions {
 
     val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     val sourceRef: WeakReference<BaseSource?> = WeakReference(source)
@@ -68,7 +71,7 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
     }
 
     fun showPhoto(src: String) {
-        activityRef.get()?.showDialogFragment(PhotoDialog(src, getSource()?.getKey()))
+        onShowPhoto?.invoke(src, getSource()?.getKey())
     }
 
     @JvmOverloads

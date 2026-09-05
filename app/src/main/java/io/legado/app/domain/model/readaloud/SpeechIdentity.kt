@@ -1,9 +1,15 @@
 package io.legado.app.domain.model.readaloud
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
+import io.legado.app.core.platform.Digest
+import io.legado.app.core.platform.JcaDigest
 
 object SpeechIdentity {
+
+    /**
+     * 摘要委托：原直接用 `java.security.MessageDigest`（JVM-only，阻碍本 object 进入 commonMain）。
+     * 走 [Digest] 契约后，P2 下沉 :core:model 时此依赖已是平台无关契约。
+     */
+    private val digest: Digest = JcaDigest
 
     fun voiceId(engineType: String, engineId: String, speakerId: String): String =
         "voice:${sha256("$engineType\u0000$engineId\u0000$speakerId").take(32)}"
@@ -42,7 +48,6 @@ object SpeechIdentity {
         }
     )
 
-    private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray(StandardCharsets.UTF_8))
-        .joinToString("") { byte -> "%02x".format(byte) }
+    private fun sha256(value: String): String = digest.sha256(value.toByteArray(Charsets.UTF_8))
+        .joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 }

@@ -1,30 +1,43 @@
 package io.legado.app.ui.association
 
-import android.os.Bundle
-import io.legado.app.base.BaseActivity
-import io.legado.app.constant.SourceType
-import io.legado.app.databinding.ActivityTranslucenceBinding
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.viewbindingdelegate.viewBinding
+import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import io.legado.app.base.BaseComposeActivity
+import io.legado.app.help.source.SourceVerificationHelp
 
-/**
- * 验证码
- */
-class VerificationCodeActivity :
-    BaseActivity<ActivityTranslucenceBinding>() {
+/** Retains the legacy Intent contract while the dialog content is Compose-owned. */
+class VerificationCodeActivity : BaseComposeActivity(transparent = true) {
 
-    override val binding by viewBinding(ActivityTranslucenceBinding::inflate)
+    private val viewModel by viewModels<VerificationCodeViewModel>()
+    private val imageUrl get() = intent.getStringExtra("imageUrl")
+    private val sourceOrigin get() = intent.getStringExtra("sourceOrigin").orEmpty()
+    private val sourceName get() = intent.getStringExtra("sourceName").orEmpty()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        intent.getStringExtra("imageUrl")?.let {
-            val sourceOrigin = intent.getStringExtra("sourceOrigin")
-            val sourceName = intent.getStringExtra("sourceName")
-            val sourceType = intent.getIntExtra("sourceType", SourceType.book)
-            showDialogFragment(
-                VerificationCodeDialog(it, sourceOrigin, sourceName, sourceType)
-            )
-        } ?: finish()
+    @Composable
+    override fun Content() {
+        val url = imageUrl
+        if (url == null) {
+            LaunchedEffect(Unit) { finish() }
+            return
+        }
+        LaunchedEffect(Unit) { viewModel.initData(intent.extras ?: return@LaunchedEffect) }
+        VerificationCodeDialog(
+            imageUrl = url,
+            sourceOrigin = sourceOrigin,
+            sourceName = sourceName,
+            onSubmit = { code ->
+                SourceVerificationHelp.setResult(sourceOrigin, code)
+                finish()
+            },
+            onDisableSource = { viewModel.disableSource(::finish) },
+            onDeleteSource = { viewModel.deleteSource(::finish) },
+            onDismissRequest = ::finish,
+        )
     }
 
+    override fun onDestroy() {
+        SourceVerificationHelp.checkResult(sourceOrigin)
+        super.onDestroy()
+    }
 }

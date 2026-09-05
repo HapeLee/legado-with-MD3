@@ -35,11 +35,12 @@ class BookGroupMutationRepository(
             }
             groupDao.insert(bookGroup)
 
-            if (!group.pattern.isNullOrBlank()) {
+            val pattern = group.pattern
+            if (!pattern.isNullOrBlank()) {
                 database.tagGroupRuleDao.insert(
                     TagGroupRule(
                         groupName = group.groupName,
-                        pattern = group.pattern,
+                        pattern = pattern,
                         order = database.tagGroupRuleDao.maxOrder,
                     )
                 )

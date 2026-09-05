@@ -65,6 +65,7 @@ import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.topbar.GlassSmallTopAppBar
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
@@ -119,6 +120,7 @@ fun RssReadRouteScreen(
     var showFavoriteSheet by remember { mutableStateOf(false) }
     var favoriteTitle by remember { mutableStateOf("") }
     var favoriteGroup by remember { mutableStateOf("") }
+    var photoRequest by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     val content by viewModel.contentState.collectAsStateWithLifecycle()
     val analyzeUrl by viewModel.urlState.collectAsStateWithLifecycle()
@@ -154,6 +156,9 @@ fun RssReadRouteScreen(
                 }
             },
             onHideCustomView = { hideCustomView() },
+            onShowPhoto = { src, sourceOrigin ->
+                photoRequest = src to sourceOrigin
+            },
             navigateToArticles = { sortUrl, targetOrigin ->
                 onOpenArticles(sortUrl, targetOrigin)
             },
@@ -499,6 +504,15 @@ fun RssReadRouteScreen(
             showFavoriteSheet = false
         }
     )
+
+    photoRequest?.let { (src, sourceOrigin) ->
+        PhotoSheet(
+            show = true,
+            src = src,
+            sourceOrigin = sourceOrigin,
+            onDismissRequest = { photoRequest = null },
+        )
+    }
 
     redirectRequest?.let { request ->
         AppAlertDialog(

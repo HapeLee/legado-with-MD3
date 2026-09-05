@@ -6,18 +6,10 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
 import androidx.core.graphics.drawable.toDrawable
-import com.bumptech.glide.Glide
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.Transformation
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.load.resource.bitmap.CenterCrop
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.request.target.Target.SIZE_ORIGINAL
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import io.legado.app.R
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
@@ -26,9 +18,6 @@ import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.help.CacheManager
 import io.legado.app.help.DefaultData
-import io.legado.app.help.glide.BlurTransformation
-import io.legado.app.help.glide.ImageLoader
-import io.legado.app.help.glide.OkHttpModelLoader
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
@@ -42,7 +31,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import splitties.init.appCtx
-import java.io.File
 import kotlin.random.Random
 
 @Keep
@@ -54,6 +42,7 @@ object BookCover : KoinComponent {
     private val shellSettingsGateway: AppShellSettingsGateway by inject()
     private val coverSettingsGateway: CoverSettingsGateway by inject()
     private val mangaSettingsGateway: MangaSettingsGateway by inject()
+    private val imageLoader: ImageLoader by inject()
 
     private val isNightTheme: Boolean
         get() = when (shellSettingsGateway.currentSettings.themeMode) {
@@ -111,132 +100,15 @@ object BookCover : KoinComponent {
         return drawable.constantState?.newDrawable()?.mutate() ?: drawable
     }
 
-    /**
-     * 加载封面
-     */
-    fun load(
-        context: Context,
-        path: String?,
-        loadOnlyWifi: Boolean = false,
-        sourceOrigin: String? = null,
-        onLoadFinish: (() -> Unit)? = null,
-    ): RequestBuilder<Drawable> {
-        val currentDefault = getRandomDefaultDrawable()
-        if (coverSettingsGateway.currentSettings.useDefaultCover) {
-            return ImageLoader.load(context, currentDefault)
-                .centerCrop()
-        }
-        var options = RequestOptions().set(OkHttpModelLoader.loadOnlyWifiOption, loadOnlyWifi)
-        if (sourceOrigin != null) {
-            options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
-        }
-        var builder = ImageLoader.load(context, path)
-            .apply(options)
-        if (onLoadFinish != null) {
-            builder = builder.addListener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable?>,
-                    isFirstResource: Boolean,
-                ): Boolean {
-                    onLoadFinish.invoke()
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: Drawable,
-                    model: Any,
-                    target: Target<Drawable?>?,
-                    dataSource: DataSource,
-                    isFirstResource: Boolean,
-                ): Boolean {
-                    onLoadFinish.invoke()
-                    return false
-                }
-            })
-        }
-        return builder.placeholder(currentDefault)
-            .error(currentDefault)
-            .centerCrop()
-    }
-
-
-
-    /**
-     * 加载漫画图片
-     */
-    fun loadManga(
-        context: Context,
-        path: String?,
-        loadOnlyWifi: Boolean = false,
-        sourceOrigin: String? = null,
-        transformation: Transformation<Bitmap>? = null,
-    ): RequestBuilder<Drawable> {
-        var options = RequestOptions().set(OkHttpModelLoader.loadOnlyWifiOption, loadOnlyWifi)
-            .set(OkHttpModelLoader.mangaOption, true)
-        if (sourceOrigin != null) {
-            options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
-        }
-        var builder = ImageLoader.load(context, path)
-            .apply(options)
-            .override(context.resources.displayMetrics.widthPixels, SIZE_ORIGINAL)
-            .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .skipMemoryCache(true)
-        if (transformation != null) {
-            builder = builder.transform(transformation)
-        }
-        builder = if (mangaSettingsGateway.currentSettings.disableMangaCrossFade) {
-            builder
-        } else {
-            builder.transition(DrawableTransitionOptions.withCrossFade())
-        }
-
-        return builder
-    }
-
-
-    fun preloadManga(
-        context: Context,
-        path: String?,
-        loadOnlyWifi: Boolean = false,
-        sourceOrigin: String? = null,
-    ): RequestBuilder<File?> {
-        var options = RequestOptions().set(OkHttpModelLoader.loadOnlyWifiOption, loadOnlyWifi)
-            .set(OkHttpModelLoader.mangaOption, true)
-        if (sourceOrigin != null) {
-            options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
-        }
-        return Glide.with(context)
-            .downloadOnly()
-            .apply(options)
-            .load(path)
-    }
-
-    /**
-     * 加载模糊封面
-     */
-    fun loadBlur(
-        context: Context,
-        path: String?,
-        loadOnlyWifi: Boolean = false,
-        sourceOrigin: String? = null,
-    ): RequestBuilder<Drawable> {
-        val currentDefault = getRandomDefaultDrawable()
-        val loadBlur = ImageLoader.load(context, currentDefault)
-            .transform(BlurTransformation(25), CenterCrop())
-        if (coverSettingsGateway.currentSettings.useDefaultCover) {
-            return loadBlur
-        }
-        var options = RequestOptions().set(OkHttpModelLoader.loadOnlyWifiOption, loadOnlyWifi)
-        if (sourceOrigin != null) {
-            options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
-        }
-        return ImageLoader.load(context, path)
-            .apply(options)
-            .transform(BlurTransformation(25), CenterCrop())
-            .transition(DrawableTransitionOptions.withCrossFade(1500))
-            .thumbnail(loadBlur)
+    /** Android service callers use Coil directly instead of the legacy Glide wrapper. */
+    suspend fun loadCoverBitmap(context: Context, path: String?): Bitmap? {
+        if (path.isNullOrBlank()) return null
+        val result = imageLoader.execute(
+            ImageRequest.Builder(context)
+                .data(path)
+                .build()
+        )
+        return (result as? SuccessResult)?.image?.toBitmap()
     }
 
     fun getCoverRule(): CoverRule {

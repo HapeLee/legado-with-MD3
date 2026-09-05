@@ -215,8 +215,14 @@ class AnalyzeRule(
                     // get {{}}
                     sourceRule.rule
                 } else {
-                    // 键值直接访问
-                    result[sourceRule.rule]
+                    when (sourceRule.mode) {
+                        Mode.WebJs -> getWebJsResult(sourceRule.rule, result)
+                        Mode.Js -> evalJS(sourceRule.rule, result)
+                        Mode.Json -> getAnalyzeByJSonPath(result).getStringList(sourceRule.rule)
+                        Mode.XPath -> getAnalyzeByXPath(result).getStringList(sourceRule.rule)
+                        Mode.Default -> result[sourceRule.rule]
+                        else -> sourceRule.rule
+                    }
                 }
                 result?.let {
                     if (sourceRule.replaceRegex.isNotEmpty() && it is List<*>) {
@@ -314,8 +320,14 @@ class AnalyzeRule(
                     // get {{}}
                     sourceRule.rule
                 } else {
-                    // 键值直接访问
-                    result[sourceRule.rule]?.toString()
+                    when (sourceRule.mode) {
+                        Mode.WebJs -> getWebJsResult(sourceRule.rule, result)
+                        Mode.Js -> evalJS(sourceRule.rule, result)
+                        Mode.Json -> getAnalyzeByJSonPath(result).getString(sourceRule.rule)
+                        Mode.XPath -> getAnalyzeByXPath(result).getString(sourceRule.rule)
+                        Mode.Default -> result[sourceRule.rule]
+                        else -> sourceRule.rule
+                    }?.toString()
                 }?.let {
                     replaceRegex(it, sourceRule)
                 }

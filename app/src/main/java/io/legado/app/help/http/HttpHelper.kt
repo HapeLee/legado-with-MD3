@@ -2,8 +2,8 @@ package io.legado.app.help.http
 
 import io.legado.app.constant.AppConst
 import io.legado.app.help.CacheManager
-import io.legado.app.help.glide.progress.ProgressManager.LISTENER
-import io.legado.app.help.glide.progress.ProgressResponseBody
+import io.legado.app.help.http.progress.ProgressManager.LISTENER
+import io.legado.app.help.http.progress.ProgressResponseBody
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.help.ConcurrentRateLimiter

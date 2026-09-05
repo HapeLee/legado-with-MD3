@@ -50,7 +50,6 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.AudioPlay
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.MarkdownSheet
-import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.ReadBookRouteHost
@@ -58,7 +57,6 @@ import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.utils.LogUtils
-import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.IO
@@ -528,7 +526,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private fun checkUpdateOnStart() {
         AppUpdateGitHub.check(lifecycleScope)
             .onSuccess { updateInfo ->
-                showDialogFragment(UpdateDialog(updateInfo))
+                showTextSheet(
+                    title = updateInfo.tagName.orEmpty(),
+                    content = updateInfo.updateLog.orEmpty(),
+                )
             }
     }
 
@@ -546,9 +547,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 try {
                     val info = AppUpdateGitHub.getReleaseByTag(BuildConfig.VERSION_NAME)
                     if (info != null) {
-                        val dialog = UpdateDialog(info, UpdateDialog.Mode.VIEW_LOG)
-                        dialog.setOnDismissListener { block.resume(null) }
-                        showDialogFragment(dialog)
+                        showTextSheet(
+                            title = getString(R.string.about_installed_version_title),
+                            content = info.updateLog.orEmpty(),
+                            onDismiss = { block.resume(null) },
+                        )
                     } else {
                         block.resume(null)
                     }

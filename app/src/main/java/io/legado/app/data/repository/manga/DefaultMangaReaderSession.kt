@@ -137,10 +137,11 @@ class DefaultMangaReaderSession(
         presentationJob?.cancel()
         cancelScheduledProgressPersist()
         val old = _state.value
-        if (old.book != null) {
+        val oldBook = old.book
+        if (oldBook != null) {
             persistProgress()
             if (old.resumed) withContext(ioDispatcher) {
-                dataGateway.pause(old.book.bookUrl, old.book.inBookshelf)
+                dataGateway.pause(oldBook.bookUrl, oldBook.inBookshelf)
             }
         }
         _state.value = MangaSessionState(

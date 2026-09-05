@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import io.legado.app.R
 import io.legado.app.base.BaseService
 import io.legado.app.constant.AppConst
@@ -59,6 +62,7 @@ import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.ag2s.epublib.domain.Author
 import me.ag2s.epublib.domain.Date
 import me.ag2s.epublib.domain.EpubBook
@@ -75,6 +79,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
@@ -116,6 +122,7 @@ class ExportBookService : BaseService(), KoinComponent {
     private val translationSettingsGateway: TranslationSettingsGateway by inject()
     private val otherSettingsGateway: OtherSettingsGateway by inject()
     private val readSettingsGateway: ReadSettingsGateway by inject()
+    private val imageLoader: ImageLoader by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
@@ -617,13 +624,21 @@ class ExportBookService : BaseService(), KoinComponent {
 
     private fun setCover(book: Book, epubBook: EpubBook) {
         kotlin.runCatching {
-            val file = Glide.with(this)
-                .asFile()
-                .load(book.getDisplayCover())
-                .submit()
-                .get()
+            val coverBytes = runBlocking {
+                val request = ImageRequest.Builder(this@ExportBookService)
+                    .data(book.getDisplayCover())
+                    .build()
+                val bitmap = (imageLoader.execute(request) as? SuccessResult)
+                    ?.image
+                    ?.toBitmap()
+                    ?: return@runBlocking null
+                ByteArrayOutputStream().use { output ->
+                    check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output))
+                    output.toByteArray()
+                }
+            } ?: return
             val provider = LazyResourceProvider { _ ->
-                file.inputStream()
+                ByteArrayInputStream(coverBytes)
             }
             epubBook.coverImage = LazyResource(provider, "Images/cover.jpg")
         }.onFailure {

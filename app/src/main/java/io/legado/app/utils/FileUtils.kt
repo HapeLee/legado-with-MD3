@@ -3,6 +3,8 @@ package io.legado.app.utils
 import android.os.Environment
 import android.webkit.MimeTypeMap
 import androidx.annotation.IntDef
+import io.legado.app.core.platform.FileSystem
+import io.legado.app.core.platform.JvmFileSystem
 import splitties.init.appCtx
 import java.io.*
 import java.nio.charset.Charset
@@ -11,6 +13,13 @@ import java.util.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object FileUtils {
+
+    /**
+     * 文件系统访问委托：原子写/复制等操作走共享 [FileSystem] 契约（[JvmFileSystem]），
+     * 逐步把 `java.io.File` 直用从 :app 迁出。P1 只迁原子写路径（经
+     * `FileUtilsAtomicWriteTest` 覆盖）；其余方法 P2 分批迁。
+     */
+    private val fileSystem: FileSystem = JvmFileSystem
 
     /**
      * 原子写入文本：先写同目录下的临时文件，再 rename 覆盖目标。
@@ -22,7 +31,7 @@ object FileUtils {
      * 注意：不做 fsync，因此只保证**进程被杀**不丢，不保证掉电不丢。
      */
     fun writeTextAtomic(filePath: String, text: String) {
-        replaceAtomic(filePath) { it.writeText(text) }
+        fileSystem.writeTextAtomic(filePath, text)
     }
 
     /**
@@ -30,19 +39,7 @@ object FileUtils {
      * 复制失败或被中断，落得两头空。
      */
     fun copyFileAtomic(source: File, targetPath: String) {
-        replaceAtomic(targetPath) { source.copyTo(it, overwrite = true) }
-    }
-
-    private inline fun replaceAtomic(targetPath: String, produce: (File) -> Unit) {
-        val target = File(targetPath)
-        val temp = File("$targetPath.tmp")
-        target.parent?.let { createFolderIfNotExist(it) }
-        produce(temp)
-        if (!temp.renameTo(target)) {
-            // 个别文件系统的 rename 不覆盖已存在的目标，退回原地写
-            produce(target)
-            temp.delete()
-        }
+        fileSystem.copyFileAtomic(source.absolutePath, targetPath)
     }
 
     fun createFileIfNotExist(root: File, vararg subDirFiles: String): File {

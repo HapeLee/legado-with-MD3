@@ -34,8 +34,9 @@ class WebJsExtensions(
     activity: AppCompatActivity?,
     webView: WebView,
     bookType: Int = 0,
-    callback: Callback? = null
-) : RssJsExtensions(activity, source) {
+    callback: Callback? = null,
+    onShowPhoto: ((src: String, sourceOrigin: String?) -> Unit)? = null,
+) : RssJsExtensions(activity, source, onShowPhoto) {
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
 
