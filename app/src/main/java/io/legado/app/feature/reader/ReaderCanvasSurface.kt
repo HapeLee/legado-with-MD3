@@ -92,6 +92,7 @@ import io.legado.app.feature.reader.core.gesture.PullBookmarkGesture
 import io.legado.app.feature.reader.core.gesture.ReaderGestureSettingsPolicy
 import io.legado.app.feature.reader.core.gesture.ReaderMainAxisPolicy
 import io.legado.app.feature.reader.core.gesture.ReaderPageViewportLayout
+import io.legado.app.feature.reader.core.gesture.selectionBounds
 import io.legado.app.feature.reader.core.gesture.ReaderTapAction
 import io.legado.app.feature.reader.core.gesture.ReaderTapActionGrid
 import io.legado.app.feature.reader.core.model.ReaderElement
@@ -312,8 +313,8 @@ fun ReaderCanvasSurface(
     LaunchedEffect(
         pages.previous?.id,
         pages.previous?.revision,
-        pages.current.id,
-        pages.current.revision,
+        current.id,
+        current.revision,
         pages.next?.id,
         pages.next?.revision,
     ) {
@@ -439,15 +440,16 @@ fun ReaderCanvasSurface(
     fun tapPageTurn(direction: ReaderTurnDirection) {
         val window = latestPages
         if ((if (direction == ReaderTurnDirection.PREVIOUS) window.previous else window.next) == null) return
-        val width = window.current?.widthPx?.toFloat() ?: return
+        val currentPage = window.current ?: return
+        val width = currentPage.widthPx.toFloat()
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
             curlRevealProgress = 1f
             curlTouchX = ReaderCurlTouchPolicy.programmaticX(direction, width)
             curlTouchY = ReaderCurlTouchPolicy.programmaticY(
-                direction, curlTouchY, window.current.heightPx.toFloat(),
+                direction, curlTouchY, currentPage.heightPx.toFloat(),
             )
             curlCornerY = ReaderCurlTouchPolicy.cornerY(
-                direction, curlTouchY, window.current.heightPx.toFloat(),
+                direction, curlTouchY, currentPage.heightPx.toFloat(),
             )
         }
         val target = if (direction == ReaderTurnDirection.PREVIOUS) width else -width

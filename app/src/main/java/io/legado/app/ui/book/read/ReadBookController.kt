@@ -34,6 +34,7 @@ import io.legado.app.feature.reader.core.model.ReaderRect
 import io.legado.app.feature.reader.core.model.ReaderThemeColorChange
 import io.legado.app.feature.reader.core.model.remapThemeColors
 import io.legado.app.feature.reader.core.navigation.ReaderChapterPaginationSnapshot
+import io.legado.app.feature.reader.core.navigation.ReaderRenderState
 import io.legado.app.feature.reader.core.navigation.ReaderPageContext
 import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
@@ -358,8 +359,10 @@ class ReadBookController(
 
     private fun publishReaderRenderState() {
         readerSessionViewModel.submit(ReaderRenderUiState(
-            pageWindow = _readerPageWindow.value,
-            paginationError = _readerPaginationError.value,
+            renderState = ReaderRenderState(
+                pageWindow = _readerPageWindow.value,
+                paginationError = _readerPaginationError.value,
+            ),
             background = _readerBackground.value,
         ))
     }
@@ -414,7 +417,7 @@ class ReadBookController(
 
     fun onComposeReaderElementClick(element: ReaderElement): Boolean = when (element) {
         is ReaderElement.Text -> when {
-            element.markingId != null -> { onMarkingClick(element.markingId); true }
+            element.markingId != null -> { onMarkingClick(element.markingId!!); true }
             element.link != null -> {
                 activity.startActivity(Intent(activity, OpenUrlConfirmActivity::class.java).putExtra("uri", element.link))
                 true

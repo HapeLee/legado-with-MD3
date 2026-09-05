@@ -8,7 +8,6 @@ import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.Locale
 
 class ReaderSelectionTest {
     private val style = ReaderTextStyle(0, 16f)
@@ -72,7 +71,7 @@ class ReaderSelectionTest {
         }
         val wrapped = page.copy(text = values.joinToString(""), elements = elements)
 
-        val selection = ReaderSelectionPolicy.startWord(wrapped, 5f, 30f, Locale.ENGLISH)!!
+        val selection = ReaderSelectionPolicy.startWord(wrapped, 5f, 30f)!!
 
         assertEquals("reader", selection.selectedText(wrapped))
         assertEquals(0, selection.start)
@@ -91,7 +90,7 @@ class ReaderSelectionTest {
         )
         val paragraphs = page.copy(elements = first + second)
 
-        val selection = ReaderSelectionPolicy.startWord(paragraphs, 5f, 40f, Locale.ENGLISH)!!
+        val selection = ReaderSelectionPolicy.startWord(paragraphs, 5f, 40f)!!
 
         assertEquals("word", selection.selectedText(paragraphs))
     }
@@ -111,7 +110,7 @@ class ReaderSelectionTest {
             )
         )
 
-        val selection = ReaderSelectionPolicy.startWord(spaced, 12f, 10f, Locale.CHINESE)
+        val selection = ReaderSelectionPolicy.startWord(spaced, 12f, 10f)
 
         assertEquals(0, selection?.anchor)
         assertEquals("甲乙", selection?.selectedText(spaced))

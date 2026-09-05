@@ -4,8 +4,6 @@ import androidx.compose.runtime.Stable
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderRect
-import java.text.BreakIterator
-import java.util.Locale
 
 enum class ReaderSelectionEndpoint {
     ANCHOR,
@@ -137,7 +135,7 @@ object ReaderSelectionPolicy {
         page: ReaderPage,
         x: Float,
         y: Float,
-        locale: Locale = Locale.getDefault(),
+        wordBoundaryResolver: ReaderWordBoundaryResolver = AndroidReaderWordBoundaryResolver,
     ): ReaderSelection? {
         // Glyph bounds intentionally omit letter- and justification-spacing. Long presses in
         // those visual gaps should start selection just like handle drags do.
@@ -153,14 +151,9 @@ object ReaderSelectionPolicy {
 
         val text = paragraph.joinToString(separator = "", transform = ReaderElement.Text::value)
         val hitOffset = paragraph.take(hitIndex).sumOf { it.value.length }
-        val boundary = BreakIterator.getWordInstance(locale).apply { setText(text) }
-        var start = boundary.first()
-        var end = boundary.next()
-        while (end != BreakIterator.DONE && hitOffset !in start until end) {
-            start = end
-            end = boundary.next()
-        }
-        if (end == BreakIterator.DONE) {
+        val range = (wordBoundaryResolver.rangeAt(text, hitOffset) as? ReaderWordBoundaryResult.Resolved)
+            ?.range
+        if (range == null) {
             return ReaderSelection(page.id.chapterIndex, hit.chapterPosition, hit.chapterPosition, hit.emphasized)
         }
 
@@ -169,7 +162,7 @@ object ReaderSelectionPolicy {
         var last: ReaderElement.Text? = null
         paragraph.forEach { element ->
             val elementEnd = offset + element.value.length
-            if (offset < end && elementEnd > start) {
+            if (offset < range.endExclusive && elementEnd > range.start) {
                 if (first == null) first = element
                 last = element
             }

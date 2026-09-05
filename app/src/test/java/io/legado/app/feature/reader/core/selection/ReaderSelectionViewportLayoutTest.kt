@@ -1,6 +1,7 @@
 package io.legado.app.feature.reader.core.selection
 
 import io.legado.app.feature.reader.core.gesture.ReaderPageViewportLayout
+import io.legado.app.feature.reader.core.gesture.selectionBounds
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId

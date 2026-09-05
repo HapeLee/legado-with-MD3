@@ -3,6 +3,7 @@ package io.legado.app.ui.book.read
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
+import io.legado.app.feature.reader.core.navigation.ReaderRenderState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -14,7 +15,7 @@ class ReaderSessionViewModelTest {
     fun buffersRenderUpdatesUntilEntranceSettlesAndThenPublishesImmediately() {
         val viewModel = ReaderSessionViewModel()
 
-        viewModel.submit(ReaderRenderUiState(paginationError = "prepared-before-enter"))
+        viewModel.submit(ReaderRenderUiState(renderState = ReaderRenderState(paginationError = "prepared-before-enter")))
         assertNull(viewModel.uiState.value.paginationError)
 
         viewModel.submitBackground(ReaderBackgroundState(meanColorArgb = 0x123456, revision = 1L))
@@ -40,11 +41,11 @@ class ReaderSessionViewModelTest {
         assertEquals("prepared-before-enter", viewModel.uiState.value.paginationError)
         assertEquals(1L, viewModel.uiState.value.background.revision)
 
-        viewModel.submit(ReaderRenderUiState(paginationError = "after-enter"))
+        viewModel.submit(ReaderRenderUiState(renderState = ReaderRenderState(paginationError = "after-enter")))
         assertEquals("after-enter", viewModel.uiState.value.paginationError)
 
         viewModel.onEntranceStateChanged(false)
-        viewModel.submit(ReaderRenderUiState(paginationError = "while-exiting"))
+        viewModel.submit(ReaderRenderUiState(renderState = ReaderRenderState(paginationError = "while-exiting")))
         assertEquals("after-enter", viewModel.uiState.value.paginationError)
 
         viewModel.onEntranceStateChanged(true)
